@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
+from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -15,7 +16,14 @@ def main() -> int:
     application.setApplicationName("Video Series Studio")
     application.setOrganizationName("VSCS")
 
-    window = MainWindow()
+    configuration = ConfigurationService()
+    try:
+        configuration.load()
+    except ConfigurationError as exc:
+        QMessageBox.critical(None, "Configuration Error", str(exc))
+        return 1
+
+    window = MainWindow(configuration)
     window.show()
 
     return application.exec()
