@@ -16,14 +16,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.infrastructure.configuration import ConfigurationService
+from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
 
 class MainWindow(QMainWindow):
     """Primary window for the Video Series Studio desktop application."""
 
-    def __init__(self) -> None:
+    def __init__(self, configuration: ConfigurationService) -> None:
         super().__init__()
+        self.configuration = configuration
         self.setObjectName("mainWindow")
         self.setWindowTitle("Video Series Studio — VSCS Framework v0.1")
         self.resize(1440, 900)
@@ -35,8 +38,9 @@ class MainWindow(QMainWindow):
         self._create_navigation()
         self._create_content_area()
         self._connect_signals()
+        self._restore_default_workspace()
 
-        self.statusBar().showMessage("Ready")
+        self.statusBar().showMessage(f"Ready — {self.configuration.config_path}")
 
     def _create_actions(self) -> None:
         self.new_project_action = QAction("New Project", self)
@@ -51,6 +55,10 @@ class MainWindow(QMainWindow):
         self.save_project_action.setShortcut(QKeySequence.StandardKey.Save)
         self.save_project_action.setStatusTip("Save the current project")
         self.save_project_action.setEnabled(False)
+
+        self.settings_action = QAction("Settings", self)
+        self.settings_action.setStatusTip("Edit application preferences")
+        self.settings_action.triggered.connect(self._show_settings_dialog)
 
         self.exit_action = QAction("Exit", self)
         self.exit_action.setShortcut(QKeySequence.StandardKey.Quit)
@@ -71,7 +79,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction("Dashboard", lambda: self._select_navigation_item(0))
 
         tools_menu = self.menuBar().addMenu("&Tools")
-        tools_menu.addAction("Settings", self._show_not_implemented)
+        tools_menu.addAction(self.settings_action)
         tools_menu.addAction("Plugin Manager", self._show_not_implemented)
 
         help_menu = self.menuBar().addMenu("&Help")
@@ -140,6 +148,12 @@ class MainWindow(QMainWindow):
         self.dashboard.new_project_button.clicked.connect(self.new_project_action.trigger)
         self.dashboard.open_project_button.clicked.connect(self.open_project_action.trigger)
 
+    def _restore_default_workspace(self) -> None:
+        default_workspace = self.configuration.settings.workspace.default_workspace
+        matches = self.navigation.findItems(default_workspace, Qt.MatchFlag.MatchExactly)
+        if matches:
+            self.navigation.setCurrentItem(matches[0])
+
     def _placeholder_page(self, title: str) -> QWidget:
         label = QLabel(f"{title}\nModule planned for a later development task")
         label.setObjectName(f"{title.lower().replace(' ', '')}Placeholder")
@@ -153,6 +167,11 @@ class MainWindow(QMainWindow):
     def _update_status_for_section(self, section: str) -> None:
         if section:
             self.statusBar().showMessage(f"Workspace: {section}")
+
+    def _show_settings_dialog(self) -> None:
+        dialog = SettingsDialog(self.configuration, self)
+        if dialog.exec():
+            self.statusBar().showMessage("Settings saved", 3000)
 
     def _show_not_implemented(self) -> None:
         QMessageBox.information(
