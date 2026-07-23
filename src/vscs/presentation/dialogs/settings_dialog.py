@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from vscs.infrastructure.configuration import ConfigurationService, Theme
@@ -18,8 +19,12 @@ from vscs.infrastructure.configuration import ConfigurationService, Theme
 class SettingsDialog(QDialog):
     """Edit commonly used VSCS preferences."""
 
-    def __init__(self, configuration: ConfigurationService, parent: object | None = None) -> None:
-        super().__init__(parent)  # type: ignore[arg-type]
+    def __init__(
+        self,
+        configuration: ConfigurationService,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
         self.configuration = configuration
         self.setWindowTitle("VSCS Settings")
         self.setMinimumWidth(420)
