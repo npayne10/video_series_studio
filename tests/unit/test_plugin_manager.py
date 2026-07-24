@@ -117,7 +117,11 @@ def test_disable_is_persistent_and_removes_capabilities(tmp_path: Path) -> None:
 def test_failed_plugin_is_isolated(tmp_path: Path) -> None:
     """Import failures are recorded without preventing other plugins from loading."""
     manager, _ = build_manager(tmp_path)
-    write_plugin(manager.plugin_directory, plugin_id="broken.plugin", code="raise RuntimeError('broken')")
+    write_plugin(
+        manager.plugin_directory,
+        plugin_id="broken.plugin",
+        code="raise RuntimeError('broken')",
+    )
     write_plugin(manager.plugin_directory, plugin_id="test.voice")
     manager.discover()
 
