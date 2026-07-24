@@ -16,6 +16,29 @@ class Theme(StrEnum):
     DARK = "dark"
 
 
+class AIProvider(StrEnum):
+    """Supported AI generation providers."""
+
+    TEMPLATE = "template"
+    OPENAI = "openai"
+
+
+class AISettings(BaseModel):
+    """AI provider preferences that are safe to persist in YAML."""
+
+    provider: AIProvider = AIProvider.TEMPLATE
+    openai_model: str = "gpt-5.5"
+
+    @field_validator("openai_model")
+    @classmethod
+    def validate_openai_model(cls, model: str) -> str:
+        """Require a non-empty model identifier."""
+        normalized = model.strip()
+        if not normalized:
+            raise ValueError("OpenAI model is required")
+        return normalized
+
+
 class RendererSettings(BaseModel):
     """Configuration for an external rendering application."""
 
@@ -79,6 +102,7 @@ class ApplicationSettings(BaseModel):
     theme: Theme = Theme.SYSTEM
     recent_projects: list[Path] = Field(default_factory=list)
     maximum_recent_projects: int = Field(default=10, ge=1, le=50)
+    ai: AISettings = Field(default_factory=AISettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     plugins: PluginSettings = Field(default_factory=PluginSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
