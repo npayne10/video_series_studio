@@ -31,6 +31,25 @@ class DatabaseSettings(BaseModel):
     cache_directory: Path | None = None
 
 
+class LoggingSettings(BaseModel):
+    """Application logging preferences."""
+
+    level: str = "INFO"
+    console_enabled: bool = True
+    max_file_size_bytes: int = Field(default=5_000_000, ge=100_000)
+    backup_count: int = Field(default=5, ge=1, le=50)
+
+    @field_validator("level")
+    @classmethod
+    def validate_level(cls, level: str) -> str:
+        """Accept standard Python logging level names."""
+        normalized = level.upper()
+        supported = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if normalized not in supported:
+            raise ValueError(f"Unsupported logging level: {level}")
+        return normalized
+
+
 class WorkspaceSettings(BaseModel):
     """Workspace behaviour and user-interface preferences."""
 
@@ -47,6 +66,7 @@ class ApplicationSettings(BaseModel):
     recent_projects: list[Path] = Field(default_factory=list)
     maximum_recent_projects: int = Field(default=10, ge=1, le=50)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    logging: LoggingSettings = Field(default_factory=LoggingSettings)
     workspace: WorkspaceSettings = Field(default_factory=WorkspaceSettings)
     renderers: dict[str, RendererSettings] = Field(
         default_factory=lambda: {
