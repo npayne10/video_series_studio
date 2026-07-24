@@ -44,9 +44,7 @@ class ApplicationServices:
                 f"Service already registered: {service_type.__qualname__}"
             )
         if not isinstance(instance, service_type):
-            raise TypeError(
-                f"Service instance must be an instance of {service_type.__qualname__}"
-            )
+            raise TypeError(f"Service instance must be an instance of {service_type.__qualname__}")
         self._services[service_type] = instance
         return instance
 
