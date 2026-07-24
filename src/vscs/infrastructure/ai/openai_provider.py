@@ -19,7 +19,7 @@ class OpenAICAPGenerationProvider:
             raise ValueError("An OpenAI model is required")
         try:
             openai_module = import_module("openai")
-            client_type = getattr(openai_module, "OpenAI")
+            client_type = openai_module.OpenAI
         except (ImportError, AttributeError) as exc:
             raise AIProviderError(
                 'Install the VSCS AI dependency with: python -m pip install "openai>=1.68"'
