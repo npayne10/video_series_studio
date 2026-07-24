@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
 from vscs.infrastructure.logging import LoggingService
+from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -40,12 +41,15 @@ def main() -> int:
     application.setApplicationName("Video Series Studio")
     application.setOrganizationName("VSCS")
 
+    services = ApplicationServices()
+
     configuration = ConfigurationService()
     try:
         configuration.load()
     except ConfigurationError as exc:
         QMessageBox.critical(None, "Configuration Error", str(exc))
         return 1
+    services.register(ConfigurationService, configuration)
 
     logging_settings = configuration.settings.logging
     logging_service = LoggingService(
@@ -60,16 +64,19 @@ def main() -> int:
     except (OSError, ValueError) as exc:
         QMessageBox.critical(None, "Logging Error", f"Unable to initialize logging: {exc}")
         return 1
+    services.register(LoggingService, logging_service)
 
     _install_exception_hook(logger)
     logger.info("Video Series Studio starting")
     logger.info("Configuration loaded from %s", configuration.config_path)
+    logger.info("Application services initialized: %s", len(services))
 
-    window = MainWindow(configuration)
+    window = MainWindow(services)
     window.show()
     exit_code = application.exec()
 
     logger.info("Video Series Studio stopped with exit code %s", exit_code)
+    services.clear()
     logging.shutdown()
     return exit_code
 
