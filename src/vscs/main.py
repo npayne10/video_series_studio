@@ -12,6 +12,7 @@ from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
+from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.windows.main_window import MainWindow
 
@@ -73,6 +74,11 @@ def main() -> int:
     project_service = ProjectService(configuration, database_manager)
     services.register(ProjectService, project_service)
 
+    plugin_manager = PluginManager(configuration, services)
+    services.register(PluginManager, plugin_manager)
+    plugin_manager.discover()
+    plugin_manager.load_enabled()
+
     _install_exception_hook(logger)
     logger.info("Video Series Studio starting")
     logger.info("Configuration loaded from %s", configuration.config_path)
@@ -82,6 +88,7 @@ def main() -> int:
     window.show()
     exit_code = application.exec()
 
+    plugin_manager.shutdown()
     database_manager.close()
     logger.info("Video Series Studio stopped with exit code %s", exit_code)
     services.clear()
