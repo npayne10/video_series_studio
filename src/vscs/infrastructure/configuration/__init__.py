@@ -3,6 +3,7 @@
 from vscs.infrastructure.configuration.models import (
     ApplicationSettings,
     DatabaseSettings,
+    LoggingSettings,
     RendererSettings,
     Theme,
     WorkspaceSettings,
@@ -14,6 +15,7 @@ __all__ = [
     "ConfigurationError",
     "ConfigurationService",
     "DatabaseSettings",
+    "LoggingSettings",
     "RendererSettings",
     "Theme",
     "WorkspaceSettings",
