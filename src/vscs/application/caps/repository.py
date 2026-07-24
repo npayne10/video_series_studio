@@ -57,9 +57,7 @@ class CAPRepository:
     def list(
         self, *, query: str = "", status: CAPStatus | None = None
     ) -> tuple[CanonicalAssetProfile, ...]:
-        statement: Select[tuple[CanonicalAssetProfileRecord]] = select(
-            CanonicalAssetProfileRecord
-        )
+        statement: Select[tuple[CanonicalAssetProfileRecord]] = select(CanonicalAssetProfileRecord)
         if query.strip():
             pattern = f"%{query.strip()}%"
             statement = statement.where(
@@ -132,7 +130,9 @@ class CAPRepository:
             canonical_description=record.canonical_description,
             visual_identity=record.visual_identity,
             production_notes=record.production_notes,
-            reference_paths=tuple(Path(path) for path in record.reference_paths.splitlines() if path),
+            reference_paths=tuple(
+                Path(path) for path in record.reference_paths.splitlines() if path
+            ),
             created_at=record.created_at,
             updated_at=record.updated_at,
         )
