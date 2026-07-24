@@ -32,12 +32,14 @@ class TemplateCAPGenerationProvider:
             title=request.asset_name,
             canonical_description=canonical_description,
             visual_identity=(
-                "Derive visible characteristics only from approved story facts and reference imagery. "
-                "Any inferred detail must remain provisional until user approval."
+                "Derive visible characteristics only from approved story facts "
+                "and reference imagery. Any inferred detail must remain "
+                "provisional until user approval."
             ),
             production_notes=(
-                "Generated locally by the VSCS template provider. Review all inferred details before "
-                "changing the CAP status from Draft."
+                "Generated locally by the VSCS template provider. "
+                "Review all inferred details before changing the CAP "
+                "status from Draft."
             ),
             continuity_rules=(
                 "Preserve all explicit story facts across every generated appearance.",
