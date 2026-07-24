@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from vscs.domain.projects import ProjectMetadata
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.database import DatabaseError, DatabaseManager
 from vscs.infrastructure.logging import LoggingService
 
 
@@ -58,8 +59,13 @@ class ProjectService:
         "temp",
     )
 
-    def __init__(self, configuration: ConfigurationService) -> None:
+    def __init__(
+        self,
+        configuration: ConfigurationService,
+        database: DatabaseManager | None = None,
+    ) -> None:
         self.configuration = configuration
+        self.database = database
         self.current_project: ProjectMetadata | None = None
         self.project_directory: Path | None = None
         self._logger = LoggingService.get_logger("projects")
@@ -84,7 +90,7 @@ class ProjectService:
         description: str = "",
         author: str = "",
     ) -> ProjectMetadata:
-        """Create and open a new project directory."""
+        """Create and open a new project directory and database."""
         self._require_closed()
         project_directory = directory.expanduser().resolve(strict=False)
         if project_directory.exists() and any(project_directory.iterdir()):
@@ -100,7 +106,10 @@ class ProjectService:
             self.current_project = project
             self.project_directory = project_directory
             self.save()
-        except (OSError, ValidationError, ProjectError) as exc:
+            self._open_database(project_directory, project)
+        except (OSError, ValidationError, ProjectError, DatabaseError) as exc:
+            if self.database is not None:
+                self.database.close()
             self.current_project = None
             self.project_directory = None
             if created_directory:
@@ -114,13 +123,16 @@ class ProjectService:
         return project
 
     def open(self, path: Path) -> ProjectMetadata:
-        """Load and activate an existing VSCS project."""
+        """Load and activate an existing VSCS project and its database."""
         self._require_closed()
         project_file = self._resolve_project_file(path)
         try:
             raw_data = yaml.safe_load(project_file.read_text(encoding="utf-8")) or {}
             project = ProjectMetadata.model_validate(raw_data)
-        except (OSError, yaml.YAMLError, ValidationError) as exc:
+            self._open_database(project_file.parent, project)
+        except (OSError, yaml.YAMLError, ValidationError, DatabaseError) as exc:
+            if self.database is not None:
+                self.database.close()
             raise InvalidProjectError(f"Unable to open project {project_file}: {exc}") from exc
 
         self.current_project = project
@@ -147,11 +159,17 @@ class ProjectService:
         self._logger.info("Project saved: %s", project_file)
 
     def close(self) -> None:
-        """Close the active project and clear in-memory project state."""
+        """Close the active database and clear in-memory project state."""
         project, project_file = self._require_open()
+        if self.database is not None:
+            self.database.close()
         self._logger.info("Project closed: %s (%s)", project_file, project.name)
         self.current_project = None
         self.project_directory = None
+
+    def _open_database(self, project_directory: Path, project: ProjectMetadata) -> None:
+        if self.database is not None:
+            self.database.open(project_directory, project)
 
     def _resolve_project_file(self, path: Path) -> Path:
         resolved = path.expanduser().resolve(strict=False)
