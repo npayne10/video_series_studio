@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import suppress
 from importlib import import_module
 from typing import Any
 
@@ -50,10 +51,8 @@ class AICredentialStore:
                     api_key.strip(),
                 )
             else:
-                try:
+                with suppress(keyring.errors.PasswordDeleteError):
                     keyring.delete_password(self.SERVICE_NAME, self.OPENAI_ACCOUNT)
-                except keyring.errors.PasswordDeleteError:
-                    pass
         except Exception as exc:
             raise CredentialStorageError(
                 f"Unable to update the OpenAI API key in secure storage: {exc}"
