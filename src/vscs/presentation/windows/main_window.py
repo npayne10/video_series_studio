@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -27,6 +28,7 @@ from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
+from vscs.presentation.widgets.asset_manager import AssetManagerWidget
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
 
@@ -40,6 +42,7 @@ class MainWindow(QMainWindow):
         self.services = services
         self.configuration = services.require(ConfigurationService)
         self.projects = services.require(ProjectService)
+        self.assets = services.require(AssetService)
         self.plugins = services.require(PluginManager)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
@@ -100,6 +103,7 @@ class MainWindow(QMainWindow):
 
         view_menu = self.menuBar().addMenu("&View")
         view_menu.addAction("Dashboard", lambda: self._select_navigation_item(0))
+        view_menu.addAction("Assets", lambda: self._select_navigation_item(3))
 
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
@@ -148,15 +152,13 @@ class MainWindow(QMainWindow):
 
         self.dashboard = DashboardWidget()
         self.content_stack.addWidget(self.dashboard)
+        self.content_stack.addWidget(self._placeholder_page("Projects"))
+        self.content_stack.addWidget(self._placeholder_page("Story"))
 
-        for section in (
-            "Projects",
-            "Story",
-            "Assets",
-            "Production Planning",
-            "Render Queue",
-            "Post-Production",
-        ):
+        self.asset_manager = AssetManagerWidget(self.assets)
+        self.content_stack.addWidget(self.asset_manager)
+
+        for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
 
         self.setCentralWidget(self.content_stack)
@@ -255,6 +257,7 @@ class MainWindow(QMainWindow):
         self.open_project_action.setEnabled(not is_open)
         self.save_project_action.setEnabled(is_open)
         self.close_project_action.setEnabled(is_open)
+        self.asset_manager.refresh()
 
         if self.projects.current_project is None:
             self.setWindowTitle(self.BASE_TITLE)
