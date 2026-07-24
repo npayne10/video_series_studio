@@ -179,6 +179,8 @@ class AssetManagerWidget(QWidget):
         if row < 0:
             return
         item = self.table.item(row, 0)
+        if item is None:
+            return
         asset_id = str(item.data(Qt.ItemDataRole.UserRole))
         answer = QMessageBox.question(
             self,
