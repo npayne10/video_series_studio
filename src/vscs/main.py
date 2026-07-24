@@ -8,6 +8,7 @@ from types import TracebackType
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
 from vscs.infrastructure.database import DatabaseManager
@@ -73,6 +74,11 @@ def main() -> int:
     services.register(DatabaseManager, database_manager)
     project_service = ProjectService(configuration, database_manager)
     services.register(ProjectService, project_service)
+
+    asset_repository = AssetRepository(database_manager)
+    services.register(AssetRepository, asset_repository)
+    asset_service = AssetService(project_service, asset_repository)
+    services.register(AssetService, asset_service)
 
     plugin_manager = PluginManager(configuration, services)
     services.register(PluginManager, plugin_manager)
