@@ -14,6 +14,7 @@ from vscs.application.caps import (
 from vscs.application.projects import ProjectService
 from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.domain.caps import CAPStatus
+from vscs.domain.caps.generation import GeneratedCAPDraft
 from vscs.infrastructure.ai import TemplateCAPGenerationProvider
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.database import DatabaseManager
@@ -52,6 +53,35 @@ def test_generate_and_create_cap_from_story_context(tmp_path: Path) -> None:
     assert stored.title == "Iron Horizon"
     assert "precise control" in stored.canonical_description
     assert "Continuity rules" in stored.production_notes
+
+
+def test_create_from_reviewed_draft_preserves_moderator_edits(tmp_path: Path) -> None:
+    generator, caps, assets = build_generator(tmp_path)
+    assets.create(
+        AssetCreate(
+            asset_id="CAP-CHR-001",
+            name="Commander James Spence",
+            category=AssetCategory.CHARACTER,
+        )
+    )
+    reviewed = GeneratedCAPDraft(
+        title="Commander James Spence",
+        canonical_description="A disciplined Guild commander.",
+        visual_identity="Grey-blue eyes and a restrained command presence.",
+        production_notes="Use the approved uniform reference.",
+        continuity_rules=("Maintain his established age and rank.",),
+        prohibited_variations=("Do not change his eye colour.",),
+        unresolved_questions=("Confirm the final command insignia.",),
+        source_summary="Reviewed against the approved manuscript passage.",
+    )
+
+    generator.create_from_draft("CAP-CHR-001", reviewed)
+
+    stored = caps.get("CAP-CHR-001")
+    assert stored.status is CAPStatus.DRAFT
+    assert stored.canonical_description == reviewed.canonical_description
+    assert "Do not change his eye colour" in stored.production_notes
+    assert "Confirm the final command insignia" in stored.production_notes
 
 
 def test_generation_requires_story_context(tmp_path: Path) -> None:
