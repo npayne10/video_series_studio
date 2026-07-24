@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.logging import LoggingService
+from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
@@ -24,9 +26,11 @@ from vscs.presentation.widgets.dashboard import DashboardWidget
 class MainWindow(QMainWindow):
     """Primary window for the Video Series Studio desktop application."""
 
-    def __init__(self, configuration: ConfigurationService) -> None:
+    def __init__(self, services: ApplicationServices) -> None:
         super().__init__()
-        self.configuration = configuration
+        self.services = services
+        self.configuration = services.require(ConfigurationService)
+        self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
         self.setWindowTitle("Video Series Studio — VSCS Framework v0.1")
         self.resize(1440, 900)
@@ -41,6 +45,7 @@ class MainWindow(QMainWindow):
         self._restore_default_workspace()
 
         self.statusBar().showMessage(f"Ready — {self.configuration.config_path}")
+        self.logger.info("Main window initialized")
 
     def _create_actions(self) -> None:
         self.new_project_action = QAction("New Project", self)
@@ -171,6 +176,7 @@ class MainWindow(QMainWindow):
     def _show_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.configuration, self)
         if dialog.exec():
+            self.logger.info("Application settings updated")
             self.statusBar().showMessage("Settings saved", 3000)
 
     def _show_not_implemented(self) -> None:
