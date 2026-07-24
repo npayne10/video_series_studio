@@ -68,10 +68,10 @@ def main() -> int:
         return 1
     services.register(LoggingService, logging_service)
 
-    project_service = ProjectService(configuration)
-    services.register(ProjectService, project_service)
     database_manager = DatabaseManager()
     services.register(DatabaseManager, database_manager)
+    project_service = ProjectService(configuration, database_manager)
+    services.register(ProjectService, project_service)
 
     _install_exception_hook(logger)
     logger.info("Video Series Studio starting")
