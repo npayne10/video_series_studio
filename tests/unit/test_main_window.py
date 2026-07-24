@@ -4,8 +4,10 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
+from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.windows.main_window import MainWindow
@@ -17,7 +19,15 @@ def build_services(tmp_path: Path) -> ApplicationServices:
     configuration.load()
     services = ApplicationServices()
     services.register(ConfigurationService, configuration)
-    services.register(ProjectService, ProjectService(configuration))
+
+    database = DatabaseManager()
+    services.register(DatabaseManager, database)
+    projects = ProjectService(configuration, database)
+    services.register(ProjectService, projects)
+    asset_repository = AssetRepository(database)
+    services.register(AssetRepository, asset_repository)
+    services.register(AssetService, AssetService(projects, asset_repository))
+
     plugins = PluginManager(configuration, services, tmp_path / "plugins")
     services.register(PluginManager, plugins)
     plugins.discover()
@@ -59,6 +69,7 @@ def test_main_window_uses_registered_services(
 
     assert window.configuration is services.require(ConfigurationService)
     assert window.projects is services.require(ProjectService)
+    assert window.assets is services.require(AssetService)
     assert window.plugins is services.require(PluginManager)
     assert window.services is services
 
@@ -74,6 +85,7 @@ def test_project_actions_reflect_active_project(
 
     assert window.new_project_action.isEnabled()
     assert not window.save_project_action.isEnabled()
+    assert not window.asset_manager.add_button.isEnabled()
 
     projects.create(tmp_path / "Example", name="Example")
     window._update_project_state()
@@ -81,4 +93,5 @@ def test_project_actions_reflect_active_project(
     assert not window.new_project_action.isEnabled()
     assert window.save_project_action.isEnabled()
     assert window.close_project_action.isEnabled()
+    assert window.asset_manager.add_button.isEnabled()
     assert "Example" in window.windowTitle()
