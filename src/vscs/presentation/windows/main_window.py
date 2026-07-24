@@ -246,8 +246,7 @@ class MainWindow(QMainWindow):
         self.open_project_action.setEnabled(not is_open)
         self.save_project_action.setEnabled(is_open)
         self.close_project_action.setEnabled(is_open)
-        self.asset_manager.refresh()
-        self.cap_manager.refresh()
+
         if self.projects.current_project is None:
             self.setWindowTitle(self.BASE_TITLE)
             status = message or f"Ready — {self.configuration.config_path}"
@@ -256,6 +255,19 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(f"{name} — {self.BASE_TITLE}")
             status = message or f"Project: {name}"
         self.statusBar().showMessage(status, 3000 if message else 0)
+
+        for workspace_name, refresh in (
+            ("Asset Manager", self.asset_manager.refresh),
+            ("CAP Manager", self.cap_manager.refresh),
+        ):
+            try:
+                refresh()
+            except Exception:
+                self.logger.exception("%s refresh failed", workspace_name)
+                self.statusBar().showMessage(
+                    f"{status} — {workspace_name} refresh failed; see application log",
+                    6000,
+                )
 
     def _show_project_error(self, error: ProjectError) -> None:
         self.logger.error("Project operation failed: %s", error)
