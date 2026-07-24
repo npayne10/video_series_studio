@@ -13,7 +13,6 @@ from vscs.infrastructure.plugins import (
 )
 from vscs.infrastructure.services import ApplicationServices
 
-
 PLUGIN_CODE = '''
 from vscs.infrastructure.plugins import Plugin
 
