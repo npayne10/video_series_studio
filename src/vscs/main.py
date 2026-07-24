@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
+from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.windows.main_window import MainWindow
@@ -69,6 +70,8 @@ def main() -> int:
 
     project_service = ProjectService(configuration)
     services.register(ProjectService, project_service)
+    database_manager = DatabaseManager()
+    services.register(DatabaseManager, database_manager)
 
     _install_exception_hook(logger)
     logger.info("Video Series Studio starting")
@@ -79,6 +82,7 @@ def main() -> int:
     window.show()
     exit_code = application.exec()
 
+    database_manager.close()
     logger.info("Video Series Studio stopped with exit code %s", exit_code)
     services.clear()
     logging.shutdown()
