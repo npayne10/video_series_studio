@@ -68,9 +68,7 @@ def test_create_get_update_and_delete_cap(tmp_path: Path) -> None:
     )
     assert created.asset_id == "CAP-CHR-001"
     assert caps.get("cap-chr-001").title == "Commander James Spence"
-    updated = caps.update(
-        "CAP-CHR-001", CAPUpdate(status=CAPStatus.APPROVED, version="1.1")
-    )
+    updated = caps.update("CAP-CHR-001", CAPUpdate(status=CAPStatus.APPROVED, version="1.1"))
     assert updated.status is CAPStatus.APPROVED
     assert updated.version == "1.1"
     caps.delete("CAP-CHR-001")
@@ -105,9 +103,7 @@ def test_search_status_and_available_assets(tmp_path: Path) -> None:
         )
     )
     assert caps.available_assets() == ()
-    assert [profile.asset_id for profile in caps.list(query="Iron Horizon")] == [
-        "CAP-CHR-001"
-    ]
+    assert [profile.asset_id for profile in caps.list(query="Iron Horizon")] == ["CAP-CHR-001"]
     assert len(caps.list(status=CAPStatus.APPROVED)) == 1
 
 
