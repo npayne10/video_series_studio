@@ -31,6 +31,18 @@ class DatabaseSettings(BaseModel):
     cache_directory: Path | None = None
 
 
+class PluginSettings(BaseModel):
+    """Persistent application plugin preferences."""
+
+    disabled: list[str] = Field(default_factory=list)
+
+    @field_validator("disabled")
+    @classmethod
+    def normalize_disabled_plugins(cls, plugin_ids: list[str]) -> list[str]:
+        """Keep disabled plugin identifiers unique and ordered."""
+        return list(dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip()))
+
+
 class LoggingSettings(BaseModel):
     """Application logging preferences."""
 
@@ -66,6 +78,7 @@ class ApplicationSettings(BaseModel):
     recent_projects: list[Path] = Field(default_factory=list)
     maximum_recent_projects: int = Field(default=10, ge=1, le=50)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    plugins: PluginSettings = Field(default_factory=PluginSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     workspace: WorkspaceSettings = Field(default_factory=WorkspaceSettings)
     renderers: dict[str, RendererSettings] = Field(
