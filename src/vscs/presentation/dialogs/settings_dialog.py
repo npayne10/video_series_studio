@@ -8,12 +8,16 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QGroupBox,
+    QLineEdit,
+    QMessageBox,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
-from vscs.infrastructure.configuration import ConfigurationService, Theme
+from vscs.infrastructure.ai import AICredentialStore, CredentialStorageError
+from vscs.infrastructure.configuration import AIProvider, ConfigurationService, Theme
 
 
 class SettingsDialog(QDialog):
@@ -26,8 +30,9 @@ class SettingsDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.configuration = configuration
+        self.credentials = AICredentialStore()
         self.setWindowTitle("VSCS Settings")
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(480)
 
         self.theme_combo = QComboBox()
         for theme in Theme:
@@ -44,11 +49,34 @@ class SettingsDialog(QDialog):
         self.confirm_before_exit = QCheckBox()
         self.confirm_before_exit.setChecked(configuration.settings.workspace.confirm_before_exit)
 
-        form = QFormLayout()
-        form.addRow("Theme", self.theme_combo)
-        form.addRow("Maximum recent projects", self.maximum_recent_spin)
-        form.addRow("Restore last project", self.restore_last_project)
-        form.addRow("Confirm before exit", self.confirm_before_exit)
+        general_form = QFormLayout()
+        general_form.addRow("Theme", self.theme_combo)
+        general_form.addRow("Maximum recent projects", self.maximum_recent_spin)
+        general_form.addRow("Restore last project", self.restore_last_project)
+        general_form.addRow("Confirm before exit", self.confirm_before_exit)
+        general_group = QGroupBox("General")
+        general_group.setLayout(general_form)
+
+        self.ai_provider = QComboBox()
+        for provider in AIProvider:
+            self.ai_provider.addItem(provider.value.title(), provider)
+        self.ai_provider.setCurrentIndex(
+            self.ai_provider.findData(configuration.settings.ai.provider)
+        )
+        self.openai_model = QLineEdit(configuration.settings.ai.openai_model)
+        self.openai_api_key = QLineEdit()
+        self.openai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self.openai_api_key.setPlaceholderText(
+            "Leave unchanged to keep the current securely stored key"
+        )
+        self.ai_provider.currentIndexChanged.connect(self._update_ai_controls)
+
+        ai_form = QFormLayout()
+        ai_form.addRow("Provider", self.ai_provider)
+        ai_form.addRow("OpenAI model", self.openai_model)
+        ai_form.addRow("OpenAI API key", self.openai_api_key)
+        ai_group = QGroupBox("AI Generation")
+        ai_group.setLayout(ai_form)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -57,8 +85,15 @@ class SettingsDialog(QDialog):
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
+        layout.addWidget(general_group)
+        layout.addWidget(ai_group)
         layout.addWidget(buttons)
+        self._update_ai_controls()
+
+    def _update_ai_controls(self) -> None:
+        openai_enabled = self.ai_provider.currentData() is AIProvider.OPENAI
+        self.openai_model.setEnabled(openai_enabled)
+        self.openai_api_key.setEnabled(openai_enabled)
 
     def _save(self) -> None:
         settings = self.configuration.settings
@@ -67,5 +102,18 @@ class SettingsDialog(QDialog):
         settings.workspace.restore_last_project = self.restore_last_project.isChecked()
         settings.workspace.confirm_before_exit = self.confirm_before_exit.isChecked()
         settings.recent_projects = settings.recent_projects[: settings.maximum_recent_projects]
-        self.configuration.save()
+        settings.ai.provider = self.ai_provider.currentData()
+        settings.ai.openai_model = self.openai_model.text()
+        try:
+            if self.openai_api_key.text():
+                self.credentials.set_openai_api_key(self.openai_api_key.text())
+            self.configuration.save()
+        except (CredentialStorageError, ValueError, RuntimeError) as exc:
+            QMessageBox.critical(self, "Settings Error", str(exc))
+            return
+        QMessageBox.information(
+            self,
+            "Settings Saved",
+            "AI provider changes will take effect the next time VSCS starts.",
+        )
         self.accept()
