@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -111,7 +111,7 @@ class DatabaseManager:
         return True
 
     def backup(self, destination: Path | None = None) -> Path:
-        """Create a consistent file backup of the active SQLite database."""
+        """Create a checkpointed file backup of the active SQLite database."""
         database_path = self._require_database_path()
         if destination is None:
             stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
@@ -149,7 +149,7 @@ class DatabaseManager:
 
     def _migrate(self, database_session: Session, schema: SchemaVersion) -> None:
         """Apply ordered migrations up to the current schema version."""
-        migrations: dict[int, callable] = {}
+        migrations: dict[int, Callable[[Session], None]] = {}
         while schema.version < self.SCHEMA_VERSION:
             next_version = schema.version + 1
             migration = migrations.get(next_version)
