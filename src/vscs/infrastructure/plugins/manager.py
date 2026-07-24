@@ -189,7 +189,9 @@ class PluginManager:
         module_path = record.directory / module_path_text
         if not module_path.is_file():
             raise FileNotFoundError(f"Plugin entry point not found: {module_path}")
-        module_name = f"vscs_external_plugin_{record.manifest.id.replace('.', '_').replace('-', '_')}"
+        module_name = (
+            f"vscs_external_plugin_{record.manifest.id.replace('.', '_').replace('-', '_')}"
+        )
         spec = importlib.util.spec_from_file_location(module_name, module_path)
         if spec is None or spec.loader is None:
             raise ImportError(f"Unable to create import specification for {module_path}")

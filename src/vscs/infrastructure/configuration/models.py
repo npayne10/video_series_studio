@@ -40,7 +40,9 @@ class PluginSettings(BaseModel):
     @classmethod
     def normalize_disabled_plugins(cls, plugin_ids: list[str]) -> list[str]:
         """Keep disabled plugin identifiers unique and ordered."""
-        return list(dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip()))
+        return list(
+            dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip())
+        )
 
 
 class LoggingSettings(BaseModel):

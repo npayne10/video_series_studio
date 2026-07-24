@@ -31,7 +31,9 @@ class PluginManifest(BaseModel):
         """Require stable lowercase identifiers safe for configuration keys."""
         normalized = value.strip()
         if not re.fullmatch(r"[a-z][a-z0-9_.-]*", normalized):
-            raise ValueError("Plugin id must use lowercase letters, numbers, dots, dashes, or underscores")
+            raise ValueError(
+                "Plugin id must use lowercase letters, numbers, dots, dashes, or underscores"
+            )
         return normalized
 
     @field_validator("entry_point")

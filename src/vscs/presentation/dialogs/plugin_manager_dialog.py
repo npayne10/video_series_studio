@@ -62,7 +62,9 @@ class PluginManagerDialog(QDialog):
         if self.plugin_list.count():
             self.plugin_list.setCurrentRow(0)
 
-    def _show_details(self, current: QListWidgetItem | None, _previous: QListWidgetItem | None) -> None:
+    def _show_details(
+        self, current: QListWidgetItem | None, _previous: QListWidgetItem | None
+    ) -> None:
         if current is None:
             self.details.setText("No plugin selected.")
             return
