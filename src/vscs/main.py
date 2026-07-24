@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from types import TracebackType
 
@@ -13,10 +12,15 @@ from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.caps import CAPGeneratorService, CAPRepository, CAPService
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.ai import (
+    AICredentialStore,
     OpenAICAPGenerationProvider,
     TemplateCAPGenerationProvider,
 )
-from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
+from vscs.infrastructure.configuration import (
+    AIProvider,
+    ConfigurationError,
+    ConfigurationService,
+)
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
@@ -45,12 +49,13 @@ def _install_exception_hook(logger: logging.Logger) -> None:
     sys.excepthook = handle_exception
 
 
-def _build_cap_generation_provider() -> object:
-    provider_name = os.environ.get("VSCS_AI_PROVIDER", "template").strip().lower()
-    if provider_name == "openai":
+def _build_cap_generation_provider(configuration: ConfigurationService) -> object:
+    settings = configuration.settings.ai
+    if settings.provider is AIProvider.OPENAI:
+        api_key = AICredentialStore().get_openai_api_key()
         return OpenAICAPGenerationProvider(
-            api_key=os.environ.get("OPENAI_API_KEY", ""),
-            model=os.environ.get("VSCS_OPENAI_MODEL", "gpt-5.5"),
+            api_key=api_key,
+            model=settings.openai_model,
         )
     return TemplateCAPGenerationProvider()
 
@@ -100,10 +105,20 @@ def main() -> int:
     services.register(CAPRepository, cap_repository)
     cap_service = CAPService(asset_service, cap_repository)
     services.register(CAPService, cap_service)
+    try:
+        cap_provider = _build_cap_generation_provider(configuration)
+    except (RuntimeError, ValueError) as exc:
+        QMessageBox.warning(
+            None,
+            "AI Configuration",
+            f"The configured AI provider could not be initialized. "
+            f"The template provider will be used instead.\n\n{exc}",
+        )
+        cap_provider = TemplateCAPGenerationProvider()
     cap_generator = CAPGeneratorService(
         asset_service,
         cap_service,
-        _build_cap_generation_provider(),  # type: ignore[arg-type]
+        cap_provider,  # type: ignore[arg-type]
     )
     services.register(CAPGeneratorService, cap_generator)
 
