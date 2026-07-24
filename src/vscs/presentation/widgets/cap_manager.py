@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -25,7 +26,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.caps import CAPError, CAPService
+from vscs.application.caps import (
+    CAPError,
+    CAPGenerationError,
+    CAPGeneratorService,
+    CAPService,
+)
 from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
 
 
@@ -167,17 +173,25 @@ class CAPEditorDialog(QDialog):
 
 
 class CAPManagerWidget(QWidget):
-    """Browse, create, edit, and remove Canonical Asset Profiles."""
+    """Browse, generate, create, edit, and remove Canonical Asset Profiles."""
 
-    def __init__(self, caps: CAPService, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        caps: CAPService,
+        generator: CAPGeneratorService | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.caps = caps
+        self.generator = generator
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search CAP asset ID, title, description, or identity")
         self.status_filter = QComboBox()
         self.status_filter.addItem("All statuses", None)
         for status in CAPStatus:
             self.status_filter.addItem(status.value.title(), status)
+        self.generate_button = QPushButton("Generate CAP")
+        self.generate_button.setToolTip("Generate a moderated CAP draft from story context")
         self.add_button = QPushButton("New CAP")
         self.edit_button = QPushButton("Edit Selected")
         self.delete_button = QPushButton("Delete Selected")
@@ -187,6 +201,7 @@ class CAPManagerWidget(QWidget):
         controls = QHBoxLayout()
         controls.addWidget(self.search_input, 1)
         controls.addWidget(self.status_filter)
+        controls.addWidget(self.generate_button)
         controls.addWidget(self.add_button)
         controls.addWidget(self.edit_button)
         controls.addWidget(self.delete_button)
@@ -208,6 +223,7 @@ class CAPManagerWidget(QWidget):
 
         self.search_input.textChanged.connect(self.refresh)
         self.status_filter.currentIndexChanged.connect(self.refresh)
+        self.generate_button.clicked.connect(self._generate)
         self.add_button.clicked.connect(self._add)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
@@ -219,9 +235,9 @@ class CAPManagerWidget(QWidget):
             profiles = self.caps.list(
                 query=self.search_input.text(), status=self.status_filter.currentData()
             )
-        except CAPError:
+        except CAPError as exc:
             self.table.setRowCount(0)
-            self.summary_label.setText("Open a project to manage CAPs")
+            self.summary_label.setText(str(exc))
             self._set_enabled(False)
             return
         self._set_enabled(True)
@@ -242,6 +258,7 @@ class CAPManagerWidget(QWidget):
         self.summary_label.setText(f"{len(profiles)} CAP(s)")
 
     def _set_enabled(self, enabled: bool) -> None:
+        self.generate_button.setEnabled(enabled and self.generator is not None)
         self.add_button.setEnabled(enabled)
         self.edit_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
@@ -253,6 +270,53 @@ class CAPManagerWidget(QWidget):
             return None
         item = self.table.item(row, 0)
         return None if item is None else str(item.data(Qt.ItemDataRole.UserRole))
+
+    def _generate(self) -> None:
+        if self.generator is None:
+            QMessageBox.information(self, "CAP Generator", "No CAP generator is configured.")
+            return
+        try:
+            assets = self.caps.available_assets()
+        except CAPError as exc:
+            QMessageBox.critical(self, "CAP Generation Error", str(exc))
+            return
+        if not assets:
+            QMessageBox.information(
+                self,
+                "CAP Generator",
+                "Register an asset without a CAP before generating one.",
+            )
+            return
+        labels = [f"{asset_id} — {name}" for asset_id, name in assets]
+        selected, accepted = QInputDialog.getItem(
+            self,
+            "Generate CAP",
+            "Asset:",
+            labels,
+            editable=False,
+        )
+        if not accepted:
+            return
+        selected_index = labels.index(selected)
+        asset_id = assets[selected_index][0]
+        story_context, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Generate CAP",
+            "Paste the relevant story passage or approved story context:",
+        )
+        if not accepted:
+            return
+        try:
+            self.generator.generate_and_create(asset_id, story_context)
+        except (CAPError, CAPGenerationError, ValueError) as exc:
+            QMessageBox.critical(self, "CAP Generation Error", str(exc))
+            return
+        self.refresh()
+        QMessageBox.information(
+            self,
+            "CAP Generated",
+            f"A Draft CAP was generated for {asset_id}. Review and approve it before production use.",
+        )
 
     def _add(self) -> None:
         try:
