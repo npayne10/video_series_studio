@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import CAPService
+from vscs.application.caps import CAPGeneratorService, CAPService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
         self.projects = services.require(ProjectService)
         self.assets = services.require(AssetService)
         self.caps = services.require(CAPService)
+        self.cap_generator = services.get(CAPGeneratorService)
         self.plugins = services.require(PluginManager)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
@@ -150,7 +151,7 @@ class MainWindow(QMainWindow):
         self.content_stack.addWidget(self._placeholder_page("Story"))
         self.asset_manager = AssetManagerWidget(self.assets)
         self.content_stack.addWidget(self.asset_manager)
-        self.cap_manager = CAPManagerWidget(self.caps)
+        self.cap_manager = CAPManagerWidget(self.caps, self.cap_generator)
         self.content_stack.addWidget(self.cap_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
