@@ -8,6 +8,7 @@ from types import TracebackType
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.services import ApplicationServices
@@ -65,6 +66,9 @@ def main() -> int:
         QMessageBox.critical(None, "Logging Error", f"Unable to initialize logging: {exc}")
         return 1
     services.register(LoggingService, logging_service)
+
+    project_service = ProjectService(configuration)
+    services.register(ProjectService, project_service)
 
     _install_exception_hook(logger)
     logger.info("Video Series Studio starting")
