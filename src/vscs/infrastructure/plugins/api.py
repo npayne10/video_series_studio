@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,9 +21,11 @@ class PluginContext:
 class Plugin(ABC):
     """Base class for dynamically loaded VSCS plugins."""
 
+    @abstractmethod
     def initialize(self, context: PluginContext) -> None:
         """Initialize the plugin after its manifest has been validated."""
 
+    @abstractmethod
     def shutdown(self) -> None:
         """Release resources before the plugin is unloaded."""
 
