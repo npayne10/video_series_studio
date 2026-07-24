@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -38,13 +40,16 @@ class AssetRepository:
                 session.refresh(record)
                 return self._to_domain(record)
         except (IntegrityError, SQLAlchemyError) as exc:
-            raise AssetRepositoryError(f"Unable to create asset {asset.asset_id}: {exc}") from exc
+            raise AssetRepositoryError(
+                f"Unable to create asset {asset.asset_id}: {exc}"
+            ) from exc
 
     def get(self, asset_id: str) -> Asset | None:
         """Return one asset by its canonical identifier."""
         try:
             with self.database.session() as session:
-                record = session.scalar(select(AssetRecord).where(AssetRecord.asset_id == asset_id))
+                statement = select(AssetRecord).where(AssetRecord.asset_id == asset_id)
+                record = session.scalar(statement)
                 return None if record is None else self._to_domain(record)
         except SQLAlchemyError as exc:
             raise AssetRepositoryError(f"Unable to read asset {asset_id}: {exc}") from exc
@@ -75,7 +80,8 @@ class AssetRepository:
         statement = statement.order_by(AssetRecord.category, AssetRecord.asset_id)
         try:
             with self.database.session() as session:
-                return tuple(self._to_domain(record) for record in session.scalars(statement))
+                records = session.scalars(statement)
+                return tuple(self._to_domain(record) for record in records)
         except SQLAlchemyError as exc:
             raise AssetRepositoryError(f"Unable to list assets: {exc}") from exc
 
@@ -83,7 +89,8 @@ class AssetRepository:
         """Apply a partial update and return the updated asset."""
         try:
             with self.database.session() as session:
-                record = session.scalar(select(AssetRecord).where(AssetRecord.asset_id == asset_id))
+                statement = select(AssetRecord).where(AssetRecord.asset_id == asset_id)
+                record = session.scalar(statement)
                 if record is None:
                     return None
                 values = changes.model_dump(exclude_unset=True)
@@ -99,13 +106,16 @@ class AssetRepository:
                 session.refresh(record)
                 return self._to_domain(record)
         except SQLAlchemyError as exc:
-            raise AssetRepositoryError(f"Unable to update asset {asset_id}: {exc}") from exc
+            raise AssetRepositoryError(
+                f"Unable to update asset {asset_id}: {exc}"
+            ) from exc
 
     def delete(self, asset_id: str) -> bool:
         """Delete an asset by identifier and report whether it existed."""
         try:
             with self.database.session() as session:
-                result = session.execute(delete(AssetRecord).where(AssetRecord.asset_id == asset_id))
+                statement = delete(AssetRecord).where(AssetRecord.asset_id == asset_id)
+                result = session.execute(statement)
                 return bool(result.rowcount)
         except SQLAlchemyError as exc:
             raise AssetRepositoryError(f"Unable to delete asset {asset_id}: {exc}") from exc
@@ -124,6 +134,7 @@ class AssetRepository:
 
     @staticmethod
     def _to_domain(record: AssetRecord) -> Asset:
+        file_path = Path(record.file_path) if record.file_path is not None else None
         return Asset(
             id=record.id,
             asset_id=record.asset_id,
@@ -131,7 +142,7 @@ class AssetRepository:
             category=AssetCategory(record.category),
             description=record.description,
             status=AssetStatus(record.status),
-            file_path=record.file_path,
+            file_path=file_path,
             tags=tuple(tag for tag in record.tags.splitlines() if tag),
             created_at=record.created_at,
             updated_at=record.updated_at,
