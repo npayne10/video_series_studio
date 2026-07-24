@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
+from vscs.application.caps import CAPService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -29,6 +30,7 @@ from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.asset_manager import AssetManagerWidget
+from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
 
@@ -43,6 +45,7 @@ class MainWindow(QMainWindow):
         self.configuration = services.require(ConfigurationService)
         self.projects = services.require(ProjectService)
         self.assets = services.require(AssetService)
+        self.caps = services.require(CAPService)
         self.plugins = services.require(PluginManager)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
@@ -58,57 +61,50 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         self._restore_default_workspace()
         self._update_project_state()
-
         self.logger.info("Main window initialized")
 
     def _create_actions(self) -> None:
         self.new_project_action = QAction("New Project", self)
         self.new_project_action.setShortcut(QKeySequence.StandardKey.New)
         self.new_project_action.setStatusTip("Create a new VSCS project")
-
         self.open_project_action = QAction("Open Project", self)
         self.open_project_action.setShortcut(QKeySequence.StandardKey.Open)
         self.open_project_action.setStatusTip("Open an existing VSCS project")
-
         self.save_project_action = QAction("Save Project", self)
         self.save_project_action.setShortcut(QKeySequence.StandardKey.Save)
         self.save_project_action.setStatusTip("Save the current project")
-
         self.close_project_action = QAction("Close Project", self)
         self.close_project_action.setStatusTip("Close the current project")
-
         self.settings_action = QAction("Settings", self)
         self.settings_action.setStatusTip("Edit application preferences")
         self.settings_action.triggered.connect(self._show_settings_dialog)
-
         self.plugin_manager_action = QAction("Plugin Manager", self)
         self.plugin_manager_action.setStatusTip("Manage VSCS extensions and capabilities")
         self.plugin_manager_action.triggered.connect(self._show_plugin_manager)
-
         self.exit_action = QAction("Exit", self)
         self.exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         self.exit_action.triggered.connect(self.close)
-
         self.about_action = QAction("About VSCS", self)
         self.about_action.triggered.connect(self._show_about_dialog)
 
     def _create_menu_bar(self) -> None:
         file_menu = self.menuBar().addMenu("&File")
-        file_menu.addAction(self.new_project_action)
-        file_menu.addAction(self.open_project_action)
-        file_menu.addAction(self.save_project_action)
-        file_menu.addAction(self.close_project_action)
+        for action in (
+            self.new_project_action,
+            self.open_project_action,
+            self.save_project_action,
+            self.close_project_action,
+        ):
+            file_menu.addAction(action)
         file_menu.addSeparator()
         file_menu.addAction(self.exit_action)
-
         view_menu = self.menuBar().addMenu("&View")
         view_menu.addAction("Dashboard", lambda: self._select_navigation_item(0))
         view_menu.addAction("Assets", lambda: self._select_navigation_item(3))
-
+        view_menu.addAction("Canonical Profiles", lambda: self._select_navigation_item(4))
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
         tools_menu.addAction(self.plugin_manager_action)
-
         help_menu = self.menuBar().addMenu("&Help")
         help_menu.addAction(self.about_action)
 
@@ -125,19 +121,18 @@ class MainWindow(QMainWindow):
         self.navigation = QListWidget()
         self.navigation.setObjectName("navigationList")
         self.navigation.setMinimumWidth(210)
-
         sections = (
             "Dashboard",
             "Projects",
             "Story",
             "Assets",
+            "Canonical Profiles",
             "Production Planning",
             "Render Queue",
             "Post-Production",
         )
         for section in sections:
             self.navigation.addItem(QListWidgetItem(section))
-
         navigation_dock = QDockWidget("Workspace", self)
         navigation_dock.setObjectName("navigationDock")
         navigation_dock.setAllowedAreas(
@@ -149,25 +144,22 @@ class MainWindow(QMainWindow):
     def _create_content_area(self) -> None:
         self.content_stack = QStackedWidget()
         self.content_stack.setObjectName("contentStack")
-
         self.dashboard = DashboardWidget()
         self.content_stack.addWidget(self.dashboard)
         self.content_stack.addWidget(self._placeholder_page("Projects"))
         self.content_stack.addWidget(self._placeholder_page("Story"))
-
         self.asset_manager = AssetManagerWidget(self.assets)
         self.content_stack.addWidget(self.asset_manager)
-
+        self.cap_manager = CAPManagerWidget(self.caps)
+        self.content_stack.addWidget(self.cap_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
-
         self.setCentralWidget(self.content_stack)
         self.navigation.setCurrentRow(0)
 
     def _connect_signals(self) -> None:
         self.navigation.currentRowChanged.connect(self.content_stack.setCurrentIndex)
         self.navigation.currentTextChanged.connect(self._update_status_for_section)
-
         self.new_project_action.triggered.connect(self._create_project)
         self.open_project_action.triggered.connect(self._open_project)
         self.save_project_action.triggered.connect(self._save_project)
@@ -197,18 +189,15 @@ class MainWindow(QMainWindow):
 
     def _create_project(self) -> None:
         selected_directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select New Project Directory",
-            str(Path.home()),
+            self, "Select New Project Directory", str(Path.home())
         )
         if not selected_directory:
             return
-        default_name = Path(selected_directory).name
         name, accepted = QInputDialog.getText(
             self,
             "New VSCS Project",
             "Project name:",
-            text=default_name,
+            text=Path(selected_directory).name,
         )
         if not accepted or not name.strip():
             return
@@ -258,7 +247,7 @@ class MainWindow(QMainWindow):
         self.save_project_action.setEnabled(is_open)
         self.close_project_action.setEnabled(is_open)
         self.asset_manager.refresh()
-
+        self.cap_manager.refresh()
         if self.projects.current_project is None:
             self.setWindowTitle(self.BASE_TITLE)
             status = message or f"Ready — {self.configuration.config_path}"
