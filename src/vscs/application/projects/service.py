@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
