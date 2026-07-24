@@ -1,6 +1,8 @@
 """VSCS configuration infrastructure."""
 
 from vscs.infrastructure.configuration.models import (
+    AIProvider,
+    AISettings,
     ApplicationSettings,
     DatabaseSettings,
     LoggingSettings,
@@ -11,6 +13,8 @@ from vscs.infrastructure.configuration.models import (
 from vscs.infrastructure.configuration.service import ConfigurationError, ConfigurationService
 
 __all__ = [
+    "AIProvider",
+    "AISettings",
     "ApplicationSettings",
     "ConfigurationError",
     "ConfigurationService",
