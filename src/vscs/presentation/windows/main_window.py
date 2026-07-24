@@ -23,7 +23,9 @@ from PySide6.QtWidgets import (
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
+from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
+from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
@@ -38,6 +40,7 @@ class MainWindow(QMainWindow):
         self.services = services
         self.configuration = services.require(ConfigurationService)
         self.projects = services.require(ProjectService)
+        self.plugins = services.require(PluginManager)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
         self.setWindowTitle(self.BASE_TITLE)
@@ -75,6 +78,10 @@ class MainWindow(QMainWindow):
         self.settings_action.setStatusTip("Edit application preferences")
         self.settings_action.triggered.connect(self._show_settings_dialog)
 
+        self.plugin_manager_action = QAction("Plugin Manager", self)
+        self.plugin_manager_action.setStatusTip("Manage VSCS extensions and capabilities")
+        self.plugin_manager_action.triggered.connect(self._show_plugin_manager)
+
         self.exit_action = QAction("Exit", self)
         self.exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         self.exit_action.triggered.connect(self.close)
@@ -96,7 +103,7 @@ class MainWindow(QMainWindow):
 
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
-        tools_menu.addAction("Plugin Manager", self._show_not_implemented)
+        tools_menu.addAction(self.plugin_manager_action)
 
         help_menu = self.menuBar().addMenu("&Help")
         help_menu.addAction(self.about_action)
@@ -267,6 +274,9 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             self.logger.info("Application settings updated")
             self.statusBar().showMessage("Settings saved", 3000)
+
+    def _show_plugin_manager(self) -> None:
+        PluginManagerDialog(self.plugins, self).exec()
 
     def _show_not_implemented(self) -> None:
         QMessageBox.information(
