@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication
 
 from vscs.application.assets import AssetRepository, AssetService
+from vscs.application.caps import CAPRepository, CAPService
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.database import DatabaseManager
@@ -26,7 +27,11 @@ def build_services(tmp_path: Path) -> ApplicationServices:
     services.register(ProjectService, projects)
     asset_repository = AssetRepository(database)
     services.register(AssetRepository, asset_repository)
-    services.register(AssetService, AssetService(projects, asset_repository))
+    assets = AssetService(projects, asset_repository)
+    services.register(AssetService, assets)
+    cap_repository = CAPRepository(database)
+    services.register(CAPRepository, cap_repository)
+    services.register(CAPService, CAPService(assets, cap_repository))
 
     plugins = PluginManager(configuration, services, tmp_path / "plugins")
     services.register(PluginManager, plugins)
@@ -70,6 +75,7 @@ def test_main_window_uses_registered_services(
     assert window.configuration is services.require(ConfigurationService)
     assert window.projects is services.require(ProjectService)
     assert window.assets is services.require(AssetService)
+    assert window.caps is services.require(CAPService)
     assert window.plugins is services.require(PluginManager)
     assert window.services is services
 
@@ -86,6 +92,7 @@ def test_project_actions_reflect_active_project(
     assert window.new_project_action.isEnabled()
     assert not window.save_project_action.isEnabled()
     assert not window.asset_manager.add_button.isEnabled()
+    assert not window.cap_manager.add_button.isEnabled()
 
     projects.create(tmp_path / "Example", name="Example")
     window._update_project_state()
@@ -94,4 +101,5 @@ def test_project_actions_reflect_active_project(
     assert window.save_project_action.isEnabled()
     assert window.close_project_action.isEnabled()
     assert window.asset_manager.add_button.isEnabled()
+    assert window.cap_manager.add_button.isEnabled()
     assert "Example" in window.windowTitle()
