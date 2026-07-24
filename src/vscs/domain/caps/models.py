@@ -58,9 +58,7 @@ class CAPUpdate(BaseModel):
 
     @field_validator("reference_paths")
     @classmethod
-    def normalize_reference_paths(
-        cls, value: tuple[Path, ...] | None
-    ) -> tuple[Path, ...] | None:
+    def normalize_reference_paths(cls, value: tuple[Path, ...] | None) -> tuple[Path, ...] | None:
         if value is None:
             return None
         return tuple(dict.fromkeys(value))
