@@ -78,10 +78,9 @@ def test_session_rolls_back_failed_transaction(tmp_path: Path) -> None:
     with database.session() as session:
         session.execute(text("CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT)"))
 
-    with pytest.raises(RuntimeError):
-        with database.session() as session:
-            session.execute(text("INSERT INTO sample (value) VALUES ('discarded')"))
-            raise RuntimeError("stop")
+    with pytest.raises(RuntimeError), database.session() as session:
+        session.execute(text("INSERT INTO sample (value) VALUES ('discarded')"))
+        raise RuntimeError("stop")
 
     with database.session() as session:
         count = session.execute(text("SELECT COUNT(*) FROM sample")).scalar_one()
