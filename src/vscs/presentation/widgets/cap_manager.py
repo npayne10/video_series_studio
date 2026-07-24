@@ -33,6 +33,7 @@ from vscs.application.caps import (
     CAPService,
 )
 from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
+from vscs.presentation.dialogs.cap_draft_review_dialog import CAPDraftReviewDialog
 
 
 class CAPEditorDialog(QDialog):
@@ -191,7 +192,7 @@ class CAPManagerWidget(QWidget):
         for status in CAPStatus:
             self.status_filter.addItem(status.value.title(), status)
         self.generate_button = QPushButton("Generate CAP")
-        self.generate_button.setToolTip("Generate a moderated CAP draft from story context")
+        self.generate_button.setToolTip("Generate and review a CAP Draft Package")
         self.add_button = QPushButton("New CAP")
         self.edit_button = QPushButton("Edit Selected")
         self.delete_button = QPushButton("Delete Selected")
@@ -306,16 +307,33 @@ class CAPManagerWidget(QWidget):
         )
         if not accepted:
             return
+
+        def regenerate():  # type: ignore[no-untyped-def]
+            if self.generator is None:
+                raise CAPGenerationError("No CAP generator is configured")
+            return self.generator.generate_draft(asset_id, story_context)
+
         try:
-            self.generator.generate_and_create(asset_id, story_context)
+            draft = regenerate()
+            dialog = CAPDraftReviewDialog(draft, regenerate, self)
+        except (CAPError, CAPGenerationError, ValueError) as exc:
+            QMessageBox.critical(self, "CAP Generation Error", str(exc))
+            return
+        if not dialog.exec():
+            return
+        try:
+            self.generator.create_from_draft(asset_id, dialog.reviewed_draft())
         except (CAPError, CAPGenerationError, ValueError) as exc:
             QMessageBox.critical(self, "CAP Generation Error", str(exc))
             return
         self.refresh()
         QMessageBox.information(
             self,
-            "CAP Generated",
-            f"A Draft CAP was generated for {asset_id}. Review and approve it before production use.",
+            "CAP Draft Created",
+            (
+                f"The moderated CAP for {asset_id} was saved in Draft status. "
+                "It remains non-canonical until approved through the normal CAP review process."
+            ),
         )
 
     def _add(self) -> None:
