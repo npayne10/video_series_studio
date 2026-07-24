@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.windows.main_window import MainWindow
 
@@ -17,6 +18,9 @@ def build_services(tmp_path: Path) -> ApplicationServices:
     services = ApplicationServices()
     services.register(ConfigurationService, configuration)
     services.register(ProjectService, ProjectService(configuration))
+    plugins = PluginManager(configuration, services, tmp_path / "plugins")
+    services.register(PluginManager, plugins)
+    plugins.discover()
     return services
 
 
@@ -55,6 +59,7 @@ def test_main_window_uses_registered_services(
 
     assert window.configuration is services.require(ConfigurationService)
     assert window.projects is services.require(ProjectService)
+    assert window.plugins is services.require(PluginManager)
     assert window.services is services
 
 
