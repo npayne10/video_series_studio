@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QDockWidget,
+    QFileDialog,
+    QInputDialog,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -16,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.services import ApplicationServices
@@ -26,13 +31,16 @@ from vscs.presentation.widgets.dashboard import DashboardWidget
 class MainWindow(QMainWindow):
     """Primary window for the Video Series Studio desktop application."""
 
+    BASE_TITLE = "Video Series Studio — VSCS Framework v0.1"
+
     def __init__(self, services: ApplicationServices) -> None:
         super().__init__()
         self.services = services
         self.configuration = services.require(ConfigurationService)
+        self.projects = services.require(ProjectService)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
-        self.setWindowTitle("Video Series Studio — VSCS Framework v0.1")
+        self.setWindowTitle(self.BASE_TITLE)
         self.resize(1440, 900)
         self.setMinimumSize(1024, 680)
 
@@ -43,8 +51,8 @@ class MainWindow(QMainWindow):
         self._create_content_area()
         self._connect_signals()
         self._restore_default_workspace()
+        self._update_project_state()
 
-        self.statusBar().showMessage(f"Ready — {self.configuration.config_path}")
         self.logger.info("Main window initialized")
 
     def _create_actions(self) -> None:
@@ -59,7 +67,9 @@ class MainWindow(QMainWindow):
         self.save_project_action = QAction("Save Project", self)
         self.save_project_action.setShortcut(QKeySequence.StandardKey.Save)
         self.save_project_action.setStatusTip("Save the current project")
-        self.save_project_action.setEnabled(False)
+
+        self.close_project_action = QAction("Close Project", self)
+        self.close_project_action.setStatusTip("Close the current project")
 
         self.settings_action = QAction("Settings", self)
         self.settings_action.setStatusTip("Edit application preferences")
@@ -77,6 +87,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.new_project_action)
         file_menu.addAction(self.open_project_action)
         file_menu.addAction(self.save_project_action)
+        file_menu.addAction(self.close_project_action)
         file_menu.addSeparator()
         file_menu.addAction(self.exit_action)
 
@@ -148,8 +159,10 @@ class MainWindow(QMainWindow):
         self.navigation.currentRowChanged.connect(self.content_stack.setCurrentIndex)
         self.navigation.currentTextChanged.connect(self._update_status_for_section)
 
-        self.new_project_action.triggered.connect(self._show_not_implemented)
-        self.open_project_action.triggered.connect(self._show_not_implemented)
+        self.new_project_action.triggered.connect(self._create_project)
+        self.open_project_action.triggered.connect(self._open_project)
+        self.save_project_action.triggered.connect(self._save_project)
+        self.close_project_action.triggered.connect(self._close_project)
         self.dashboard.new_project_button.clicked.connect(self.new_project_action.trigger)
         self.dashboard.open_project_button.clicked.connect(self.open_project_action.trigger)
 
@@ -172,6 +185,82 @@ class MainWindow(QMainWindow):
     def _update_status_for_section(self, section: str) -> None:
         if section:
             self.statusBar().showMessage(f"Workspace: {section}")
+
+    def _create_project(self) -> None:
+        selected_directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select New Project Directory",
+            str(Path.home()),
+        )
+        if not selected_directory:
+            return
+        default_name = Path(selected_directory).name
+        name, accepted = QInputDialog.getText(
+            self,
+            "New VSCS Project",
+            "Project name:",
+            text=default_name,
+        )
+        if not accepted or not name.strip():
+            return
+        try:
+            self.projects.create(Path(selected_directory), name=name)
+        except ProjectError as exc:
+            self._show_project_error(exc)
+            return
+        self._update_project_state("Project created")
+
+    def _open_project(self) -> None:
+        selected_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open VSCS Project",
+            str(Path.home()),
+            "VSCS Projects (project.vscs *.vscs);;All Files (*)",
+        )
+        if not selected_file:
+            return
+        try:
+            self.projects.open(Path(selected_file))
+        except ProjectError as exc:
+            self._show_project_error(exc)
+            return
+        self._update_project_state("Project opened")
+
+    def _save_project(self) -> None:
+        try:
+            self.projects.save()
+        except ProjectError as exc:
+            self._show_project_error(exc)
+            return
+        self._update_project_state("Project saved")
+
+    def _close_project(self) -> None:
+        try:
+            self.projects.close()
+        except ProjectError as exc:
+            self._show_project_error(exc)
+            return
+        self._update_project_state("Project closed")
+
+    def _update_project_state(self, message: str | None = None) -> None:
+        is_open = self.projects.is_project_open
+        self.new_project_action.setEnabled(not is_open)
+        self.open_project_action.setEnabled(not is_open)
+        self.save_project_action.setEnabled(is_open)
+        self.close_project_action.setEnabled(is_open)
+
+        if self.projects.current_project is None:
+            self.setWindowTitle(self.BASE_TITLE)
+            status = message or f"Ready — {self.configuration.config_path}"
+        else:
+            name = self.projects.current_project.name
+            self.setWindowTitle(f"{name} — {self.BASE_TITLE}")
+            status = message or f"Project: {name}"
+        self.statusBar().showMessage(status, 3000 if message else 0)
+
+    def _show_project_error(self, error: ProjectError) -> None:
+        self.logger.error("Project operation failed: %s", error)
+        QMessageBox.critical(self, "Project Error", str(error))
 
     def _show_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.configuration, self)
