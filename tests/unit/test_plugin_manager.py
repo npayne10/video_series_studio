@@ -13,7 +13,7 @@ from vscs.infrastructure.plugins import (
 )
 from vscs.infrastructure.services import ApplicationServices
 
-PLUGIN_CODE = '''
+PLUGIN_CODE = """
 from vscs.infrastructure.plugins import Plugin
 
 
@@ -33,7 +33,7 @@ class TestPlugin(Plugin):
         if name == "text_to_speech":
             return "voice-provider"
         return super().capability(name)
-'''
+"""
 
 
 def build_manager(tmp_path: Path) -> tuple[PluginManager, ConfigurationService]:

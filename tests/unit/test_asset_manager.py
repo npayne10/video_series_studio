@@ -104,9 +104,9 @@ def test_search_and_category_filters(tmp_path: Path) -> None:
     )
 
     assert [asset.asset_id for asset in assets.list(query="carrier")] == ["CAP-SHP-001"]
-    assert [
-        asset.asset_id for asset in assets.list(category=AssetCategory.CHARACTER)
-    ] == ["CAP-CHR-001"]
+    assert [asset.asset_id for asset in assets.list(category=AssetCategory.CHARACTER)] == [
+        "CAP-CHR-001"
+    ]
 
 
 def test_asset_file_must_remain_inside_project(tmp_path: Path) -> None:

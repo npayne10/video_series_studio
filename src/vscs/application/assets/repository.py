@@ -40,9 +40,7 @@ class AssetRepository:
                 session.refresh(record)
                 return self._to_domain(record)
         except (IntegrityError, SQLAlchemyError) as exc:
-            raise AssetRepositoryError(
-                f"Unable to create asset {asset.asset_id}: {exc}"
-            ) from exc
+            raise AssetRepositoryError(f"Unable to create asset {asset.asset_id}: {exc}") from exc
 
     def get(self, asset_id: str) -> Asset | None:
         """Return one asset by its canonical identifier."""
@@ -106,9 +104,7 @@ class AssetRepository:
                 session.refresh(record)
                 return self._to_domain(record)
         except SQLAlchemyError as exc:
-            raise AssetRepositoryError(
-                f"Unable to update asset {asset_id}: {exc}"
-            ) from exc
+            raise AssetRepositoryError(f"Unable to update asset {asset_id}: {exc}") from exc
 
     def delete(self, asset_id: str) -> bool:
         """Delete an asset by identifier and report whether it existed."""

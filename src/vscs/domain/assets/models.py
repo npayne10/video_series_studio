@@ -56,9 +56,7 @@ class AssetCreate(BaseModel):
     def normalize_asset_id(cls, value: str) -> str:
         """Normalize identifiers while preserving readable separators."""
         normalized = value.upper().replace(" ", "-")
-        valid = all(
-            character.isalnum() or character in {"-", "_"} for character in normalized
-        )
+        valid = all(character.isalnum() or character in {"-", "_"} for character in normalized)
         if not valid:
             raise ValueError(
                 "Asset IDs may contain only letters, numbers, hyphens, and underscores"
