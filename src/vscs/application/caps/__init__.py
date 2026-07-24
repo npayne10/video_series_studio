@@ -1,5 +1,6 @@
 """Canonical Asset Profile application exports."""
 
+from vscs.application.caps.generator import CAPGenerationError, CAPGeneratorService
 from vscs.application.caps.repository import CAPRepository, CAPRepositoryError
 from vscs.application.caps.service import (
     CAPAlreadyExistsError,
@@ -14,6 +15,8 @@ __all__ = (
     "CAPAlreadyExistsError",
     "CAPAssetNotFoundError",
     "CAPError",
+    "CAPGenerationError",
+    "CAPGeneratorService",
     "CAPNotFoundError",
     "CAPRepository",
     "CAPRepositoryError",
