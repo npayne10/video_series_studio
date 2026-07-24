@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -42,6 +42,34 @@ class AssetRecord(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+
+class CanonicalAssetProfileRecord(Base):
+    """Persist one CAP linked one-to-one with a registered asset."""
+
+    __tablename__ = "canonical_asset_profiles"
+    __table_args__ = (UniqueConstraint("asset_id", name="uq_caps_asset_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    asset_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    version: Mapped[str] = mapped_column(String(32), nullable=False, default="1.0")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    canonical_description: Mapped[str] = mapped_column(Text, nullable=False)
+    visual_identity: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    production_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reference_paths: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
