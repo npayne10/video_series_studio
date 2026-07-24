@@ -39,6 +39,7 @@ class CAPService:
         self._logger = LoggingService.get_logger("caps")
 
     def create(self, profile: CAPCreate) -> CanonicalAssetProfile:
+        self._require_project()
         self._require_asset(profile.asset_id)
         if self.repository.get(profile.asset_id) is not None:
             raise CAPAlreadyExistsError(f"CAP already exists for asset: {profile.asset_id}")
@@ -53,6 +54,7 @@ class CAPService:
         return created
 
     def get(self, asset_id: str) -> CanonicalAssetProfile:
+        self._require_project()
         normalized_id = asset_id.strip().upper()
         try:
             profile = self.repository.get(normalized_id)
@@ -65,13 +67,14 @@ class CAPService:
     def list(
         self, *, query: str = "", status: CAPStatus | None = None
     ) -> tuple[CanonicalAssetProfile, ...]:
-        self.assets.list()
+        self._require_project()
         try:
             return self.repository.list(query=query, status=status)
         except CAPRepositoryError as exc:
             raise CAPError(str(exc)) from exc
 
     def update(self, asset_id: str, changes: CAPUpdate) -> CanonicalAssetProfile:
+        self._require_project()
         normalized_id = asset_id.strip().upper()
         values = changes.model_dump(exclude_unset=True)
         if "reference_paths" in values and changes.reference_paths is not None:
@@ -87,6 +90,7 @@ class CAPService:
         return updated
 
     def delete(self, asset_id: str) -> None:
+        self._require_project()
         normalized_id = asset_id.strip().upper()
         try:
             deleted = self.repository.delete(normalized_id)
@@ -98,12 +102,19 @@ class CAPService:
 
     def available_assets(self) -> tuple[tuple[str, str], ...]:
         """Return registered assets that do not yet have a CAP."""
+        self._require_project()
         existing = {profile.asset_id for profile in self.list()}
         return tuple(
             (asset.asset_id, asset.name)
             for asset in self.assets.list()
             if asset.asset_id not in existing
         )
+
+    def _require_project(self) -> Path:
+        project_directory = self.assets.projects.project_directory
+        if not self.assets.projects.is_project_open or project_directory is None:
+            raise CAPError("Open a VSCS project before managing CAPs")
+        return project_directory
 
     def _require_asset(self, asset_id: str) -> None:
         try:
@@ -114,10 +125,7 @@ class CAPService:
             ) from exc
 
     def _normalize_paths(self, paths: tuple[Path, ...]) -> tuple[Path, ...]:
-        project_directory = self.assets.projects.project_directory
-        if project_directory is None:
-            raise CAPError("Open a VSCS project before managing CAPs")
-        root = project_directory.resolve(strict=False)
+        root = self._require_project().resolve(strict=False)
         normalized: list[Path] = []
         for path in paths:
             resolved = (
