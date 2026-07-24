@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ai = [
+  "keyring>=25",
   "openai>=1.68",
 ]
 dev = [
