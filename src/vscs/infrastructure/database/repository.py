@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from vscs.infrastructure.database.models import Base
 
-ModelType = TypeVar("ModelType", bound=Base)
 
-
-class Repository(Generic[ModelType]):
+class Repository[ModelType: Base]:
     """Small typed repository for common ORM persistence operations."""
 
     def __init__(self, session: Session, model_type: type[ModelType]) -> None:
