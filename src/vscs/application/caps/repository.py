@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlalchemy import Select, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from vscs.domain.caps import CAPCreate, CAPStatus, CAPUpdate, CanonicalAssetProfile
+from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.database.models import CanonicalAssetProfileRecord
 
