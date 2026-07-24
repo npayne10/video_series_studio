@@ -132,7 +132,9 @@ class CAPEditorDialog(QDialog):
             self.references.addItem(str(path))
 
     def _reference_paths(self) -> tuple[Path, ...]:
-        return tuple(Path(self.references.item(index).text()) for index in range(self.references.count()))
+        return tuple(
+            Path(self.references.item(index).text()) for index in range(self.references.count())
+        )
 
     def _add_reference(self) -> None:
         if self.project_directory is None:
@@ -191,7 +193,9 @@ class CAPManagerWidget(QWidget):
         controls.addWidget(self.refresh_button)
 
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(("Asset ID", "CAP Title", "Version", "Status", "References"))
+        self.table.setHorizontalHeaderLabels(
+            ("Asset ID", "CAP Title", "Version", "Status", "References")
+        )
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
@@ -289,9 +293,14 @@ class CAPManagerWidget(QWidget):
         asset_id = self._selected_asset_id()
         if asset_id is None:
             return
-        if QMessageBox.question(
-            self, "Delete CAP", f"Delete the CAP for {asset_id}?\n\nThe linked asset and files remain unchanged."
-        ) is not QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Delete CAP",
+                f"Delete the CAP for {asset_id}?\n\nThe linked asset and files remain unchanged.",
+            )
+            is not QMessageBox.StandardButton.Yes
+        ):
             return
         try:
             self.caps.delete(asset_id)
