@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps import CAPError, CAPService
-from vscs.domain.caps import CAPCreate, CAPStatus, CAPUpdate, CanonicalAssetProfile
+from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
 
 
 class CAPEditorDialog(QDialog):
