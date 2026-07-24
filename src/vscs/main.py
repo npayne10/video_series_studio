@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from types import TracebackType
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from vscs.application.assets import AssetRepository, AssetService
-from vscs.application.caps import CAPRepository, CAPService
+from vscs.application.caps import CAPGeneratorService, CAPRepository, CAPService
 from vscs.application.projects import ProjectService
+from vscs.infrastructure.ai import (
+    OpenAICAPGenerationProvider,
+    TemplateCAPGenerationProvider,
+)
 from vscs.infrastructure.configuration import ConfigurationError, ConfigurationService
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
@@ -38,6 +43,16 @@ def _install_exception_hook(logger: logging.Logger) -> None:
         default_hook(exception_type, exception, traceback)
 
     sys.excepthook = handle_exception
+
+
+def _build_cap_generation_provider() -> object:
+    provider_name = os.environ.get("VSCS_AI_PROVIDER", "template").strip().lower()
+    if provider_name == "openai":
+        return OpenAICAPGenerationProvider(
+            api_key=os.environ.get("OPENAI_API_KEY", ""),
+            model=os.environ.get("VSCS_OPENAI_MODEL", "gpt-5.5"),
+        )
+    return TemplateCAPGenerationProvider()
 
 
 def main() -> int:
@@ -85,6 +100,12 @@ def main() -> int:
     services.register(CAPRepository, cap_repository)
     cap_service = CAPService(asset_service, cap_repository)
     services.register(CAPService, cap_service)
+    cap_generator = CAPGeneratorService(
+        asset_service,
+        cap_service,
+        _build_cap_generation_provider(),  # type: ignore[arg-type]
+    )
+    services.register(CAPGeneratorService, cap_generator)
 
     plugin_manager = PluginManager(configuration, services)
     services.register(PluginManager, plugin_manager)
