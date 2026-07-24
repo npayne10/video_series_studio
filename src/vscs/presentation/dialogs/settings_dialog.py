@@ -39,14 +39,10 @@ class SettingsDialog(QDialog):
         self.maximum_recent_spin.setValue(configuration.settings.maximum_recent_projects)
 
         self.restore_last_project = QCheckBox()
-        self.restore_last_project.setChecked(
-            configuration.settings.workspace.restore_last_project
-        )
+        self.restore_last_project.setChecked(configuration.settings.workspace.restore_last_project)
 
         self.confirm_before_exit = QCheckBox()
-        self.confirm_before_exit.setChecked(
-            configuration.settings.workspace.confirm_before_exit
-        )
+        self.confirm_before_exit.setChecked(configuration.settings.workspace.confirm_before_exit)
 
         form = QFormLayout()
         form.addRow("Theme", self.theme_combo)

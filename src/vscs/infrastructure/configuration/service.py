@@ -80,8 +80,7 @@ class ConfigurationService:
         existing = [
             path
             for path in self.settings.recent_projects
-            if str(path.expanduser().resolve(strict=False)).casefold()
-            != str(normalized).casefold()
+            if str(path.expanduser().resolve(strict=False)).casefold() != str(normalized).casefold()
         ]
         self.settings.recent_projects = [normalized, *existing][
             : self.settings.maximum_recent_projects
