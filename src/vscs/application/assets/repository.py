@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus, AssetUpdate
@@ -114,9 +114,13 @@ class AssetRepository:
         """Delete an asset by identifier and report whether it existed."""
         try:
             with self.database.session() as session:
-                statement = delete(AssetRecord).where(AssetRecord.asset_id == asset_id)
-                result = session.execute(statement)
-                return bool(result.rowcount)
+                statement = select(AssetRecord).where(AssetRecord.asset_id == asset_id)
+                record = session.scalar(statement)
+                if record is None:
+                    return False
+                session.delete(record)
+                session.flush()
+                return True
         except SQLAlchemyError as exc:
             raise AssetRepositoryError(f"Unable to delete asset {asset_id}: {exc}") from exc
 
