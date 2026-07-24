@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
@@ -30,8 +31,9 @@ from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
 class AssetEditorDialog(QDialog):
     """Collect the core metadata required to register an asset."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, project_directory: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.project_directory = project_directory.resolve(strict=False)
         self.setWindowTitle("New Asset")
         self.setMinimumWidth(520)
 
@@ -44,16 +46,23 @@ class AssetEditorDialog(QDialog):
         for status in AssetStatus:
             self.status.addItem(status.value.title(), status)
         self.file_path = QLineEdit()
+        self.file_path.setPlaceholderText("Select a file inside the project")
+        self.browse_button = QPushButton("Browse…")
+        self.browse_button.clicked.connect(self._browse_for_file)
         self.tags = QLineEdit()
         self.description = QTextEdit()
         self.description.setMinimumHeight(110)
+
+        file_row = QHBoxLayout()
+        file_row.addWidget(self.file_path, 1)
+        file_row.addWidget(self.browse_button)
 
         form = QFormLayout()
         form.addRow("Asset ID", self.asset_id)
         form.addRow("Name", self.name)
         form.addRow("Category", self.category)
         form.addRow("Status", self.status)
-        form.addRow("Project-relative file", self.file_path)
+        form.addRow("Project-relative file", file_row)
         form.addRow("Tags (comma-separated)", self.tags)
         form.addRow("Description", self.description)
 
@@ -79,6 +88,30 @@ class AssetEditorDialog(QDialog):
             tags=tuple(tag.strip() for tag in self.tags.text().split(",")),
             description=self.description.toPlainText(),
         )
+
+    def _browse_for_file(self) -> None:
+        """Select an existing project file and store its project-relative path."""
+        selected_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Asset File",
+            str(self.project_directory),
+            "All Files (*)",
+        )
+        if not selected_file:
+            return
+
+        selected_path = Path(selected_file).resolve(strict=False)
+        try:
+            relative_path = selected_path.relative_to(self.project_directory)
+        except ValueError:
+            QMessageBox.warning(
+                self,
+                "File Outside Project",
+                "Select a file located inside the active VSCS project directory.",
+            )
+            return
+
+        self.file_path.setText(str(relative_path))
 
 
 class AssetManagerWidget(QWidget):
@@ -164,7 +197,12 @@ class AssetManagerWidget(QWidget):
             self.table.setItem(row, column, item)
 
     def _add_asset(self) -> None:
-        dialog = AssetEditorDialog(self)
+        project_directory = self.assets.projects.project_directory
+        if project_directory is None:
+            QMessageBox.warning(self, "Asset Error", "Open a project before adding an asset.")
+            return
+
+        dialog = AssetEditorDialog(project_directory, self)
         if not dialog.exec():
             return
         try:
