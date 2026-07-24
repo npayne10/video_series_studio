@@ -47,9 +47,8 @@ class CAPGeneratorService:
         self._logger.info("CAP draft generated for asset: %s", asset.asset_id)
         return draft
 
-    def generate_and_create(self, asset_id: str, story_context: str) -> CAPCreate:
-        """Generate and persist a new CAP in Draft status."""
-        draft = self.generate_draft(asset_id, story_context)
+    def create_from_draft(self, asset_id: str, draft: GeneratedCAPDraft) -> CAPCreate:
+        """Persist an explicitly approved generated draft as a Draft CAP."""
         notes = self._production_notes(draft)
         value = CAPCreate(
             asset_id=asset_id,
@@ -61,7 +60,17 @@ class CAPGeneratorService:
             production_notes=notes,
         )
         self.caps.create(value)
+        self._logger.info("Approved generated CAP draft stored for asset: %s", asset_id)
         return value
+
+    def generate_and_create(self, asset_id: str, story_context: str) -> CAPCreate:
+        """Generate and persist a new CAP in Draft status.
+
+        This compatibility method bypasses moderation. Presentation workflows should
+        call ``generate_draft`` and then ``create_from_draft`` after explicit approval.
+        """
+        draft = self.generate_draft(asset_id, story_context)
+        return self.create_from_draft(asset_id, draft)
 
     @staticmethod
     def _production_notes(draft: GeneratedCAPDraft) -> str:
