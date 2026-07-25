@@ -9,7 +9,13 @@ from types import TracebackType
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from vscs.application.assets import AssetRepository, AssetService
-from vscs.application.caps import CAPGeneratorService, CAPRepository, CAPService
+from vscs.application.caps import (
+    CAPGeneratorService,
+    CAPRepository,
+    CAPService,
+    CanonicalReferenceRepository,
+    CanonicalReferenceService,
+)
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.ai import (
     AICredentialStore,
@@ -105,6 +111,15 @@ def main() -> int:
     services.register(CAPRepository, cap_repository)
     cap_service = CAPService(asset_service, cap_repository)
     services.register(CAPService, cap_service)
+
+    canonical_reference_repository = CanonicalReferenceRepository(database_manager)
+    services.register(CanonicalReferenceRepository, canonical_reference_repository)
+    canonical_reference_service = CanonicalReferenceService(
+        cap_service,
+        canonical_reference_repository,
+    )
+    services.register(CanonicalReferenceService, canonical_reference_service)
+
     try:
         cap_provider = _build_cap_generation_provider(configuration)
     except (RuntimeError, ValueError) as exc:
