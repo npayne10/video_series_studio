@@ -50,6 +50,7 @@ class TemplateCAPGenerationProvider:
                 evidence=request.story_context.strip()[:500],
                 confidence=0.8,
             )
+        )
         return CanonicalFactExtraction(
             facts=tuple(facts),
             candidate_claims=(
