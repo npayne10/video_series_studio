@@ -21,7 +21,11 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import CAPGeneratorService, CAPService
+from vscs.application.caps import (
+    CAPGeneratorService,
+    CAPService,
+    CanonicalReferenceService,
+)
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -47,6 +51,7 @@ class MainWindow(QMainWindow):
         self.assets = services.require(AssetService)
         self.caps = services.require(CAPService)
         self.cap_generator = services.get(CAPGeneratorService)
+        self.canonical_references = services.get(CanonicalReferenceService)
         self.plugins = services.require(PluginManager)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
@@ -151,7 +156,11 @@ class MainWindow(QMainWindow):
         self.content_stack.addWidget(self._placeholder_page("Story"))
         self.asset_manager = AssetManagerWidget(self.assets)
         self.content_stack.addWidget(self.asset_manager)
-        self.cap_manager = CAPManagerWidget(self.caps, self.cap_generator)
+        self.cap_manager = CAPManagerWidget(
+            self.caps,
+            self.cap_generator,
+            self.canonical_references,
+        )
         self.content_stack.addWidget(self.cap_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
@@ -178,122 +187,101 @@ class MainWindow(QMainWindow):
         label = QLabel(f"{title}\nModule planned for a later development task")
         label.setObjectName(f"{title.lower().replace(' ', '')}Placeholder")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setWordWrap(True)
         return label
+
+    def _update_status_for_section(self, section: str) -> None:
+        self.statusBar().showMessage(f"Workspace: {section}")
+        if section == "Assets":
+            self.asset_manager.refresh()
+        elif section == "Canonical Profiles":
+            self.cap_manager.refresh()
 
     def _select_navigation_item(self, row: int) -> None:
         self.navigation.setCurrentRow(row)
 
-    def _update_status_for_section(self, section: str) -> None:
-        if section:
-            self.statusBar().showMessage(f"Workspace: {section}")
-
     def _create_project(self) -> None:
-        selected_directory = QFileDialog.getExistingDirectory(
-            self, "Select New Project Directory", str(Path.home())
-        )
-        if not selected_directory:
-            return
-        name, accepted = QInputDialog.getText(
-            self,
-            "New VSCS Project",
-            "Project name:",
-            text=Path(selected_directory).name,
-        )
+        name, accepted = QInputDialog.getText(self, "New Project", "Project name:")
         if not accepted or not name.strip():
             return
-        try:
-            self.projects.create(Path(selected_directory), name=name)
-        except ProjectError as exc:
-            self._show_project_error(exc)
+        parent_directory = QFileDialog.getExistingDirectory(
+            self,
+            "Choose Project Parent Directory",
+            str(Path.home()),
+        )
+        if not parent_directory:
             return
-        self._update_project_state("Project created")
+        try:
+            project = self.projects.create(name, Path(parent_directory))
+        except ProjectError as exc:
+            QMessageBox.critical(self, "Project Error", str(exc))
+            return
+        self._update_project_state()
+        self.dashboard.set_active_project(project.name, self.projects.project_directory)
+        self.statusBar().showMessage(f"Created project: {project.name}", 5000)
 
     def _open_project(self) -> None:
-        selected_file, _ = QFileDialog.getOpenFileName(
+        project_directory = QFileDialog.getExistingDirectory(
             self,
             "Open VSCS Project",
             str(Path.home()),
-            "VSCS Projects (project.vscs *.vscs);;All Files (*)",
         )
-        if not selected_file:
+        if not project_directory:
             return
         try:
-            self.projects.open(Path(selected_file))
+            project = self.projects.open(Path(project_directory))
         except ProjectError as exc:
-            self._show_project_error(exc)
+            QMessageBox.critical(self, "Project Error", str(exc))
             return
-        self._update_project_state("Project opened")
+        self._update_project_state()
+        self.dashboard.set_active_project(project.name, self.projects.project_directory)
+        self.statusBar().showMessage(f"Opened project: {project.name}", 5000)
 
     def _save_project(self) -> None:
         try:
-            self.projects.save()
+            project = self.projects.save()
         except ProjectError as exc:
-            self._show_project_error(exc)
+            QMessageBox.critical(self, "Project Error", str(exc))
             return
-        self._update_project_state("Project saved")
+        self.statusBar().showMessage(f"Saved project: {project.name}", 5000)
 
     def _close_project(self) -> None:
-        try:
-            self.projects.close()
-        except ProjectError as exc:
-            self._show_project_error(exc)
+        if not self.projects.is_project_open:
             return
-        self._update_project_state("Project closed")
-
-    def _update_project_state(self, message: str | None = None) -> None:
-        is_open = self.projects.is_project_open
-        self.new_project_action.setEnabled(not is_open)
-        self.open_project_action.setEnabled(not is_open)
-        self.save_project_action.setEnabled(is_open)
-        self.close_project_action.setEnabled(is_open)
-
-        if self.projects.current_project is None:
-            self.setWindowTitle(self.BASE_TITLE)
-            status = message or f"Ready — {self.configuration.config_path}"
-        else:
-            name = self.projects.current_project.name
-            self.setWindowTitle(f"{name} — {self.BASE_TITLE}")
-            status = message or f"Project: {name}"
-        self.statusBar().showMessage(status, 3000 if message else 0)
-
-        for workspace_name, refresh in (
-            ("Asset Manager", self.asset_manager.refresh),
-            ("CAP Manager", self.cap_manager.refresh),
+        if (
+            QMessageBox.question(self, "Close Project", "Close the active project?")
+            is not QMessageBox.StandardButton.Yes
         ):
-            try:
-                refresh()
-            except Exception:
-                self.logger.exception("%s refresh failed", workspace_name)
-                self.statusBar().showMessage(
-                    f"{status} — {workspace_name} refresh failed; see application log",
-                    6000,
-                )
-
-    def _show_project_error(self, error: ProjectError) -> None:
-        self.logger.error("Project operation failed: %s", error)
-        QMessageBox.critical(self, "Project Error", str(error))
+            return
+        self.projects.close()
+        self._update_project_state()
+        self.dashboard.clear_active_project()
+        self.asset_manager.refresh()
+        self.cap_manager.refresh()
+        self.statusBar().showMessage("Project closed", 5000)
 
     def _show_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.configuration, self)
-        if dialog.exec():
-            self.logger.info("Application settings updated")
-            self.statusBar().showMessage("Settings saved", 3000)
+        dialog.exec()
 
     def _show_plugin_manager(self) -> None:
         PluginManagerDialog(self.plugins, self).exec()
 
-    def _show_not_implemented(self) -> None:
-        QMessageBox.information(
-            self,
-            "VSCS Framework",
-            "This function is reserved for a later development task.",
-        )
-
     def _show_about_dialog(self) -> None:
         QMessageBox.about(
             self,
-            "About Video Series Studio",
-            "Video Series Studio (VSCS)\nFramework version 0.1\n\n"
-            "A production platform for planning and creating cinematic video series.",
+            "About VSCS",
+            "Video Series Studio\nVSCS Framework v0.1\n\n"
+            "A professional production platform for cinematic television series.",
         )
+
+    def _update_project_state(self) -> None:
+        active = self.projects.is_project_open
+        self.save_project_action.setEnabled(active)
+        self.close_project_action.setEnabled(active)
+        if active and self.projects.project is not None:
+            project = self.projects.project
+            self.setWindowTitle(f"{self.BASE_TITLE} — {project.name}")
+            self.dashboard.set_active_project(project.name, self.projects.project_directory)
+        else:
+            self.setWindowTitle(self.BASE_TITLE)
+            self.dashboard.clear_active_project()
