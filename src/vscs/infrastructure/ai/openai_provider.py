@@ -27,6 +27,15 @@ class OpenAICAPGenerationProvider:
         self._client: Any = client_type(api_key=api_key)
         self._model = model
 
+    @classmethod
+    def test_connection(cls, *, api_key: str, model: str) -> None:
+        """Validate the configured credentials and model with a lightweight API call."""
+        provider = cls(api_key=api_key, model=model)
+        try:
+            provider._client.models.retrieve(model)
+        except Exception as exc:
+            raise AIProviderError(f"OpenAI connection test failed: {exc}") from exc
+
     def generate_cap(self, request: CAPGenerationRequest) -> GeneratedCAPDraft:
         instructions = (
             "You are the VSCS Canonical Asset Profile generator. Create a production-ready draft "
