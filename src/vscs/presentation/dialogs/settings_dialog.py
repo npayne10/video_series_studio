@@ -9,14 +9,20 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
     QLineEdit,
     QMessageBox,
+    QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
 from vscs.infrastructure.ai import AICredentialStore, CredentialStorageError
+from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+from vscs.infrastructure.ai.provider import AIProviderError
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService, Theme
 
 
@@ -32,7 +38,7 @@ class SettingsDialog(QDialog):
         self.configuration = configuration
         self.credentials = AICredentialStore()
         self.setWindowTitle("VSCS Settings")
-        self.setMinimumWidth(480)
+        self.setMinimumWidth(520)
 
         self.theme_combo = QComboBox()
         for theme in Theme:
@@ -63,18 +69,32 @@ class SettingsDialog(QDialog):
         self.ai_provider.setCurrentIndex(
             self.ai_provider.findData(configuration.settings.ai.provider)
         )
+
         self.openai_model = QLineEdit(configuration.settings.ai.openai_model)
-        self.openai_api_key = QLineEdit()
-        self.openai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        self.openai_api_key.setPlaceholderText(
-            "Leave unchanged to keep the current securely stored key"
-        )
+        self.openai_key_status = QLabel()
+        self.set_openai_key_button = QPushButton("Set / Change API Key…")
+        self.remove_openai_key_button = QPushButton("Remove API Key")
+        self.test_openai_button = QPushButton("Test Connection")
+
+        self.set_openai_key_button.clicked.connect(self._set_openai_api_key)
+        self.remove_openai_key_button.clicked.connect(self._remove_openai_api_key)
+        self.test_openai_button.clicked.connect(self._test_openai_connection)
         self.ai_provider.currentIndexChanged.connect(self._update_ai_controls)
+
+        api_key_buttons = QHBoxLayout()
+        api_key_buttons.addWidget(self.set_openai_key_button)
+        api_key_buttons.addWidget(self.remove_openai_key_button)
+        api_key_buttons.addStretch(1)
+
+        api_key_layout = QVBoxLayout()
+        api_key_layout.addWidget(self.openai_key_status)
+        api_key_layout.addLayout(api_key_buttons)
 
         ai_form = QFormLayout()
         ai_form.addRow("Provider", self.ai_provider)
         ai_form.addRow("OpenAI model", self.openai_model)
-        ai_form.addRow("OpenAI API key", self.openai_api_key)
+        ai_form.addRow("OpenAI API key", api_key_layout)
+        ai_form.addRow("", self.test_openai_button)
         ai_group = QGroupBox("AI Generation")
         ai_group.setLayout(ai_form)
 
@@ -88,12 +108,97 @@ class SettingsDialog(QDialog):
         layout.addWidget(general_group)
         layout.addWidget(ai_group)
         layout.addWidget(buttons)
+
+        self._refresh_openai_key_status()
         self._update_ai_controls()
+
+    def _refresh_openai_key_status(self) -> None:
+        try:
+            key_available = bool(self.credentials.get_openai_api_key())
+        except CredentialStorageError as exc:
+            self.openai_key_status.setText(f"Credential status unavailable: {exc}")
+            self.openai_key_status.setToolTip(str(exc))
+            return
+
+        if key_available:
+            self.openai_key_status.setText("✓ API key is available from secure storage.")
+        else:
+            self.openai_key_status.setText("No OpenAI API key is currently configured.")
+        self.openai_key_status.setToolTip("")
 
     def _update_ai_controls(self) -> None:
         openai_enabled = self.ai_provider.currentData() is AIProvider.OPENAI
         self.openai_model.setEnabled(openai_enabled)
-        self.openai_api_key.setEnabled(openai_enabled)
+        self.openai_key_status.setEnabled(openai_enabled)
+        self.set_openai_key_button.setEnabled(openai_enabled)
+        self.remove_openai_key_button.setEnabled(openai_enabled)
+        self.test_openai_button.setEnabled(openai_enabled)
+
+    def _set_openai_api_key(self) -> None:
+        api_key, accepted = QInputDialog.getText(
+            self,
+            "Set OpenAI API Key",
+            "OpenAI API key:",
+            QLineEdit.EchoMode.Password,
+        )
+        if not accepted:
+            return
+        if not api_key.strip():
+            QMessageBox.warning(
+                self,
+                "OpenAI API Key",
+                "Enter a non-empty OpenAI API key.",
+            )
+            return
+        try:
+            self.credentials.set_openai_api_key(api_key)
+        except CredentialStorageError as exc:
+            QMessageBox.critical(self, "Credential Storage Error", str(exc))
+            return
+        self._refresh_openai_key_status()
+        QMessageBox.information(
+            self,
+            "OpenAI API Key",
+            "The OpenAI API key was saved securely.",
+        )
+
+    def _remove_openai_api_key(self) -> None:
+        if (
+            QMessageBox.question(
+                self,
+                "Remove OpenAI API Key",
+                "Remove the securely stored OpenAI API key?",
+            )
+            is not QMessageBox.StandardButton.Yes
+        ):
+            return
+        try:
+            self.credentials.set_openai_api_key("")
+        except CredentialStorageError as exc:
+            QMessageBox.critical(self, "Credential Storage Error", str(exc))
+            return
+        self._refresh_openai_key_status()
+        QMessageBox.information(
+            self,
+            "OpenAI API Key",
+            "The securely stored OpenAI API key was removed.",
+        )
+
+    def _test_openai_connection(self) -> None:
+        model = self.openai_model.text().strip()
+        try:
+            api_key = self.credentials.get_openai_api_key()
+            if not api_key:
+                raise ValueError("Set an OpenAI API key before testing the connection.")
+            OpenAICAPGenerationProvider.test_connection(api_key=api_key, model=model)
+        except (AIProviderError, CredentialStorageError, ValueError, RuntimeError) as exc:
+            QMessageBox.critical(self, "OpenAI Connection Test", str(exc))
+            return
+        QMessageBox.information(
+            self,
+            "OpenAI Connection Test",
+            f"Connection succeeded. Model '{model}' is available.",
+        )
 
     def _save(self) -> None:
         settings = self.configuration.settings
@@ -103,10 +208,8 @@ class SettingsDialog(QDialog):
         settings.workspace.confirm_before_exit = self.confirm_before_exit.isChecked()
         settings.recent_projects = settings.recent_projects[: settings.maximum_recent_projects]
         settings.ai.provider = self.ai_provider.currentData()
-        settings.ai.openai_model = self.openai_model.text()
+        settings.ai.openai_model = self.openai_model.text().strip()
         try:
-            if self.openai_api_key.text():
-                self.credentials.set_openai_api_key(self.openai_api_key.text())
             self.configuration.save()
         except (CredentialStorageError, ValueError, RuntimeError) as exc:
             QMessageBox.critical(self, "Settings Error", str(exc))
