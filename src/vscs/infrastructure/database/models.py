@@ -79,3 +79,37 @@ class CanonicalAssetProfileRecord(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+
+
+class CanonicalReferenceRecord(Base):
+    """Persist one typed and versioned file attached to a CAP."""
+
+    __tablename__ = "canonical_references"
+    __table_args__ = (
+        UniqueConstraint("cap_id", "file_path", name="uq_canonical_references_cap_path"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    cap_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("canonical_asset_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    reference_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    version: Mapped[str] = mapped_column(String(32), nullable=False, default="1.0")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
