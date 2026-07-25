@@ -89,6 +89,28 @@ class CAPGeneratorService:
                 "Unresolved questions:\n"
                 + "\n".join(f"- {item}" for item in draft.unresolved_questions)
             )
+        if draft.contradictions:
+            sections.append(
+                "Source contradictions:\n"
+                + "\n".join(f"- {item}" for item in draft.contradictions)
+            )
+        if draft.canonical_facts:
+            fact_lines = []
+            for fact in draft.canonical_facts:
+                fact_lines.append(
+                    f"- [{fact.confidence:.0%}] {fact.fact}\n  Evidence: {fact.evidence}"
+                )
+            sections.append("Extracted canonical facts:\n" + "\n".join(fact_lines))
+        confidence = draft.confidence
+        sections.append(
+            "AI confidence scores:\n"
+            f"- Canonical description: {confidence.canonical_description:.0%}\n"
+            f"- Visual identity: {confidence.visual_identity:.0%}\n"
+            f"- Production notes: {confidence.production_notes:.0%}\n"
+            f"- Continuity rules: {confidence.continuity_rules:.0%}\n"
+            f"- Prohibited variations: {confidence.prohibited_variations:.0%}\n"
+            f"- Overall: {confidence.overall:.0%}"
+        )
         if draft.source_summary:
             sections.append(f"Source summary:\n{draft.source_summary.strip()}")
         return "\n\n".join(section for section in sections if section)
