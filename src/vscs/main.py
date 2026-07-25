@@ -32,11 +32,14 @@ from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.widgets import cap_manager as cap_manager_module
+from vscs.presentation.widgets.cap_reference_file_management import (
+    install_canonical_reference_file_management,
+)
 from vscs.presentation.widgets.cap_reference_preview import PreviewCAPManagerWidget
 
-# Install the Phase 1 preview-enabled implementation before MainWindow imports
-# CAPManagerWidget from the presentation module.
+# Install the Phase 1 extensions before MainWindow imports CAPManagerWidget.
 cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
+install_canonical_reference_file_management()
 
 from vscs.presentation.windows.main_window import MainWindow  # noqa: E402
 
