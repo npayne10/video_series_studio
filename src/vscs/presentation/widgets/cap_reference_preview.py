@@ -214,7 +214,7 @@ class PreviewCAPEditorDialog(CAPEditorDialog):
         self.references.doubleClicked.connect(self._preview_reference)
         self._update_preview_enabled()
         if self.profile is not None:
-            self._refresh_references()
+            self._refresh_reference_previews()
 
     def _insert_preview_button(self) -> None:
         form = self.layout().itemAt(0).layout()
@@ -232,13 +232,15 @@ class PreviewCAPEditorDialog(CAPEditorDialog):
                         button_layout.insertWidget(2, self.preview_reference_button)
                 return
 
-    def _refresh_references(self) -> None:
-        super()._refresh_references()
+    def _refresh_reference_previews(self) -> None:
+        CAPEditorDialog._refresh_references(self)
         if self.profile is None or self.reference_service is None:
+            self._update_preview_enabled()
             return
         try:
             values = self.reference_service.list_for_cap(self.profile.asset_id)
         except CanonicalReferenceError:
+            self._update_preview_enabled()
             return
         value_by_id = {reference.id: reference for reference in values}
         for row in range(self.references.rowCount()):
@@ -261,6 +263,18 @@ class PreviewCAPEditorDialog(CAPEditorDialog):
                     item.setIcon(QIcon(thumbnail))
                     self.references.setRowHeight(row, self.THUMBNAIL_SIZE.height() + 10)
         self._update_preview_enabled()
+
+    def _add_reference(self) -> None:
+        super()._add_reference()
+        self._refresh_reference_previews()
+
+    def _edit_reference(self) -> None:
+        super()._edit_reference()
+        self._refresh_reference_previews()
+
+    def _remove_reference(self) -> None:
+        super()._remove_reference()
+        self._refresh_reference_previews()
 
     def _selected_reference(self) -> CanonicalReference | None:
         row = self.references.currentRow()
