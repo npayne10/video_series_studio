@@ -9,6 +9,14 @@ from vscs.domain.caps.generation import (
     GeneratedCAPDraft,
 )
 from vscs.domain.caps.models import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
+from vscs.domain.caps.references import (
+    CanonicalReference,
+    CanonicalReferenceCreate,
+    CanonicalReferenceRole,
+    CanonicalReferenceStatus,
+    CanonicalReferenceType,
+    CanonicalReferenceUpdate,
+)
 
 __all__ = (
     "CAPCanonAnalysis",
@@ -19,6 +27,12 @@ __all__ = (
     "CAPUpdate",
     "CanonicalAssetProfile",
     "CanonicalFactExtraction",
+    "CanonicalReference",
+    "CanonicalReferenceCreate",
+    "CanonicalReferenceRole",
+    "CanonicalReferenceStatus",
+    "CanonicalReferenceType",
+    "CanonicalReferenceUpdate",
     "ExtractedCanonicalFact",
     "GeneratedCAPDraft",
 )
