@@ -32,12 +32,13 @@ class CAPDraftReviewDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self._regenerate = regenerate
+        self._draft = draft
         self.setWindowTitle("Review Generated CAP Draft")
-        self.setMinimumSize(860, 720)
+        self.setMinimumSize(900, 760)
 
         notice = QLabel(
-            "This content is AI-assisted and is not canon. Review every section before "
-            "creating the Draft CAP."
+            "This content is AI-assisted and is not canon. Review every section, its "
+            "supporting facts, unresolved questions, and confidence before creating the Draft CAP."
         )
         notice.setWordWrap(True)
 
@@ -49,6 +50,15 @@ class CAPDraftReviewDialog(QDialog):
         self.prohibited_variations = QTextEdit()
         self.unresolved_questions = QTextEdit()
         self.source_summary = QTextEdit()
+        self.canonical_facts = QTextEdit()
+        self.contradictions = QTextEdit()
+        self.confidence_summary = QTextEdit()
+        for editor in (
+            self.canonical_facts,
+            self.contradictions,
+            self.confidence_summary,
+        ):
+            editor.setReadOnly(True)
 
         identity_tab = QWidget()
         identity_form = QFormLayout(identity_tab)
@@ -67,13 +77,26 @@ class CAPDraftReviewDialog(QDialog):
 
         evidence_tab = QWidget()
         evidence_form = QFormLayout(evidence_tab)
+        evidence_form.addRow("Extracted canonical facts", self.canonical_facts)
         evidence_form.addRow("Unresolved questions (one per line)", self.unresolved_questions)
+        evidence_form.addRow("Source contradictions", self.contradictions)
         evidence_form.addRow("Source summary", self.source_summary)
+
+        confidence_tab = QWidget()
+        confidence_form = QFormLayout(confidence_tab)
+        confidence_form.addRow("Section confidence", self.confidence_summary)
+        confidence_note = QLabel(
+            "Confidence is advisory. Low scores indicate sparse, ambiguous, indirect, or visually "
+            "incomplete source material and require closer moderator review."
+        )
+        confidence_note.setWordWrap(True)
+        confidence_form.addRow(confidence_note)
 
         tabs = QTabWidget()
         tabs.addTab(identity_tab, "Canonical Identity")
         tabs.addTab(production_tab, "Production & Continuity")
-        tabs.addTab(evidence_tab, "Sources & Questions")
+        tabs.addTab(evidence_tab, "Evidence & Questions")
+        tabs.addTab(confidence_tab, "Confidence")
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -96,6 +119,7 @@ class CAPDraftReviewDialog(QDialog):
 
     def set_draft(self, draft: GeneratedCAPDraft) -> None:
         """Replace all editable fields with a newly generated package."""
+        self._draft = draft
         self.title.setText(draft.title)
         self.canonical_description.setPlainText(draft.canonical_description)
         self.visual_identity.setPlainText(draft.visual_identity)
@@ -104,6 +128,9 @@ class CAPDraftReviewDialog(QDialog):
         self.prohibited_variations.setPlainText("\n".join(draft.prohibited_variations))
         self.unresolved_questions.setPlainText("\n".join(draft.unresolved_questions))
         self.source_summary.setPlainText(draft.source_summary)
+        self.canonical_facts.setPlainText(self._format_facts(draft))
+        self.contradictions.setPlainText("\n".join(draft.contradictions) or "None identified")
+        self.confidence_summary.setPlainText(self._format_confidence(draft))
 
     def reviewed_draft(self) -> GeneratedCAPDraft:
         """Return a validated draft package containing the moderator's edits."""
@@ -116,11 +143,35 @@ class CAPDraftReviewDialog(QDialog):
             prohibited_variations=self._lines(self.prohibited_variations),
             unresolved_questions=self._lines(self.unresolved_questions),
             source_summary=self.source_summary.toPlainText(),
+            canonical_facts=self._draft.canonical_facts,
+            contradictions=self._draft.contradictions,
+            confidence=self._draft.confidence,
         )
 
     @staticmethod
     def _lines(editor: QTextEdit) -> tuple[str, ...]:
         return tuple(line.strip() for line in editor.toPlainText().splitlines() if line.strip())
+
+    @staticmethod
+    def _format_facts(draft: GeneratedCAPDraft) -> str:
+        if not draft.canonical_facts:
+            return "No canonical facts were extracted."
+        return "\n\n".join(
+            f"[{fact.confidence:.0%}] {fact.fact}\nEvidence: {fact.evidence}"
+            for fact in draft.canonical_facts
+        )
+
+    @staticmethod
+    def _format_confidence(draft: GeneratedCAPDraft) -> str:
+        confidence = draft.confidence
+        return (
+            f"Canonical description: {confidence.canonical_description:.0%}\n"
+            f"Visual identity: {confidence.visual_identity:.0%}\n"
+            f"Production notes: {confidence.production_notes:.0%}\n"
+            f"Continuity rules: {confidence.continuity_rules:.0%}\n"
+            f"Prohibited variations: {confidence.prohibited_variations:.0%}\n\n"
+            f"Overall confidence: {confidence.overall:.0%}"
+        )
 
     def _approve(self) -> None:
         try:
