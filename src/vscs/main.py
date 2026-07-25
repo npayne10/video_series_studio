@@ -31,7 +31,14 @@ from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
-from vscs.presentation.windows.main_window import MainWindow
+from vscs.presentation.widgets import cap_manager as cap_manager_module
+from vscs.presentation.widgets.cap_reference_preview import PreviewCAPManagerWidget
+
+# Install the Phase 1 preview-enabled implementation before MainWindow imports
+# CAPManagerWidget from the presentation module.
+cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
+
+from vscs.presentation.windows.main_window import MainWindow  # noqa: E402
 
 
 def _install_exception_hook(logger: logging.Logger) -> None:
