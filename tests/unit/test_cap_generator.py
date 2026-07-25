@@ -14,7 +14,11 @@ from vscs.application.caps import (
 from vscs.application.projects import ProjectService
 from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.domain.caps import CAPStatus
-from vscs.domain.caps.generation import GeneratedCAPDraft
+from vscs.domain.caps.generation import (
+    CAPSectionConfidence,
+    ExtractedCanonicalFact,
+    GeneratedCAPDraft,
+)
 from vscs.infrastructure.ai import TemplateCAPGenerationProvider
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.database import DatabaseManager
@@ -53,6 +57,8 @@ def test_generate_and_create_cap_from_story_context(tmp_path: Path) -> None:
     assert stored.title == "Iron Horizon"
     assert "precise control" in stored.canonical_description
     assert "Continuity rules" in stored.production_notes
+    assert "Extracted canonical facts" in stored.production_notes
+    assert "AI confidence scores" in stored.production_notes
 
 
 def test_create_from_reviewed_draft_preserves_moderator_edits(tmp_path: Path) -> None:
@@ -73,6 +79,21 @@ def test_create_from_reviewed_draft_preserves_moderator_edits(tmp_path: Path) ->
         prohibited_variations=("Do not change his eye colour.",),
         unresolved_questions=("Confirm the final command insignia.",),
         source_summary="Reviewed against the approved manuscript passage.",
+        canonical_facts=(
+            ExtractedCanonicalFact(
+                fact="James is a Guild commander.",
+                evidence="The source addresses him as Commander James Spence.",
+                confidence=0.98,
+            ),
+        ),
+        confidence=CAPSectionConfidence(
+            canonical_description=0.95,
+            visual_identity=0.8,
+            production_notes=0.85,
+            continuity_rules=0.9,
+            prohibited_variations=0.9,
+            overall=0.88,
+        ),
     )
 
     generator.create_from_draft("CAP-CHR-001", reviewed)
@@ -82,6 +103,8 @@ def test_create_from_reviewed_draft_preserves_moderator_edits(tmp_path: Path) ->
     assert stored.canonical_description == reviewed.canonical_description
     assert "Do not change his eye colour" in stored.production_notes
     assert "Confirm the final command insignia" in stored.production_notes
+    assert "James is a Guild commander" in stored.production_notes
+    assert "Overall: 88%" in stored.production_notes
 
 
 def test_generation_requires_story_context(tmp_path: Path) -> None:
@@ -114,4 +137,7 @@ def test_generate_draft_does_not_persist_cap(tmp_path: Path) -> None:
     )
 
     assert draft.title == "Kestrel Nine"
+    assert draft.canonical_facts
+    assert draft.unresolved_questions
+    assert 0.0 <= draft.confidence.overall <= 1.0
     assert caps.list() == ()
