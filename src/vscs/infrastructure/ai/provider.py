@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from vscs.domain.caps.generation import CAPGenerationRequest, GeneratedCAPDraft
+from vscs.domain.caps.generation import (
+    CAPCanonAnalysis,
+    CAPGenerationRequest,
+    CAPSectionConfidence,
+    CanonicalFactExtraction,
+    ExtractedCanonicalFact,
+    GeneratedCAPDraft,
+)
 
 
 class AIProviderError(RuntimeError):
@@ -22,34 +29,79 @@ class TemplateCAPGenerationProvider:
     """Deterministic local provider used for development and offline operation."""
 
     def generate_cap(self, request: CAPGenerationRequest) -> GeneratedCAPDraft:
-        description = request.asset_description or (
-            f"{request.asset_name} is a {request.asset_category} identified in the supplied story."
+        extraction = self._extract_facts(request)
+        analysis = self._analyse_canon(request, extraction)
+        return self._build_draft(request, analysis)
+
+    @staticmethod
+    def _extract_facts(request: CAPGenerationRequest) -> CanonicalFactExtraction:
+        facts: list[ExtractedCanonicalFact] = []
+        if request.asset_description:
+            facts.append(
+                ExtractedCanonicalFact(
+                    fact=request.asset_description,
+                    evidence="Existing approved asset description",
+                    confidence=0.95,
+                )
+            )
+        facts.append(
+            ExtractedCanonicalFact(
+                fact=request.story_context.strip(),
+                evidence=request.story_context.strip()[:500],
+                confidence=0.8,
+            )
+        return CanonicalFactExtraction(
+            facts=tuple(facts),
+            candidate_claims=(
+                "Visible details not explicitly stated in the supplied material require approval.",
+            ),
         )
-        canonical_description = (
-            f"{description}\n\nStory-grounded context:\n{request.story_context.strip()}"
+
+    @staticmethod
+    def _analyse_canon(
+        request: CAPGenerationRequest,
+        extraction: CanonicalFactExtraction,
+    ) -> CAPCanonAnalysis:
+        return CAPCanonAnalysis(
+            canonical_facts=extraction.facts,
+            uncertainties=extraction.candidate_claims,
+            source_summary=request.story_context.strip()[:1000],
         )
+
+    @staticmethod
+    def _build_draft(
+        request: CAPGenerationRequest,
+        analysis: CAPCanonAnalysis,
+    ) -> GeneratedCAPDraft:
+        description = "\n\n".join(fact.fact for fact in analysis.canonical_facts)
         return GeneratedCAPDraft(
             title=request.asset_name,
-            canonical_description=canonical_description,
+            canonical_description=description,
             visual_identity=(
-                "Derive visible characteristics only from approved story facts "
-                "and reference imagery. Any inferred detail must remain "
-                "provisional until user approval."
+                "Use only visible characteristics explicitly supported by the canonical facts "
+                "and approved reference imagery."
             ),
             production_notes=(
-                "Generated locally by the VSCS template provider. "
-                "Review all inferred details before changing the CAP "
-                "status from Draft."
+                "Generated through the local multi-stage CAP intelligence pipeline. "
+                "Review all sections before changing the CAP status from Draft."
             ),
             continuity_rules=(
-                "Preserve all explicit story facts across every generated appearance.",
+                "Preserve every extracted canonical fact across generated appearances.",
                 "Use approved reference images as the visual source of truth once available.",
             ),
             prohibited_variations=(
                 "Do not introduce unsupported design changes as established canon.",
             ),
-            unresolved_questions=(
-                "Which visual details are explicit canon and which require creative approval?",
+            unresolved_questions=analysis.uncertainties,
+            source_summary=analysis.source_summary,
+            canonical_facts=analysis.canonical_facts,
+            contradictions=analysis.contradictions,
+            confidence=CAPSectionConfidence(
+                canonical_description=0.8,
+                visual_identity=0.55,
+                production_notes=0.75,
+                continuity_rules=0.8,
+                prohibited_variations=0.75,
+                overall=0.73,
             ),
-            source_summary=request.story_context.strip()[:1000],
         )
