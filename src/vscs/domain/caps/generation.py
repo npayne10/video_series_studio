@@ -17,6 +17,47 @@ class CAPGenerationRequest(BaseModel):
     story_context: str = Field(min_length=1)
 
 
+class ExtractedCanonicalFact(BaseModel):
+    """One explicit story fact with evidence and a confidence score."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    fact: str = Field(min_length=1)
+    evidence: str = Field(min_length=1)
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class CanonicalFactExtraction(BaseModel):
+    """Stage-one extraction of explicit facts and candidate claims."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    facts: tuple[ExtractedCanonicalFact, ...] = ()
+    candidate_claims: tuple[str, ...] = ()
+
+
+class CAPCanonAnalysis(BaseModel):
+    """Stage-two separation of established canon from uncertainty."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    canonical_facts: tuple[ExtractedCanonicalFact, ...] = ()
+    uncertainties: tuple[str, ...] = ()
+    contradictions: tuple[str, ...] = ()
+    source_summary: str = ""
+
+
+class CAPSectionConfidence(BaseModel):
+    """Confidence scores for each generated CAP Draft Package section."""
+
+    canonical_description: float = Field(default=0.0, ge=0.0, le=1.0)
+    visual_identity: float = Field(default=0.0, ge=0.0, le=1.0)
+    production_notes: float = Field(default=0.0, ge=0.0, le=1.0)
+    continuity_rules: float = Field(default=0.0, ge=0.0, le=1.0)
+    prohibited_variations: float = Field(default=0.0, ge=0.0, le=1.0)
+    overall: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
 class GeneratedCAPDraft(BaseModel):
     """Validated CAP draft returned by an automation provider."""
 
@@ -30,3 +71,6 @@ class GeneratedCAPDraft(BaseModel):
     prohibited_variations: tuple[str, ...] = ()
     unresolved_questions: tuple[str, ...] = ()
     source_summary: str = ""
+    canonical_facts: tuple[ExtractedCanonicalFact, ...] = ()
+    contradictions: tuple[str, ...] = ()
+    confidence: CAPSectionConfidence = Field(default_factory=CAPSectionConfidence)
