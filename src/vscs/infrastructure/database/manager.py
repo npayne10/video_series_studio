@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from vscs.domain.projects import ProjectMetadata
-from vscs.infrastructure.database.models import Base, SchemaVersion
+from vscs.infrastructure.database.models import Base, CanonicalReferenceRecord, SchemaVersion
 from vscs.infrastructure.logging import LoggingService
 
 
@@ -36,7 +36,7 @@ class DatabaseIntegrityError(DatabaseError):
 class DatabaseManager:
     """Manage the SQLite database belonging to the active VSCS project."""
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
     APPLICATION_VERSION = "0.1.0"
 
     def __init__(self) -> None:
@@ -149,7 +149,9 @@ class DatabaseManager:
 
     def _migrate(self, database_session: Session, schema: SchemaVersion) -> None:
         """Apply ordered migrations up to the current schema version."""
-        migrations: dict[int, Callable[[Session], None]] = {}
+        migrations: dict[int, Callable[[Session], None]] = {
+            2: self._migrate_to_canonical_references,
+        }
         while schema.version < self.SCHEMA_VERSION:
             next_version = schema.version + 1
             migration = migrations.get(next_version)
@@ -158,6 +160,12 @@ class DatabaseManager:
             migration(database_session)
             schema.version = next_version
         schema.application_version = self.APPLICATION_VERSION
+
+    @staticmethod
+    def _migrate_to_canonical_references(database_session: Session) -> None:
+        """Create structured canonical reference storage for existing projects."""
+        bind = database_session.get_bind()
+        CanonicalReferenceRecord.__table__.create(bind=bind, checkfirst=True)
 
     @staticmethod
     def _configure_sqlite(engine: Engine) -> None:
