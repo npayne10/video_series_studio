@@ -1,5 +1,9 @@
 """Canonical Asset Profile application exports."""
 
+from vscs.application.caps.asset_generator import (
+    CanonicalAssetGenerationError,
+    CanonicalAssetGeneratorService,
+)
 from vscs.application.caps.generator import CAPGenerationError, CAPGeneratorService
 from vscs.application.caps.reference_repository import (
     CanonicalReferenceRepository,
@@ -33,6 +37,8 @@ __all__ = (
     "CAPRepository",
     "CAPRepositoryError",
     "CAPService",
+    "CanonicalAssetGenerationError",
+    "CanonicalAssetGeneratorService",
     "CanonicalReferenceError",
     "CanonicalReferenceLockedError",
     "CanonicalReferenceNotFoundError",
