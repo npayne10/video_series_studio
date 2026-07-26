@@ -56,6 +56,7 @@ class CanonicalReferenceFileManager:
         ".gif": CanonicalReferenceType.IMAGE,
         ".tif": CanonicalReferenceType.IMAGE,
         ".tiff": CanonicalReferenceType.IMAGE,
+        ".svg": CanonicalReferenceType.IMAGE,
         ".pdf": CanonicalReferenceType.DOCUMENT,
         ".doc": CanonicalReferenceType.DOCUMENT,
         ".docx": CanonicalReferenceType.DOCUMENT,
