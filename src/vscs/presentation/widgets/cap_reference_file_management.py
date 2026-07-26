@@ -92,7 +92,7 @@ def _import_sources(dialog: Any, sources: list[Path]) -> None:
             )
             editor.role.setCurrentIndex(editor.role.findData(CanonicalReferenceRole.SUPPLEMENTARY))
             editor.status.setCurrentIndex(
-                editor.status.findData(CanonicalReferenceStatus.WORKING)
+                editor.status.findData(CanonicalReferenceStatus.IMPORTED)
             )
             editor.notes.setPlainText(
                 "Managed by VSCS\n"

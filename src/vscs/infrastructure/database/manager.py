@@ -36,7 +36,7 @@ class DatabaseIntegrityError(DatabaseError):
 class DatabaseManager:
     """Manage the SQLite database belonging to the active VSCS project."""
 
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
     APPLICATION_VERSION = "0.1.0"
 
     def __init__(self) -> None:
@@ -151,6 +151,7 @@ class DatabaseManager:
         """Apply ordered migrations up to the current schema version."""
         migrations: dict[int, Callable[[Session], None]] = {
             2: self._migrate_to_canonical_references,
+            3: self._migrate_reference_statuses,
         }
         while schema.version < self.SCHEMA_VERSION:
             next_version = schema.version + 1
@@ -166,6 +167,26 @@ class DatabaseManager:
         """Create structured canonical reference storage for existing projects."""
         bind = database_session.get_bind()
         CanonicalReferenceRecord.__table__.create(bind=bind, checkfirst=True)
+
+    @staticmethod
+    def _migrate_reference_statuses(database_session: Session) -> None:
+        """Convert legacy canonical-reference statuses to the new lifecycle model."""
+        database_session.execute(
+            text(
+                """
+                UPDATE canonical_references
+                SET status = CASE LOWER(TRIM(status))
+                    WHEN 'working' THEN 'imported'
+                    WHEN 'review' THEN 'candidate'
+                    WHEN 'imported' THEN 'imported'
+                    WHEN 'candidate' THEN 'candidate'
+                    WHEN 'approved' THEN 'approved'
+                    WHEN 'archived' THEN 'archived'
+                    ELSE 'imported'
+                END
+                """
+            )
+        )
 
     @staticmethod
     def _configure_sqlite(engine: Engine) -> None:

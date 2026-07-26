@@ -275,13 +275,47 @@ class MainWindow(QMainWindow):
         )
 
     def _update_project_state(self) -> None:
+        """Synchronize all project-aware interface elements."""
+
         active = self.projects.is_project_open
+
+        # Menu / Toolbar actions
+        self.new_project_action.setEnabled(not active)
+        self.open_project_action.setEnabled(not active)
+
         self.save_project_action.setEnabled(active)
         self.close_project_action.setEnabled(active)
-        if active and self.projects.project is not None:
-            project = self.projects.project
+
+        # Project-dependent manager controls
+        self.asset_manager.add_button.setEnabled(active)
+        self.cap_manager.add_button.setEnabled(active)
+
+        # Dashboard buttons (if present)
+        self.dashboard.new_project_button.setEnabled(not active)
+        self.dashboard.open_project_button.setEnabled(not active)
+
+        if active and self.projects.current_project is not None:
+            project = self.projects.current_project
+
             self.setWindowTitle(f"{self.BASE_TITLE} — {project.name}")
-            self.dashboard.set_active_project(project.name, self.projects.project_directory)
+
+            # If this exists
+            if hasattr(self, "navigation_dock"):
+                self.navigation_dock.setWindowTitle(project.name)
+
+            self.dashboard.set_active_project(
+                project.name,
+                self.projects.project_directory,
+            )
+
+            self.statusBar().showMessage(f"Active project: {project.name}")
+
         else:
             self.setWindowTitle(self.BASE_TITLE)
+
+            if hasattr(self, "navigation_dock"):
+                self.navigation_dock.setWindowTitle("Workspace")
+
             self.dashboard.clear_active_project()
+
+            self.statusBar().showMessage("No project open")

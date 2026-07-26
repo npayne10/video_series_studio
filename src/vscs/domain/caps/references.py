@@ -28,13 +28,12 @@ class CanonicalReferenceRole(StrEnum):
 
 
 class CanonicalReferenceStatus(StrEnum):
-    """Review state for a canonical reference."""
+    """Lifecycle status for a canonical reference."""
 
-    WORKING = "working"
-    REVIEW = "review"
+    IMPORTED = "imported"
+    CANDIDATE = "candidate"
     APPROVED = "approved"
     ARCHIVED = "archived"
-
 
 class CanonicalReferenceCreate(BaseModel):
     """Validated input for attaching a structured reference to a CAP."""
@@ -49,7 +48,7 @@ class CanonicalReferenceCreate(BaseModel):
     description: str = ""
     notes: str = ""
     version: str = Field(default="1.0", min_length=1, max_length=32)
-    status: CanonicalReferenceStatus = CanonicalReferenceStatus.WORKING
+    status: CanonicalReferenceStatus = CanonicalReferenceStatus.IMPORTED
 
     @field_validator("file_path")
     @classmethod
