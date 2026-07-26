@@ -1,11 +1,11 @@
-"""UI integration for managed canonical reference imports and drag-and-drop."""
+"""UI integration for managed canonical reference imports and the reference gallery."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QEvent, QObject, QUrl
+from PySide6.QtCore import QEvent, QObject
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from vscs.application.caps.file_manager import (
@@ -13,12 +13,19 @@ from vscs.application.caps.file_manager import (
     CanonicalReferenceFileManager,
     DuplicateFileResolution,
 )
-from vscs.domain.caps import CanonicalReferenceCreate, CanonicalReferenceRole, CanonicalReferenceStatus
+from vscs.application.caps.reference_service import CanonicalReferenceError
+from vscs.domain.caps import (
+    CanonicalReferenceCreate,
+    CanonicalReferenceRole,
+    CanonicalReferenceStatus,
+    CanonicalReferenceUpdate,
+)
 from vscs.presentation.widgets import cap_manager
+from vscs.presentation.widgets.canonical_reference_gallery import CanonicalReferenceGallery
 
 
 class CanonicalReferenceDropFilter(QObject):
-    """Accept local files dropped onto the Canonical References table."""
+    """Accept local files dropped onto the Canonical References gallery."""
 
     def __init__(self, dialog: Any) -> None:
         super().__init__(dialog)
@@ -124,25 +131,98 @@ def _managed_add_reference(dialog: Any) -> None:
         _import_sources(dialog, [Path(filename) for filename in files])
 
 
+def _set_primary_reference(dialog: Any, reference_id: int) -> None:
+    """Make one reference primary and demote any existing primary reference."""
+    if dialog.profile is None or dialog.reference_service is None:
+        return
+    try:
+        references = dialog.reference_service.list_for_cap(dialog.profile.asset_id)
+        target = next((reference for reference in references if reference.id == reference_id), None)
+        if target is None:
+            return
+        for reference in references:
+            if (
+                reference.id != reference_id
+                and reference.role is CanonicalReferenceRole.PRIMARY
+            ):
+                dialog.reference_service.update(
+                    reference.id,
+                    CanonicalReferenceUpdate(role=CanonicalReferenceRole.SECONDARY),
+                )
+        if target.role is not CanonicalReferenceRole.PRIMARY:
+            dialog.reference_service.update(
+                reference_id,
+                CanonicalReferenceUpdate(role=CanonicalReferenceRole.PRIMARY),
+            )
+    except CanonicalReferenceError as exc:
+        QMessageBox.critical(dialog, "Canonical Reference Error", str(exc))
+        return
+    dialog._refresh_references()
+
+
 def install_canonical_reference_file_management() -> None:
-    """Extend the CAP editor with project-owned imports and file drops."""
+    """Extend the CAP editor with managed imports and a thumbnail gallery."""
     if getattr(cap_manager.CAPEditorDialog, "_managed_reference_files_installed", False):
         return
+
     original_init = cap_manager.CAPEditorDialog.__init__
+    original_refresh = cap_manager.CAPEditorDialog._refresh_references
+    original_selected_reference_id = cap_manager.CAPEditorDialog._selected_reference_id
 
     def managed_init(self: Any, *args: Any, **kwargs: Any) -> None:
         original_init(self, *args, **kwargs)
-        self.references.setAcceptDrops(True)
+
+        self.reference_gallery = CanonicalReferenceGallery(self)
+        self.reference_gallery.reference_activated.connect(
+            lambda _reference_id: self._edit_reference()
+        )
+        self.reference_gallery.primary_requested.connect(
+            lambda reference_id: _set_primary_reference(self, reference_id)
+        )
+
+        # Retain the original table as the compatibility data model while the
+        # gallery becomes the visible reference browser.
+        self.references.hide()
+        self.layout().insertWidget(1, self.reference_gallery, 1)
+
+        self.reference_gallery.setAcceptDrops(True)
         self._canonical_reference_drop_filter = CanonicalReferenceDropFilter(self)
-        self.references.installEventFilter(self._canonical_reference_drop_filter)
-        self.references.setToolTip(
+        self.reference_gallery.installEventFilter(self._canonical_reference_drop_filter)
+        self.reference_gallery.gallery.installEventFilter(self._canonical_reference_drop_filter)
+        self.reference_gallery.setToolTip(
             "Drop files here to copy them into managed Canonical Assets storage."
         )
         if self.profile is not None and self.project_directory is not None:
             CanonicalReferenceFileManager(self.project_directory).ensure_asset_structure(
                 self.profile.asset_id
             )
+        self._refresh_references()
+
+    def managed_refresh(self: Any) -> None:
+        original_refresh(self)
+        gallery = getattr(self, "reference_gallery", None)
+        if gallery is None:
+            return
+        if self.profile is None or self.reference_service is None:
+            gallery.set_references((), self.project_directory)
+            return
+        try:
+            references = self.reference_service.list_for_cap(self.profile.asset_id)
+        except CanonicalReferenceError as exc:
+            QMessageBox.critical(self, "Canonical Reference Error", str(exc))
+            return
+        gallery.set_references(references, self.project_directory)
+
+    def managed_selected_reference_id(self: Any) -> int | None:
+        gallery = getattr(self, "reference_gallery", None)
+        if gallery is not None:
+            reference_id = gallery.selected_reference_id()
+            if reference_id is not None:
+                return reference_id
+        return original_selected_reference_id(self)
 
     cap_manager.CAPEditorDialog.__init__ = managed_init
+    cap_manager.CAPEditorDialog._refresh_references = managed_refresh
+    cap_manager.CAPEditorDialog._selected_reference_id = managed_selected_reference_id
     cap_manager.CAPEditorDialog._add_reference = _managed_add_reference
     cap_manager.CAPEditorDialog._managed_reference_files_installed = True
