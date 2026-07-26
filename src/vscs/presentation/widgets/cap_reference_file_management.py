@@ -1,4 +1,4 @@
-"""UI integration for managed canonical reference imports and approval workflow."""
+"""UI integration for managed canonical references, approvals, and generation."""
 
 from __future__ import annotations
 
@@ -7,8 +7,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PySide6.QtCore import QEvent, QObject
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
 
+from vscs.application.caps.asset_generator import (
+    CanonicalAssetGenerationError,
+    CanonicalAssetGeneratorService,
+)
 from vscs.application.caps.file_manager import (
     CanonicalReferenceFileError,
     CanonicalReferenceFileManager,
@@ -16,6 +20,10 @@ from vscs.application.caps.file_manager import (
 )
 from vscs.application.caps.reference_service import CanonicalReferenceError
 from vscs.domain.caps import CanonicalReferenceRole, CanonicalReferenceStatus
+from vscs.infrastructure.ai.image_provider import LocalPreviewImageProvider
+from vscs.presentation.dialogs.canonical_asset_generation_dialog import (
+    CanonicalAssetGenerationDialog,
+)
 from vscs.presentation.widgets import cap_manager
 from vscs.presentation.widgets.canonical_reference_gallery import CanonicalReferenceGallery
 
@@ -120,6 +128,36 @@ def _managed_add_reference(dialog: Any) -> None:
         _import_sources(dialog, [Path(filename) for filename in files])
 
 
+def _generate_references(dialog: Any) -> None:
+    if dialog.profile is None or dialog.reference_service is None:
+        return
+    default_prompt = "\n\n".join(
+        value for value in (
+            dialog.description.toPlainText().strip(),
+            dialog.visual_identity.toPlainText().strip(),
+        ) if value
+    )
+    editor = CanonicalAssetGenerationDialog(default_prompt, dialog)
+    if not editor.exec():
+        return
+    try:
+        generator = CanonicalAssetGeneratorService(
+            dialog.reference_service,
+            LocalPreviewImageProvider(),
+        )
+        created = generator.generate(dialog.profile.asset_id, editor.request_value())
+    except (CanonicalAssetGenerationError, CanonicalReferenceError, ValueError, OSError) as exc:
+        QMessageBox.critical(dialog, "Canonical Asset Generation", str(exc))
+        return
+    dialog._refresh_references()
+    QMessageBox.information(
+        dialog,
+        "Canonical Asset Generation",
+        f"Generated {len(created)} versioned Candidate reference(s).\n\n"
+        "The local preview provider was used. Prompt, model, seed, dimensions, and generation time were stored in provenance manifests.",
+    )
+
+
 def _run_workflow(dialog: Any, action: Callable[[], object], success: str | None = None) -> None:
     try:
         action()
@@ -132,75 +170,52 @@ def _run_workflow(dialog: Any, action: Callable[[], object], success: str | None
 
 
 def _set_primary_reference(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is None:
-        return
-    _run_workflow(dialog, lambda: dialog.reference_service.set_primary(reference_id))
+    if dialog.reference_service is not None:
+        _run_workflow(dialog, lambda: dialog.reference_service.set_primary(reference_id))
 
 
 def _mark_candidate(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is None:
-        return
-    _run_workflow(dialog, lambda: dialog.reference_service.mark_candidate(reference_id))
+    if dialog.reference_service is not None:
+        _run_workflow(dialog, lambda: dialog.reference_service.mark_candidate(reference_id))
 
 
 def _approve(dialog: Any, reference_id: int) -> None:
     if dialog.reference_service is None:
         return
     reference = dialog.reference_service.get(reference_id)
-    if (
-        QMessageBox.question(
-            dialog,
-            "Approve Canonical Reference",
-            f"Approve '{reference.title}' for production?\n\nThe reference will become locked.",
-        )
-        is not QMessageBox.StandardButton.Yes
-    ):
-        return
-    _run_workflow(
+    if QMessageBox.question(
         dialog,
-        lambda: dialog.reference_service.approve(reference_id, getpass.getuser()),
-    )
+        "Approve Canonical Reference",
+        f"Approve '{reference.title}' for production?\n\nThe reference will become locked.",
+    ) is not QMessageBox.StandardButton.Yes:
+        return
+    _run_workflow(dialog, lambda: dialog.reference_service.approve(reference_id, getpass.getuser()))
 
 
 def _reject(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is None:
-        return
-    if (
-        QMessageBox.question(
-            dialog,
-            "Return to Candidate",
-            "Remove production approval and return this reference to Candidate status?",
-        )
-        is QMessageBox.StandardButton.Yes
-    ):
+    if dialog.reference_service is not None and QMessageBox.question(
+        dialog,
+        "Return to Candidate",
+        "Remove production approval and return this reference to Candidate status?",
+    ) is QMessageBox.StandardButton.Yes:
         _run_workflow(dialog, lambda: dialog.reference_service.reject(reference_id))
 
 
 def _archive(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is None:
-        return
-    if (
-        QMessageBox.question(
-            dialog,
-            "Archive Canonical Reference",
-            "Archive this reference? Archived references remain in the project but cannot be edited or used for production.",
-        )
-        is QMessageBox.StandardButton.Yes
-    ):
+    if dialog.reference_service is not None and QMessageBox.question(
+        dialog,
+        "Archive Canonical Reference",
+        "Archive this reference? Archived references remain in the project but cannot be edited or used for production.",
+    ) is QMessageBox.StandardButton.Yes:
         _run_workflow(dialog, lambda: dialog.reference_service.archive(reference_id))
 
 
 def _unlock(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is None:
-        return
-    if (
-        QMessageBox.question(
-            dialog,
-            "Unlock Canonical Reference",
-            "Unlocking removes production approval and returns the reference to Candidate status. Continue?",
-        )
-        is QMessageBox.StandardButton.Yes
-    ):
+    if dialog.reference_service is not None and QMessageBox.question(
+        dialog,
+        "Unlock Canonical Reference",
+        "Unlocking removes production approval and returns the reference to Candidate status. Continue?",
+    ) is QMessageBox.StandardButton.Yes:
         _run_workflow(dialog, lambda: dialog.reference_service.unlock(reference_id))
 
 
@@ -213,7 +228,7 @@ def _update_edit_controls(dialog: Any) -> None:
 
 
 def install_canonical_reference_file_management() -> None:
-    """Extend the CAP editor with managed imports, gallery, and approvals."""
+    """Extend the CAP editor with managed imports, generation, gallery, and approvals."""
     if getattr(cap_manager.CAPEditorDialog, "_managed_reference_files_installed", False):
         return
 
@@ -233,8 +248,14 @@ def install_canonical_reference_file_management() -> None:
         self.reference_gallery.unlock_requested.connect(lambda rid: _unlock(self, rid))
         self.reference_gallery.gallery.currentItemChanged.connect(lambda *_: _update_edit_controls(self))
 
+        self.generate_reference_button = QPushButton("Generate Canonical Images…")
+        self.generate_reference_button.setObjectName("generateCanonicalImagesButton")
+        self.generate_reference_button.setEnabled(self.profile is not None and self.reference_service is not None)
+        self.generate_reference_button.clicked.connect(lambda: _generate_references(self))
+
         self.references.hide()
         self.layout().insertWidget(1, self.reference_gallery, 1)
+        self.layout().insertWidget(2, self.generate_reference_button)
         self.reference_gallery.setAcceptDrops(True)
         self._canonical_reference_drop_filter = CanonicalReferenceDropFilter(self)
         self.reference_gallery.installEventFilter(self._canonical_reference_drop_filter)
