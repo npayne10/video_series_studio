@@ -36,7 +36,7 @@ class DatabaseIntegrityError(DatabaseError):
 class DatabaseManager:
     """Manage the SQLite database belonging to the active VSCS project."""
 
-    SCHEMA_VERSION = 3
+    SCHEMA_VERSION = 4
     APPLICATION_VERSION = "0.1.0"
 
     def __init__(self) -> None:
@@ -47,14 +47,11 @@ class DatabaseManager:
 
     @property
     def is_open(self) -> bool:
-        """Return whether a project database is active."""
         return self.engine is not None
 
     def open(self, project_directory: Path, project: ProjectMetadata) -> Path:
-        """Open or initialize the active project's SQLite database."""
         if self.is_open:
             raise DatabaseAlreadyOpenError("Close the current database before continuing")
-
         database_path = (project_directory / project.paths.database).resolve(strict=False)
         try:
             database_path.parent.mkdir(parents=True, exist_ok=True)
@@ -71,12 +68,10 @@ class DatabaseManager:
             if isinstance(exc, DatabaseError):
                 raise
             raise DatabaseError(f"Unable to open database {database_path}: {exc}") from exc
-
         self._logger.info("Database opened: %s", database_path)
         return database_path
 
     def close(self) -> None:
-        """Dispose the active engine and clear database state."""
         if self.engine is not None:
             self.engine.dispose()
             self._logger.info("Database closed: %s", self.database_path)
@@ -86,7 +81,6 @@ class DatabaseManager:
 
     @contextmanager
     def session(self) -> Iterator[Session]:
-        """Provide a transaction that commits or rolls back automatically."""
         factory = self._require_session_factory()
         database_session = factory()
         try:
@@ -99,7 +93,6 @@ class DatabaseManager:
             database_session.close()
 
     def check_integrity(self) -> bool:
-        """Run SQLite's integrity check and raise when corruption is detected."""
         engine = self._require_engine()
         try:
             with engine.connect() as connection:
@@ -111,7 +104,6 @@ class DatabaseManager:
         return True
 
     def backup(self, destination: Path | None = None) -> Path:
-        """Create a checkpointed file backup of the active SQLite database."""
         database_path = self._require_database_path()
         if destination is None:
             stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
@@ -131,13 +123,7 @@ class DatabaseManager:
         with self.session() as database_session:
             schema = database_session.scalar(select(SchemaVersion).where(SchemaVersion.id == 1))
             if schema is None:
-                database_session.add(
-                    SchemaVersion(
-                        id=1,
-                        version=self.SCHEMA_VERSION,
-                        application_version=self.APPLICATION_VERSION,
-                    )
-                )
+                database_session.add(SchemaVersion(id=1, version=self.SCHEMA_VERSION, application_version=self.APPLICATION_VERSION))
                 return
             if schema.version > self.SCHEMA_VERSION:
                 raise DatabaseError(
@@ -148,10 +134,10 @@ class DatabaseManager:
                 self._migrate(database_session, schema)
 
     def _migrate(self, database_session: Session, schema: SchemaVersion) -> None:
-        """Apply ordered migrations up to the current schema version."""
         migrations: dict[int, Callable[[Session], None]] = {
             2: self._migrate_to_canonical_references,
             3: self._migrate_reference_statuses,
+            4: self._migrate_reference_approvals,
         }
         while schema.version < self.SCHEMA_VERSION:
             next_version = schema.version + 1
@@ -164,29 +150,37 @@ class DatabaseManager:
 
     @staticmethod
     def _migrate_to_canonical_references(database_session: Session) -> None:
-        """Create structured canonical reference storage for existing projects."""
         bind = database_session.get_bind()
         CanonicalReferenceRecord.__table__.create(bind=bind, checkfirst=True)
 
     @staticmethod
     def _migrate_reference_statuses(database_session: Session) -> None:
-        """Convert legacy canonical-reference statuses to the new lifecycle model."""
-        database_session.execute(
-            text(
-                """
-                UPDATE canonical_references
-                SET status = CASE LOWER(TRIM(status))
-                    WHEN 'working' THEN 'imported'
-                    WHEN 'review' THEN 'candidate'
-                    WHEN 'imported' THEN 'imported'
-                    WHEN 'candidate' THEN 'candidate'
-                    WHEN 'approved' THEN 'approved'
-                    WHEN 'archived' THEN 'archived'
-                    ELSE 'imported'
-                END
-                """
-            )
-        )
+        database_session.execute(text("""
+            UPDATE canonical_references
+            SET status = CASE LOWER(TRIM(status))
+                WHEN 'working' THEN 'imported'
+                WHEN 'review' THEN 'candidate'
+                WHEN 'imported' THEN 'imported'
+                WHEN 'candidate' THEN 'candidate'
+                WHEN 'approved' THEN 'approved'
+                WHEN 'archived' THEN 'archived'
+                ELSE 'imported'
+            END
+        """))
+
+    @staticmethod
+    def _migrate_reference_approvals(database_session: Session) -> None:
+        columns = {
+            row[1]
+            for row in database_session.execute(text("PRAGMA table_info(canonical_references)"))
+        }
+        if "approved_by" not in columns:
+            database_session.execute(text("ALTER TABLE canonical_references ADD COLUMN approved_by VARCHAR(200)"))
+        if "approved_at" not in columns:
+            database_session.execute(text("ALTER TABLE canonical_references ADD COLUMN approved_at DATETIME"))
+        if "locked" not in columns:
+            database_session.execute(text("ALTER TABLE canonical_references ADD COLUMN locked BOOLEAN NOT NULL DEFAULT 0"))
+        database_session.execute(text("UPDATE canonical_references SET locked = 1 WHERE status = 'approved'"))
 
     @staticmethod
     def _configure_sqlite(engine: Engine) -> None:
