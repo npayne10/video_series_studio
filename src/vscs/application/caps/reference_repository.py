@@ -40,6 +40,9 @@ class CanonicalReferenceRepository:
             notes=reference.notes,
             version=reference.version,
             status=reference.status.value,
+            approved_by=reference.approved_by,
+            approved_at=reference.approved_at,
+            locked=reference.locked,
         )
         try:
             with self.database.session() as session:
@@ -73,9 +76,7 @@ class CanonicalReferenceRepository:
             CanonicalReferenceRecord.cap_id == cap_id
         )
         if reference_type is not None:
-            statement = statement.where(
-                CanonicalReferenceRecord.reference_type == reference_type.value
-            )
+            statement = statement.where(CanonicalReferenceRecord.reference_type == reference_type.value)
         if status is not None:
             statement = statement.where(CanonicalReferenceRecord.status == status.value)
         statement = statement.order_by(
@@ -91,9 +92,7 @@ class CanonicalReferenceRepository:
                 f"Unable to list canonical references for CAP {cap_id}: {exc}"
             ) from exc
 
-    def update(
-        self, reference_id: int, changes: CanonicalReferenceUpdate
-    ) -> CanonicalReference | None:
+    def update(self, reference_id: int, changes: CanonicalReferenceUpdate) -> CanonicalReference | None:
         try:
             with self.database.session() as session:
                 record = session.get(CanonicalReferenceRecord, reference_id)
@@ -140,6 +139,9 @@ class CanonicalReferenceRepository:
             notes=record.notes,
             version=record.version,
             status=CanonicalReferenceStatus(record.status),
+            approved_by=record.approved_by,
+            approved_at=record.approved_at,
+            locked=record.locked,
             created_at=record.created_at,
             updated_at=record.updated_at,
         )
