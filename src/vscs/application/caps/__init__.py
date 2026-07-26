@@ -7,9 +7,11 @@ from vscs.application.caps.reference_repository import (
 )
 from vscs.application.caps.reference_service import (
     CanonicalReferenceError,
+    CanonicalReferenceLockedError,
     CanonicalReferenceNotFoundError,
     CanonicalReferenceService,
     InvalidCanonicalReferencePathError,
+    InvalidCanonicalReferenceTransitionError,
 )
 from vscs.application.caps.repository import CAPRepository, CAPRepositoryError
 from vscs.application.caps.service import (
@@ -32,10 +34,12 @@ __all__ = (
     "CAPRepositoryError",
     "CAPService",
     "CanonicalReferenceError",
+    "CanonicalReferenceLockedError",
     "CanonicalReferenceNotFoundError",
     "CanonicalReferenceRepository",
     "CanonicalReferenceRepositoryError",
     "CanonicalReferenceService",
     "InvalidCAPReferencePathError",
     "InvalidCanonicalReferencePathError",
+    "InvalidCanonicalReferenceTransitionError",
 )
