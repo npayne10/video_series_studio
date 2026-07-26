@@ -35,6 +35,7 @@ class CanonicalReferenceStatus(StrEnum):
     APPROVED = "approved"
     ARCHIVED = "archived"
 
+
 class CanonicalReferenceCreate(BaseModel):
     """Validated input for attaching a structured reference to a CAP."""
 
@@ -49,6 +50,9 @@ class CanonicalReferenceCreate(BaseModel):
     notes: str = ""
     version: str = Field(default="1.0", min_length=1, max_length=32)
     status: CanonicalReferenceStatus = CanonicalReferenceStatus.IMPORTED
+    approved_by: str | None = Field(default=None, max_length=200)
+    approved_at: datetime | None = None
+    locked: bool = False
 
     @field_validator("file_path")
     @classmethod
@@ -71,6 +75,9 @@ class CanonicalReferenceUpdate(BaseModel):
     notes: str | None = None
     version: str | None = Field(default=None, min_length=1, max_length=32)
     status: CanonicalReferenceStatus | None = None
+    approved_by: str | None = Field(default=None, max_length=200)
+    approved_at: datetime | None = None
+    locked: bool | None = None
 
 
 class CanonicalReference(BaseModel):
@@ -88,5 +95,8 @@ class CanonicalReference(BaseModel):
     notes: str
     version: str
     status: CanonicalReferenceStatus
+    approved_by: str | None = None
+    approved_at: datetime | None = None
+    locked: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
