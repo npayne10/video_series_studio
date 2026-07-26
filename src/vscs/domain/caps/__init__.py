@@ -1,5 +1,9 @@
 """Canonical Asset Profile domain exports."""
 
+from vscs.domain.caps.asset_generation import (
+    CanonicalAssetGenerationRequest,
+    GeneratedCanonicalAsset,
+)
 from vscs.domain.caps.generation import (
     CAPCanonAnalysis,
     CAPGenerationRequest,
@@ -25,6 +29,7 @@ __all__ = (
     "CAPSectionConfidence",
     "CAPStatus",
     "CAPUpdate",
+    "CanonicalAssetGenerationRequest",
     "CanonicalAssetProfile",
     "CanonicalFactExtraction",
     "CanonicalReference",
@@ -35,4 +40,5 @@ __all__ = (
     "CanonicalReferenceUpdate",
     "ExtractedCanonicalFact",
     "GeneratedCAPDraft",
+    "GeneratedCanonicalAsset",
 )
