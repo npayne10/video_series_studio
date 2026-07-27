@@ -20,7 +20,7 @@ from vscs.application.caps.file_manager import (
 )
 from vscs.application.caps.reference_service import CanonicalReferenceError
 from vscs.domain.caps import CanonicalReferenceRole, CanonicalReferenceStatus
-from vscs.infrastructure.ai.image_provider import LocalPreviewImageProvider
+from vscs.infrastructure.xcic import XCICImageProvider
 from vscs.presentation.dialogs.canonical_asset_generation_dialog import (
     CanonicalAssetGenerationDialog,
 )
@@ -129,7 +129,11 @@ def _managed_add_reference(dialog: Any) -> None:
 
 
 def _generate_references(dialog: Any) -> None:
-    if dialog.profile is None or dialog.reference_service is None:
+    if (
+        dialog.profile is None
+        or dialog.reference_service is None
+        or dialog.project_directory is None
+    ):
         return
     default_prompt = "\n\n".join(
         value for value in (
@@ -143,7 +147,7 @@ def _generate_references(dialog: Any) -> None:
     try:
         generator = CanonicalAssetGeneratorService(
             dialog.reference_service,
-            LocalPreviewImageProvider(),
+            XCICImageProvider(dialog.project_directory),
         )
         created = generator.generate(dialog.profile.asset_id, editor.request_value())
     except (CanonicalAssetGenerationError, CanonicalReferenceError, ValueError, OSError) as exc:
@@ -153,8 +157,11 @@ def _generate_references(dialog: Any) -> None:
     QMessageBox.information(
         dialog,
         "Canonical Asset Generation",
-        f"Generated {len(created)} versioned Candidate reference(s).\n\n"
-        "The local preview provider was used. Prompt, model, seed, dimensions, and generation time were stored in provenance manifests.",
+        f"Generated {len(created)} versioned Candidate reference(s) using the "
+        "XCIC Rendering Engine and ComfyUI.\n\n"
+        "The generated PNG files were imported into the Canonical Reference Gallery. "
+        "Prompt, model, seed, dimensions, provider, and generation time were stored in "
+        "provenance manifests.",
     )
 
 
