@@ -1,6 +1,7 @@
 """XCIC rendering engine exports."""
 
 from vscs.infrastructure.xcic.comfyui import ComfyUIClient, ComfyUIError
+from vscs.infrastructure.xcic.config import XCICConfiguration
 from vscs.infrastructure.xcic.engine import XCICRenderingEngine, XCICRenderingError
 from vscs.infrastructure.xcic.models import (
     XCICGenerationJob,
@@ -9,18 +10,19 @@ from vscs.infrastructure.xcic.models import (
     XCICWorkflowKind,
 )
 from vscs.infrastructure.xcic.provider import XCICImageProvider
-from vscs.infrastructure.xcic.queue import XCICQueueError, XCICQueueWriter
+from vscs.infrastructure.xcic.workflow import XCICWorkflowError, XCICWorkflowPatcher
 
 __all__ = (
     "ComfyUIClient",
     "ComfyUIError",
+    "XCICConfiguration",
     "XCICGenerationJob",
     "XCICImageProvider",
-    "XCICQueueError",
-    "XCICQueueWriter",
     "XCICRenderedFile",
     "XCICRenderingEngine",
     "XCICRenderingError",
     "XCICWorkflowDefinition",
+    "XCICWorkflowError",
     "XCICWorkflowKind",
+    "XCICWorkflowPatcher",
 )
