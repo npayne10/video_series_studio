@@ -26,6 +26,10 @@ class ComfyUIClient:
     def healthcheck(self) -> None:
         self._json_request("GET", "/system_stats")
 
+    def object_info(self) -> dict[str, Any]:
+        """Return ComfyUI node schemas and exact installed combo values."""
+        return self._json_request("GET", "/object_info")
+
     def submit_workflow(self, workflow: Path | dict[str, Any]) -> str:
         """Submit an API-format workflow path or an already patched workflow object."""
         if isinstance(workflow, Path):
@@ -43,8 +47,6 @@ class ComfyUIClient:
             prompt = workflow
         if not isinstance(prompt, dict):
             raise ComfyUIError("The ComfyUI API workflow must be a JSON object")
-        # Some exporters wrap the API graph in a top-level prompt object. ComfyUI's
-        # /prompt endpoint expects the graph itself inside the request's prompt field.
         if set(prompt) == {"prompt"} and isinstance(prompt.get("prompt"), dict):
             prompt = prompt["prompt"]
         response = self._json_request(
