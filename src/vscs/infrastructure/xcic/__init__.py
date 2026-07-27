@@ -3,6 +3,10 @@
 from vscs.infrastructure.xcic.comfyui import ComfyUIClient, ComfyUIError
 from vscs.infrastructure.xcic.config import XCICConfiguration
 from vscs.infrastructure.xcic.engine import XCICRenderingEngine, XCICRenderingError
+from vscs.infrastructure.xcic.model_resolver import (
+    XCICModelResolutionError,
+    XCICModelResolver,
+)
 from vscs.infrastructure.xcic.models import (
     XCICGenerationJob,
     XCICRenderedFile,
@@ -18,6 +22,8 @@ __all__ = (
     "XCICConfiguration",
     "XCICGenerationJob",
     "XCICImageProvider",
+    "XCICModelResolutionError",
+    "XCICModelResolver",
     "XCICRenderedFile",
     "XCICRenderingEngine",
     "XCICRenderingError",
