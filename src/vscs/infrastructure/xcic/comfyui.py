@@ -27,20 +27,30 @@ class ComfyUIClient:
         self._json_request("GET", "/system_stats")
 
     def submit_workflow(self, workflow: Path | dict[str, Any]) -> str:
+        """Submit an API-format workflow path or an already patched workflow object."""
         if isinstance(workflow, Path):
             path = workflow.expanduser().resolve(strict=False)
             if not path.is_file():
-                raise ComfyUIError(f"ComfyUI API workflow not found: {path}")
+                raise ComfyUIError(
+                    f"ComfyUI API workflow not found: {path}. Export the workflow using "
+                    "ComfyUI's 'Save (API Format)' option."
+                )
             try:
-                value = json.loads(path.read_text(encoding="utf-8"))
+                prompt = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as exc:
                 raise ComfyUIError(f"Unable to read ComfyUI API workflow {path}: {exc}") from exc
         else:
-            value = workflow
-        if not isinstance(value, dict):
+            prompt = workflow
+        if not isinstance(prompt, dict):
             raise ComfyUIError("The ComfyUI API workflow must be a JSON object")
+        # Some exporters wrap the API graph in a top-level prompt object. ComfyUI's
+        # /prompt endpoint expects the graph itself inside the request's prompt field.
+        if set(prompt) == {"prompt"} and isinstance(prompt.get("prompt"), dict):
+            prompt = prompt["prompt"]
         response = self._json_request(
-            "POST", "/prompt", {"prompt": value, "client_id": self.client_id}
+            "POST",
+            "/prompt",
+            {"prompt": prompt, "client_id": self.client_id},
         )
         prompt_id = response.get("prompt_id")
         if not isinstance(prompt_id, str) or not prompt_id:
@@ -76,13 +86,45 @@ class ComfyUIClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                raw = response.read().decode("utf-8")
+                raw = response.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            try:
+                raw_error = exc.read().decode("utf-8", errors="replace")
+            except OSError:
+                raw_error = ""
+            detail = self._format_http_error(raw_error)
+            raise ComfyUIError(
+                f"ComfyUI rejected {method} {path} with HTTP {exc.code} {exc.reason}"
+                + (f":\n{detail}" if detail else "")
+            ) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise ComfyUIError(f"Unable to communicate with ComfyUI at {self.base_url}: {exc}") from exc
         try:
             value = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise ComfyUIError(f"ComfyUI returned invalid JSON: {raw[:300]}") from exc
+            raise ComfyUIError(f"ComfyUI returned invalid JSON: {raw[:1000]}") from exc
         if not isinstance(value, dict):
             raise ComfyUIError("ComfyUI returned an unexpected response")
         return value
+
+    @staticmethod
+    def _format_http_error(raw: str) -> str:
+        """Return readable ComfyUI validation details instead of hiding the response body."""
+        if not raw.strip():
+            return ""
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError:
+            return raw[:4000]
+        if not isinstance(value, dict):
+            return str(value)[:4000]
+        error = value.get("error")
+        node_errors = value.get("node_errors")
+        parts: list[str] = []
+        if error:
+            parts.append(f"Error: {json.dumps(error, ensure_ascii=False)}")
+        if node_errors:
+            parts.append(f"Node validation errors: {json.dumps(node_errors, ensure_ascii=False)}")
+        if not parts:
+            parts.append(json.dumps(value, ensure_ascii=False))
+        return "\n".join(parts)[:8000]
