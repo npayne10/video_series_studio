@@ -26,23 +26,21 @@ class ComfyUIClient:
     def healthcheck(self) -> None:
         self._json_request("GET", "/system_stats")
 
-    def submit_workflow(self, workflow_path: Path) -> str:
-        path = workflow_path.expanduser().resolve(strict=False)
-        if not path.is_file():
-            raise ComfyUIError(
-                f"ComfyUI API workflow not found: {path}. Export the workflow using "
-                "ComfyUI's 'Save (API Format)' option."
-            )
-        try:
-            workflow = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise ComfyUIError(f"Unable to read ComfyUI API workflow {path}: {exc}") from exc
-        if not isinstance(workflow, dict):
+    def submit_workflow(self, workflow: Path | dict[str, Any]) -> str:
+        if isinstance(workflow, Path):
+            path = workflow.expanduser().resolve(strict=False)
+            if not path.is_file():
+                raise ComfyUIError(f"ComfyUI API workflow not found: {path}")
+            try:
+                value = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ComfyUIError(f"Unable to read ComfyUI API workflow {path}: {exc}") from exc
+        else:
+            value = workflow
+        if not isinstance(value, dict):
             raise ComfyUIError("The ComfyUI API workflow must be a JSON object")
         response = self._json_request(
-            "POST",
-            "/prompt",
-            {"prompt": workflow, "client_id": self.client_id},
+            "POST", "/prompt", {"prompt": value, "client_id": self.client_id}
         )
         prompt_id = response.get("prompt_id")
         if not isinstance(prompt_id, str) or not prompt_id:
