@@ -16,19 +16,20 @@ class XCICWorkflowKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class XCICWorkflowDefinition:
-    """Registered ComfyUI workflow and its XCIC queue contract."""
+    """Registered ComfyUI API workflow and mapping/profile contract."""
 
     name: str
     kind: XCICWorkflowKind
     api_workflow_path: Path
-    queue_file_path: Path
+    mapping_path: Path
+    profile_path: Path
     output_directory: Path
     version: str = "1.0"
 
 
 @dataclass(frozen=True, slots=True)
 class XCICGenerationJob:
-    """One queue item consumed by an XCIC ComfyUI loader node."""
+    """One independently submitted XCIC generation request."""
 
     job_id: str
     asset_id: str
