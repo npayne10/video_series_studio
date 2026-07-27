@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from uuid import uuid4
 
 from vscs.domain.caps import CanonicalAssetGenerationRequest, GeneratedCanonicalAsset
 from vscs.infrastructure.xcic.comfyui import ComfyUIClient
+from vscs.infrastructure.xcic.config import XCICConfiguration
 from vscs.infrastructure.xcic.engine import XCICRenderingEngine, XCICRenderingError
 from vscs.infrastructure.xcic.models import (
     XCICGenerationJob,
@@ -17,34 +17,29 @@ from vscs.infrastructure.xcic.models import (
 
 
 class XCICImageProvider:
-    """Generate real canonical PNG candidates through a configured XCIC workflow."""
+    """Generate canonical PNG candidates through the shared XCIC installation."""
 
     def __init__(
         self,
         project_directory: Path,
         *,
-        workflow_path: Path | None = None,
-        comfyui_url: str | None = None,
+        configuration: XCICConfiguration | None = None,
     ) -> None:
         project = project_directory.expanduser().resolve(strict=False)
-        xcic_root = project / "XCIC"
-        workflow = workflow_path or Path(
-            os.environ.get(
-                "VSCS_XCIC_TEXT_WORKFLOW",
-                str(xcic_root / "Workflows" / "Xorix_Qwen_XCIC_Image_Creator_v1.0_api.json"),
-            )
-        )
+        config = configuration or XCICConfiguration.load()
+        config.validate_text_to_image()
         definition = XCICWorkflowDefinition(
             name="Qwen XCIC Text-to-Image",
             kind=XCICWorkflowKind.TEXT_TO_IMAGE,
-            api_workflow_path=workflow,
-            queue_file_path=xcic_root / "Queues" / "xcic_generation_queue.json",
-            output_directory=xcic_root / "Candidates",
-            version="1.0",
+            api_workflow_path=config.text_workflow_path,
+            mapping_path=config.text_mapping_path,
+            profile_path=config.text_profile_path,
+            output_directory=project / "Render Cache" / "XCIC",
+            version="2.0",
         )
         self.engine = XCICRenderingEngine(
             definition,
-            ComfyUIClient(comfyui_url or os.environ.get("VSCS_COMFYUI_URL", "http://127.0.0.1:8188")),
+            ComfyUIClient(config.comfyui_url),
         )
 
     def generate_images(
@@ -68,7 +63,9 @@ class XCICImageProvider:
                     seed=seed,
                     steps=4,
                     cfg=1.0,
-                    candidate_directory=self.engine.workflow.output_directory / asset_id.upper(),
+                    candidate_directory=(
+                        self.engine.workflow.output_directory / asset_id.upper() / str(uuid4())
+                    ),
                     candidate_filename=filename,
                     enable_turbo_mode=True,
                 )
@@ -77,19 +74,17 @@ class XCICImageProvider:
             rendered = self.engine.render(tuple(jobs))
         except XCICRenderingError:
             raise
-        values: list[GeneratedCanonicalAsset] = []
-        for output in rendered:
-            values.append(
-                GeneratedCanonicalAsset(
-                    filename=output.path.name,
-                    media_type="image/png",
-                    content=output.path.read_bytes(),
-                    prompt=output.job.positive_prompt,
-                    negative_prompt=output.job.negative_prompt,
-                    model=request.model or output.workflow_name,
-                    seed=output.job.seed,
-                    width=output.job.width,
-                    height=output.job.height,
-                )
+        return tuple(
+            GeneratedCanonicalAsset(
+                filename=output.path.name,
+                media_type="image/png",
+                content=output.path.read_bytes(),
+                prompt=output.job.positive_prompt,
+                negative_prompt=output.job.negative_prompt,
+                model=request.model or output.workflow_name,
+                seed=output.job.seed,
+                width=output.job.width,
+                height=output.job.height,
             )
-        return tuple(values)
+            for output in rendered
+        )
