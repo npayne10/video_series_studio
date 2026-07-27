@@ -21,22 +21,27 @@ class CanonicalAssetGenerationDialog(QDialog):
 
     def __init__(self, default_prompt: str = "", parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Generate Canonical Images")
+        self.setWindowTitle("Generate Canonical Images with XCIC")
         self.setMinimumWidth(680)
 
         self.prompt = QTextEdit(default_prompt)
         self.prompt.setMinimumHeight(150)
-        self.negative_prompt = QTextEdit()
+        self.negative_prompt = QTextEdit(
+            "fantasy, magical, stylised science fiction, excessive glow, neon technology, "
+            "unnecessary holograms, floating interfaces, impossible architecture, cartoon, "
+            "anime, illustration, low detail, low resolution, distorted geometry, watermark, "
+            "logo, AI artifacts, identity drift, inconsistent materials, inconsistent scale"
+        )
         self.negative_prompt.setMaximumHeight(90)
-        self.model = QLineEdit("VSCS Local Preview")
+        self.model = QLineEdit("Qwen Image 2512 via XCIC")
         self.seed = QSpinBox()
         self.seed.setRange(0, 2_147_483_647)
         self.width = QSpinBox()
         self.width.setRange(256, 8192)
-        self.width.setValue(1280)
+        self.width.setValue(1664)
         self.height = QSpinBox()
         self.height.setRange(256, 8192)
-        self.height.setValue(720)
+        self.height.setValue(928)
         self.variations = QSpinBox()
         self.variations.setRange(1, 12)
         self.variations.setValue(1)
