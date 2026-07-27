@@ -6,6 +6,10 @@ import time
 
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.xcic.comfyui import ComfyUIClient, ComfyUIError
+from vscs.infrastructure.xcic.model_resolver import (
+    XCICModelResolutionError,
+    XCICModelResolver,
+)
 from vscs.infrastructure.xcic.models import (
     XCICGenerationJob,
     XCICRenderedFile,
@@ -19,15 +23,17 @@ class XCICRenderingError(RuntimeError):
 
 
 class XCICRenderingEngine:
-    """Patch, submit, monitor, and collect independent XCIC generation jobs."""
+    """Patch, resolve, submit, monitor, and collect independent XCIC jobs."""
 
     def __init__(
         self,
         workflow: XCICWorkflowDefinition,
         client: ComfyUIClient | None = None,
+        model_resolver: XCICModelResolver | None = None,
     ) -> None:
         self.workflow = workflow
         self.client = client or ComfyUIClient()
+        self.model_resolver = model_resolver or XCICModelResolver()
         self.patcher = XCICWorkflowPatcher(
             workflow.api_workflow_path,
             workflow.mapping_path,
@@ -43,12 +49,14 @@ class XCICRenderingEngine:
         outputs: list[XCICRenderedFile] = []
         try:
             self.client.healthcheck()
+            object_info = self.client.object_info()
             for job in jobs:
                 job.candidate_directory.mkdir(parents=True, exist_ok=True)
                 expected = job.candidate_directory / job.candidate_filename
                 if expected.exists():
                     expected.unlink()
                 workflow = self.patcher.build(job)
+                workflow = self.model_resolver.resolve(workflow, object_info)
                 prompt_id = self.client.submit_workflow(workflow)
                 self.client.wait_for_completion(prompt_id, timeout_seconds)
                 self._wait_for_file(expected, timeout_seconds)
@@ -60,7 +68,12 @@ class XCICRenderingEngine:
                         workflow_version=self.workflow.version,
                     )
                 )
-        except (ComfyUIError, XCICWorkflowError, OSError) as exc:
+        except (
+            ComfyUIError,
+            XCICWorkflowError,
+            XCICModelResolutionError,
+            OSError,
+        ) as exc:
             raise XCICRenderingError(str(exc)) from exc
 
         self._logger.info("XCIC rendered %s file(s) using %s", len(outputs), self.workflow.name)
