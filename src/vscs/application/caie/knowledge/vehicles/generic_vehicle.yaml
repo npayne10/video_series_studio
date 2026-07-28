@@ -1,0 +1,28 @@
+name: Canonical Production Vehicle
+classification: a functional vehicle engineered for its canonical operating environment
+purpose:
+  - provide credible mobility, access and payload capability
+required_features:
+  - legible mobility system
+  - safe crew access
+  - coherent structure and scale
+engineering_principles:
+  - connect suspension, propulsion and load paths plausibly
+preferred_language:
+  - production vehicle
+  - functional mobility system
+forbidden_features:
+  - unrelated consumer styling
+  - toy-like proportions
+forbidden_archetypes:
+  - generic sports car
+  - toy vehicle
+negative_terms:
+  - toy
+  - concept-car advertisement
+  - impossible suspension
+required_anchors:
+  - vehicle
+  - functional
+environment_guidance: Show the vehicle in the environment where it canonically operates.
+composition_guidance: Use a complete three-quarter view that clearly shows mobility, access and scale.
