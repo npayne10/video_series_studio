@@ -32,7 +32,6 @@ class AISettings(BaseModel):
     @field_validator("openai_model")
     @classmethod
     def validate_openai_model(cls, model: str) -> str:
-        """Require a non-empty model identifier."""
         normalized = model.strip()
         if not normalized:
             raise ValueError("OpenAI model is required")
@@ -45,6 +44,30 @@ class RendererSettings(BaseModel):
     enabled: bool = False
     executable_path: Path | None = None
     api_url: str | None = None
+
+
+class EnvironmentSettings(BaseModel):
+    """Application-owned workspace, XCIC, and ComfyUI runtime settings."""
+
+    workspace_root: Path = Path(r"D:\VSCS")
+    config_root: Path = Path(r"D:\VSCS\config")
+    projects_root: Path = Path(r"D:\VSCS\Projects")
+    logs_root: Path = Path(r"D:\VSCS\Logs")
+    cache_root: Path = Path(r"D:\VSCS\Cache")
+    xcic_root: Path = Path(r"D:\VSCS\XCIC")
+    comfyui_url: str = "http://127.0.0.1:8188"
+    xcic_text_workflow: Path = Path("Xorix_Qwen_XCIC_Image_Creator_v1.0_api.json")
+    xcic_reference_workflow: Path | None = None
+    validate_on_startup: bool = True
+    developer_mode: bool = False
+
+    @field_validator("comfyui_url")
+    @classmethod
+    def validate_comfyui_url(cls, value: str) -> str:
+        normalized = value.strip().rstrip("/")
+        if not normalized.startswith(("http://", "https://")):
+            raise ValueError("ComfyUI URL must begin with http:// or https://")
+        return normalized
 
 
 class DatabaseSettings(BaseModel):
@@ -62,10 +85,7 @@ class PluginSettings(BaseModel):
     @field_validator("disabled")
     @classmethod
     def normalize_disabled_plugins(cls, plugin_ids: list[str]) -> list[str]:
-        """Keep disabled plugin identifiers unique and ordered."""
-        return list(
-            dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip())
-        )
+        return list(dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip()))
 
 
 class LoggingSettings(BaseModel):
@@ -79,7 +99,6 @@ class LoggingSettings(BaseModel):
     @field_validator("level")
     @classmethod
     def validate_level(cls, level: str) -> str:
-        """Accept standard Python logging level names."""
         normalized = level.upper()
         supported = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if normalized not in supported:
@@ -98,18 +117,19 @@ class WorkspaceSettings(BaseModel):
 class ApplicationSettings(BaseModel):
     """Root VSCS application configuration model."""
 
-    schema_version: int = 1
+    schema_version: int = 2
     theme: Theme = Theme.SYSTEM
     recent_projects: list[Path] = Field(default_factory=list)
     maximum_recent_projects: int = Field(default=10, ge=1, le=50)
     ai: AISettings = Field(default_factory=AISettings)
+    environment: EnvironmentSettings = Field(default_factory=EnvironmentSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     plugins: PluginSettings = Field(default_factory=PluginSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     workspace: WorkspaceSettings = Field(default_factory=WorkspaceSettings)
     renderers: dict[str, RendererSettings] = Field(
         default_factory=lambda: {
-            "comfyui": RendererSettings(),
+            "comfyui": RendererSettings(enabled=True, api_url="http://127.0.0.1:8188"),
             "pinokio": RendererSettings(),
         }
     )
@@ -117,7 +137,6 @@ class ApplicationSettings(BaseModel):
     @field_validator("recent_projects")
     @classmethod
     def remove_duplicate_recent_projects(cls, projects: list[Path]) -> list[Path]:
-        """Keep recent projects unique while preserving their order."""
         unique: list[Path] = []
         seen: set[str] = set()
         for project in projects:
