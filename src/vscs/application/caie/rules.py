@@ -39,7 +39,7 @@ CATEGORY_RULES: dict[AssetCategory, CategoryPromptRule] = {
     ),
     AssetCategory.VEHICLE: CategoryPromptRule(
         classification="a technologically coherent production vehicle, not an unrelated contemporary consumer vehicle",
-        functional_language="Make its mobility system, crew access, structure and intended operating role immediately legible.",
+        functional_language="Make its mobility system, crew access, structure and intended operating role immediately legible and functional.",
         environment_language="Place it in the environment where it is canonically operated.",
         required_anchors=("vehicle", "functional"),
         negative_terms=("toy vehicle", "generic sports car", "unrelated modern traffic"),
@@ -48,14 +48,14 @@ CATEGORY_RULES: dict[AssetCategory, CategoryPromptRule] = {
         classification="a single canonical production character reference",
         functional_language="Preserve age, body proportions, facial identity, hair, wardrobe and role-specific details; show one person only.",
         environment_language="Use a neutral studio reference setting unless the CAP explicitly requires an environmental portrait.",
-        required_anchors=("single character", "canonical reference"),
+        required_anchors=("canonical production character", "one person"),
         negative_terms=("multiple people", "duplicate person", "extra limbs", "extra fingers", "malformed hands", "cropped head", "identity drift"),
     ),
     AssetCategory.LOCATION: CategoryPromptRule(
         classification="a canonical production location with a coherent architectural and spatial identity",
         functional_language="Show circulation, scale, materials, structural logic and the location's production purpose clearly.",
         environment_language="Use a wide establishing composition that makes the location readable for future scene continuity.",
-        required_anchors=("location", "architecture", "spatial"),
+        required_anchors=("location", "architectural", "spatial"),
         negative_terms=("impossible architecture", "floating building parts", "generic fantasy palace"),
     ),
     AssetCategory.ENVIRONMENT: CategoryPromptRule(
@@ -68,20 +68,20 @@ CATEGORY_RULES: dict[AssetCategory, CategoryPromptRule] = {
     AssetCategory.PLANET: CategoryPromptRule(
         classification="a planetary-scale world, not a small landscape or decorative sphere",
         functional_language="Show recognisable planetary geology, atmosphere, hydrology, cloud systems and continental-scale features where applicable.",
-        environment_language="Use an orbital or high-altitude view that communicates true planetary scale.",
-        required_anchors=("planet", "orbital view", "planetary scale"),
+        environment_language="Use an orbital view or high-altitude view that communicates true planetary scale.",
+        required_anchors=("planetary", "orbital view", "planetary scale"),
         negative_terms=("small floating island", "glass marble", "fantasy globe", "flat landscape only"),
     ),
     AssetCategory.PROP: CategoryPromptRule(
         classification="a single canonical production prop",
         functional_language="Show its form, materials, controls, wear state, scale cues and intended use with an unobstructed silhouette.",
-        environment_language="Use a clean neutral product-reference setting unless operational context is essential.",
-        required_anchors=("single prop", "production reference"),
+        environment_language="Use a clean neutral production reference setting unless operational context is essential.",
+        required_anchors=("canonical production prop", "production reference"),
         negative_terms=("multiple unrelated objects", "cluttered table", "product advertisement"),
     ),
     AssetCategory.TECHNOLOGY: CategoryPromptRule(
         classification="a physically coherent engineered technology asset",
-        functional_language="Communicate how the device is constructed and operated through restrained, plausible interfaces and visible engineering logic.",
+        functional_language="Communicate how the device is constructed and operated through restrained, plausible interfaces and visible functional engineering logic.",
         environment_language="Present it as a clean production reference or in its correct operational installation.",
         required_anchors=("engineered technology", "functional"),
         negative_terms=("magic device", "excessive holograms", "floating interface", "neon circuitry everywhere"),
@@ -89,12 +89,12 @@ CATEGORY_RULES: dict[AssetCategory, CategoryPromptRule] = {
     AssetCategory.UNIFORM: CategoryPromptRule(
         classification="a canonical production costume and uniform reference",
         functional_language="Show the complete garment, rank or role identifiers, construction, closures, materials, trim and practical fit consistently.",
-        environment_language="Use a neutral full-body studio presentation on one wearer or a clean garment display.",
+        environment_language="Use a neutral full body studio presentation on one wearer or a clean garment display.",
         required_anchors=("uniform reference", "full body"),
         negative_terms=("fashion runway", "multiple outfits", "cropped garment", "fantasy armour"),
     ),
     AssetCategory.EFFECT: CategoryPromptRule(
-        classification="a controlled production visual-effect reference",
+        classification="a controlled production visual effect reference",
         functional_language="Show the effect's source, physical interaction, scale, colour behaviour and environmental influence without obscuring its structure.",
         environment_language="Use a simple context that makes the effect readable and repeatable.",
         required_anchors=("visual effect reference", "controlled"),
@@ -106,7 +106,7 @@ CATEGORY_RULES: dict[AssetCategory, CategoryPromptRule] = {
 DEFAULT_RULE = CategoryPromptRule(
     classification="a single canonical production asset",
     functional_language="Present the asset clearly, consistently and without unrelated objects.",
-    environment_language="Use an appropriate production-reference composition with coherent scale and lighting.",
+    environment_language="Use an appropriate production reference composition with coherent scale and lighting.",
     required_anchors=("canonical production asset",),
     negative_terms=("unrelated objects", "ambiguous subject"),
 )
