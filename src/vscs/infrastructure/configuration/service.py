@@ -1,7 +1,6 @@
 """Load, validate, and persist VSCS application configuration."""
 
 from __future__ import annotations
-
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -26,11 +25,13 @@ class ConfigurationService:
 
     @staticmethod
     def default_config_path() -> Path:
-        """Return a platform-appropriate per-user configuration path."""
+        """Return the central VSCS configuration file location."""
+        configured = os.environ.get("VSCS_SETTINGS_FILE")
+        if configured:
+            return Path(configured)
         if os.name == "nt":
-            root = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-        else:
-            root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+            return Path(r"D:\VSCS\config\settings.yaml")
+        root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
         return root / "VSCS" / "settings.yaml"
 
     def load(self) -> ApplicationSettings:
@@ -39,7 +40,6 @@ class ConfigurationService:
             self.settings = ApplicationSettings()
             self.save()
             return self.settings
-
         try:
             raw_data = yaml.safe_load(self.config_path.read_text(encoding="utf-8")) or {}
             if not isinstance(raw_data, dict):
@@ -55,12 +55,8 @@ class ConfigurationService:
         data: dict[str, Any] = self.settings.model_dump(mode="json")
         try:
             with NamedTemporaryFile(
-                "w",
-                encoding="utf-8",
-                dir=self.config_path.parent,
-                prefix="settings-",
-                suffix=".tmp",
-                delete=False,
+                "w", encoding="utf-8", dir=self.config_path.parent,
+                prefix="settings-", suffix=".tmp", delete=False,
             ) as temporary_file:
                 yaml.safe_dump(data, temporary_file, sort_keys=False, allow_unicode=True)
                 temporary_path = Path(temporary_file.name)
@@ -69,35 +65,27 @@ class ConfigurationService:
             raise ConfigurationError(f"Unable to save settings: {exc}") from exc
 
     def reset(self) -> ApplicationSettings:
-        """Restore default settings and persist them."""
         self.settings = ApplicationSettings()
         self.save()
         return self.settings
 
     def add_recent_project(self, project_path: Path) -> None:
-        """Move a project to the front of the recent-project list."""
         normalized = project_path.expanduser().resolve(strict=False)
         existing = [
-            path
-            for path in self.settings.recent_projects
+            path for path in self.settings.recent_projects
             if str(path.expanduser().resolve(strict=False)).casefold() != str(normalized).casefold()
         ]
-        self.settings.recent_projects = [normalized, *existing][
-            : self.settings.maximum_recent_projects
-        ]
+        self.settings.recent_projects = [normalized, *existing][: self.settings.maximum_recent_projects]
         self.save()
 
     def remove_recent_project(self, project_path: Path) -> None:
-        """Remove a project from the recent-project list."""
         target = str(project_path.expanduser().resolve(strict=False)).casefold()
         self.settings.recent_projects = [
-            path
-            for path in self.settings.recent_projects
+            path for path in self.settings.recent_projects
             if str(path.expanduser().resolve(strict=False)).casefold() != target
         ]
         self.save()
 
     def clear_recent_projects(self) -> None:
-        """Remove all recent projects."""
         self.settings.recent_projects.clear()
         self.save()
