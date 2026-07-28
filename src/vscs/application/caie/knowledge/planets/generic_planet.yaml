@@ -1,0 +1,29 @@
+name: Canonical Planetary World
+classification: a planetary-scale world with coherent geology, atmosphere and orbital appearance
+purpose:
+  - establish repeatable planetary identity from orbit and at altitude
+required_features:
+  - continental or planetary-scale geology
+  - coherent atmosphere and cloud systems where applicable
+  - believable hydrology, terrain and illumination
+engineering_principles:
+  - maintain planetary curvature, atmospheric depth and consistent light direction
+preferred_language:
+  - planetary scale
+  - orbital view
+  - coherent geology
+forbidden_features:
+  - miniature globe
+  - floating island posing as a planet
+forbidden_archetypes:
+  - fantasy marble
+  - flat landscape only
+negative_terms:
+  - glass marble
+  - floating island
+  - miniature planet
+required_anchors:
+  - planetary scale
+  - orbital view
+environment_guidance: Show the world from orbit or high altitude with physically plausible atmosphere and sunlight.
+composition_guidance: Keep the full curvature or sufficient planetary scale visible to establish global identity.
