@@ -15,7 +15,7 @@ class CAIEError(RuntimeError):
 class CanonicalAssetIntelligenceEngine:
     """Compile CAP facts into category-aware, model-ready image prompts."""
 
-    VERSION = "1.0"
+    VERSION = "1.1"
     _metadata_line = re.compile(
         r"^\s*(asset\s*id|cap[-_ ]?[a-z]+[-_ ]?\d+|category|status|version|story\s*role|canonical\s*description|visual\s*identity|production\s*notes)\s*[:\-]",
         re.IGNORECASE,
@@ -27,6 +27,11 @@ class CanonicalAssetIntelligenceEngine:
         description = self._clean_source(context.profile.canonical_description)
         identity = self._clean_source(context.profile.visual_identity)
         notes = self._clean_source(context.profile.production_notes)
+        refinements = tuple(
+            cleaned
+            for value in context.refinement_instructions
+            if (cleaned := self._clean_source(value))
+        )
 
         sections = [
             "Ultra-photorealistic premium production reference image.",
@@ -39,6 +44,12 @@ class CanonicalAssetIntelligenceEngine:
             sections.append(f"Visual identity: {identity}")
         if notes:
             sections.append(f"Production constraints: {notes}")
+        if refinements:
+            sections.append(
+                "Evaluation-driven corrections for this new iteration: "
+                + " ".join(f"{index + 1}. {value}" for index, value in enumerate(refinements))
+                + " These corrections refine presentation only and must not introduce new canon."
+            )
         sections.extend(
             (
                 rule.environment_language,
@@ -48,14 +59,16 @@ class CanonicalAssetIntelligenceEngine:
         )
         positive = self._normalise("\n\n".join(sections))
         negative = ", ".join(dict.fromkeys((*rule.negative_terms, *GLOBAL_NEGATIVE_TERMS)))
-        warnings = self._validate(positive, context, rule.required_anchors)
+        warnings = list(self._validate(positive, context, rule.required_anchors))
+        if refinements:
+            warnings.append(f"Applied {len(refinements)} evaluation-feedback refinement(s).")
         return CanonicalPromptPackage(
             positive_prompt=positive,
             negative_prompt=negative,
             category=context.category,
             style_profile=context.style_profile,
             target_model=context.target_model,
-            warnings=warnings,
+            warnings=tuple(warnings),
             engine_version=self.VERSION,
         )
 
