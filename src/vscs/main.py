@@ -35,6 +35,9 @@ from vscs.presentation.widgets import cap_manager as cap_manager_module
 from vscs.presentation.widgets.cap_reference_deletion import (
     install_canonical_reference_deletion,
 )
+from vscs.presentation.widgets.cap_reference_evaluation import (
+    install_canonical_image_evaluation,
+)
 from vscs.presentation.widgets.cap_reference_file_management import (
     install_canonical_reference_file_management,
 )
@@ -43,6 +46,7 @@ from vscs.presentation.widgets.cap_reference_preview import PreviewCAPManagerWid
 cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
 install_canonical_reference_file_management()
 install_canonical_reference_deletion()
+install_canonical_image_evaluation()
 
 from vscs.presentation.windows.main_window import MainWindow  # noqa: E402
 
