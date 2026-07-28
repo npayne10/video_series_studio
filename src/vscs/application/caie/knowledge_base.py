@@ -47,6 +47,11 @@ class StyleKnowledge:
 class CAIEKnowledgeBase:
     """Load and resolve YAML knowledge without embedding design facts in code."""
 
+    STYLE_ALIASES = {
+        "grounded_cinematic": "xorix_grounded_scifi",
+        "neutral_reference": "xorix_grounded_scifi",
+    }
+
     def __init__(self, root: Path | None = None) -> None:
         self.root = root or Path(__file__).with_name("knowledge")
         self._design_cache: dict[str, DesignKnowledge] = {}
@@ -95,18 +100,19 @@ class CAIEKnowledgeBase:
         return knowledge
 
     def load_style(self, style_id: str) -> StyleKnowledge:
-        cached = self._style_cache.get(style_id)
+        resolved_id = self.STYLE_ALIASES.get(style_id, style_id)
+        cached = self._style_cache.get(resolved_id)
         if cached is not None:
             return cached
-        path = self.root / "styles" / f"{style_id}.yaml"
+        path = self.root / "styles" / f"{resolved_id}.yaml"
         data = self._load_yaml(path)
         style = StyleKnowledge(
-            style_id=style_id,
+            style_id=resolved_id,
             name=self._required_text(data, "name"),
             positive_language=self._text_tuple(data, "positive_language"),
             negative_terms=self._text_tuple(data, "negative_terms"),
         )
-        self._style_cache[style_id] = style
+        self._style_cache[resolved_id] = style
         return style
 
     @staticmethod
