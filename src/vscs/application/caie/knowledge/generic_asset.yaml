@@ -1,0 +1,26 @@
+name: Generic Canonical Asset
+classification: a single production-ready canonical asset with a clear functional identity
+purpose:
+  - represent the approved CAP facts without unrelated invention
+required_features:
+  - clear silhouette
+  - coherent scale
+  - plausible materials
+engineering_principles:
+  - every visible feature should have a believable purpose
+preferred_language:
+  - canonical production asset
+  - functional design
+forbidden_features:
+  - unrelated objects
+  - captions or metadata panels
+forbidden_archetypes:
+  - infographic
+  - product advertisement
+negative_terms:
+  - unrelated objects
+  - ambiguous subject
+required_anchors:
+  - canonical production asset
+environment_guidance: Use a context that clarifies scale and purpose without distracting from the asset.
+composition_guidance: Show one complete, unobstructed asset with a readable silhouette.
