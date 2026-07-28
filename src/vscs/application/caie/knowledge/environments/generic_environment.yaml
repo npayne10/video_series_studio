@@ -1,0 +1,27 @@
+name: Canonical Production Environment
+classification: a coherent natural or constructed environment with repeatable terrain, atmosphere and spatial layers
+purpose:
+  - establish navigable geography, climate, scale and material character
+required_features:
+  - foreground, middle-ground and background continuity
+  - believable terrain or construction logic
+  - coherent atmosphere and light direction
+engineering_principles:
+  - access routes, slopes, structures and environmental hazards must remain physically plausible
+preferred_language:
+  - production environment
+  - navigable spatial continuity
+forbidden_features:
+  - abstract backdrop
+  - miniature diorama
+forbidden_archetypes:
+  - generic fantasy landscape
+negative_terms:
+  - abstract background
+  - miniature diorama
+  - impossible terrain
+required_anchors:
+  - environment
+  - scale
+environment_guidance: Use the canonical climate, atmosphere and time-of-day conditions.
+composition_guidance: Use an establishing view with readable depth and landmarks suitable for future scene matching.
