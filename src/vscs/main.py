@@ -45,6 +45,9 @@ from vscs.presentation.widgets.cap_reference_preview import PreviewCAPManagerWid
 from vscs.presentation.widgets.cap_reference_production_readiness import (
     install_production_readiness_evaluation,
 )
+from vscs.presentation.widgets.cap_reference_regeneration import (
+    install_feedback_regeneration,
+)
 from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
     install_semantic_image_evaluation,
 )
@@ -55,6 +58,7 @@ install_canonical_reference_deletion()
 install_canonical_image_evaluation()
 install_semantic_image_evaluation()
 install_production_readiness_evaluation()
+install_feedback_regeneration()
 
 from vscs.presentation.windows.main_window import MainWindow  # noqa: E402
 
