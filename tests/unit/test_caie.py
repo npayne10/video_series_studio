@@ -1,7 +1,6 @@
 """Tests for the Canonical Asset Intelligence Engine."""
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 from vscs.application.caie import CanonicalAssetIntelligenceEngine, CanonicalPromptContext
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
@@ -31,7 +30,7 @@ def _ship_context() -> CanonicalPromptContext:
         canonical_description="Story Role: The Guild Tug Ship will pull the Mauritania out of the orbital dock.",
         visual_identity="Compact industrial Guild vessel with towing clamps and manoeuvring thrusters.",
         production_notes="No visible text or labels.",
-        reference_paths=tuple[Path](),
+        reference_paths=(),
         created_at=now,
         updated_at=now,
     )
