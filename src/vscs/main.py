@@ -42,11 +42,15 @@ from vscs.presentation.widgets.cap_reference_file_management import (
     install_canonical_reference_file_management,
 )
 from vscs.presentation.widgets.cap_reference_preview import PreviewCAPManagerWidget
+from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
+    install_semantic_image_evaluation,
+)
 
 cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
 install_canonical_reference_file_management()
 install_canonical_reference_deletion()
 install_canonical_image_evaluation()
+install_semantic_image_evaluation()
 
 from vscs.presentation.windows.main_window import MainWindow  # noqa: E402
 
