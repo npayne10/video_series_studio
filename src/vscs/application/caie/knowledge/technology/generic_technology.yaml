@@ -1,0 +1,30 @@
+name: Canonical Engineered Technology
+classification: a physically coherent engineered technology asset with restrained, functional interfaces
+purpose:
+  - communicate construction, operation, maintenance and safety
+required_features:
+  - visible functional assemblies
+  - plausible controls and service access
+  - materials appropriate to load, heat and wear
+engineering_principles:
+  - interfaces should connect to believable machinery and power paths
+  - heat, force and access requirements should influence form
+preferred_language:
+  - engineered technology
+  - maintenance access
+  - restrained interface
+forbidden_features:
+  - magical energy source
+  - floating interface without emitter or support
+forbidden_archetypes:
+  - fantasy artefact
+  - neon gadget
+negative_terms:
+  - magic device
+  - excessive holograms
+  - neon circuitry everywhere
+required_anchors:
+  - engineered technology
+  - functional
+environment_guidance: Present the technology as a clean reference or installed in its correct operational context.
+composition_guidance: Make the operating surfaces, connections and maintenance logic visible without exploded-view labels.
