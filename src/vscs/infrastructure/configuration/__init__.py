@@ -1,10 +1,12 @@
 """VSCS configuration infrastructure."""
 
+from vscs.infrastructure.configuration.environment import EnvironmentHealth, EnvironmentManager
 from vscs.infrastructure.configuration.models import (
     AIProvider,
     AISettings,
     ApplicationSettings,
     DatabaseSettings,
+    EnvironmentSettings,
     LoggingSettings,
     RendererSettings,
     Theme,
@@ -19,6 +21,9 @@ __all__ = [
     "ConfigurationError",
     "ConfigurationService",
     "DatabaseSettings",
+    "EnvironmentHealth",
+    "EnvironmentManager",
+    "EnvironmentSettings",
     "LoggingSettings",
     "RendererSettings",
     "Theme",
