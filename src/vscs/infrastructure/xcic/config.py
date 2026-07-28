@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,8 +26,13 @@ class XCICConfiguration:
         if explicit_workflow:
             workflow = Path(explicit_workflow)
         else:
-            loader_workflow = root / "Xorix_Qwen_XCIC_Image_Creator_v1.0.json"
-            workflow = loader_workflow if loader_workflow.is_file() else root / "qwen_xcic_api_workflow.json"
+            candidates = (
+                root / "Xorix_Qwen_XCIC_Image_Creator_v1.0_api.json",
+                root / "Xorix_Qwen_XCIC_Image_Creator_v1.0_API.json",
+                root / "qwen_xcic_loader_api_workflow.json",
+                root / "Xorix_Qwen_XCIC_Image_Creator_v1.0.json",
+            )
+            workflow = next((path for path in candidates if path.is_file()), candidates[0])
         return cls(
             installation_root=root,
             comfyui_url=os.environ.get("VSCS_COMFYUI_URL", "http://127.0.0.1:8188"),
@@ -45,9 +52,34 @@ class XCICConfiguration:
         )
 
     def validate_text_to_image(self) -> None:
-        if not self.text_workflow_path.expanduser().is_file():
+        path = self.text_workflow_path.expanduser()
+        if not path.is_file():
             raise FileNotFoundError(
-                "XCIC text-to-image workflow is missing. Place the loader-based workflow at "
-                f"{self.installation_root / 'Xorix_Qwen_XCIC_Image_Creator_v1.0.json'} "
-                "or set VSCS_XCIC_TEXT_WORKFLOW explicitly."
+                "XCIC text-to-image workflow is missing. Export the loader-based workflow "
+                "from ComfyUI using 'Save (API Format)' and save it as:\n"
+                f"{self.installation_root / 'Xorix_Qwen_XCIC_Image_Creator_v1.0_api.json'}\n"
+                "The API workflow must contain one XCICQueueJobLoader node."
+            )
+        try:
+            value: Any = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Unable to read XCIC workflow {path}: {exc}") from exc
+        if not isinstance(value, dict):
+            raise ValueError(f"XCIC workflow must be a JSON object: {path}")
+        if "nodes" in value:
+            raise ValueError(
+                "The configured XCIC workflow is an editable ComfyUI workflow, not an API workflow. "
+                "Open it in ComfyUI, choose 'Save (API Format)', and save the result as:\n"
+                f"{self.installation_root / 'Xorix_Qwen_XCIC_Image_Creator_v1.0_api.json'}"
+            )
+        loader_count = sum(
+            1
+            for node in value.values()
+            if isinstance(node, dict) and node.get("class_type") == "XCICQueueJobLoader"
+        )
+        if loader_count != 1:
+            raise ValueError(
+                "The XCIC API workflow must contain exactly one XCICQueueJobLoader node; "
+                f"found {loader_count} in {path}. Export the same loader-based workflow using "
+                "ComfyUI's 'Save (API Format)' command."
             )
