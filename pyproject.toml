@@ -34,6 +34,7 @@ dev = [
 
 [project.scripts]
 vscs = "vscs.main:main"
+vscs-car-migrate = "vscs.application.car.migrator:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vscs"]
