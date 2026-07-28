@@ -64,7 +64,7 @@ negative_terms:
   - open deck railings
 required_anchors:
   - orbital spacecraft
-  - vacuum operations
+  - operating in vacuum
   - reaction-control thrusters
 environment_guidance: Show the spacecraft in open space, planetary orbit or a dry orbital construction dock with stars or planetary curvature visible; never place it in water or a wet dock.
 composition_guidance: Use a clear three-quarter production view with the complete spacecraft silhouette visible and enough separation to read thruster groups, docking hardpoints and structural layout.
