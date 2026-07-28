@@ -83,15 +83,13 @@ class XCICCoreRenderer:
             raise XCICCoreRenderingError(str(exc)) from exc
 
     def _compile(self) -> dict[str, object]:
-        if not self.workflow.editable_path.is_file() and self.workflow.compiled_path.is_file():
-            value = json.loads(self.workflow.compiled_path.read_text(encoding="utf-8"))
-            if not isinstance(value, dict):
-                raise XCICCoreCompileError("Compiled XCIC workflow must be a JSON object")
-            return value
-        api, _removed = compile_workflow(
-            self.workflow.editable_path,
-            self.workflow.compiled_path,
-        )
+        source = self.workflow.editable_path
+        if not source.is_file():
+            raise XCICCoreCompileError(
+                f"Configured XCIC workflow not found: {source}. XCIC Core will not reuse a stale "
+                "compiled workflow. Export the loader-based workflow using ComfyUI 'Save (API Format)'."
+            )
+        api, _removed = compile_workflow(source, self.workflow.compiled_path)
         return api
 
     def _loader_id(self, prompt: dict[str, object]) -> str:
@@ -101,8 +99,11 @@ class XCICCoreRenderer:
             if isinstance(node, dict) and node.get("class_type") == self.workflow.loader_class
         ]
         if len(matches) != 1:
+            source = self.workflow.editable_path
             raise XCICCoreRenderingError(
-                f"Expected exactly one {self.workflow.loader_class} node, found {len(matches)}"
+                f"Expected exactly one {self.workflow.loader_class} node, found {len(matches)} in "
+                f"{source}. Confirm VSCS is using the API-format export of the loader-based workflow, "
+                "not qwen_xcic_api_workflow.json from the older direct-patching integration."
             )
         return matches[0]
 
