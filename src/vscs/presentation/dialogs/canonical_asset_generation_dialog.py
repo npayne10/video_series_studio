@@ -17,22 +17,35 @@ from vscs.domain.caps import CanonicalAssetGenerationRequest
 
 
 class CanonicalAssetGenerationDialog(QDialog):
-    """Collect provider-neutral canonical image generation settings."""
+    """Review CAIE-compiled prompts and collect XCIC generation settings."""
 
-    def __init__(self, default_prompt: str = "", parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        default_prompt: str = "",
+        parent: QWidget | None = None,
+        *,
+        default_negative_prompt: str = "",
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Generate Canonical Images with XCIC")
         self.setMinimumWidth(680)
 
         self.prompt = QTextEdit(default_prompt)
-        self.prompt.setMinimumHeight(150)
-        self.negative_prompt = QTextEdit(
-            "fantasy, magical, stylised science fiction, excessive glow, neon technology, "
-            "unnecessary holograms, floating interfaces, impossible architecture, cartoon, "
-            "anime, illustration, low detail, low resolution, distorted geometry, watermark, "
-            "logo, AI artifacts, identity drift, inconsistent materials, inconsistent scale"
+        self.prompt.setMinimumHeight(210)
+        self.prompt.setToolTip(
+            "CAIE compiled this prompt from the registered asset and CAP. "
+            "You may refine it before rendering."
         )
-        self.negative_prompt.setMaximumHeight(90)
+        self.negative_prompt = QTextEdit(
+            default_negative_prompt
+            or (
+                "fantasy, magical, stylised science fiction, excessive glow, neon technology, "
+                "unnecessary holograms, floating interfaces, impossible architecture, cartoon, "
+                "anime, illustration, low detail, low resolution, distorted geometry, watermark, "
+                "logo, AI artifacts, identity drift, inconsistent materials, inconsistent scale"
+            )
+        )
+        self.negative_prompt.setMaximumHeight(120)
         self.model = QLineEdit("Qwen Image 2512 via XCIC")
         self.seed = QSpinBox()
         self.seed.setRange(0, 2_147_483_647)
@@ -47,8 +60,8 @@ class CanonicalAssetGenerationDialog(QDialog):
         self.variations.setValue(1)
 
         form = QFormLayout()
-        form.addRow("Prompt", self.prompt)
-        form.addRow("Negative prompt", self.negative_prompt)
+        form.addRow("CAIE compiled prompt", self.prompt)
+        form.addRow("CAIE negative prompt", self.negative_prompt)
         form.addRow("Provider/model", self.model)
         form.addRow("Seed", self.seed)
         form.addRow("Width", self.width)
