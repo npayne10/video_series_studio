@@ -1,0 +1,37 @@
+name: Generic Spacecraft
+classification: a purpose-built spacecraft engineered for vacuum and orbital operations
+purpose:
+  - perform the canonical mission defined by the CAP
+  - operate safely in vacuum and orbital environments
+required_features:
+  - credible propulsion and attitude-control systems
+  - visible structural logic and maintenance access
+  - sensors, docking interfaces and heat-management systems appropriate to role
+engineering_principles:
+  - align propulsion with mass and structural load paths
+  - separate crew, payload and hazardous machinery logically
+  - avoid aerodynamic or maritime forms unless explicitly required by canon
+preferred_language:
+  - spacecraft
+  - vacuum-rated
+  - orbital engineering
+  - reaction-control system
+forbidden_features:
+  - maritime hull features
+  - fantasy ornament
+  - unsupported readable markings
+forbidden_archetypes:
+  - ocean vessel
+  - fantasy starship
+negative_terms:
+  - boat
+  - ocean
+  - waterline
+  - mast
+  - anchor
+  - fantasy spaceship
+required_anchors:
+  - spacecraft
+  - vacuum operations
+environment_guidance: Place the asset in open space, orbit, a dry orbital dock or another clearly non-maritime operating environment.
+composition_guidance: Present the complete silhouette in a clear production-reference view that exposes propulsion, access and docking logic.
