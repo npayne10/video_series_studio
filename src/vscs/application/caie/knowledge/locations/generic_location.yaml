@@ -1,0 +1,29 @@
+name: Canonical Production Location
+classification: a spatially coherent production location with believable architecture and circulation
+purpose:
+  - establish repeatable scale, materials, access routes and spatial identity
+required_features:
+  - clear circulation paths
+  - plausible structural support
+  - readable entrances, work zones and scale cues
+engineering_principles:
+  - loads, spans and service access should be physically credible
+preferred_language:
+  - architectural continuity reference
+  - functional circulation
+forbidden_features:
+  - unsupported floating structures
+  - impossible spans
+forbidden_archetypes:
+  - generic fantasy palace
+  - abstract backdrop
+negative_terms:
+  - impossible architecture
+  - floating building parts
+  - miniature diorama
+required_anchors:
+  - location
+  - architectural
+  - spatial
+environment_guidance: Use the canonical environmental conditions and practical lighting appropriate to the location.
+composition_guidance: Use a wide establishing view that explains circulation, scale and major production zones.
