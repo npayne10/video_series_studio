@@ -15,7 +15,7 @@ class CanonicalPromptContext:
     asset: Asset
     profile: CanonicalAssetProfile
     target_model: str = "Qwen Image 2512"
-    style_profile: str = "grounded_cinematic"
+    style_profile: str = "xorix_grounded_scifi"
     refinement_instructions: tuple[str, ...] = ()
 
     @property
@@ -32,5 +32,6 @@ class CanonicalPromptPackage:
     category: AssetCategory
     style_profile: str
     target_model: str
+    knowledge_id: str = "generic_asset"
     warnings: tuple[str, ...] = ()
-    engine_version: str = "1.0"
+    engine_version: str = "2.0"
