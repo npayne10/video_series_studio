@@ -16,6 +16,7 @@ class CanonicalPromptContext:
     profile: CanonicalAssetProfile
     target_model: str = "Qwen Image 2512"
     style_profile: str = "grounded_cinematic"
+    refinement_instructions: tuple[str, ...] = ()
 
     @property
     def category(self) -> AssetCategory:
