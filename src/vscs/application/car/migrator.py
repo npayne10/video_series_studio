@@ -1,17 +1,29 @@
-"""Safe repository structure migration for Canonical Asset Repository v2.0."""
+"""Asset-aware migration for Canonical Asset Repository (CAR) v2.0.
+
+The migrator consumes :mod:`vscs.application.car.scanner` as its discovery and
+classification layer. It is safe by default: existing files are never
+overwritten, moved, renamed, or deleted.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Mapping, Sequence
 
-ASSET_DIRECTORY_PATTERN = re.compile(r"^CAP-[A-Z]{3}-\d{3}(?:_.+)?$")
-CAR_DIRECTORIES = (
+from .scanner import (
+    AssetClass,
+    AssetRepositoryInfo,
+    CarRepositoryScanner,
+    CarScanError,
+    InvalidCarRootError as ScannerInvalidCarRootError,
+    RepositoryScanResult,
+)
+
+VISUAL_DIRECTORIES = (
     "canon",
     "metadata",
     "prompts",
@@ -19,12 +31,25 @@ CAR_DIRECTORIES = (
     "candidates",
     "rejected",
 )
-METADATA_TEMPLATES = (
+VISUAL_METADATA_TEMPLATES = (
     "cap.json",
     "knowledge.json",
     "provenance.json",
     "evaluation.json",
     "history.json",
+)
+
+CONFIGURATION_FILES = (
+    "profile.json",
+    "description.md",
+)
+
+BEHAVIOUR_DIRECTORIES = (
+    "prompts",
+    "tests",
+)
+BEHAVIOUR_FILES = (
+    "behaviour.json",
 )
 
 
@@ -44,6 +69,8 @@ class MigrationAction:
     path: str
     status: str
     detail: str = ""
+    asset_id: str = ""
+    asset_class: str = ""
 
 
 @dataclass(slots=True)
@@ -55,10 +82,15 @@ class MigrationReport:
     started_at: str
     completed_at: str = ""
     assets_scanned: int = 0
+    visual_assets: int = 0
+    configuration_assets: int = 0
+    behaviour_assets: int = 0
+    unknown_assets: int = 0
     directories_created: int = 0
     files_created: int = 0
     skipped: int = 0
     warnings: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     actions: list[MigrationAction] = field(default_factory=list)
 
     def finish(self) -> None:
@@ -73,26 +105,36 @@ class MigrationReport:
 
 
 class CarRepositoryMigrator:
-    """Create the CAR v2 directory and metadata skeleton without moving media."""
+    """Create an asset-class-aware CAR v2 repository structure."""
 
-    def __init__(self, root: Path) -> None:
-        self.root = root.expanduser().resolve()
+    def __init__(self, root: Path | str) -> None:
+        self.root = Path(root).expanduser().resolve()
+        self.scanner = CarRepositoryScanner(self.root)
 
     def migrate(self, *, apply: bool = False) -> MigrationReport:
         """Plan or apply the repository migration.
 
         Existing files are never overwritten, renamed, moved, or deleted.
         """
-        self._validate_root()
         report = MigrationReport(
             root=str(self.root),
             applied=apply,
             started_at=datetime.now(UTC).isoformat(),
         )
 
-        for asset_directory in self._asset_directories():
+        try:
+            scan_result = self.scanner.scan()
+        except ScannerInvalidCarRootError as error:
+            raise InvalidCarRootError(str(error)) from error
+        except CarScanError as error:
+            raise CarMigrationError(str(error)) from error
+
+        self._copy_scan_issues(scan_result, report)
+
+        for asset in scan_result.assets:
             report.assets_scanned += 1
-            self._prepare_asset(asset_directory, report, apply=apply)
+            self._increment_class_count(asset.asset_class, report)
+            self._prepare_asset(asset, report, apply=apply)
 
         report.finish()
         return report
@@ -105,132 +147,249 @@ class CarRepositoryMigrator:
         target.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
         return target
 
-    def _validate_root(self) -> None:
-        if not self.root.exists():
-            raise InvalidCarRootError(f"CAR root does not exist: {self.root}")
-        if not self.root.is_dir():
-            raise InvalidCarRootError(f"CAR root is not a directory: {self.root}")
-
-    def _asset_directories(self) -> Iterable[Path]:
-        for category in sorted(path for path in self.root.iterdir() if path.is_dir()):
-            for candidate in sorted(path for path in category.iterdir() if path.is_dir()):
-                if ASSET_DIRECTORY_PATTERN.match(candidate.name):
-                    yield candidate
-
     def _prepare_asset(
         self,
-        asset_directory: Path,
+        asset: AssetRepositoryInfo,
         report: MigrationReport,
         *,
         apply: bool,
     ) -> None:
-        manifest = self._read_manifest(asset_directory, report)
-        asset_id = self._asset_id(asset_directory, manifest)
-        asset_name = self._asset_name(asset_directory, manifest)
-        category = asset_directory.parent.name
+        if asset.asset_class is AssetClass.VISUAL:
+            self._prepare_visual_asset(asset, report, apply=apply)
+            return
+        if asset.asset_class is AssetClass.CONFIGURATION:
+            self._prepare_configuration_asset(asset, report, apply=apply)
+            return
+        if asset.asset_class is AssetClass.BEHAVIOUR:
+            self._prepare_behaviour_asset(asset, report, apply=apply)
+            return
 
-        for directory_name in CAR_DIRECTORIES:
-            self._ensure_directory(asset_directory / directory_name, report, apply=apply)
+        warning = (
+            f"Unknown asset class; no migration template applied: "
+            f"{asset.relative_path}"
+        )
+        report.warnings.append(warning)
+        report.actions.append(
+            MigrationAction(
+                action="skip_asset",
+                path=str(asset.relative_path),
+                status="skipped",
+                detail="Unknown asset class",
+                asset_id=asset.asset_id,
+                asset_class=asset.asset_class.value,
+            )
+        )
+        report.skipped += 1
 
-        metadata_directory = asset_directory / "metadata"
-        template_context = {
-            "asset_id": asset_id,
-            "name": asset_name,
-            "category": category,
-            "source_manifest": "../manifest.json",
-        }
-        for filename in METADATA_TEMPLATES:
-            payload = self._metadata_template(filename, template_context)
-            self._ensure_json_file(
-                metadata_directory / filename,
-                payload,
+    def _prepare_visual_asset(
+        self,
+        asset: AssetRepositoryInfo,
+        report: MigrationReport,
+        *,
+        apply: bool,
+    ) -> None:
+        if not asset.has_manifest:
+            report.warnings.append(f"Missing manifest: {asset.relative_path / 'manifest.json'}")
+
+        for directory_name in VISUAL_DIRECTORIES:
+            self._ensure_directory(
+                asset.path / directory_name,
+                asset,
                 report,
                 apply=apply,
             )
 
+        context = self._template_context(asset)
+        metadata_directory = asset.path / "metadata"
+        for filename in VISUAL_METADATA_TEMPLATES:
+            self._ensure_json_file(
+                metadata_directory / filename,
+                self._visual_metadata_template(filename, context),
+                asset,
+                report,
+                apply=apply,
+            )
+
+    def _prepare_configuration_asset(
+        self,
+        asset: AssetRepositoryInfo,
+        report: MigrationReport,
+        *,
+        apply: bool,
+    ) -> None:
+        context = self._template_context(asset)
+        profile_payload = self._configuration_profile_template(context)
+        description = self._configuration_description_template(context)
+
+        self._ensure_json_file(
+            asset.path / CONFIGURATION_FILES[0],
+            profile_payload,
+            asset,
+            report,
+            apply=apply,
+        )
+        self._ensure_text_file(
+            asset.path / CONFIGURATION_FILES[1],
+            description,
+            asset,
+            report,
+            apply=apply,
+        )
+
+    def _prepare_behaviour_asset(
+        self,
+        asset: AssetRepositoryInfo,
+        report: MigrationReport,
+        *,
+        apply: bool,
+    ) -> None:
+        for directory_name in BEHAVIOUR_DIRECTORIES:
+            self._ensure_directory(
+                asset.path / directory_name,
+                asset,
+                report,
+                apply=apply,
+            )
+
+        context = self._template_context(asset)
+        behaviour_path = asset.path / BEHAVIOUR_FILES[0]
+        self._ensure_json_file(
+            behaviour_path,
+            self._behaviour_template(context),
+            asset,
+            report,
+            apply=apply,
+        )
+
     def _ensure_directory(
         self,
         path: Path,
+        asset: AssetRepositoryInfo,
         report: MigrationReport,
         *,
         apply: bool,
     ) -> None:
         relative_path = str(path.relative_to(self.root))
         if path.exists():
+            if not path.is_dir():
+                message = f"Expected directory but found file: {relative_path}"
+                report.errors.append(message)
+                report.actions.append(
+                    self._action("create_directory", relative_path, "conflict", asset, message)
+                )
+                return
             report.skipped += 1
-            report.actions.append(MigrationAction("create_directory", relative_path, "exists"))
+            report.actions.append(
+                self._action("create_directory", relative_path, "exists", asset)
+            )
             return
+
         if apply:
             path.mkdir(parents=True, exist_ok=False)
         report.directories_created += 1
         report.actions.append(
-            MigrationAction(
+            self._action(
                 "create_directory",
                 relative_path,
                 "created" if apply else "planned",
+                asset,
             )
         )
 
     def _ensure_json_file(
         self,
         path: Path,
-        payload: dict[str, Any],
+        payload: Mapping[str, Any],
+        asset: AssetRepositoryInfo,
         report: MigrationReport,
         *,
         apply: bool,
     ) -> None:
-        relative_path = str(path.relative_to(self.root))
-        if path.exists():
-            report.skipped += 1
-            report.actions.append(MigrationAction("create_file", relative_path, "exists"))
-            return
-        if apply:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        report.files_created += 1
-        report.actions.append(
-            MigrationAction("create_file", relative_path, "created" if apply else "planned")
+        content = json.dumps(dict(payload), indent=2) + "\n"
+        self._ensure_text_file(
+            path,
+            content,
+            asset,
+            report,
+            apply=apply,
+            action="create_file",
         )
 
-    def _read_manifest(
+    def _ensure_text_file(
         self,
-        asset_directory: Path,
+        path: Path,
+        content: str,
+        asset: AssetRepositoryInfo,
         report: MigrationReport,
-    ) -> dict[str, Any]:
-        manifest_path = asset_directory / "manifest.json"
-        if not manifest_path.exists():
-            report.warnings.append(f"Missing manifest: {manifest_path.relative_to(self.root)}")
-            return {}
-        try:
-            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            report.warnings.append(
-                f"Unreadable manifest {manifest_path.relative_to(self.root)}: {error}"
+        *,
+        apply: bool,
+        action: str = "create_file",
+    ) -> None:
+        relative_path = str(path.relative_to(self.root))
+        if path.exists():
+            if not path.is_file():
+                message = f"Expected file but found directory: {relative_path}"
+                report.errors.append(message)
+                report.actions.append(
+                    self._action(action, relative_path, "conflict", asset, message)
+                )
+                return
+            report.skipped += 1
+            report.actions.append(self._action(action, relative_path, "exists", asset))
+            return
+
+        if apply:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        report.files_created += 1
+        report.actions.append(
+            self._action(
+                action,
+                relative_path,
+                "created" if apply else "planned",
+                asset,
             )
-            return {}
-        return payload if isinstance(payload, dict) else {}
+        )
 
     @staticmethod
-    def _asset_id(asset_directory: Path, manifest: dict[str, Any]) -> str:
-        manifest_id = manifest.get("asset_id")
-        if isinstance(manifest_id, str) and manifest_id.strip():
-            return manifest_id.strip().upper()
-        return asset_directory.name.split("_", maxsplit=1)[0].upper()
+    def _action(
+        action: str,
+        path: str,
+        status: str,
+        asset: AssetRepositoryInfo,
+        detail: str = "",
+    ) -> MigrationAction:
+        return MigrationAction(
+            action=action,
+            path=path,
+            status=status,
+            detail=detail,
+            asset_id=asset.asset_id,
+            asset_class=asset.asset_class.value,
+        )
 
     @staticmethod
-    def _asset_name(asset_directory: Path, manifest: dict[str, Any]) -> str:
-        manifest_name = manifest.get("name") or manifest.get("asset_name")
-        if isinstance(manifest_name, str) and manifest_name.strip():
-            return manifest_name.strip()
-        parts = asset_directory.name.split("_", maxsplit=1)
-        return parts[1].replace("_", " ") if len(parts) == 2 else parts[0]
+    def _template_context(asset: AssetRepositoryInfo) -> dict[str, str]:
+        return {
+            "asset_id": asset.asset_id,
+            "name": asset.name,
+            "category": asset.category,
+            "asset_class": asset.asset_class.value,
+            "repository_version": "2.0",
+            "source_manifest": "../manifest.json",
+        }
 
     @staticmethod
-    def _metadata_template(filename: str, context: dict[str, str]) -> dict[str, Any]:
+    def _visual_metadata_template(
+        filename: str,
+        context: Mapping[str, str],
+    ) -> dict[str, Any]:
         now = datetime.now(UTC).isoformat()
         common = {
             "schema_version": "2.0",
+            "repository_version": context["repository_version"],
             "asset_id": context["asset_id"],
+            "asset_class": context["asset_class"],
         }
         if filename == "cap.json":
             return {
@@ -254,30 +413,104 @@ class CarRepositoryMigrator:
                     {
                         "event": "car_v2_structure_created",
                         "timestamp": now,
-                        "version": "1.0",
+                        "version": "2.0",
                     }
                 ],
             }
-        raise ValueError(f"Unsupported metadata template: {filename}")
+        raise ValueError(f"Unsupported visual metadata template: {filename}")
+
+    @staticmethod
+    def _configuration_profile_template(context: Mapping[str, str]) -> dict[str, Any]:
+        return {
+            "schema_version": "2.0",
+            "repository_version": context["repository_version"],
+            "asset_id": context["asset_id"],
+            "asset_class": context["asset_class"],
+            "name": context["name"],
+            "category": context["category"],
+            "status": "migration_pending",
+            "parameters": {},
+            "notes": "",
+        }
+
+    @staticmethod
+    def _configuration_description_template(context: Mapping[str, str]) -> str:
+        return (
+            f"# {context['asset_id']} — {context['name']}\n\n"
+            f"- Asset class: `{context['asset_class']}`\n"
+            f"- Category: `{context['category']}`\n"
+            f"- Repository version: `{context['repository_version']}`\n\n"
+            "Configuration description pending.\n"
+        )
+
+    @staticmethod
+    def _behaviour_template(context: Mapping[str, str]) -> dict[str, Any]:
+        return {
+            "schema_version": "2.0",
+            "repository_version": context["repository_version"],
+            "asset_id": context["asset_id"],
+            "asset_class": context["asset_class"],
+            "name": context["name"],
+            "category": context["category"],
+            "status": "migration_pending",
+            "inputs": {},
+            "parameters": {},
+            "outputs": {},
+            "constraints": [],
+        }
+
+    @staticmethod
+    def _increment_class_count(
+        asset_class: AssetClass,
+        report: MigrationReport,
+    ) -> None:
+        if asset_class is AssetClass.VISUAL:
+            report.visual_assets += 1
+        elif asset_class is AssetClass.CONFIGURATION:
+            report.configuration_assets += 1
+        elif asset_class is AssetClass.BEHAVIOUR:
+            report.behaviour_assets += 1
+        else:
+            report.unknown_assets += 1
+
+    @staticmethod
+    def _copy_scan_issues(
+        scan_result: RepositoryScanResult,
+        report: MigrationReport,
+    ) -> None:
+        all_issues = list(scan_result.issues)
+        for asset in scan_result.assets:
+            all_issues.extend(asset.issues)
+
+        for issue in all_issues:
+            location = f" ({issue.path})" if issue.path else ""
+            message = f"[{issue.code}] {issue.message}{location}"
+            if issue.severity.casefold() == "error":
+                report.errors.append(message)
+            else:
+                report.warnings.append(message)
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the CAR migrator command-line parser."""
     parser = argparse.ArgumentParser(
-        description="Create the CAR v2 repository structure without moving existing media."
+        description=(
+            "Create an asset-class-aware CAR v2 repository structure without "
+            "moving or overwriting existing content."
+        )
     )
     parser.add_argument("root", type=Path, help="Canonical asset repository root")
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Create folders and template files. Without this flag, only preview changes.",
+        help="Create folders and template files. Without this flag, preview only.",
     )
     parser.add_argument("--report", type=Path, help="Optional report output path")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the CAR repository migrator command line interface."""
+    """Run the CAR repository migrator command-line interface."""
     arguments = build_parser().parse_args(argv)
     migrator = CarRepositoryMigrator(arguments.root)
     try:
@@ -289,11 +522,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     report_path = migrator.write_report(report, arguments.report)
     mode = "APPLIED" if arguments.apply else "DRY RUN"
     print(
-        f"CAR migration {mode}: {report.assets_scanned} assets, "
-        f"{report.directories_created} directories, {report.files_created} files."
+        f"CAR migration {mode}: {report.assets_scanned} assets "
+        f"({report.visual_assets} visual, "
+        f"{report.configuration_assets} configuration, "
+        f"{report.behaviour_assets} behaviour, "
+        f"{report.unknown_assets} unknown), "
+        f"{report.directories_created} directories, "
+        f"{report.files_created} files, "
+        f"{len(report.warnings)} warnings, "
+        f"{len(report.errors)} errors."
     )
     print(f"Report: {report_path}")
-    return 0
+    return 2 if report.errors else 0
 
 
 if __name__ == "__main__":

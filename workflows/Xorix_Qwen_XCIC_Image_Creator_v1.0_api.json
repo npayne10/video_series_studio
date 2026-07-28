@@ -1,0 +1,295 @@
+{
+  "60": {
+    "inputs": {
+      "directory": [
+        "264",
+        7
+      ],
+      "filename": [
+        "264",
+        8
+      ],
+      "images": [
+        "238:231",
+        0
+      ]
+    },
+    "class_type": "XCICSaveImage",
+    "_meta": {
+      "title": "XCIC Save Candidate Image"
+    }
+  },
+  "264": {
+    "inputs": {
+      "queue_file": "D:\\VSCS\\video_series_studio\\workflows\\xcic_output\\xcic_generation_queue.json",
+      "job_index": 2
+    },
+    "class_type": "XCICQueueJobLoader",
+    "_meta": {
+      "title": "XCIC Queue Job Loader"
+    }
+  },
+  "238:219": {
+    "inputs": {
+      "clip_name": "qwen\\qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "238:220": {
+    "inputs": {
+      "vae_name": "qwen\\qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "238:222": {
+    "inputs": {
+      "shift": 3.1000000000000005,
+      "model": [
+        "238:233",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "238:226": {
+    "inputs": {
+      "unet_name": "qwen\\qwen_image_2512_fp8_e4m3fn.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "238:227": {
+    "inputs": {
+      "text": [
+        "264",
+        0
+      ],
+      "clip": [
+        "238:219",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "238:228": {
+    "inputs": {
+      "text": "fantasy, magical, stylised science fiction, excessive glow, neon technology, unnecessary holograms, floating interfaces, impossible architecture, exaggerated proportions, cartoon, anime, illustration, painterly, low detail, low resolution, distorted geometry, duplicate objects, extra limbs, malformed hands, text artifacts, watermark, logo, AI artifacts, morphing, identity drift, inconsistent materials, inconsistent scale",
+      "clip": [
+        "238:219",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "238:231": {
+    "inputs": {
+      "samples": [
+        "238:230",
+        0
+      ],
+      "vae": [
+        "238:220",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "238:232": {
+    "inputs": {
+      "width": [
+        "264",
+        2
+      ],
+      "height": [
+        "264",
+        3
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "238:230": {
+    "inputs": {
+      "seed": [
+        "264",
+        4
+      ],
+      "steps": [
+        "238:240",
+        0
+      ],
+      "cfg": [
+        "238:243",
+        0
+      ],
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "238:222",
+        0
+      ],
+      "positive": [
+        "238:227",
+        0
+      ],
+      "negative": [
+        "238:228",
+        0
+      ],
+      "latent_image": [
+        "238:232",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "238:224": {
+    "inputs": {
+      "value": 50
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Int (Steps)"
+    }
+  },
+  "238:223": {
+    "inputs": {
+      "value": 4
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float (CFG)"
+    }
+  },
+  "238:229": {
+    "inputs": {
+      "value": true
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "Enable 4 Steps LoRA?"
+    }
+  },
+  "238:225": {
+    "inputs": {
+      "value": 4
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Int (Steps)"
+    }
+  },
+  "238:218": {
+    "inputs": {
+      "value": 1
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float (CFG)"
+    }
+  },
+  "238:221": {
+    "inputs": {
+      "lora_name": "qwen\\Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+      "strength_model": 1,
+      "model": [
+        "238:226",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "238:233": {
+    "inputs": {
+      "switch": [
+        "238:229",
+        0
+      ],
+      "on_false": [
+        "238:226",
+        0
+      ],
+      "on_true": [
+        "238:221",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch (model)"
+    }
+  },
+  "238:240": {
+    "inputs": {
+      "switch": [
+        "238:229",
+        0
+      ],
+      "on_false": [
+        "238:224",
+        0
+      ],
+      "on_true": [
+        "238:225",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch (steps)"
+    }
+  },
+  "238:243": {
+    "inputs": {
+      "switch": [
+        "238:229",
+        0
+      ],
+      "on_false": [
+        "238:223",
+        0
+      ],
+      "on_true": [
+        "238:218",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch (cfg)"
+    }
+  }
+}
