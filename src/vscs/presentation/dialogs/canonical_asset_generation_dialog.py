@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -13,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caie import CanonicalAssetIntelligenceEngine, CanonicalPromptContext
 from vscs.domain.caps import CanonicalAssetGenerationRequest
 
 
@@ -30,14 +33,20 @@ class CanonicalAssetGenerationDialog(QDialog):
         self.setWindowTitle("Generate Canonical Images with XCIC")
         self.setMinimumWidth(680)
 
-        self.prompt = QTextEdit(default_prompt)
+        compiled_prompt, compiled_negative = self._compile_from_parent(
+            parent,
+            default_prompt,
+            default_negative_prompt,
+        )
+
+        self.prompt = QTextEdit(compiled_prompt)
         self.prompt.setMinimumHeight(210)
         self.prompt.setToolTip(
             "CAIE compiled this prompt from the registered asset and CAP. "
             "You may refine it before rendering."
         )
         self.negative_prompt = QTextEdit(
-            default_negative_prompt
+            compiled_negative
             or (
                 "fantasy, magical, stylised science fiction, excessive glow, neon technology, "
                 "unnecessary holograms, floating interfaces, impossible architecture, cartoon, "
@@ -77,6 +86,33 @@ class CanonicalAssetGenerationDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addWidget(buttons)
+
+    @staticmethod
+    def _compile_from_parent(
+        parent: QWidget | None,
+        fallback_prompt: str,
+        fallback_negative: str,
+    ) -> tuple[str, str]:
+        """Compile a preview from the active CAP editor when services are available."""
+        try:
+            editor: Any = parent
+            profile = getattr(editor, "profile", None)
+            reference_service = getattr(editor, "reference_service", None)
+            if profile is None or reference_service is None:
+                return fallback_prompt, fallback_negative
+            asset = reference_service.caps.assets.get(profile.asset_id)
+            package = CanonicalAssetIntelligenceEngine().compile(
+                CanonicalPromptContext(
+                    asset=asset,
+                    profile=profile,
+                    target_model="Qwen Image 2512 via XCIC",
+                )
+            )
+            return package.positive_prompt, package.negative_prompt
+        except Exception:
+            # The application service still compiles CAIE again before rendering. Falling back here
+            # keeps the dialog usable if it is opened without a fully initialized CAP editor.
+            return fallback_prompt, fallback_negative
 
     def request_value(self) -> CanonicalAssetGenerationRequest:
         return CanonicalAssetGenerationRequest(
