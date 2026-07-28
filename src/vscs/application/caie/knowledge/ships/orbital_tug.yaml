@@ -1,0 +1,70 @@
+name: Orbital Space Tug
+classification: a compact industrial orbital towing spacecraft engineered exclusively for vacuum operations, not a boat adapted for space
+purpose:
+  - manoeuvre, tow and precisely position larger spacecraft
+  - operate around orbital docks, construction yards and starports
+  - provide controlled low-speed translation and attitude authority in zero gravity
+required_features:
+  - reinforced structural towing and docking hardpoints
+  - distributed reaction-control thrusters for six-axis manoeuvring
+  - compact main propulsion units aligned with the spacecraft centre of mass
+  - protected sensor clusters and rendezvous cameras
+  - thermal radiators or other credible heat-rejection surfaces
+  - service access panels and externally readable maintenance zones
+engineering_principles:
+  - use a non-buoyant spacecraft body with no keel, waterline or marine hydrodynamic shaping
+  - arrange thrusters in opposing groups so translation and rotation are physically plausible
+  - keep docking loads connected to obvious structural members and load paths
+  - protect crew and machinery from plume impingement and collision hazards
+  - make vacuum operation unmistakable through spacecraft systems rather than decorative sci-fi styling
+preferred_language:
+  - orbital transfer vehicle
+  - industrial spacecraft
+  - zero-gravity tug
+  - docking hardpoints
+  - reaction-control thrusters
+  - vacuum-rated structure
+  - orbital construction craft
+forbidden_features:
+  - marine wheelhouse or panoramic harbour-boat bridge
+  - mast, crow's nest, rigging, ropes or marine radar tower
+  - smokestack, funnel or chimney
+  - anchor, rudder, keel, marine propeller or water jet
+  - lifeboats, tyre fenders, deck railings or open weather decks
+  - waterline paint, bow wave, wet hull or ocean wake
+  - readable hull names, registration numbers or decorative insignia
+forbidden_archetypes:
+  - harbour tugboat
+  - fishing vessel
+  - naval patrol boat
+  - cargo ship
+  - riverboat
+  - steam tug
+  - ocean-going ship placed inside a space hangar
+negative_terms:
+  - terrestrial tugboat
+  - harbour tug
+  - maritime ship
+  - boat hull
+  - marine bridge
+  - ship mast
+  - smokestack
+  - funnel
+  - anchor
+  - rudder
+  - keel
+  - propeller
+  - waterline
+  - ocean
+  - sea
+  - water
+  - bow wave
+  - tyre fenders
+  - lifeboat
+  - open deck railings
+required_anchors:
+  - orbital spacecraft
+  - vacuum operations
+  - reaction-control thrusters
+environment_guidance: Show the spacecraft in open space, planetary orbit or a dry orbital construction dock with stars or planetary curvature visible; never place it in water or a wet dock.
+composition_guidance: Use a clear three-quarter production view with the complete spacecraft silhouette visible and enough separation to read thruster groups, docking hardpoints and structural layout.
