@@ -1,0 +1,31 @@
+name: Canonical Character Reference
+classification: a single canonical production character shown with stable identity and anatomy
+purpose:
+  - establish repeatable facial identity, body proportions, age and wardrobe
+required_features:
+  - anatomically coherent face and hands
+  - role-appropriate posture and wardrobe
+  - unobstructed full-body or approved portrait framing
+engineering_principles:
+  - preserve plausible garment construction and practical fit
+preferred_language:
+  - neutral studio character reference
+  - consistent facial identity
+forbidden_features:
+  - duplicate person
+  - extra limbs or fingers
+  - cropped head or feet when full body is required
+forbidden_archetypes:
+  - fashion advertisement
+  - fantasy hero portrait
+negative_terms:
+  - multiple people
+  - extra limbs
+  - extra fingers
+  - malformed hands
+  - identity drift
+required_anchors:
+  - canonical character
+  - one person
+environment_guidance: Use a neutral studio or minimal role-appropriate setting with even reference lighting.
+composition_guidance: Keep the subject centred, fully readable and free from dramatic occlusion.
