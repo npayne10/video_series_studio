@@ -1,0 +1,28 @@
+name: Canonical Production Prop
+classification: a single functional production prop with clear scale, materials and intended use
+purpose:
+  - establish repeatable form, controls, wear and handling
+required_features:
+  - unobstructed silhouette
+  - credible construction and closures
+  - clear scale cues and use surfaces
+engineering_principles:
+  - parts, controls and materials should support the prop's stated function
+preferred_language:
+  - canonical prop reference
+  - practical construction
+forbidden_features:
+  - unrelated accessories
+  - advertising layout
+forbidden_archetypes:
+  - product advertisement
+  - cluttered still life
+negative_terms:
+  - multiple unrelated objects
+  - product advertisement
+  - packaging text
+required_anchors:
+  - canonical prop
+  - production reference
+environment_guidance: Use a clean neutral setting unless operational context is essential to understanding the prop.
+composition_guidance: Show one complete prop at a useful three-quarter angle with controls and materials readable.
