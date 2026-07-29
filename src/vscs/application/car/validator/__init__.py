@@ -6,11 +6,19 @@ from .models import (
     ValidationDiagnostic,
     ValidationSeverity,
 )
+from .prompt_discovery import (
+    PromptPackage,
+    PromptPackageDiscoverer,
+    PromptPackageDiscoveryResult,
+)
 from .validator import CarRepositoryValidator
 
 __all__ = [
     "AssetValidationResult",
     "CarRepositoryValidator",
+    "PromptPackage",
+    "PromptPackageDiscoverer",
+    "PromptPackageDiscoveryResult",
     "RepositoryValidationResult",
     "ValidationCode",
     "ValidationDiagnostic",

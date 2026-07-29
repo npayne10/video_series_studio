@@ -28,6 +28,25 @@ VISUAL_REQUIRED_DIRECTORIES = (
 CONFIGURATION_REQUIRED_FILES = ("profile.json", "description.md")
 BEHAVIOUR_REQUIRED_DIRECTORIES = ("prompts", "tests")
 BEHAVIOUR_REQUIRED_FILES = ("behaviour.json",)
+
+PROMPT_PACKAGE_REQUIRED_DIRECTORIES = (
+    "prompts",
+    "templates",
+    "metadata",
+    "tests",
+)
+PROMPT_PACKAGE_MANIFEST_NAMES = (
+    "manifest.json",
+    "manifest.yaml",
+    "manifest.yml",
+)
+PROMPT_PACKAGE_README_NAMES = ("README.md", "readme.md")
+
 SUPPORTED_IMAGE_EXTENSIONS = {
-    ".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".tif",
+    ".tiff",
 }

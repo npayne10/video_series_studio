@@ -12,7 +12,7 @@
 
 | Milestone | Status | Acceptance gate |
 |---|---|---|
-| Phase 12.1.1 Part 4B2 Section 1A — Prompt Package Discovery | ⏳ Planned | Implementation, focused tests, full regression suite, owner approval |
+| Phase 12.1.1 Part 4B2 Section 1A — Prompt Package Discovery | 🧪 Implemented, awaiting local test | Focused tests, full regression suite, owner approval |
 
 ## Milestone register
 
@@ -20,7 +20,7 @@
 |---|---|---|---|---|---|
 | 11.10.1 | CAR Migrator v2 | ✅ Complete | `v0.11.10.1` | Passed | Approved |
 | 12.1 | Validator modularisation | ✅ Complete | `b998d01` baseline | Confirmed | Approved |
-| 12.1.1-4B2-1A | Prompt Package Discovery | ⏳ Planned | — | Not run | Pending |
+| 12.1.1-4B2-1A | Prompt Package Discovery | 🧪 Implemented | `05ad266` milestone head | Not run | Pending |
 | 12.1.1-4B2-1B | Prompt Content Validation | ⏳ Planned | — | Not run | Pending |
 | 12.1.1-4B2-1C | Template and Metadata Validation | ⏳ Planned | — | Not run | Pending |
 | 12.1.1-4B2-1D | Prompt Package Integration | ⏳ Planned | — | Not run | Pending |
@@ -47,15 +47,15 @@
 
 A milestone may be marked complete only when all applicable items are checked:
 
-- [ ] Scope implemented
-- [ ] Public interfaces documented
-- [ ] Unit tests added or updated
+- [x] Scope implemented
+- [x] Public interfaces documented
+- [x] Unit tests added or updated
 - [ ] Focused tests pass locally
 - [ ] Full regression suite passes locally
 - [ ] No new critical or high-severity defect
-- [ ] Changelog updated
-- [ ] Roadmap status updated
-- [ ] Commit or PR recorded
+- [x] Changelog updated
+- [x] Roadmap status updated
+- [x] Commit or PR recorded
 - [ ] Project-owner approval recorded
 
 ## Standard local verification record
