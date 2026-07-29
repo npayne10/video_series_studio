@@ -4,9 +4,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..scanner import AssetClass
+
+if TYPE_CHECKING:
+    from .prompt_discovery import PromptPackage
 
 
 class ValidationSeverity(StrEnum):
@@ -33,6 +36,9 @@ class ValidationCode(StrEnum):
     EMPTY_DIRECTORY = "EMPTY_DIRECTORY"
     DUPLICATE_HASH = "DUPLICATE_HASH"
     UNUSED_FILE = "UNUSED_FILE"
+    PROMPT_PACKAGE_DISCOVERED = "PROMPT_PACKAGE_DISCOVERED"
+    MULTIPLE_MANIFESTS = "MULTIPLE_MANIFESTS"
+    UNEXPECTED_DIRECTORY = "UNEXPECTED_DIRECTORY"
 
 
 @dataclass(slots=True)
@@ -56,6 +62,9 @@ class AssetValidationResult:
     image_count: int = 0
     metadata_count: int = 0
     prompt_count: int = 0
+    prompt_packages: list[PromptPackage] = field(default_factory=list)
+    prompt_packages_valid: int = 0
+    prompt_packages_ignored: int = 0
 
 
 @dataclass(slots=True)
