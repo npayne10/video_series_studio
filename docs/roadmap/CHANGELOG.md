@@ -14,10 +14,14 @@ The project follows semantic versioning where practical.
 - Test plan
 - Milestone tracker
 - Architectural decision log
+- Phase 12.1.1-4B2-1A prompt package discovery
+- Structured prompt package inventory and discovery statistics
+- Diagnostics for missing directories, missing README files, missing or multiple manifests, empty directories, and unexpected directories
+- Focused unit tests for valid, incomplete, ambiguous, and ignored prompt package entries
 
 ### In progress
 
-- Phase 12.1.1 Part 4B2 — Behaviour content validation
+- Local verification and owner approval for Phase 12.1.1-4B2-1A
 
 ## v0.11.10.1
 
