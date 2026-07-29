@@ -1,7 +1,6 @@
 """Canonical Asset Intelligence Engine v2.0."""
 
 from __future__ import annotations
-
 import re
 
 from vscs.application.caie.knowledge_base import (
@@ -57,6 +56,7 @@ class CanonicalAssetIntelligenceEngine:
             self._section("Required design language", knowledge.required_features),
             self._section("Engineering logic", knowledge.engineering_principles),
             self._section("Preferred semantic anchors", knowledge.preferred_language),
+            self._section("Required semantic anchors", knowledge.required_anchors),
         ]
         if description:
             sections.append(f"Approved canonical description: {description}")
