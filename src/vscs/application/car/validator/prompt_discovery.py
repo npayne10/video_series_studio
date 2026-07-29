@@ -71,14 +71,21 @@ class PromptPackageDiscoverer:
             return result
 
         for entry in sorted(root.iterdir(), key=lambda path: path.name.casefold()):
-            if entry.name.startswith("."):
-                result.ignored_entries.append(entry)
-                continue
-            if not entry.is_dir():
+            if not self._is_package_candidate(entry):
                 result.ignored_entries.append(entry)
                 continue
             result.packages.append(self._inspect_package(entry))
         return result
+
+    def _is_package_candidate(self, path: Path) -> bool:
+        if path.name.startswith(".") or not path.is_dir():
+            return False
+        recognised_files = (*PROMPT_PACKAGE_MANIFEST_NAMES, *PROMPT_PACKAGE_README_NAMES)
+        if any((path / name).is_file() for name in recognised_files):
+            return True
+        return any(
+            (path / name).is_dir() for name in PROMPT_PACKAGE_REQUIRED_DIRECTORIES
+        )
 
     def _inspect_package(self, package_path: Path) -> PromptPackage:
         directories = {
