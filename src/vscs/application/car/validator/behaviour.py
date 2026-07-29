@@ -12,6 +12,7 @@ from .constants import (
     TESTS_FOLDER,
 )
 from .models import AssetValidationResult, ValidationCode, ValidationSeverity
+from .prompt_discovery import PromptPackage, PromptPackageDiscoverer
 
 
 class BehaviourValidationMixin:
@@ -448,15 +449,96 @@ class BehaviourValidationMixin:
     def _validate_behaviour_prompts(
         self, asset: Any, result: AssetValidationResult
     ) -> None:
-        """Part 4B2 extension point: validate behaviour prompt content."""
+        """Discover and structurally validate behaviour prompt packages."""
         directory = Path(asset.path) / PROMPTS_FOLDER
-        if directory.is_dir() and not any(path.is_file() for path in directory.rglob("*")):
+        if not directory.is_dir():
+            return
+        discovery = PromptPackageDiscoverer().discover(directory)
+        result.prompt_packages.extend(discovery.packages)
+        result.prompt_packages_valid += discovery.valid_package_count
+        result.prompt_packages_ignored += len(discovery.ignored_entries)
+
+        if not discovery.packages:
             self._add_asset_diagnostic(
                 result,
                 ValidationSeverity.WARNING,
                 ValidationCode.EMPTY_DIRECTORY,
                 directory,
-                "Behaviour prompt directory is empty.",
+                "Behaviour prompt directory contains no prompt packages.",
+                {"ignored_entries": len(discovery.ignored_entries)},
+            )
+            return
+
+        for package in discovery.packages:
+            self._validate_prompt_package_structure(result, package)
+
+    def _validate_prompt_package_structure(
+        self, result: AssetValidationResult, package: PromptPackage
+    ) -> None:
+        self._add_asset_diagnostic(
+            result,
+            ValidationSeverity.INFO,
+            ValidationCode.PROMPT_PACKAGE_DISCOVERED,
+            package.path,
+            f"Prompt package '{package.name}' discovered.",
+            {"package": package.name},
+        )
+        for name in package.missing_directories:
+            self._add_asset_diagnostic(
+                result,
+                ValidationSeverity.ERROR,
+                ValidationCode.MISSING_DIRECTORY,
+                package.path / name,
+                f"Required prompt package directory '{name}' is missing.",
+                {"package": package.name, "directory": name},
+            )
+        for name in package.empty_directories:
+            self._add_asset_diagnostic(
+                result,
+                ValidationSeverity.WARNING,
+                ValidationCode.EMPTY_DIRECTORY,
+                package.path / name,
+                f"Prompt package directory '{name}' is empty.",
+                {"package": package.name, "directory": name},
+            )
+        for name in package.extra_directories:
+            self._add_asset_diagnostic(
+                result,
+                ValidationSeverity.WARNING,
+                ValidationCode.UNEXPECTED_DIRECTORY,
+                package.path / name,
+                f"Unexpected prompt package directory '{name}'.",
+                {"package": package.name, "directory": name},
+            )
+        if not package.manifest_candidates:
+            self._add_asset_diagnostic(
+                result,
+                ValidationSeverity.ERROR,
+                ValidationCode.MISSING_FILE,
+                package.path,
+                "Prompt package manifest is missing.",
+                {"package": package.name},
+            )
+        elif len(package.manifest_candidates) > 1:
+            self._add_asset_diagnostic(
+                result,
+                ValidationSeverity.ERROR,
+                ValidationCode.MULTIPLE_MANIFESTS,
+                package.path,
+                "Prompt package contains multiple recognised manifests.",
+                {
+                    "package": package.name,
+                    "manifests": [path.name for path in package.manifest_candidates],
+                },
+            )
+        if package.readme_path is None:
+            self._add_asset_diagnostic(
+                result,
+                ValidationSeverity.WARNING,
+                ValidationCode.MISSING_FILE,
+                package.path / "README.md",
+                "Prompt package README.md is missing.",
+                {"package": package.name},
             )
 
     def _validate_behaviour_tests(
