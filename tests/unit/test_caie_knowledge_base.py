@@ -59,10 +59,12 @@ def test_caie_v2_injects_engineering_and_forbidden_archetypes() -> None:
     assert package.engine_version == "2.0"
     assert package.knowledge_id == "ships/orbital_tug"
     assert "Engineering logic:" in package.positive_prompt
+    assert "Required semantic anchors:" in package.positive_prompt
     assert "Forbidden archetypes and interpretations:" in package.positive_prompt
     assert "harbour tugboat" in package.negative_prompt
     assert "waterline" in package.negative_prompt
     assert "reaction-control thrusters" in package.positive_prompt
+    assert "operating in vacuum" in package.positive_prompt
 
 
 def test_legacy_style_name_resolves_to_xorix_style() -> None:
