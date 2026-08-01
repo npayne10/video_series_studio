@@ -17,6 +17,19 @@ from .models import (
     SeedPolicy,
 )
 from .protocols import ClipPackageSerializer, ClipPackageValidator
+from .resolution import (
+    ACPPResolutionResult,
+    ACPPResolverConfig,
+    AssetResolutionCatalog,
+    AssetResolutionRecord,
+    BehaviourResolutionCatalog,
+    BehaviourResolutionRecord,
+    CanonicalReferenceResolution,
+    ResolutionDiagnostic,
+    ResolutionProvenance,
+    ResolutionSeverity,
+)
+from .resolver import ACPPResolutionError, ACPPResourceResolver
 from .serialization import ACPPSerializationError, ACPPSerializer
 from .validator import (
     ACPPValidationIssue,
@@ -29,6 +42,10 @@ __all__ = [
     "ACPPBuildError",
     "ACPPCompilationError",
     "ACPPCompilerConfig",
+    "ACPPResolutionError",
+    "ACPPResolutionResult",
+    "ACPPResolverConfig",
+    "ACPPResourceResolver",
     "ACPPSerializationError",
     "ACPPSerializer",
     "ACPPValidationIssue",
@@ -37,7 +54,12 @@ __all__ = [
     "ACPPValidator",
     "AssetBinding",
     "AssetBindingRole",
+    "AssetResolutionCatalog",
+    "AssetResolutionRecord",
     "AudioSpecification",
+    "BehaviourResolutionCatalog",
+    "BehaviourResolutionRecord",
+    "CanonicalReferenceResolution",
     "ClipIdentity",
     "ClipPackageSerializer",
     "ClipPackageValidator",
@@ -48,6 +70,9 @@ __all__ = [
     "PromptSpecification",
     "RenderQualityMode",
     "RenderSpecification",
+    "ResolutionDiagnostic",
+    "ResolutionProvenance",
+    "ResolutionSeverity",
     "SSIEToACPPCompiler",
     "SeedPolicy",
     "build_clip_id",
