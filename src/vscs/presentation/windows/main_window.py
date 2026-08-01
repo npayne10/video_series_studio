@@ -218,7 +218,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Project Error", str(exc))
             return
         self._update_project_state()
-        self.dashboard.set_active_project(project.name, self.projects.project_directory)
+        self.dashboard.set_active_project(project.name, project_directory)
         self.statusBar().showMessage(f"Created project: {project.name}", 5000)
 
     def _open_project(self) -> None:
@@ -229,13 +229,14 @@ class MainWindow(QMainWindow):
         )
         if not project_directory:
             return
+        project_path = Path(project_directory)
         try:
-            project = self.projects.open(Path(project_directory))
+            project = self.projects.open(project_path)
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
         self._update_project_state()
-        self.dashboard.set_active_project(project.name, self.projects.project_directory)
+        self.dashboard.set_active_project(project.name, project_path)
         self.statusBar().showMessage(f"Opened project: {project.name}", 5000)
 
     def _save_project(self) -> None:
@@ -283,35 +284,28 @@ class MainWindow(QMainWindow):
 
         active = self.projects.is_project_open
 
-        # Menu / Toolbar actions
         self.new_project_action.setEnabled(not active)
         self.open_project_action.setEnabled(not active)
-
         self.save_project_action.setEnabled(active)
         self.close_project_action.setEnabled(active)
 
-        # Project-dependent manager controls
         self.asset_manager.add_button.setEnabled(active)
         self.cap_manager.add_button.setEnabled(active)
 
-        # Dashboard buttons (if present)
         self.dashboard.new_project_button.setEnabled(not active)
         self.dashboard.open_project_button.setEnabled(not active)
 
         if active and self.projects.current_project is not None:
             project = self.projects.current_project
+            project_directory = self.projects.project_directory
+            assert project_directory is not None
 
             self.setWindowTitle(f"{self.BASE_TITLE} — {project.name}")
 
-            # If this exists
             if hasattr(self, "navigation_dock"):
                 self.navigation_dock.setWindowTitle(project.name)
 
-            self.dashboard.set_active_project(
-                project.name,
-                self.projects.project_directory,
-            )
-
+            self.dashboard.set_active_project(project.name, project_directory)
             self.statusBar().showMessage(f"Active project: {project.name}")
 
         else:
@@ -321,5 +315,4 @@ class MainWindow(QMainWindow):
                 self.navigation_dock.setWindowTitle("Workspace")
 
             self.dashboard.clear_active_project()
-
             self.statusBar().showMessage("No project open")
