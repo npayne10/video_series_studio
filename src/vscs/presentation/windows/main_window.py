@@ -201,7 +201,8 @@ class MainWindow(QMainWindow):
 
     def _create_project(self) -> None:
         name, accepted = QInputDialog.getText(self, "New Project", "Project name:")
-        if not accepted or not name.strip():
+        project_name = name.strip()
+        if not accepted or not project_name:
             return
         parent_directory = QFileDialog.getExistingDirectory(
             self,
@@ -210,8 +211,9 @@ class MainWindow(QMainWindow):
         )
         if not parent_directory:
             return
+        project_directory = Path(parent_directory) / project_name
         try:
-            project = self.projects.create(name, Path(parent_directory))
+            project = self.projects.create(project_directory, name=project_name)
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
@@ -238,11 +240,13 @@ class MainWindow(QMainWindow):
 
     def _save_project(self) -> None:
         try:
-            project = self.projects.save()
+            self.projects.save()
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
-        self.statusBar().showMessage(f"Saved project: {project.name}", 5000)
+        project = self.projects.current_project
+        if project is not None:
+            self.statusBar().showMessage(f"Saved project: {project.name}", 5000)
 
     def _close_project(self) -> None:
         if not self.projects.is_project_open:
