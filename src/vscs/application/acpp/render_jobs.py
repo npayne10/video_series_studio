@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from .models import ClipProductionPackage, RenderQualityMode, SeedPolicy
@@ -86,7 +86,7 @@ class RenderJobCompilerConfig:
     """Policy controlling render-job compilation."""
 
     schema_version: str = "1.0"
-    retry_policy: RetryPolicy = RetryPolicy()
+    retry_policy: RetryPolicy = field(default_factory=RetryPolicy)
     require_resolved_package: bool = True
 
     def __post_init__(self) -> None:
