@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
+import pytest
+from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.caps import CAPRepository, CAPService
@@ -103,3 +104,53 @@ def test_project_actions_reflect_active_project(
     assert window.asset_manager.add_button.isEnabled()
     assert window.cap_manager.add_button.isEnabled()
     assert "Example" in window.windowTitle()
+
+
+def test_create_project_uses_selected_parent_and_keyword_name(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The New Project action passes the current ProjectService contract."""
+    services = build_services(tmp_path)
+    projects = services.require(ProjectService)
+    window = MainWindow(services)
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getText",
+        lambda *args, **kwargs: ("  Test Production  ", True),
+    )
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(tmp_path),
+    )
+
+    window._create_project()
+
+    expected_directory = tmp_path / "Test Production"
+    assert projects.current_project is not None
+    assert projects.current_project.name == "Test Production"
+    assert projects.project_directory == expected_directory.resolve(strict=False)
+    assert (expected_directory / ProjectService.PROJECT_FILE_NAME).is_file()
+    assert "Created project: Test Production" in window.statusBar().currentMessage()
+
+
+def test_save_project_uses_active_project_after_void_service_call(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    """Saving through the UI does not expect ProjectService.save to return metadata."""
+    services = build_services(tmp_path)
+    projects = services.require(ProjectService)
+    projects.create(tmp_path / "Example", name="Example")
+    window = MainWindow(services)
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+
+    window._save_project()
+
+    assert "Saved project: Example" in window.statusBar().currentMessage()
