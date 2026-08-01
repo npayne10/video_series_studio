@@ -75,14 +75,15 @@ class CanonicalReferenceEditorDialog(QDialog):
         self.reference_type = QComboBox()
         for reference_type in CanonicalReferenceType:
             self.reference_type.addItem(
-            reference_type.value.title(),
-            reference_type,
+                reference_type.value.title(),
+                reference_type,
             )
 
         self.role = QComboBox()
         for role in CanonicalReferenceRole:
             self.role.addItem(role.value.title(), role)
 
+        self.version = QLineEdit("1.0")
         self.status = QComboBox()
         for status in CanonicalReferenceStatus:
             self.status.addItem(status.value.title(), status)
