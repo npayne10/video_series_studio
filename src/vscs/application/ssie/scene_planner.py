@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from .models import Scene, ScenePlan
-from .protocols import ShotPlanner
+from .production_planner import ShotProductionPlanner
+from .protocols import ShotPlanner, ShotProductionPlannerContract
 from .shot_planner import RuleBasedShotPlanner
 from .validator import SSIEValidationIssue, SSIEValidator
 
@@ -22,9 +23,11 @@ class RuleBasedScenePlanner:
     def __init__(
         self,
         shot_planner: ShotPlanner | None = None,
+        production_planner: ShotProductionPlannerContract | None = None,
         validator: SSIEValidator | None = None,
     ) -> None:
         self._shot_planner = shot_planner or RuleBasedShotPlanner()
+        self._production_planner = production_planner or ShotProductionPlanner()
         self._validator = validator or SSIEValidator()
 
     def plan_scene(self, scene: Scene) -> ScenePlan:
@@ -42,6 +45,7 @@ class RuleBasedScenePlanner:
             continuity_requirements=self._continuity_requirements(scene),
             production_notes=self._production_notes(scene),
         )
+        plan = self._production_planner.enrich_scene_plan(plan)
         plan_result = self._validator.validate_scene_plan(plan)
         if not plan_result.passed:
             raise ScenePlanningError(tuple(plan_result.issues))
