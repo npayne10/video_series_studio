@@ -178,10 +178,10 @@ class SSIEToACPPCompiler:
             scene.location_asset_id: AssetBindingRole.LOCATION,
         }
         roles.update(
-            {
-                asset_id: AssetBindingRole.SUBJECT
-                for asset_id in scene.participant_asset_ids
-            }
+            dict.fromkeys(
+                scene.participant_asset_ids,
+                AssetBindingRole.SUBJECT,
+            )
         )
         for asset_id in shot.required_asset_ids:
             roles.setdefault(asset_id, AssetBindingRole.PROP)
