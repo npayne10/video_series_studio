@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import time
 from pathlib import Path
+from typing import Any, cast
 
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.xcic_core.client import XCICCoreClient, XCICCoreClientError
@@ -50,7 +51,11 @@ class XCICCoreRenderer:
                 expected = job.candidate_directory / job.candidate_filename
                 self._remove_prior_outputs(expected)
                 prompt = copy.deepcopy(template)
-                loader_inputs = prompt[loader_id].setdefault("inputs", {})
+                loader_node = cast(dict[str, Any], prompt[loader_id])
+                loader_inputs = cast(
+                    dict[str, Any],
+                    loader_node.setdefault("inputs", {}),
+                )
                 loader_inputs["queue_file"] = str(self.workflow.queue_file_path.resolve())
                 loader_inputs["job_index"] = index
                 if "quality_mode" in loader_inputs or job.quality_mode:
