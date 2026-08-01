@@ -1,6 +1,8 @@
 """Tests for deterministic SSIE scene and shot planning."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from vscs.application.ssie import (
@@ -14,22 +16,21 @@ from vscs.application.ssie import (
 
 
 def _scene(**overrides: object) -> Scene:
-    values: dict[str, object] = {
-        "scene_id": "SCN-001",
-        "episode_id": "EP-001",
-        "sequence_number": 1,
-        "heading": "INT. OBSERVATION LOUNGE - NIGHT",
-        "location_asset_id": "LOC-OBS-001",
-        "summary": "James discovers an unexplained signal beyond the ship.",
-        "participant_asset_ids": ("CHR-JAMES-001", "CHR-SANDRA-001"),
-        "dialogue": ("That signal should not be there.", "I see it too."),
-        "required_asset_ids": ("PROP-CONSOLE-001", "LOC-OBS-001"),
-        "time_of_day": "night",
-        "transition_in": SceneTransition.DISSOLVE,
-        "estimated_duration_seconds": 40.0,
-    }
-    values.update(overrides)
-    return Scene(**values)  # type: ignore[arg-type]
+    scene = Scene(
+        scene_id="SCN-001",
+        episode_id="EP-001",
+        sequence_number=1,
+        heading="INT. OBSERVATION LOUNGE - NIGHT",
+        location_asset_id="LOC-OBS-001",
+        summary="James discovers an unexplained signal beyond the ship.",
+        participant_asset_ids=("CHR-JAMES-001", "CHR-SANDRA-001"),
+        dialogue=("That signal should not be there.", "I see it too."),
+        required_asset_ids=("PROP-CONSOLE-001", "LOC-OBS-001"),
+        time_of_day="night",
+        transition_in=SceneTransition.DISSOLVE,
+        estimated_duration_seconds=40.0,
+    )
+    return replace(scene, **overrides)
 
 
 def test_scene_planner_builds_valid_dialogue_plan() -> None:
