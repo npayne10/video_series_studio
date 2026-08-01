@@ -87,10 +87,7 @@ def _artifacts() -> tuple[
             checksum="cap-checksum",
         ),
     )
-    resolution = ACPPResolutionResult(
-        package=package,
-        provenance=provenance,
-    )
+    resolution = ACPPResolutionResult(package=package, provenance=provenance)
     prompt = CompiledProductionPrompt(
         clip_id=package.identity.clip_id,
         schema_version="1.0",
@@ -140,8 +137,7 @@ def _artifacts() -> tuple[
         prompt_checksum=prompt.checksum,
         metadata=tuple(sorted(package.metadata.items())),
     )
-    render_job_checksum = RenderJobCompiler().checksum(job)
-    return resolution, prompt, job, render_job_checksum
+    return resolution, prompt, job, RenderJobCompiler().checksum(job)
 
 
 def test_bundle_builds_and_validates_complete_artifacts() -> None:
@@ -246,11 +242,6 @@ def test_bundle_report_summarizes_handoff_contract() -> None:
     report = serializer.report(bundle)
 
     assert "Status: PASSED" in report
-    assert package_id(bundle) in report
+    assert bundle.package.identity.clip_id in report
     assert job.output_path in report
     assert bundle.aggregate_checksum in report
-
-
-def package_id(bundle: object) -> str:
-    assert hasattr(bundle, "package")
-    return bundle.package.identity.clip_id
