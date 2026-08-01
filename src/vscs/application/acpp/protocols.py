@@ -5,12 +5,13 @@ from __future__ import annotations
 from typing import Protocol
 
 from .models import ClipProductionPackage
+from .validator import ACPPValidationResult
 
 
 class ClipPackageValidator(Protocol):
     """Validate a complete clip production package."""
 
-    def validate(self, package: ClipProductionPackage) -> object:
+    def validate(self, package: ClipProductionPackage) -> ACPPValidationResult:
         """Return a validation result for one package."""
         ...
 
