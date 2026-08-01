@@ -7,8 +7,9 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
-from sqlalchemy import Engine, create_engine, event, select, text
+from sqlalchemy import Engine, Table, create_engine, event, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -157,9 +158,10 @@ class DatabaseManager:
     @staticmethod
     def _migrate_to_canonical_references(database_session: Session) -> None:
         bind = database_session.get_bind()
+        reference_table = cast(Table, CanonicalReferenceRecord.__table__)
         Base.metadata.create_all(
             bind=bind,
-            tables=[CanonicalReferenceRecord.__table__],
+            tables=[reference_table],
             checkfirst=True,
         )
 
