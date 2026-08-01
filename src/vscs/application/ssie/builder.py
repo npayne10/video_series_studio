@@ -5,7 +5,11 @@ from dataclasses import replace
 
 from .models import ProductionPlan, Scene
 from .protocols import ScenePlanner
-from .validator import SSIEValidationIssue, SSIEValidator
+from .validator import (
+    SSIEValidationIssue,
+    SSIEValidationSeverity,
+    SSIEValidator,
+)
 
 
 class SSIEBuildError(ValueError):
@@ -47,8 +51,9 @@ class ProductionPlanBuilder:
         result = self._validator.validate_production_plan(plan)
         if not result.passed:
             raise SSIEBuildError(tuple(result.issues))
-        return replace(plan, warnings=tuple(
+        warnings = tuple(
             issue.message
             for issue in result.issues
-            if issue.severity.value == "warning"
-        ))
+            if issue.severity is SSIEValidationSeverity.WARNING
+        )
+        return replace(plan, warnings=warnings)
