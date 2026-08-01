@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.xcic.comfyui import ComfyUIClient, ComfyUIError
@@ -80,7 +81,7 @@ class XCICRenderingEngine:
         return tuple(outputs)
 
     @staticmethod
-    def _wait_for_file(path, timeout_seconds: float) -> None:
+    def _wait_for_file(path: Path, timeout_seconds: float) -> None:
         deadline = time.monotonic() + min(timeout_seconds, 120.0)
         while time.monotonic() < deadline:
             if path.is_file() and path.stat().st_size > 0:
