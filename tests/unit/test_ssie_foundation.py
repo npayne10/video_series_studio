@@ -5,12 +5,12 @@ import pytest
 
 from vscs.application.ssie import (
     ProductionPlanBuilder,
-    SSIEBuildError,
-    SSIEValidator,
     Scene,
     ScenePlan,
     ShotPlan,
     ShotPurpose,
+    SSIEBuildError,
+    SSIEValidator,
 )
 
 
