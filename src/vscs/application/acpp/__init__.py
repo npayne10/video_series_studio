@@ -1,6 +1,15 @@
 """Advanced Clip Production Package public API."""
 
 from .builder import ACPPBuildError, ClipProductionPackageBuilder
+from .bundle import (
+    BundleValidationIssue,
+    BundleValidationResult,
+    BundleValidationSeverity,
+    ProductionBundle,
+    ProductionBundleSerializer,
+    ProductionBundleValidationError,
+    ProductionBundleValidator,
+)
 from .catalogs import CAPAssetResolutionCatalog, FilesystemBehaviourResolutionCatalog
 from .compiler import ACPPCompilationError, ACPPCompilerConfig, SSIEToACPPCompiler
 from .identifiers import build_clip_id
@@ -79,6 +88,9 @@ __all__ = [
     "AudioSpecification",
     "BehaviourResolutionCatalog",
     "BehaviourResolutionRecord",
+    "BundleValidationIssue",
+    "BundleValidationResult",
+    "BundleValidationSeverity",
     "CAPAssetResolutionCatalog",
     "CanonicalReferenceResolution",
     "ClipIdentity",
@@ -91,6 +103,10 @@ __all__ = [
     "ContinuityBinding",
     "FilesystemBehaviourResolutionCatalog",
     "OutputSpecification",
+    "ProductionBundle",
+    "ProductionBundleSerializer",
+    "ProductionBundleValidationError",
+    "ProductionBundleValidator",
     "PromptCompilationError",
     "PromptCompilerConfig",
     "PromptContribution",
