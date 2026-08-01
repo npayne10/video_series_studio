@@ -27,6 +27,15 @@ from .prompt_compiler import (
     PromptContributionCatalog,
 )
 from .protocols import ClipPackageSerializer, ClipPackageValidator
+from .render_jobs import (
+    RenderCapability,
+    RenderInputReference,
+    RenderJob,
+    RenderJobCompilationError,
+    RenderJobCompiler,
+    RenderJobCompilerConfig,
+    RetryPolicy,
+)
 from .resolution import (
     ACPPResolutionResult,
     ACPPResolverConfig,
@@ -87,11 +96,18 @@ __all__ = [
     "PromptContribution",
     "PromptContributionCatalog",
     "PromptSpecification",
+    "RenderCapability",
+    "RenderInputReference",
+    "RenderJob",
+    "RenderJobCompilationError",
+    "RenderJobCompiler",
+    "RenderJobCompilerConfig",
     "RenderQualityMode",
     "RenderSpecification",
     "ResolutionDiagnostic",
     "ResolutionProvenance",
     "ResolutionSeverity",
+    "RetryPolicy",
     "SSIEToACPPCompiler",
     "SeedPolicy",
     "build_clip_id",
