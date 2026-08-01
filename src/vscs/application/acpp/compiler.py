@@ -164,7 +164,8 @@ class SSIEToACPPCompiler:
             )
         ):
             raise ACPPCompilationError(
-                f"Shot {shot.shot_id} is missing camera, lighting, blocking, or continuity planning"
+                f"Shot {shot.shot_id} is missing camera, lighting, "
+                "blocking, or continuity planning"
             )
 
     @staticmethod
@@ -179,7 +180,7 @@ class SSIEToACPPCompiler:
         roles.update(
             {
                 asset_id: AssetBindingRole.SUBJECT
-                for asset_id in shot.subject_asset_ids
+                for asset_id in scene.participant_asset_ids
             }
         )
         for asset_id in shot.required_asset_ids:
