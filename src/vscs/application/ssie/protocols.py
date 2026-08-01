@@ -20,3 +20,11 @@ class ShotPlanner(Protocol):
     def plan_shots(self, scene: Scene) -> tuple[ShotPlan, ...]:
         """Return the ordered shots required to express a scene."""
         ...
+
+
+class ShotProductionPlannerContract(Protocol):
+    """Enrich shot plans with camera, lighting, blocking, and continuity intent."""
+
+    def enrich_scene_plan(self, plan: ScenePlan) -> ScenePlan:
+        """Return a production-enriched copy of the scene plan."""
+        ...
