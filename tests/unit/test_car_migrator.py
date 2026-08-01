@@ -31,7 +31,7 @@ def test_dry_run_reports_changes_without_writing(tmp_path: Path) -> None:
 
     assert report.applied is False
     assert report.assets_scanned == 1
-    assert report.directories_created == 4
+    assert report.directories_created == 6
     assert report.files_created == 5
     assert not (asset / "canon").exists()
     assert (asset / "approved" / "legacy.png").exists()
@@ -80,7 +80,8 @@ def test_missing_manifest_uses_folder_identity_and_warns(tmp_path: Path) -> None
     cap = json.loads((asset / "metadata" / "cap.json").read_text(encoding="utf-8"))
     assert cap["asset_id"] == "CAP-SHP-004"
     assert cap["name"] == "Guild Cargo Shuttle"
-    assert report.warnings == ["Missing manifest: ships/CAP-SHP-004_Guild_Cargo_Shuttle/manifest.json"]
+    expected_manifest = Path("ships") / "CAP-SHP-004_Guild_Cargo_Shuttle" / "manifest.json"
+    assert report.warnings == [f"Missing manifest: {expected_manifest}"]
 
 
 def test_report_can_be_written(tmp_path: Path) -> None:
