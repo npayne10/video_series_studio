@@ -28,7 +28,7 @@ class PromptContribution:
 
 
 class PromptContributionCatalog(Protocol):
-    """Resolve structured text contributed by a prompt package."""
+    """Resolve structured text contributed by one prompt package."""
 
     def resolve_prompt_package(self, package_id: str) -> PromptContribution | None:
         """Return one prompt-package contribution, if available."""
@@ -111,7 +111,13 @@ class ACPPPromptCompiler:
         negative_values = [*package.prompt.negative_constraints]
         for contribution in contributions:
             negative_values.extend(contribution.negative_fragments)
-        negative_prompt = "; ".join(dict.fromkeys(value.strip() for value in negative_values if value.strip()))
+        negative_prompt = "; ".join(
+            dict.fromkeys(
+                value.strip()
+                for value in negative_values
+                if value.strip()
+            )
+        )
         reference_ids = tuple(
             dict.fromkeys(
                 reference_id
@@ -221,10 +227,19 @@ class ACPPPromptCompiler:
         return tuple(
             section
             for section in (
-                CompiledPromptSection("visual_intent", prompt.positive_visual_intent.strip()),
+                CompiledPromptSection(
+                    "visual_intent",
+                    prompt.positive_visual_intent.strip(),
+                ),
                 CompiledPromptSection("canonical_assets", canonical_assets),
-                CompiledPromptSection("canonical_references", reference_binding),
-                CompiledPromptSection("environment", prompt.environment_intent.strip()),
+                CompiledPromptSection(
+                    "canonical_references",
+                    reference_binding,
+                ),
+                CompiledPromptSection(
+                    "environment",
+                    prompt.environment_intent.strip(),
+                ),
                 CompiledPromptSection("camera", prompt.camera_language.strip()),
                 CompiledPromptSection("lighting", prompt.lighting_intent.strip()),
                 CompiledPromptSection(
@@ -238,7 +253,10 @@ class ACPPPromptCompiler:
                         if value
                     ),
                 ),
-                CompiledPromptSection("prompt_packages", contribution_positive),
+                CompiledPromptSection(
+                    "prompt_packages",
+                    contribution_positive,
+                ),
                 CompiledPromptSection("continuity", continuity),
                 CompiledPromptSection(
                     "negative_constraints",
