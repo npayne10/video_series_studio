@@ -1,6 +1,7 @@
 """Advanced Clip Production Package public API."""
 
 from .builder import ACPPBuildError, ClipProductionPackageBuilder
+from .compiler import ACPPCompilationError, ACPPCompilerConfig, SSIEToACPPCompiler
 from .identifiers import build_clip_id
 from .models import (
     AssetBinding,
@@ -26,6 +27,8 @@ from .validator import (
 
 __all__ = [
     "ACPPBuildError",
+    "ACPPCompilationError",
+    "ACPPCompilerConfig",
     "ACPPSerializationError",
     "ACPPSerializer",
     "ACPPValidationIssue",
@@ -45,6 +48,7 @@ __all__ = [
     "PromptSpecification",
     "RenderQualityMode",
     "RenderSpecification",
+    "SSIEToACPPCompiler",
     "SeedPolicy",
     "build_clip_id",
 ]
