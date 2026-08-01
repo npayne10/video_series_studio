@@ -17,6 +17,15 @@ from .models import (
     RenderSpecification,
     SeedPolicy,
 )
+from .prompt_compiler import (
+    ACPPPromptCompiler,
+    CompiledProductionPrompt,
+    CompiledPromptSection,
+    PromptCompilationError,
+    PromptCompilerConfig,
+    PromptContribution,
+    PromptContributionCatalog,
+)
 from .protocols import ClipPackageSerializer, ClipPackageValidator
 from .resolution import (
     ACPPResolutionResult,
@@ -43,6 +52,7 @@ __all__ = [
     "ACPPBuildError",
     "ACPPCompilationError",
     "ACPPCompilerConfig",
+    "ACPPPromptCompiler",
     "ACPPResolutionError",
     "ACPPResolutionResult",
     "ACPPResolverConfig",
@@ -67,9 +77,15 @@ __all__ = [
     "ClipPackageValidator",
     "ClipProductionPackage",
     "ClipProductionPackageBuilder",
+    "CompiledProductionPrompt",
+    "CompiledPromptSection",
     "ContinuityBinding",
     "FilesystemBehaviourResolutionCatalog",
     "OutputSpecification",
+    "PromptCompilationError",
+    "PromptCompilerConfig",
+    "PromptContribution",
+    "PromptContributionCatalog",
     "PromptSpecification",
     "RenderQualityMode",
     "RenderSpecification",
