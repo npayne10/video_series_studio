@@ -130,8 +130,18 @@ class SSIEValidator:
 
     def validate_production_plan(self, plan: ProductionPlan) -> SSIEValidationResult:
         result = SSIEValidationResult()
-        self._require_text(result, plan.production_id, "production_id", plan.production_id)
-        self._require_text(result, plan.production_id, "episode_id", plan.episode_id)
+        self._require_text(
+            result,
+            plan.production_id,
+            "production_id",
+            plan.production_id,
+        )
+        self._require_text(
+            result,
+            plan.production_id,
+            "episode_id",
+            plan.episode_id,
+        )
         self._require_text(
             result,
             plan.production_id,
