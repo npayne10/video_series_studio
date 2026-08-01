@@ -127,7 +127,7 @@ class SettingsDialog(QDialog):
         self.openai_key_status.setToolTip("")
 
     def _update_ai_controls(self) -> None:
-        openai_enabled = self.ai_provider.currentData() is AIProvider.OPENAI
+        openai_enabled = self.ai_provider.currentData() == AIProvider.OPENAI
         self.openai_model.setEnabled(openai_enabled)
         self.openai_key_status.setEnabled(openai_enabled)
         self.set_openai_key_button.setEnabled(openai_enabled)

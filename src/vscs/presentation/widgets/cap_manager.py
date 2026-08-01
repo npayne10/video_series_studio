@@ -45,6 +45,7 @@ from vscs.domain.caps import (
     CAPStatus,
     CAPUpdate,
 )
+from vscs.infrastructure.ai.provider import GeneratedCAPDraft
 from vscs.presentation.dialogs.cap_draft_review_dialog import CAPDraftReviewDialog
 
 
@@ -72,15 +73,19 @@ class CanonicalReferenceEditorDialog(QDialog):
         path_row.addWidget(browse)
 
         self.reference_type = QComboBox()
-        for value in CanonicalReferenceType:
-            self.reference_type.addItem(value.value.title(), value)
+        for reference_type in CanonicalReferenceType:
+            self.reference_type.addItem(
+            reference_type.value.title(),
+            reference_type,
+            )
+
         self.role = QComboBox()
-        for value in CanonicalReferenceRole:
-            self.role.addItem(value.value.title(), value)
-        self.version = QLineEdit("1.0")
+        for role in CanonicalReferenceRole:
+            self.role.addItem(role.value.title(), role)
+
         self.status = QComboBox()
-        for value in CanonicalReferenceStatus:
-            self.status.addItem(value.value.title(), value)
+        for status in CanonicalReferenceStatus:
+            self.status.addItem(status.value.title(), status)
         self.description = QTextEdit()
         self.description.setMaximumHeight(100)
         self.notes = QTextEdit()
@@ -552,7 +557,7 @@ class CAPManagerWidget(QWidget):
         if not accepted:
             return
 
-        def regenerate():  # type: ignore[no-untyped-def]
+        def regenerate() -> GeneratedCAPDraft:
             if self.generator is None:
                 raise CAPGenerationError("No CAP generator is configured")
             return self.generator.generate_draft(asset_id, story_context)

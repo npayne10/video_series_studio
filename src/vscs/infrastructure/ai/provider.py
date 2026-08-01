@@ -8,10 +8,22 @@ from vscs.domain.caps.generation import (
     CanonicalFactExtraction,
     CAPCanonAnalysis,
     CAPGenerationRequest,
+    CAPGenerationRequest,
     CAPSectionConfidence,
     ExtractedCanonicalFact,
     GeneratedCAPDraft,
 )
+
+from vscs.domain.caps.generation import (
+    GeneratedCAPDraft as GeneratedCAPDraft,
+)
+
+__all__ = [
+    "AIProviderError",
+    "CAPGenerationProvider",
+    "GeneratedCAPDraft",
+    "TemplateCAPGenerationProvider",
+]
 
 
 class AIProviderError(RuntimeError):
