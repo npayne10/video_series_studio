@@ -7,7 +7,7 @@ from vscs.application.siee.models import (
     SemanticModelResult,
 )
 from vscs.application.siee.provider import SemanticEvaluationProvider
-from vscs.application.siee.service import SIEEError, SemanticImageEvaluationEngine
+from vscs.application.siee.service import SemanticImageEvaluationEngine, SIEEError
 
 __all__ = [
     "SIEEError",

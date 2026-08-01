@@ -8,7 +8,7 @@ from vscs.application.caie import (
     CanonicalPromptContext,
 )
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
-from vscs.domain.caps import CAPStatus, CanonicalAssetProfile
+from vscs.domain.caps import CanonicalAssetProfile, CAPStatus
 
 
 def _context(title: str = "Guild Tug Ship") -> CanonicalPromptContext:

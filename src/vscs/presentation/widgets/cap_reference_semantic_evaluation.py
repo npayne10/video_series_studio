@@ -9,7 +9,7 @@ from typing import Any
 
 from PySide6.QtWidgets import QMessageBox, QPushButton
 
-from vscs.application.siee import SIEEError, SemanticImageEvaluationEngine
+from vscs.application.siee import SemanticImageEvaluationEngine, SIEEError
 from vscs.domain.caps import (
     CanonicalReferenceRole,
     CanonicalReferenceStatus,

@@ -8,9 +8,9 @@ from typing import Any, TypeVar, cast
 from pydantic import BaseModel
 
 from vscs.domain.caps.generation import (
+    CanonicalFactExtraction,
     CAPCanonAnalysis,
     CAPGenerationRequest,
-    CanonicalFactExtraction,
     GeneratedCAPDraft,
 )
 from vscs.infrastructure.ai.provider import AIProviderError

@@ -5,10 +5,10 @@ from vscs.domain.caps.asset_generation import (
     GeneratedCanonicalAsset,
 )
 from vscs.domain.caps.generation import (
+    CanonicalFactExtraction,
     CAPCanonAnalysis,
     CAPGenerationRequest,
     CAPSectionConfidence,
-    CanonicalFactExtraction,
     ExtractedCanonicalFact,
     GeneratedCAPDraft,
 )

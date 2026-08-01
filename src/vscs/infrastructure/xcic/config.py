@@ -20,7 +20,7 @@ class XCICConfiguration:
     text_profile_path: Path
 
     @classmethod
-    def load(cls) -> "XCICConfiguration":
+    def load(cls) -> XCICConfiguration:
         root = Path(os.environ.get("VSCS_XCIC_ROOT", r"D:\VSCS\XCIC"))
         explicit_workflow = os.environ.get("VSCS_XCIC_TEXT_WORKFLOW")
         if explicit_workflow:

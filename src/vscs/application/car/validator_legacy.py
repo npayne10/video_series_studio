@@ -43,17 +43,13 @@ Author:
 
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
 from typing import Any
-import json
-import logging
-import hashlib
 
 from .scanner import (
     AssetClass,
@@ -206,13 +202,13 @@ class ValidationDiagnostic:
 
     code: ValidationCode
 
-    asset_id: Optional[str]
+    asset_id: str | None
 
-    path: Optional[Path]
+    path: Path | None
 
     message: str
 
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -230,9 +226,9 @@ class AssetValidationResult:
 
     passed: bool = True
 
-    diagnostics: List[ValidationDiagnostic] = field(default_factory=list)
+    diagnostics: list[ValidationDiagnostic] = field(default_factory=list)
 
-    file_hashes: Dict[str, str] = field(default_factory=dict)
+    file_hashes: dict[str, str] = field(default_factory=dict)
 
     image_count: int = 0
 
@@ -248,17 +244,17 @@ class AssetValidationResult:
 @dataclass(slots=True)
 class RepositoryValidationResult:
 
-    repository: Optional[AssetRepositoryInfo]
+    repository: AssetRepositoryInfo | None
 
     passed: bool = True
 
-    diagnostics: List[ValidationDiagnostic] = field(default_factory=list)
+    diagnostics: list[ValidationDiagnostic] = field(default_factory=list)
 
-    assets: List[AssetValidationResult] = field(default_factory=list)
+    assets: list[AssetValidationResult] = field(default_factory=list)
 
-    duplicate_asset_ids: Set[str] = field(default_factory=set)
+    duplicate_asset_ids: set[str] = field(default_factory=set)
 
-    duplicate_hashes: Dict[str, List[str]] = field(default_factory=dict)
+    duplicate_hashes: dict[str, list[str]] = field(default_factory=dict)
 
     repository_health: float = 100.0
 
@@ -296,19 +292,15 @@ class CarRepositoryValidator:
 
         self.scanner = AssetRepositoryScanner(self.repository)
 
-        self.scan_result: Optional[
-            RepositoryScanResult
-        ] = None
+        self.scan_result: RepositoryScanResult | None = None
 
-        self.result: Optional[
-            RepositoryValidationResult
-        ] = None
+        self.result: RepositoryValidationResult | None = None
 
-        self._asset_ids: Set[str] = set()
+        self._asset_ids: set[str] = set()
 
-        self._file_hashes: Dict[
+        self._file_hashes: dict[
             str,
-            List[str]
+            list[str]
         ] = {}
 
     # -------------------------------------------------------------------------
@@ -337,7 +329,7 @@ class CarRepositoryValidator:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def load_json(path: Path) -> Optional[dict]:
+    def load_json(path: Path) -> dict | None:
         """
         Safe JSON loader.
         """
@@ -1186,9 +1178,9 @@ class CarRepositoryValidator:
         result: AssetValidationResult,
         severity: ValidationSeverity,
         code: ValidationCode,
-        path: Optional[Path],
+        path: Path | None,
         message: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """
         Add a diagnostic to an asset result.
@@ -1221,7 +1213,7 @@ class CarRepositoryValidator:
         result: AssetValidationResult,
         invalid_code: ValidationCode,
         description: str,
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """
         Load JSON while recording detailed asset diagnostics.
 
@@ -1347,7 +1339,7 @@ class CarRepositoryValidator:
         path: Path,
         result: AssetValidationResult,
         detect_duplicates: bool,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Calculate and record a file SHA-256 hash.
 
@@ -1656,7 +1648,7 @@ class CarRepositoryValidator:
 
     def _validate_configuration_identity_fields(
         self,
-        profile: Dict[str, Any],
+        profile: dict[str, Any],
         profile_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -1725,7 +1717,7 @@ class CarRepositoryValidator:
 
     def _validate_configuration_version(
         self,
-        profile: Dict[str, Any],
+        profile: dict[str, Any],
         profile_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -1829,7 +1821,7 @@ class CarRepositoryValidator:
 
     def _validate_configuration_references(
         self,
-        profile: Dict[str, Any],
+        profile: dict[str, Any],
         profile_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -1906,12 +1898,12 @@ class CarRepositoryValidator:
         field_name: str,
         profile_path: Path,
         result: AssetValidationResult,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Extract string references from a supported reference structure.
         """
 
-        references: List[str] = []
+        references: list[str] = []
 
         if value is None:
             return references
@@ -2096,8 +2088,8 @@ class CarRepositoryValidator:
 
     @staticmethod
     def _reference_from_mapping(
-        value: Dict[str, Any],
-    ) -> Optional[str]:
+        value: dict[str, Any],
+    ) -> str | None:
         """
         Extract an asset ID from a reference mapping.
         """
@@ -2350,7 +2342,7 @@ class CarRepositoryValidator:
     # Configuration validation helpers
     # -------------------------------------------------------------------------
 
-    def _get_scanned_asset_ids(self) -> Set[str]:
+    def _get_scanned_asset_ids(self) -> set[str]:
         """
         Return all asset IDs discovered by the current repository scan.
         """
@@ -2664,7 +2656,7 @@ class CarRepositoryValidator:
 
     def _validate_behaviour_identity(
         self,
-        behaviour: Dict[str, Any],
+        behaviour: dict[str, Any],
         behaviour_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -2763,7 +2755,7 @@ class CarRepositoryValidator:
 
     def _validate_behaviour_version(
         self,
-        behaviour: Dict[str, Any],
+        behaviour: dict[str, Any],
         behaviour_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -2865,7 +2857,7 @@ class CarRepositoryValidator:
 
     def _validate_behaviour_entry_point(
         self,
-        behaviour: Dict[str, Any],
+        behaviour: dict[str, Any],
         behaviour_path: Path,
         asset_path: Path,
         result: AssetValidationResult,
@@ -3191,7 +3183,7 @@ class CarRepositoryValidator:
 
     def _validate_behaviour_execution_settings(
         self,
-        behaviour: Dict[str, Any],
+        behaviour: dict[str, Any],
         behaviour_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -3334,7 +3326,7 @@ class CarRepositoryValidator:
 
     def _validate_behaviour_dependencies(
         self,
-        behaviour: Dict[str, Any],
+        behaviour: dict[str, Any],
         behaviour_path: Path,
         result: AssetValidationResult,
     ) -> None:
@@ -3371,7 +3363,7 @@ class CarRepositoryValidator:
         )
 
         known_asset_ids = self._get_scanned_asset_ids()
-        seen_dependencies: Set[str] = set()
+        seen_dependencies: set[str] = set()
 
         for dependency in dependencies:
 
@@ -3430,12 +3422,12 @@ class CarRepositoryValidator:
         field_name: str,
         behaviour_path: Path,
         result: AssetValidationResult,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Extract dependency identifiers from supported JSON structures.
         """
 
-        dependencies: List[str] = []
+        dependencies: list[str] = []
 
         if value is None:
             return dependencies

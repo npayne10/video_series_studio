@@ -5,7 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from vscs.application.caps.reference_repository import CanonicalReferenceRepository, CanonicalReferenceRepositoryError
+from vscs.application.caps.reference_repository import (
+    CanonicalReferenceRepository,
+    CanonicalReferenceRepositoryError,
+)
 from vscs.application.caps.service import CAPService
 from vscs.domain.caps import (
     CanonicalReference,

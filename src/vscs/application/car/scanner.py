@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any
 
 ASSET_DIRECTORY_PATTERN = re.compile(
     r"^(?P<asset_id>CAP-(?P<prefix>[A-Z]{3})-\d{3})(?:_(?P<slug>.+))?$"
@@ -511,17 +512,17 @@ def _nested_value(payload: Mapping[str, Any], *keys: str) -> object:
 
 __all__ = [
     "ASSET_DIRECTORY_PATTERN",
-    "AssetClass",
-    "AssetRepositoryInfo",
     "BEHAVIOUR_CATEGORIES",
     "CONFIGURATION_CATEGORIES",
+    "PREFIX_CLASS_MAP",
+    "VISUAL_CATEGORIES",
+    "AssetClass",
+    "AssetRepositoryInfo",
     "CarRepositoryScanner",
     "CarScanError",
     "InvalidCarRootError",
-    "PREFIX_CLASS_MAP",
     "RepositoryScanResult",
     "ScanIssue",
-    "VISUAL_CATEGORIES",
     "classify_asset",
     "detect_repository_version",
 ]

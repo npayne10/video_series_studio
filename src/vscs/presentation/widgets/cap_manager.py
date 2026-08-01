@@ -26,17 +26,14 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps import (
+    CanonicalReferenceError,
+    CanonicalReferenceService,
     CAPError,
     CAPGenerationError,
     CAPGeneratorService,
     CAPService,
-    CanonicalReferenceError,
-    CanonicalReferenceService,
 )
 from vscs.domain.caps import (
-    CAPCreate,
-    CAPStatus,
-    CAPUpdate,
     CanonicalAssetProfile,
     CanonicalReference,
     CanonicalReferenceCreate,
@@ -44,6 +41,9 @@ from vscs.domain.caps import (
     CanonicalReferenceStatus,
     CanonicalReferenceType,
     CanonicalReferenceUpdate,
+    CAPCreate,
+    CAPStatus,
+    CAPUpdate,
 )
 from vscs.presentation.dialogs.cap_draft_review_dialog import CAPDraftReviewDialog
 

@@ -1,6 +1,7 @@
 """VSCS application entry point."""
 
 from __future__ import annotations
+
 import logging
 import sys
 from types import TracebackType
@@ -9,11 +10,11 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.caps import (
+    CanonicalReferenceRepository,
+    CanonicalReferenceService,
     CAPGeneratorService,
     CAPRepository,
     CAPService,
-    CanonicalReferenceRepository,
-    CanonicalReferenceService,
 )
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.ai import (

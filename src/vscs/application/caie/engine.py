@@ -1,6 +1,7 @@
 """Canonical Asset Intelligence Engine v2.0."""
 
 from __future__ import annotations
+
 import re
 
 from vscs.application.caie.knowledge_base import (

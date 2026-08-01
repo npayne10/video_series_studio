@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import getpass
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from PySide6.QtCore import QEvent, QObject
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton

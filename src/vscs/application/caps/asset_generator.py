@@ -6,7 +6,11 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from vscs.application.caie import CAIEError, CanonicalAssetIntelligenceEngine, CanonicalPromptContext
+from vscs.application.caie import (
+    CAIEError,
+    CanonicalAssetIntelligenceEngine,
+    CanonicalPromptContext,
+)
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.domain.caps import (
     CanonicalAssetGenerationRequest,

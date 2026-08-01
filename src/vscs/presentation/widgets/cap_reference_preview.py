@@ -17,15 +17,13 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSlider,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
-from vscs.application.caps import CAPError, CanonicalReferenceError
+from vscs.application.caps import CanonicalReferenceError, CAPError
 from vscs.domain.caps import CanonicalReference, CanonicalReferenceType
 from vscs.presentation.widgets.cap_manager import CAPEditorDialog, CAPManagerWidget
-
 
 IMAGE_SUFFIXES = frozenset({".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"})
 

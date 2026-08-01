@@ -9,18 +9,21 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from .scanner import (
     AssetClass,
     AssetRepositoryInfo,
     CarRepositoryScanner,
     CarScanError,
-    InvalidCarRootError as ScannerInvalidCarRootError,
     RepositoryScanResult,
+)
+from .scanner import (
+    InvalidCarRootError as ScannerInvalidCarRootError,
 )
 
 VISUAL_DIRECTORIES = (

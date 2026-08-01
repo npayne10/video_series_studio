@@ -9,7 +9,7 @@ from typing import Any
 
 from PySide6.QtWidgets import QMessageBox, QPushButton
 
-from vscs.application.ciee import CIEEError, CanonicalImageEvaluationEngine
+from vscs.application.ciee import CanonicalImageEvaluationEngine, CIEEError
 from vscs.domain.caps import CanonicalReferenceType
 from vscs.presentation.widgets import cap_manager
 

@@ -22,9 +22,9 @@ from PySide6.QtWidgets import (
 
 from vscs.application.assets import AssetService
 from vscs.application.caps import (
+    CanonicalReferenceService,
     CAPGeneratorService,
     CAPService,
-    CanonicalReferenceService,
 )
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
