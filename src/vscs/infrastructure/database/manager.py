@@ -123,7 +123,13 @@ class DatabaseManager:
         with self.session() as database_session:
             schema = database_session.scalar(select(SchemaVersion).where(SchemaVersion.id == 1))
             if schema is None:
-                database_session.add(SchemaVersion(id=1, version=self.SCHEMA_VERSION, application_version=self.APPLICATION_VERSION))
+                database_session.add(
+                    SchemaVersion(
+                        id=1,
+                        version=self.SCHEMA_VERSION,
+                        application_version=self.APPLICATION_VERSION,
+                    )
+                )
                 return
             if schema.version > self.SCHEMA_VERSION:
                 raise DatabaseError(
@@ -151,7 +157,11 @@ class DatabaseManager:
     @staticmethod
     def _migrate_to_canonical_references(database_session: Session) -> None:
         bind = database_session.get_bind()
-        CanonicalReferenceRecord.__table__.create(bind=bind, checkfirst=True)
+        Base.metadata.create_all(
+            bind=bind,
+            tables=[CanonicalReferenceRecord.__table__],
+            checkfirst=True,
+        )
 
     @staticmethod
     def _migrate_reference_statuses(database_session: Session) -> None:
@@ -175,12 +185,23 @@ class DatabaseManager:
             for row in database_session.execute(text("PRAGMA table_info(canonical_references)"))
         }
         if "approved_by" not in columns:
-            database_session.execute(text("ALTER TABLE canonical_references ADD COLUMN approved_by VARCHAR(200)"))
+            database_session.execute(
+                text("ALTER TABLE canonical_references ADD COLUMN approved_by VARCHAR(200)")
+            )
         if "approved_at" not in columns:
-            database_session.execute(text("ALTER TABLE canonical_references ADD COLUMN approved_at DATETIME"))
+            database_session.execute(
+                text("ALTER TABLE canonical_references ADD COLUMN approved_at DATETIME")
+            )
         if "locked" not in columns:
-            database_session.execute(text("ALTER TABLE canonical_references ADD COLUMN locked BOOLEAN NOT NULL DEFAULT 0"))
-        database_session.execute(text("UPDATE canonical_references SET locked = 1 WHERE status = 'approved'"))
+            database_session.execute(
+                text(
+                    "ALTER TABLE canonical_references "
+                    "ADD COLUMN locked BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )
+        database_session.execute(
+            text("UPDATE canonical_references SET locked = 1 WHERE status = 'approved'")
+        )
 
     @staticmethod
     def _configure_sqlite(engine: Engine) -> None:
