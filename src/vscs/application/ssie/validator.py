@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from .models import ProductionPlan, Scene, ScenePlan
+from .models import ProductionPlan, Scene, ScenePlan, ShotPlan
 
 
 class SSIEValidationSeverity(StrEnum):
@@ -125,6 +125,7 @@ class SSIEValidator:
                     "Estimated shot duration must be greater than zero.",
                     shot.shot_id,
                 )
+            self._validate_production_layers(shot, result)
             expected_sequence += 1
         return result
 
@@ -186,6 +187,26 @@ class SSIEValidator:
             previous_sequence = scene.sequence_number
             result.issues.extend(self.validate_scene_plan(scene_plan).issues)
         return result
+
+    @staticmethod
+    def _validate_production_layers(
+        shot: ShotPlan,
+        result: SSIEValidationResult,
+    ) -> None:
+        layers = (
+            shot.camera_plan,
+            shot.lighting_plan,
+            shot.blocking_plan,
+            shot.continuity_plan,
+        )
+        populated = sum(layer is not None for layer in layers)
+        if populated not in {0, len(layers)}:
+            SSIEValidator._error(
+                result,
+                "INCOMPLETE_SHOT_PRODUCTION_PLAN",
+                "A shot must provide all production planning layers or none of them.",
+                shot.shot_id,
+            )
 
     @staticmethod
     def _require_text(
