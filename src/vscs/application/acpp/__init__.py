@@ -1,6 +1,7 @@
 """Advanced Clip Production Package public API."""
 
 from .builder import ACPPBuildError, ClipProductionPackageBuilder
+from .catalogs import CAPAssetResolutionCatalog, FilesystemBehaviourResolutionCatalog
 from .compiler import ACPPCompilationError, ACPPCompilerConfig, SSIEToACPPCompiler
 from .identifiers import build_clip_id
 from .models import (
@@ -59,6 +60,7 @@ __all__ = [
     "AudioSpecification",
     "BehaviourResolutionCatalog",
     "BehaviourResolutionRecord",
+    "CAPAssetResolutionCatalog",
     "CanonicalReferenceResolution",
     "ClipIdentity",
     "ClipPackageSerializer",
@@ -66,6 +68,7 @@ __all__ = [
     "ClipProductionPackage",
     "ClipProductionPackageBuilder",
     "ContinuityBinding",
+    "FilesystemBehaviourResolutionCatalog",
     "OutputSpecification",
     "PromptSpecification",
     "RenderQualityMode",
