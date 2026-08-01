@@ -9,6 +9,8 @@ from .models import (
     ShotPurpose,
 )
 from .protocols import ScenePlanner, ShotPlanner
+from .scene_planner import RuleBasedScenePlanner, ScenePlanningError
+from .shot_planner import RuleBasedShotPlanner
 from .validator import (
     SSIEValidationIssue,
     SSIEValidationResult,
@@ -19,6 +21,8 @@ from .validator import (
 __all__ = [
     "ProductionPlan",
     "ProductionPlanBuilder",
+    "RuleBasedScenePlanner",
+    "RuleBasedShotPlanner",
     "SSIEBuildError",
     "SSIEValidationIssue",
     "SSIEValidationResult",
@@ -27,6 +31,7 @@ __all__ = [
     "Scene",
     "ScenePlan",
     "ScenePlanner",
+    "ScenePlanningError",
     "SceneTransition",
     "ShotPlan",
     "ShotPlanner",
