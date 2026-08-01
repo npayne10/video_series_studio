@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .constants import (
     CONFIGURATION_REQUIRED_FILES,
@@ -11,8 +11,17 @@ from .constants import (
 )
 from .models import AssetValidationResult, ValidationCode, ValidationSeverity
 
+if TYPE_CHECKING:
+    from .protocols import ValidatorProtocol
 
-class ConfigurationValidationMixin:
+    _ConfigurationMixinBase = ValidatorProtocol
+else:
+
+    class _ConfigurationMixinBase:
+        pass
+
+
+class ConfigurationValidationMixin(_ConfigurationMixinBase):
     def _validate_configuration_asset(
         self, asset: Any, result: AssetValidationResult
     ) -> None:
@@ -79,8 +88,14 @@ class ConfigurationValidationMixin:
         result: AssetValidationResult,
     ) -> None:
         for field in (
-            "name", "title", "display_name", "displayName", "category",
-            "type", "profile_type", "profileType",
+            "name",
+            "title",
+            "display_name",
+            "displayName",
+            "category",
+            "type",
+            "profile_type",
+            "profileType",
         ):
             if field not in profile:
                 continue
@@ -111,15 +126,16 @@ class ConfigurationValidationMixin:
         result: AssetValidationResult,
     ) -> None:
         for field in (
-            "version", "profile_version", "profileVersion",
-            "schema_version", "schemaVersion",
+            "version",
+            "profile_version",
+            "profileVersion",
+            "schema_version",
+            "schemaVersion",
         ):
             if field not in profile:
                 continue
             value = profile[field]
-            valid = (
-                isinstance(value, str) and bool(value.strip())
-            ) or (
+            valid = (isinstance(value, str) and bool(value.strip())) or (
                 isinstance(value, int) and not isinstance(value, bool) and value >= 0
             )
             if not valid:
@@ -128,7 +144,10 @@ class ConfigurationValidationMixin:
                     ValidationSeverity.ERROR,
                     ValidationCode.INVALID_PROFILE,
                     path,
-                    f"Configuration version field '{field}' must be a non-empty string or non-negative integer.",
+                    (
+                        f"Configuration version field '{field}' must be a non-empty "
+                        "string or non-negative integer."
+                    ),
                     {"field": field, "actual": value},
                 )
 
@@ -140,8 +159,13 @@ class ConfigurationValidationMixin:
     ) -> None:
         known = self._get_scanned_asset_ids()
         for field in (
-            "asset_reference", "assetReference", "asset_references",
-            "assetReferences", "references", "depends_on", "dependsOn",
+            "asset_reference",
+            "assetReference",
+            "asset_references",
+            "assetReferences",
+            "references",
+            "depends_on",
+            "dependsOn",
             "dependencies",
         ):
             if field not in profile:
@@ -177,21 +201,24 @@ class ConfigurationValidationMixin:
         if isinstance(value, str):
             return [value]
         if isinstance(value, list):
-            references: list[str] = []
+            reference_ids: list[str] = []
             for index, item in enumerate(value):
                 if isinstance(item, str):
-                    references.append(item)
+                    reference_ids.append(item)
                 elif isinstance(item, dict):
                     reference = self._reference_from_mapping(item)
                     if reference:
-                        references.append(reference)
+                        reference_ids.append(reference)
                     else:
                         self._add_asset_diagnostic(
                             result,
                             ValidationSeverity.WARNING,
                             ValidationCode.INVALID_PROFILE,
                             path,
-                            f"Reference entry '{field}[{index}]' does not declare an asset ID.",
+                            (
+                                f"Reference entry '{field}[{index}]' does not declare "
+                                "an asset ID."
+                            ),
                         )
                 else:
                     self._add_asset_diagnostic(
@@ -199,22 +226,25 @@ class ConfigurationValidationMixin:
                         ValidationSeverity.ERROR,
                         ValidationCode.INVALID_PROFILE,
                         path,
-                        f"Reference entry '{field}[{index}]' must be a string or object.",
+                        (
+                            f"Reference entry '{field}[{index}]' must be a string "
+                            "or object."
+                        ),
                         {"actual_type": type(item).__name__},
                     )
-            return references
+            return reference_ids
         if isinstance(value, dict):
             direct = self._reference_from_mapping(value)
             if direct:
                 return [direct]
-            references: list[str] = []
+            nested_reference_ids: list[str] = []
             for key, item in value.items():
-                references.extend(
+                nested_reference_ids.extend(
                     self._extract_reference_values(
                         item, f"{field}.{key}", path, result
                     )
                 )
-            return references
+            return nested_reference_ids
         self._add_asset_diagnostic(
             result,
             ValidationSeverity.ERROR,
