@@ -25,7 +25,7 @@ def _scene(**overrides: object) -> Scene:
         sequence_number=10,
         heading="INT. MAURITANIA BRIDGE - NIGHT",
         location_asset_id="LOC-MAURITANIA-BRIDGE",
-        summary="An alarm reveals an unknown vessel approaching the ship.",
+        summary="An alarm signals a threat as James confronts Cheryl on the bridge.",
         participant_asset_ids=("CHR-JAMES", "CHR-CHERYL"),
         dialogue=("Unknown vessel closing fast.", "Hold our position."),
         required_asset_ids=("PROP-BRIDGE-CONSOLE",),
