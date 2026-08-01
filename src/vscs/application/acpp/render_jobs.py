@@ -123,7 +123,7 @@ class RenderJobCompiler:
         if not prompt.positive_prompt.strip():
             raise RenderJobCompilationError("Positive prompt must not be empty")
 
-        references = self._input_references(package, prompt)
+        references = self._input_references(prompt)
         capabilities = self._required_capabilities(package, prompt)
         package_checksum = self.serializer.checksum(package)
         job_id = f"JOB-{package.identity.clip_id}"
@@ -199,7 +199,6 @@ class RenderJobCompiler:
 
     @staticmethod
     def _input_references(
-        package: ClipProductionPackage,
         prompt: CompiledProductionPrompt,
     ) -> tuple[RenderInputReference, ...]:
         references: list[RenderInputReference] = [
