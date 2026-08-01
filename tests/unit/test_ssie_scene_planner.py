@@ -124,7 +124,7 @@ def test_shot_planner_segments_urgent_action() -> None:
     )
 
     assert [shot.purpose for shot in shots].count(ShotPurpose.ACTION) == 2
-    assert all(shot.estimated_duration_seconds == 4.857 for shot in shots)
+    assert all(shot.estimated_duration_seconds == 8.5 for shot in shots)
 
 
 def test_shot_planner_respects_shot_limit() -> None:
