@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from itertools import pairwise
 
 import pytest
 
@@ -86,7 +87,7 @@ def test_compiler_chains_clip_dependencies_and_continuity() -> None:
 
     assert packages[0].dependencies == ()
     assert packages[0].continuity.incoming_clip_id is None
-    for previous, current in zip(packages, packages[1:], strict=True):
+    for previous, current in pairwise(packages):
         assert current.dependencies == (previous.identity.clip_id,)
         assert current.continuity.incoming_clip_id == previous.identity.clip_id
 
