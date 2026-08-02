@@ -151,7 +151,7 @@ class StoryBrowserWidget(QWidget):
             parent=self,
             default_episode_id=self.stories.default_episode_id(),
             suggested_sequence=self.stories.next_sequence_number(),
-            scene_id_factory=self.stories.build_scene_id,
+            scene_id_factory=self.stories.generate_scene_id,
             location_assets=self._location_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
@@ -168,7 +168,7 @@ class StoryBrowserWidget(QWidget):
         dialog = SceneEditorDialog(
             scene,
             self,
-            scene_id_factory=self.stories.build_scene_id,
+            scene_id_factory=self.stories.generate_scene_id,
             location_assets=self._location_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
