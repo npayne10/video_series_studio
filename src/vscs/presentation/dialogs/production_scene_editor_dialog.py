@@ -22,7 +22,7 @@ from vscs.presentation.dialogs.structured_scene_editor_dialog import (
 class TransitionComboBox(QComboBox):
     """Expose strongly typed SceneTransition values over Qt's string variants."""
 
-    def itemData(
+    def itemData(  # noqa: N802
         self,
         index: int,
         role: int = Qt.ItemDataRole.UserRole,
@@ -35,7 +35,7 @@ class TransitionComboBox(QComboBox):
                 return value
         return value
 
-    def currentData(
+    def currentData(  # noqa: N802
         self,
         role: int = Qt.ItemDataRole.UserRole,
     ) -> object:
