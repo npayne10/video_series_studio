@@ -103,9 +103,10 @@ class ExpectedMediaProbe:
     def probe(self, path: Path) -> MediaProbeResult:
         assert path.is_file()
         return MediaProbeResult(
+            path=path,
             width=self.width,
             height=self.height,
-            frame_rate=float(self.fps),
+            frames_per_second=float(self.fps),
             frame_count=self.frames,
             duration_seconds=self.frames / self.fps,
             container="mp4",
@@ -280,7 +281,9 @@ def test_complete_story_to_validated_render_and_audit_chain(tmp_path: Path) -> N
     ).validate(job, outcome.execution_result)
     assert validation.passed is True
     assert len(validation.outputs) == 1
-    assert len(validation.outputs[0].checksum) == 64
+    validation_checksum = validation.outputs[0].checksum
+    assert validation_checksum is not None
+    assert len(validation_checksum) == 64
 
     audit_service = ProductionAuditService()
     provenance = audit_service.capture(
@@ -309,7 +312,7 @@ def test_complete_story_to_validated_render_and_audit_chain(tmp_path: Path) -> N
         message="End-to-end render completed and validated",
         provenance=provenance,
         occurred_at=outcome.execution_result.completed_at,
-        metadata=(("validation_checksum", validation.outputs[0].checksum),),
+        metadata=(("validation_checksum", validation_checksum),),
     )
 
     assert ProductionAuditValidator().validate(ledger).passed is True
