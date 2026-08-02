@@ -1,5 +1,20 @@
 """Production orchestration foundation public API."""
 
+from .audit import (
+    ArtifactProvenance,
+    AuditEventType,
+    AuditValidationIssue,
+    AuditValidationResult,
+    ProductionAuditEntry,
+    ProductionAuditError,
+    ProductionAuditLedger,
+    ProductionAuditSerializer,
+    ProductionAuditService,
+    ProductionAuditValidator,
+    ProductionProvenance,
+    RenderProvenance,
+    VersionedComponent,
+)
 from .executors import (
     ExecutionLease,
     ExecutionRequest,
@@ -67,6 +82,10 @@ from .validator import (
 )
 
 __all__ = [
+    "ArtifactProvenance",
+    "AuditEventType",
+    "AuditValidationIssue",
+    "AuditValidationResult",
     "ExecutionLease",
     "ExecutionMetrics",
     "ExecutionRequest",
@@ -84,6 +103,12 @@ __all__ = [
     "PipelineValidationIssue",
     "PipelineValidationResult",
     "PipelineValidationSeverity",
+    "ProductionAuditEntry",
+    "ProductionAuditError",
+    "ProductionAuditLedger",
+    "ProductionAuditSerializer",
+    "ProductionAuditService",
+    "ProductionAuditValidator",
     "ProductionEvent",
     "ProductionExecutor",
     "ProductionGraph",
@@ -96,6 +121,7 @@ __all__ = [
     "ProductionPipelineSerializationError",
     "ProductionPipelineSerializer",
     "ProductionPipelineValidator",
+    "ProductionProvenance",
     "ProductionRecoveryConfig",
     "ProductionRecoveryEngine",
     "ProductionRecoveryError",
@@ -113,6 +139,7 @@ __all__ = [
     "RecoveryDecision",
     "RecoveryEvent",
     "RecoveryReason",
+    "RenderProvenance",
     "RenderQueue",
     "RenderQueueEngine",
     "RenderQueueEntry",
@@ -120,6 +147,7 @@ __all__ = [
     "RenderQueueSerializationError",
     "RenderQueueSerializer",
     "RenderQueueValidator",
+    "VersionedComponent",
     "WorkerHealth",
     "WorkerIdentity",
     "WorkerObservation",
