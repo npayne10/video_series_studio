@@ -19,7 +19,11 @@ def install_story_browser() -> None:
     if getattr(MainWindow, "_story_browser_installed", False):
         return
 
-    story_browser_module.SceneEditorDialog = StructuredSceneEditorDialog
+    setattr(  # noqa: B010
+        story_browser_module,
+        "SceneEditorDialog",
+        StructuredSceneEditorDialog,
+    )
 
     original_create_content = MainWindow._create_content_area
     original_update_status = MainWindow._update_status_for_section
