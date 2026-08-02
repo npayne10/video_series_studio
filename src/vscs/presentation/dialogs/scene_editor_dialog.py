@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.ssie import Scene, SceneTransition
+from vscs.domain.assets import Asset
 
 
 class SceneEditorDialog(QDialog):
@@ -33,12 +34,14 @@ class SceneEditorDialog(QDialog):
         default_episode_id: str = "EP-001",
         suggested_sequence: int = 1,
         scene_id_factory: Callable[[str, int], str] | None = None,
+        location_assets: tuple[Asset, ...] = (),
     ) -> None:
         super().__init__(parent)
         self._editing = scene is not None
         self._scene_id_factory = scene_id_factory or self._default_scene_id
+        self._location_assets = location_assets
         self.setWindowTitle("Edit Scene" if self._editing else "New Scene")
-        self.resize(680, 700)
+        self.resize(700, 720)
 
         intro = QLabel(
             "Create the story-level scene information used by SSIE. "
@@ -70,9 +73,32 @@ class SceneEditorDialog(QDialog):
         self.heading_edit.setToolTip(
             "Screenplay-style heading describing interior/exterior, location and time."
         )
-        self.location_edit = QLineEdit()
-        self.location_edit.setPlaceholderText("Select a location in Phase 16.2a.2")
-        self.location_edit.setToolTip("Canonical location asset ID used by this scene.")
+
+        self.location_combo = QComboBox()
+        self.location_combo.setObjectName("sceneLocationSelector")
+        self.location_combo.setEditable(True)
+        self.location_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.location_combo.setToolTip(
+            "Search for and select a canonical location or environment asset. "
+            "The scene stores the asset ID."
+        )
+        self._populate_locations()
+
+        self.location_help = QLabel()
+        self.location_help.setWordWrap(True)
+        self.location_help.setObjectName("sceneLocationHelp")
+        if location_assets:
+            self.location_help.setText(
+                "Choose a location by name or asset ID. Only location and environment "
+                "assets are shown."
+            )
+        else:
+            self.location_help.setText(
+                "No location assets are available. Create a Location or Environment "
+                "asset in Asset Manager, then reopen this dialog."
+            )
+            self.location_help.setStyleSheet("color: #8a5a00;")
+
         self.summary_edit = QPlainTextEdit()
         self.summary_edit.setPlaceholderText(
             "Describe what changes in this scene and why it matters."
@@ -100,13 +126,18 @@ class SceneEditorDialog(QDialog):
         self.validation_label.setWordWrap(True)
         self.validation_label.setStyleSheet("color: #b00020;")
 
+        location_layout = QVBoxLayout()
+        location_layout.setContentsMargins(0, 0, 0, 0)
+        location_layout.addWidget(self.location_combo)
+        location_layout.addWidget(self.location_help)
+
         form = QFormLayout()
         form.addRow("Scene ID", self.scene_id_edit)
         form.addRow("Scene name *", self.scene_name_edit)
         form.addRow("Episode ID *", self.episode_id_edit)
         form.addRow("Sequence *", self.sequence_spin)
         form.addRow("Heading *", self.heading_edit)
-        form.addRow("Location asset ID *", self.location_edit)
+        form.addRow("Location *", location_layout)
         form.addRow("Summary *", self.summary_edit)
         form.addRow("Participants (one per line)", self.participants_edit)
         form.addRow("Dialogue (one line per utterance)", self.dialogue_edit)
@@ -134,7 +165,8 @@ class SceneEditorDialog(QDialog):
         self.episode_id_edit.textChanged.connect(self._identity_changed)
         self.sequence_spin.valueChanged.connect(self._identity_changed)
         self.heading_edit.textChanged.connect(self._validate)
-        self.location_edit.textChanged.connect(self._validate)
+        self.location_combo.currentIndexChanged.connect(self._validate)
+        self.location_combo.editTextChanged.connect(self._validate)
         self.summary_edit.textChanged.connect(self._validate)
 
         if scene is not None:
@@ -151,7 +183,7 @@ class SceneEditorDialog(QDialog):
             episode_id=self.episode_id_edit.text().strip(),
             sequence_number=self.sequence_spin.value(),
             heading=self.heading_edit.text().strip(),
-            location_asset_id=self.location_edit.text().strip(),
+            location_asset_id=self.selected_location_id(),
             summary=self.summary_edit.toPlainText().strip(),
             participant_asset_ids=self._lines(self.participants_edit.toPlainText()),
             dialogue=self._lines(self.dialogue_edit.toPlainText()),
@@ -162,13 +194,40 @@ class SceneEditorDialog(QDialog):
             scene_name=self.scene_name_edit.text().strip(),
         )
 
+    def selected_location_id(self) -> str:
+        """Return the canonical ID selected by name or exact asset ID."""
+        selected = self.location_combo.currentData()
+        if isinstance(selected, str) and selected:
+            return selected
+        query = self.location_combo.currentText().strip()
+        for asset in self._location_assets:
+            if query.casefold() in {asset.asset_id.casefold(), asset.name.casefold()}:
+                return asset.asset_id
+        return ""
+
+    def _populate_locations(self) -> None:
+        self.location_combo.clear()
+        self.location_combo.addItem("Select a location...", "")
+        for asset in sorted(
+            self._location_assets,
+            key=lambda item: (item.name.casefold(), item.asset_id),
+        ):
+            self.location_combo.addItem(
+                f"{asset.name}  —  {asset.asset_id}",
+                asset.asset_id,
+            )
+        completer = self.location_combo.completer()
+        if completer is not None:
+            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+            completer.setFilterMode(Qt.MatchFlag.MatchContains)
+
     def _load(self, scene: Scene) -> None:
         self.scene_id_edit.setText(scene.scene_id)
         self.scene_name_edit.setText(scene.scene_name or scene.heading)
         self.episode_id_edit.setText(scene.episode_id)
         self.sequence_spin.setValue(scene.sequence_number)
         self.heading_edit.setText(scene.heading)
-        self.location_edit.setText(scene.location_asset_id)
+        self._select_location(scene.location_asset_id)
         self.summary_edit.setPlainText(scene.summary)
         self.participants_edit.setPlainText("\n".join(scene.participant_asset_ids))
         self.dialogue_edit.setPlainText("\n".join(scene.dialogue))
@@ -178,6 +237,20 @@ class SceneEditorDialog(QDialog):
             self.transition_combo.findData(scene.transition_in)
         )
         self.duration_spin.setValue(scene.estimated_duration_seconds or 30.0)
+
+    def _select_location(self, asset_id: str) -> None:
+        index = self.location_combo.findData(asset_id)
+        if index >= 0:
+            self.location_combo.setCurrentIndex(index)
+            return
+        if asset_id:
+            self.location_combo.addItem(f"Unavailable asset — {asset_id}", asset_id)
+            self.location_combo.setCurrentIndex(self.location_combo.count() - 1)
+            self.location_help.setText(
+                "This scene references a location that is not currently present in Asset "
+                "Manager. Select another location or restore the missing asset."
+            )
+            self.location_help.setStyleSheet("color: #b00020;")
 
     def _identity_changed(self) -> None:
         if not self._editing:
@@ -200,7 +273,7 @@ class SceneEditorDialog(QDialog):
             missing.append("episode ID")
         if not self.heading_edit.text().strip():
             missing.append("heading")
-        if not self.location_edit.text().strip():
+        if not self.selected_location_id():
             missing.append("location")
         if not self.summary_edit.toPlainText().strip():
             missing.append("summary")
