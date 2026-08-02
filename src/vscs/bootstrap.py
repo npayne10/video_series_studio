@@ -17,6 +17,7 @@ from vscs.application.caps import (
     CAPService,
 )
 from vscs.application.projects import ProjectService
+from vscs.application.story import StoryService
 from vscs.infrastructure.ai import (
     AICredentialStore,
     CAPGenerationProvider,
@@ -79,8 +80,10 @@ class ApplicationContext:
 
     def create_main_window(self) -> MainWindow:
         """Create the real VSCS main window without starting the event loop."""
+        from vscs.presentation.story_integration import install_story_browser
         from vscs.presentation.windows.main_window import MainWindow
 
+        install_story_browser()
         return MainWindow(self.services)
 
     def shutdown(self) -> None:
@@ -134,6 +137,7 @@ def build_application_context(
 
     database = services.register(DatabaseManager, DatabaseManager())
     projects = services.register(ProjectService, ProjectService(configuration, database))
+    services.register(StoryService, StoryService(projects))
     asset_repository = services.register(AssetRepository, AssetRepository(database))
     assets = services.register(AssetService, AssetService(projects, asset_repository))
     cap_repository = services.register(CAPRepository, CAPRepository(database))
