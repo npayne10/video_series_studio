@@ -24,6 +24,9 @@ from PySide6.QtWidgets import (
 from vscs.application.ssie import Scene, SceneTransition
 from vscs.domain.assets import Asset
 
+_HEADER_ROLE = Qt.ItemDataRole.UserRole + 2
+_SEARCH_ROLE = Qt.ItemDataRole.UserRole + 1
+
 
 class SceneEditorDialog(QDialog):
     """Collect clear, validated scene data suitable for the SSIE planner."""
@@ -38,14 +41,16 @@ class SceneEditorDialog(QDialog):
         scene_id_factory: Callable[[str, int], str] | None = None,
         location_assets: tuple[Asset, ...] = (),
         participant_assets: tuple[Asset, ...] = (),
+        required_assets: tuple[Asset, ...] = (),
     ) -> None:
         super().__init__(parent)
         self._editing = scene is not None
         self._scene_id_factory = scene_id_factory or self._default_scene_id
         self._location_assets = location_assets
         self._participant_assets = participant_assets
+        self._required_assets = required_assets
         self.setWindowTitle("Edit Scene" if self._editing else "New Scene")
-        self.resize(720, 820)
+        self.resize(760, 900)
 
         intro = QLabel(
             "Create the story-level scene information used by SSIE. "
@@ -113,7 +118,9 @@ class SceneEditorDialog(QDialog):
 
         self.participant_search = QLineEdit()
         self.participant_search.setObjectName("sceneParticipantSearch")
-        self.participant_search.setPlaceholderText("Search characters by name or asset ID...")
+        self.participant_search.setPlaceholderText(
+            "Search characters by name or asset ID..."
+        )
         self.participant_search.setClearButtonEnabled(True)
         self.participant_search.setToolTip(
             "Filter the available character assets, then tick everyone present in the scene."
@@ -128,7 +135,23 @@ class SceneEditorDialog(QDialog):
         self._populate_participants()
 
         self.dialogue_edit = QPlainTextEdit()
-        self.assets_edit = QPlainTextEdit()
+
+        self.asset_search = QLineEdit()
+        self.asset_search.setObjectName("sceneRequiredAssetSearch")
+        self.asset_search.setPlaceholderText("Search assets by name, ID or category...")
+        self.asset_search.setClearButtonEnabled(True)
+        self.asset_search.setToolTip(
+            "Filter production assets, then tick everything required to stage this scene."
+        )
+        self.asset_list = QListWidget()
+        self.asset_list.setObjectName("sceneRequiredAssetSelector")
+        self.asset_list.setAlternatingRowColors(True)
+        self.asset_list.setMinimumHeight(170)
+        self.asset_help = QLabel()
+        self.asset_help.setObjectName("sceneRequiredAssetHelp")
+        self.asset_help.setWordWrap(True)
+        self._populate_required_assets()
+
         self.time_of_day_edit = QLineEdit()
         self.transition_combo = QComboBox()
         for transition in SceneTransition:
@@ -157,6 +180,12 @@ class SceneEditorDialog(QDialog):
         participant_layout.addWidget(self.participant_list)
         participant_layout.addWidget(self.participant_help)
 
+        asset_layout = QVBoxLayout()
+        asset_layout.setContentsMargins(0, 0, 0, 0)
+        asset_layout.addWidget(self.asset_search)
+        asset_layout.addWidget(self.asset_list)
+        asset_layout.addWidget(self.asset_help)
+
         form = QFormLayout()
         form.addRow("Scene ID", self.scene_id_edit)
         form.addRow("Scene name *", self.scene_name_edit)
@@ -167,7 +196,7 @@ class SceneEditorDialog(QDialog):
         form.addRow("Summary *", self.summary_edit)
         form.addRow("Participants", participant_layout)
         form.addRow("Dialogue (one line per utterance)", self.dialogue_edit)
-        form.addRow("Required assets (one per line)", self.assets_edit)
+        form.addRow("Required assets", asset_layout)
         form.addRow("Time of day", self.time_of_day_edit)
         form.addRow("Transition", self.transition_combo)
         form.addRow("Estimated duration (seconds)", self.duration_spin)
@@ -196,12 +225,15 @@ class SceneEditorDialog(QDialog):
         self.summary_edit.textChanged.connect(self._validate)
         self.participant_search.textChanged.connect(self._filter_participants)
         self.participant_list.itemChanged.connect(self._participants_changed)
+        self.asset_search.textChanged.connect(self._filter_required_assets)
+        self.asset_list.itemChanged.connect(self._required_assets_changed)
 
         if scene is not None:
             self._load(scene)
         else:
             self._refresh_generated_id()
             self._update_participant_help()
+            self._update_asset_help()
         self._validate()
         self.scene_name_edit.setFocus(Qt.FocusReason.OtherFocusReason)
 
@@ -216,7 +248,7 @@ class SceneEditorDialog(QDialog):
             summary=self.summary_edit.toPlainText().strip(),
             participant_asset_ids=self.selected_participant_ids(),
             dialogue=self._lines(self.dialogue_edit.toPlainText()),
-            required_asset_ids=self._lines(self.assets_edit.toPlainText()),
+            required_asset_ids=self.selected_required_asset_ids(),
             time_of_day=self.time_of_day_edit.text().strip() or None,
             transition_in=self.transition_combo.currentData(),
             estimated_duration_seconds=self.duration_spin.value(),
@@ -236,15 +268,11 @@ class SceneEditorDialog(QDialog):
 
     def selected_participant_ids(self) -> tuple[str, ...]:
         """Return checked participant IDs in stable display order without duplicates."""
-        selected: list[str] = []
-        for index in range(self.participant_list.count()):
-            item = self.participant_list.item(index)
-            if item.checkState() is not Qt.CheckState.Checked:
-                continue
-            asset_id = item.data(Qt.ItemDataRole.UserRole)
-            if isinstance(asset_id, str) and asset_id and asset_id not in selected:
-                selected.append(asset_id)
-        return tuple(selected)
+        return self._checked_ids(self.participant_list)
+
+    def selected_required_asset_ids(self) -> tuple[str, ...]:
+        """Return checked production asset IDs without category headers or duplicates."""
+        return self._checked_ids(self.asset_list)
 
     def _populate_locations(self) -> None:
         self.location_combo.clear()
@@ -268,16 +296,30 @@ class SceneEditorDialog(QDialog):
             self._participant_assets,
             key=lambda item: (item.name.casefold(), item.asset_id),
         ):
-            item = QListWidgetItem(f"{asset.name}  —  {asset.asset_id}")
-            item.setData(Qt.ItemDataRole.UserRole, asset.asset_id)
-            item.setData(
-                Qt.ItemDataRole.UserRole + 1,
-                f"{asset.name} {asset.asset_id}".casefold(),
-            )
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Unchecked)
+            item = self._asset_item(asset)
             self.participant_list.addItem(item)
         self._update_participant_help()
+
+    def _populate_required_assets(self) -> None:
+        self.asset_list.clear()
+        grouped: dict[str, list[Asset]] = {}
+        for asset in self._required_assets:
+            grouped.setdefault(asset.category.value, []).append(asset)
+        for category in sorted(grouped):
+            header = QListWidgetItem(category.replace("_", " ").title())
+            header.setData(_HEADER_ROLE, True)
+            header.setData(_SEARCH_ROLE, category.casefold())
+            header.setFlags(Qt.ItemFlag.NoItemFlags)
+            font = header.font()
+            font.setBold(True)
+            header.setFont(font)
+            self.asset_list.addItem(header)
+            for asset in sorted(
+                grouped[category],
+                key=lambda item: (item.name.casefold(), item.asset_id),
+            ):
+                self.asset_list.addItem(self._asset_item(asset, category))
+        self._update_asset_help()
 
     def _load(self, scene: Scene) -> None:
         self.scene_id_edit.setText(scene.scene_id)
@@ -287,14 +329,24 @@ class SceneEditorDialog(QDialog):
         self.heading_edit.setText(scene.heading)
         self._select_location(scene.location_asset_id)
         self.summary_edit.setPlainText(scene.summary)
-        self._select_participants(scene.participant_asset_ids)
+        self._select_ids(
+            self.participant_list,
+            scene.participant_asset_ids,
+            "Unavailable character",
+        )
         self.dialogue_edit.setPlainText("\n".join(scene.dialogue))
-        self.assets_edit.setPlainText("\n".join(scene.required_asset_ids))
+        self._select_ids(
+            self.asset_list,
+            scene.required_asset_ids,
+            "Unavailable asset",
+        )
         self.time_of_day_edit.setText(scene.time_of_day or "")
         self.transition_combo.setCurrentIndex(
             self.transition_combo.findData(scene.transition_in)
         )
         self.duration_spin.setValue(scene.estimated_duration_seconds or 30.0)
+        self._update_participant_help()
+        self._update_asset_help()
 
     def _select_location(self, asset_id: str) -> None:
         index = self.location_combo.findData(asset_id)
@@ -310,41 +362,72 @@ class SceneEditorDialog(QDialog):
             )
             self.location_help.setStyleSheet("color: #b00020;")
 
-    def _select_participants(self, participant_ids: tuple[str, ...]) -> None:
+    def _select_ids(
+        self,
+        widget: QListWidget,
+        selected_ids: tuple[str, ...],
+        unavailable_label: str,
+    ) -> None:
         available: set[str] = set()
-        for index in range(self.participant_list.count()):
-            item = self.participant_list.item(index)
+        for index in range(widget.count()):
+            item = widget.item(index)
             asset_id = item.data(Qt.ItemDataRole.UserRole)
-            if isinstance(asset_id, str):
-                available.add(asset_id)
-                if asset_id in participant_ids:
-                    item.setCheckState(Qt.CheckState.Checked)
-        for asset_id in participant_ids:
+            if not isinstance(asset_id, str):
+                continue
+            available.add(asset_id)
+            if asset_id in selected_ids:
+                item.setCheckState(Qt.CheckState.Checked)
+        for asset_id in selected_ids:
             if asset_id in available:
                 continue
-            item = QListWidgetItem(f"Unavailable character — {asset_id}")
+            item = QListWidgetItem(f"{unavailable_label} — {asset_id}")
             item.setData(Qt.ItemDataRole.UserRole, asset_id)
-            item.setData(Qt.ItemDataRole.UserRole + 1, asset_id.casefold())
+            item.setData(_SEARCH_ROLE, asset_id.casefold())
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Checked)
             item.setToolTip(
-                "This character is referenced by the scene but is missing from Asset Manager."
+                "This asset is referenced by the scene but is missing from Asset Manager."
             )
-            self.participant_list.addItem(item)
-        self._update_participant_help()
+            widget.addItem(item)
 
     def _filter_participants(self, query: str) -> None:
+        self._filter_asset_list(self.participant_list, query, grouped=False)
+
+    def _filter_required_assets(self, query: str) -> None:
+        self._filter_asset_list(self.asset_list, query, grouped=True)
+
+    def _filter_asset_list(
+        self,
+        widget: QListWidget,
+        query: str,
+        *,
+        grouped: bool,
+    ) -> None:
         normalized = query.strip().casefold()
-        for index in range(self.participant_list.count()):
-            item = self.participant_list.item(index)
-            searchable = item.data(Qt.ItemDataRole.UserRole + 1)
+        visible_by_header: dict[int, bool] = {}
+        current_header = -1
+        for index in range(widget.count()):
+            item = widget.item(index)
+            if item.data(_HEADER_ROLE):
+                current_header = index
+                visible_by_header[index] = False
+                continue
+            searchable = item.data(_SEARCH_ROLE)
             matches = not normalized or (
                 isinstance(searchable, str) and normalized in searchable
             )
             item.setHidden(not matches)
+            if grouped and matches and current_header >= 0:
+                visible_by_header[current_header] = True
+        if grouped:
+            for index, visible in visible_by_header.items():
+                widget.item(index).setHidden(not visible)
 
     def _participants_changed(self, _item: QListWidgetItem) -> None:
         self._update_participant_help()
+
+    def _required_assets_changed(self, _item: QListWidgetItem) -> None:
+        self._update_asset_help()
 
     def _update_participant_help(self) -> None:
         count = len(self.selected_participant_ids())
@@ -360,6 +443,21 @@ class SceneEditorDialog(QDialog):
             f"{count} {label} selected. Tick every character who appears in this scene."
         )
         self.participant_help.setStyleSheet("")
+
+    def _update_asset_help(self) -> None:
+        count = len(self.selected_required_asset_ids())
+        if not self._required_assets and self.asset_list.count() == 0:
+            self.asset_help.setText(
+                "No production assets are available. Create assets in Asset Manager, "
+                "then reopen this dialog."
+            )
+            self.asset_help.setStyleSheet("color: #8a5a00;")
+            return
+        label = "asset" if count == 1 else "assets"
+        self.asset_help.setText(
+            f"{count} required {label} selected. Items are grouped by asset category."
+        )
+        self.asset_help.setStyleSheet("")
 
     def _identity_changed(self) -> None:
         if not self._editing:
@@ -393,6 +491,28 @@ class SceneEditorDialog(QDialog):
             if missing
             else ""
         )
+
+    @staticmethod
+    def _asset_item(asset: Asset, category: str = "") -> QListWidgetItem:
+        item = QListWidgetItem(f"{asset.name}  —  {asset.asset_id}")
+        item.setData(Qt.ItemDataRole.UserRole, asset.asset_id)
+        searchable = f"{asset.name} {asset.asset_id} {category}".casefold()
+        item.setData(_SEARCH_ROLE, searchable)
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        item.setCheckState(Qt.CheckState.Unchecked)
+        return item
+
+    @staticmethod
+    def _checked_ids(widget: QListWidget) -> tuple[str, ...]:
+        selected: list[str] = []
+        for index in range(widget.count()):
+            item = widget.item(index)
+            if item.checkState() is not Qt.CheckState.Checked:
+                continue
+            asset_id = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(asset_id, str) and asset_id and asset_id not in selected:
+                selected.append(asset_id)
+        return tuple(selected)
 
     @staticmethod
     def _default_scene_id(episode_id: str, sequence_number: int) -> str:
