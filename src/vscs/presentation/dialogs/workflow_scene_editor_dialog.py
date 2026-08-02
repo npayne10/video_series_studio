@@ -1,4 +1,4 @@
-"""Final scene-editor workflow and layout refinements."""
+"""Final scene-editor workflow, layout, and knowledge refinements."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from vscs.application.ssie import Scene
 from vscs.presentation.dialogs.production_scene_editor_dialog import (
     ProductionSceneEditorDialog,
 )
+from vscs.presentation.help import KnowledgeProvider, build_default_knowledge_registry
 
 
 class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
@@ -37,6 +38,7 @@ class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
         )
         super().__init__(scene, parent, **kwargs)
         self._install_workflow_ui(scene)
+        self._install_knowledge_help()
         self._restore_geometry()
 
     def _install_workflow_ui(self, scene: Scene | None) -> None:
@@ -83,6 +85,35 @@ class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
 
         self._connect_summary_signals()
         self._update_workflow_summary()
+
+    def _install_knowledge_help(self) -> None:
+        """Attach VKF topics to every completed Scene Editor control."""
+        self.knowledge_provider = KnowledgeProvider(
+            build_default_knowledge_registry(),
+            self,
+        )
+        bindings = (
+            (self.scene_name_edit, "scene.name"),
+            (self.episode_id_edit, "scene.episode"),
+            (self.sequence_spin, "scene.sequence"),
+            (self.heading_edit, "scene.heading"),
+            (self.location_combo, "scene.location"),
+            (self.summary_edit, "scene.summary"),
+            (self.participant_search, "scene.participants"),
+            (self.participant_list, "scene.participants"),
+            (self.dialogue_editor.speaker_combo, "scene.dialogue"),
+            (self.dialogue_editor.text_edit, "scene.dialogue"),
+            (self.dialogue_editor.performance_edit, "scene.dialogue"),
+            (self.dialogue_editor.dialogue_list, "scene.dialogue"),
+            (self.asset_search, "scene.required_assets"),
+            (self.asset_list, "scene.required_assets"),
+            (self.time_of_day_combo, "scene.time"),
+            (self.transition_combo, "scene.transition"),
+            (self.duration_preset_combo, "scene.duration"),
+            (self.duration_spin, "scene.duration"),
+        )
+        for widget, topic_id in bindings:
+            self.knowledge_provider.install(widget, topic_id)
 
     def _connect_summary_signals(self) -> None:
         self.scene_name_edit.textChanged.connect(self._update_workflow_summary)
