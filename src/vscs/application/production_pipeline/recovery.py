@@ -413,6 +413,8 @@ class ProductionRecoveryEngine:
 
     @staticmethod
     def _pipeline_state(state: QueueState | None) -> ProductionState | None:
+        if state is None:
+            return None
         mapping = {
             QueueState.WAITING: ProductionState.PENDING,
             QueueState.READY: ProductionState.READY,
