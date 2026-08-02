@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.caps import (
@@ -18,6 +19,7 @@ from vscs.application.caps import (
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.ai import (
     AICredentialStore,
+    CAPGenerationProvider,
     OpenAICAPGenerationProvider,
     TemplateCAPGenerationProvider,
 )
@@ -30,6 +32,9 @@ from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
+
+if TYPE_CHECKING:
+    from vscs.presentation.windows.main_window import MainWindow
 
 
 class StartupMode(StrEnum):
@@ -72,7 +77,7 @@ class ApplicationContext:
         """Return whether application resources have been released."""
         return self._shutdown
 
-    def create_main_window(self):  # type: ignore[no-untyped-def]
+    def create_main_window(self) -> MainWindow:
         """Create the real VSCS main window without starting the event loop."""
         from vscs.presentation.windows.main_window import MainWindow
 
@@ -179,7 +184,7 @@ def build_application_context(
 def _cap_provider(
     configuration: ConfigurationService,
     mode: StartupMode,
-):  # type: ignore[no-untyped-def]
+) -> CAPGenerationProvider:
     """Build the selected CAP provider, using deterministic templates in tests."""
     if mode is StartupMode.TEST:
         return TemplateCAPGenerationProvider()
