@@ -67,6 +67,11 @@ class ApplicationContext:
     environment_messages: tuple[str, ...] = ()
     _shutdown: bool = False
 
+    @property
+    def is_shutdown(self) -> bool:
+        """Return whether application resources have been released."""
+        return self._shutdown
+
     def create_main_window(self):  # type: ignore[no-untyped-def]
         """Create the real VSCS main window without starting the event loop."""
         from vscs.presentation.windows.main_window import MainWindow
