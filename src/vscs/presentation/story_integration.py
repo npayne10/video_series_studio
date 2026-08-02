@@ -6,6 +6,10 @@ from typing import Any
 
 from vscs.application.assets import AssetService
 from vscs.application.story import StoryService
+from vscs.presentation.dialogs.structured_scene_editor_dialog import (
+    StructuredSceneEditorDialog,
+)
+from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.story_browser import StoryBrowserWidget
 from vscs.presentation.windows.main_window import MainWindow
 
@@ -14,6 +18,8 @@ def install_story_browser() -> None:
     """Install the project-aware Story workspace exactly once."""
     if getattr(MainWindow, "_story_browser_installed", False):
         return
+
+    story_browser_module.SceneEditorDialog = StructuredSceneEditorDialog
 
     original_create_content = MainWindow._create_content_area
     original_update_status = MainWindow._update_status_for_section
