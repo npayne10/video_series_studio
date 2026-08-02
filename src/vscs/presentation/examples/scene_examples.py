@@ -67,7 +67,9 @@ SCENE_EXAMPLES = (
     ),
     ExampleTopic(
         topic_id="scene.required_assets",
-        inline_tip="Select ships, props, technology, effects and other visible dependencies.",
+        inline_tip=(
+            "Select ships, props, technology, effects and other visible dependencies."
+        ),
         empty_state=(
             "No production assets are available. Add assets in Asset Manager before "
             "declaring scene dependencies."
