@@ -37,7 +37,6 @@ from vscs.application.production_pipeline import (
 )
 from vscs.application.production_pipeline.executors import ExecutionResult
 
-
 NOW = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
 
 
