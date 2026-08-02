@@ -153,6 +153,7 @@ class StoryBrowserWidget(QWidget):
             suggested_sequence=self.stories.next_sequence_number(),
             scene_id_factory=self.stories.generate_scene_id,
             location_assets=self._location_assets(),
+            participant_assets=self._participant_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
@@ -170,6 +171,7 @@ class StoryBrowserWidget(QWidget):
             self,
             scene_id_factory=self.stories.generate_scene_id,
             location_assets=self._location_assets(),
+            participant_assets=self._participant_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
@@ -185,6 +187,18 @@ class StoryBrowserWidget(QWidget):
         return tuple(
             sorted(
                 combined.values(),
+                key=lambda item: (item.name.casefold(), item.asset_id),
+            )
+        )
+
+    def _participant_assets(self) -> tuple[Asset, ...]:
+        try:
+            participants = self.assets.list(category=AssetCategory.CHARACTER)
+        except (AssetProjectNotOpenError, AssetError):
+            return ()
+        return tuple(
+            sorted(
+                participants,
                 key=lambda item: (item.name.casefold(), item.asset_id),
             )
         )
