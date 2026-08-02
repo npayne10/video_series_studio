@@ -100,7 +100,7 @@ def ui_to_api(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:
                         f"Node {node_id} input {item.get('name')} is linked through editor-only node {source_id}"
                     )
                 inputs[str(item["name"])] = [source_id, int(link[2])]
-        for name, value in zip(widget_names, node.get("widgets_values", [])):
+        for name, value in zip(widget_names, node.get("widgets_values", []), strict=False):
             inputs.setdefault(name, value)
         api[node_id] = {
             "class_type": class_type,
