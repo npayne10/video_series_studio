@@ -1,9 +1,10 @@
-"""Tests for Phase 16.2a scene identity and location selection UX."""
+"""Tests for Phase 16.2a scene identity, location, and participant UX."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from vscs.application.ssie import Scene
@@ -35,6 +36,13 @@ def _locations() -> tuple[Asset, ...]:
     return (
         _asset("LOC-XORIX-ORBIT", "Xorix Orbit"),
         _asset("ENV-XORIX-FOREST", "Xorix Forest", AssetCategory.ENVIRONMENT),
+    )
+
+
+def _participants() -> tuple[Asset, ...]:
+    return (
+        _asset("CHR-JAMES", "Commander James Spence", AssetCategory.CHARACTER),
+        _asset("CHR-SANDRA", "Sandra Crawford", AssetCategory.CHARACTER),
     )
 
 
@@ -148,3 +156,83 @@ def test_editing_preserves_existing_unavailable_location_reference(
     assert dialog.scene_name_edit.text() == "The Alert"
     assert dialog.selected_location_id() == "LOC-BRIDGE"
     assert "not currently present" in dialog.location_help.text()
+
+
+def test_participant_selector_returns_checked_character_ids(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = SceneEditorDialog(participant_assets=_participants())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    for index in range(dialog.participant_list.count()):
+        item = dialog.participant_list.item(index)
+        if item.data(Qt.ItemDataRole.UserRole) in {"CHR-JAMES", "CHR-SANDRA"}:
+            item.setCheckState(Qt.CheckState.Checked)
+
+    assert dialog.selected_participant_ids() == ("CHR-JAMES", "CHR-SANDRA")
+    assert "2 participants selected" in dialog.participant_help.text()
+
+
+def test_participant_search_filters_by_name_and_asset_id(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = SceneEditorDialog(participant_assets=_participants())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    dialog.participant_search.setText("Sandra")
+
+    visible = [
+        dialog.participant_list.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(dialog.participant_list.count())
+        if not dialog.participant_list.item(index).isHidden()
+    ]
+    assert visible == ["CHR-SANDRA"]
+
+    dialog.participant_search.setText("CHR-JAMES")
+    visible = [
+        dialog.participant_list.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(dialog.participant_list.count())
+        if not dialog.participant_list.item(index).isHidden()
+    ]
+    assert visible == ["CHR-JAMES"]
+
+
+def test_editing_preserves_unavailable_participant_references(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    scene = Scene(
+        scene_id="EP-001-SCN-004",
+        episode_id="EP-001",
+        sequence_number=4,
+        heading="INT. BRIDGE - NIGHT",
+        location_asset_id="LOC-XORIX-ORBIT",
+        summary="The bridge crew receives an alert.",
+        participant_asset_ids=("CHR-JAMES", "CHR-MISSING"),
+        scene_name="The Alert",
+    )
+    dialog = SceneEditorDialog(
+        scene,
+        location_assets=_locations(),
+        participant_assets=_participants(),
+    )
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    assert dialog.selected_participant_ids() == ("CHR-JAMES", "CHR-MISSING")
+    assert any(
+        "Unavailable character" in dialog.participant_list.item(index).text()
+        for index in range(dialog.participant_list.count())
+    )
+
+
+def test_empty_participant_catalog_explains_how_to_add_characters(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = SceneEditorDialog()
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    assert dialog.participant_list.count() == 0
+    assert "Character assets" in dialog.participant_help.text()
