@@ -6,9 +6,9 @@ import json
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from collections.abc import Callable
 from typing import Any, Protocol
 from uuid import uuid4
 
