@@ -40,8 +40,8 @@ def install_story_browser() -> None:
         original_close_project(window)
         window.story_browser.refresh()
 
-    setattr(MainWindow, "_create_content_area", create_content_area)
-    setattr(MainWindow, "_update_status_for_section", update_status)
-    setattr(MainWindow, "_update_project_state", update_state)
-    setattr(MainWindow, "_close_project", close_project)
-    setattr(MainWindow, "_story_browser_installed", True)
+    setattr(MainWindow, "_create_content_area", create_content_area)  # noqa: B010
+    setattr(MainWindow, "_update_status_for_section", update_status)  # noqa: B010
+    setattr(MainWindow, "_update_project_state", update_state)  # noqa: B010
+    setattr(MainWindow, "_close_project", close_project)  # noqa: B010
+    setattr(MainWindow, "_story_browser_installed", True)  # noqa: B010
