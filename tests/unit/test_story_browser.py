@@ -111,9 +111,11 @@ def test_story_browser_scene_selection_exposes_scene_details(
     item = window.story_browser.tree.topLevelItem(0)
     window.story_browser.tree.setCurrentItem(item)
     data = item.data(0, Qt.ItemDataRole.UserRole)
+    details = window.story_browser.details.toPlainText()
 
     assert data == ("scene", "SCN-001")
-    assert "unexplained signal" in window.story_browser.details.toPlainText()
+    assert "unexplained signal" in details
+    assert "PROP-CONSOLE" in details
 
     context.shutdown()
 
@@ -195,5 +197,55 @@ def test_story_browser_participant_catalog_contains_characters_only(
     catalog = window.story_browser._participant_assets()
 
     assert [asset.asset_id for asset in catalog] == ["CHR-JAMES", "CHR-SANDRA"]
+
+    context.shutdown()
+
+
+def test_story_browser_required_asset_catalog_excludes_characters_only(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    context = build_application_context(_options(tmp_path))
+    context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
+    assets = context.services.require(AssetService)
+    assets.create(
+        AssetCreate(
+            asset_id="CHR-JAMES",
+            name="Commander James Spence",
+            category=AssetCategory.CHARACTER,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="PROP-CONSOLE",
+            name="Bridge Console",
+            category=AssetCategory.PROP,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="SHP-IRON-HORIZON",
+            name="Iron Horizon",
+            category=AssetCategory.SHIP,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="LOC-BRIDGE",
+            name="Mauritania Bridge",
+            category=AssetCategory.LOCATION,
+        )
+    )
+    window = context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+
+    catalog = window.story_browser._required_assets()
+
+    assert [asset.asset_id for asset in catalog] == [
+        "LOC-BRIDGE",
+        "PROP-CONSOLE",
+        "SHP-IRON-HORIZON",
+    ]
 
     context.shutdown()
