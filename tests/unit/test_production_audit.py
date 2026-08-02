@@ -68,8 +68,12 @@ def _bundle() -> ProductionBundle:
         schema_version="1.0",
         positive_prompt="James stands on the bridge.",
         negative_prompt="No drift.",
+        sections=(),
         canonical_reference_ids=("REF-JAMES",),
         prompt_package_ids=("PROMPT-BEHAVIOUR-001",),
+        start_reference_id=None,
+        end_reference_id=None,
+        provenance=(),
         checksum="prompt-checksum",
     )
     job = RenderJob(
