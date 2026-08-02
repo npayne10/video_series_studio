@@ -79,7 +79,11 @@ class KnowledgeProvider(QObject):
         """Return all bindings in installation order."""
         return tuple(self._bindings.values())
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+    def eventFilter(  # noqa: N802
+        self,
+        watched: QObject,
+        event: QEvent,
+    ) -> bool:
         """Route F1 and keep overlay buttons aligned when controls resize."""
         if isinstance(watched, QWidget):
             binding = self._bindings.get(watched)
@@ -90,10 +94,14 @@ class KnowledgeProvider(QObject):
                     QEvent.Type.Move,
                 }:
                     self._position_button(binding)
-                if event.type() == QEvent.Type.KeyPress and isinstance(event, QKeyEvent):
-                    if event.key() == Qt.Key.Key_F1:
-                        self.show_topic(binding.topic_id)
-                        return True
+                is_f1 = (
+                    event.type() == QEvent.Type.KeyPress
+                    and isinstance(event, QKeyEvent)
+                    and event.key() == Qt.Key.Key_F1
+                )
+                if is_f1:
+                    self.show_topic(binding.topic_id)
+                    return True
         return super().eventFilter(watched, event)
 
     @staticmethod
