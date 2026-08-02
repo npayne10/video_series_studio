@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from vscs.application.ssie import Scene
@@ -149,12 +150,13 @@ def test_deselecting_participant_prevents_new_dialogue_for_that_speaker(
     james_item = next(
         dialog.participant_list.item(index)
         for index in range(dialog.participant_list.count())
-        if dialog.participant_list.item(index).data(256) == "CHR-JAMES"
+        if dialog.participant_list.item(index).data(Qt.ItemDataRole.UserRole)
+        == "CHR-JAMES"
     )
-    james_item.setCheckState(2)
+    james_item.setCheckState(Qt.CheckState.Checked)
     dialog.dialogue_editor.add_entry("CHR-JAMES", "We proceed.")
 
-    james_item.setCheckState(0)
+    james_item.setCheckState(Qt.CheckState.Unchecked)
 
     with pytest.raises(ValueError, match="selected scene participants"):
         dialog.dialogue_editor.add_entry("CHR-JAMES", "Another line.")
