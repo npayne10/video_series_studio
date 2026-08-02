@@ -34,6 +34,7 @@ def _scene(scene_id: str = "SCN-001", sequence: int = 1) -> Scene:
         time_of_day="night",
         transition_in=SceneTransition.CUT,
         estimated_duration_seconds=24.0,
+        scene_name="The Signal",
     )
 
 
@@ -43,7 +44,9 @@ def test_story_service_persists_and_orders_scenes(tmp_path: Path) -> None:
     service.save_scene(_scene("SCN-002", 2))
     service.save_scene(_scene("SCN-001", 1))
 
-    assert [scene.scene_id for scene in service.list_scenes()] == ["SCN-001", "SCN-002"]
+    scenes = service.list_scenes()
+    assert [scene.scene_id for scene in scenes] == ["SCN-001", "SCN-002"]
+    assert scenes[0].scene_name == "The Signal"
     assert service.story_file.is_file()
 
 
@@ -72,3 +75,16 @@ def test_story_service_generates_enriched_ssie_plan(tmp_path: Path) -> None:
     assert all(shot.blocking_plan is not None for shot in plan.shots)
     assert all(shot.continuity_plan is not None for shot in plan.shots)
     assert service.plan("SCN-001") is plan
+
+
+def test_story_service_supplies_identity_defaults(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+
+    assert service.default_episode_id() == "EP-001"
+    assert service.next_sequence_number("EP-001") == 1
+    assert service.generate_scene_id("EP-001", 1) == "EP-001-SCN-001"
+
+    service.save_scene(_scene("EP-001-SCN-001", 1))
+
+    assert service.next_sequence_number("EP-001") == 2
+    assert service.generate_scene_id("EP-001", 1) == "EP-001-SCN-001-2"
