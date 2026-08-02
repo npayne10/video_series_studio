@@ -74,12 +74,12 @@ class XCICCoreWorkflowCompiler:
             inputs = cast(dict[str, Any], loader_node.setdefault("inputs", {}))
             inputs["queue_file"] = str(self.workflow.queue_file_path.resolve())
             inputs["job_index"] = self.config.queue_job_index
-            if "quality_mode" in inputs or xcic_job.quality_mode:
-                inputs["quality_mode"] = xcic_job.quality_mode
+            inputs["quality_mode"] = xcic_job.quality_mode
             return prompt
         except (
             XCICCoreCompileError,
             XCICCoreQueueError,
+            LookupError,
             OSError,
             ValueError,
         ) as exc:
@@ -89,7 +89,7 @@ class XCICCoreWorkflowCompiler:
         output = Path(job.output_path)
         candidate_directory = output.parent if str(output.parent) != "." else Path()
         reference_path = self._primary_reference(job)
-        metadata = dict(job.metadata)
+        metadata: dict[str, Any] = dict(job.metadata)
         metadata.update(
             {
                 "clip_id": job.clip_id,
