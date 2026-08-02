@@ -22,7 +22,6 @@ from vscs.application.production_pipeline import (
     WorkerIdentity,
 )
 
-
 NOW = datetime(2026, 8, 2, 8, 0, tzinfo=UTC)
 
 
