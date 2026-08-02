@@ -197,15 +197,20 @@ class ProductionMonitor:
         else:
             health = WorkerHealth.HEALTHY
         lease = observation.active_lease
-        lease_active = lease is not None and not lease.is_expired(now)
+        if lease is not None and not lease.is_expired(now):
+            active_job_id = lease.job_id
+            lease_expires_at = lease.expires_at
+        else:
+            active_job_id = None
+            lease_expires_at = None
         return WorkerSnapshot(
             worker_id=observation.worker.worker_id,
             executor_id=observation.worker.executor_id,
             health=health,
-            available=health is WorkerHealth.HEALTHY and not lease_active,
+            available=health is WorkerHealth.HEALTHY and active_job_id is None,
             last_heartbeat_at=observation.last_heartbeat_at,
-            active_job_id=lease.job_id if lease_active else None,
-            lease_expires_at=lease.expires_at if lease_active else None,
+            active_job_id=active_job_id,
+            lease_expires_at=lease_expires_at,
         )
 
     @staticmethod
