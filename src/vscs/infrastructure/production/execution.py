@@ -8,6 +8,7 @@ from enum import StrEnum
 
 from vscs.application.acpp import RenderJob
 from vscs.application.production_pipeline import (
+    ExecutionRequest,
     ExecutionResult,
     ExecutorRegistry,
     LeaseManager,
@@ -16,6 +17,7 @@ from vscs.application.production_pipeline import (
     ProductionPipeline,
     ProductionStage,
     ProductionState,
+    QueueState,
     RenderQueue,
     RenderQueueEngine,
     RenderQueueEntry,
@@ -58,6 +60,10 @@ class RenderExecutionRequest:
     staging_requests: tuple[StagingRequest, ...] = ()
     entry_id: str | None = None
     lease_duration_seconds: float = 3600.0
+
+    def __post_init__(self) -> None:
+        if self.lease_duration_seconds <= 0:
+            raise ValueError("lease_duration_seconds must be positive")
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +130,7 @@ class RenderExecutionService:
         events.append(self._event(RenderExecutionEventType.CLAIMED, entry, current))
 
         manifest: StagingManifest | None = None
+        pipeline = request.pipeline
         try:
             if request.staging_requests:
                 if self.stager is None:
@@ -137,7 +144,7 @@ class RenderExecutionService:
 
             queue = self.queue_engine.start(queue, entry.entry_id, current)
             pipeline = self._set_render_state(
-                request.pipeline,
+                pipeline,
                 entry.clip_id,
                 ProductionState.RUNNING,
             )
@@ -149,14 +156,15 @@ class RenderExecutionService:
                 now=current,
             )
             result = executor.execute(
-                self._execution_request(job, request.worker, lease, current)
+                ExecutionRequest(job, request.worker, lease, current)
             )
         except Exception as exc:
-            if queue.entry(entry.entry_id) is not None and queue.entry(entry.entry_id).state.value == "claimed":
+            claimed = queue.entry(entry.entry_id)
+            if claimed is not None and claimed.state is QueueState.CLAIMED:
                 queue = self.queue_engine.start(queue, entry.entry_id, current)
             return self._failure_outcome(
                 queue,
-                request.pipeline,
+                pipeline,
                 entry,
                 job,
                 str(exc),
@@ -197,7 +205,7 @@ class RenderExecutionService:
                 now=completed_at,
             )
             refreshed = queue.entry(entry.entry_id)
-            terminal = refreshed is not None and refreshed.state.value == "failed"
+            terminal = refreshed is not None and refreshed.state is QueueState.FAILED
             pipeline = self._set_render_state(
                 pipeline,
                 entry.clip_id,
@@ -243,7 +251,7 @@ class RenderExecutionService:
         final_entry = queue.entry(entry.entry_id)
         if final_entry is None:
             raise RenderExecutionError(f"Queue entry disappeared: {entry.entry_id}")
-        terminal = final_entry.state.value == "failed"
+        terminal = final_entry.state is QueueState.FAILED
         pipeline = self._set_render_state(
             pipeline,
             entry.clip_id,
@@ -274,14 +282,12 @@ class RenderExecutionService:
         entry_id: str | None,
         now: datetime,
     ) -> RenderQueueEntry:
+        ready = self.queue_engine.ready_entries(queue, now)
         if entry_id is not None:
-            entry = queue.entry(entry_id)
+            entry = next((item for item in ready if item.entry_id == entry_id), None)
             if entry is None:
-                raise RenderExecutionError(f"Queue entry not found: {entry_id}")
-            if entry not in self.queue_engine.ready_entries(queue, now):
                 raise RenderExecutionError(f"Queue entry is not ready: {entry_id}")
             return entry
-        ready = self.queue_engine.ready_entries(queue, now)
         if not ready:
             raise RenderExecutionError("No render queue entries are ready")
         return ready[0]
@@ -309,12 +315,6 @@ class RenderExecutionService:
                 f"Worker does not support render job: {job.job_id}"
             )
         return executor
-
-    @staticmethod
-    def _execution_request(job, worker, lease, submitted_at):
-        from vscs.application.production_pipeline import ExecutionRequest
-
-        return ExecutionRequest(job, worker, lease, submitted_at)
 
     @staticmethod
     def _set_render_state(
