@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
+    QFrame,
     QLabel,
     QScrollArea,
     QVBoxLayout,
@@ -41,7 +42,7 @@ class KnowledgeHelpPopup(QDialog):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setWidget(self.content_label)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -79,7 +80,10 @@ class KnowledgeHelpPopup(QDialog):
             f"<h3>Description</h3><p>{escape(topic.description)}</p>",
         ]
         if topic.examples:
-            examples = "".join(f"<li><code>{escape(value)}</code></li>" for value in topic.examples)
+            examples = "".join(
+                f"<li><code>{escape(value)}</code></li>"
+                for value in topic.examples
+            )
             sections.append(f"<h3>Examples</h3><ul>{examples}</ul>")
         if topic.common_mistakes:
             mistakes = "".join(
