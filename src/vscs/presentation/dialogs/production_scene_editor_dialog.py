@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -16,6 +17,29 @@ from vscs.application.ssie import Scene, SceneTransition
 from vscs.presentation.dialogs.structured_scene_editor_dialog import (
     StructuredSceneEditorDialog,
 )
+
+
+class TransitionComboBox(QComboBox):
+    """Expose strongly typed SceneTransition values over Qt's string variants."""
+
+    def itemData(
+        self,
+        index: int,
+        role: int = Qt.ItemDataRole.UserRole,
+    ) -> object:
+        value = super().itemData(index, role)
+        if role == Qt.ItemDataRole.UserRole and isinstance(value, str):
+            try:
+                return SceneTransition(value)
+            except ValueError:
+                return value
+        return value
+
+    def currentData(
+        self,
+        role: int = Qt.ItemDataRole.UserRole,
+    ) -> object:
+        return self.itemData(self.currentIndex(), role)
 
 
 class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
@@ -55,10 +79,13 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
 
     def scene(self) -> Scene:
         """Return the scene with controlled production metadata."""
+        transition = self.transition_combo.currentData()
+        if not isinstance(transition, SceneTransition):
+            transition = SceneTransition(str(transition))
         return replace(
             super().scene(),
             time_of_day=self.time_of_day_combo.currentData(),
-            transition_in=self.transition_combo.currentData(),
+            transition_in=transition,
             estimated_duration_seconds=self.duration_spin.value(),
         )
 
@@ -82,13 +109,31 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
         self.time_of_day_edit.hide()
         self.time_of_day_edit.deleteLater()
 
+        previous_transition = (
+            scene.transition_in if scene is not None else SceneTransition.CUT
+        )
+        old_transition_combo = self.transition_combo
+        self.transition_combo = TransitionComboBox(self)
+        self.transition_combo.setObjectName("sceneTransitionSelector")
+        for transition in SceneTransition:
+            self.transition_combo.addItem(
+                transition.value.replace("_", " ").title(),
+                transition.value,
+            )
+        transition_index = self.transition_combo.findData(previous_transition.value)
+        self.transition_combo.setCurrentIndex(max(transition_index, 0))
         self.transition_combo.setToolTip(
             "Choose how the editor enters this scene from the preceding scene."
         )
+        cut_index = self.transition_combo.findData(SceneTransition.CUT.value)
         self.transition_combo.setItemData(
-            self.transition_combo.findData(SceneTransition.CUT),
+            cut_index,
             "Immediate transition; the standard choice for most scene changes.",
+            Qt.ItemDataRole.ToolTipRole,
         )
+        form.replaceWidget(old_transition_combo, self.transition_combo)
+        old_transition_combo.hide()
+        old_transition_combo.deleteLater()
 
         self.duration_preset_combo = QComboBox(self)
         self.duration_preset_combo.setObjectName("sceneDurationPreset")
