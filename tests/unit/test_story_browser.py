@@ -158,3 +158,42 @@ def test_story_browser_location_catalog_filters_asset_categories(
     ]
 
     context.shutdown()
+
+
+def test_story_browser_participant_catalog_contains_characters_only(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    context = build_application_context(_options(tmp_path))
+    context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
+    assets = context.services.require(AssetService)
+    assets.create(
+        AssetCreate(
+            asset_id="CHR-JAMES",
+            name="Commander James Spence",
+            category=AssetCategory.CHARACTER,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="CHR-SANDRA",
+            name="Sandra Crawford",
+            category=AssetCategory.CHARACTER,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="LOC-BRIDGE",
+            name="Mauritania Bridge",
+            category=AssetCategory.LOCATION,
+        )
+    )
+    window = context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+
+    catalog = window.story_browser._participant_assets()
+
+    assert [asset.asset_id for asset in catalog] == ["CHR-JAMES", "CHR-SANDRA"]
+
+    context.shutdown()
