@@ -107,7 +107,7 @@ def test_shutdown_is_idempotent_and_clears_services(tmp_path: Path) -> None:
     context.shutdown()
 
     assert len(context.services) == 0
-    assert context._shutdown is True
+    assert context.is_shutdown is True
 
 
 def test_context_manager_releases_application_services(tmp_path: Path) -> None:
