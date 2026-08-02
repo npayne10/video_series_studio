@@ -132,11 +132,12 @@ class ProductionRecoveryEngine:
         *,
         leases: tuple[ExecutionLease, ...] = (),
         outputs: tuple[OutputObservation, ...] = (),
-        active_worker_ids: frozenset[str] = frozenset(),
+        active_worker_ids: frozenset[str] | None = None,
         now: datetime | None = None,
     ) -> ProductionRecoveryResult:
         """Recover interrupted queue state and reconcile rendering nodes."""
         current = now or datetime.now(UTC)
+        workers = active_worker_ids or frozenset()
         lease_by_job = {lease.job_id: lease for lease in leases}
         output_by_job = {output.job_id: output for output in outputs}
         recovered_entries: list[RenderQueueEntry] = []
@@ -147,7 +148,7 @@ class ProductionRecoveryEngine:
                 entry,
                 lease_by_job.get(entry.job_id),
                 output_by_job.get(entry.job_id),
-                active_worker_ids,
+                workers,
                 current,
             )
             recovered_entries.append(recovered)
@@ -217,10 +218,8 @@ class ProductionRecoveryEngine:
     ) -> tuple[RenderQueueEntry, RecoveryDecision | None]:
         if entry.state in {QueueState.CANCELLED, QueueState.FAILED}:
             return entry, None
-
         if entry.state is QueueState.COMPLETED:
             return self._recover_completed_output(entry, output, now)
-
         if output is not None and output.status is OutputStatus.PRESENT:
             if self.config.complete_when_output_present:
                 recovered = self._mark_completed(entry, now)
@@ -230,7 +229,6 @@ class ProductionRecoveryEngine:
                     RecoveryReason.OUTPUT_PRESENT,
                     "Existing output verified; marked entry complete",
                 )
-
         if entry.state is QueueState.CLAIMED:
             age = (now - entry.updated_at).total_seconds()
             lease_expired = lease is not None and lease.is_expired(now)
@@ -249,13 +247,11 @@ class ProductionRecoveryEngine:
                     RecoveryReason.ABANDONED_CLAIM,
                     "Abandoned worker claim released for recovery",
                 )
-
         if entry.state is QueueState.RUNNING:
             lease_expired = lease is None or lease.is_expired(now)
             worker_missing = entry.claimed_by not in active_worker_ids
             if lease_expired or worker_missing:
                 return self._interrupt_running_entry(entry, now)
-
         return entry, None
 
     def _recover_completed_output(
