@@ -364,7 +364,12 @@ class AssetStager:
 
     @staticmethod
     def _safe_segment(value: str) -> str:
-        safe = "".join(character if character.isalnum() or character in "-_." else "_" for character in value.strip())
+        safe = "".join(
+            character
+            if character.isalnum() or character in "-_."
+            else "_"
+            for character in value.strip()
+        )
         if safe in {"", ".", ".."}:
             raise AssetStagingError(f"Unsafe staging path segment: {value!r}")
         return safe
