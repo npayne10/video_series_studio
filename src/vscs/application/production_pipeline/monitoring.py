@@ -171,6 +171,9 @@ class ProductionMonitor:
             self._worker_snapshot(observation, current) for observation in workers
         )
         diagnostics = self._diagnostics(queue, worker_snapshots, current)
+        ordered_events = tuple(
+            sorted(events, key=lambda item: (item.occurred_at, item.event_id))
+        )
         return ProductionMonitoringSnapshot(
             generated_at=current,
             queue=self._queue_progress(queue),
@@ -178,7 +181,7 @@ class ProductionMonitor:
             workers=worker_snapshots,
             metrics=self._execution_metrics(results),
             diagnostics=diagnostics,
-            events=tuple(sorted(events, key=lambda item: (item.occurred_at, item.event_id))),
+            events=ordered_events,
         )
 
     def _worker_snapshot(
@@ -296,8 +299,9 @@ class ProductionMonitor:
                     )
                 )
         stalled_before = now - timedelta(seconds=self.config.stalled_after_seconds)
+        active_states = {QueueState.CLAIMED, QueueState.RUNNING}
         for entry in queue.entries:
-            if entry.state in {QueueState.CLAIMED, QueueState.RUNNING} and entry.updated_at <= stalled_before:
+            if entry.state in active_states and entry.updated_at <= stalled_before:
                 diagnostics.append(
                     MonitoringDiagnostic(
                         code="QUEUE_ENTRY_STALLED",
