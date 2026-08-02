@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from itertools import pairwise
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QLabel,
     QLayout,
+    QLayoutItem,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -72,8 +74,8 @@ class StructuredSceneEditorDialog(SceneEditorDialog):
         intro = intro_item.widget() if intro_item is not None else None
         form = form_item.layout() if form_item is not None else None
         if intro is None or not isinstance(form, QFormLayout):
-            self._restore_layout_item(root, intro_item)
             self._restore_layout_item(root, form_item)
+            self._restore_layout_item(root, intro_item)
             return
 
         self._insert_section_headers(form)
@@ -162,15 +164,15 @@ class StructuredSceneEditorDialog(SceneEditorDialog):
             self.duration_spin,
             self.save_button,
         )
-        for current, following in zip(ordered, ordered[1:], strict=True):
+        for current, following in pairwise(ordered):
             self.setTabOrder(current, following)
 
     @staticmethod
-    def _restore_layout_item(root: QVBoxLayout, item: object) -> None:
+    def _restore_layout_item(root: QVBoxLayout, item: QLayoutItem | None) -> None:
         if item is None:
             return
-        widget = item.widget() if hasattr(item, "widget") else None
-        layout = item.layout() if hasattr(item, "layout") else None
+        widget = item.widget()
+        layout = item.layout()
         if widget is not None:
             root.insertWidget(0, widget)
         elif isinstance(layout, QLayout):
