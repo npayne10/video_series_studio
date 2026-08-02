@@ -139,7 +139,7 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
 
     def _apply_duration_preset(self) -> None:
         value = self.duration_preset_combo.currentData()
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             self.duration_spin.setValue(float(value))
 
     def _duration_changed(self) -> None:
@@ -150,7 +150,7 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
         matching = 0
         for index in range(self.duration_preset_combo.count()):
             value = self.duration_preset_combo.itemData(index)
-            if isinstance(value, (int, float)) and abs(float(value) - duration) < 0.001:
+            if isinstance(value, int | float) and abs(float(value) - duration) < 0.001:
                 matching = index
                 break
         if self.duration_preset_combo.currentIndex() != matching:
