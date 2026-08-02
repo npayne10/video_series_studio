@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLabel
 
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
 from vscs.presentation.dialogs.smart_example_scene_editor_dialog import (
@@ -76,9 +76,10 @@ def test_scene_editor_installs_smart_placeholders_and_inline_tips(
     assert dialog.scene_name_edit.placeholderText().startswith("Example:")
     assert "EXT." in dialog.heading_edit.placeholderText()
     assert "story event" in dialog.summary_edit.placeholderText().lower()
-    assert "unexpected signal" in dialog.dialogue_editor.text_edit.placeholderText()
-    assert dialog.findChild(type(dialog.summary_label), "smartExampleTip_scene_name")
-    assert dialog.findChild(type(dialog.summary_label), "smartExampleTip_scene_duration")
+    dialogue_placeholder = dialog.dialogue_editor.text_edit.placeholderText()
+    assert "unexpected signal" in dialogue_placeholder
+    assert dialog.findChild(QLabel, "smartExampleTip_scene_name")
+    assert dialog.findChild(QLabel, "smartExampleTip_scene_duration")
 
 
 def test_scene_editor_uses_project_assets_for_examples(
@@ -98,7 +99,8 @@ def test_scene_editor_uses_project_assets_for_examples(
     )
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
-    assert dialog.scene_name_edit.placeholderText() == "Example: Arrival at Iron Horizon"
+    placeholder = dialog.scene_name_edit.placeholderText()
+    assert placeholder == "Example: Arrival at Iron Horizon"
     dialog._update_heading_suggestions("EXT")
     suggestions = dialog.heading_completion_model.stringList()
     assert any(value.startswith("EXT. IRON HORIZON") for value in suggestions)
