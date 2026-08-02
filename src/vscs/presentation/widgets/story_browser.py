@@ -16,18 +16,26 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.assets import AssetError, AssetProjectNotOpenError, AssetService
 from vscs.application.projects import ProjectNotOpenError
 from vscs.application.ssie import Scene, ScenePlan, ShotPlan
 from vscs.application.story import StoryService, StoryServiceError
+from vscs.domain.assets import Asset, AssetCategory
 from vscs.presentation.dialogs.scene_editor_dialog import SceneEditorDialog
 
 
 class StoryBrowserWidget(QWidget):
     """Browse structured scenes and inspect generated SSIE shot plans."""
 
-    def __init__(self, stories: StoryService, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        stories: StoryService,
+        assets: AssetService,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.stories = stories
+        self.assets = assets
         self.setObjectName("storyBrowser")
 
         self.new_button = QPushButton("New Scene")
@@ -99,10 +107,10 @@ class StoryBrowserWidget(QWidget):
             "No scenes yet. Use New Scene to add structured story material."
         )
         for scene in scenes:
-            display_name = scene.scene_name or scene.heading
+            scene_label = scene.scene_name or scene.heading
             scene_item = QTreeWidgetItem(
                 (
-                    f"{scene.sequence_number:03d} — {display_name}",
+                    f"{scene.sequence_number:03d} — {scene_label}",
                     "Scene",
                     self._duration(scene.estimated_duration_seconds),
                 )
@@ -139,13 +147,12 @@ class StoryBrowserWidget(QWidget):
             parent.addChild(item)
 
     def _new_scene(self) -> None:
-        episode_id = self.stories.default_episode_id()
-        sequence = self.stories.next_sequence_number(episode_id)
         dialog = SceneEditorDialog(
             parent=self,
-            default_episode_id=episode_id,
-            suggested_sequence=sequence,
-            scene_id_factory=self.stories.generate_scene_id,
+            default_episode_id=self.stories.default_episode_id(),
+            suggested_sequence=self.stories.next_sequence_number(),
+            scene_id_factory=self.stories.build_scene_id,
+            location_assets=self._location_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
@@ -158,10 +165,29 @@ class StoryBrowserWidget(QWidget):
         scene = self.stories.scene(scene_id)
         if scene is None:
             return
-        dialog = SceneEditorDialog(scene, self)
+        dialog = SceneEditorDialog(
+            scene,
+            self,
+            scene_id_factory=self.stories.build_scene_id,
+            location_assets=self._location_assets(),
+        )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
         self._save(dialog.scene())
+
+    def _location_assets(self) -> tuple[Asset, ...]:
+        try:
+            locations = self.assets.list(category=AssetCategory.LOCATION)
+            environments = self.assets.list(category=AssetCategory.ENVIRONMENT)
+        except (AssetProjectNotOpenError, AssetError):
+            return ()
+        combined = {asset.asset_id: asset for asset in (*locations, *environments)}
+        return tuple(
+            sorted(
+                combined.values(),
+                key=lambda item: (item.name.casefold(), item.asset_id),
+            )
+        )
 
     def _save(self, scene: Scene) -> None:
         try:
@@ -216,11 +242,10 @@ class StoryBrowserWidget(QWidget):
             scene = self.stories.scene(data[1])
             if scene is not None:
                 participants = ", ".join(scene.participant_asset_ids) or "None"
-                display_name = scene.scene_name or scene.heading
+                title = scene.scene_name or scene.heading
                 self.details.setHtml(
-                    f"<h2>{display_name}</h2>"
+                    f"<h2>{title}</h2>"
                     f"<p><b>ID:</b> {scene.scene_id}</p>"
-                    f"<p><b>Episode:</b> {scene.episode_id}</p>"
                     f"<p><b>Heading:</b> {scene.heading}</p>"
                     f"<p><b>Location:</b> {scene.location_asset_id}</p>"
                     f"<p><b>Summary:</b> {scene.summary}</p>"
@@ -237,9 +262,8 @@ class StoryBrowserWidget(QWidget):
                     self._show_shot(shot)
 
     def _show_plan(self, plan: ScenePlan) -> None:
-        display_name = plan.scene.scene_name or plan.scene.heading
         self.details.setHtml(
-            f"<h2>{display_name}</h2>"
+            f"<h2>{plan.scene.scene_name or plan.scene.heading}</h2>"
             f"<p><b>Objective:</b> {plan.objective}</p>"
             f"<p><b>Emotional intent:</b> {plan.emotional_intent}</p>"
             f"<p><b>Shots:</b> {len(plan.shots)}</p>"
