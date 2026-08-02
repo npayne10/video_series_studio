@@ -8,7 +8,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Callable, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol
 from uuid import uuid4
 
 from vscs.application.acpp import RenderCapability, RenderJob
