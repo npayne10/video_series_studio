@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from .knowledge_topics import KnowledgeTopic, SCENE_TOPICS
+from .knowledge_topics import SCENE_TOPICS, KnowledgeTopic
 
 
 class KnowledgeTopicNotFoundError(LookupError):

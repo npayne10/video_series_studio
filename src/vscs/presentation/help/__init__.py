@@ -8,10 +8,11 @@ from .knowledge_registry import (
     KnowledgeTopicNotFoundError,
     build_default_knowledge_registry,
 )
-from .knowledge_topics import KnowledgeTopic, SCENE_TOPICS
+from .knowledge_topics import SCENE_TOPICS, KnowledgeTopic
 from .workflow_hint import WorkflowHint
 
 __all__ = [
+    "SCENE_TOPICS",
     "KnowledgeBinding",
     "KnowledgeHelpButton",
     "KnowledgeHelpPopup",
@@ -19,7 +20,6 @@ __all__ = [
     "KnowledgeRegistry",
     "KnowledgeTopic",
     "KnowledgeTopicNotFoundError",
-    "SCENE_TOPICS",
     "WorkflowHint",
     "build_default_knowledge_registry",
 ]
