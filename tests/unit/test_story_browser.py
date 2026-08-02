@@ -7,10 +7,12 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
 from vscs.application.ssie import Scene, SceneTransition
 from vscs.application.story import StoryService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
+from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.presentation.widgets.story_browser import StoryBrowserWidget
 
 
@@ -112,5 +114,47 @@ def test_story_browser_scene_selection_exposes_scene_details(
 
     assert data == ("scene", "SCN-001")
     assert "unexplained signal" in window.story_browser.details.toPlainText()
+
+    context.shutdown()
+
+
+def test_story_browser_location_catalog_filters_asset_categories(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    context = build_application_context(_options(tmp_path))
+    context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
+    assets = context.services.require(AssetService)
+    assets.create(
+        AssetCreate(
+            asset_id="LOC-BRIDGE",
+            name="Mauritania Bridge",
+            category=AssetCategory.LOCATION,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="ENV-XORIX-FOREST",
+            name="Xorix Forest",
+            category=AssetCategory.ENVIRONMENT,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="PROP-CONSOLE",
+            name="Bridge Console",
+            category=AssetCategory.PROP,
+        )
+    )
+    window = context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+
+    catalog = window.story_browser._location_assets()
+
+    assert [asset.asset_id for asset in catalog] == [
+        "LOC-BRIDGE",
+        "ENV-XORIX-FOREST",
+    ]
 
     context.shutdown()
