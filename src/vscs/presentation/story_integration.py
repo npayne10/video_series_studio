@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from vscs.application.assets import AssetService
 from vscs.application.story import StoryService
 from vscs.presentation.widgets.story_browser import StoryBrowserWidget
 from vscs.presentation.windows.main_window import MainWindow
@@ -22,7 +23,10 @@ def install_story_browser() -> None:
     def create_content_area(window: Any) -> None:
         original_create_content(window)
         placeholder = window.content_stack.widget(2)
-        window.story_browser = StoryBrowserWidget(window.services.require(StoryService))
+        window.story_browser = StoryBrowserWidget(
+            window.services.require(StoryService),
+            window.services.require(AssetService),
+        )
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
