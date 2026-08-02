@@ -139,13 +139,13 @@ class MainWindow(QMainWindow):
         )
         for section in sections:
             self.navigation.addItem(QListWidgetItem(section))
-        navigation_dock = QDockWidget("Workspace", self)
-        navigation_dock.setObjectName("navigationDock")
-        navigation_dock.setAllowedAreas(
+        self.navigation_dock = QDockWidget("Workspace", self)
+        self.navigation_dock.setObjectName("navigationDock")
+        self.navigation_dock.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
         )
-        navigation_dock.setWidget(self.navigation)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, navigation_dock)
+        self.navigation_dock.setWidget(self.navigation)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.navigation_dock)
 
     def _create_content_area(self) -> None:
         self.content_stack = QStackedWidget()
@@ -281,17 +281,13 @@ class MainWindow(QMainWindow):
 
     def _update_project_state(self) -> None:
         """Synchronize all project-aware interface elements."""
-
         active = self.projects.is_project_open
-
         self.new_project_action.setEnabled(not active)
         self.open_project_action.setEnabled(not active)
         self.save_project_action.setEnabled(active)
         self.close_project_action.setEnabled(active)
-
         self.asset_manager.add_button.setEnabled(active)
         self.cap_manager.add_button.setEnabled(active)
-
         self.dashboard.new_project_button.setEnabled(not active)
         self.dashboard.open_project_button.setEnabled(not active)
 
@@ -299,20 +295,12 @@ class MainWindow(QMainWindow):
             project = self.projects.current_project
             project_directory = self.projects.project_directory
             assert project_directory is not None
-
             self.setWindowTitle(f"{self.BASE_TITLE} — {project.name}")
-
-            if hasattr(self, "navigation_dock"):
-                self.navigation_dock.setWindowTitle(project.name)
-
+            self.navigation_dock.setWindowTitle(project.name)
             self.dashboard.set_active_project(project.name, project_directory)
             self.statusBar().showMessage(f"Active project: {project.name}")
-
         else:
             self.setWindowTitle(self.BASE_TITLE)
-
-            if hasattr(self, "navigation_dock"):
-                self.navigation_dock.setWindowTitle("Workspace")
-
+            self.navigation_dock.setWindowTitle("Workspace")
             self.dashboard.clear_active_project()
             self.statusBar().showMessage("No project open")
