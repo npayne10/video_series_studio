@@ -6,7 +6,6 @@ from dataclasses import replace
 
 from PySide6.QtWidgets import (
     QComboBox,
-    QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -120,10 +119,20 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
                 existing = field_item.widget()
                 if existing is not None:
                     form.removeWidget(existing)
-            form.setLayout(duration_row, QFormLayout.ItemRole.FieldRole, duration_layout)
-            form.insertRow(duration_row + 1, "Production estimate", self.production_estimate_label)
+            form.setLayout(
+                duration_row,
+                QFormLayout.ItemRole.FieldRole,
+                duration_layout,
+            )
+            form.insertRow(
+                duration_row + 1,
+                "Production estimate",
+                self.production_estimate_label,
+            )
 
-        self.duration_preset_combo.currentIndexChanged.connect(self._apply_duration_preset)
+        self.duration_preset_combo.currentIndexChanged.connect(
+            self._apply_duration_preset
+        )
         self.duration_spin.valueChanged.connect(self._duration_changed)
         self._select_matching_preset(self.duration_spin.value())
         self._update_production_estimate()
