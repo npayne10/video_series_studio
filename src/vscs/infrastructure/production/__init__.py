@@ -8,6 +8,15 @@ from .comfyui import (
     ComfyUITimeoutError,
     ComfyUIWorkflowCompiler,
 )
+from .execution import (
+    RenderExecutionConfig,
+    RenderExecutionError,
+    RenderExecutionEvent,
+    RenderExecutionEventType,
+    RenderExecutionOutcome,
+    RenderExecutionRequest,
+    RenderExecutionService,
+)
 from .staging import (
     AssetStager,
     AssetStagingConfig,
@@ -36,6 +45,13 @@ __all__ = [
     "ComfyUIProductionExecutor",
     "ComfyUITimeoutError",
     "ComfyUIWorkflowCompiler",
+    "RenderExecutionConfig",
+    "RenderExecutionError",
+    "RenderExecutionEvent",
+    "RenderExecutionEventType",
+    "RenderExecutionOutcome",
+    "RenderExecutionRequest",
+    "RenderExecutionService",
     "StagedArtifact",
     "StagedAssetKind",
     "StagingManifest",
