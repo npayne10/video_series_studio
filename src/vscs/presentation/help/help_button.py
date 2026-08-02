@@ -22,7 +22,6 @@ class KnowledgeHelpButton(QPushButton):
         self.setFixedSize(22, 22)
         self.setToolTip("Show context-sensitive help (F1)")
         self.setAccessibleName(f"Help for {topic_id}")
-        self.setFocusPolicy(self.focusPolicy())
         self.clicked.connect(self._request_topic)
 
     def _request_topic(self) -> None:
