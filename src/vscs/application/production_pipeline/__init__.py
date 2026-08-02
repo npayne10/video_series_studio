@@ -1,5 +1,17 @@
 """Production orchestration foundation public API."""
 
+from .executors import (
+    ExecutionLease,
+    ExecutionRequest,
+    ExecutionResult,
+    ExecutorErrorCode,
+    ExecutorRegistry,
+    ExecutorRegistryError,
+    LeaseManager,
+    MockProductionExecutor,
+    ProductionExecutor,
+    WorkerIdentity,
+)
 from .graph import ProductionGraph, ProductionGraphError
 from .models import ProductionNode, ProductionPipeline, ProductionStage, ProductionState
 from .queue import RenderQueueEngine, RenderQueueError
@@ -29,9 +41,18 @@ from .validator import (
 )
 
 __all__ = [
+    "ExecutionLease",
+    "ExecutionRequest",
+    "ExecutionResult",
+    "ExecutorErrorCode",
+    "ExecutorRegistry",
+    "ExecutorRegistryError",
+    "LeaseManager",
+    "MockProductionExecutor",
     "PipelineValidationIssue",
     "PipelineValidationResult",
     "PipelineValidationSeverity",
+    "ProductionExecutor",
     "ProductionGraph",
     "ProductionGraphError",
     "ProductionNode",
@@ -54,4 +75,5 @@ __all__ = [
     "RenderQueueSerializationError",
     "RenderQueueSerializer",
     "RenderQueueValidator",
+    "WorkerIdentity",
 ]
