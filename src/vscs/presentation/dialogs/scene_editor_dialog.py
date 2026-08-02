@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QSpinBox,
     QVBoxLayout,
@@ -35,13 +37,15 @@ class SceneEditorDialog(QDialog):
         suggested_sequence: int = 1,
         scene_id_factory: Callable[[str, int], str] | None = None,
         location_assets: tuple[Asset, ...] = (),
+        participant_assets: tuple[Asset, ...] = (),
     ) -> None:
         super().__init__(parent)
         self._editing = scene is not None
         self._scene_id_factory = scene_id_factory or self._default_scene_id
         self._location_assets = location_assets
+        self._participant_assets = participant_assets
         self.setWindowTitle("Edit Scene" if self._editing else "New Scene")
-        self.resize(700, 720)
+        self.resize(720, 820)
 
         intro = QLabel(
             "Create the story-level scene information used by SSIE. "
@@ -106,7 +110,23 @@ class SceneEditorDialog(QDialog):
         self.summary_edit.setToolTip(
             "A concise narrative summary used by SSIE to infer scene purpose and shots."
         )
-        self.participants_edit = QPlainTextEdit()
+
+        self.participant_search = QLineEdit()
+        self.participant_search.setObjectName("sceneParticipantSearch")
+        self.participant_search.setPlaceholderText("Search characters by name or asset ID...")
+        self.participant_search.setClearButtonEnabled(True)
+        self.participant_search.setToolTip(
+            "Filter the available character assets, then tick everyone present in the scene."
+        )
+        self.participant_list = QListWidget()
+        self.participant_list.setObjectName("sceneParticipantSelector")
+        self.participant_list.setAlternatingRowColors(True)
+        self.participant_list.setMinimumHeight(130)
+        self.participant_help = QLabel()
+        self.participant_help.setObjectName("sceneParticipantHelp")
+        self.participant_help.setWordWrap(True)
+        self._populate_participants()
+
         self.dialogue_edit = QPlainTextEdit()
         self.assets_edit = QPlainTextEdit()
         self.time_of_day_edit = QLineEdit()
@@ -131,6 +151,12 @@ class SceneEditorDialog(QDialog):
         location_layout.addWidget(self.location_combo)
         location_layout.addWidget(self.location_help)
 
+        participant_layout = QVBoxLayout()
+        participant_layout.setContentsMargins(0, 0, 0, 0)
+        participant_layout.addWidget(self.participant_search)
+        participant_layout.addWidget(self.participant_list)
+        participant_layout.addWidget(self.participant_help)
+
         form = QFormLayout()
         form.addRow("Scene ID", self.scene_id_edit)
         form.addRow("Scene name *", self.scene_name_edit)
@@ -139,7 +165,7 @@ class SceneEditorDialog(QDialog):
         form.addRow("Heading *", self.heading_edit)
         form.addRow("Location *", location_layout)
         form.addRow("Summary *", self.summary_edit)
-        form.addRow("Participants (one per line)", self.participants_edit)
+        form.addRow("Participants", participant_layout)
         form.addRow("Dialogue (one line per utterance)", self.dialogue_edit)
         form.addRow("Required assets (one per line)", self.assets_edit)
         form.addRow("Time of day", self.time_of_day_edit)
@@ -168,11 +194,14 @@ class SceneEditorDialog(QDialog):
         self.location_combo.currentIndexChanged.connect(self._validate)
         self.location_combo.editTextChanged.connect(self._validate)
         self.summary_edit.textChanged.connect(self._validate)
+        self.participant_search.textChanged.connect(self._filter_participants)
+        self.participant_list.itemChanged.connect(self._participants_changed)
 
         if scene is not None:
             self._load(scene)
         else:
             self._refresh_generated_id()
+            self._update_participant_help()
         self._validate()
         self.scene_name_edit.setFocus(Qt.FocusReason.OtherFocusReason)
 
@@ -185,7 +214,7 @@ class SceneEditorDialog(QDialog):
             heading=self.heading_edit.text().strip(),
             location_asset_id=self.selected_location_id(),
             summary=self.summary_edit.toPlainText().strip(),
-            participant_asset_ids=self._lines(self.participants_edit.toPlainText()),
+            participant_asset_ids=self.selected_participant_ids(),
             dialogue=self._lines(self.dialogue_edit.toPlainText()),
             required_asset_ids=self._lines(self.assets_edit.toPlainText()),
             time_of_day=self.time_of_day_edit.text().strip() or None,
@@ -205,6 +234,18 @@ class SceneEditorDialog(QDialog):
                 return asset.asset_id
         return ""
 
+    def selected_participant_ids(self) -> tuple[str, ...]:
+        """Return checked participant IDs in stable display order without duplicates."""
+        selected: list[str] = []
+        for index in range(self.participant_list.count()):
+            item = self.participant_list.item(index)
+            if item.checkState() is not Qt.CheckState.Checked:
+                continue
+            asset_id = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(asset_id, str) and asset_id and asset_id not in selected:
+                selected.append(asset_id)
+        return tuple(selected)
+
     def _populate_locations(self) -> None:
         self.location_combo.clear()
         self.location_combo.addItem("Select a location...", "")
@@ -221,6 +262,23 @@ class SceneEditorDialog(QDialog):
             completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
             completer.setFilterMode(Qt.MatchFlag.MatchContains)
 
+    def _populate_participants(self) -> None:
+        self.participant_list.clear()
+        for asset in sorted(
+            self._participant_assets,
+            key=lambda item: (item.name.casefold(), item.asset_id),
+        ):
+            item = QListWidgetItem(f"{asset.name}  —  {asset.asset_id}")
+            item.setData(Qt.ItemDataRole.UserRole, asset.asset_id)
+            item.setData(
+                Qt.ItemDataRole.UserRole + 1,
+                f"{asset.name} {asset.asset_id}".casefold(),
+            )
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Unchecked)
+            self.participant_list.addItem(item)
+        self._update_participant_help()
+
     def _load(self, scene: Scene) -> None:
         self.scene_id_edit.setText(scene.scene_id)
         self.scene_name_edit.setText(scene.scene_name or scene.heading)
@@ -229,7 +287,7 @@ class SceneEditorDialog(QDialog):
         self.heading_edit.setText(scene.heading)
         self._select_location(scene.location_asset_id)
         self.summary_edit.setPlainText(scene.summary)
-        self.participants_edit.setPlainText("\n".join(scene.participant_asset_ids))
+        self._select_participants(scene.participant_asset_ids)
         self.dialogue_edit.setPlainText("\n".join(scene.dialogue))
         self.assets_edit.setPlainText("\n".join(scene.required_asset_ids))
         self.time_of_day_edit.setText(scene.time_of_day or "")
@@ -251,6 +309,57 @@ class SceneEditorDialog(QDialog):
                 "Manager. Select another location or restore the missing asset."
             )
             self.location_help.setStyleSheet("color: #b00020;")
+
+    def _select_participants(self, participant_ids: tuple[str, ...]) -> None:
+        available: set[str] = set()
+        for index in range(self.participant_list.count()):
+            item = self.participant_list.item(index)
+            asset_id = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(asset_id, str):
+                available.add(asset_id)
+                if asset_id in participant_ids:
+                    item.setCheckState(Qt.CheckState.Checked)
+        for asset_id in participant_ids:
+            if asset_id in available:
+                continue
+            item = QListWidgetItem(f"Unavailable character — {asset_id}")
+            item.setData(Qt.ItemDataRole.UserRole, asset_id)
+            item.setData(Qt.ItemDataRole.UserRole + 1, asset_id.casefold())
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked)
+            item.setToolTip(
+                "This character is referenced by the scene but is missing from Asset Manager."
+            )
+            self.participant_list.addItem(item)
+        self._update_participant_help()
+
+    def _filter_participants(self, query: str) -> None:
+        normalized = query.strip().casefold()
+        for index in range(self.participant_list.count()):
+            item = self.participant_list.item(index)
+            searchable = item.data(Qt.ItemDataRole.UserRole + 1)
+            matches = not normalized or (
+                isinstance(searchable, str) and normalized in searchable
+            )
+            item.setHidden(not matches)
+
+    def _participants_changed(self, _item: QListWidgetItem) -> None:
+        self._update_participant_help()
+
+    def _update_participant_help(self) -> None:
+        count = len(self.selected_participant_ids())
+        if not self._participant_assets and self.participant_list.count() == 0:
+            self.participant_help.setText(
+                "No character assets are available. Create Character assets in Asset "
+                "Manager, then reopen this dialog."
+            )
+            self.participant_help.setStyleSheet("color: #8a5a00;")
+            return
+        label = "participant" if count == 1 else "participants"
+        self.participant_help.setText(
+            f"{count} {label} selected. Tick every character who appears in this scene."
+        )
+        self.participant_help.setStyleSheet("")
 
     def _identity_changed(self) -> None:
         if not self._editing:
