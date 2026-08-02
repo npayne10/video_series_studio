@@ -88,7 +88,9 @@ def test_dialog_returns_selected_canonical_location_id(
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     dialog.scene_name_edit.setText("First Sight of Xorix")
     dialog.heading_edit.setText("EXT. XORIX ORBIT - DAY")
-    dialog.location_combo.setCurrentIndex(1)
+    location_index = dialog.location_combo.findData("LOC-XORIX-ORBIT")
+    assert location_index >= 0
+    dialog.location_combo.setCurrentIndex(location_index)
     dialog.summary_edit.setPlainText("The crew sees Xorix for the first time.")
 
     scene = dialog.scene()
