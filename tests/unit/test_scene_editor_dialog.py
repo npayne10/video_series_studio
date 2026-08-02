@@ -1,4 +1,4 @@
-"""Tests for Phase 16.2a scene identity, location, and participant UX."""
+"""Tests for Phase 16.2a scene identity and asset-aware selectors."""
 
 from __future__ import annotations
 
@@ -43,6 +43,14 @@ def _participants() -> tuple[Asset, ...]:
     return (
         _asset("CHR-JAMES", "Commander James Spence", AssetCategory.CHARACTER),
         _asset("CHR-SANDRA", "Sandra Crawford", AssetCategory.CHARACTER),
+    )
+
+
+def _required_assets() -> tuple[Asset, ...]:
+    return (
+        _asset("PROP-CONSOLE", "Bridge Console", AssetCategory.PROP),
+        _asset("SHP-IRON-HORIZON", "Iron Horizon", AssetCategory.SHIP),
+        _asset("FX-JUMP", "Jump Emergence", AssetCategory.EFFECT),
     )
 
 
@@ -236,3 +244,99 @@ def test_empty_participant_catalog_explains_how_to_add_characters(
 
     assert dialog.participant_list.count() == 0
     assert "Character assets" in dialog.participant_help.text()
+
+
+def test_required_asset_selector_groups_and_returns_checked_ids(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = SceneEditorDialog(required_assets=_required_assets())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    for index in range(dialog.asset_list.count()):
+        item = dialog.asset_list.item(index)
+        if item.data(Qt.ItemDataRole.UserRole) in {
+            "PROP-CONSOLE",
+            "SHP-IRON-HORIZON",
+        }:
+            item.setCheckState(Qt.CheckState.Checked)
+
+    assert dialog.selected_required_asset_ids() == (
+        "PROP-CONSOLE",
+        "SHP-IRON-HORIZON",
+    )
+    assert "2 required assets selected" in dialog.asset_help.text()
+    headers = [
+        dialog.asset_list.item(index).text()
+        for index in range(dialog.asset_list.count())
+        if dialog.asset_list.item(index).data(Qt.ItemDataRole.UserRole + 2)
+    ]
+    assert headers == ["Effect", "Prop", "Ship"]
+
+
+def test_required_asset_search_filters_by_name_id_and_category(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = SceneEditorDialog(required_assets=_required_assets())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    dialog.asset_search.setText("console")
+    visible_ids = [
+        dialog.asset_list.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(dialog.asset_list.count())
+        if not dialog.asset_list.item(index).isHidden()
+        and dialog.asset_list.item(index).data(Qt.ItemDataRole.UserRole)
+    ]
+    assert visible_ids == ["PROP-CONSOLE"]
+
+    dialog.asset_search.setText("ship")
+    visible_ids = [
+        dialog.asset_list.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(dialog.asset_list.count())
+        if not dialog.asset_list.item(index).isHidden()
+        and dialog.asset_list.item(index).data(Qt.ItemDataRole.UserRole)
+    ]
+    assert visible_ids == ["SHP-IRON-HORIZON"]
+
+
+def test_editing_preserves_unavailable_required_asset_references(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    scene = Scene(
+        scene_id="EP-001-SCN-004",
+        episode_id="EP-001",
+        sequence_number=4,
+        heading="INT. BRIDGE - NIGHT",
+        location_asset_id="LOC-XORIX-ORBIT",
+        summary="The bridge crew receives an alert.",
+        required_asset_ids=("PROP-CONSOLE", "TECH-MISSING"),
+        scene_name="The Alert",
+    )
+    dialog = SceneEditorDialog(
+        scene,
+        location_assets=_locations(),
+        required_assets=_required_assets(),
+    )
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    assert dialog.selected_required_asset_ids() == (
+        "PROP-CONSOLE",
+        "TECH-MISSING",
+    )
+    assert any(
+        "Unavailable asset" in dialog.asset_list.item(index).text()
+        for index in range(dialog.asset_list.count())
+    )
+
+
+def test_empty_required_asset_catalog_explains_how_to_add_assets(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = SceneEditorDialog()
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    assert dialog.asset_list.count() == 0
+    assert "Asset Manager" in dialog.asset_help.text()
