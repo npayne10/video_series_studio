@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.projects import ProjectNotOpenError
-from vscs.application.ssie import ScenePlan, ShotPlan
+from vscs.application.ssie import Scene, ScenePlan, ShotPlan
 from vscs.application.story import StoryService, StoryServiceError
 from vscs.presentation.dialogs.scene_editor_dialog import SceneEditorDialog
 
@@ -106,7 +106,11 @@ class StoryBrowserWidget(QWidget):
                     self._duration(scene.estimated_duration_seconds),
                 )
             )
-            scene_item.setData(0, Qt.ItemDataRole.UserRole, ("scene", scene.scene_id))
+            scene_item.setData(
+                0,
+                Qt.ItemDataRole.UserRole,
+                ("scene", scene.scene_id),
+            )
             self.tree.addTopLevelItem(scene_item)
             plan = self.stories.plan(scene.scene_id)
             if plan is not None:
@@ -126,7 +130,11 @@ class StoryBrowserWidget(QWidget):
                     self._duration(shot.estimated_duration_seconds),
                 )
             )
-            item.setData(0, Qt.ItemDataRole.UserRole, ("shot", plan.scene.scene_id, shot.shot_id))
+            item.setData(
+                0,
+                Qt.ItemDataRole.UserRole,
+                ("shot", plan.scene.scene_id, shot.shot_id),
+            )
             parent.addChild(item)
 
     def _new_scene(self) -> None:
@@ -147,7 +155,7 @@ class StoryBrowserWidget(QWidget):
             return
         self._save(dialog.scene())
 
-    def _save(self, scene) -> None:  # type: ignore[no-untyped-def]
+    def _save(self, scene: Scene) -> None:
         try:
             self.stories.save_scene(scene)
         except (ProjectNotOpenError, StoryServiceError, ValueError) as exc:
@@ -159,7 +167,12 @@ class StoryBrowserWidget(QWidget):
         scene_id = self._selected_scene_id()
         if scene_id is None:
             return
-        if QMessageBox.question(self, "Delete Scene", f"Delete scene {scene_id}?") != QMessageBox.StandardButton.Yes:
+        response = QMessageBox.question(
+            self,
+            "Delete Scene",
+            f"Delete scene {scene_id}?",
+        )
+        if response != QMessageBox.StandardButton.Yes:
             return
         try:
             self.stories.delete_scene(scene_id)
@@ -180,7 +193,11 @@ class StoryBrowserWidget(QWidget):
         self.refresh()
         self._show_plan(plan)
 
-    def _show_item(self, current: QTreeWidgetItem | None, _previous: QTreeWidgetItem | None) -> None:
+    def _show_item(
+        self,
+        current: QTreeWidgetItem | None,
+        _previous: QTreeWidgetItem | None,
+    ) -> None:
         if current is None:
             self.details.clear()
             return
@@ -190,22 +207,28 @@ class StoryBrowserWidget(QWidget):
         if data[0] == "scene":
             scene = self.stories.scene(data[1])
             if scene is not None:
+                participants = ", ".join(scene.participant_asset_ids) or "None"
                 self.details.setHtml(
-                    f"<h2>{scene.heading}</h2><p><b>ID:</b> {scene.scene_id}</p>"
+                    f"<h2>{scene.heading}</h2>"
+                    f"<p><b>ID:</b> {scene.scene_id}</p>"
                     f"<p><b>Location:</b> {scene.location_asset_id}</p>"
                     f"<p><b>Summary:</b> {scene.summary}</p>"
-                    f"<p><b>Participants:</b> {', '.join(scene.participant_asset_ids) or 'None'}</p>"
+                    f"<p><b>Participants:</b> {participants}</p>"
                 )
         elif data[0] == "shot":
             plan = self.stories.plan(data[1])
             if plan is not None:
-                shot = next((item for item in plan.shots if item.shot_id == data[2]), None)
+                shot = next(
+                    (item for item in plan.shots if item.shot_id == data[2]),
+                    None,
+                )
                 if shot is not None:
                     self._show_shot(shot)
 
     def _show_plan(self, plan: ScenePlan) -> None:
         self.details.setHtml(
-            f"<h2>{plan.scene.heading}</h2><p><b>Objective:</b> {plan.objective}</p>"
+            f"<h2>{plan.scene.heading}</h2>"
+            f"<p><b>Objective:</b> {plan.objective}</p>"
             f"<p><b>Emotional intent:</b> {plan.emotional_intent}</p>"
             f"<p><b>Shots:</b> {len(plan.shots)}</p>"
         )
@@ -215,16 +238,24 @@ class StoryBrowserWidget(QWidget):
         lighting = shot.lighting_plan
         blocking = shot.blocking_plan
         continuity = shot.continuity_plan
+        continuity_state = (
+            continuity.location_state if continuity else "Not planned"
+        )
         self.details.setHtml(
-            f"<h2>{shot.shot_id}</h2><p><b>Purpose:</b> {shot.purpose.value}</p>"
+            f"<h2>{shot.shot_id}</h2>"
+            f"<p><b>Purpose:</b> {shot.purpose.value}</p>"
             f"<p><b>Description:</b> {shot.description}</p>"
-            f"<h3>Camera</h3><p>{camera.shot_size.value if camera else 'Not planned'}; "
-            f"{camera.movement.value if camera else ''}; {camera.composition if camera else ''}</p>"
-            f"<h3>Lighting</h3><p>{lighting.mood.value if lighting else 'Not planned'}; "
+            f"<h3>Camera</h3>"
+            f"<p>{camera.shot_size.value if camera else 'Not planned'}; "
+            f"{camera.movement.value if camera else ''}; "
+            f"{camera.composition if camera else ''}</p>"
+            f"<h3>Lighting</h3>"
+            f"<p>{lighting.mood.value if lighting else 'Not planned'}; "
             f"{lighting.key_direction if lighting else ''}</p>"
-            f"<h3>Blocking</h3><p>{blocking.pattern.value if blocking else 'Not planned'}; "
+            f"<h3>Blocking</h3>"
+            f"<p>{blocking.pattern.value if blocking else 'Not planned'}; "
             f"{blocking.screen_direction if blocking else ''}</p>"
-            f"<h3>Continuity</h3><p>{continuity.location_state if continuity else 'Not planned'}</p>"
+            f"<h3>Continuity</h3><p>{continuity_state}</p>"
         )
 
     def _selected_scene_id(self) -> str | None:
