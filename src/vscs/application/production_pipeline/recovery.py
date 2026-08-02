@@ -9,7 +9,7 @@ from enum import StrEnum
 from .executors import ExecutionLease
 from .models import ProductionPipeline, ProductionStage, ProductionState
 from .queue import RenderQueueEngine
-from .queue_models import QueueAttempt, QueueState, RenderQueue, RenderQueueEntry
+from .queue_models import QueueState, RenderQueue, RenderQueueEntry
 
 
 class OutputStatus(StrEnum):
@@ -220,15 +220,18 @@ class ProductionRecoveryEngine:
             return entry, None
         if entry.state is QueueState.COMPLETED:
             return self._recover_completed_output(entry, output, now)
-        if output is not None and output.status is OutputStatus.PRESENT:
-            if self.config.complete_when_output_present:
-                recovered = self._mark_completed(entry, now)
-                return recovered, self._decision(
-                    entry,
-                    RecoveryAction.COMPLETE,
-                    RecoveryReason.OUTPUT_PRESENT,
-                    "Existing output verified; marked entry complete",
-                )
+        if (
+            output is not None
+            and output.status is OutputStatus.PRESENT
+            and self.config.complete_when_output_present
+        ):
+            recovered = self._mark_completed(entry, now)
+            return recovered, self._decision(
+                entry,
+                RecoveryAction.COMPLETE,
+                RecoveryReason.OUTPUT_PRESENT,
+                "Existing output verified; marked entry complete",
+            )
         if entry.state is QueueState.CLAIMED:
             age = (now - entry.updated_at).total_seconds()
             lease_expired = lease is not None and lease.is_expired(now)
