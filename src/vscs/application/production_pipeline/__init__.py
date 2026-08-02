@@ -14,6 +14,20 @@ from .executors import (
 )
 from .graph import ProductionGraph, ProductionGraphError
 from .models import ProductionNode, ProductionPipeline, ProductionStage, ProductionState
+from .monitoring import (
+    ExecutionMetrics,
+    MonitoringDiagnostic,
+    MonitoringSeverity,
+    PipelineProgressSnapshot,
+    ProductionEvent,
+    ProductionMonitor,
+    ProductionMonitoringConfig,
+    ProductionMonitoringSnapshot,
+    QueueProgressSnapshot,
+    WorkerHealth,
+    WorkerObservation,
+    WorkerSnapshot,
+)
 from .queue import RenderQueueEngine, RenderQueueError
 from .queue_models import (
     QueueAttempt,
@@ -42,6 +56,7 @@ from .validator import (
 
 __all__ = [
     "ExecutionLease",
+    "ExecutionMetrics",
     "ExecutionRequest",
     "ExecutionResult",
     "ExecutorErrorCode",
@@ -49,12 +64,19 @@ __all__ = [
     "ExecutorRegistryError",
     "LeaseManager",
     "MockProductionExecutor",
+    "MonitoringDiagnostic",
+    "MonitoringSeverity",
+    "PipelineProgressSnapshot",
     "PipelineValidationIssue",
     "PipelineValidationResult",
     "PipelineValidationSeverity",
+    "ProductionEvent",
     "ProductionExecutor",
     "ProductionGraph",
     "ProductionGraphError",
+    "ProductionMonitor",
+    "ProductionMonitoringConfig",
+    "ProductionMonitoringSnapshot",
     "ProductionNode",
     "ProductionPipeline",
     "ProductionPipelineSerializationError",
@@ -64,6 +86,7 @@ __all__ = [
     "ProductionState",
     "QueueAttempt",
     "QueuePriority",
+    "QueueProgressSnapshot",
     "QueueState",
     "QueueValidationIssue",
     "QueueValidationResult",
@@ -75,5 +98,8 @@ __all__ = [
     "RenderQueueSerializationError",
     "RenderQueueSerializer",
     "RenderQueueValidator",
+    "WorkerHealth",
     "WorkerIdentity",
+    "WorkerObservation",
+    "WorkerSnapshot",
 ]
