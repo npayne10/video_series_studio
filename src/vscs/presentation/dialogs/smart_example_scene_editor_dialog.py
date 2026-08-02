@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QStringListModel
+from PySide6.QtCore import QStringListModel, Qt
 from PySide6.QtWidgets import QCompleter, QLabel, QWidget
 
 from vscs.application.ssie import Scene
@@ -55,10 +55,6 @@ class SmartExampleSceneEditorDialog(WorkflowSceneEditorDialog):
             self.example_provider.placeholder("scene.dialogue")
         )
 
-        self.location_help.setText(
-            self.location_help.text()
-            or "Choose the canonical location where the scene takes place."
-        )
         if not self._participant_assets:
             self.participant_help.setText(
                 self.example_provider.empty_state("scene.participants")
@@ -72,30 +68,37 @@ class SmartExampleSceneEditorDialog(WorkflowSceneEditorDialog):
                 self.example_provider.empty_state("scene.dialogue")
             )
 
-        self._install_inline_tip(self.scene_name_edit, "scene.name")
-        self._install_inline_tip(self.heading_edit, "scene.heading")
-        self._install_inline_tip(self.summary_edit, "scene.summary")
-        self._install_inline_tip(self.duration_spin, "scene.duration")
+        form = self._find_form_layout()
+        if form is not None:
+            tips = (
+                (self.duration_spin, "scene.duration"),
+                (self.summary_edit, "scene.summary"),
+                (self.heading_edit, "scene.heading"),
+                (self.scene_name_edit, "scene.name"),
+            )
+            for widget, topic_id in tips:
+                row = self._row_for_widget(form, widget)
+                if row >= 0:
+                    form.insertRow(row + 1, self._tip_label(topic_id))
 
         self.heading_completion_model = QStringListModel(self)
         self.heading_completer = QCompleter(self.heading_completion_model, self)
-        self.heading_completer.setCaseSensitivity(False)
-        self.heading_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self.heading_completer.setCaseSensitivity(
+            Qt.CaseSensitivity.CaseInsensitive
+        )
+        self.heading_completer.setCompletionMode(
+            QCompleter.CompletionMode.PopupCompletion
+        )
         self.heading_edit.setCompleter(self.heading_completer)
         self.heading_edit.textEdited.connect(self._update_heading_suggestions)
 
-    def _install_inline_tip(self, widget: QWidget, topic_id: str) -> None:
-        tip = self.example_provider.inline_tip(topic_id)
-        if not tip:
-            return
-        label = QLabel(tip, self)
+    def _tip_label(self, topic_id: str) -> QLabel:
+        label = QLabel(self.example_provider.inline_tip(topic_id), self)
         label.setObjectName(f"smartExampleTip_{topic_id.replace('.', '_')}")
         label.setWordWrap(True)
         label.setStyleSheet("font-style: italic; color: palette(mid);")
         label.setAccessibleName(f"Entry guidance for {topic_id}")
-        layout = widget.parentWidget().layout() if widget.parentWidget() else None
-        if layout is not None:
-            layout.addWidget(label)
+        return label
 
     def _update_heading_suggestions(self, text: str) -> None:
         suggestions = self.example_provider.adaptive("scene.heading", text)
