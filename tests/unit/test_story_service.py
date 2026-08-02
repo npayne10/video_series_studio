@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from vscs.application.projects import ProjectService
@@ -49,13 +50,11 @@ def test_story_service_persists_and_orders_scenes(tmp_path: Path) -> None:
 def test_story_service_replaces_and_deletes_scenes(tmp_path: Path) -> None:
     service = _service(tmp_path)
     service.save_scene(_scene())
-    changed = _scene()
-    changed = Scene(**{**changed.__dict__, "summary": "A revised structured summary."})
+    service.save_scene(replace(_scene(), summary="A revised structured summary."))
 
-    service.save_scene(changed)
-
-    assert service.scene("SCN-001") is not None
-    assert service.scene("SCN-001").summary == "A revised structured summary."  # type: ignore[union-attr]
+    stored = service.scene("SCN-001")
+    assert stored is not None
+    assert stored.summary == "A revised structured summary."
     assert service.delete_scene("SCN-001") is True
     assert service.list_scenes() == ()
 
