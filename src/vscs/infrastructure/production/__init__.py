@@ -8,6 +8,12 @@ from .comfyui import (
     ComfyUITimeoutError,
     ComfyUIWorkflowCompiler,
 )
+from .xcic import (
+    XCICCoreWorkflowCompiler,
+    XCICReferenceResolver,
+    XCICWorkflowCompilationError,
+    XCICWorkflowCompilerConfig,
+)
 
 __all__ = [
     "ComfyUIClient",
@@ -16,4 +22,8 @@ __all__ = [
     "ComfyUIProductionExecutor",
     "ComfyUITimeoutError",
     "ComfyUIWorkflowCompiler",
+    "XCICCoreWorkflowCompiler",
+    "XCICReferenceResolver",
+    "XCICWorkflowCompilationError",
+    "XCICWorkflowCompilerConfig",
 ]
