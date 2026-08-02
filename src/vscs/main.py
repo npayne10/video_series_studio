@@ -31,7 +31,7 @@ from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
     install_semantic_image_evaluation,
 )
 
-cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
+setattr(cap_manager_module, "CAPManagerWidget", PreviewCAPManagerWidget)
 install_canonical_reference_file_management()
 install_canonical_reference_deletion()
 install_canonical_image_evaluation()
