@@ -137,7 +137,7 @@ def build_application_context(
         CanonicalReferenceRepository,
         CanonicalReferenceRepository(database),
     )
-    references = services.register(
+    services.register(
         CanonicalReferenceService,
         CanonicalReferenceService(caps, reference_repository),
     )
