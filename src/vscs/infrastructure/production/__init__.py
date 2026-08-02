@@ -8,6 +8,17 @@ from .comfyui import (
     ComfyUITimeoutError,
     ComfyUIWorkflowCompiler,
 )
+from .staging import (
+    AssetStager,
+    AssetStagingConfig,
+    AssetStagingError,
+    StagedArtifact,
+    StagedAssetKind,
+    StagingManifest,
+    StagingPlan,
+    StagingPlanItem,
+    StagingRequest,
+)
 from .xcic import (
     XCICCoreWorkflowCompiler,
     XCICReferenceResolver,
@@ -16,12 +27,21 @@ from .xcic import (
 )
 
 __all__ = [
+    "AssetStager",
+    "AssetStagingConfig",
+    "AssetStagingError",
     "ComfyUIClient",
     "ComfyUIClientError",
     "ComfyUIExecutorConfig",
     "ComfyUIProductionExecutor",
     "ComfyUITimeoutError",
     "ComfyUIWorkflowCompiler",
+    "StagedArtifact",
+    "StagedAssetKind",
+    "StagingManifest",
+    "StagingPlan",
+    "StagingPlanItem",
+    "StagingRequest",
     "XCICCoreWorkflowCompiler",
     "XCICReferenceResolver",
     "XCICWorkflowCompilationError",
