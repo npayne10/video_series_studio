@@ -18,7 +18,6 @@ from vscs.application.production_pipeline import (
     RenderQueueValidator,
 )
 
-
 NOW = datetime(2026, 8, 1, 12, 0, tzinfo=UTC)
 
 
