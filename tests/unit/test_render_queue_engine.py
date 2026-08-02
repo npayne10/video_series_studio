@@ -89,9 +89,8 @@ def test_failure_schedules_retry_then_terminal_failure() -> None:
     assert entry.attempt_count == 1
     assert entry.attempts[0].succeeded is False
     assert entry.attempts[0].error_message == "provider timeout"
-    assert engine.ready_entries(queue, NOW + timedelta(seconds=20)) == (
-        queue.entry("Q-003"),
-    )
+    ready = engine.ready_entries(queue, NOW + timedelta(seconds=20))
+    assert tuple(item.entry_id for item in ready) == ("Q-003",)
 
     queue = engine.refresh(queue, NOW + timedelta(seconds=40))
     queue = engine.claim(queue, "Q-001", "worker-b", NOW + timedelta(seconds=40))
