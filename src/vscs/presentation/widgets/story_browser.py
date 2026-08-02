@@ -154,6 +154,7 @@ class StoryBrowserWidget(QWidget):
             scene_id_factory=self.stories.generate_scene_id,
             location_assets=self._location_assets(),
             participant_assets=self._participant_assets(),
+            required_assets=self._required_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
@@ -172,6 +173,7 @@ class StoryBrowserWidget(QWidget):
             scene_id_factory=self.stories.generate_scene_id,
             location_assets=self._location_assets(),
             participant_assets=self._participant_assets(),
+            required_assets=self._required_assets(),
         )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
@@ -184,22 +186,31 @@ class StoryBrowserWidget(QWidget):
         except (AssetProjectNotOpenError, AssetError):
             return ()
         combined = {asset.asset_id: asset for asset in (*locations, *environments)}
-        return tuple(
-            sorted(
-                combined.values(),
-                key=lambda item: (item.name.casefold(), item.asset_id),
-            )
-        )
+        return self._sort_assets(tuple(combined.values()))
 
     def _participant_assets(self) -> tuple[Asset, ...]:
         try:
             participants = self.assets.list(category=AssetCategory.CHARACTER)
         except (AssetProjectNotOpenError, AssetError):
             return ()
+        return self._sort_assets(participants)
+
+    def _required_assets(self) -> tuple[Asset, ...]:
+        try:
+            assets = self.assets.list()
+        except (AssetProjectNotOpenError, AssetError):
+            return ()
+        production_assets = tuple(
+            asset for asset in assets if asset.category is not AssetCategory.CHARACTER
+        )
         return tuple(
             sorted(
-                participants,
-                key=lambda item: (item.name.casefold(), item.asset_id),
+                production_assets,
+                key=lambda item: (
+                    item.category.value,
+                    item.name.casefold(),
+                    item.asset_id,
+                ),
             )
         )
 
@@ -256,6 +267,7 @@ class StoryBrowserWidget(QWidget):
             scene = self.stories.scene(data[1])
             if scene is not None:
                 participants = ", ".join(scene.participant_asset_ids) or "None"
+                required_assets = ", ".join(scene.required_asset_ids) or "None"
                 title = scene.scene_name or scene.heading
                 self.details.setHtml(
                     f"<h2>{title}</h2>"
@@ -264,6 +276,7 @@ class StoryBrowserWidget(QWidget):
                     f"<p><b>Location:</b> {scene.location_asset_id}</p>"
                     f"<p><b>Summary:</b> {scene.summary}</p>"
                     f"<p><b>Participants:</b> {participants}</p>"
+                    f"<p><b>Required assets:</b> {required_assets}</p>"
                 )
         elif data[0] == "shot":
             plan = self.stories.plan(data[1])
@@ -321,6 +334,15 @@ class StoryBrowserWidget(QWidget):
         self.new_button.setEnabled(active)
         for button in (self.edit_button, self.delete_button, self.plan_button):
             button.setEnabled(active and self.tree.currentItem() is not None)
+
+    @staticmethod
+    def _sort_assets(assets: tuple[Asset, ...]) -> tuple[Asset, ...]:
+        return tuple(
+            sorted(
+                assets,
+                key=lambda item: (item.name.casefold(), item.asset_id),
+            )
+        )
 
     @staticmethod
     def _duration(value: float | None) -> str:
