@@ -1,4 +1,4 @@
-"""Tests for Phase 16.2a.5 structured dialogue editing."""
+"""Tests for structured dialogue and the responsive scene editor layout."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 
 from vscs.application.ssie import Scene
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
@@ -163,3 +163,70 @@ def test_deselecting_participant_prevents_new_dialogue_for_that_speaker(
     assert dialog.dialogue_editor.dialogue_lines() == (
         "CHR-JAMES: We proceed.",
     )
+
+
+def test_scene_editor_places_long_form_inside_scroll_area(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = StructuredSceneEditorDialog(participant_assets=_participants())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    assert dialog.scroll_area.widget() is dialog.scroll_content
+    assert _is_descendant(dialog.scene_name_edit, dialog.scroll_content)
+    assert _is_descendant(dialog.dialogue_editor, dialog.scroll_content)
+    assert _is_descendant(dialog.asset_list, dialog.scroll_content)
+
+
+def test_validation_and_actions_remain_outside_scrolling_content(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = StructuredSceneEditorDialog(participant_assets=_participants())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    assert not _is_descendant(dialog.validation_label, dialog.scroll_content)
+    assert not _is_descendant(dialog.buttons, dialog.scroll_content)
+    assert not _is_descendant(dialog.save_button, dialog.scroll_content)
+
+
+def test_scene_editor_exposes_logical_section_landmarks(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = StructuredSceneEditorDialog(participant_assets=_participants())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+
+    for object_name in (
+        "sceneSectionGeneral",
+        "sceneSectionStoryContext",
+        "sceneSectionCast&Dialogue",
+        "sceneSectionAssets",
+        "sceneSectionProduction",
+    ):
+        assert dialog.findChild(QWidget, object_name) is not None
+
+
+def test_scene_editor_remains_usable_at_laptop_sized_viewport(
+    qtbot: object,
+    qapp: QApplication,
+) -> None:
+    dialog = StructuredSceneEditorDialog(participant_assets=_participants())
+    qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    dialog.resize(700, 520)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog.scroll_area.isVisible()
+    assert dialog.buttons.isVisible()
+    assert dialog.height() == 520
+    assert dialog.scroll_area.verticalScrollBar().maximum() > 0
+
+
+def _is_descendant(widget: QWidget, ancestor: QWidget) -> bool:
+    parent = widget.parentWidget()
+    while parent is not None:
+        if parent is ancestor:
+            return True
+        parent = parent.parentWidget()
+    return False
