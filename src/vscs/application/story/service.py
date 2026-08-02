@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -83,12 +84,37 @@ class StoryService:
         """Return the current in-memory SSIE plan for one scene."""
         return self._plans.get(scene_id)
 
+    def next_sequence_number(self, episode_id: str | None = None) -> int:
+        """Return the next available scene sequence for an episode."""
+        scenes = self.list_scenes()
+        if episode_id:
+            scenes = tuple(scene for scene in scenes if scene.episode_id == episode_id)
+        return max((scene.sequence_number for scene in scenes), default=0) + 1
+
+    def default_episode_id(self) -> str:
+        """Return the most recently used episode ID, or the initial default."""
+        scenes = self.list_scenes()
+        return scenes[-1].episode_id if scenes else "EP-001"
+
+    def generate_scene_id(self, episode_id: str, sequence_number: int) -> str:
+        """Generate a stable, readable scene ID for a new scene."""
+        episode = re.sub(r"[^A-Za-z0-9]+", "-", episode_id.strip()).strip("-")
+        episode = episode.upper() or "EP-001"
+        base = f"{episode}-SCN-{sequence_number:03d}"
+        existing = {scene.scene_id for scene in self.list_scenes()}
+        if base not in existing:
+            return base
+        suffix = 2
+        while f"{base}-{suffix}" in existing:
+            suffix += 1
+        return f"{base}-{suffix}"
+
     def _write(self, scenes: tuple[Scene, ...]) -> None:
         path = self.story_file
         path.parent.mkdir(parents=True, exist_ok=True)
         ordered = sorted(scenes, key=lambda item: (item.sequence_number, item.scene_id))
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "scenes": [self._scene_to_dict(scene) for scene in ordered],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
@@ -110,11 +136,12 @@ class StoryService:
 
     @staticmethod
     def _scene_from_dict(raw: dict[str, Any]) -> Scene:
+        heading = str(raw["heading"])
         return Scene(
             scene_id=str(raw["scene_id"]),
             episode_id=str(raw["episode_id"]),
             sequence_number=int(raw["sequence_number"]),
-            heading=str(raw["heading"]),
+            heading=heading,
             location_asset_id=str(raw["location_asset_id"]),
             summary=str(raw["summary"]),
             participant_asset_ids=tuple(
@@ -133,4 +160,5 @@ class StoryService:
                 if raw.get("estimated_duration_seconds") is None
                 else float(raw["estimated_duration_seconds"])
             ),
+            scene_name=str(raw.get("scene_name", "")).strip() or heading,
         )
