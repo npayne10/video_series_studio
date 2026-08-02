@@ -99,9 +99,10 @@ class StoryBrowserWidget(QWidget):
             "No scenes yet. Use New Scene to add structured story material."
         )
         for scene in scenes:
+            display_name = scene.scene_name or scene.heading
             scene_item = QTreeWidgetItem(
                 (
-                    f"{scene.sequence_number:03d} — {scene.heading}",
+                    f"{scene.sequence_number:03d} — {display_name}",
                     "Scene",
                     self._duration(scene.estimated_duration_seconds),
                 )
@@ -138,7 +139,14 @@ class StoryBrowserWidget(QWidget):
             parent.addChild(item)
 
     def _new_scene(self) -> None:
-        dialog = SceneEditorDialog(parent=self)
+        episode_id = self.stories.default_episode_id()
+        sequence = self.stories.next_sequence_number(episode_id)
+        dialog = SceneEditorDialog(
+            parent=self,
+            default_episode_id=episode_id,
+            suggested_sequence=sequence,
+            scene_id_factory=self.stories.generate_scene_id,
+        )
         if dialog.exec() != SceneEditorDialog.DialogCode.Accepted:
             return
         self._save(dialog.scene())
@@ -208,9 +216,12 @@ class StoryBrowserWidget(QWidget):
             scene = self.stories.scene(data[1])
             if scene is not None:
                 participants = ", ".join(scene.participant_asset_ids) or "None"
+                display_name = scene.scene_name or scene.heading
                 self.details.setHtml(
-                    f"<h2>{scene.heading}</h2>"
+                    f"<h2>{display_name}</h2>"
                     f"<p><b>ID:</b> {scene.scene_id}</p>"
+                    f"<p><b>Episode:</b> {scene.episode_id}</p>"
+                    f"<p><b>Heading:</b> {scene.heading}</p>"
                     f"<p><b>Location:</b> {scene.location_asset_id}</p>"
                     f"<p><b>Summary:</b> {scene.summary}</p>"
                     f"<p><b>Participants:</b> {participants}</p>"
@@ -226,8 +237,9 @@ class StoryBrowserWidget(QWidget):
                     self._show_shot(shot)
 
     def _show_plan(self, plan: ScenePlan) -> None:
+        display_name = plan.scene.scene_name or plan.scene.heading
         self.details.setHtml(
-            f"<h2>{plan.scene.heading}</h2>"
+            f"<h2>{display_name}</h2>"
             f"<p><b>Objective:</b> {plan.objective}</p>"
             f"<p><b>Emotional intent:</b> {plan.emotional_intent}</p>"
             f"<p><b>Shots:</b> {len(plan.shots)}</p>"
