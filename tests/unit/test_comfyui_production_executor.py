@@ -26,7 +26,7 @@ from vscs.infrastructure.production import (
     ComfyUITimeoutError,
 )
 
-NOW = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
+NOW = datetime.now(UTC)
 
 
 class StubCompiler:
