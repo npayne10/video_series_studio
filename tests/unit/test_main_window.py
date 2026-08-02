@@ -1,48 +1,53 @@
 """Tests for the VSCS application shell."""
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
-from vscs.application.assets import AssetRepository, AssetService
-from vscs.application.caps import CAPRepository, CAPService
+from vscs.application.assets import AssetService
+from vscs.application.caps import CAPService
 from vscs.application.projects import ProjectService
+from vscs.bootstrap import (
+    ApplicationContext,
+    BootstrapOptions,
+    StartupMode,
+    build_application_context,
+)
 from vscs.infrastructure.configuration import ConfigurationService
-from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.plugins import PluginManager
-from vscs.infrastructure.services import ApplicationServices
-from vscs.presentation.windows.main_window import MainWindow
 
 
-def build_services(tmp_path: Path) -> ApplicationServices:
-    """Create application services with isolated configuration and projects."""
-    configuration = ConfigurationService(tmp_path / "settings.yaml")
-    configuration.load()
-    services = ApplicationServices()
-    services.register(ConfigurationService, configuration)
-
-    database = DatabaseManager()
-    services.register(DatabaseManager, database)
-    projects = ProjectService(configuration, database)
-    services.register(ProjectService, projects)
-    asset_repository = AssetRepository(database)
-    services.register(AssetRepository, asset_repository)
-    assets = AssetService(projects, asset_repository)
-    services.register(AssetService, assets)
-    cap_repository = CAPRepository(database)
-    services.register(CAPRepository, cap_repository)
-    services.register(CAPService, CAPService(assets, cap_repository))
-
-    plugins = PluginManager(configuration, services, tmp_path / "plugins")
-    services.register(PluginManager, plugins)
-    plugins.discover()
-    return services
+@pytest.fixture
+def application_context(tmp_path: Path) -> Iterator[ApplicationContext]:
+    """Build the real Phase 16 application graph for MainWindow tests."""
+    context = build_application_context(
+        BootstrapOptions(
+            mode=StartupMode.TEST,
+            config_path=tmp_path / "settings.yaml",
+            plugin_root=tmp_path / "plugins",
+            configure_logging=False,
+            discover_plugins=False,
+            load_plugins=False,
+            validate_environment=False,
+        )
+    )
+    try:
+        yield context
+    finally:
+        context.shutdown()
 
 
-def test_main_window_title(qtbot: object, qapp: QApplication, tmp_path: Path) -> None:
+def test_main_window_title(
+    qtbot: object,
+    qapp: QApplication,
+    application_context: ApplicationContext,
+) -> None:
     """The application shell exposes the expected product identity."""
-    window = MainWindow(build_services(tmp_path))
+    window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     assert "Video Series Studio" in window.windowTitle()
@@ -50,14 +55,14 @@ def test_main_window_title(qtbot: object, qapp: QApplication, tmp_path: Path) ->
 
 
 def test_main_window_opens_default_workspace(
-    qtbot: object, qapp: QApplication, tmp_path: Path
+    qtbot: object,
+    qapp: QApplication,
+    application_context: ApplicationContext,
 ) -> None:
     """The configured default workspace is selected on startup."""
-    services = build_services(tmp_path)
-    configuration = services.require(ConfigurationService)
-    configuration.settings.workspace.default_workspace = "Assets"
+    application_context.configuration.settings.workspace.default_workspace = "Assets"
 
-    window = MainWindow(services)
+    window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     assert window.navigation.currentItem().text() == "Assets"
@@ -65,12 +70,14 @@ def test_main_window_opens_default_workspace(
 
 
 def test_main_window_uses_registered_services(
-    qtbot: object, qapp: QApplication, tmp_path: Path
+    qtbot: object,
+    qapp: QApplication,
+    application_context: ApplicationContext,
 ) -> None:
-    """The window resolves dependencies through the service container."""
-    services = build_services(tmp_path)
+    """The window resolves dependencies through the composition root."""
+    services = application_context.services
 
-    window = MainWindow(services)
+    window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     assert window.configuration is services.require(ConfigurationService)
@@ -82,12 +89,14 @@ def test_main_window_uses_registered_services(
 
 
 def test_project_actions_reflect_active_project(
-    qtbot: object, qapp: QApplication, tmp_path: Path
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
 ) -> None:
     """Project actions are enabled only when their lifecycle operation is valid."""
-    services = build_services(tmp_path)
-    projects = services.require(ProjectService)
-    window = MainWindow(services)
+    projects = application_context.services.require(ProjectService)
+    window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     assert window.new_project_action.isEnabled()
@@ -111,11 +120,11 @@ def test_create_project_uses_selected_parent_and_keyword_name(
     qapp: QApplication,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    application_context: ApplicationContext,
 ) -> None:
     """The New Project action passes the current ProjectService contract."""
-    services = build_services(tmp_path)
-    projects = services.require(ProjectService)
-    window = MainWindow(services)
+    projects = application_context.services.require(ProjectService)
+    window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     monkeypatch.setattr(
@@ -143,12 +152,12 @@ def test_save_project_uses_active_project_after_void_service_call(
     qtbot: object,
     qapp: QApplication,
     tmp_path: Path,
+    application_context: ApplicationContext,
 ) -> None:
     """Saving through the UI does not expect ProjectService.save to return metadata."""
-    services = build_services(tmp_path)
-    projects = services.require(ProjectService)
+    projects = application_context.services.require(ProjectService)
     projects.create(tmp_path / "Example", name="Example")
-    window = MainWindow(services)
+    window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     window._save_project()
