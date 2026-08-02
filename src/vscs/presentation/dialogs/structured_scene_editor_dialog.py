@@ -7,7 +7,6 @@ from dataclasses import replace
 from PySide6.QtWidgets import QWidget
 
 from vscs.application.ssie import Scene
-from vscs.domain.assets import Asset
 from vscs.presentation.dialogs.scene_editor_dialog import SceneEditorDialog
 from vscs.presentation.widgets.dialogue_editor import DialogueEditorWidget
 
