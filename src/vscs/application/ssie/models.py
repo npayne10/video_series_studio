@@ -179,6 +179,7 @@ class Scene:
     time_of_day: str | None = None
     transition_in: SceneTransition = SceneTransition.CUT
     estimated_duration_seconds: float | None = None
+    scene_name: str = ""
 
 
 @dataclass(frozen=True, slots=True)
