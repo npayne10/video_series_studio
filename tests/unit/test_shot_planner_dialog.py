@@ -12,6 +12,13 @@ from vscs.application.shots import (
     ShotPlanningService,
     ShotPlanningStatus,
 )
+from vscs.application.ssie import (
+    CameraMovement,
+    LensFamily,
+    LightingMood,
+    ShotPurpose,
+    ShotSize,
+)
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.presentation.dialogs.shot_planner_dialog import ShotPlannerDialog
@@ -54,6 +61,12 @@ def test_shot_planner_creates_ready_shot(
         "A wide view establishes the Mauritania bridge and active crew."
     )
     dialog.duration_spin.setValue(8.0)
+    form_shot = dialog._shot_from_form()
+    assert form_shot.purpose is ShotPurpose.COVERAGE
+    assert form_shot.shot_size is ShotSize.MEDIUM
+    assert form_shot.camera_movement is CameraMovement.STATIC
+    assert form_shot.lens_family is LensFamily.NORMAL
+    assert form_shot.lighting_mood is LightingMood.NATURALISTIC
     assert dialog.save_button.isEnabled()
     dialog.save_button.click()
 
