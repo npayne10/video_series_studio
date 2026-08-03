@@ -1,5 +1,6 @@
 """Reusable onboarding framework for VSCS presentation workflows."""
 
+from .guided_tour_overlay import GuidedTourOverlay
 from .onboarding_controller import (
     OnboardingController,
     OnboardingOutcome,
@@ -11,6 +12,7 @@ from .welcome_overlay import OnboardingWelcomeOverlay
 
 __all__ = [
     "SCENE_EDITOR_ONBOARDING",
+    "GuidedTourOverlay",
     "OnboardingController",
     "OnboardingOutcome",
     "OnboardingSequence",
