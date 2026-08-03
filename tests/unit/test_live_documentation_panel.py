@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QEvent
 from PySide6.QtGui import QFocusEvent
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 
 from vscs.presentation.dialogs.live_documentation_scene_editor_dialog import (
     LiveDocumentationSceneEditorDialog,
@@ -12,8 +12,8 @@ from vscs.presentation.dialogs.live_documentation_scene_editor_dialog import (
 from vscs.presentation.help import KnowledgeDocumentationPanel
 
 
-def _focus(widget: object, qapp: QApplication) -> None:
-    QApplication.sendEvent(widget, QFocusEvent(QEvent.Type.FocusIn))  # type: ignore[arg-type]
+def _focus(widget: QWidget, qapp: QApplication) -> None:
+    QApplication.sendEvent(widget, QFocusEvent(QEvent.Type.FocusIn))
     qapp.processEvents()
 
 
@@ -101,4 +101,5 @@ def test_unknown_live_topic_returns_to_welcome_guidance(
     dialog.show_live_topic("scene.not_registered")
 
     assert dialog.documentation_panel.topic_id is None
-    assert "Select or tab into any field" in dialog.documentation_panel.content_label.text()
+    content = dialog.documentation_panel.content_label.text()
+    assert "Select or tab into any field" in content
