@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
@@ -15,6 +16,18 @@ from PySide6.QtWidgets import (
 )
 
 from .workflow_steps import WorkflowStepState
+
+
+class _WorkflowStepButton(QToolButton):
+    """Activate workflow navigation consistently from mouse or keyboard."""
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        """Treat Enter and Return as the same action as a mouse click."""
+        if event.key() in {Qt.Key.Key_Enter, Qt.Key.Key_Return}:
+            self.click()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 class WorkflowProgressChecklist(QFrame):
@@ -73,7 +86,7 @@ class WorkflowProgressChecklist(QFrame):
         for state in state_tuple:
             button = self._buttons.get(state.step.step_id)
             if button is None:
-                button = QToolButton(self)
+                button = _WorkflowStepButton(self)
                 button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
                 button.setAutoRaise(True)
                 button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
