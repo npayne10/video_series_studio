@@ -264,6 +264,7 @@ class ShotPlanningService:
                 else str(raw["continuity_from_shot_id"])
             ),
             continuity_notes=str(raw.get("continuity_notes", "")),
+            blocking_notes=str(raw.get("blocking_notes", "")),
             storyboard_reference=str(
                 raw.get("storyboard_reference", "")
             ),
