@@ -163,7 +163,7 @@ def test_valid_final_step_creates_scene_and_completes_onboarding(
     qapp.processEvents()
 
     assert dialog.save_button.isEnabled()
-    assert dialog.tour_overlay.next_button.text() == "Finish"
+    assert dialog.tour_overlay.next_button.text() == "Create Scene"
     assert dialog.tour_overlay.next_button.isEnabled()
 
     dialog.tour_overlay.next_button.click()
