@@ -6,8 +6,8 @@ from typing import Any
 
 from vscs.application.assets import AssetService
 from vscs.application.story import StoryService
-from vscs.presentation.dialogs.beginner_workflow_scene_editor_dialog import (
-    BeginnerWorkflowSceneEditorDialog,
+from vscs.presentation.dialogs.guided_navigation_scene_editor_dialog import (
+    GuidedNavigationSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.story_browser import StoryBrowserWidget
@@ -22,7 +22,7 @@ def install_story_browser() -> None:
     setattr(  # noqa: B010
         story_browser_module,
         "SceneEditorDialog",
-        BeginnerWorkflowSceneEditorDialog,
+        GuidedNavigationSceneEditorDialog,
     )
 
     original_create_content = MainWindow._create_content_area
