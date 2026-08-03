@@ -22,7 +22,6 @@ from vscs.presentation.onboarding import (
     OnboardingStep,
 )
 
-
 EXPECTED_AREAS = (
     "Welcome overlay coverage",
     "Tour overlay coverage",
