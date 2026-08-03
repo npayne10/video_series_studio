@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
@@ -68,9 +68,8 @@ class WorkflowProgressChecklist(QFrame):
             button = self._buttons.get(state.step.step_id)
             if button is None:
                 button = QToolButton(self)
-                button.setToolButtonStyle(button.ToolButtonStyle.ToolButtonTextOnly)
+                button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
                 button.setAutoRaise(True)
-                button.setCursor(button.cursor())
                 button.clicked.connect(
                     lambda _checked=False, step_id=state.step.step_id: (
                         self.step_requested.emit(step_id)
