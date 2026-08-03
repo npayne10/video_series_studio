@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -100,15 +101,19 @@ class ShotPlannerDialog(QDialog):
         self.size_combo = self._enum_combo(ShotSize)
         self.movement_combo = self._enum_combo(CameraMovement)
         self.lens_combo = self._enum_combo(LensFamily)
-        self.lighting_mood_combo = self._enum_combo(LightingMood)
         self.camera_profile_combo = self._asset_combo(AssetCategory.CAMERA)
         self.lighting_profile_combo = self._asset_combo(AssetCategory.LIGHTING)
+        self.lighting_mood_combo = self._enum_combo(LightingMood)
         self.duration_spin = QDoubleSpinBox(self)
         self.duration_spin.setRange(0.1, 3600.0)
         self.duration_spin.setDecimals(2)
         self.duration_spin.setValue(5.0)
         self.continuity_combo = QComboBox(self)
         self.continuity_notes_edit = QPlainTextEdit(self)
+        self.blocking_edit = QPlainTextEdit(self)
+        self.blocking_edit.setPlaceholderText(
+            "Describe positions, facing, movement paths and eyelines."
+        )
         self.storyboard_edit = QLineEdit(self)
         self.storyboard_edit.setPlaceholderText(
             "Optional image path, asset ID or storyboard reference"
@@ -132,19 +137,27 @@ class ShotPlannerDialog(QDialog):
         form.addRow("Duration (seconds) *", self.duration_spin)
         form.addRow("Continuity from", self.continuity_combo)
         form.addRow("Continuity notes", self.continuity_notes_edit)
+        form.addRow("Actor blocking", self.blocking_edit)
         form.addRow("Storyboard reference", self.storyboard_edit)
         form.addRow("Dialogue allocation", self.dialogue_edit)
         form.addRow("Validation", self.validation_label)
 
         self.save_button = QPushButton("Save Shot", self)
-        right = QWidget(self)
-        right_layout = QVBoxLayout(right)
-        right_layout.addLayout(form)
-        right_layout.addWidget(self.save_button)
+        form_widget = QWidget(self)
+        form_layout = QVBoxLayout(form_widget)
+        form_layout.addLayout(form)
+        form_layout.addWidget(self.save_button)
+        form_layout.addStretch(1)
+
+        scroll = QScrollArea(self)
+        scroll.setObjectName("shotPlannerScrollArea")
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(form_widget)
 
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        splitter.setObjectName("shotPlannerSplitter")
         splitter.addWidget(left)
-        splitter.addWidget(right)
+        splitter.addWidget(scroll)
         splitter.setSizes((360, 820))
 
         buttons = QDialogButtonBox(
@@ -247,8 +260,10 @@ class ShotPlannerDialog(QDialog):
         self.description_edit.clear()
         self.duration_spin.setValue(5.0)
         self.continuity_notes_edit.clear()
+        self.blocking_edit.clear()
         self.storyboard_edit.clear()
         self.dialogue_edit.clear()
+        self._populate_continuity(self.shots.list_shots(self.scene_id))
         self._validate()
         self.title_edit.setFocus()
 
@@ -287,6 +302,7 @@ class ShotPlannerDialog(QDialog):
             shot.continuity_from_shot_id,
         )
         self.continuity_notes_edit.setPlainText(shot.continuity_notes)
+        self.blocking_edit.setPlainText(shot.blocking_notes)
         self.storyboard_edit.setText(shot.storyboard_reference)
         self.dialogue_edit.setPlainText("\n".join(shot.dialogue_lines))
         self._validate()
@@ -325,6 +341,7 @@ class ShotPlannerDialog(QDialog):
             continuity_notes=(
                 self.continuity_notes_edit.toPlainText().strip()
             ),
+            blocking_notes=self.blocking_edit.toPlainText().strip(),
             storyboard_reference=self.storyboard_edit.text().strip(),
             dialogue_lines=tuple(
                 line.strip()
