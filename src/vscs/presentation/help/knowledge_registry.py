@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from .container_topics import CONTAINER_TOPICS
 from .knowledge_topics import SCENE_TOPICS, KnowledgeTopic
 
 
@@ -55,4 +56,4 @@ class KnowledgeRegistry:
 
 def build_default_knowledge_registry() -> KnowledgeRegistry:
     """Build the application registry with all currently supported topics."""
-    return KnowledgeRegistry(SCENE_TOPICS)
+    return KnowledgeRegistry((*SCENE_TOPICS, *CONTAINER_TOPICS))
