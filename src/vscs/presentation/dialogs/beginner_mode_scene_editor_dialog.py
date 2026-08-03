@@ -64,4 +64,4 @@ class BeginnerModeSceneEditorDialog(AdaptiveWorkspaceSceneEditorDialog):
             self.workflow_navigator.clear_highlight()
             self.workflow_checklist.set_active_step(None)
         self.beginner_mode_checkbox.setChecked(enabled)
-        self.workspace_splitter.refresh()
+        self.workspace_splitter.updateGeometry()
