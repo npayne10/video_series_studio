@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QWidget
 
@@ -17,7 +19,7 @@ from vscs.presentation.dialogs.validation_explanations_scene_editor_dialog impor
 class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
     """Require essential first-scene actions while keeping optional steps gentle."""
 
-    _ACTION_HINTS = {
+    _ACTION_HINTS: ClassVar[dict[str, str]] = {
         "production_type": "Confirm the production type, then continue.",
         "container_id": "Enter a valid container ID using letters, numbers and hyphens.",
         "scene_identity": (
@@ -29,7 +31,7 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
         ),
         "save": "Create the valid scene to finish this guided workflow.",
     }
-    _REQUIRED_STEPS = frozenset(_ACTION_HINTS)
+    _REQUIRED_STEPS: ClassVar[frozenset[str]] = frozenset(_ACTION_HINTS)
 
     def __init__(
         self,
