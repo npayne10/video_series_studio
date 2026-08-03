@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, replace
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -146,7 +147,10 @@ class ShotPlanningService:
         """Persist an explicit sequence order for every shot in a scene."""
         current = self.list_shots(scene_id)
         by_id = {shot.shot_id: shot for shot in current}
-        if set(ordered_shot_ids) != set(by_id):
+        if (
+            len(ordered_shot_ids) != len(by_id)
+            or set(ordered_shot_ids) != set(by_id)
+        ):
             raise ValueError(
                 "Reorder must include every shot in the scene exactly once"
             )
@@ -202,14 +206,19 @@ class ShotPlanningService:
             ) from exc
 
     @staticmethod
-    def _to_dict(shot: ProductionShot) -> dict[str, Any]:
+    def _enum_value(value: StrEnum | str) -> str:
+        """Serialize enum members and defensive string-backed values uniformly."""
+        return value.value if isinstance(value, StrEnum) else str(value)
+
+    @classmethod
+    def _to_dict(cls, shot: ProductionShot) -> dict[str, Any]:
         raw = asdict(shot)
-        raw["purpose"] = shot.purpose.value
-        raw["shot_size"] = shot.shot_size.value
-        raw["camera_movement"] = shot.camera_movement.value
-        raw["lens_family"] = shot.lens_family.value
-        raw["lighting_mood"] = shot.lighting_mood.value
-        raw["status"] = shot.status.value
+        raw["purpose"] = cls._enum_value(shot.purpose)
+        raw["shot_size"] = cls._enum_value(shot.shot_size)
+        raw["camera_movement"] = cls._enum_value(shot.camera_movement)
+        raw["lens_family"] = cls._enum_value(shot.lens_family)
+        raw["lighting_mood"] = cls._enum_value(shot.lighting_mood)
+        raw["status"] = cls._enum_value(shot.status)
         return raw
 
     @staticmethod
