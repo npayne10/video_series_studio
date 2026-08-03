@@ -81,13 +81,13 @@ def test_highlight_can_be_cleared_without_changing_existing_style(
 ) -> None:
     dialog = GuidedNavigationSceneEditorDialog()
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
-    dialog.heading_edit.setStyleSheet("padding: 3px;")
+    dialog.scene_name_edit.setStyleSheet("padding: 3px;")
 
     dialog.workflow_navigator.navigate("scene_identity")
     dialog.workflow_navigator.clear_highlight()
 
     assert dialog.scene_name_edit.property("workflowGuidedTarget") is False
-    assert dialog.heading_edit.styleSheet() == "padding: 3px;"
+    assert dialog.scene_name_edit.styleSheet() == "padding: 3px;"
 
 
 def test_validation_step_highlights_feedback_and_routes_guidance(
@@ -131,4 +131,4 @@ def test_checklist_button_supports_keyboard_activation(
 
     assert dialog.summary_edit.hasFocus()
     assert dialog.documentation_panel.topic_id == "scene.summary"
-    assert dialog.workflow_checklist._active_step_id == "summary"
+    assert dialog.workflow_checklist.active_step_id == "summary"
