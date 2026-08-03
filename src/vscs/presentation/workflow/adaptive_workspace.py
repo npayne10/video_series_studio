@@ -79,6 +79,6 @@ class CollapsibleWorkspacePanel(QFrame):
         if changed:
             self.collapsed_changed.emit(collapsed)
 
-    def toggle(self) -> None:
+    def toggle(self, _checked: bool = False) -> None:
         """Toggle the content visibility."""
         self.set_collapsed(not self._collapsed)
