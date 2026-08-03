@@ -27,9 +27,10 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
         self,
         stories: StoryService,
         assets: AssetService,
+        shot_plans: ShotPlanningService,
         parent: QWidget | None = None,
     ) -> None:
-        self.shot_plans = ShotPlanningService(stories.projects)
+        self.shot_plans = shot_plans
         self._shot_planner_ready = False
         super().__init__(stories, assets, parent)
         self.shot_planner_button = QPushButton("Shot Planner", self)
