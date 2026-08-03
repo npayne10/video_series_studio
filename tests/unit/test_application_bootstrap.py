@@ -15,8 +15,13 @@ from vscs.application.caps import (
     CAPService,
 )
 from vscs.application.projects import ProjectService
+from vscs.application.shots import ShotPlanningService
+from vscs.application.story import StoryService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
-from vscs.infrastructure.configuration import ConfigurationService, EnvironmentManager
+from vscs.infrastructure.configuration import (
+    ConfigurationService,
+    EnvironmentManager,
+)
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.plugins import PluginManager
 from vscs.presentation.windows.main_window import MainWindow
@@ -34,7 +39,9 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def test_bootstrap_registers_complete_frontend_dependency_graph(tmp_path: Path) -> None:
+def test_bootstrap_registers_complete_frontend_dependency_graph(
+    tmp_path: Path,
+) -> None:
     context = build_application_context(_options(tmp_path))
 
     required = (
@@ -42,6 +49,8 @@ def test_bootstrap_registers_complete_frontend_dependency_graph(tmp_path: Path) 
         EnvironmentManager,
         DatabaseManager,
         ProjectService,
+        StoryService,
+        ShotPlanningService,
         AssetRepository,
         AssetService,
         CAPRepository,
@@ -51,7 +60,10 @@ def test_bootstrap_registers_complete_frontend_dependency_graph(tmp_path: Path) 
         CAPGeneratorService,
         PluginManager,
     )
-    assert all(context.services.contains(service_type) for service_type in required)
+    assert all(
+        context.services.contains(service_type)
+        for service_type in required
+    )
     assert context.services.require(ProjectService).database is context.database
 
     context.shutdown()
