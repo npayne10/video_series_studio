@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, Qt
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog
 
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
@@ -45,7 +46,7 @@ def _start(
     qapp.processEvents()
 
 
-def test_required_scene_identity_step_blocks_until_user_completes_action(
+def test_required_scene_identity_step_waits_for_editing_to_finish(
     qtbot: object,
     qapp: QApplication,
     tmp_path: Path,
@@ -68,8 +69,20 @@ def test_required_scene_identity_step_blocks_until_user_completes_action(
     assert not dialog.tour_overlay.isVisible()
     assert dialog.scene_name_edit.hasFocus()
 
-    dialog.scene_name_edit.setText("Arrival at Xorix")
-    dialog.heading_edit.setText("EXT. XORIX ORBIT - DAY")
+    QTest.keyClicks(dialog.scene_name_edit, "Arrival at Xorix")
+    assert not dialog.tour_overlay.isVisible()
+
+    QTest.keyClick(dialog.scene_name_edit, Qt.Key.Key_Tab)
+    qapp.processEvents()
+    assert dialog.heading_edit.hasFocus()
+    assert not dialog.tour_overlay.isVisible()
+
+    QTest.keyClicks(dialog.heading_edit, "EXT. XORIX ORBIT - DAY")
+    qapp.processEvents()
+    assert dialog.heading_edit.text() == "EXT. XORIX ORBIT - DAY"
+    assert not dialog.tour_overlay.isVisible()
+
+    QTest.keyClick(dialog.heading_edit, Qt.Key.Key_Tab)
     qapp.processEvents()
 
     assert dialog.tour_overlay.isVisible()
