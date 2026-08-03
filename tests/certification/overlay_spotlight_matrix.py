@@ -13,48 +13,60 @@ class OverlaySpotlightEvidence:
     test_nodes: tuple[str, ...]
 
 
+_CERTIFICATION_FILE = (
+    "tests/certification/"
+    "test_onboarding_overlay_spotlight_certification.py"
+)
+
 OVERLAY_SPOTLIGHT_MATRIX = (
     OverlaySpotlightEvidence(
         "Welcome overlay coverage",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_welcome_overlay_covers_dialog_and_card_stays_inside",
+            f"{_CERTIFICATION_FILE}::"
+            "test_welcome_overlay_covers_dialog_and_card_stays_inside",
         ),
     ),
     OverlaySpotlightEvidence(
         "Tour overlay coverage",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_tour_overlay_covers_dialog_after_resize",
+            f"{_CERTIFICATION_FILE}::"
+            "test_tour_overlay_covers_dialog_after_resize",
         ),
     ),
     OverlaySpotlightEvidence(
         "Spotlight target accuracy",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_spotlight_contains_the_navigated_target",
+            f"{_CERTIFICATION_FILE}::"
+            "test_spotlight_contains_the_navigated_target",
             "tests/unit/test_guided_interface_tour.py",
         ),
     ),
     OverlaySpotlightEvidence(
         "Card collision avoidance",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_tour_card_avoids_a_top_right_spotlight",
+            f"{_CERTIFICATION_FILE}::"
+            "test_tour_card_avoids_a_top_right_spotlight",
         ),
     ),
     OverlaySpotlightEvidence(
         "Missing target recovery",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_missing_or_hidden_target_clears_spotlight_safely",
+            f"{_CERTIFICATION_FILE}::"
+            "test_missing_or_hidden_target_clears_spotlight_safely",
         ),
     ),
     OverlaySpotlightEvidence(
         "Scrolling and spotlight refresh",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_spotlight_tracks_target_after_guided_scrolling",
+            f"{_CERTIFICATION_FILE}::"
+            "test_spotlight_tracks_target_after_guided_scrolling",
         ),
     ),
     OverlaySpotlightEvidence(
         "Focus-safe redraw",
         (
-            "tests/certification/test_onboarding_overlay_spotlight_certification.py::test_overlay_resize_keeps_tour_focus_and_geometry",
+            f"{_CERTIFICATION_FILE}::"
+            "test_overlay_resize_keeps_tour_focus_and_geometry",
             "tests/certification/test_onboarding_keyboard_focus_certification.py",
         ),
     ),
