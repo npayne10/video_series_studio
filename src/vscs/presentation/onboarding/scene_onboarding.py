@@ -13,12 +13,18 @@ SCENE_EDITOR_ONBOARDING = OnboardingSequence(
         OnboardingStep(
             "welcome",
             "Welcome to the Scene Editor",
-            "Learn the scene-creation workflow and the assistance available while you work.",
+            (
+                "Learn the scene-creation workflow and the assistance available "
+                "while you work."
+            ),
         ),
         OnboardingStep(
             "production_type",
             "Choose the production type",
-            "Choose whether the scene belongs to an episode, trailer, teaser or another container.",
+            (
+                "Choose whether the scene belongs to an episode, trailer, teaser "
+                "or another container."
+            ),
             topic_id="scene.production_type",
             target_id="production_type",
         ),
@@ -39,7 +45,10 @@ SCENE_EDITOR_ONBOARDING = OnboardingSequence(
         OnboardingStep(
             "location",
             "Choose the primary location",
-            "Select the canonical Location or Environment asset where the scene occurs.",
+            (
+                "Select the canonical Location or Environment asset where the "
+                "scene occurs."
+            ),
             topic_id="scene.location",
             target_id="location",
         ),
@@ -74,7 +83,7 @@ SCENE_EDITOR_ONBOARDING = OnboardingSequence(
         OnboardingStep(
             "validation",
             "Resolve validation issues",
-            "Use the explanations to complete all information required before saving.",
+            "Use the explanations to complete all required information before saving.",
             topic_id="scene.summary",
             target_id="validation",
         ),
