@@ -60,7 +60,7 @@ def test_next_and_previous_route_spotlight_and_live_documentation(
 
     assert dialog.onboarding.state.current_index == 1
     assert dialog.tour_overlay.title_label.text() == "Choose the production type"
-    assert not dialog.tour_overlay._spotlight.isNull()
+    assert not dialog.tour_overlay.spotlight_rect.isNull()
     assert dialog.documentation_panel.topic_id == "scene.production_type"
     assert dialog.workflow_checklist.active_step_id == "production_type"
     assert dialog.tour_overlay.previous_button.isEnabled()
