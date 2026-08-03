@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen
+from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -97,6 +97,8 @@ class GuidedTourOverlay(QWidget):
         self.next_button.clicked.connect(self.next_requested.emit)
         self.skip_button.clicked.connect(self.skip_requested.emit)
         self.try_button.clicked.connect(self.try_requested.emit)
+        for button in self._tour_buttons():
+            button.installEventFilter(self)
         parent.installEventFilter(self)
         self.hide()
 
@@ -177,14 +179,53 @@ class GuidedTourOverlay(QWidget):
         painter.drawRoundedRect(hole, 6, 6)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
-        """Keep the overlay and card aligned when the parent changes size."""
+        """Keep geometry aligned and keyboard focus inside the visible tour card."""
         if watched is self.parentWidget() and event.type() in {
             QEvent.Type.Resize,
             QEvent.Type.Show,
         }:
             self._fit_parent()
             self._position_card()
+        if (
+            self.isVisible()
+            and watched in set(self._tour_buttons())
+            and event.type() is QEvent.Type.KeyPress
+        ):
+            key_event = event
+            if isinstance(key_event, QKeyEvent) and key_event.key() == Qt.Key.Key_Tab:
+                reverse = bool(
+                    key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+                )
+                self._cycle_focus(watched, reverse=reverse)
+                return True
         return super().eventFilter(watched, event)
+
+    def _tour_buttons(self) -> tuple[QPushButton, ...]:
+        return (
+            self.skip_button,
+            self.try_button,
+            self.previous_button,
+            self.next_button,
+        )
+
+    def _focusable_buttons(self) -> tuple[QPushButton, ...]:
+        return tuple(
+            button
+            for button in self._tour_buttons()
+            if button.isVisible() and button.isEnabled()
+        )
+
+    def _cycle_focus(self, current: QObject, *, reverse: bool) -> None:
+        buttons = self._focusable_buttons()
+        if not buttons:
+            return
+        if current not in buttons:
+            target = buttons[-1] if reverse else buttons[0]
+        else:
+            index = buttons.index(current)
+            step = -1 if reverse else 1
+            target = buttons[(index + step) % len(buttons)]
+        target.setFocus(Qt.FocusReason.TabFocusReason)
 
     def _set_spotlight(self, target: QWidget | None) -> None:
         if target is None or not target.isVisible():
