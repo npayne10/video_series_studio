@@ -17,6 +17,7 @@ from vscs.application.caps import (
     CAPService,
 )
 from vscs.application.projects import ProjectService
+from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
 from vscs.infrastructure.ai import (
     AICredentialStore,
@@ -124,7 +125,11 @@ def build_application_context(
     logger: logging.Logger | None = None
     if selected.configure_logging:
         settings = configuration.settings.logging
-        root = configuration.settings.environment.logs_root.expanduser().resolve(strict=False)
+        root = (
+            configuration.settings.environment.logs_root
+            .expanduser()
+            .resolve(strict=False)
+        )
         logging_service = LoggingService(
             root,
             level=settings.level,
@@ -136,12 +141,28 @@ def build_application_context(
         services.register(LoggingService, logging_service)
 
     database = services.register(DatabaseManager, DatabaseManager())
-    projects = services.register(ProjectService, ProjectService(configuration, database))
+    projects = services.register(
+        ProjectService,
+        ProjectService(configuration, database),
+    )
     services.register(StoryService, StoryService(projects))
-    asset_repository = services.register(AssetRepository, AssetRepository(database))
-    assets = services.register(AssetService, AssetService(projects, asset_repository))
-    cap_repository = services.register(CAPRepository, CAPRepository(database))
-    caps = services.register(CAPService, CAPService(assets, cap_repository))
+    services.register(ShotPlanningService, ShotPlanningService(projects))
+    asset_repository = services.register(
+        AssetRepository,
+        AssetRepository(database),
+    )
+    assets = services.register(
+        AssetService,
+        AssetService(projects, asset_repository),
+    )
+    cap_repository = services.register(
+        CAPRepository,
+        CAPRepository(database),
+    )
+    caps = services.register(
+        CAPService,
+        CAPService(assets, cap_repository),
+    )
     reference_repository = services.register(
         CanonicalReferenceRepository,
         CanonicalReferenceRepository(database),
@@ -169,10 +190,16 @@ def build_application_context(
         if not health.ready:
             messages = tuple(health.messages)
             if logger is not None:
-                logger.warning("VSCS environment health check: %s", "; ".join(messages))
+                logger.warning(
+                    "VSCS environment health check: %s",
+                    "; ".join(messages),
+                )
 
     if logger is not None:
-        logger.info("VSCS dependency graph initialized in %s mode", selected.mode.value)
+        logger.info(
+            "VSCS dependency graph initialized in %s mode",
+            selected.mode.value,
+        )
     return ApplicationContext(
         services=services,
         configuration=configuration,
