@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .onboarding_steps import OnboardingSequence, OnboardingStep
 
-
 SCENE_EDITOR_ONBOARDING = OnboardingSequence(
     guide_id="scene-editor",
     title="Scene Editor Tour",
