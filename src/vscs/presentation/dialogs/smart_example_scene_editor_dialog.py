@@ -71,7 +71,7 @@ class SmartExampleSceneEditorDialog(WorkflowSceneEditorDialog):
         form = self._find_form_layout()
         if form is not None:
             tips = (
-                (self.duration_spin, "scene.duration"),
+                (self.production_estimate_label, "scene.duration"),
                 (self.summary_edit, "scene.summary"),
                 (self.heading_edit, "scene.heading"),
                 (self.scene_name_edit, "scene.name"),
