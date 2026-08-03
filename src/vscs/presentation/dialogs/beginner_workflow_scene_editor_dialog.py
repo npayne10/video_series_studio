@@ -48,7 +48,9 @@ class BeginnerWorkflowSceneEditorDialog(ValidationExplanationsSceneEditorDialog)
         self.episode_id_edit.textChanged.connect(self._update_workflow_progress)
         self.scene_name_edit.textChanged.connect(self._update_workflow_progress)
         self.heading_edit.textChanged.connect(self._update_workflow_progress)
-        self.location_combo.currentIndexChanged.connect(self._update_workflow_progress)
+        self.location_combo.currentIndexChanged.connect(
+            self._update_workflow_progress
+        )
         self.location_combo.editTextChanged.connect(self._update_workflow_progress)
         self.summary_edit.textChanged.connect(self._update_workflow_progress)
         self.participant_list.itemChanged.connect(self._update_workflow_progress)
@@ -73,6 +75,7 @@ class BeginnerWorkflowSceneEditorDialog(ValidationExplanationsSceneEditorDialog)
         dialogue_present = bool(self.dialogue_editor.dialogue_lines())
         has_participant_catalog = bool(self._participant_assets)
         has_required_asset_catalog = bool(self._required_assets)
+        ready_to_save = self.save_button.isEnabled()
         blocking_issues = any(
             issue.severity.value == "error" for issue in self.validation_explanations
         )
@@ -84,9 +87,13 @@ class BeginnerWorkflowSceneEditorDialog(ValidationExplanationsSceneEditorDialog)
             ),
             "location": bool(self.selected_location_id()),
             "summary": bool(self.summary_edit.toPlainText().strip()),
-            "participants": participants_selected or not has_participant_catalog,
-            "required_assets": assets_selected or not has_required_asset_catalog,
-            "dialogue": dialogue_present or not participants_selected,
+            "participants": (
+                participants_selected or not has_participant_catalog or ready_to_save
+            ),
+            "required_assets": (
+                assets_selected or not has_required_asset_catalog or ready_to_save
+            ),
+            "dialogue": dialogue_present or not participants_selected or ready_to_save,
             "production": bool(
                 self.time_of_day_combo.currentText()
                 and self.transition_combo.currentIndex() >= 0
