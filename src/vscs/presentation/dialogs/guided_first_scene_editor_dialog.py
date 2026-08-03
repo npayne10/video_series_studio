@@ -221,7 +221,7 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
 
     def _complete_guided_action(self) -> None:
         self._guided_action_active = False
-        QTimer.singleShot(0, self._show_active_tour_state)
+        self._show_active_tour_state()
 
     def _refresh_guided_action(self, *_args: object) -> None:
         if not self.onboarding.state.active:
