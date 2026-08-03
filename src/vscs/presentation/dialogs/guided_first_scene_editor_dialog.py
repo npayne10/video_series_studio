@@ -69,15 +69,23 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
         self.duration_spin.valueChanged.connect(self._refresh_guided_action)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
-        """Complete guided text entry when focus leaves an identity field."""
-        if event.type() is QEvent.Type.FocusOut and self._is_active_guided_step(
-            "scene_identity"
-        ):
+        """React only after identity fields have genuinely lost focus."""
+        if event.type() is QEvent.Type.FocusOut:
             if watched is self.scene_name_edit:
-                QTimer.singleShot(0, self._finish_scene_name_guided_action)
+                QTimer.singleShot(0, self._handle_scene_name_focus_out)
             elif watched is self.heading_edit:
-                QTimer.singleShot(0, self._finish_heading_guided_action)
+                QTimer.singleShot(0, self._handle_heading_focus_out)
         return super().eventFilter(watched, event)
+
+    def _handle_scene_name_focus_out(self) -> None:
+        if self.scene_name_edit.hasFocus():
+            return
+        self._finish_scene_name_guided_action()
+
+    def _handle_heading_focus_out(self) -> None:
+        if self.heading_edit.hasFocus():
+            return
+        self._finish_heading_guided_action()
 
     def _show_active_tour_state(self) -> None:
         state = self.onboarding.state
