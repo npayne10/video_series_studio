@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from enum import StrEnum
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -24,9 +26,24 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.assets import AssetError, AssetProjectNotOpenError, AssetService
-from vscs.application.shots import ProductionShot, ShotPlanningError, ShotPlanningService
-from vscs.application.ssie import CameraMovement, LensFamily, LightingMood, ShotPurpose, ShotSize
+from vscs.application.assets import (
+    AssetError,
+    AssetProjectNotOpenError,
+    AssetService,
+)
+from vscs.application.shots import (
+    ProductionShot,
+    ShotPlanningError,
+    ShotPlanningService,
+    ShotPlanningStatus,
+)
+from vscs.application.ssie import (
+    CameraMovement,
+    LensFamily,
+    LightingMood,
+    ShotPurpose,
+    ShotSize,
+)
 from vscs.domain.assets import AssetCategory
 
 
@@ -51,7 +68,9 @@ class ShotPlannerDialog(QDialog):
 
         self.shot_list = QListWidget(self)
         self.shot_list.setObjectName("shotPlannerList")
-        self.shot_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.shot_list.setDragDropMode(
+            QAbstractItemView.DragDropMode.InternalMove
+        )
         self.shot_list.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         self.add_button = QPushButton("New Shot", self)
@@ -91,7 +110,9 @@ class ShotPlannerDialog(QDialog):
         self.continuity_combo = QComboBox(self)
         self.continuity_notes_edit = QPlainTextEdit(self)
         self.storyboard_edit = QLineEdit(self)
-        self.storyboard_edit.setPlaceholderText("Optional image path, asset ID or storyboard reference")
+        self.storyboard_edit.setPlaceholderText(
+            "Optional image path, asset ID or storyboard reference"
+        )
         self.dialogue_edit = QPlainTextEdit(self)
         self.dialogue_edit.setPlaceholderText("One dialogue line per row")
         self.validation_label = QLabel(self)
@@ -126,7 +147,10 @@ class ShotPlannerDialog(QDialog):
         splitter.addWidget(right)
         splitter.setSizes((360, 820))
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, self)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Close,
+            self,
+        )
         buttons.rejected.connect(self.reject)
         buttons.accepted.connect(self.accept)
 
@@ -147,7 +171,7 @@ class ShotPlannerDialog(QDialog):
         self.refresh()
 
     @staticmethod
-    def _enum_combo(enum_type: type) -> QComboBox:
+    def _enum_combo(enum_type: type[StrEnum]) -> QComboBox:
         combo = QComboBox()
         for value in enum_type:
             combo.addItem(value.value.replace("_", " ").title(), value)
@@ -160,12 +184,16 @@ class ShotPlannerDialog(QDialog):
             assets = self.assets.list(category=category)
         except (AssetProjectNotOpenError, AssetError):
             assets = ()
-        for asset in sorted(assets, key=lambda item: (item.name.casefold(), item.asset_id)):
+        ordered = sorted(
+            assets,
+            key=lambda item: (item.name.casefold(), item.asset_id),
+        )
+        for asset in ordered:
             combo.addItem(f"{asset.name} — {asset.asset_id}", asset.asset_id)
         return combo
 
     def refresh(self, select_shot_id: str | None = None) -> None:
-        """Reload the current scene's persistent shots and continuity choices."""
+        """Reload the current scene's shots and continuity choices."""
         current = select_shot_id or self._current_shot_id
         self.shot_list.clear()
         try:
@@ -175,7 +203,8 @@ class ShotPlannerDialog(QDialog):
             return
         for shot in shots:
             item = QListWidgetItem(
-                f"{shot.sequence_number:03d} — {shot.title} [{shot.status.label}]"
+                f"{shot.sequence_number:03d} — {shot.title} "
+                f"[{shot.status.label}]"
             )
             item.setData(Qt.ItemDataRole.UserRole, shot.shot_id)
             self.shot_list.addItem(item)
@@ -190,14 +219,18 @@ class ShotPlannerDialog(QDialog):
         else:
             self._new_shot()
 
-    def _populate_continuity(self, shots: tuple[ProductionShot, ...]) -> None:
+    def _populate_continuity(
+        self,
+        shots: tuple[ProductionShot, ...],
+    ) -> None:
         selected = self.continuity_combo.currentData()
         self.continuity_combo.clear()
         self.continuity_combo.addItem("No incoming shot", None)
         for shot in shots:
             if shot.shot_id != self._current_shot_id:
                 self.continuity_combo.addItem(
-                    f"{shot.sequence_number:03d} — {shot.title}", shot.shot_id
+                    f"{shot.sequence_number:03d} — {shot.title}",
+                    shot.shot_id,
                 )
         index = self.continuity_combo.findData(selected)
         if index >= 0:
@@ -205,7 +238,10 @@ class ShotPlannerDialog(QDialog):
 
     def _new_shot(self) -> None:
         sequence = self.shots.next_sequence_number(self.scene_id)
-        self._current_shot_id = self.shots.generate_shot_id(self.scene_id, sequence)
+        self._current_shot_id = self.shots.generate_shot_id(
+            self.scene_id,
+            sequence,
+        )
         self.shot_id_edit.setText(self._current_shot_id)
         self.title_edit.clear()
         self.description_edit.clear()
@@ -236,11 +272,20 @@ class ShotPlannerDialog(QDialog):
         self._select_data(self.movement_combo, shot.camera_movement)
         self._select_data(self.lens_combo, shot.lens_family)
         self._select_data(self.lighting_mood_combo, shot.lighting_mood)
-        self._select_data(self.camera_profile_combo, shot.camera_profile_id)
-        self._select_data(self.lighting_profile_combo, shot.lighting_profile_id)
+        self._select_data(
+            self.camera_profile_combo,
+            shot.camera_profile_id,
+        )
+        self._select_data(
+            self.lighting_profile_combo,
+            shot.lighting_profile_id,
+        )
         self.duration_spin.setValue(shot.estimated_duration_seconds)
         self._populate_continuity(self.shots.list_shots(self.scene_id))
-        self._select_data(self.continuity_combo, shot.continuity_from_shot_id)
+        self._select_data(
+            self.continuity_combo,
+            shot.continuity_from_shot_id,
+        )
         self.continuity_notes_edit.setPlainText(shot.continuity_notes)
         self.storyboard_edit.setText(shot.storyboard_reference)
         self.dialogue_edit.setPlainText("\n".join(shot.dialogue_lines))
@@ -253,7 +298,8 @@ class ShotPlannerDialog(QDialog):
 
     def _shot_from_form(self) -> ProductionShot:
         shot_id = self._current_shot_id or self.shots.generate_shot_id(
-            self.scene_id, self.shots.next_sequence_number(self.scene_id)
+            self.scene_id,
+            self.shots.next_sequence_number(self.scene_id),
         )
         existing = self.shots.shot(shot_id)
         sequence = (
@@ -276,7 +322,9 @@ class ShotPlannerDialog(QDialog):
             lighting_mood=self.lighting_mood_combo.currentData(),
             estimated_duration_seconds=self.duration_spin.value(),
             continuity_from_shot_id=self.continuity_combo.currentData(),
-            continuity_notes=self.continuity_notes_edit.toPlainText().strip(),
+            continuity_notes=(
+                self.continuity_notes_edit.toPlainText().strip()
+            ),
             storyboard_reference=self.storyboard_edit.text().strip(),
             dialogue_lines=tuple(
                 line.strip()
@@ -284,7 +332,12 @@ class ShotPlannerDialog(QDialog):
                 if line.strip()
             ),
         )
-        return replace(shot, status=shot.status.READY if shot.ready else shot.status.DRAFT)
+        status = (
+            ShotPlanningStatus.READY
+            if shot.ready
+            else ShotPlanningStatus.DRAFT
+        )
+        return replace(shot, status=status)
 
     def _save_current(self) -> None:
         try:
@@ -295,11 +348,17 @@ class ShotPlannerDialog(QDialog):
         self.refresh(shot.shot_id)
 
     def _delete_shot(self) -> None:
-        if self._current_shot_id is None or self.shots.shot(self._current_shot_id) is None:
+        shot_id = self._current_shot_id
+        if shot_id is None or self.shots.shot(shot_id) is None:
             return
-        if QMessageBox.question(self, "Delete Shot", "Delete the selected shot?") != QMessageBox.StandardButton.Yes:
+        response = QMessageBox.question(
+            self,
+            "Delete Shot",
+            "Delete the selected shot?",
+        )
+        if response != QMessageBox.StandardButton.Yes:
             return
-        self.shots.delete_shot(self._current_shot_id)
+        self.shots.delete_shot(shot_id)
         self._current_shot_id = None
         self.refresh()
 
@@ -315,10 +374,16 @@ class ShotPlannerDialog(QDialog):
 
     def _persist_visual_order(self, *_args: object) -> None:
         ordered = tuple(
-            str(self.shot_list.item(index).data(Qt.ItemDataRole.UserRole))
+            str(
+                self.shot_list.item(index).data(
+                    Qt.ItemDataRole.UserRole
+                )
+            )
             for index in range(self.shot_list.count())
         )
-        if ordered and all(self.shots.shot(shot_id) is not None for shot_id in ordered):
+        if ordered and all(
+            self.shots.shot(shot_id) is not None for shot_id in ordered
+        ):
             self.shots.reorder_scene(self.scene_id, ordered)
             self.refresh(self._current_shot_id)
 
