@@ -8,11 +8,15 @@ from pathlib import Path
 from vscs.application.projects import ProjectService
 from vscs.application.ssie import Scene
 from vscs.application.story import ProductionContainerType, StoryService
+from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.database import DatabaseManager
 
 
 def _open_project(tmp_path: Path) -> StoryService:
-    projects = ProjectService(tmp_path)
-    projects.create_project("Container Test", tmp_path)
+    configuration = ConfigurationService(tmp_path / "settings.yaml")
+    configuration.load()
+    projects = ProjectService(configuration, DatabaseManager())
+    projects.create(tmp_path / "Project", name="Container Test")
     return StoryService(projects)
 
 
