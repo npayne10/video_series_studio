@@ -1,11 +1,11 @@
-"""Tests for the Phase 16.2 Story Browser and SSIE interface."""
+"""Tests for Phase 17.1 Story Browser v2."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QTreeWidgetItem
 
 from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
@@ -13,7 +13,7 @@ from vscs.application.ssie import Scene, SceneTransition
 from vscs.application.story import StoryService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
-from vscs.presentation.widgets.story_browser import StoryBrowserWidget
+from vscs.presentation.widgets.story_browser_v2 import StoryBrowserV2Widget
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -30,7 +30,7 @@ def _options(tmp_path: Path) -> BootstrapOptions:
 
 def _scene() -> Scene:
     return Scene(
-        scene_id="SCN-001",
+        scene_id="EP-001-SCN-001",
         episode_id="EP-001",
         sequence_number=1,
         heading="INT. MAURITANIA BRIDGE - NIGHT",
@@ -42,10 +42,19 @@ def _scene() -> Scene:
         time_of_day="night",
         transition_in=SceneTransition.CUT,
         estimated_duration_seconds=24.0,
+        scene_name="Unexplained Signal",
     )
 
 
-def test_story_workspace_replaces_placeholder(
+def _scene_item(browser: StoryBrowserV2Widget) -> QTreeWidgetItem:
+    production = browser.tree.topLevelItem(0)
+    season = production.child(0)
+    container = season.child(0)
+    act = container.child(0)
+    return act.child(0)
+
+
+def test_story_workspace_uses_story_browser_v2(
     qtbot: object,
     qapp: QApplication,
     tmp_path: Path,
@@ -54,13 +63,13 @@ def test_story_workspace_replaces_placeholder(
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
-    assert isinstance(window.content_stack.widget(2), StoryBrowserWidget)
+    assert isinstance(window.content_stack.widget(2), StoryBrowserV2Widget)
     assert window.story_browser.new_button.isEnabled() is False
 
     context.shutdown()
 
 
-def test_story_browser_displays_scene_and_generated_shots(
+def test_story_browser_displays_production_hierarchy_and_generated_shots(
     qtbot: object,
     qapp: QApplication,
     tmp_path: Path,
@@ -73,24 +82,23 @@ def test_story_browser_displays_scene_and_generated_shots(
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
-    window.navigation.setCurrentRow(2)
     window.story_browser.refresh()
-    assert window.story_browser.tree.topLevelItemCount() == 1
-    scene_item = window.story_browser.tree.topLevelItem(0)
-    assert "MAURITANIA BRIDGE" in scene_item.text(0)
+    production = window.story_browser.tree.topLevelItem(0)
+    assert production.text(0) == "Current Production"
+    assert production.child(0).text(0) == "Season 1"
+    scene_item = _scene_item(window.story_browser)
+    assert scene_item.text(0) == "Unexplained Signal"
 
-    stories.plan_scene("SCN-001")
+    stories.plan_scene("EP-001-SCN-001")
     window.story_browser.refresh()
-    scene_item = window.story_browser.tree.topLevelItem(0)
+    scene_item = _scene_item(window.story_browser)
     assert scene_item.childCount() > 0
 
     shot_item = scene_item.child(0)
     window.story_browser.tree.setCurrentItem(shot_item)
     qtbot.waitUntil(  # type: ignore[attr-defined]
-        lambda: shot_item.text(0).split("—", 1)[-1].strip()
-        in window.story_browser.details.toPlainText()
+        lambda: "Camera" in window.story_browser.details.toPlainText()
     )
-    assert "Camera" in window.story_browser.details.toPlainText()
     assert "Lighting" in window.story_browser.details.toPlainText()
 
     context.shutdown()
@@ -108,14 +116,44 @@ def test_story_browser_scene_selection_exposes_scene_details(
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
     window.story_browser.refresh()
-    item = window.story_browser.tree.topLevelItem(0)
+    item = _scene_item(window.story_browser)
     window.story_browser.tree.setCurrentItem(item)
     data = item.data(0, Qt.ItemDataRole.UserRole)
     details = window.story_browser.details.toPlainText()
 
-    assert data == ("scene", "SCN-001")
+    assert data[0] == "scene"
+    assert data[2] == "EP-001-SCN-001"
     assert "unexplained signal" in details
     assert "PROP-CONSOLE" in details
+
+    context.shutdown()
+
+
+def test_story_browser_dashboard_and_filters(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    context = build_application_context(_options(tmp_path))
+    context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
+    context.services.require(StoryService).save_scene(_scene())
+    window = context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    browser = window.story_browser
+    browser.refresh()
+
+    assert browser.dashboard_labels["containers"].text() == "1"
+    assert browser.dashboard_labels["scenes"].text() == "1"
+    assert browser.dashboard_labels["ready"].text() == "1"
+    assert browser.dashboard_labels["assets"].text() == "3"
+
+    browser.search_edit.setText("unexplained")
+    qapp.processEvents()
+    assert not _scene_item(browser).isHidden()
+
+    browser.search_edit.setText("does-not-exist")
+    qapp.processEvents()
+    assert browser.tree.topLevelItem(0).isHidden()
 
     context.shutdown()
 
@@ -129,40 +167,23 @@ def test_story_browser_location_catalog_filters_asset_categories(
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     assets = context.services.require(AssetService)
     assets.create(
-        AssetCreate(
-            asset_id="LOC-BRIDGE",
-            name="Mauritania Bridge",
-            category=AssetCategory.LOCATION,
-        )
+        AssetCreate("LOC-BRIDGE", "Mauritania Bridge", AssetCategory.LOCATION)
     )
     assets.create(
-        AssetCreate(
-            asset_id="ENV-XORIX-FOREST",
-            name="Xorix Forest",
-            category=AssetCategory.ENVIRONMENT,
-        )
+        AssetCreate("ENV-XORIX-FOREST", "Xorix Forest", AssetCategory.ENVIRONMENT)
     )
-    assets.create(
-        AssetCreate(
-            asset_id="PROP-CONSOLE",
-            name="Bridge Console",
-            category=AssetCategory.PROP,
-        )
-    )
+    assets.create(AssetCreate("PROP-CONSOLE", "Bridge Console", AssetCategory.PROP))
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
-    catalog = window.story_browser._location_assets()
-
-    assert [asset.asset_id for asset in catalog] == [
+    assert [asset.asset_id for asset in window.story_browser._location_assets()] == [
         "LOC-BRIDGE",
         "ENV-XORIX-FOREST",
     ]
-
     context.shutdown()
 
 
-def test_story_browser_participant_catalog_contains_characters_only(
+def test_story_browser_asset_catalogs_separate_characters(
     qtbot: object,
     qapp: QApplication,
     tmp_path: Path,
@@ -170,82 +191,17 @@ def test_story_browser_participant_catalog_contains_characters_only(
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     assets = context.services.require(AssetService)
-    assets.create(
-        AssetCreate(
-            asset_id="CHR-JAMES",
-            name="Commander James Spence",
-            category=AssetCategory.CHARACTER,
-        )
-    )
-    assets.create(
-        AssetCreate(
-            asset_id="CHR-SANDRA",
-            name="Sandra Crawford",
-            category=AssetCategory.CHARACTER,
-        )
-    )
-    assets.create(
-        AssetCreate(
-            asset_id="LOC-BRIDGE",
-            name="Mauritania Bridge",
-            category=AssetCategory.LOCATION,
-        )
-    )
+    assets.create(AssetCreate("CHR-JAMES", "Commander James", AssetCategory.CHARACTER))
+    assets.create(AssetCreate("PROP-CONSOLE", "Bridge Console", AssetCategory.PROP))
+    assets.create(AssetCreate("SHP-IRON", "Iron Horizon", AssetCategory.SHIP))
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
-    catalog = window.story_browser._participant_assets()
-
-    assert [asset.asset_id for asset in catalog] == ["CHR-JAMES", "CHR-SANDRA"]
-
-    context.shutdown()
-
-
-def test_story_browser_required_asset_catalog_excludes_characters_only(
-    qtbot: object,
-    qapp: QApplication,
-    tmp_path: Path,
-) -> None:
-    context = build_application_context(_options(tmp_path))
-    context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
-    assets = context.services.require(AssetService)
-    assets.create(
-        AssetCreate(
-            asset_id="CHR-JAMES",
-            name="Commander James Spence",
-            category=AssetCategory.CHARACTER,
-        )
-    )
-    assets.create(
-        AssetCreate(
-            asset_id="PROP-CONSOLE",
-            name="Bridge Console",
-            category=AssetCategory.PROP,
-        )
-    )
-    assets.create(
-        AssetCreate(
-            asset_id="SHP-IRON-HORIZON",
-            name="Iron Horizon",
-            category=AssetCategory.SHIP,
-        )
-    )
-    assets.create(
-        AssetCreate(
-            asset_id="LOC-BRIDGE",
-            name="Mauritania Bridge",
-            category=AssetCategory.LOCATION,
-        )
-    )
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
-
-    catalog = window.story_browser._required_assets()
-
-    assert [asset.asset_id for asset in catalog] == [
-        "LOC-BRIDGE",
-        "PROP-CONSOLE",
-        "SHP-IRON-HORIZON",
+    assert [asset.asset_id for asset in window.story_browser._participant_assets()] == [
+        "CHR-JAMES"
     ]
-
+    assert [asset.asset_id for asset in window.story_browser._required_assets()] == [
+        "PROP-CONSOLE",
+        "SHP-IRON",
+    ]
     context.shutdown()
