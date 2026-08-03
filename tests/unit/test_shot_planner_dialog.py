@@ -8,7 +8,10 @@ from PySide6.QtWidgets import QApplication
 
 from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
-from vscs.application.shots import ShotPlanningService, ShotPlanningStatus
+from vscs.application.shots import (
+    ShotPlanningService,
+    ShotPlanningStatus,
+)
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.presentation.dialogs.shot_planner_dialog import ShotPlannerDialog
@@ -34,7 +37,7 @@ def test_shot_planner_creates_ready_shot(
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
-    service = ShotPlanningService(projects)
+    service = context.services.require(ShotPlanningService)
     dialog = ShotPlannerDialog(
         "EP-001-SCN-001",
         service,
@@ -85,7 +88,7 @@ def test_shot_planner_lists_camera_and_lighting_profiles(
     )
     dialog = ShotPlannerDialog(
         "EP-001-SCN-001",
-        ShotPlanningService(projects),
+        context.services.require(ShotPlanningService),
         assets,
     )
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
@@ -95,7 +98,7 @@ def test_shot_planner_lists_camera_and_lighting_profiles(
     context.shutdown()
 
 
-def test_shot_planner_allocates_continuity_between_shots(
+def test_shot_planner_allocates_continuity_and_blocking(
     qtbot: object,
     qapp: QApplication,
     tmp_path: Path,
@@ -103,7 +106,7 @@ def test_shot_planner_allocates_continuity_between_shots(
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
-    service = ShotPlanningService(projects)
+    service = context.services.require(ShotPlanningService)
     dialog = ShotPlannerDialog(
         "EP-001-SCN-001",
         service,
@@ -124,10 +127,16 @@ def test_shot_planner_allocates_continuity_between_shots(
     index = dialog.continuity_combo.findData(first.shot_id)
     assert index >= 0
     dialog.continuity_combo.setCurrentIndex(index)
-    dialog.continuity_notes_edit.setPlainText("Maintain James's screen-left eyeline.")
+    dialog.continuity_notes_edit.setPlainText(
+        "Maintain James's screen-left eyeline."
+    )
+    dialog.blocking_edit.setPlainText(
+        "James remains at the command rail and turns toward the main display."
+    )
     dialog.save_button.click()
 
     second = service.list_shots()[1]
     assert second.continuity_from_shot_id == first.shot_id
     assert "screen-left" in second.continuity_notes
+    assert "command rail" in second.blocking_notes
     context.shutdown()
