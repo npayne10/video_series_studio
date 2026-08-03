@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer
 from PySide6.QtWidgets import QWidget
 
 from vscs.application.ssie import Scene
@@ -53,12 +53,8 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
             self._refresh_guided_action
         )
         self.episode_id_edit.textChanged.connect(self._refresh_guided_action)
-        self.scene_name_edit.editingFinished.connect(
-            self._finish_scene_name_guided_action
-        )
-        self.heading_edit.editingFinished.connect(
-            self._finish_heading_guided_action
-        )
+        self.scene_name_edit.installEventFilter(self)
+        self.heading_edit.installEventFilter(self)
         self.location_combo.currentIndexChanged.connect(self._refresh_guided_action)
         self.location_combo.currentTextChanged.connect(self._refresh_guided_action)
         self.summary_edit.textChanged.connect(self._refresh_guided_action)
@@ -71,6 +67,17 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
             self._refresh_guided_action
         )
         self.duration_spin.valueChanged.connect(self._refresh_guided_action)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        """Complete guided text entry when focus leaves an identity field."""
+        if event.type() is QEvent.Type.FocusOut and self._is_active_guided_step(
+            "scene_identity"
+        ):
+            if watched is self.scene_name_edit:
+                QTimer.singleShot(0, self._finish_scene_name_guided_action)
+            elif watched is self.heading_edit:
+                QTimer.singleShot(0, self._finish_heading_guided_action)
+        return super().eventFilter(watched, event)
 
     def _show_active_tour_state(self) -> None:
         state = self.onboarding.state
