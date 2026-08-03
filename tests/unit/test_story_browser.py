@@ -167,12 +167,26 @@ def test_story_browser_location_catalog_filters_asset_categories(
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     assets = context.services.require(AssetService)
     assets.create(
-        AssetCreate("LOC-BRIDGE", "Mauritania Bridge", AssetCategory.LOCATION)
+        AssetCreate(
+            asset_id="LOC-BRIDGE",
+            name="Mauritania Bridge",
+            category=AssetCategory.LOCATION,
+        )
     )
     assets.create(
-        AssetCreate("ENV-XORIX-FOREST", "Xorix Forest", AssetCategory.ENVIRONMENT)
+        AssetCreate(
+            asset_id="ENV-XORIX-FOREST",
+            name="Xorix Forest",
+            category=AssetCategory.ENVIRONMENT,
+        )
     )
-    assets.create(AssetCreate("PROP-CONSOLE", "Bridge Console", AssetCategory.PROP))
+    assets.create(
+        AssetCreate(
+            asset_id="PROP-CONSOLE",
+            name="Bridge Console",
+            category=AssetCategory.PROP,
+        )
+    )
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
@@ -191,9 +205,27 @@ def test_story_browser_asset_catalogs_separate_characters(
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     assets = context.services.require(AssetService)
-    assets.create(AssetCreate("CHR-JAMES", "Commander James", AssetCategory.CHARACTER))
-    assets.create(AssetCreate("PROP-CONSOLE", "Bridge Console", AssetCategory.PROP))
-    assets.create(AssetCreate("SHP-IRON", "Iron Horizon", AssetCategory.SHIP))
+    assets.create(
+        AssetCreate(
+            asset_id="CHR-JAMES",
+            name="Commander James",
+            category=AssetCategory.CHARACTER,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="PROP-CONSOLE",
+            name="Bridge Console",
+            category=AssetCategory.PROP,
+        )
+    )
+    assets.create(
+        AssetCreate(
+            asset_id="SHP-IRON",
+            name="Iron Horizon",
+            category=AssetCategory.SHIP,
+        )
+    )
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
