@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
-from vscs.application.ssie import CameraMovement, LensFamily, LightingMood, ShotPurpose, ShotSize
+from vscs.application.ssie import (
+    CameraMovement,
+    LensFamily,
+    LightingMood,
+    ShotPurpose,
+    ShotSize,
+)
 
 from .models import ProductionShot, ShotPlanningStatus, build_shot_id
 
@@ -31,29 +37,73 @@ class ShotPlanningService:
             raise ProjectNotOpenError("No VSCS project is currently open")
         return self.projects.project_directory / "story" / self.FILE_NAME
 
-    def list_shots(self, scene_id: str | None = None) -> tuple[ProductionShot, ...]:
+    def list_shots(
+        self,
+        scene_id: str | None = None,
+    ) -> tuple[ProductionShot, ...]:
         """Load shots in stable scene and sequence order."""
         path = self.shot_file
         if not path.is_file():
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            shots = tuple(self._from_dict(item) for item in raw.get("shots", []))
-        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise ShotPlanningError(f"Unable to load shot plans: {exc}") from exc
+            shots = tuple(
+                self._from_dict(item) for item in raw.get("shots", [])
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise ShotPlanningError(
+                f"Unable to load shot plans: {exc}"
+            ) from exc
         if scene_id is not None:
-            shots = tuple(shot for shot in shots if shot.scene_id == scene_id)
-        return tuple(sorted(shots, key=lambda shot: (shot.scene_id, shot.sequence_number, shot.shot_id)))
+            shots = tuple(
+                shot for shot in shots if shot.scene_id == scene_id
+            )
+        return tuple(
+            sorted(
+                shots,
+                key=lambda shot: (
+                    shot.scene_id,
+                    shot.sequence_number,
+                    shot.shot_id,
+                ),
+            )
+        )
 
     def shot(self, shot_id: str) -> ProductionShot | None:
         """Return one persistent shot by identity."""
-        return next((shot for shot in self.list_shots() if shot.shot_id == shot_id), None)
+        return next(
+            (
+                shot
+                for shot in self.list_shots()
+                if shot.shot_id == shot_id
+            ),
+            None,
+        )
 
     def next_sequence_number(self, scene_id: str) -> int:
         """Return the next available shot number inside a scene."""
-        return max((shot.sequence_number for shot in self.list_shots(scene_id)), default=0) + 1
+        return (
+            max(
+                (
+                    shot.sequence_number
+                    for shot in self.list_shots(scene_id)
+                ),
+                default=0,
+            )
+            + 1
+        )
 
-    def generate_shot_id(self, scene_id: str, sequence_number: int) -> str:
+    def generate_shot_id(
+        self,
+        scene_id: str,
+        sequence_number: int,
+    ) -> str:
         """Generate a unique stable shot ID."""
         base = build_shot_id(scene_id, sequence_number)
         existing = {shot.shot_id for shot in self.list_shots()}
@@ -88,20 +138,31 @@ class ShotPlanningService:
         self._write(tuple(shots.values()))
         return True
 
-    def reorder_scene(self, scene_id: str, ordered_shot_ids: tuple[str, ...]) -> tuple[ProductionShot, ...]:
+    def reorder_scene(
+        self,
+        scene_id: str,
+        ordered_shot_ids: tuple[str, ...],
+    ) -> tuple[ProductionShot, ...]:
         """Persist an explicit sequence order for every shot in a scene."""
         current = self.list_shots(scene_id)
         by_id = {shot.shot_id: shot for shot in current}
         if set(ordered_shot_ids) != set(by_id):
-            raise ValueError("Reorder must include every shot in the scene exactly once")
-        replacements = {
-            shot_id: ProductionShot(
-                **{**asdict(by_id[shot_id]), "sequence_number": index}
+            raise ValueError(
+                "Reorder must include every shot in the scene exactly once"
             )
-            for index, shot_id in enumerate(ordered_shot_ids, start=1)
+        replacements = {
+            shot_id: replace(
+                by_id[shot_id],
+                sequence_number=index,
+            )
+            for index, shot_id in enumerate(
+                ordered_shot_ids,
+                start=1,
+            )
         }
         all_shots = tuple(
-            replacements.get(shot.shot_id, shot) for shot in self.list_shots()
+            replacements.get(shot.shot_id, shot)
+            for shot in self.list_shots()
         )
         self._write(all_shots)
         return self.list_shots(scene_id)
@@ -109,7 +170,14 @@ class ShotPlanningService:
     def _write(self, shots: tuple[ProductionShot, ...]) -> None:
         path = self.shot_file
         path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(shots, key=lambda shot: (shot.scene_id, shot.sequence_number, shot.shot_id))
+        ordered = sorted(
+            shots,
+            key=lambda shot: (
+                shot.scene_id,
+                shot.sequence_number,
+                shot.shot_id,
+            ),
+        )
         payload = {
             "schema_version": "1.0",
             "shots": [self._to_dict(shot) for shot in ordered],
@@ -117,13 +185,21 @@ class ShotPlanningService:
         temporary = path.with_suffix(path.suffix + ".tmp")
         try:
             temporary.write_text(
-                json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                json.dumps(
+                    payload,
+                    indent=2,
+                    sort_keys=True,
+                    ensure_ascii=False,
+                )
+                + "\n",
                 encoding="utf-8",
             )
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise ShotPlanningError(f"Unable to save shot plans: {exc}") from exc
+            raise ShotPlanningError(
+                f"Unable to save shot plans: {exc}"
+            ) from exc
 
     @staticmethod
     def _to_dict(shot: ProductionShot) -> dict[str, Any]:
@@ -144,14 +220,27 @@ class ShotPlanningService:
             sequence_number=int(raw["sequence_number"]),
             title=str(raw["title"]),
             description=str(raw["description"]),
-            purpose=ShotPurpose(str(raw.get("purpose", ShotPurpose.COVERAGE.value))),
-            shot_size=ShotSize(str(raw.get("shot_size", ShotSize.MEDIUM.value))),
-            camera_movement=CameraMovement(
-                str(raw.get("camera_movement", CameraMovement.STATIC.value))
+            purpose=ShotPurpose(
+                str(raw.get("purpose", ShotPurpose.COVERAGE.value))
             ),
-            lens_family=LensFamily(str(raw.get("lens_family", LensFamily.NORMAL.value))),
+            shot_size=ShotSize(
+                str(raw.get("shot_size", ShotSize.MEDIUM.value))
+            ),
+            camera_movement=CameraMovement(
+                str(
+                    raw.get(
+                        "camera_movement",
+                        CameraMovement.STATIC.value,
+                    )
+                )
+            ),
+            lens_family=LensFamily(
+                str(raw.get("lens_family", LensFamily.NORMAL.value))
+            ),
             camera_profile_id=(
-                None if raw.get("camera_profile_id") is None else str(raw["camera_profile_id"])
+                None
+                if raw.get("camera_profile_id") is None
+                else str(raw["camera_profile_id"])
             ),
             lighting_profile_id=(
                 None
@@ -159,20 +248,43 @@ class ShotPlanningService:
                 else str(raw["lighting_profile_id"])
             ),
             lighting_mood=LightingMood(
-                str(raw.get("lighting_mood", LightingMood.NATURALISTIC.value))
+                str(
+                    raw.get(
+                        "lighting_mood",
+                        LightingMood.NATURALISTIC.value,
+                    )
+                )
             ),
-            estimated_duration_seconds=float(raw.get("estimated_duration_seconds", 5.0)),
+            estimated_duration_seconds=float(
+                raw.get("estimated_duration_seconds", 5.0)
+            ),
             continuity_from_shot_id=(
                 None
                 if raw.get("continuity_from_shot_id") is None
                 else str(raw["continuity_from_shot_id"])
             ),
             continuity_notes=str(raw.get("continuity_notes", "")),
-            storyboard_reference=str(raw.get("storyboard_reference", "")),
-            dialogue_lines=tuple(str(value) for value in raw.get("dialogue_lines", [])),
-            subject_asset_ids=tuple(str(value) for value in raw.get("subject_asset_ids", [])),
-            required_asset_ids=tuple(str(value) for value in raw.get("required_asset_ids", [])),
+            storyboard_reference=str(
+                raw.get("storyboard_reference", "")
+            ),
+            dialogue_lines=tuple(
+                str(value)
+                for value in raw.get("dialogue_lines", [])
+            ),
+            subject_asset_ids=tuple(
+                str(value)
+                for value in raw.get("subject_asset_ids", [])
+            ),
+            required_asset_ids=tuple(
+                str(value)
+                for value in raw.get("required_asset_ids", [])
+            ),
             status=ShotPlanningStatus(
-                str(raw.get("status", ShotPlanningStatus.DRAFT.value))
+                str(
+                    raw.get(
+                        "status",
+                        ShotPlanningStatus.DRAFT.value,
+                    )
+                )
             ),
         )
