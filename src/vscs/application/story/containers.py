@@ -10,6 +10,8 @@ class ProductionContainerType(StrEnum):
     """Supported story containers that can own scenes."""
 
     EPISODE = "episode"
+    FILM = "film"
+    SHORT = "short"
     TRAILER = "trailer"
     TEASER = "teaser"
     PROMO = "promo"
@@ -26,6 +28,8 @@ class ProductionContainerType(StrEnum):
         """Return the initial canonical ID for this container type."""
         return {
             ProductionContainerType.EPISODE: "EP-001",
+            ProductionContainerType.FILM: "FILM-01",
+            ProductionContainerType.SHORT: "SHORT-01",
             ProductionContainerType.TRAILER: "T01",
             ProductionContainerType.TEASER: "TEASER-01",
             ProductionContainerType.PROMO: "PROMO-01",
@@ -39,6 +43,10 @@ def infer_container_type(container_id: str) -> ProductionContainerType:
     normalized = container_id.strip().upper()
     if normalized.startswith("EP-"):
         return ProductionContainerType.EPISODE
+    if normalized.startswith("FILM-"):
+        return ProductionContainerType.FILM
+    if normalized.startswith("SHORT-"):
+        return ProductionContainerType.SHORT
     if normalized.startswith("TEASER-"):
         return ProductionContainerType.TEASER
     if normalized.startswith("PROMO-"):
