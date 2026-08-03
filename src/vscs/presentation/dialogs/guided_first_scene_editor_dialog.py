@@ -53,8 +53,12 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
             self._refresh_guided_action
         )
         self.episode_id_edit.textChanged.connect(self._refresh_guided_action)
-        self.scene_name_edit.textChanged.connect(self._refresh_guided_action)
-        self.heading_edit.textChanged.connect(self._refresh_guided_action)
+        self.scene_name_edit.editingFinished.connect(
+            self._finish_scene_name_guided_action
+        )
+        self.heading_edit.editingFinished.connect(
+            self._finish_heading_guided_action
+        )
         self.location_combo.currentIndexChanged.connect(self._refresh_guided_action)
         self.location_combo.currentTextChanged.connect(self._refresh_guided_action)
         self.summary_edit.textChanged.connect(self._refresh_guided_action)
@@ -189,14 +193,45 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
             "location": "scene.location",
         }.get(step_id)
 
+    def _finish_scene_name_guided_action(self) -> None:
+        if not self._is_active_guided_step("scene_identity"):
+            return
+        if not self.scene_name_edit.text().strip():
+            return
+        if self.heading_edit.text().strip():
+            self._complete_guided_action()
+            return
+        self.heading_edit.setFocus(Qt.FocusReason.OtherFocusReason)
+        self.scroll_area.ensureWidgetVisible(self.heading_edit, 20, 20)
+        self.show_live_topic("scene.heading")
+
+    def _finish_heading_guided_action(self) -> None:
+        if not self._is_active_guided_step("scene_identity"):
+            return
+        if self._step_ready("scene_identity"):
+            self._complete_guided_action()
+
+    def _is_active_guided_step(self, step_id: str) -> bool:
+        current = self.onboarding.state.current_step
+        return bool(
+            self._guided_action_active
+            and current is not None
+            and current.step_id == step_id
+        )
+
+    def _complete_guided_action(self) -> None:
+        self._guided_action_active = False
+        QTimer.singleShot(0, self._show_active_tour_state)
+
     def _refresh_guided_action(self, *_args: object) -> None:
         if not self.onboarding.state.active:
             return
         if self._guided_action_active and self.onboarding.state.current_step is not None:
             step_id = self.onboarding.state.current_step.step_id
+            if step_id == "scene_identity":
+                return
             if self._step_ready(step_id):
-                self._guided_action_active = False
-                QTimer.singleShot(0, self._show_active_tour_state)
+                self._complete_guided_action()
             return
         if self.tour_overlay.isVisible():
             QTimer.singleShot(0, self._show_active_tour_state)
