@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .certification_matrix import ONBOARDING_FUNCTIONAL_MATRIX
+from certification_matrix import ONBOARDING_FUNCTIONAL_MATRIX
 
 
 @dataclass(frozen=True, slots=True)
