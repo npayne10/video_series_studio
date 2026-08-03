@@ -95,6 +95,8 @@ def test_adaptive_state_is_restored_between_sessions(
     settings = _settings(tmp_path)
     first = AdaptiveWorkspaceSceneEditorDialog(settings=settings)
     qtbot.addWidget(first)  # type: ignore[attr-defined]
+    first.show()
+    qapp.processEvents()
     first.workflow_panel.set_collapsed(False)
     first.summary_panel.set_collapsed(False)
     first.validation_panel.set_collapsed(True)
@@ -104,6 +106,8 @@ def test_adaptive_state_is_restored_between_sessions(
 
     second = AdaptiveWorkspaceSceneEditorDialog(settings=settings)
     qtbot.addWidget(second)  # type: ignore[attr-defined]
+    second.show()
+    qapp.processEvents()
 
     assert not second.workflow_panel.collapsed
     assert not second.summary_panel.collapsed
