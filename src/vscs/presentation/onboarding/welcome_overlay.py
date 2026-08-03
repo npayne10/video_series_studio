@@ -84,7 +84,9 @@ class OnboardingWelcomeOverlay(QFrame):
         actions.addStretch(1)
         self.skip_button = QPushButton("Skip", card)
         self.skip_button.setObjectName("onboardingWelcomeSkip")
-        self.skip_button.setToolTip("Skip this tour and do not show it automatically again.")
+        self.skip_button.setToolTip(
+            "Skip this tour and do not show it automatically again."
+        )
         self.start_button = QPushButton("Start Guide", card)
         self.start_button.setObjectName("onboardingWelcomeStart")
         self.start_button.setDefault(True)
@@ -104,8 +106,12 @@ class OnboardingWelcomeOverlay(QFrame):
         layout.addLayout(centered)
         layout.addStretch(1)
 
-        self.start_button.clicked.connect(self.start_requested.emit)
-        self.skip_button.clicked.connect(self.skip_requested.emit)
+        self.start_button.clicked.connect(
+            lambda _checked=False: self.start_requested.emit()
+        )
+        self.skip_button.clicked.connect(
+            lambda _checked=False: self.skip_requested.emit()
+        )
         parent.installEventFilter(self)
         self.hide()
 
