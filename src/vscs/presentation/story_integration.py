@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from vscs.application.assets import AssetService
+from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
@@ -38,6 +39,7 @@ def install_story_browser() -> None:
         window.story_browser = ShotPlanningStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
+            window.services.require(ShotPlanningService),
         )
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
