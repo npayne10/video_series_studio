@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QByteArray, Qt
+from PySide6.QtCore import QByteArray, QTimer, Qt
+from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import QSplitter, QVBoxLayout, QWidget
 
 from vscs.application.ssie import Scene
@@ -28,9 +29,10 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
         parent: QWidget | None = None,
         **kwargs: object,
     ) -> None:
+        self._adaptive_splitters_restored = False
         super().__init__(scene, parent, **kwargs)
         self._install_adaptive_workspace()
-        self._restore_adaptive_workspace()
+        self._restore_adaptive_panel_states()
         self.setMinimumSize(760, 620)
         if self.width() < 1100 or self.height() < 760:
             self.resize(max(self.width(), 1100), max(self.height(), 760))
@@ -97,12 +99,8 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
         root.insertWidget(insert_index, self.workspace_splitter, 1)
         self._update_validation_panel_title()
 
-    def _restore_adaptive_workspace(self) -> None:
+    def _restore_adaptive_panel_states(self) -> None:
         settings = self._workflow_settings
-        self._restore_splitter(self.workspace_splitter, self.MAIN_SPLITTER_KEY)
-        self._restore_splitter(self.support_splitter, self.SUPPORT_SPLITTER_KEY)
-        self._restore_splitter(self.editor_splitter, self.DOCUMENTATION_SPLITTER_KEY)
-
         if settings.contains(self.WORKFLOW_COLLAPSED_KEY):
             self.workflow_panel.set_collapsed(
                 settings.value(self.WORKFLOW_COLLAPSED_KEY, True, type=bool)
@@ -115,6 +113,14 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
             self.validation_panel.set_collapsed(
                 settings.value(self.VALIDATION_COLLAPSED_KEY, True, type=bool)
             )
+
+    def _restore_adaptive_splitters(self) -> None:
+        if self._adaptive_splitters_restored:
+            return
+        self._restore_splitter(self.workspace_splitter, self.MAIN_SPLITTER_KEY)
+        self._restore_splitter(self.support_splitter, self.SUPPORT_SPLITTER_KEY)
+        self._restore_splitter(self.editor_splitter, self.DOCUMENTATION_SPLITTER_KEY)
+        self._adaptive_splitters_restored = True
 
     def _restore_splitter(self, splitter: QSplitter, key: str) -> None:
         state = self._workflow_settings.value(key)
@@ -133,6 +139,12 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
         settings.setValue(self.SUMMARY_COLLAPSED_KEY, self.summary_panel.collapsed)
         settings.setValue(self.VALIDATION_COLLAPSED_KEY, self.validation_panel.collapsed)
         settings.sync()
+
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
+        """Restore splitter geometry once Qt has assigned the dialog its final size."""
+        super().showEvent(event)
+        if not self._adaptive_splitters_restored:
+            QTimer.singleShot(0, self._restore_adaptive_splitters)
 
     def _validate(self) -> None:
         super()._validate()
