@@ -6,8 +6,8 @@ from typing import Any
 
 from vscs.application.assets import AssetService
 from vscs.application.story import StoryService
-from vscs.presentation.dialogs.validation_explanations_scene_editor_dialog import (
-    ValidationExplanationsSceneEditorDialog,
+from vscs.presentation.dialogs.beginner_workflow_scene_editor_dialog import (
+    BeginnerWorkflowSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.story_browser import StoryBrowserWidget
@@ -22,7 +22,7 @@ def install_story_browser() -> None:
     setattr(  # noqa: B010
         story_browser_module,
         "SceneEditorDialog",
-        ValidationExplanationsSceneEditorDialog,
+        BeginnerWorkflowSceneEditorDialog,
     )
 
     original_create_content = MainWindow._create_content_area
