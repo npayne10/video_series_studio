@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QComboBox, QFormLayout, QLabel, QWidget
+from PySide6.QtWidgets import QComboBox, QLabel, QWidget
 
 from vscs.application.ssie import Scene
 from vscs.application.story import (
@@ -57,8 +57,11 @@ class ProductionContainerSceneEditorDialog(LiveDocumentationSceneEditorDialog):
             "Choose the kind of production that owns this scene."
         )
         for container_type in ProductionContainerType:
-            self.production_type_combo.addItem(container_type.label, container_type)
-        type_index = self.production_type_combo.findData(current_type)
+            self.production_type_combo.addItem(
+                container_type.label,
+                container_type.value,
+            )
+        type_index = self.production_type_combo.findData(current_type.value)
         self.production_type_combo.setCurrentIndex(max(type_index, 0))
 
         container_row = self._row_for_widget(form, self.episode_id_edit)
@@ -105,7 +108,7 @@ class ProductionContainerSceneEditorDialog(LiveDocumentationSceneEditorDialog):
 
         self._update_workflow_summary()
 
-    def _production_type_changed(self) -> None:
+    def _production_type_changed(self, _index: int = -1) -> None:
         if self._editing:
             return
         old_type = infer_container_type(self.episode_id_edit.text())
