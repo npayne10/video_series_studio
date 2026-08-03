@@ -89,6 +89,8 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
             ready=ready,
             hint=hint,
         )
+        if state.is_final_step:
+            self.tour_overlay.next_button.setText("Create Scene")
 
     def _step_ready(self, step_id: str) -> bool:
         if step_id == "production_type":
