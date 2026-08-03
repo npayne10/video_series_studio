@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.application.ssie import RuleBasedScenePlanner, Scene, ScenePlan, SceneTransition
+
+from .containers import (
+    ProductionContainerType,
+    build_scene_id,
+    infer_container_type,
+    normalize_container_id,
+)
 
 
 class StoryServiceError(RuntimeError):
@@ -38,7 +44,7 @@ class StoryService:
         return self.projects.project_directory / "story" / self.FILE_NAME
 
     def list_scenes(self) -> tuple[Scene, ...]:
-        """Load all scenes in sequence order."""
+        """Load all scenes in stable production-container order."""
         path = self.story_file
         if not path.is_file():
             return ()
@@ -47,7 +53,16 @@ class StoryService:
             scenes = tuple(self._scene_from_dict(item) for item in raw.get("scenes", []))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise StoryServiceError(f"Unable to load structured story: {exc}") from exc
-        return tuple(sorted(scenes, key=lambda item: (item.sequence_number, item.scene_id)))
+        return tuple(
+            sorted(
+                scenes,
+                key=lambda item: (
+                    item.episode_id,
+                    item.sequence_number,
+                    item.scene_id,
+                ),
+            )
+        )
 
     def save_scene(self, scene: Scene) -> Scene:
         """Create or replace one structured scene."""
@@ -84,23 +99,42 @@ class StoryService:
         """Return the current in-memory SSIE plan for one scene."""
         return self._plans.get(scene_id)
 
-    def next_sequence_number(self, episode_id: str | None = None) -> int:
-        """Return the next available scene sequence for an episode."""
+    def next_sequence_number(self, container_id: str | None = None) -> int:
+        """Return the next available scene sequence for one production container."""
         scenes = self.list_scenes()
-        if episode_id:
-            scenes = tuple(scene for scene in scenes if scene.episode_id == episode_id)
+        if container_id:
+            normalized = container_id.strip().upper()
+            scenes = tuple(
+                scene for scene in scenes if scene.episode_id.strip().upper() == normalized
+            )
         return max((scene.sequence_number for scene in scenes), default=0) + 1
 
-    def default_episode_id(self) -> str:
-        """Return the most recently used episode ID, or the initial default."""
+    def default_container_id(self) -> str:
+        """Return the most recently used production container ID."""
         scenes = self.list_scenes()
-        return scenes[-1].episode_id if scenes else "EP-001"
+        return scenes[-1].episode_id if scenes else ProductionContainerType.EPISODE.default_id
 
-    def generate_scene_id(self, episode_id: str, sequence_number: int) -> str:
-        """Generate a stable, readable scene ID for a new scene."""
-        episode = re.sub(r"[^A-Za-z0-9]+", "-", episode_id.strip()).strip("-")
-        episode = episode.upper() or "EP-001"
-        base = f"{episode}-SCN-{sequence_number:03d}"
+    def default_container_type(self) -> ProductionContainerType:
+        """Return the type inferred from the most recently used container."""
+        return infer_container_type(self.default_container_id())
+
+    def default_episode_id(self) -> str:
+        """Return the legacy episode-compatible default container ID."""
+        return self.default_container_id()
+
+    def container_type_for_scene(self, scene: Scene) -> ProductionContainerType:
+        """Return the production-container type owning a scene."""
+        return infer_container_type(scene.episode_id)
+
+    def generate_container_scene_id(
+        self,
+        container_type: ProductionContainerType,
+        container_id: str,
+        sequence_number: int,
+    ) -> str:
+        """Generate a unique scene ID for any supported production container."""
+        normalized = normalize_container_id(container_id, container_type)
+        base = build_scene_id(normalized, sequence_number)
         existing = {scene.scene_id for scene in self.list_scenes()}
         if base not in existing:
             return base
@@ -109,12 +143,24 @@ class StoryService:
             suffix += 1
         return f"{base}-{suffix}"
 
+    def generate_scene_id(self, episode_id: str, sequence_number: int) -> str:
+        """Generate a legacy-compatible episode or container scene ID."""
+        container_type = infer_container_type(episode_id)
+        return self.generate_container_scene_id(
+            container_type,
+            episode_id,
+            sequence_number,
+        )
+
     def _write(self, scenes: tuple[Scene, ...]) -> None:
         path = self.story_file
         path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(scenes, key=lambda item: (item.sequence_number, item.scene_id))
+        ordered = sorted(
+            scenes,
+            key=lambda item: (item.episode_id, item.sequence_number, item.scene_id),
+        )
         payload = {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "scenes": [self._scene_to_dict(scene) for scene in ordered],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
@@ -132,14 +178,17 @@ class StoryService:
     def _scene_to_dict(scene: Scene) -> dict[str, Any]:
         raw = asdict(scene)
         raw["transition_in"] = scene.transition_in.value
+        raw["container_type"] = infer_container_type(scene.episode_id).value
+        raw["container_id"] = scene.episode_id
         return raw
 
     @staticmethod
     def _scene_from_dict(raw: dict[str, Any]) -> Scene:
         heading = str(raw["heading"])
+        container_id = str(raw.get("container_id", raw.get("episode_id", "EP-001")))
         return Scene(
             scene_id=str(raw["scene_id"]),
-            episode_id=str(raw["episode_id"]),
+            episode_id=container_id,
             sequence_number=int(raw["sequence_number"]),
             heading=heading,
             location_asset_id=str(raw["location_asset_id"]),
