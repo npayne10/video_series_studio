@@ -64,38 +64,47 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
             if not data or str(data[0]) != "scene":
                 continue
             scene_id = str(data[2])
-            existing = {
-                str(child_data[1])
-                for index in range(item.childCount())
-                if (
-                    child_data := item.child(index).data(
-                        0,
-                        Qt.ItemDataRole.UserRole,
-                    )
-                )
-            }
+            existing: dict[str, QTreeWidgetItem] = {}
+            for index in range(item.childCount()):
+                child = item.child(index)
+                child_data = child.data(0, Qt.ItemDataRole.UserRole)
+                if child_data:
+                    existing[str(child_data[1])] = child
             for shot in by_scene.get(scene_id, []):
-                if shot.shot_id in existing:
-                    continue
-                asset_count = len(
-                    set((*shot.subject_asset_ids, *shot.required_asset_ids))
-                )
-                child = QTreeWidgetItem(
-                    (
-                        f"{shot.sequence_number:03d} — {shot.title}",
-                        "Production Shot",
-                        shot.status.label,
-                        self._duration(shot.estimated_duration_seconds),
-                        str(asset_count) if asset_count else "—",
-                    )
-                )
-                child.setData(
-                    0,
-                    Qt.ItemDataRole.UserRole,
-                    (self.SHOT_KIND, shot.shot_id, scene_id, shot.shot_id),
-                )
-                item.addChild(child)
+                placeholder = existing.get(shot.shot_id)
+                if placeholder is not None:
+                    item.removeChild(placeholder)
+                item.addChild(self._production_shot_item(shot))
+        shot_count = sum(
+            1
+            for item in self._walk_items()
+            if (
+                data := item.data(0, Qt.ItemDataRole.UserRole)
+            )
+            and str(data[0]) in {"shot", self.SHOT_KIND}
+        )
+        self.dashboard_labels["shots"].setText(str(shot_count))
         self._update_shot_action_state()
+
+    def _production_shot_item(self, shot: ProductionShot) -> QTreeWidgetItem:
+        asset_count = len(
+            set((*shot.subject_asset_ids, *shot.required_asset_ids))
+        )
+        item = QTreeWidgetItem(
+            (
+                f"{shot.sequence_number:03d} — {shot.title}",
+                "Production Shot",
+                shot.status.label,
+                self._duration(shot.estimated_duration_seconds),
+                str(asset_count) if asset_count else "—",
+            )
+        )
+        item.setData(
+            0,
+            Qt.ItemDataRole.UserRole,
+            (self.SHOT_KIND, shot.shot_id, shot.scene_id, shot.shot_id),
+        )
+        return item
 
     def _walk_items(self) -> tuple[QTreeWidgetItem, ...]:
         root = self.tree.invisibleRootItem()
@@ -177,4 +186,6 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
             self._update_shot_action_state()
 
     def _update_shot_action_state(self) -> None:
-        self.shot_planner_button.setEnabled(self._selected_scene_id() is not None)
+        self.shot_planner_button.setEnabled(
+            self._selected_scene_id() is not None
+        )
