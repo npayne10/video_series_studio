@@ -89,7 +89,7 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
 
     def _production_shot_item(self, shot: ProductionShot) -> QTreeWidgetItem:
         asset_count = len(
-            set((*shot.subject_asset_ids, *shot.required_asset_ids))
+            {*shot.subject_asset_ids, *shot.required_asset_ids}
         )
         item = QTreeWidgetItem(
             (
