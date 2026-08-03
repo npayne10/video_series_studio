@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QFrame
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QFrame
 
 from tests.certification.responsive_layout_matrix import (
     RESPONSIVE_LAYOUT_MATRIX,
@@ -72,6 +72,7 @@ def test_compact_layout_keeps_editor_scrollable_and_actions_visible(
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 800, 640)
 
+    cancel_button = dialog.buttons.button(QDialogButtonBox.StandardButton.Cancel)
     assert dialog.width() >= 760
     assert dialog.height() >= 620
     assert dialog.workspace_splitter.isVisible()
@@ -80,7 +81,8 @@ def test_compact_layout_keeps_editor_scrollable_and_actions_visible(
     assert dialog.scroll_area.verticalScrollBar().maximum() > 0
     assert dialog.buttons.isVisible()
     assert dialog.save_button.isVisible()
-    assert dialog.cancel_button.isVisible()
+    assert cancel_button is not None
+    assert cancel_button.isVisible()
 
 
 def test_standard_layout_prioritises_the_editor(
