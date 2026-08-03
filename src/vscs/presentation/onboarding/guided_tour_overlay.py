@@ -87,6 +87,11 @@ class GuidedTourOverlay(QWidget):
         parent.installEventFilter(self)
         self.hide()
 
+    @property
+    def spotlight_rect(self) -> QRect:
+        """Return the current spotlight rectangle in overlay coordinates."""
+        return QRect(self._spotlight)
+
     def show_state(self, state: OnboardingState, target: QWidget | None) -> None:
         """Render an active onboarding state and optional spotlight target."""
         step = state.current_step
@@ -126,12 +131,22 @@ class GuidedTourOverlay(QWidget):
         hole = self._spotlight.intersected(self.rect())
         painter.fillRect(QRect(0, 0, self.width(), hole.top()), dim)
         painter.fillRect(
-            QRect(0, hole.bottom() + 1, self.width(), self.height() - hole.bottom()),
+            QRect(
+                0,
+                hole.bottom() + 1,
+                self.width(),
+                self.height() - hole.bottom(),
+            ),
             dim,
         )
         painter.fillRect(QRect(0, hole.top(), hole.left(), hole.height()), dim)
         painter.fillRect(
-            QRect(hole.right() + 1, hole.top(), self.width() - hole.right(), hole.height()),
+            QRect(
+                hole.right() + 1,
+                hole.top(),
+                self.width() - hole.right(),
+                hole.height(),
+            ),
             dim,
         )
         painter.setPen(QPen(self.palette().highlight().color(), 3))
@@ -164,8 +179,7 @@ class GuidedTourOverlay(QWidget):
         margin = 24
         x = max(margin, self.width() - self.card.width() - margin)
         y = margin
-        if not self._spotlight.isNull() and self._spotlight.intersects(
-            QRect(x, y, self.card.width(), self.card.height())
-        ):
+        card_rect = QRect(x, y, self.card.width(), self.card.height())
+        if not self._spotlight.isNull() and self._spotlight.intersects(card_rect):
             y = max(margin, self.height() - self.card.height() - margin)
         self.card.move(x, y)
