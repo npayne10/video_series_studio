@@ -5,7 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from vscs.application.ssie import CameraMovement, LensFamily, LightingMood, ShotPurpose, ShotSize
+from vscs.application.ssie import (
+    CameraMovement,
+    LensFamily,
+    LightingMood,
+    ShotPurpose,
+    ShotSize,
+)
 
 
 class ShotPlanningStatus(StrEnum):
@@ -39,6 +45,7 @@ class ProductionShot:
     estimated_duration_seconds: float = 5.0
     continuity_from_shot_id: str | None = None
     continuity_notes: str = ""
+    blocking_notes: str = ""
     storyboard_reference: str = ""
     dialogue_lines: tuple[str, ...] = ()
     subject_asset_ids: tuple[str, ...] = ()
