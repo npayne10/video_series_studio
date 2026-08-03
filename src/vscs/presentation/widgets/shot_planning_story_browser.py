@@ -6,7 +6,12 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTreeWidgetItem, QWidget
 
 from vscs.application.assets import AssetService
-from vscs.application.shots import ProductionShot, ShotPlanningService
+from vscs.application.projects import ProjectNotOpenError
+from vscs.application.shots import (
+    ProductionShot,
+    ShotPlanningError,
+    ShotPlanningService,
+)
 from vscs.application.story import StoryService
 from vscs.presentation.dialogs.shot_planner_dialog import ShotPlannerDialog
 
@@ -32,7 +37,8 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
         self.shot_planner_button.setToolTip(
             "Open the production Shot Planner for the selected scene."
         )
-        toolbar = self.layout().itemAt(2).layout()
+        toolbar_item = self.layout().itemAt(2)
+        toolbar = toolbar_item.layout() if toolbar_item is not None else None
         if not isinstance(toolbar, QHBoxLayout):
             raise RuntimeError("Story Browser toolbar is unavailable.")
         toolbar.insertWidget(4, self.shot_planner_button)
@@ -47,7 +53,7 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
             return
         try:
             shots = self.shot_plans.list_shots()
-        except Exception:
+        except (ProjectNotOpenError, ShotPlanningError):
             self.shot_planner_button.setEnabled(False)
             return
         by_scene: dict[str, list[ProductionShot]] = {}
@@ -59,21 +65,28 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
                 continue
             scene_id = str(data[2])
             existing = {
-                str(item.child(index).data(0, Qt.ItemDataRole.UserRole)[1])
+                str(child_data[1])
                 for index in range(item.childCount())
-                if item.child(index).data(0, Qt.ItemDataRole.UserRole)
+                if (
+                    child_data := item.child(index).data(
+                        0,
+                        Qt.ItemDataRole.UserRole,
+                    )
+                )
             }
             for shot in by_scene.get(scene_id, []):
                 if shot.shot_id in existing:
                     continue
+                asset_count = len(
+                    set((*shot.subject_asset_ids, *shot.required_asset_ids))
+                )
                 child = QTreeWidgetItem(
                     (
                         f"{shot.sequence_number:03d} — {shot.title}",
                         "Production Shot",
                         shot.status.label,
                         self._duration(shot.estimated_duration_seconds),
-                        str(len(set((*shot.subject_asset_ids, *shot.required_asset_ids))))
-                        or "—",
+                        str(asset_count) if asset_count else "—",
                     )
                 )
                 child.setData(
@@ -124,11 +137,12 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
         lighting_profile = shot.lighting_profile_id or "Planner default"
         continuity = shot.continuity_from_shot_id or "Opening shot"
         storyboard = shot.storyboard_reference or "Not assigned"
+        purpose = shot.purpose.value.replace("_", " ").title()
         self.details.setHtml(
             f"<h2>{shot.title}</h2>"
             f"<p><b>ID:</b> {shot.shot_id}</p>"
             f"<p><b>Status:</b> {shot.status.label}</p>"
-            f"<p><b>Purpose:</b> {shot.purpose.value.replace('_', ' ').title()}</p>"
+            f"<p><b>Purpose:</b> {purpose}</p>"
             f"<p><b>Description:</b> {shot.description}</p>"
             f"<h3>Camera</h3><p>{shot.shot_size.value}; "
             f"{shot.camera_movement.value}; {shot.lens_family.value}; "
