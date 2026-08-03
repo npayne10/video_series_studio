@@ -55,6 +55,11 @@ class WorkflowProgressChecklist(QFrame):
         self.next_step_label.setStyleSheet("font-weight: 600;")
         layout.addWidget(self.next_step_label)
 
+    @property
+    def active_step_id(self) -> str | None:
+        """Return the step currently selected for guided navigation."""
+        return self._active_step_id
+
     def update_states(self, states: Iterable[WorkflowStepState]) -> None:
         """Refresh checklist controls and progress from evaluated states."""
         state_tuple = tuple(states)
