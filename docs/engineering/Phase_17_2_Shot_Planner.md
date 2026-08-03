@@ -14,11 +14,14 @@ Convert structured scenes into persistent, editable production shots that can fe
 - Canonical camera and lighting profile selectors from Asset Manager.
 - Lighting mood and estimated duration.
 - Incoming-shot continuity links and continuity notes.
+- Actor blocking instructions for position, movement and eyelines.
 - Storyboard reference placeholders.
 - Dialogue allocation per shot.
 - Draft and Ready validation states.
+- Responsive, scrollable editing form.
 - Persistent production shots displayed beneath their scene.
 - Persistent shots replace generated SSIE placeholders with matching IDs.
+- Shot Planning service registered through the application bootstrap.
 - Targeted service, dialog and Story Browser integration tests.
 
 ## Storage
@@ -38,10 +41,14 @@ Existing `scenes.json` projects remain compatible. Shot planning is additive and
 - narrative purpose and description;
 - camera and lens intent;
 - camera and lighting profile references;
-- continuity relationships;
+- actor blocking and continuity relationships;
 - storyboard reference;
 - dialogue and asset allocation;
 - readiness status.
+
+## Architecture
+
+`ShotPlanningService` is registered in the Phase 16.1 application service graph and injected into Story Browser. Presentation widgets do not create their own service instances.
 
 ## Development gate
 
