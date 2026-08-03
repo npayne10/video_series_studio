@@ -39,8 +39,6 @@ def infer_container_type(container_id: str) -> ProductionContainerType:
     normalized = container_id.strip().upper()
     if normalized.startswith("EP-"):
         return ProductionContainerType.EPISODE
-    if normalized.startswith(("T", "TR-", "TRAILER-")):
-        return ProductionContainerType.TRAILER
     if normalized.startswith("TEASER-"):
         return ProductionContainerType.TEASER
     if normalized.startswith("PROMO-"):
@@ -49,6 +47,8 @@ def infer_container_type(container_id: str) -> ProductionContainerType:
         return ProductionContainerType.TEST
     if normalized.startswith("SPECIAL-"):
         return ProductionContainerType.SPECIAL
+    if normalized.startswith(("T0", "TR-", "TRAILER-")):
+        return ProductionContainerType.TRAILER
     return ProductionContainerType.SPECIAL
 
 
