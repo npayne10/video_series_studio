@@ -27,6 +27,7 @@ class WorkflowProgressChecklist(QFrame):
         self.setObjectName("sceneWorkflowProgressChecklist")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self._buttons: dict[str, QToolButton] = {}
+        self._active_step_id: str | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 10, 12, 10)
@@ -70,6 +71,7 @@ class WorkflowProgressChecklist(QFrame):
                 button = QToolButton(self)
                 button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
                 button.setAutoRaise(True)
+                button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
                 button.clicked.connect(
                     lambda _checked=False, step_id=state.step.step_id: (
                         self.step_requested.emit(step_id)
@@ -78,13 +80,20 @@ class WorkflowProgressChecklist(QFrame):
                 self.steps_layout.addWidget(button)
                 self._buttons[state.step.step_id] = button
             marker = "✓" if state.completed else "□"
+            active = "→ " if state.step.step_id == self._active_step_id else ""
             optional = " (optional)" if state.step.optional else ""
-            button.setText(f"{marker} {state.step.label}{optional}")
+            button.setText(f"{active}{marker} {state.step.label}{optional}")
+            button.setProperty(
+                "workflowActiveStep",
+                state.step.step_id == self._active_step_id,
+            )
             button.setAccessibleName(
                 f"{'Completed' if state.completed else 'Incomplete'}: "
                 f"{state.step.label}"
             )
             button.setToolTip(state.step.recommendation)
+            button.style().unpolish(button)
+            button.style().polish(button)
 
         completed = sum(state.completed for state in state_tuple)
         total = len(state_tuple)
@@ -99,6 +108,14 @@ class WorkflowProgressChecklist(QFrame):
             self.next_step_label.setText(
                 f"Next recommended step: {next_state.step.recommendation}"
             )
+
+    def set_active_step(self, step_id: str | None) -> None:
+        """Mark the workflow step currently selected for guided navigation."""
+        self._active_step_id = step_id
+        for current_id, button in self._buttons.items():
+            button.setProperty("workflowActiveStep", current_id == step_id)
+            button.style().unpolish(button)
+            button.style().polish(button)
 
     def button_for_step(self, step_id: str) -> QToolButton | None:
         """Return the checklist button for a canonical step ID."""
