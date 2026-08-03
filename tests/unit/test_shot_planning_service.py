@@ -4,11 +4,23 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from vscs.application.projects import ProjectService
-from vscs.application.shots import ProductionShot, ShotPlanningService
+from vscs.application.shots import (
+    ProductionShot,
+    ShotPlanningService,
+    ShotPlanningStatus,
+)
+from vscs.application.ssie import (
+    CameraMovement,
+    LensFamily,
+    LightingMood,
+    ShotPurpose,
+    ShotSize,
+)
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 
 
@@ -84,4 +96,31 @@ def test_shot_service_rejects_invalid_shot(tmp_path: Path) -> None:
                 description="Description",
             )
         )
+    context.shutdown()
+
+
+def test_shot_service_tolerates_string_backed_enum_values(tmp_path: Path) -> None:
+    context = build_application_context(_options(tmp_path))
+    context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
+    service = ShotPlanningService(context.services.require(ProjectService))
+    shot = _shot("EP-001-SCN-001-SHT-001", 1, "Defensive serialization")
+    string_backed = replace(
+        shot,
+        purpose=cast(Any, ShotPurpose.COVERAGE.value),
+        shot_size=cast(Any, ShotSize.MEDIUM.value),
+        camera_movement=cast(Any, CameraMovement.STATIC.value),
+        lens_family=cast(Any, LensFamily.NORMAL.value),
+        lighting_mood=cast(Any, LightingMood.NATURALISTIC.value),
+        status=cast(Any, ShotPlanningStatus.READY.value),
+    )
+
+    service.save_shot(string_backed)
+    restored = service.list_shots()[0]
+
+    assert restored.purpose is ShotPurpose.COVERAGE
+    assert restored.shot_size is ShotSize.MEDIUM
+    assert restored.camera_movement is CameraMovement.STATIC
+    assert restored.lens_family is LensFamily.NORMAL
+    assert restored.lighting_mood is LightingMood.NATURALISTIC
+    assert restored.status is ShotPlanningStatus.READY
     context.shutdown()
