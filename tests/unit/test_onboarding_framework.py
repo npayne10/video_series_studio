@@ -181,15 +181,27 @@ def test_controller_emits_navigation_and_terminal_signals(
 ) -> None:
     controller = OnboardingController(_sequence(), _settings(tmp_path))
 
-    with qtbot.waitSignal(controller.guide_started, timeout=500):  # type: ignore[attr-defined]
+    with qtbot.waitSignal(  # type: ignore[attr-defined]
+        controller.guide_started,
+        timeout=500,
+    ):
         controller.start()
-    with qtbot.waitSignal(controller.state_changed, timeout=500):  # type: ignore[attr-defined]
+    with qtbot.waitSignal(  # type: ignore[attr-defined]
+        controller.state_changed,
+        timeout=500,
+    ):
         controller.next()
-    with qtbot.waitSignal(controller.guide_skipped, timeout=500):  # type: ignore[attr-defined]
+    with qtbot.waitSignal(  # type: ignore[attr-defined]
+        controller.guide_skipped,
+        timeout=500,
+    ):
         controller.skip()
 
     controller.restart()
-    with qtbot.waitSignal(controller.guide_completed, timeout=500):  # type: ignore[attr-defined]
+    with qtbot.waitSignal(  # type: ignore[attr-defined]
+        controller.guide_completed,
+        timeout=500,
+    ):
         controller.finish()
 
 
