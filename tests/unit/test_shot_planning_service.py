@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -43,9 +44,7 @@ def test_shot_service_persists_replaces_and_deletes(tmp_path: Path) -> None:
     service.save_shot(first)
     assert service.list_shots("EP-001-SCN-001") == (first,)
 
-    replacement = ProductionShot(
-        **{**first.__dict__, "title": "Revised bridge establishing"}
-    )
+    replacement = replace(first, title="Revised bridge establishing")
     service.save_shot(replacement)
     assert service.shot(first.shot_id) == replacement
     assert service.delete_shot(first.shot_id)
