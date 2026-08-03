@@ -34,6 +34,8 @@ def test_default_registry_contains_all_scene_topics() -> None:
         "scene.time",
         "scene.transition",
         "scene.duration",
+        "scene.production_type",
+        "scene.container_id",
     }
 
     assert {topic.topic_id for topic in registry.all_topics()} == expected
