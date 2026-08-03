@@ -17,7 +17,6 @@ from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
 
-
 EXPECTED_AREAS = (
     "Accessible onboarding identity",
     "Descriptive controls",
