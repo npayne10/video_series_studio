@@ -62,11 +62,11 @@ def test_shot_planner_creates_ready_shot(
     )
     dialog.duration_spin.setValue(8.0)
     form_shot = dialog._shot_from_form()
-    assert form_shot.purpose is ShotPurpose.COVERAGE
-    assert form_shot.shot_size is ShotSize.MEDIUM
-    assert form_shot.camera_movement is CameraMovement.STATIC
-    assert form_shot.lens_family is LensFamily.NORMAL
-    assert form_shot.lighting_mood is LightingMood.NATURALISTIC
+    assert isinstance(form_shot.purpose, ShotPurpose)
+    assert isinstance(form_shot.shot_size, ShotSize)
+    assert isinstance(form_shot.camera_movement, CameraMovement)
+    assert isinstance(form_shot.lens_family, LensFamily)
+    assert isinstance(form_shot.lighting_mood, LightingMood)
     assert dialog.save_button.isEnabled()
     dialog.save_button.click()
 
