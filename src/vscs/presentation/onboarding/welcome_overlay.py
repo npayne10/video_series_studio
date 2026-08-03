@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -112,6 +113,8 @@ class OnboardingWelcomeOverlay(QFrame):
         self.skip_button.clicked.connect(
             lambda _checked=False: self.skip_requested.emit()
         )
+        self.skip_button.installEventFilter(self)
+        self.start_button.installEventFilter(self)
         parent.installEventFilter(self)
         self.hide()
 
@@ -127,13 +130,33 @@ class OnboardingWelcomeOverlay(QFrame):
         self.hide()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
-        """Keep the overlay aligned to its parent during resize and movement."""
+        """Keep geometry aligned and keyboard focus inside the visible overlay."""
         if watched is self.parentWidget() and event.type() in {
             QEvent.Type.Resize,
             QEvent.Type.Show,
         }:
             self._fit_parent()
+        if (
+            self.isVisible()
+            and watched in {self.skip_button, self.start_button}
+            and event.type() is QEvent.Type.KeyPress
+        ):
+            key_event = event
+            if isinstance(key_event, QKeyEvent) and key_event.key() == Qt.Key.Key_Tab:
+                reverse = bool(
+                    key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+                )
+                self._cycle_focus(watched, reverse=reverse)
+                return True
         return super().eventFilter(watched, event)
+
+    def _cycle_focus(self, current: QObject, *, reverse: bool) -> None:
+        buttons = (self.skip_button, self.start_button)
+        index = buttons.index(current)
+        step = -1 if reverse else 1
+        buttons[(index + step) % len(buttons)].setFocus(
+            Qt.FocusReason.TabFocusReason
+        )
 
     def _fit_parent(self) -> None:
         parent = self.parentWidget()
