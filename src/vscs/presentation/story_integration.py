@@ -10,7 +10,7 @@ from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
-from vscs.presentation.widgets.story_browser import StoryBrowserWidget
+from vscs.presentation.widgets.story_browser_v2 import StoryBrowserV2Widget
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -33,7 +33,7 @@ def install_story_browser() -> None:
     def create_content_area(window: Any) -> None:
         original_create_content(window)
         placeholder = window.content_stack.widget(2)
-        window.story_browser = StoryBrowserWidget(
+        window.story_browser = StoryBrowserV2Widget(
             window.services.require(StoryService),
             window.services.require(AssetService),
         )
