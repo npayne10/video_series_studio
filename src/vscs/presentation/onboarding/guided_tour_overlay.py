@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject, QRect, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import (
     QFrame,
@@ -190,8 +190,14 @@ class GuidedTourOverlay(QWidget):
         if target is None or not target.isVisible():
             self._spotlight = QRect()
             return
-        top_left = target.mapTo(self, target.rect().topLeft())
-        self._spotlight = QRect(top_left, target.size()).adjusted(-8, -8, 8, 8)
+        global_top_left = target.mapToGlobal(QPoint(0, 0))
+        overlay_top_left = self.mapFromGlobal(global_top_left)
+        self._spotlight = QRect(overlay_top_left, target.size()).adjusted(
+            -8,
+            -8,
+            8,
+            8,
+        )
 
     def _fit_parent(self) -> None:
         parent = self.parentWidget()
