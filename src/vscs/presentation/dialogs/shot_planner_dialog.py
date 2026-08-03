@@ -187,8 +187,16 @@ class ShotPlannerDialog(QDialog):
     def _enum_combo(enum_type: type[StrEnum]) -> QComboBox:
         combo = QComboBox()
         for value in enum_type:
-            combo.addItem(value.value.replace("_", " ").title(), value)
+            combo.addItem(value.value.replace("_", " ").title(), value.value)
         return combo
+
+    @staticmethod
+    def _current_enum[T: StrEnum](
+        combo: QComboBox,
+        enum_type: type[T],
+    ) -> T:
+        """Return a strongly typed enum regardless of Qt QVariant conversion."""
+        return enum_type(str(combo.currentData()))
 
     def _asset_combo(self, category: AssetCategory) -> QComboBox:
         combo = QComboBox(self)
@@ -282,11 +290,11 @@ class ShotPlannerDialog(QDialog):
         self.shot_id_edit.setText(shot.shot_id)
         self.title_edit.setText(shot.title)
         self.description_edit.setPlainText(shot.description)
-        self._select_data(self.purpose_combo, shot.purpose)
-        self._select_data(self.size_combo, shot.shot_size)
-        self._select_data(self.movement_combo, shot.camera_movement)
-        self._select_data(self.lens_combo, shot.lens_family)
-        self._select_data(self.lighting_mood_combo, shot.lighting_mood)
+        self._select_data(self.purpose_combo, shot.purpose.value)
+        self._select_data(self.size_combo, shot.shot_size.value)
+        self._select_data(self.movement_combo, shot.camera_movement.value)
+        self._select_data(self.lens_combo, shot.lens_family.value)
+        self._select_data(self.lighting_mood_combo, shot.lighting_mood.value)
         self._select_data(
             self.camera_profile_combo,
             shot.camera_profile_id,
@@ -329,13 +337,19 @@ class ShotPlannerDialog(QDialog):
             sequence_number=sequence,
             title=self.title_edit.text().strip(),
             description=self.description_edit.toPlainText().strip(),
-            purpose=self.purpose_combo.currentData(),
-            shot_size=self.size_combo.currentData(),
-            camera_movement=self.movement_combo.currentData(),
-            lens_family=self.lens_combo.currentData(),
+            purpose=self._current_enum(self.purpose_combo, ShotPurpose),
+            shot_size=self._current_enum(self.size_combo, ShotSize),
+            camera_movement=self._current_enum(
+                self.movement_combo,
+                CameraMovement,
+            ),
+            lens_family=self._current_enum(self.lens_combo, LensFamily),
             camera_profile_id=self.camera_profile_combo.currentData(),
             lighting_profile_id=self.lighting_profile_combo.currentData(),
-            lighting_mood=self.lighting_mood_combo.currentData(),
+            lighting_mood=self._current_enum(
+                self.lighting_mood_combo,
+                LightingMood,
+            ),
             estimated_duration_seconds=self.duration_spin.value(),
             continuity_from_shot_id=self.continuity_combo.currentData(),
             continuity_notes=(
