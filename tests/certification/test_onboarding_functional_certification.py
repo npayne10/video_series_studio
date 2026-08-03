@@ -8,13 +8,13 @@ from pathlib import Path
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog
-from tests.certification.certification_matrix import (
+
+from certification_matrix import (
     ONBOARDING_FUNCTIONAL_MATRIX,
     certification_areas,
     certification_test_nodes,
 )
-from tests.certification.certification_runner import CertificationRunner
-
+from certification_runner import CertificationRunner
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
