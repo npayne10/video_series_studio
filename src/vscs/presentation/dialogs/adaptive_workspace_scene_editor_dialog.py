@@ -70,7 +70,7 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
             "Validation",
             self.validation_label,
             self,
-            collapsed=not bool(self.validation_explanations),
+            collapsed=True,
         )
 
         self.support_splitter = QSplitter(Qt.Orientation.Vertical, self)
@@ -79,7 +79,7 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
         self.support_splitter.addWidget(self.validation_panel)
         self.support_splitter.setCollapsible(0, True)
         self.support_splitter.setCollapsible(1, True)
-        self.support_splitter.setSizes([55, 140])
+        self.support_splitter.setSizes([45, 45])
 
         self.workspace_splitter = QSplitter(Qt.Orientation.Vertical, self)
         self.workspace_splitter.setObjectName("sceneEditorAdaptiveWorkspaceSplitter")
@@ -92,7 +92,7 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
         self.workspace_splitter.setCollapsible(0, True)
         self.workspace_splitter.setCollapsible(1, False)
         self.workspace_splitter.setCollapsible(2, True)
-        self.workspace_splitter.setSizes([45, 650, 150])
+        self.workspace_splitter.setSizes([45, 720, 90])
 
         root.insertWidget(insert_index, self.workspace_splitter, 1)
         self._update_validation_panel_title()
@@ -113,7 +113,7 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
             )
         if settings.contains(self.VALIDATION_COLLAPSED_KEY):
             self.validation_panel.set_collapsed(
-                settings.value(self.VALIDATION_COLLAPSED_KEY, False, type=bool)
+                settings.value(self.VALIDATION_COLLAPSED_KEY, True, type=bool)
             )
 
     def _restore_splitter(self, splitter: QSplitter, key: str) -> None:
