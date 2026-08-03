@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from .adaptive_examples import heading_suggestions, scene_name_examples
 from .empty_state_examples import empty_state_text
-from .scene_examples import ExampleTopic, SCENE_EXAMPLES
+from .scene_examples import SCENE_EXAMPLES, ExampleTopic
 
 
 @dataclass(frozen=True, slots=True)
