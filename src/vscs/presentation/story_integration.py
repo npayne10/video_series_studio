@@ -6,8 +6,8 @@ from typing import Any
 
 from vscs.application.assets import AssetService
 from vscs.application.story import StoryService
-from vscs.presentation.dialogs.smart_example_scene_editor_dialog import (
-    SmartExampleSceneEditorDialog,
+from vscs.presentation.dialogs.live_documentation_scene_editor_dialog import (
+    LiveDocumentationSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.story_browser import StoryBrowserWidget
@@ -22,7 +22,7 @@ def install_story_browser() -> None:
     setattr(  # noqa: B010
         story_browser_module,
         "SceneEditorDialog",
-        SmartExampleSceneEditorDialog,
+        LiveDocumentationSceneEditorDialog,
     )
 
     original_create_content = MainWindow._create_content_area
