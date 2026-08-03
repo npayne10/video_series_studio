@@ -23,6 +23,7 @@ class GuidedTourOverlay(QWidget):
     previous_requested = Signal()
     next_requested = Signal()
     skip_requested = Signal()
+    try_requested = Signal()
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
@@ -66,9 +67,19 @@ class GuidedTourOverlay(QWidget):
         self.description_label.setWordWrap(True)
         layout.addWidget(self.description_label)
 
+        self.action_hint_label = QLabel(self.card)
+        self.action_hint_label.setObjectName("guidedTourActionHint")
+        self.action_hint_label.setWordWrap(True)
+        self.action_hint_label.setStyleSheet("font-weight: 600;")
+        self.action_hint_label.hide()
+        layout.addWidget(self.action_hint_label)
+
         actions = QHBoxLayout()
         self.skip_button = QPushButton("Skip Tour", self.card)
         self.skip_button.setObjectName("guidedTourSkip")
+        self.try_button = QPushButton("Try It", self.card)
+        self.try_button.setObjectName("guidedTourTry")
+        self.try_button.hide()
         self.previous_button = QPushButton("Previous", self.card)
         self.previous_button.setObjectName("guidedTourPrevious")
         self.next_button = QPushButton("Next", self.card)
@@ -76,6 +87,7 @@ class GuidedTourOverlay(QWidget):
         self.next_button.setDefault(True)
         self.next_button.setAutoDefault(True)
         actions.addWidget(self.skip_button)
+        actions.addWidget(self.try_button)
         actions.addStretch(1)
         actions.addWidget(self.previous_button)
         actions.addWidget(self.next_button)
@@ -84,6 +96,7 @@ class GuidedTourOverlay(QWidget):
         self.previous_button.clicked.connect(self.previous_requested.emit)
         self.next_button.clicked.connect(self.next_requested.emit)
         self.skip_button.clicked.connect(self.skip_requested.emit)
+        self.try_button.clicked.connect(self.try_requested.emit)
         parent.installEventFilter(self)
         self.hide()
 
@@ -106,6 +119,7 @@ class GuidedTourOverlay(QWidget):
         self.description_label.setText(step.description)
         self.previous_button.setEnabled(state.can_go_previous)
         self.next_button.setText("Finish" if state.is_final_step else "Next")
+        self.configure_action(required=False, ready=True, hint="")
         self._fit_parent()
         self._set_spotlight(target)
         self._position_card()
@@ -113,6 +127,16 @@ class GuidedTourOverlay(QWidget):
         self.raise_()
         self.next_button.setFocus(Qt.FocusReason.OtherFocusReason)
         self.update()
+
+    def configure_action(self, *, required: bool, ready: bool, hint: str) -> None:
+        """Configure an optional user action required before advancing."""
+        blocked = required and not ready
+        self.next_button.setEnabled(not blocked)
+        self.try_button.setVisible(blocked)
+        self.action_hint_label.setVisible(bool(hint))
+        self.action_hint_label.setText(hint)
+        if blocked:
+            self.try_button.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def hide_tour(self) -> None:
         """Hide the guided tour and clear its spotlight."""
