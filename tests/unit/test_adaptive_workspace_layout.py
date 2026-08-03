@@ -28,7 +28,7 @@ def test_workspace_prioritises_editor_with_collapsed_support_panels(
 
     assert dialog.workflow_panel.collapsed
     assert dialog.summary_panel.collapsed
-    assert not dialog.validation_panel.collapsed
+    assert dialog.validation_panel.collapsed
     assert dialog.workspace_splitter.orientation() is Qt.Orientation.Vertical
     assert dialog.editor_splitter.orientation() is Qt.Orientation.Horizontal
     sizes = dialog.workspace_splitter.sizes()
