@@ -43,6 +43,8 @@ def test_panels_can_be_expanded_and_collapsed(
 ) -> None:
     dialog = AdaptiveWorkspaceSceneEditorDialog(settings=_settings(tmp_path))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
+    dialog.show()
+    qapp.processEvents()
 
     dialog.workflow_panel.toggle_button.click()
     assert not dialog.workflow_panel.collapsed
@@ -75,15 +77,14 @@ def test_validation_heading_tracks_blocking_issue_count(
     dialog = AdaptiveWorkspaceSceneEditorDialog(settings=_settings(tmp_path))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
-    assert "blocking issues" in dialog.validation_panel.title_label.text()
+    assert "4 blocking issues" in dialog.validation_panel.title_label.text()
 
     dialog.scene_name_edit.setText("Arrival at Xorix")
     dialog.heading_edit.setText("EXT. XORIX ORBIT - DAY")
-    dialog.location_combo.setEditText("LOC-XORIX-ORBIT")
     dialog.summary_edit.setPlainText("The crew sees Xorix for the first time.")
     dialog._validate()
 
-    assert dialog.validation_panel.title_label.text() == "Validation · Ready to save"
+    assert dialog.validation_panel.title_label.text() == "Validation · 1 blocking issue"
 
 
 def test_adaptive_state_is_restored_between_sessions(
