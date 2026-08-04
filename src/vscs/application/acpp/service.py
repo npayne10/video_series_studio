@@ -70,9 +70,7 @@ class ACPPEditorService:
         directory = self.package_directory
         if not directory.is_dir():
             return ()
-        packages: list[ClipProductionPackage] = []
-        for path in sorted(directory.glob("*.json")):
-            packages.append(self._read(path))
+        packages = [self._read(path) for path in sorted(directory.glob("*.json"))]
         return tuple(sorted(packages, key=lambda item: item.identity.clip_id))
 
     def package(self, clip_id: str) -> ClipProductionPackage | None:
@@ -96,10 +94,18 @@ class ACPPEditorService:
         scene = self.stories.scene(shot.scene_id)
         if scene is None:
             raise ACPPEditorError(f"Scene not found for shot: {shot.scene_id}")
-        clip_id = build_clip_id(shot.shot_id, 1)
+        production_id = scene.episode_id
+        clip_id = build_clip_id(
+            production_id,
+            scene.sequence_number,
+            shot.sequence_number,
+        )
         frame_count = max(1, round(shot.estimated_duration_seconds * 24))
         bindings = [
-            AssetBinding(asset_id=scene.location_asset_id, role=AssetBindingRole.LOCATION)
+            AssetBinding(
+                asset_id=scene.location_asset_id,
+                role=AssetBindingRole.LOCATION,
+            )
         ]
         bindings.extend(
             AssetBinding(asset_id=asset_id, role=AssetBindingRole.SUBJECT)
@@ -121,10 +127,10 @@ class ACPPEditorService:
             for value in (shot.continuity_notes, shot.blocking_notes)
             if value
         )
-        package = ClipProductionPackage(
+        return ClipProductionPackage(
             identity=ClipIdentity(
                 clip_id=clip_id,
-                production_id="CURRENT-PRODUCTION",
+                production_id=production_id,
                 episode_id=scene.episode_id,
                 scene_id=scene.scene_id,
                 shot_id=shot.shot_id,
@@ -164,7 +170,6 @@ class ACPPEditorService:
                 "source_shot_title": shot.title,
             },
         )
-        return package
 
     def save(self, package: ClipProductionPackage) -> ClipProductionPackage:
         """Persist a package and archive the previous current version."""
