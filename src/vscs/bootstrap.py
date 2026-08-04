@@ -19,7 +19,10 @@ from vscs.application.caps import (
 )
 from vscs.application.projects import ProjectService
 from vscs.application.prompt_graph import (
+    PromptGraphBuilder,
+    PromptGraphDiagnosticsFactory,
     PromptGraphRegistry,
+    PromptGraphResolver,
     PromptGraphSnapshotRegistry,
 )
 from vscs.application.rendering import (
@@ -96,11 +99,9 @@ class ApplicationContext:
 
     @property
     def is_shutdown(self) -> bool:
-        """Return whether application resources have been released."""
         return self._shutdown
 
     def create_main_window(self) -> MainWindow:
-        """Create the real VSCS main window without starting the event loop."""
         from vscs.presentation.story_integration import install_story_browser
         from vscs.presentation.windows.main_window import MainWindow
 
@@ -108,7 +109,6 @@ class ApplicationContext:
         return MainWindow(self.services)
 
     def shutdown(self) -> None:
-        """Release application resources exactly once."""
         if self._shutdown:
             return
         self.plugins.shutdown()
@@ -130,7 +130,6 @@ class ApplicationContext:
 def build_application_context(
     options: BootstrapOptions | None = None,
 ) -> ApplicationContext:
-    """Build and validate the complete VSCS dependency graph."""
     selected = options or BootstrapOptions()
     configuration = ConfigurationService(selected.config_path)
     configuration.load()
@@ -145,10 +144,8 @@ def build_application_context(
     logger: logging.Logger | None = None
     if selected.configure_logging:
         settings = configuration.settings.logging
-        root = (
-            configuration.settings.environment.logs_root
-            .expanduser()
-            .resolve(strict=False)
+        root = configuration.settings.environment.logs_root.expanduser().resolve(
+            strict=False
         )
         logging_service = LoggingService(
             root,
@@ -167,20 +164,20 @@ def build_application_context(
     )
     stories = services.register(StoryService, StoryService(projects))
     services.register(ShotPlanningService, ShotPlanningService(projects))
-    services.register(
-        ACPPEditorService,
-        ACPPEditorService(projects, stories),
-    )
+    services.register(ACPPEditorService, ACPPEditorService(projects, stories))
     services.register(PromptGraphRegistry, PromptGraphRegistry())
+    services.register(PromptGraphSnapshotRegistry, PromptGraphSnapshotRegistry())
+    graph_resolver = services.register(PromptGraphResolver, PromptGraphResolver())
+    graph_diagnostics = services.register(
+        PromptGraphDiagnosticsFactory,
+        PromptGraphDiagnosticsFactory(),
+    )
     services.register(
-        PromptGraphSnapshotRegistry,
-        PromptGraphSnapshotRegistry(),
+        PromptGraphBuilder,
+        PromptGraphBuilder(graph_resolver, graph_diagnostics),
     )
     services.register(RenderingContracts, RenderingContracts())
-    adapter_registry = services.register(
-        RenderAdapterRegistry,
-        RenderAdapterRegistry(),
-    )
+    adapter_registry = services.register(RenderAdapterRegistry, RenderAdapterRegistry())
     services.register(
         QualityProfileRegistry,
         QualityProfileRegistry(default_quality_profiles()),
@@ -192,15 +189,11 @@ def build_application_context(
         WorkflowCompatibilityValidator,
         WorkflowCompatibilityValidator(),
     )
-    services.register(
-        WorkflowDiagnosticsFormatter,
-        WorkflowDiagnosticsFormatter(),
-    )
+    services.register(WorkflowDiagnosticsFormatter, WorkflowDiagnosticsFormatter())
     workflow_root = configuration.settings.environment.config_root / "workflows"
-    manifest_root = workflow_root / "manifests"
     manifest_loader = services.register(
         WorkflowManifestLoader,
-        WorkflowManifestLoader(manifest_root),
+        WorkflowManifestLoader(workflow_root / "manifests"),
     )
     services.register(
         ManifestDiscoveryResult,
@@ -218,22 +211,10 @@ def build_application_context(
     if not adapter_registry.contains(RendererKind.COMFYUI):
         raise RuntimeError("ComfyUI adapter registration failed")
 
-    asset_repository = services.register(
-        AssetRepository,
-        AssetRepository(database),
-    )
-    assets = services.register(
-        AssetService,
-        AssetService(projects, asset_repository),
-    )
-    cap_repository = services.register(
-        CAPRepository,
-        CAPRepository(database),
-    )
-    caps = services.register(
-        CAPService,
-        CAPService(assets, cap_repository),
-    )
+    asset_repository = services.register(AssetRepository, AssetRepository(database))
+    assets = services.register(AssetService, AssetService(projects, asset_repository))
+    cap_repository = services.register(CAPRepository, CAPRepository(database))
+    caps = services.register(CAPService, CAPService(assets, cap_repository))
     reference_repository = services.register(
         CanonicalReferenceRepository,
         CanonicalReferenceRepository(database),
@@ -287,7 +268,6 @@ def _cap_provider(
     configuration: ConfigurationService,
     mode: StartupMode,
 ) -> CAPGenerationProvider:
-    """Build the selected CAP provider, using deterministic templates in tests."""
     if mode is StartupMode.TEST:
         return TemplateCAPGenerationProvider()
     settings = configuration.settings.ai
