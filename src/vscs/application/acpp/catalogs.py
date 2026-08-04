@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.caps import (
-    CanonicalReferenceError,
-    CanonicalReferenceService,
     CAPError,
     CAPService,
+    CanonicalReferenceError,
+    CanonicalReferenceService,
 )
 from vscs.application.car.validator.prompt_discovery import PromptPackageDiscoverer
 from vscs.domain.caps import CAPStatus, CanonicalReferenceStatus
