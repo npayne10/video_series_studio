@@ -1,0 +1,191 @@
+{
+  "bindings": [
+    {
+      "field_path": "inputs.text",
+      "input_kind": "positive_prompt",
+      "required": true,
+      "selector": {
+        "class_type": "CLIPTextEncode",
+        "logical_name": "positive_prompt",
+        "node_title": "VSCS Positive Prompt"
+      }
+    },
+    {
+      "field_path": "inputs.text",
+      "input_kind": "negative_prompt",
+      "required": true,
+      "selector": {
+        "class_type": "CLIPTextEncode",
+        "logical_name": "negative_prompt",
+        "node_title": "VSCS Negative Prompt"
+      }
+    },
+    {
+      "field_path": "inputs.width",
+      "input_kind": "width",
+      "required": true,
+      "selector": {
+        "logical_name": "video_settings",
+        "node_title": "VSCS Video Settings"
+      }
+    },
+    {
+      "field_path": "inputs.height",
+      "input_kind": "height",
+      "required": true,
+      "selector": {
+        "logical_name": "video_settings",
+        "node_title": "VSCS Video Settings"
+      }
+    },
+    {
+      "field_path": "inputs.length",
+      "input_kind": "frame_count",
+      "required": true,
+      "selector": {
+        "logical_name": "video_settings",
+        "node_title": "VSCS Video Settings"
+      }
+    },
+    {
+      "field_path": "inputs.frame_rate",
+      "input_kind": "frames_per_second",
+      "required": true,
+      "selector": {
+        "logical_name": "video_settings",
+        "node_title": "VSCS Video Settings"
+      }
+    },
+    {
+      "field_path": "inputs.image",
+      "input_kind": "start_frame",
+      "required": false,
+      "selector": {
+        "logical_name": "start_frame",
+        "node_title": "VSCS Start Frame"
+      }
+    },
+    {
+      "field_path": "inputs.image",
+      "input_kind": "end_frame",
+      "required": false,
+      "selector": {
+        "logical_name": "end_frame",
+        "node_title": "VSCS End Frame"
+      }
+    },
+    {
+      "field_path": "inputs.images",
+      "input_kind": "reference_images",
+      "required": false,
+      "selector": {
+        "logical_name": "canonical_references",
+        "node_title": "VSCS Canonical References"
+      }
+    },
+    {
+      "field_path": "inputs.lora_name",
+      "input_kind": "lora",
+      "required": false,
+      "selector": {
+        "logical_name": "lora_loader",
+        "node_title": "VSCS LoRA Loader"
+      }
+    },
+    {
+      "field_path": "inputs.seed",
+      "input_kind": "seed",
+      "required": false,
+      "selector": {
+        "logical_name": "sampler",
+        "node_title": "VSCS Sampler"
+      }
+    },
+    {
+      "field_path": "inputs.filename_prefix",
+      "input_kind": "filename_stem",
+      "required": true,
+      "selector": {
+        "logical_name": "output",
+        "node_title": "VSCS Video Output"
+      }
+    }
+  ],
+  "capabilities": [
+    "text_to_video",
+    "image_to_video",
+    "start_frame",
+    "end_frame",
+    "reference_images",
+    "multiple_reference_images",
+    "loras",
+    "seed_control",
+    "resume"
+  ],
+  "extra": [
+    [
+      "profile_purpose",
+      "High-quality continuity-aware production generation"
+    ],
+    [
+      "video_model_family",
+      "LTX 2.3"
+    ],
+    [
+      "temporal_refinement",
+      "required"
+    ]
+  ],
+  "lip_sync_modes": [
+    "none",
+    "off_screen"
+  ],
+  "metadata": {
+    "author": "VSCS",
+    "description": "Reference ComfyUI manifest for high-quality LTX 2.3 Production renders.",
+    "display_name": "LTX 2.3 Production",
+    "manifest_version": "1.0",
+    "renderer": "comfyui",
+    "workflow_id": "ltx23_production_v1",
+    "workflow_version": "1.0"
+  },
+  "output_kinds": [
+    "production_video",
+    "image_sequence",
+    "reference_frame",
+    "metadata"
+  ],
+  "quality_levels": [
+    "production"
+  ],
+  "requirements": [
+    {
+      "identifier": "ltx-2.3",
+      "kind": "video_model",
+      "optional": false,
+      "version": "2.3"
+    },
+    {
+      "identifier": "ComfyUI-LTXVideo",
+      "kind": "custom_node",
+      "optional": false
+    },
+    {
+      "identifier": "Licon-MSR",
+      "kind": "custom_node",
+      "optional": false
+    },
+    {
+      "identifier": "VSCS-Temporal-Refinement",
+      "kind": "custom_node",
+      "optional": true
+    }
+  ],
+  "tags": [
+    "ltx",
+    "video",
+    "production",
+    "reference"
+  ],
+  "workflow_file": "workflows/ltx23_production_v1_api.json"
+}
