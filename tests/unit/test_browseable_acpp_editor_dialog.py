@@ -14,7 +14,6 @@ from vscs.application.ssie import Scene
 from vscs.application.story import StoryService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
-import vscs.presentation.dialogs.browseable_acpp_editor_dialog as dialog_module
 from vscs.presentation.dialogs.browseable_acpp_editor_dialog import (
     BrowseableACPPEditorDialog,
 )
@@ -83,7 +82,7 @@ def test_acpp_browse_button_adds_selected_project_asset(
             return QDialog.DialogCode.Accepted
 
     monkeypatch.setattr(  # type: ignore[attr-defined]
-        dialog_module,
+        "vscs.presentation.dialogs.browseable_acpp_editor_dialog."
         "AssetPickerDialog",
         FakePicker,
     )
