@@ -62,6 +62,11 @@ from .progress import (
     BatchProgressSnapshot,
     BatchProgressTracker,
 )
+from .recovery import (
+    BatchRecoveryCheckpoint,
+    BatchRecoveryService,
+    BatchRecoveryStore,
+)
 from .registry import PromptGraphRegistry, PromptGraphSnapshotRegistry
 from .renderer_profiles import (
     ProfiledPromptPackage,
@@ -110,6 +115,9 @@ __all__ = [
     "BatchQueueEntry",
     "BatchQueueSnapshot",
     "BatchQueueStatus",
+    "BatchRecoveryCheckpoint",
+    "BatchRecoveryService",
+    "BatchRecoveryStore",
     "BatchReportingService",
     "BatchStatistics",
     "BatchStatisticsService",
