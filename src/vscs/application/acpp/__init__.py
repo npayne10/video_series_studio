@@ -59,6 +59,7 @@ from .resolution import (
 )
 from .resolver import ACPPResolutionError, ACPPResourceResolver
 from .serialization import ACPPSerializationError, ACPPSerializer
+from .service import ACPPEditorError, ACPPEditorService
 from .validator import (
     ACPPValidationIssue,
     ACPPValidationResult,
@@ -70,6 +71,8 @@ __all__ = [
     "ACPPBuildError",
     "ACPPCompilationError",
     "ACPPCompilerConfig",
+    "ACPPEditorError",
+    "ACPPEditorService",
     "ACPPPromptCompiler",
     "ACPPResolutionError",
     "ACPPResolutionResult",
