@@ -24,6 +24,7 @@ from vscs.application.rendering import (
     RenderAdapterRegistry,
     RenderingContracts,
     VoiceProfileRegistry,
+    WorkflowRegistry,
     default_quality_profiles,
 )
 from vscs.application.shots import ShotPlanningService
@@ -168,6 +169,7 @@ def build_application_context(
     )
     services.register(ContinuityStateRegistry, ContinuityStateRegistry())
     services.register(VoiceProfileRegistry, VoiceProfileRegistry())
+    services.register(WorkflowRegistry, WorkflowRegistry())
     asset_repository = services.register(
         AssetRepository,
         AssetRepository(database),
