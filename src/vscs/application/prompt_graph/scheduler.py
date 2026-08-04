@@ -178,24 +178,11 @@ class BatchCompilationScheduler:
         scheduled.started_at = datetime.now(UTC)
         self._running_batch_id = scheduled.request.batch_id
         try:
-            job = self.compilation_service.compile(
-                scheduled.request,
-                on_progress=lambda progress: self._record_progress(
-                    scheduled,
-                    progress,
-                ),
-                should_cancel=lambda: scheduled.cancellation_requested,
-            )
+            job = self._compile(scheduled)
             scheduled.job = job
             scheduled.progress = job.progress
             scheduled.status = self._queue_status(job.status)
             scheduled.finished_at = job.finished_at
-            if self.recovery_service is not None:
-                for result in job.results:
-                    self.recovery_service.record_result(
-                        scheduled.request.batch_id,
-                        result,
-                    )
             if self.progress_tracker is not None:
                 self.progress_tracker.update(job.progress, observed_at=job.finished_at)
             if self.reporting_service is not None:
@@ -211,6 +198,28 @@ class BatchCompilationScheduler:
             if entry is None:
                 return tuple(completed)
             completed.append(entry)
+
+    def _compile(self, scheduled: _ScheduledBatch) -> BatchCompilationJob:
+        progress_callback = lambda progress: self._record_progress(
+            scheduled,
+            progress,
+        )
+        cancellation = lambda: scheduled.cancellation_requested
+        if self.recovery_service is None:
+            return self.compilation_service.compile(
+                scheduled.request,
+                on_progress=progress_callback,
+                should_cancel=cancellation,
+            )
+        return self.compilation_service.compile(
+            scheduled.request,
+            on_progress=progress_callback,
+            on_result=lambda result: self.recovery_service.record_result(
+                scheduled.request.batch_id,
+                result,
+            ),
+            should_cancel=cancellation,
+        )
 
     def _next_pending(self) -> _ScheduledBatch | None:
         return next(
