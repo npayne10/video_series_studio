@@ -26,6 +26,7 @@ from vscs.application.rendering import (
     VoicePackageReference,
     WorkflowCompatibilityValidator,
     WorkflowDiagnosticsFormatter,
+    WorkflowInputKind,
     WorkflowManifest,
     WorkflowManifestLoader,
     WorkflowRegistry,
@@ -34,13 +35,16 @@ from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_cont
 from vscs.infrastructure.rendering import ComfyUIAdapter, ComfyUIWorkflowCompiler
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-_REFERENCE_MANIFEST_ROOT = _REPOSITORY_ROOT / "resources" / "workflows" / "manifests"
+_REFERENCE_MANIFEST_ROOT = (
+    _REPOSITORY_ROOT / "resources" / "workflows" / "manifests"
+)
 
 
 def _install_reference_manifests(root: Path) -> Path:
     manifest_root = root / "manifests"
     manifest_root.mkdir(parents=True)
-    for filename in ("ltx23_preview_v1.json", "ltx23_production_v1.json"):
+    filenames = ("ltx23_preview_v1.json", "ltx23_production_v1.json")
+    for filename in filenames:
         shutil.copy2(_REFERENCE_MANIFEST_ROOT / filename, manifest_root / filename)
     return manifest_root
 
@@ -52,28 +56,29 @@ def _write_api_workflow(root: Path, manifest: WorkflowManifest) -> None:
     for binding in manifest.bindings:
         selector = binding.selector
         selector_key = (selector.node_title, selector.class_type)
-        node_id = selector.node_id
-        if node_id is None:
-            node_id = nodes_by_selector.get(selector_key)
+        node_id = selector.node_id or nodes_by_selector.get(selector_key)
         if node_id is None:
             node_id = str(next_id)
             next_id += 1
             nodes_by_selector[selector_key] = node_id
-        if node_id not in workflow:
-            node: dict[str, object] = {
-                "class_type": selector.class_type or "VSCSReferenceNode",
-                "inputs": {},
-            }
-            if selector.node_title is not None:
-                node["_meta"] = {"title": selector.node_title}
-            workflow[node_id] = node
+        if node_id in workflow:
+            continue
+        node: dict[str, object] = {
+            "class_type": selector.class_type or "VSCSReferenceNode",
+            "inputs": {},
+        }
+        if selector.node_title is not None:
+            node["_meta"] = {"title": selector.node_title}
+        workflow[node_id] = node
     assert manifest.workflow_file is not None
     path = root / manifest.workflow_file
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(workflow), encoding="utf-8")
 
 
-def _discover_foundation(tmp_path: Path) -> tuple[WorkflowRegistry, ManifestDiscoveryResult]:
+def _discover_foundation(
+    tmp_path: Path,
+) -> tuple[WorkflowRegistry, ManifestDiscoveryResult]:
     registry = WorkflowRegistry()
     loader = WorkflowManifestLoader(_install_reference_manifests(tmp_path))
     result = loader.discover(registry)
@@ -146,7 +151,9 @@ def _adapter(tmp_path: Path, registry: WorkflowRegistry) -> ComfyUIAdapter:
     )
 
 
-def test_reference_manifests_discover_and_report_as_one_catalogue(tmp_path: Path) -> None:
+def test_reference_manifests_discover_and_report_as_one_catalogue(
+    tmp_path: Path,
+) -> None:
     registry, result = _discover_foundation(tmp_path)
     report = WorkflowDiagnosticsFormatter().format_discovery(result)
 
@@ -162,7 +169,9 @@ def test_reference_manifests_discover_and_report_as_one_catalogue(tmp_path: Path
     assert "ltx23_production_v1" in report
 
 
-def test_preview_foundation_compiles_submits_and_cancels_dry_run(tmp_path: Path) -> None:
+def test_preview_foundation_compiles_submits_and_cancels_dry_run(
+    tmp_path: Path,
+) -> None:
     registry, _result = _discover_foundation(tmp_path)
     adapter = _adapter(tmp_path, registry)
     request = _request("ltx23_preview_v1", QualityLevel.PREVIEW)
@@ -180,7 +189,7 @@ def test_preview_foundation_compiles_submits_and_cancels_dry_run(tmp_path: Path)
     assert adapter.cancel(job).status is RenderJobStatus.CANCELLED
 
 
-def test_production_foundation_injects_continuity_and_canonical_assets(
+def test_production_injects_continuity_and_canonical_assets(
     tmp_path: Path,
 ) -> None:
     registry, _result = _discover_foundation(tmp_path)
@@ -204,14 +213,10 @@ def test_production_foundation_injects_continuity_and_canonical_assets(
     compiled = _adapter(tmp_path, registry).compile_request(request)
     prompt = compiled.payload["prompt"]
 
-    start_binding = manifest.binding_for("start_frame")
-    end_binding = manifest.binding_for("end_frame")
-    reference_binding = manifest.binding_for("reference_images")
-    lora_binding = manifest.binding_for("lora")
-    assert start_binding is not None
-    assert end_binding is not None
-    assert reference_binding is not None
-    assert lora_binding is not None
+    assert manifest.binding_for(WorkflowInputKind.START_FRAME) is not None
+    assert manifest.binding_for(WorkflowInputKind.END_FRAME) is not None
+    assert manifest.binding_for(WorkflowInputKind.REFERENCE_IMAGES) is not None
+    assert manifest.binding_for(WorkflowInputKind.LORA) is not None
 
     values = json.dumps(prompt)
     assert "continuity/previous-final.png" in values
