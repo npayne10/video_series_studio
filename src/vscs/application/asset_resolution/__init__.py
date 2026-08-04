@@ -1,5 +1,6 @@
 """Asset Manager resolution contracts and services."""
 
+from .bootstrap import register_asset_resolution
 from .models import (
     AssetDependencyFingerprint,
     AssetResolutionDiagnostic,
@@ -25,5 +26,6 @@ __all__ = [
     "ResolvedAssetBinding",
     "ResolvedCAPBinding",
     "ResolvedReferenceBinding",
+    "register_asset_resolution",
     "stable_model_checksum",
 ]
