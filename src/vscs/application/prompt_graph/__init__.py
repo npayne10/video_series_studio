@@ -37,6 +37,7 @@ from .differencing import (
     PromptGraphDiffer,
     PromptGraphSnapshotService,
 )
+from .history import BatchCompilationHistory, BatchHistoryRecord
 from .incremental import (
     CompilationDependency,
     CompilationDependencyKind,
@@ -55,6 +56,12 @@ from .models import (
     PromptNodeKind,
 )
 from .preview import PromptPreview, PromptPreviewSection, PromptPreviewService
+from .progress import (
+    BatchProgressEvent,
+    BatchProgressMetrics,
+    BatchProgressSnapshot,
+    BatchProgressTracker,
+)
 from .registry import PromptGraphRegistry, PromptGraphSnapshotRegistry
 from .renderer_profiles import (
     ProfiledPromptPackage,
@@ -63,6 +70,7 @@ from .renderer_profiles import (
     RendererPromptProfileRegistry,
     default_renderer_prompt_profiles,
 )
+from .reporting import BatchCompilationReport, BatchReportingService
 from .resolver import PromptGraphResolver, PromptGraphSource
 from .scheduler import (
     BatchCompilationScheduler,
@@ -71,6 +79,7 @@ from .scheduler import (
     BatchQueueStatus,
 )
 from .snapshot import PromptGraphSnapshot, graph_checksum
+from .statistics import BatchStatistics, BatchStatisticsService
 from .validation import (
     PromptGraphCompleteness,
     PromptGraphResourceInventory,
@@ -82,18 +91,28 @@ from .validation import (
 )
 
 __all__ = [
+    "BatchCompilationHistory",
     "BatchCompilationItem",
     "BatchCompilationItemResult",
     "BatchCompilationItemStatus",
     "BatchCompilationJob",
     "BatchCompilationProgress",
+    "BatchCompilationReport",
     "BatchCompilationRequest",
     "BatchCompilationScheduler",
     "BatchCompilationStatus",
+    "BatchHistoryRecord",
+    "BatchProgressEvent",
+    "BatchProgressMetrics",
+    "BatchProgressSnapshot",
+    "BatchProgressTracker",
     "BatchPromptCompilationService",
     "BatchQueueEntry",
     "BatchQueueSnapshot",
     "BatchQueueStatus",
+    "BatchReportingService",
+    "BatchStatistics",
+    "BatchStatisticsService",
     "CancellationPredicate",
     "CompilationDependency",
     "CompilationDependencyKind",
