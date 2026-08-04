@@ -95,4 +95,4 @@ class RenderAdapterRegistry:
 class RenderingContracts:
     """Marker service identifying the installed rendering contract version."""
 
-    version: str = "17.4.0.4"
+    version: str = "17.4.0.5"
