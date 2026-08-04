@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.caps import (
-    CAPError,
-    CAPService,
     CanonicalReferenceError,
     CanonicalReferenceService,
+    CAPError,
+    CAPService,
 )
 from vscs.application.car.validator.prompt_discovery import PromptPackageDiscoverer
-from vscs.domain.caps import CAPStatus, CanonicalReferenceStatus
+from vscs.domain.caps import CanonicalReferenceStatus, CAPStatus
 
 from .resolution import (
     AssetResolutionRecord,
