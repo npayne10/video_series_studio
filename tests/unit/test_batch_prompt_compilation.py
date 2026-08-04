@@ -33,7 +33,10 @@ def _service(resolver: PromptGraphResolver) -> BatchPromptCompilationService:
     )
 
 
-def _context(shot_id: str, quality: QualityLevel = QualityLevel.PRODUCTION) -> PromptGraphBuildContext:
+def _context(
+    shot_id: str,
+    quality: QualityLevel = QualityLevel.PRODUCTION,
+) -> PromptGraphBuildContext:
     return PromptGraphBuildContext(
         graph_id=f"GRAPH-{shot_id}",
         production_id="XORIX",
@@ -118,7 +121,10 @@ def test_batch_compiles_in_deterministic_sequence_and_reports_progress() -> None
     job = _service(resolver).compile(request, on_progress=progress.append)
 
     assert job.status is BatchCompilationStatus.COMPLETED
-    assert tuple(result.item_id for result in job.results) == ("ITEM-001", "ITEM-002")
+    assert tuple(result.item_id for result in job.results) == (
+        "ITEM-001",
+        "ITEM-002",
+    )
     assert all(
         result.status is BatchCompilationItemStatus.COMPLETED
         for result in job.results
@@ -173,7 +179,8 @@ def test_batch_can_use_preview_profile_and_nonproduction_override() -> None:
         require_production_ready=False,
     )
 
-    job = _service(resolver).compile(BatchCompilationRequest.create("BATCH-004", (item,)))
+    request = BatchCompilationRequest.create("BATCH-004", (item,))
+    job = _service(resolver).compile(request)
 
     assert job.status is BatchCompilationStatus.COMPLETED
     assert job.packages[0].profile.profile_id == "comfyui_preview_v1"
