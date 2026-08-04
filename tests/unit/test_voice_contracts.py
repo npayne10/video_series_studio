@@ -38,7 +38,7 @@ def test_voice_profile_registry_preserves_character_identity() -> None:
     assert registry.list() == (profile,)
 
 
-def test_voice_generation_request_accepts_ordered_non_overlapping_cues() -> None:
+def test_voice_generation_request_accepts_timed_and_overlapping_cues() -> None:
     cues = (
         DialogueCue(
             cue_id="CUE-001",
@@ -54,7 +54,7 @@ def test_voice_generation_request_accepts_ordered_non_overlapping_cues() -> None
             character_asset_id="CHR-SANDRA-CRAWFORD",
             voice_profile_id="VOI-SANDRA-CRAWFORD",
             text="Course confirmed.",
-            timing=DialogueTiming(3.0, 4.2),
+            timing=DialogueTiming(2.0, 3.2),
             off_screen=True,
         ),
     )
@@ -84,27 +84,19 @@ def test_voice_contracts_reject_invalid_timing_and_identity() -> None:
             off_screen=True,
             face_target_id="FACE-JAMES",
         )
-    with pytest.raises(ValueError, match="overlap"):
+    duplicate = DialogueCue(
+        cue_id="CUE-DUPLICATE",
+        character_asset_id="CHR-A",
+        voice_profile_id="VOI-A",
+        text="Duplicate",
+        timing=DialogueTiming(0.0, 1.0),
+    )
+    with pytest.raises(ValueError, match="unique"):
         VoiceGenerationRequest(
             request_id="VOICE-BAD",
             production_id="XORIX",
             scene_id="SCN-001",
             shot_id="SHT-001",
-            cues=(
-                DialogueCue(
-                    cue_id="CUE-A",
-                    character_asset_id="CHR-A",
-                    voice_profile_id="VOI-A",
-                    text="First",
-                    timing=DialogueTiming(0.0, 2.0),
-                ),
-                DialogueCue(
-                    cue_id="CUE-B",
-                    character_asset_id="CHR-B",
-                    voice_profile_id="VOI-B",
-                    text="Second",
-                    timing=DialogueTiming(1.0, 3.0),
-                ),
-            ),
+            cues=(duplicate, duplicate),
             output_directory="audio/dialogue",
         )
