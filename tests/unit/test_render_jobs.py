@@ -6,9 +6,9 @@ import pytest
 
 from vscs.application.rendering import (
     QualityLevel,
+    RendererKind,
     RenderJob,
     RenderJobStatus,
-    RendererKind,
     RenderOutput,
     RenderOutputKind,
 )

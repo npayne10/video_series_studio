@@ -7,7 +7,7 @@ from typing import Protocol, runtime_checkable
 
 from .capabilities import WorkflowCapabilities
 from .jobs import RenderJob
-from .models import RenderRequest, RendererKind
+from .models import RendererKind, RenderRequest
 from .outputs import RenderOutput
 
 

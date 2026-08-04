@@ -18,8 +18,8 @@ from .models import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
-    RenderRequest,
     RendererKind,
+    RenderRequest,
     RenderSettings,
 )
 from .outputs import RenderOutput, RenderOutputKind
@@ -48,9 +48,9 @@ __all__ = [
     "RenderOutput",
     "RenderOutputKind",
     "RenderRequest",
+    "RenderSettings",
     "RendererKind",
     "RenderingContracts",
-    "RenderSettings",
     "RequestValidation",
     "RetryPolicy",
     "WorkflowCapabilities",

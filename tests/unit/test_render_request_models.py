@@ -12,8 +12,8 @@ from vscs.application.rendering import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
-    RenderRequest,
     RendererKind,
+    RenderRequest,
     RenderSettings,
 )
 
