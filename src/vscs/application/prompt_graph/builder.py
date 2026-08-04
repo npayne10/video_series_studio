@@ -13,7 +13,6 @@ from .diagnostics import (
 )
 from .models import (
     PromptEdge,
-    PromptEdgeKind,
     PromptGraph,
     PromptGraphMetadata,
     PromptNode,

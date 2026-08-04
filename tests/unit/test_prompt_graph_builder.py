@@ -2,8 +2,8 @@
 
 from vscs.application.prompt_graph import (
     PromptEdgeKind,
-    PromptGraphBuilder,
     PromptGraphBuildContext,
+    PromptGraphBuilder,
     PromptGraphDiagnosticSeverity,
     PromptGraphDiagnosticsFactory,
     PromptGraphResolver,
