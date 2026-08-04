@@ -61,13 +61,14 @@ class _FakeCompiler:
             )
             status = BatchCompilationStatus.COMPLETED
         progress = BatchCompilationProgress(
-            request.batch_id,
-            status,
-            1,
-            int(status is BatchCompilationStatus.COMPLETED),
-            0,
-            int(status is BatchCompilationStatus.CANCELLED),
-            0,
+            batch_id=request.batch_id,
+            status=status,
+            total_items=1,
+            completed_items=int(status is BatchCompilationStatus.COMPLETED),
+            skipped_items=0,
+            failed_items=0,
+            cancelled_items=int(status is BatchCompilationStatus.CANCELLED),
+            remaining_items=0,
         )
         if on_progress is not None:
             on_progress(progress)
