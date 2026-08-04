@@ -22,9 +22,11 @@ from vscs.application.prompt_graph import (
     PromptGraphBuilder,
     PromptGraphCompiler,
     PromptGraphDiagnosticsFactory,
+    PromptGraphDiffer,
     PromptGraphRegistry,
     PromptGraphResolver,
     PromptGraphSnapshotRegistry,
+    PromptGraphSnapshotService,
     PromptGraphValidator,
 )
 from vscs.application.rendering import (
@@ -168,7 +170,15 @@ def build_application_context(
     services.register(ShotPlanningService, ShotPlanningService(projects))
     services.register(ACPPEditorService, ACPPEditorService(projects, stories))
     services.register(PromptGraphRegistry, PromptGraphRegistry())
-    services.register(PromptGraphSnapshotRegistry, PromptGraphSnapshotRegistry())
+    snapshot_registry = services.register(
+        PromptGraphSnapshotRegistry,
+        PromptGraphSnapshotRegistry(),
+    )
+    services.register(
+        PromptGraphSnapshotService,
+        PromptGraphSnapshotService(snapshot_registry),
+    )
+    services.register(PromptGraphDiffer, PromptGraphDiffer())
     graph_resolver = services.register(PromptGraphResolver, PromptGraphResolver())
     graph_diagnostics = services.register(
         PromptGraphDiagnosticsFactory,
