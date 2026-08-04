@@ -34,37 +34,51 @@ class BatchHistoryRecord:
     def from_job(cls, job: BatchCompilationJob) -> BatchHistoryRecord:
         packages = job.packages
         checksum_input = "\n".join(
-            sorted(
-                f"{result.item_id}:{result.status.value}:"
-                f"{result.package.source.provenance.graph_checksum if result.package else ''}"
-                for result in job.results
-            )
+            sorted(cls._result_identity(result) for result in job.results)
         )
         contexts = tuple(item.context for item in job.request.items)
+        duration = max(
+            (job.finished_at - job.started_at).total_seconds(),
+            0.0,
+        )
         return cls(
             batch_id=job.request.batch_id,
             status=job.status,
             started_at=job.started_at,
             finished_at=job.finished_at,
-            duration_seconds=max((job.finished_at - job.started_at).total_seconds(), 0.0),
+            duration_seconds=duration,
             total_items=len(job.request.items),
             completed_items=len(job.completed_results),
             skipped_items=len(job.skipped_results),
             failed_items=len(job.failed_results),
             cancelled_items=len(job.cancelled_results),
-            renderer_ids=tuple(sorted({context.renderer.value for context in contexts})),
+            renderer_ids=tuple(
+                sorted({context.renderer.value for context in contexts})
+            ),
             quality_levels=tuple(
                 sorted({context.quality_level.value for context in contexts})
             ),
             renderer_profile_ids=tuple(
                 sorted({package.profile.profile_id for package in packages})
             ),
-            workflow_ids=tuple(sorted({context.workflow_id for context in contexts})),
+            workflow_ids=tuple(
+                sorted({context.workflow_id for context in contexts})
+            ),
             graph_versions=tuple(
                 sorted({package.source.provenance.graph_version for package in packages})
             ),
-            result_checksum=hashlib.sha256(checksum_input.encode("utf-8")).hexdigest(),
+            result_checksum=hashlib.sha256(
+                checksum_input.encode("utf-8")
+            ).hexdigest(),
         )
+
+    @staticmethod
+    def _result_identity(result: object) -> str:
+        item_id = getattr(result, "item_id")
+        status = getattr(result, "status").value
+        package = getattr(result, "package")
+        checksum = package.source.provenance.graph_checksum if package else ""
+        return f"{item_id}:{status}:{checksum}"
 
     @property
     def processed_items(self) -> int:
