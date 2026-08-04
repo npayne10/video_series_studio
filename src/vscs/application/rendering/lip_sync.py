@@ -21,7 +21,7 @@ class LipSyncMode(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class LipSyncTarget:
-    """One visible face target mapped to its speaking character."""
+    """One visible target mapped to its speaking character."""
 
     target_id: str
     character_asset_id: str
@@ -37,7 +37,7 @@ class LipSyncTarget:
 
 @dataclass(frozen=True, slots=True)
 class LipSyncRequest:
-    """Separate post-generation request for applying dialogue to visible faces."""
+    """Post-generation request for applying dialogue to visible targets."""
 
     request_id: str
     production_id: str
@@ -81,35 +81,69 @@ class LipSyncRequest:
             raise ValueError(f"{name} must remain project-relative")
 
     def _validate_mode(self) -> None:
-        visible_cues = tuple(cue for cue in self.dialogue_cues if not cue.off_screen)
+        visible_cues = tuple(
+            cue for cue in self.dialogue_cues if not cue.off_screen
+        )
         if self.mode is LipSyncMode.NONE:
             if self.dialogue_cues or self.targets or self.audio_reference_ids:
-                raise ValueError("none lip-sync mode may not declare dialogue inputs")
+                raise ValueError(
+                    "none lip-sync mode may not declare dialogue inputs"
+                )
             return
         if self.mode is LipSyncMode.OFF_SCREEN:
             if any(not cue.off_screen for cue in self.dialogue_cues):
-                raise ValueError("off-screen mode requires every cue to be off-screen")
+                raise ValueError(
+                    "off-screen mode requires every cue to be off-screen"
+                )
             if self.targets:
-                raise ValueError("off-screen mode may not declare visible targets")
+                raise ValueError(
+                    "off-screen mode may not declare visible targets"
+                )
             return
         if not visible_cues:
-            raise ValueError("visible lip-sync modes require at least one visible cue")
+            raise ValueError(
+                "visible lip-sync modes require at least one visible cue"
+            )
         if not self.targets:
-            raise ValueError("visible lip-sync modes require at least one face target")
+            raise ValueError(
+                "visible lip-sync modes require at least one target"
+            )
         speaker_ids = {cue.character_asset_id for cue in visible_cues}
-        if self.mode in {LipSyncMode.SINGLE_SPEAKER, LipSyncMode.PRECISION_CLOSE_UP}:
+        single_modes = {
+            LipSyncMode.SINGLE_SPEAKER,
+            LipSyncMode.PRECISION_CLOSE_UP,
+        }
+        if self.mode in single_modes:
             if len(speaker_ids) != 1 or len(self.targets) != 1:
-                raise ValueError("single-speaker modes require one speaker and one target")
-        if self.mode is LipSyncMode.ALTERNATING_SPEAKERS and len(speaker_ids) < 2:
-            raise ValueError("alternating-speaker mode requires at least two speakers")
-        if self.mode is LipSyncMode.MULTIPLE_SPEAKERS and len(speaker_ids) < 2:
-            raise ValueError("multiple-speaker mode requires at least two speakers")
-        if self.mode is LipSyncMode.PRECISION_CLOSE_UP and not self.precision_required:
-            raise ValueError("precision close-up mode requires precision_required")
+                raise ValueError(
+                    "single-speaker modes require one speaker and one target"
+                )
+        if (
+            self.mode is LipSyncMode.ALTERNATING_SPEAKERS
+            and len(speaker_ids) < 2
+        ):
+            raise ValueError(
+                "alternating-speaker mode requires at least two speakers"
+            )
+        if (
+            self.mode is LipSyncMode.MULTIPLE_SPEAKERS
+            and len(speaker_ids) < 2
+        ):
+            raise ValueError(
+                "multiple-speaker mode requires at least two speakers"
+            )
+        if (
+            self.mode is LipSyncMode.PRECISION_CLOSE_UP
+            and not self.precision_required
+        ):
+            raise ValueError(
+                "precision close-up mode requires precision_required"
+            )
 
     def _validate_cue_targets(self) -> None:
         targets_by_character = {
-            target.character_asset_id: target.target_id for target in self.targets
+            target.character_asset_id: target.target_id
+            for target in self.targets
         }
         for cue in self.dialogue_cues:
             if cue.off_screen:
@@ -121,25 +155,28 @@ class LipSyncRequest:
                 )
             if cue.face_target_id is not None and cue.face_target_id != expected:
                 raise ValueError(
-                    f"dialogue cue {cue.cue_id} references the wrong face target"
+                    f"dialogue cue {cue.cue_id} uses the wrong target"
                 )
 
     @property
     def requires_lip_sync(self) -> bool:
         """Return whether this request needs a visible lip-sync pass."""
-        return self.mode not in {LipSyncMode.NONE, LipSyncMode.OFF_SCREEN}
+        return self.mode not in {
+            LipSyncMode.NONE,
+            LipSyncMode.OFF_SCREEN,
+        }
 
 
 @dataclass(frozen=True, slots=True)
 class LipSyncValidation:
-    """Machine-readable compatibility result for one lip-sync request."""
+    """Machine-readable compatibility result for one request."""
 
     passed: bool
     issues: tuple[str, ...] = ()
 
 
 class LipSyncContractValidator:
-    """Validate external workflow support against a lip-sync request."""
+    """Validate workflow support against a lip-sync request."""
 
     def validate_capabilities(
         self,
@@ -153,14 +190,20 @@ class LipSyncContractValidator:
         issues: list[str] = []
         if request.requires_lip_sync and not supports_lip_sync:
             issues.append("workflow does not support lip-sync")
-        if request.mode in {
+        multi_modes = {
             LipSyncMode.ALTERNATING_SPEAKERS,
             LipSyncMode.MULTIPLE_SPEAKERS,
-        } and not supports_multiple_speakers:
+        }
+        if request.mode in multi_modes and not supports_multiple_speakers:
             issues.append("workflow does not support multiple speakers")
         if (
             request.mode is LipSyncMode.PRECISION_CLOSE_UP
             and not supports_precision_close_up
         ):
-            issues.append("workflow does not support precision close-up lip-sync")
-        return LipSyncValidation(passed=not issues, issues=tuple(issues))
+            issues.append(
+                "workflow does not support precision close-up lip-sync"
+            )
+        return LipSyncValidation(
+            passed=not issues,
+            issues=tuple(issues),
+        )
