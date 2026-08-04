@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
 from .compiler import PromptFragment, PromptPackage, PromptSection, PromptSectionKind
@@ -87,7 +87,7 @@ class PromptOptimizationService:
     """Optimise prompts without weakening authoritative production knowledge."""
 
     renderer_compiler: RendererPromptCompiler
-    policy: PromptOptimizationPolicy = PromptOptimizationPolicy()
+    policy: PromptOptimizationPolicy = field(default_factory=PromptOptimizationPolicy)
 
     def optimize(
         self,
