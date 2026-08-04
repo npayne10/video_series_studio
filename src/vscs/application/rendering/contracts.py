@@ -65,7 +65,7 @@ class RenderAdapter(Protocol):
 
 
 class RenderAdapterRegistry:
-    """Store renderer adapters without constructing any by default."""
+    """Store renderer adapters registered by infrastructure composition."""
 
     def __init__(self) -> None:
         self._adapters: dict[RendererKind, RenderAdapter] = {}
@@ -95,4 +95,4 @@ class RenderAdapterRegistry:
 class RenderingContracts:
     """Marker service identifying the installed rendering contract version."""
 
-    version: str = "17.4.0.1"
+    version: str = "17.4.0.4"
