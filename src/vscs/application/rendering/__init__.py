@@ -1,6 +1,15 @@
 """Renderer-neutral production rendering contracts."""
 
 from .capabilities import WorkflowCapabilities
+from .continuity import (
+    ContinuityEntityKind,
+    ContinuityFrameReference,
+    ContinuityPackage,
+    ContinuityScope,
+    ContinuityStateRegistry,
+    EntityContinuityState,
+    ScopedContinuityState,
+)
 from .contracts import (
     CompiledRenderRequest,
     RenderAdapter,
@@ -10,17 +19,26 @@ from .contracts import (
 )
 from .failure_policy import FailureAction, RetryPolicy
 from .jobs import RenderJob, RenderJobStatus
+from .lip_sync import (
+    LipSyncContractValidator,
+    LipSyncMode,
+    LipSyncRequest,
+    LipSyncTarget,
+    LipSyncValidation,
+)
 from .models import (
     AssetPackageReference,
     AudioMode,
     ContinuityPackageReference,
     LipSyncIntent,
+    LipSyncPackageReference,
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
     RendererKind,
     RenderRequest,
     RenderSettings,
+    VoicePackageReference,
 )
 from .outputs import RenderOutput, RenderOutputKind
 from .quality_profiles import (
@@ -28,14 +46,36 @@ from .quality_profiles import (
     QualityProfileRegistry,
     default_quality_profiles,
 )
+from .voice import (
+    DialogueCue,
+    DialogueTiming,
+    VoiceEmotion,
+    VoiceGenerationRequest,
+    VoiceProfile,
+    VoiceProfileRegistry,
+)
 
 __all__ = [
     "AssetPackageReference",
     "AudioMode",
     "CompiledRenderRequest",
+    "ContinuityEntityKind",
+    "ContinuityFrameReference",
+    "ContinuityPackage",
     "ContinuityPackageReference",
+    "ContinuityScope",
+    "ContinuityStateRegistry",
+    "DialogueCue",
+    "DialogueTiming",
+    "EntityContinuityState",
     "FailureAction",
+    "LipSyncContractValidator",
     "LipSyncIntent",
+    "LipSyncMode",
+    "LipSyncPackageReference",
+    "LipSyncRequest",
+    "LipSyncTarget",
+    "LipSyncValidation",
     "OutputSettings",
     "PromptPackageReference",
     "QualityLevel",
@@ -53,6 +93,12 @@ __all__ = [
     "RenderingContracts",
     "RequestValidation",
     "RetryPolicy",
+    "ScopedContinuityState",
+    "VoiceEmotion",
+    "VoiceGenerationRequest",
+    "VoicePackageReference",
+    "VoiceProfile",
+    "VoiceProfileRegistry",
     "WorkflowCapabilities",
     "default_quality_profiles",
 ]
