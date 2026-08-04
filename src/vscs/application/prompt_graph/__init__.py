@@ -20,6 +20,15 @@ from .models import (
 from .registry import PromptGraphRegistry, PromptGraphSnapshotRegistry
 from .resolver import PromptGraphResolver, PromptGraphSource
 from .snapshot import PromptGraphSnapshot, graph_checksum
+from .validation import (
+    PromptGraphCompleteness,
+    PromptGraphResourceInventory,
+    PromptGraphValidationIssue,
+    PromptGraphValidationPolicy,
+    PromptGraphValidationReport,
+    PromptGraphValidationSeverity,
+    PromptGraphValidator,
+)
 
 __all__ = [
     "PromptEdge",
@@ -29,6 +38,7 @@ __all__ = [
     "PromptGraphBuildReport",
     "PromptGraphBuildResult",
     "PromptGraphBuilder",
+    "PromptGraphCompleteness",
     "PromptGraphCycleError",
     "PromptGraphDiagnostic",
     "PromptGraphDiagnosticSeverity",
@@ -36,9 +46,15 @@ __all__ = [
     "PromptGraphMetadata",
     "PromptGraphRegistry",
     "PromptGraphResolver",
+    "PromptGraphResourceInventory",
     "PromptGraphSnapshot",
     "PromptGraphSnapshotRegistry",
     "PromptGraphSource",
+    "PromptGraphValidationIssue",
+    "PromptGraphValidationPolicy",
+    "PromptGraphValidationReport",
+    "PromptGraphValidationSeverity",
+    "PromptGraphValidator",
     "PromptNode",
     "PromptNodeKind",
     "graph_checksum",
