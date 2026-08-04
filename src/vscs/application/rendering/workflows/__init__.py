@@ -1,5 +1,11 @@
-"""Workflow manifest contracts and registry."""
+"""Workflow manifest contracts, discovery, and registry."""
 
+from .loader import (
+    ManifestDiagnostic,
+    ManifestDiagnosticLevel,
+    ManifestDiscoveryResult,
+    WorkflowManifestLoader,
+)
 from .manifest import (
     WorkflowInputKind,
     WorkflowManifest,
@@ -18,8 +24,12 @@ from .registry import (
 
 __all__ = [
     "DuplicateWorkflowManifestError",
+    "ManifestDiagnostic",
+    "ManifestDiagnosticLevel",
+    "ManifestDiscoveryResult",
     "WorkflowInputKind",
     "WorkflowManifest",
+    "WorkflowManifestLoader",
     "WorkflowManifestRegistryError",
     "WorkflowMetadata",
     "WorkflowNodeBinding",
