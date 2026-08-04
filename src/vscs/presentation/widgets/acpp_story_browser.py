@@ -5,8 +5,9 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTreeWidgetItem, QWidget
 
-from vscs.application.acpp import ACPPEditorService
+from vscs.application.acpp import ACPPEditorError, ACPPEditorService
 from vscs.application.assets import AssetService
+from vscs.application.projects import ProjectNotOpenError
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
 from vscs.presentation.dialogs.acpp_editor_dialog import ACPPEditorDialog
@@ -30,7 +31,8 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         self.acpp_button = QPushButton("ACPP Editor", self)
         self.acpp_button.setObjectName("openACPPEditor")
         self.acpp_button.setToolTip(
-            "Create or edit the Advanced Clip Production Package for the selected shot."
+            "Create or edit the Advanced Clip Production Package "
+            "for the selected shot."
         )
         toolbar_item = self.layout().itemAt(2)
         toolbar = toolbar_item.layout() if toolbar_item is not None else None
@@ -46,10 +48,14 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         super().refresh()
         if not hasattr(self, "acpp_button"):
             return
-        packages = {
-            package.identity.shot_id: package
-            for package in self.acpp.list_packages()
-        }
+        try:
+            packages = {
+                package.identity.shot_id: package
+                for package in self.acpp.list_packages()
+            }
+        except (ProjectNotOpenError, ACPPEditorError):
+            self.acpp_button.setEnabled(False)
+            return
         for item in self._walk_items():
             data = item.data(0, Qt.ItemDataRole.UserRole)
             if not data or str(data[0]) != self.SHOT_KIND:
@@ -88,9 +94,15 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
     def _select_production_shot(self, shot_id: str) -> None:
         for item in self._walk_items():
             data = item.data(0, Qt.ItemDataRole.UserRole)
-            if data and str(data[0]) == self.SHOT_KIND and str(data[1]) == shot_id:
+            if (
+                data
+                and str(data[0]) == self.SHOT_KIND
+                and str(data[1]) == shot_id
+            ):
                 self.tree.setCurrentItem(item)
                 return
 
     def _update_acpp_action_state(self, *_args: object) -> None:
-        self.acpp_button.setEnabled(self._selected_production_shot_id() is not None)
+        self.acpp_button.setEnabled(
+            self._selected_production_shot_id() is not None
+        )
