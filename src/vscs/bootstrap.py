@@ -20,10 +20,12 @@ from vscs.application.caps import (
 from vscs.application.projects import ProjectService
 from vscs.application.rendering import (
     ContinuityStateRegistry,
+    ManifestDiscoveryResult,
     QualityProfileRegistry,
     RenderAdapterRegistry,
     RenderingContracts,
     VoiceProfileRegistry,
+    WorkflowManifestLoader,
     WorkflowRegistry,
     default_quality_profiles,
 )
@@ -169,7 +171,20 @@ def build_application_context(
     )
     services.register(ContinuityStateRegistry, ContinuityStateRegistry())
     services.register(VoiceProfileRegistry, VoiceProfileRegistry())
-    services.register(WorkflowRegistry, WorkflowRegistry())
+    workflow_registry = services.register(WorkflowRegistry, WorkflowRegistry())
+    manifest_root = (
+        configuration.settings.environment.config_root
+        / "workflows"
+        / "manifests"
+    )
+    manifest_loader = services.register(
+        WorkflowManifestLoader,
+        WorkflowManifestLoader(manifest_root),
+    )
+    services.register(
+        ManifestDiscoveryResult,
+        manifest_loader.discover(workflow_registry),
+    )
     asset_repository = services.register(
         AssetRepository,
         AssetRepository(database),
