@@ -30,6 +30,7 @@ from .registry import (
     WorkflowManifestRegistryError,
     WorkflowRegistry,
 )
+from .reporting import WorkflowDiagnosticsFormatter
 
 __all__ = [
     "CompatibilityDiagnostic",
@@ -41,6 +42,7 @@ __all__ = [
     "ManifestDiscoveryResult",
     "WorkflowCompatibilityReport",
     "WorkflowCompatibilityValidator",
+    "WorkflowDiagnosticsFormatter",
     "WorkflowInputKind",
     "WorkflowManifest",
     "WorkflowManifestLoader",
