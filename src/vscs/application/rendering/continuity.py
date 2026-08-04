@@ -43,7 +43,12 @@ class ContinuityFrameReference:
         if not self.reference_id.strip():
             raise ValueError("reference_id is required")
         normalized = self.relative_path.replace("\\", "/")
-        if not normalized or normalized.startswith("/") or ".." in normalized.split("/"):
+        unsafe = (
+            not normalized
+            or normalized.startswith("/")
+            or ".." in normalized.split("/")
+        )
+        if unsafe:
             raise ValueError("relative_path must remain project-relative")
         if self.frame_number is not None and self.frame_number < 0:
             raise ValueError("frame_number may not be negative")
@@ -72,7 +77,14 @@ class EntityContinuityState:
 
     def value(self, key: str) -> str | None:
         """Return one named state value when present."""
-        return next((value for name, value in self.state_values if name == key), None)
+        return next(
+            (
+                value
+                for name, value in self.state_values
+                if name == key
+            ),
+            None,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +106,11 @@ class ScopedContinuityState:
             raise ValueError("state_id and production_id are required")
         if self.scope is not ContinuityScope.SERIES and not self.container_id:
             raise ValueError("container_id is required below series scope")
-        if self.scope in {ContinuityScope.SCENE, ContinuityScope.SHOT} and not self.scene_id:
+        requires_scene = self.scope in {
+            ContinuityScope.SCENE,
+            ContinuityScope.SHOT,
+        }
+        if requires_scene and not self.scene_id:
             raise ValueError("scene_id is required for scene and shot scope")
         if self.scope is ContinuityScope.SHOT and not self.shot_id:
             raise ValueError("shot_id is required for shot scope")
@@ -141,7 +157,9 @@ class ContinuityPackage:
         )
         for state, scope in expected:
             if state is not None and state.scope is not scope:
-                raise ValueError(f"{scope.value} continuity state has the wrong scope")
+                raise ValueError(
+                    f"{scope.value} continuity state has the wrong scope"
+                )
 
     @property
     def ordered_states(self) -> tuple[ScopedContinuityState, ...]:
@@ -161,7 +179,9 @@ class ContinuityPackage:
         """Resolve entities with narrower scopes overriding broader scopes."""
         resolved: dict[str, EntityContinuityState] = {}
         for state in self.ordered_states:
-            resolved.update({entity.entity_id: entity for entity in state.entities})
+            resolved.update(
+                {entity.entity_id: entity for entity in state.entities}
+            )
         return tuple(resolved.values())
 
 
@@ -179,12 +199,19 @@ class ContinuityStateRegistry:
         """Return one continuity state by identity."""
         return self._states.get(state_id)
 
-    def list(self, scope: ContinuityScope | None = None) -> tuple[ScopedContinuityState, ...]:
+    def list(
+        self,
+        scope: ContinuityScope | None = None,
+    ) -> tuple[ScopedContinuityState, ...]:
         """List states in stable identity order with optional scope filtering."""
         values = self._states.values()
         return tuple(
             sorted(
-                (state for state in values if scope is None or state.scope is scope),
+                (
+                    state
+                    for state in values
+                    if scope is None or state.scope is scope
+                ),
                 key=lambda state: state.state_id,
             )
         )
