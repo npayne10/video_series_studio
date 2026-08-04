@@ -45,9 +45,15 @@ class PromptGraphDiagnosticsFactory:
         edges_created: int,
         diagnostics: tuple[PromptGraphDiagnostic, ...] = (),
     ) -> PromptGraphBuildReport:
+        ordered = tuple(
+            sorted(
+                diagnostics,
+                key=lambda item: (item.severity, item.code, item.subject),
+            )
+        )
         return PromptGraphBuildReport(
             graph_id,
             nodes_created,
             edges_created,
-            tuple(sorted(diagnostics, key=lambda item: (item.severity, item.code, item.subject))),
+            ordered,
         )
