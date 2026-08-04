@@ -18,6 +18,12 @@ from vscs.application.caps import (
     CAPService,
 )
 from vscs.application.projects import ProjectService
+from vscs.application.rendering import (
+    QualityProfileRegistry,
+    RenderAdapterRegistry,
+    RenderingContracts,
+    default_quality_profiles,
+)
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
 from vscs.infrastructure.ai import (
@@ -151,6 +157,12 @@ def build_application_context(
     services.register(
         ACPPEditorService,
         ACPPEditorService(projects, stories),
+    )
+    services.register(RenderingContracts, RenderingContracts())
+    services.register(RenderAdapterRegistry, RenderAdapterRegistry())
+    services.register(
+        QualityProfileRegistry,
+        QualityProfileRegistry(default_quality_profiles()),
     )
     asset_repository = services.register(
         AssetRepository,
