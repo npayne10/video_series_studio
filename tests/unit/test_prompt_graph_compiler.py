@@ -12,6 +12,7 @@ from vscs.application.prompt_graph import (
     PromptGraphCompiler,
     PromptGraphMetadata,
     PromptGraphResourceInventory,
+    PromptGraphValidationPolicy,
     PromptGraphValidator,
     PromptNode,
     PromptNodeKind,
@@ -189,17 +190,28 @@ def test_compiler_rejects_validation_errors() -> None:
 
 def test_compiler_can_allow_valid_non_production_ready_preview() -> None:
     graph = _graph()
-    inventory = PromptGraphResourceInventory(
-        canonical_asset_ids=_inventory().canonical_asset_ids,
+    preview_graph = PromptGraph(
+        graph.metadata,
+        tuple(
+            node for node in graph.nodes if node.kind is not PromptNodeKind.CONTINUITY
+        ),
+        tuple(edge for edge in graph.edges if edge.target_id != "continuity"),
+        graph.root_node_id,
     )
-    compiler = PromptGraphCompiler(PromptGraphValidator())
+    validator = PromptGraphValidator(
+        PromptGraphValidationPolicy(
+            require_continuity_for_references=False,
+            production_ready_threshold=100,
+        )
+    )
+    compiler = PromptGraphCompiler(validator)
 
     with pytest.raises(PromptGraphCompilationError, match="readiness threshold"):
-        compiler.compile(graph, inventory)
+        compiler.compile(preview_graph, _inventory())
 
     package = compiler.compile(
-        graph,
-        inventory,
+        preview_graph,
+        _inventory(),
         require_production_ready=False,
     )
     assert package.validation.passed
