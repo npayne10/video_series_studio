@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from vscs.application.prompt_graph import (
     PromptGraphBuildContext,
     PromptGraphBuilder,
@@ -17,7 +19,9 @@ from vscs.application.rendering import QualityLevel, RendererKind
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 
 
-def test_built_graph_versions_can_be_snapshotted_and_compared(tmp_path) -> None:  # type: ignore[no-untyped-def]
+def test_built_graph_versions_can_be_snapshotted_and_compared(
+    tmp_path: Path,
+) -> None:
     context = build_application_context(
         BootstrapOptions(
             mode=StartupMode.TEST,
@@ -55,7 +59,10 @@ def test_built_graph_versions_can_be_snapshotted_and_compared(tmp_path) -> None:
                 ),
             ),
         )
-        first = snapshots.capture(builder.build(context_data).graph, snapshot_id="SNAP-001")
+        first = snapshots.capture(
+            builder.build(context_data).graph,
+            snapshot_id="SNAP-001",
+        )
         resolver.register(
             "SHT-001",
             (
@@ -68,7 +75,10 @@ def test_built_graph_versions_can_be_snapshotted_and_compared(tmp_path) -> None:
                 ),
             ),
         )
-        second = snapshots.capture(builder.build(context_data).graph, snapshot_id="SNAP-002")
+        second = snapshots.capture(
+            builder.build(context_data).graph,
+            snapshot_id="SNAP-002",
+        )
 
         diff = differ.compare_snapshots(first, second)
 
