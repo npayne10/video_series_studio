@@ -9,11 +9,11 @@ from vscs.application.prompt_graph import (
     PromptGraphResolver,
     PromptGraphResourceInventory,
     PromptGraphSource,
+    PromptNodeKind,
     PromptPreviewService,
     PromptSectionKind,
     RendererPromptCompiler,
     RendererPromptProfileRegistry,
-    PromptNodeKind,
 )
 from vscs.application.rendering import QualityLevel, RendererKind
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
