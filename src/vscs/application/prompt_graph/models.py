@@ -319,7 +319,7 @@ def _primitive(value: Any) -> Any:
         return value.value
     if isinstance(value, dict):
         return {key: _primitive(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_primitive(item) for item in value]
     return value
 
@@ -333,7 +333,7 @@ def _mapping(raw: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _mappings(raw: dict[str, Any], key: str) -> tuple[dict[str, Any], ...]:
     value = raw.get(key, ())
-    if not isinstance(value, (list, tuple)) or any(
+    if not isinstance(value, list | tuple) or any(
         not isinstance(item, dict) for item in value
     ):
         raise ValueError(f"{key} must be an array of objects")
@@ -341,11 +341,11 @@ def _mappings(raw: dict[str, Any], key: str) -> tuple[dict[str, Any], ...]:
 
 
 def _pairs(value: object) -> tuple[tuple[str, str], ...]:
-    if not isinstance(value, (list, tuple)):
+    if not isinstance(value, list | tuple):
         raise ValueError("attributes must be an array of pairs")
     pairs: list[tuple[str, str]] = []
     for item in value:
-        if not isinstance(item, (list, tuple)) or len(item) != 2:
+        if not isinstance(item, list | tuple) or len(item) != 2:
             raise ValueError("attributes must contain two-item pairs")
         pairs.append((str(item[0]), str(item[1])))
     return tuple(pairs)
