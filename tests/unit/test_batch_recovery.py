@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from vscs.application.prompt_graph import (
     BatchCompilationItem,
     BatchCompilationItemResult,
@@ -44,10 +46,16 @@ def _item(item_id: str, shot_id: str) -> BatchCompilationItem:
     )
 
 
-def _request() -> BatchCompilationRequest:
+def _request(
+    batch_id: str = "BATCH-RECOVERY",
+    shot_ids: tuple[str, ...] = ("SHT-001", "SHT-002"),
+) -> BatchCompilationRequest:
     return BatchCompilationRequest.create(
-        "BATCH-RECOVERY",
-        (_item("ITEM-001", "SHT-001"), _item("ITEM-002", "SHT-002")),
+        batch_id,
+        tuple(
+            _item(f"ITEM-{index:03d}", shot_id)
+            for index, shot_id in enumerate(shot_ids, start=1)
+        ),
     )
 
 
@@ -132,3 +140,34 @@ def test_completed_checkpoint_is_not_pending(tmp_path: Path) -> None:
         )
 
     assert service.pending_checkpoints() == ()
+
+
+def test_completed_checkpoint_can_be_replaced_for_reused_batch_id(
+    tmp_path: Path,
+) -> None:
+    service = BatchRecoveryService(BatchRecoveryStore(tmp_path / "recovery.json"))
+    original = _request()
+    service.begin(original)
+    for item in original.items:
+        service.record_result(
+            original.batch_id,
+            BatchCompilationItemResult(
+                item.item_id,
+                item.context.shot_id,
+                BatchCompilationItemStatus.COMPLETED,
+            ),
+        )
+
+    replacement = _request(shot_ids=("SHT-003",))
+    checkpoint = service.begin(replacement)
+
+    assert checkpoint.request == replacement
+    assert checkpoint.item_statuses == ()
+
+
+def test_incomplete_checkpoint_rejects_changed_request(tmp_path: Path) -> None:
+    service = BatchRecoveryService(BatchRecoveryStore(tmp_path / "recovery.json"))
+    service.begin(_request())
+
+    with pytest.raises(ValueError, match="Recovery request changed"):
+        service.begin(_request(shot_ids=("SHT-003",)))
