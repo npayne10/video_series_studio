@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -42,7 +42,9 @@ class BatchCompilationItem:
 
     item_id: str
     context: PromptGraphBuildContext
-    inventory: PromptGraphResourceInventory = PromptGraphResourceInventory()
+    inventory: PromptGraphResourceInventory = field(
+        default_factory=PromptGraphResourceInventory
+    )
     sequence: int = 0
     renderer_profile_id: str | None = None
     require_production_ready: bool = True
@@ -256,7 +258,7 @@ class BatchPromptCompilationService:
                     )
                 )
                 completed += 1
-            except Exception as exc:  # noqa: BLE001 - isolation is a batch boundary
+            except Exception as exc:  # noqa: BLE001 - batch failure isolation
                 results.append(
                     BatchCompilationItemResult(
                         item.item_id,
