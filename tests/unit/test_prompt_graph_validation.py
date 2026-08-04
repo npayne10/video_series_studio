@@ -191,7 +191,10 @@ def test_dialogue_requires_spoken_content() -> None:
 
 def test_policy_can_make_continuity_warning_only() -> None:
     validator = PromptGraphValidator(
-        PromptGraphValidationPolicy(require_continuity_for_references=False)
+        PromptGraphValidationPolicy(
+            require_continuity_for_references=False,
+            production_ready_threshold=90,
+        )
     )
     report = validator.validate(_graph(include_continuity=False), _inventory())
 
