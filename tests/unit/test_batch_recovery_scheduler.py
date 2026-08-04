@@ -45,7 +45,14 @@ def _request() -> BatchCompilationRequest:
 class _Compiler:
     calls: list[tuple[str, ...]]
 
-    def compile(self, request, *, on_progress=None, should_cancel=None):
+    def compile(
+        self,
+        request,
+        *,
+        on_progress=None,
+        on_result=None,
+        should_cancel=None,
+    ):
         self.calls.append(tuple(item.item_id for item in request.items))
         now = datetime.now(UTC)
         results = tuple(
@@ -56,6 +63,9 @@ class _Compiler:
             )
             for item in request.items
         )
+        if on_result is not None:
+            for result in results:
+                on_result(result)
         return BatchCompilationJob(
             request,
             BatchCompilationStatus.COMPLETED,
