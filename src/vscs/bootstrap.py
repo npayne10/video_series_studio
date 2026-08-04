@@ -23,6 +23,7 @@ from vscs.application.rendering import (
     ManifestDiscoveryResult,
     QualityProfileRegistry,
     RenderAdapterRegistry,
+    RendererKind,
     RenderingContracts,
     VoiceProfileRegistry,
     WorkflowCompatibilityValidator,
@@ -47,6 +48,7 @@ from vscs.infrastructure.configuration import (
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
+from vscs.infrastructure.rendering import ComfyUIAdapter, ComfyUIWorkflowCompiler
 from vscs.infrastructure.services import ApplicationServices
 
 if TYPE_CHECKING:
@@ -166,7 +168,10 @@ def build_application_context(
         ACPPEditorService(projects, stories),
     )
     services.register(RenderingContracts, RenderingContracts())
-    services.register(RenderAdapterRegistry, RenderAdapterRegistry())
+    adapter_registry = services.register(
+        RenderAdapterRegistry,
+        RenderAdapterRegistry(),
+    )
     services.register(
         QualityProfileRegistry,
         QualityProfileRegistry(default_quality_profiles()),
@@ -174,7 +179,7 @@ def build_application_context(
     services.register(ContinuityStateRegistry, ContinuityStateRegistry())
     services.register(VoiceProfileRegistry, VoiceProfileRegistry())
     workflow_registry = services.register(WorkflowRegistry, WorkflowRegistry())
-    services.register(
+    compatibility = services.register(
         WorkflowCompatibilityValidator,
         WorkflowCompatibilityValidator(),
     )
@@ -182,11 +187,8 @@ def build_application_context(
         WorkflowDiagnosticsFormatter,
         WorkflowDiagnosticsFormatter(),
     )
-    manifest_root = (
-        configuration.settings.environment.config_root
-        / "workflows"
-        / "manifests"
-    )
+    workflow_root = configuration.settings.environment.config_root / "workflows"
+    manifest_root = workflow_root / "manifests"
     manifest_loader = services.register(
         WorkflowManifestLoader,
         WorkflowManifestLoader(manifest_root),
@@ -195,6 +197,18 @@ def build_application_context(
         ManifestDiscoveryResult,
         manifest_loader.discover(workflow_registry),
     )
+    comfyui_adapter = services.register(
+        ComfyUIAdapter,
+        ComfyUIAdapter(
+            workflow_registry,
+            compatibility,
+            ComfyUIWorkflowCompiler(workflow_root),
+        ),
+    )
+    adapter_registry.register(comfyui_adapter)
+    if not adapter_registry.contains(RendererKind.COMFYUI):
+        raise RuntimeError("ComfyUI adapter registration failed")
+
     asset_repository = services.register(
         AssetRepository,
         AssetRepository(database),
