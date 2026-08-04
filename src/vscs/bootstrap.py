@@ -26,6 +26,7 @@ from vscs.application.rendering import (
     RenderingContracts,
     VoiceProfileRegistry,
     WorkflowCompatibilityValidator,
+    WorkflowDiagnosticsFormatter,
     WorkflowManifestLoader,
     WorkflowRegistry,
     default_quality_profiles,
@@ -176,6 +177,10 @@ def build_application_context(
     services.register(
         WorkflowCompatibilityValidator,
         WorkflowCompatibilityValidator(),
+    )
+    services.register(
+        WorkflowDiagnosticsFormatter,
+        WorkflowDiagnosticsFormatter(),
     )
     manifest_root = (
         configuration.settings.environment.config_root
