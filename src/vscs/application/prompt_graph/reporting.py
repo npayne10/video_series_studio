@@ -29,6 +29,7 @@ class BatchCompilationReport:
         quality = ", ".join(self.record.quality_levels) or "none"
         profiles = ", ".join(self.record.renderer_profile_ids) or "none"
         workflows = ", ".join(self.record.workflow_ids) or "none"
+        throughput = self.record.throughput_per_minute
         lines = [
             f"Batch Compilation Report: {self.record.batch_id}",
             f"Status: {self.record.status.value}",
@@ -40,7 +41,7 @@ class BatchCompilationReport:
             f"Failed: {self.record.failed_items}",
             f"Cancelled: {self.record.cancelled_items}",
             f"Success: {self.success_percentage:.1f}%",
-            f"Throughput: {self.record.throughput_per_minute:.2f} items/minute",
+            f"Throughput: {throughput:.2f} items/minute",
             f"Renderer profiles: {profiles}",
             f"Workflows: {workflows}",
             f"Result checksum: {self.record.result_checksum}",
@@ -56,6 +57,10 @@ class BatchCompilationReport:
     def to_markdown(self) -> str:
         renderer = ", ".join(self.record.renderer_ids) or "none"
         quality = ", ".join(self.record.quality_levels) or "none"
+        profiles = ", ".join(self.record.renderer_profile_ids) or "none"
+        workflows = ", ".join(self.record.workflow_ids) or "none"
+        graph_versions = ", ".join(self.record.graph_versions) or "none"
+        throughput = self.record.throughput_per_minute
         lines = [
             f"# Batch Compilation Report — {self.record.batch_id}",
             "",
@@ -76,13 +81,13 @@ class BatchCompilationReport:
             "",
             "## Timing",
             "",
-            f"- **Throughput:** {self.record.throughput_per_minute:.2f} items/minute",
+            f"- **Throughput:** {throughput:.2f} items/minute",
             "",
             "## Provenance",
             "",
-            f"- **Renderer profiles:** {', '.join(self.record.renderer_profile_ids) or 'none'}",
-            f"- **Workflows:** {', '.join(self.record.workflow_ids) or 'none'}",
-            f"- **Graph versions:** {', '.join(self.record.graph_versions) or 'none'}",
+            f"- **Renderer profiles:** {profiles}",
+            f"- **Workflows:** {workflows}",
+            f"- **Graph versions:** {graph_versions}",
             f"- **Result checksum:** `{self.record.result_checksum}`",
         ]
         if self.failures:
