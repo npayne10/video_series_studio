@@ -38,6 +38,7 @@ from vscs.application.prompt_graph import (
     PromptGraphSnapshotRegistry,
     PromptGraphSnapshotService,
     PromptGraphValidator,
+    PromptOptimizationService,
     PromptPreviewService,
     RendererPromptCompiler,
     RendererPromptProfileRegistry,
@@ -209,6 +210,10 @@ def build_application_context(
         RendererPromptProfileRegistry(default_renderer_prompt_profiles()),
     )
     renderer_compiler = services.register(RendererPromptCompiler, RendererPromptCompiler())
+    services.register(
+        PromptOptimizationService,
+        PromptOptimizationService(renderer_compiler),
+    )
     services.register(PromptPreviewService, PromptPreviewService())
     incremental_history = services.register(
         IncrementalCompilationHistory,
