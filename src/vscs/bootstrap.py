@@ -23,6 +23,8 @@ from vscs.application.prompt_graph import (
     BatchCompilationScheduler,
     BatchProgressTracker,
     BatchPromptCompilationService,
+    BatchRecoveryService,
+    BatchRecoveryStore,
     BatchReportingService,
     BatchStatisticsService,
     IncrementalCompilationHistory,
@@ -239,12 +241,26 @@ def build_application_context(
         BatchReportingService,
         BatchReportingService(batch_history, statistics_service),
     )
+    recovery_path = (
+        configuration.settings.environment.config_root
+        / "recovery"
+        / "batch_compilation.json"
+    )
+    recovery_store = services.register(
+        BatchRecoveryStore,
+        BatchRecoveryStore(recovery_path),
+    )
+    recovery_service = services.register(
+        BatchRecoveryService,
+        BatchRecoveryService(recovery_store),
+    )
     services.register(
         BatchCompilationScheduler,
         BatchCompilationScheduler(
             batch_compiler,
             progress_tracker,
             reporting_service,
+            recovery_service,
         ),
     )
     services.register(RenderingContracts, RenderingContracts())
