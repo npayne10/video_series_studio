@@ -24,6 +24,7 @@ from vscs.application.prompt_graph import (
     PromptGraphRegistry,
     PromptGraphResolver,
     PromptGraphSnapshotRegistry,
+    PromptGraphValidator,
 )
 from vscs.application.rendering import (
     ContinuityStateRegistry,
@@ -176,6 +177,7 @@ def build_application_context(
         PromptGraphBuilder,
         PromptGraphBuilder(graph_resolver, graph_diagnostics),
     )
+    services.register(PromptGraphValidator, PromptGraphValidator())
     services.register(RenderingContracts, RenderingContracts())
     adapter_registry = services.register(RenderAdapterRegistry, RenderAdapterRegistry())
     services.register(
