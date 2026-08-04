@@ -1,5 +1,16 @@
 """Renderer-neutral prompt graph production knowledge contracts."""
 
+from .batch import (
+    BatchCompilationItem,
+    BatchCompilationItemResult,
+    BatchCompilationItemStatus,
+    BatchCompilationJob,
+    BatchCompilationProgress,
+    BatchCompilationRequest,
+    BatchCompilationStatus,
+    BatchPromptCompilationService,
+    ProgressCallback,
+)
 from .builder import PromptGraphBuilder, PromptGraphBuildResult
 from .compiler import (
     PromptFragment,
@@ -56,7 +67,16 @@ from .validation import (
 )
 
 __all__ = [
+    "BatchCompilationItem",
+    "BatchCompilationItemResult",
+    "BatchCompilationItemStatus",
+    "BatchCompilationJob",
+    "BatchCompilationProgress",
+    "BatchCompilationRequest",
+    "BatchCompilationStatus",
+    "BatchPromptCompilationService",
     "ProfiledPromptPackage",
+    "ProgressCallback",
     "PromptEdge",
     "PromptEdgeKind",
     "PromptFragment",
