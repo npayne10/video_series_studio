@@ -29,7 +29,7 @@ def test_bootstrap_registers_rendering_contract_foundation(tmp_path: Path) -> No
     adapters = context.services.require(RenderAdapterRegistry)
     profiles = context.services.require(QualityProfileRegistry)
 
-    assert contracts.version == "17.4.0.4"
+    assert contracts.version == "17.4.0.5"
     assert adapters.renderers() == (RendererKind.COMFYUI,)
     assert profiles.require(QualityLevel.PREVIEW).priority == 50
     assert profiles.require(QualityLevel.PRODUCTION).priority == 100
