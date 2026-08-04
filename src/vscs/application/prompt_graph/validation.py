@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 from .models import PromptGraph, PromptNodeKind
 
@@ -68,6 +69,31 @@ class PromptGraphResourceInventory:
 
     canonical_asset_ids: frozenset[str] = frozenset()
     reference_ids: frozenset[str] = frozenset()
+
+    def to_dict(self) -> dict[str, list[str]]:
+        """Return deterministic JSON-compatible inventory data."""
+        return {
+            "canonical_asset_ids": sorted(self.canonical_asset_ids),
+            "reference_ids": sorted(self.reference_ids),
+        }
+
+    @classmethod
+    def from_dict(cls, raw: object) -> PromptGraphResourceInventory:
+        """Restore inventory data while tolerating absent optional collections."""
+        if raw is None:
+            return cls()
+        if not isinstance(raw, dict):
+            raise ValueError("resource inventory must be an object")
+        canonical = raw.get("canonical_asset_ids", ())
+        references = raw.get("reference_ids", ())
+        if not isinstance(canonical, list | tuple | set | frozenset):
+            raise ValueError("canonical_asset_ids must be an array")
+        if not isinstance(references, list | tuple | set | frozenset):
+            raise ValueError("reference_ids must be an array")
+        return cls(
+            canonical_asset_ids=frozenset(str(item) for item in canonical),
+            reference_ids=frozenset(str(item) for item in references),
+        )
 
 
 @dataclass(frozen=True, slots=True)
