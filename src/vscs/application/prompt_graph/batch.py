@@ -10,6 +10,7 @@ from enum import StrEnum
 from .builder import PromptGraphBuilder
 from .compiler import PromptGraphCompiler
 from .context import PromptGraphBuildContext
+from .incremental import CompilationDependency, IncrementalCompilationService
 from .renderer_profiles import (
     ProfiledPromptPackage,
     RendererPromptCompiler,
@@ -34,6 +35,7 @@ class BatchCompilationItemStatus(StrEnum):
 
     PENDING = "pending"
     COMPLETED = "completed"
+    SKIPPED = "skipped"
     FAILED = "failed"
     CANCELLED = "cancelled"
 
@@ -50,12 +52,20 @@ class BatchCompilationItem:
     sequence: int = 0
     renderer_profile_id: str | None = None
     require_production_ready: bool = True
+    dependencies: tuple[CompilationDependency, ...] = ()
+    force_recompile: bool = False
 
     def __post_init__(self) -> None:
         if not self.item_id.strip():
             raise ValueError("item_id is required")
         if self.sequence < 0:
             raise ValueError("sequence cannot be negative")
+        identities = tuple(
+            (dependency.kind, dependency.dependency_id)
+            for dependency in self.dependencies
+        )
+        if len(identities) != len(set(identities)):
+            raise ValueError("batch item dependencies must be unique by kind and ID")
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +134,7 @@ class BatchCompilationProgress:
     status: BatchCompilationStatus
     total_items: int
     completed_items: int
+    skipped_items: int
     failed_items: int
     cancelled_items: int
     remaining_items: int
@@ -131,7 +142,12 @@ class BatchCompilationProgress:
 
     @property
     def processed_items(self) -> int:
-        return self.completed_items + self.failed_items + self.cancelled_items
+        return (
+            self.completed_items
+            + self.skipped_items
+            + self.failed_items
+            + self.cancelled_items
+        )
 
     @property
     def percentage(self) -> int:
@@ -155,6 +171,10 @@ class BatchCompilationJob:
         return self._results(BatchCompilationItemStatus.COMPLETED)
 
     @property
+    def skipped_results(self) -> tuple[BatchCompilationItemResult, ...]:
+        return self._results(BatchCompilationItemStatus.SKIPPED)
+
+    @property
     def failed_results(self) -> tuple[BatchCompilationItemResult, ...]:
         return self._results(BatchCompilationItemStatus.FAILED)
 
@@ -164,15 +184,17 @@ class BatchCompilationJob:
 
     @property
     def packages(self) -> tuple[ProfiledPromptPackage, ...]:
+        reusable = self.completed_results + self.skipped_results
         return tuple(
             result.package
-            for result in self.completed_results
+            for result in reusable
             if result.package is not None
         )
 
     @property
     def progress(self) -> BatchCompilationProgress:
         completed = len(self.completed_results)
+        skipped = len(self.skipped_results)
         failed = len(self.failed_results)
         cancelled = len(self.cancelled_results)
         total = len(self.request.items)
@@ -181,9 +203,10 @@ class BatchCompilationJob:
             self.status,
             total,
             completed,
+            skipped,
             failed,
             cancelled,
-            total - completed - failed - cancelled,
+            total - completed - skipped - failed - cancelled,
         )
 
     def _results(
@@ -205,6 +228,7 @@ class BatchPromptCompilationService:
     graph_compiler: PromptGraphCompiler
     profile_registry: RendererPromptProfileRegistry
     renderer_compiler: RendererPromptCompiler
+    incremental: IncrementalCompilationService | None = None
 
     def compile(
         self,
@@ -216,12 +240,20 @@ class BatchPromptCompilationService:
         started_at = datetime.now(UTC)
         total = len(request.items)
         completed = 0
+        skipped = 0
         failed = 0
         cancelled = 0
         results: list[BatchCompilationItemResult] = []
         self._notify(
             on_progress,
-            self._progress(request.batch_id, total, completed, failed, cancelled),
+            self._progress(
+                request.batch_id,
+                total,
+                completed,
+                skipped,
+                failed,
+                cancelled,
+            ),
         )
         ordered = request.ordered_items
         for index, item in enumerate(ordered):
@@ -243,6 +275,7 @@ class BatchPromptCompilationService:
                     request.batch_id,
                     total,
                     completed,
+                    skipped,
                     failed,
                     cancelled,
                     item.item_id,
@@ -250,11 +283,6 @@ class BatchPromptCompilationService:
             )
             try:
                 build = self.builder.build(item.context)
-                package = self.graph_compiler.compile(
-                    build.graph,
-                    item.inventory,
-                    require_production_ready=item.require_production_ready,
-                )
                 profile = (
                     self.profile_registry.require(item.renderer_profile_id)
                     if item.renderer_profile_id
@@ -263,16 +291,52 @@ class BatchPromptCompilationService:
                         item.context.quality_level,
                     )
                 )
-                profiled = self.renderer_compiler.compile(package, profile)
-                results.append(
-                    BatchCompilationItemResult(
-                        item.item_id,
-                        item.context.shot_id,
-                        BatchCompilationItemStatus.COMPLETED,
-                        package=profiled,
+                fingerprint = None
+                reusable = None
+                if self.incremental is not None:
+                    fingerprint = self.incremental.fingerprint(
+                        build.graph,
+                        profile,
+                        item.dependencies,
                     )
-                )
-                completed += 1
+                    reusable = self.incremental.reusable(
+                        item.item_id,
+                        fingerprint,
+                        force_recompile=item.force_recompile,
+                    )
+                if reusable is not None:
+                    results.append(
+                        BatchCompilationItemResult(
+                            item.item_id,
+                            item.context.shot_id,
+                            BatchCompilationItemStatus.SKIPPED,
+                            package=reusable.package,
+                        )
+                    )
+                    skipped += 1
+                else:
+                    package = self.graph_compiler.compile(
+                        build.graph,
+                        item.inventory,
+                        require_production_ready=item.require_production_ready,
+                    )
+                    profiled = self.renderer_compiler.compile(package, profile)
+                    results.append(
+                        BatchCompilationItemResult(
+                            item.item_id,
+                            item.context.shot_id,
+                            BatchCompilationItemStatus.COMPLETED,
+                            package=profiled,
+                        )
+                    )
+                    completed += 1
+                    if self.incremental is not None and fingerprint is not None:
+                        self.incremental.record(
+                            item.item_id,
+                            item.context.shot_id,
+                            fingerprint,
+                            profiled,
+                        )
             except Exception as exc:
                 results.append(
                     BatchCompilationItemResult(
@@ -290,12 +354,13 @@ class BatchPromptCompilationService:
                     request.batch_id,
                     total,
                     completed,
+                    skipped,
                     failed,
                     cancelled,
                     item.item_id,
                 ),
             )
-        status = self._final_status(completed, failed, cancelled)
+        status = self._final_status(completed, skipped, failed, cancelled)
         job = BatchCompilationJob(
             request=request,
             status=status,
@@ -311,6 +376,7 @@ class BatchPromptCompilationService:
         batch_id: str,
         total: int,
         completed: int,
+        skipped: int,
         failed: int,
         cancelled: int,
         current_item_id: str | None = None,
@@ -320,15 +386,17 @@ class BatchPromptCompilationService:
             BatchCompilationStatus.RUNNING,
             total,
             completed,
+            skipped,
             failed,
             cancelled,
-            total - completed - failed - cancelled,
+            total - completed - skipped - failed - cancelled,
             current_item_id,
         )
 
     @staticmethod
     def _final_status(
         completed: int,
+        skipped: int,
         failed: int,
         cancelled: int,
     ) -> BatchCompilationStatus:
@@ -336,7 +404,7 @@ class BatchPromptCompilationService:
             return BatchCompilationStatus.CANCELLED
         if failed == 0:
             return BatchCompilationStatus.COMPLETED
-        if completed == 0:
+        if completed + skipped == 0:
             return BatchCompilationStatus.FAILED
         return BatchCompilationStatus.COMPLETED_WITH_FAILURES
 
