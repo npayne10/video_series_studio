@@ -124,7 +124,9 @@ class BatchRecoveryService:
 
     def begin(self, request: BatchCompilationRequest) -> BatchRecoveryCheckpoint:
         checkpoint = self._checkpoints.get(request.batch_id)
-        if checkpoint is None:
+        if checkpoint is None or (
+            checkpoint.complete and checkpoint.request != request
+        ):
             checkpoint = BatchRecoveryCheckpoint(request)
         elif checkpoint.request != request:
             raise ValueError(f"Recovery request changed for batch: {request.batch_id}")
