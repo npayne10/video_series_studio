@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -212,7 +212,9 @@ class WorkflowManifest:
                 QualityLevel(str(value))
                 for value in raw.get("quality_levels", ())
             ),
-            capabilities=tuple(str(value) for value in raw.get("capabilities", ())),
+            capabilities=tuple(
+                str(value) for value in raw.get("capabilities", ())
+            ),
             bindings=bindings,
             requirements=requirements,
             output_kinds=tuple(
@@ -313,7 +315,10 @@ def _mapping_sequence(value: object, name: str) -> tuple[dict[str, Any], ...]:
     return tuple(value)
 
 
-def _required_pairs(value: object, name: str) -> tuple[tuple[object, object], ...]:
+def _required_pairs(
+    value: object,
+    name: str,
+) -> tuple[tuple[object, object], ...]:
     if not isinstance(value, list | tuple):
         raise ValueError(f"{name} must be an array")
     result: list[tuple[object, object]] = []
