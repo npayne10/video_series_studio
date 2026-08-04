@@ -6,6 +6,7 @@ from vscs.application.rendering import (
     QualityLevel,
     QualityProfileRegistry,
     RenderAdapterRegistry,
+    RendererKind,
     RenderingContracts,
 )
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
@@ -28,8 +29,8 @@ def test_bootstrap_registers_rendering_contract_foundation(tmp_path: Path) -> No
     adapters = context.services.require(RenderAdapterRegistry)
     profiles = context.services.require(QualityProfileRegistry)
 
-    assert contracts.version == "17.4.0.1"
-    assert adapters.renderers() == ()
+    assert contracts.version == "17.4.0.4"
+    assert adapters.renderers() == (RendererKind.COMFYUI,)
     assert profiles.require(QualityLevel.PREVIEW).priority == 50
     assert profiles.require(QualityLevel.PRODUCTION).priority == 100
 
