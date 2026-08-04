@@ -7,7 +7,6 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication
 
 from vscs.application.acpp import ACPPEditorService
-from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
 from vscs.application.ssie import Scene
