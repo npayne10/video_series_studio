@@ -217,6 +217,7 @@ class BatchCompilationJob:
 
 
 ProgressCallback = Callable[[BatchCompilationProgress], None]
+ResultCallback = Callable[[BatchCompilationItemResult], None]
 CancellationPredicate = Callable[[], bool]
 
 
@@ -235,6 +236,7 @@ class BatchPromptCompilationService:
         request: BatchCompilationRequest,
         *,
         on_progress: ProgressCallback | None = None,
+        on_result: ResultCallback | None = None,
         should_cancel: CancellationPredicate | None = None,
     ) -> BatchCompilationJob:
         started_at = datetime.now(UTC)
@@ -244,7 +246,7 @@ class BatchPromptCompilationService:
         failed = 0
         cancelled = 0
         results: list[BatchCompilationItemResult] = []
-        self._notify(
+        self._notify_progress(
             on_progress,
             self._progress(
                 request.batch_id,
@@ -258,18 +260,17 @@ class BatchPromptCompilationService:
         ordered = request.ordered_items
         for index, item in enumerate(ordered):
             if should_cancel is not None and should_cancel():
-                remaining = ordered[index:]
-                results.extend(
-                    BatchCompilationItemResult(
+                for pending in ordered[index:]:
+                    result = BatchCompilationItemResult(
                         pending.item_id,
                         pending.context.shot_id,
                         BatchCompilationItemStatus.CANCELLED,
                     )
-                    for pending in remaining
-                )
-                cancelled += len(remaining)
+                    results.append(result)
+                    self._notify_result(on_result, result)
+                    cancelled += 1
                 break
-            self._notify(
+            self._notify_progress(
                 on_progress,
                 self._progress(
                     request.batch_id,
@@ -305,13 +306,11 @@ class BatchPromptCompilationService:
                         force_recompile=item.force_recompile,
                     )
                 if reusable is not None:
-                    results.append(
-                        BatchCompilationItemResult(
-                            item.item_id,
-                            item.context.shot_id,
-                            BatchCompilationItemStatus.SKIPPED,
-                            package=reusable.package,
-                        )
+                    result = BatchCompilationItemResult(
+                        item.item_id,
+                        item.context.shot_id,
+                        BatchCompilationItemStatus.SKIPPED,
+                        package=reusable.package,
                     )
                     skipped += 1
                 else:
@@ -321,13 +320,11 @@ class BatchPromptCompilationService:
                         require_production_ready=item.require_production_ready,
                     )
                     profiled = self.renderer_compiler.compile(package, profile)
-                    results.append(
-                        BatchCompilationItemResult(
-                            item.item_id,
-                            item.context.shot_id,
-                            BatchCompilationItemStatus.COMPLETED,
-                            package=profiled,
-                        )
+                    result = BatchCompilationItemResult(
+                        item.item_id,
+                        item.context.shot_id,
+                        BatchCompilationItemStatus.COMPLETED,
+                        package=profiled,
                     )
                     completed += 1
                     if self.incremental is not None and fingerprint is not None:
@@ -338,17 +335,17 @@ class BatchPromptCompilationService:
                             profiled,
                         )
             except Exception as exc:
-                results.append(
-                    BatchCompilationItemResult(
-                        item.item_id,
-                        item.context.shot_id,
-                        BatchCompilationItemStatus.FAILED,
-                        error_type=type(exc).__name__,
-                        error_message=str(exc),
-                    )
+                result = BatchCompilationItemResult(
+                    item.item_id,
+                    item.context.shot_id,
+                    BatchCompilationItemStatus.FAILED,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
                 )
                 failed += 1
-            self._notify(
+            results.append(result)
+            self._notify_result(on_result, result)
+            self._notify_progress(
                 on_progress,
                 self._progress(
                     request.batch_id,
@@ -368,7 +365,7 @@ class BatchPromptCompilationService:
             finished_at=datetime.now(UTC),
             results=tuple(results),
         )
-        self._notify(on_progress, job.progress)
+        self._notify_progress(on_progress, job.progress)
         return job
 
     @staticmethod
@@ -409,9 +406,17 @@ class BatchPromptCompilationService:
         return BatchCompilationStatus.COMPLETED_WITH_FAILURES
 
     @staticmethod
-    def _notify(
+    def _notify_progress(
         callback: ProgressCallback | None,
         progress: BatchCompilationProgress,
     ) -> None:
         if callback is not None:
             callback(progress)
+
+    @staticmethod
+    def _notify_result(
+        callback: ResultCallback | None,
+        result: BatchCompilationItemResult,
+    ) -> None:
+        if callback is not None:
+            callback(result)
