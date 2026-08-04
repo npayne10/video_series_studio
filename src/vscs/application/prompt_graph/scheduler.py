@@ -13,6 +13,8 @@ from .batch import (
     BatchCompilationStatus,
     BatchPromptCompilationService,
 )
+from .progress import BatchProgressTracker
+from .reporting import BatchReportingService
 
 
 class BatchQueueStatus(StrEnum):
@@ -99,6 +101,8 @@ class BatchCompilationScheduler:
     """Manage FIFO sequential execution of batch compilation requests."""
 
     compilation_service: BatchPromptCompilationService
+    progress_tracker: BatchProgressTracker | None = None
+    reporting_service: BatchReportingService | None = None
     _entries: dict[str, _ScheduledBatch] = field(default_factory=dict)
     _order: list[str] = field(default_factory=list)
     _running_batch_id: str | None = None
@@ -161,6 +165,10 @@ class BatchCompilationScheduler:
             scheduled.progress = job.progress
             scheduled.status = self._queue_status(job.status)
             scheduled.finished_at = job.finished_at
+            if self.progress_tracker is not None:
+                self.progress_tracker.update(job.progress, observed_at=job.finished_at)
+            if self.reporting_service is not None:
+                self.reporting_service.record(job)
         finally:
             self._running_batch_id = None
         return scheduled.snapshot()
@@ -189,12 +197,14 @@ class BatchCompilationScheduler:
         except KeyError as exc:
             raise KeyError(f"Batch not scheduled: {batch_id}") from exc
 
-    @staticmethod
     def _record_progress(
+        self,
         scheduled: _ScheduledBatch,
         progress: BatchCompilationProgress,
     ) -> None:
         scheduled.progress = progress
+        if self.progress_tracker is not None:
+            self.progress_tracker.update(progress)
 
     @staticmethod
     def _queue_status(status: BatchCompilationStatus) -> BatchQueueStatus:
