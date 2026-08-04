@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from .batch import (
+    BatchCompilationItemResult,
     BatchCompilationJob,
     BatchCompilationProgress,
     BatchCompilationRequest,
@@ -200,24 +201,30 @@ class BatchCompilationScheduler:
             completed.append(entry)
 
     def _compile(self, scheduled: _ScheduledBatch) -> BatchCompilationJob:
-        progress_callback = lambda progress: self._record_progress(
-            scheduled,
-            progress,
-        )
-        cancellation = lambda: scheduled.cancellation_requested
+        def progress_callback(progress: BatchCompilationProgress) -> None:
+            self._record_progress(scheduled, progress)
+
+        def cancellation() -> bool:
+            return scheduled.cancellation_requested
+
         if self.recovery_service is None:
             return self.compilation_service.compile(
                 scheduled.request,
                 on_progress=progress_callback,
                 should_cancel=cancellation,
             )
+
+        def record_result(result: BatchCompilationItemResult) -> None:
+            assert self.recovery_service is not None
+            self.recovery_service.record_result(
+                scheduled.request.batch_id,
+                result,
+            )
+
         return self.compilation_service.compile(
             scheduled.request,
             on_progress=progress_callback,
-            on_result=lambda result: self.recovery_service.record_result(
-                scheduled.request.batch_id,
-                result,
-            ),
+            on_result=record_result,
             should_cancel=cancellation,
         )
 
