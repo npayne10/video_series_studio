@@ -13,9 +13,9 @@ from uuid import uuid4
 from vscs.application.rendering import (
     CompiledRenderRequest,
     RenderAdapter,
+    RendererKind,
     RenderJob,
     RenderJobStatus,
-    RendererKind,
     RenderOutput,
     RenderRequest,
     RequestValidation,
