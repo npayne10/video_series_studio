@@ -78,7 +78,7 @@ class PromptGraphResourceInventory:
         }
 
     @classmethod
-    def from_dict(cls, raw: object) -> PromptGraphResourceInventory:
+    def from_dict(cls, raw: Any) -> PromptGraphResourceInventory:
         """Restore inventory data while tolerating absent optional collections."""
         if raw is None:
             return cls()
