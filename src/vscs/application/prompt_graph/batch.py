@@ -19,13 +19,14 @@ from .validation import PromptGraphResourceInventory
 
 
 class BatchCompilationStatus(StrEnum):
-    """Lifecycle state of one synchronous batch compilation job."""
+    """Lifecycle state of one batch compilation job."""
 
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     COMPLETED_WITH_FAILURES = "completed_with_failures"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class BatchCompilationItemStatus(StrEnum):
@@ -34,6 +35,7 @@ class BatchCompilationItemStatus(StrEnum):
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,12 +125,13 @@ class BatchCompilationProgress:
     total_items: int
     completed_items: int
     failed_items: int
+    cancelled_items: int
     remaining_items: int
     current_item_id: str | None = None
 
     @property
     def processed_items(self) -> int:
-        return self.completed_items + self.failed_items
+        return self.completed_items + self.failed_items + self.cancelled_items
 
     @property
     def percentage(self) -> int:
@@ -149,19 +152,15 @@ class BatchCompilationJob:
 
     @property
     def completed_results(self) -> tuple[BatchCompilationItemResult, ...]:
-        return tuple(
-            result
-            for result in self.results
-            if result.status is BatchCompilationItemStatus.COMPLETED
-        )
+        return self._results(BatchCompilationItemStatus.COMPLETED)
 
     @property
     def failed_results(self) -> tuple[BatchCompilationItemResult, ...]:
-        return tuple(
-            result
-            for result in self.results
-            if result.status is BatchCompilationItemStatus.FAILED
-        )
+        return self._results(BatchCompilationItemStatus.FAILED)
+
+    @property
+    def cancelled_results(self) -> tuple[BatchCompilationItemResult, ...]:
+        return self._results(BatchCompilationItemStatus.CANCELLED)
 
     @property
     def packages(self) -> tuple[ProfiledPromptPackage, ...]:
@@ -175,6 +174,7 @@ class BatchCompilationJob:
     def progress(self) -> BatchCompilationProgress:
         completed = len(self.completed_results)
         failed = len(self.failed_results)
+        cancelled = len(self.cancelled_results)
         total = len(self.request.items)
         return BatchCompilationProgress(
             self.request.batch_id,
@@ -182,11 +182,19 @@ class BatchCompilationJob:
             total,
             completed,
             failed,
-            total - completed - failed,
+            cancelled,
+            total - completed - failed - cancelled,
         )
+
+    def _results(
+        self,
+        status: BatchCompilationItemStatus,
+    ) -> tuple[BatchCompilationItemResult, ...]:
+        return tuple(result for result in self.results if result.status is status)
 
 
 ProgressCallback = Callable[[BatchCompilationProgress], None]
+CancellationPredicate = Callable[[], bool]
 
 
 @dataclass(slots=True)
@@ -203,33 +211,40 @@ class BatchPromptCompilationService:
         request: BatchCompilationRequest,
         *,
         on_progress: ProgressCallback | None = None,
+        should_cancel: CancellationPredicate | None = None,
     ) -> BatchCompilationJob:
         started_at = datetime.now(UTC)
         total = len(request.items)
         completed = 0
         failed = 0
+        cancelled = 0
         results: list[BatchCompilationItemResult] = []
         self._notify(
             on_progress,
-            BatchCompilationProgress(
-                request.batch_id,
-                BatchCompilationStatus.RUNNING,
-                total,
-                completed,
-                failed,
-                total,
-            ),
+            self._progress(request.batch_id, total, completed, failed, cancelled),
         )
-        for item in request.ordered_items:
+        ordered = request.ordered_items
+        for index, item in enumerate(ordered):
+            if should_cancel is not None and should_cancel():
+                remaining = ordered[index:]
+                results.extend(
+                    BatchCompilationItemResult(
+                        pending.item_id,
+                        pending.context.shot_id,
+                        BatchCompilationItemStatus.CANCELLED,
+                    )
+                    for pending in remaining
+                )
+                cancelled += len(remaining)
+                break
             self._notify(
                 on_progress,
-                BatchCompilationProgress(
+                self._progress(
                     request.batch_id,
-                    BatchCompilationStatus.RUNNING,
                     total,
                     completed,
                     failed,
-                    total - completed - failed,
+                    cancelled,
                     item.item_id,
                 ),
             )
@@ -258,7 +273,7 @@ class BatchPromptCompilationService:
                     )
                 )
                 completed += 1
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - batch isolation boundary
                 results.append(
                     BatchCompilationItemResult(
                         item.item_id,
@@ -271,17 +286,16 @@ class BatchPromptCompilationService:
                 failed += 1
             self._notify(
                 on_progress,
-                BatchCompilationProgress(
+                self._progress(
                     request.batch_id,
-                    BatchCompilationStatus.RUNNING,
                     total,
                     completed,
                     failed,
-                    total - completed - failed,
+                    cancelled,
                     item.item_id,
                 ),
             )
-        status = self._final_status(completed, failed)
+        status = self._final_status(completed, failed, cancelled)
         job = BatchCompilationJob(
             request=request,
             status=status,
@@ -293,7 +307,33 @@ class BatchPromptCompilationService:
         return job
 
     @staticmethod
-    def _final_status(completed: int, failed: int) -> BatchCompilationStatus:
+    def _progress(
+        batch_id: str,
+        total: int,
+        completed: int,
+        failed: int,
+        cancelled: int,
+        current_item_id: str | None = None,
+    ) -> BatchCompilationProgress:
+        return BatchCompilationProgress(
+            batch_id,
+            BatchCompilationStatus.RUNNING,
+            total,
+            completed,
+            failed,
+            cancelled,
+            total - completed - failed - cancelled,
+            current_item_id,
+        )
+
+    @staticmethod
+    def _final_status(
+        completed: int,
+        failed: int,
+        cancelled: int,
+    ) -> BatchCompilationStatus:
+        if cancelled:
+            return BatchCompilationStatus.CANCELLED
         if failed == 0:
             return BatchCompilationStatus.COMPLETED
         if completed == 0:
