@@ -54,6 +54,19 @@ from .voice import (
     VoiceProfile,
     VoiceProfileRegistry,
 )
+from .workflows import (
+    DuplicateWorkflowManifestError,
+    WorkflowInputKind,
+    WorkflowManifest,
+    WorkflowManifestRegistryError,
+    WorkflowMetadata,
+    WorkflowNodeBinding,
+    WorkflowNodeSelector,
+    WorkflowRegistry,
+    WorkflowRequirement,
+    WorkflowRequirementKind,
+    workflow_manifest_schema,
+)
 
 __all__ = [
     "AssetPackageReference",
@@ -67,6 +80,7 @@ __all__ = [
     "ContinuityStateRegistry",
     "DialogueCue",
     "DialogueTiming",
+    "DuplicateWorkflowManifestError",
     "EntityContinuityState",
     "FailureAction",
     "LipSyncContractValidator",
@@ -100,5 +114,15 @@ __all__ = [
     "VoiceProfile",
     "VoiceProfileRegistry",
     "WorkflowCapabilities",
+    "WorkflowInputKind",
+    "WorkflowManifest",
+    "WorkflowManifestRegistryError",
+    "WorkflowMetadata",
+    "WorkflowNodeBinding",
+    "WorkflowNodeSelector",
+    "WorkflowRegistry",
+    "WorkflowRequirement",
+    "WorkflowRequirementKind",
     "default_quality_profiles",
+    "workflow_manifest_schema",
 ]
