@@ -10,7 +10,9 @@ from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectNotOpenError
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
-from vscs.presentation.dialogs.acpp_editor_dialog import ACPPEditorDialog
+from vscs.presentation.dialogs.browseable_acpp_editor_dialog import (
+    BrowseableACPPEditorDialog,
+)
 
 from .shot_planning_story_browser import ShotPlanningStoryBrowserWidget
 
@@ -86,7 +88,12 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         shot = self.shot_plans.shot(shot_id)
         if shot is None:
             return
-        dialog = ACPPEditorDialog(shot, self.acpp, self)
+        dialog = BrowseableACPPEditorDialog(
+            shot,
+            self.acpp,
+            self.assets,
+            self,
+        )
         dialog.exec()
         self.refresh()
         self._select_production_shot(shot_id)
