@@ -258,7 +258,7 @@ class BatchPromptCompilationService:
                     )
                 )
                 completed += 1
-            except Exception as exc:  # noqa: BLE001 - batch failure isolation
+            except Exception as exc:
                 results.append(
                     BatchCompilationItemResult(
                         item.item_id,
