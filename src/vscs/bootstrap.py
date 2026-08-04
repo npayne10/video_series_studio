@@ -19,8 +19,12 @@ from vscs.application.caps import (
 )
 from vscs.application.projects import ProjectService
 from vscs.application.prompt_graph import (
+    BatchCompilationHistory,
     BatchCompilationScheduler,
+    BatchProgressTracker,
     BatchPromptCompilationService,
+    BatchReportingService,
+    BatchStatisticsService,
     IncrementalCompilationHistory,
     IncrementalCompilationService,
     PromptGraphBuilder,
@@ -170,10 +174,7 @@ def build_application_context(
         services.register(LoggingService, logging_service)
 
     database = services.register(DatabaseManager, DatabaseManager())
-    projects = services.register(
-        ProjectService,
-        ProjectService(configuration, database),
-    )
+    projects = services.register(ProjectService, ProjectService(configuration, database))
     stories = services.register(StoryService, StoryService(projects))
     services.register(ShotPlanningService, ShotPlanningService(projects))
     services.register(ACPPEditorService, ACPPEditorService(projects, stories))
@@ -205,10 +206,7 @@ def build_application_context(
         RendererPromptProfileRegistry,
         RendererPromptProfileRegistry(default_renderer_prompt_profiles()),
     )
-    renderer_compiler = services.register(
-        RendererPromptCompiler,
-        RendererPromptCompiler(),
-    )
+    renderer_compiler = services.register(RendererPromptCompiler, RendererPromptCompiler())
     services.register(PromptPreviewService, PromptPreviewService())
     incremental_history = services.register(
         IncrementalCompilationHistory,
@@ -228,9 +226,26 @@ def build_application_context(
             incremental,
         ),
     )
+    progress_tracker = services.register(BatchProgressTracker, BatchProgressTracker())
+    batch_history = services.register(
+        BatchCompilationHistory,
+        BatchCompilationHistory(),
+    )
+    statistics_service = services.register(
+        BatchStatisticsService,
+        BatchStatisticsService(batch_history),
+    )
+    reporting_service = services.register(
+        BatchReportingService,
+        BatchReportingService(batch_history, statistics_service),
+    )
     services.register(
         BatchCompilationScheduler,
-        BatchCompilationScheduler(batch_compiler),
+        BatchCompilationScheduler(
+            batch_compiler,
+            progress_tracker,
+            reporting_service,
+        ),
     )
     services.register(RenderingContracts, RenderingContracts())
     adapter_registry = services.register(RenderAdapterRegistry, RenderAdapterRegistry())
@@ -280,10 +295,7 @@ def build_application_context(
         CanonicalReferenceService(caps, reference_repository),
     )
     provider = _cap_provider(configuration, selected.mode)
-    services.register(
-        CAPGeneratorService,
-        CAPGeneratorService(assets, caps, provider),
-    )
+    services.register(CAPGeneratorService, CAPGeneratorService(assets, caps, provider))
 
     plugins = PluginManager(configuration, services, selected.plugin_root)
     services.register(PluginManager, plugins)
@@ -298,16 +310,10 @@ def build_application_context(
         if not health.ready:
             messages = tuple(health.messages)
             if logger is not None:
-                logger.warning(
-                    "VSCS environment health check: %s",
-                    "; ".join(messages),
-                )
+                logger.warning("VSCS environment health check: %s", "; ".join(messages))
 
     if logger is not None:
-        logger.info(
-            "VSCS dependency graph initialized in %s mode",
-            selected.mode.value,
-        )
+        logger.info("VSCS dependency graph initialized in %s mode", selected.mode.value)
     return ApplicationContext(
         services=services,
         configuration=configuration,
