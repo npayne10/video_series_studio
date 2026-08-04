@@ -19,9 +19,11 @@ from vscs.application.caps import (
 )
 from vscs.application.projects import ProjectService
 from vscs.application.rendering import (
+    ContinuityStateRegistry,
     QualityProfileRegistry,
     RenderAdapterRegistry,
     RenderingContracts,
+    VoiceProfileRegistry,
     default_quality_profiles,
 )
 from vscs.application.shots import ShotPlanningService
@@ -164,6 +166,8 @@ def build_application_context(
         QualityProfileRegistry,
         QualityProfileRegistry(default_quality_profiles()),
     )
+    services.register(ContinuityStateRegistry, ContinuityStateRegistry())
+    services.register(VoiceProfileRegistry, VoiceProfileRegistry())
     asset_repository = services.register(
         AssetRepository,
         AssetRepository(database),
