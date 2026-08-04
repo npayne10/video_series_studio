@@ -33,7 +33,7 @@ class AudioMode(StrEnum):
 
 
 class LipSyncIntent(StrEnum):
-    """High-level lip-sync intent before detailed contracts are added."""
+    """High-level lip-sync intent before detailed workflow selection."""
 
     NONE = "none"
     DRAFT = "draft"
@@ -110,12 +110,35 @@ class AssetPackageReference:
 
 @dataclass(frozen=True, slots=True)
 class ContinuityPackageReference:
-    """Reference to continuity state supplied by a later phase."""
+    """Reference to resolved hierarchical continuity state."""
 
     package_id: str | None = None
     previous_frame_id: str | None = None
     next_frame_id: str | None = None
     requirements: tuple[str, ...] = ()
+    version: str = "1.0"
+    checksum: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class VoicePackageReference:
+    """Reference to canonical voice profiles and generated dialogue audio."""
+
+    request_id: str | None = None
+    voice_profile_ids: tuple[str, ...] = ()
+    dialogue_cue_ids: tuple[str, ...] = ()
+    audio_reference_ids: tuple[str, ...] = ()
+    version: str = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class LipSyncPackageReference:
+    """Reference to a separate post-generation lip-sync request."""
+
+    request_id: str | None = None
+    mode: str = "none"
+    required: bool = False
+    version: str = "1.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +159,8 @@ class RenderRequest:
     continuity: ContinuityPackageReference
     render: RenderSettings
     output: OutputSettings
+    voice: VoicePackageReference = field(default_factory=VoicePackageReference)
+    lip_sync: LipSyncPackageReference = field(default_factory=LipSyncPackageReference)
     metadata: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -151,3 +176,5 @@ class RenderRequest:
         ):
             if not value.strip():
                 raise ValueError(f"{name} is required")
+        if self.lip_sync.required and self.lip_sync.mode == "none":
+            raise ValueError("required lip-sync must declare a non-none mode")
