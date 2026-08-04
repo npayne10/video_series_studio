@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from vscs.application.acpp import ACPPEditorService
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
@@ -11,9 +12,7 @@ from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
-from vscs.presentation.widgets.shot_planning_story_browser import (
-    ShotPlanningStoryBrowserWidget,
-)
+from vscs.presentation.widgets.acpp_story_browser import ACPPStoryBrowserWidget
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -36,10 +35,11 @@ def install_story_browser() -> None:
     def create_content_area(window: Any) -> None:
         original_create_content(window)
         placeholder = window.content_stack.widget(2)
-        window.story_browser = ShotPlanningStoryBrowserWidget(
+        window.story_browser = ACPPStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
             window.services.require(ShotPlanningService),
+            window.services.require(ACPPEditorService),
         )
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
