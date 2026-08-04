@@ -86,7 +86,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "intent",
             PromptNodeKind.VISUAL_INTENT,
             "Visual intent",
-            "A disciplined orbital descent establishes Xorix as a real inhabited world.",
+            "A disciplined orbital descent establishes Xorix as a real "
+            "inhabited world.",
             mandatory=True,
             sequence=1,
         ),
@@ -94,7 +95,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "location",
             PromptNodeKind.LOCATION,
             "Iron Horizon bridge",
-            "A compact functional Guild bridge with restrained interfaces and clear sightlines.",
+            "A compact functional Guild bridge with restrained interfaces "
+            "and clear sightlines.",
             canonical_asset_id="CAP-LOC-IRON-HORIZON-BRIDGE",
             reference_ids=("REF-LOC-IRON-HORIZON-BRIDGE-01",),
             mandatory=True,
@@ -104,7 +106,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "ship",
             PromptNodeKind.SHIP,
             "Iron Horizon",
-            "The 145 metre Guild survey spacecraft has four rear fusion engines producing controlled blue-white engine trails.",
+            "The 145 metre Guild survey spacecraft has four rear fusion engines "
+            "producing controlled blue-white engine trails.",
             canonical_asset_id="CAP-SHP-IRON-HORIZON",
             reference_ids=("REF-SHP-IRON-HORIZON-01",),
             mandatory=True,
@@ -114,7 +117,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "james",
             PromptNodeKind.CHARACTER,
             "Commander James Spence",
-            "Commander James Spence, age 43, wears the approved Guild command uniform and remains calm and focused.",
+            "Commander James Spence, age 43, wears the approved Guild command "
+            "uniform and remains calm and focused.",
             canonical_asset_id="CAP-CHR-JAMES-SPENCE",
             reference_ids=("REF-CHR-JAMES-SPENCE-01",),
             mandatory=True,
@@ -132,7 +136,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "lighting",
             PromptNodeKind.LIGHTING,
             "Lighting",
-            "Natural planetary light enters through the bridge viewport with subtle instrument fill.",
+            "Natural planetary light enters through the bridge viewport with "
+            "subtle instrument fill.",
             mandatory=True,
             sequence=6,
         ),
@@ -156,7 +161,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "renderer",
             PromptNodeKind.RENDERER,
             "Renderer",
-            "Renderer-neutral cinematic video intent for the selected ComfyUI workflow.",
+            "Renderer-neutral cinematic video intent for the selected "
+            "ComfyUI workflow.",
             mandatory=True,
             sequence=9,
         ),
@@ -164,7 +170,8 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "quality",
             PromptNodeKind.QUALITY,
             "Quality",
-            "Production quality at 24 fps with stable temporal detail and consistent geometry.",
+            "Production quality at 24 fps with stable temporal detail and "
+            "consistent geometry.",
             mandatory=True,
             sequence=10,
         ),
@@ -172,14 +179,16 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "restriction",
             PromptNodeKind.RESTRICTION,
             "Restrictions",
-            "No uniform changes, no altered hull geometry and no missing engine trails.",
+            "No uniform changes, no altered hull geometry and no missing "
+            "engine trails.",
             sequence=11,
         ),
         PromptGraphSource(
             "negative",
             PromptNodeKind.NEGATIVE,
             "Negative prompt",
-            "No fantasy glow, excessive holograms, visual clutter or uncontrolled camera motion.",
+            "No fantasy glow, excessive holograms, visual clutter or "
+            "uncontrolled camera motion.",
             sequence=12,
         ),
     )
@@ -269,7 +278,10 @@ def test_snapshot_and_prompt_diffs_expose_continuity_and_dialogue_changes(
             and change.subject == PromptSectionKind.DIALOGUE.value
             for change in package_diff.changes
         )
-        assert first_package.provenance.graph_checksum != second_package.provenance.graph_checksum
+        assert (
+            first_package.provenance.graph_checksum
+            != second_package.provenance.graph_checksum
+        )
         assert snapshots.history(first_graph.metadata.graph_id) == (
             first_snapshot,
             second_snapshot,
@@ -292,7 +304,10 @@ def test_invalid_canonical_inventory_blocks_compilation(tmp_path: Path) -> None:
             reference_ids=_inventory().reference_ids,
         )
 
-        with pytest.raises(PromptGraphCompilationError, match="validation issues"):
+        with pytest.raises(
+            PromptGraphCompilationError,
+            match="validation issues",
+        ):
             compiler.compile(graph, incomplete_inventory)
     finally:
         application.shutdown()
