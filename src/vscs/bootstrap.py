@@ -18,6 +18,10 @@ from vscs.application.caps import (
     CAPService,
 )
 from vscs.application.projects import ProjectService
+from vscs.application.prompt_graph import (
+    PromptGraphRegistry,
+    PromptGraphSnapshotRegistry,
+)
 from vscs.application.rendering import (
     ContinuityStateRegistry,
     ManifestDiscoveryResult,
@@ -166,6 +170,11 @@ def build_application_context(
     services.register(
         ACPPEditorService,
         ACPPEditorService(projects, stories),
+    )
+    services.register(PromptGraphRegistry, PromptGraphRegistry())
+    services.register(
+        PromptGraphSnapshotRegistry,
+        PromptGraphSnapshotRegistry(),
     )
     services.register(RenderingContracts, RenderingContracts())
     adapter_registry = services.register(
