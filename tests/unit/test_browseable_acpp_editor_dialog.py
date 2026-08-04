@@ -14,10 +14,10 @@ from vscs.application.ssie import Scene
 from vscs.application.story import StoryService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
+import vscs.presentation.dialogs.browseable_acpp_editor_dialog as dialog_module
 from vscs.presentation.dialogs.browseable_acpp_editor_dialog import (
     BrowseableACPPEditorDialog,
 )
-import vscs.presentation.dialogs.browseable_acpp_editor_dialog as dialog_module
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -97,7 +97,9 @@ def test_acpp_browse_button_adds_selected_project_asset(
     qapp.processEvents()
 
     initial = dialog.asset_list.count()
-    role_index = dialog.asset_role_combo.findData(AssetBindingRole.VEHICLE.value)
+    role_index = dialog.asset_role_combo.findData(
+        AssetBindingRole.VEHICLE.value
+    )
     dialog.asset_role_combo.setCurrentIndex(role_index)
     dialog.browse_asset_button.click()
     qapp.processEvents()
