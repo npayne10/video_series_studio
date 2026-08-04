@@ -75,8 +75,9 @@ Each `DialogueCue` binds exact text to:
 - Off-screen state
 - Pronunciation notes
 
-A `VoiceGenerationRequest` groups non-overlapping cues for one shot and declares
-a project-relative dialogue-output directory.
+A `VoiceGenerationRequest` groups uniquely identified cues for one shot and
+declares a project-relative dialogue-output directory. Timing windows may
+overlap deliberately for interruptions and multi-speaker performances.
 
 ## Lip-sync strategy
 
