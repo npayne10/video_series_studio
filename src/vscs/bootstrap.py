@@ -28,6 +28,10 @@ from vscs.application.prompt_graph import (
     PromptGraphSnapshotRegistry,
     PromptGraphSnapshotService,
     PromptGraphValidator,
+    PromptPreviewService,
+    RendererPromptCompiler,
+    RendererPromptProfileRegistry,
+    default_renderer_prompt_profiles,
 )
 from vscs.application.rendering import (
     ContinuityStateRegistry,
@@ -193,6 +197,12 @@ def build_application_context(
         PromptGraphCompiler,
         PromptGraphCompiler(graph_validator),
     )
+    services.register(
+        RendererPromptProfileRegistry,
+        RendererPromptProfileRegistry(default_renderer_prompt_profiles()),
+    )
+    services.register(RendererPromptCompiler, RendererPromptCompiler())
+    services.register(PromptPreviewService, PromptPreviewService())
     services.register(RenderingContracts, RenderingContracts())
     adapter_registry = services.register(RenderAdapterRegistry, RenderAdapterRegistry())
     services.register(
