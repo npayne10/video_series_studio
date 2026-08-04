@@ -55,6 +55,14 @@ from .models import (
     PromptNode,
     PromptNodeKind,
 )
+from .optimization import (
+    OptimizedPromptPackage,
+    PromptOptimizationDiagnostic,
+    PromptOptimizationPolicy,
+    PromptOptimizationReport,
+    PromptOptimizationService,
+    PromptOptimizationSeverity,
+)
 from .preview import PromptPreview, PromptPreviewSection, PromptPreviewService
 from .progress import (
     BatchProgressEvent,
@@ -128,6 +136,7 @@ __all__ = [
     "CompiledPromptRecord",
     "IncrementalCompilationHistory",
     "IncrementalCompilationService",
+    "OptimizedPromptPackage",
     "ProfiledPromptPackage",
     "ProgressCallback",
     "PromptEdge",
@@ -165,6 +174,11 @@ __all__ = [
     "PromptGraphValidator",
     "PromptNode",
     "PromptNodeKind",
+    "PromptOptimizationDiagnostic",
+    "PromptOptimizationPolicy",
+    "PromptOptimizationReport",
+    "PromptOptimizationService",
+    "PromptOptimizationSeverity",
     "PromptPackage",
     "PromptPackageProvenance",
     "PromptPreview",
