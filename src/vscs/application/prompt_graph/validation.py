@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
-from .models import PromptGraph, PromptNode, PromptNodeKind
+from .models import PromptGraph, PromptNodeKind
 
 
 class PromptGraphValidationSeverity(StrEnum):
@@ -100,7 +100,9 @@ class PromptGraphValidationReport:
 class PromptGraphValidator:
     """Validate graph integrity and production completeness without compilation."""
 
-    policy: PromptGraphValidationPolicy = PromptGraphValidationPolicy()
+    policy: PromptGraphValidationPolicy = field(
+        default_factory=PromptGraphValidationPolicy
+    )
 
     def validate(
         self,
