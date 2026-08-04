@@ -35,7 +35,21 @@ class BatchStatisticsService:
     def calculate(self) -> BatchStatistics:
         records = self.history.all()
         if not records:
-            return BatchStatistics(0, 0, 0, 0, 0, 0, 0.0, None, None, 0.0, 0.0, 0.0, 0.0)
+            return BatchStatistics(
+                total_batches=0,
+                total_items=0,
+                completed_items=0,
+                skipped_items=0,
+                failed_items=0,
+                cancelled_items=0,
+                average_duration_seconds=0.0,
+                fastest_batch_id=None,
+                slowest_batch_id=None,
+                average_throughput_per_minute=0.0,
+                average_completion_percentage=0.0,
+                failure_rate=0.0,
+                skip_rate=0.0,
+            )
         total_items = sum(record.total_items for record in records)
         processed = sum(record.processed_items for record in records)
         durations = tuple(record.duration_seconds for record in records)
@@ -45,8 +59,14 @@ class BatchStatisticsService:
             else 100.0
             for record in records
         )
-        fastest = min(records, key=lambda record: (record.duration_seconds, record.batch_id))
-        slowest = max(records, key=lambda record: (record.duration_seconds, record.batch_id))
+        fastest = min(
+            records,
+            key=lambda record: (record.duration_seconds, record.batch_id),
+        )
+        slowest = max(
+            records,
+            key=lambda record: (record.duration_seconds, record.batch_id),
+        )
         failed = sum(record.failed_items for record in records)
         skipped = sum(record.skipped_items for record in records)
         return BatchStatistics(
