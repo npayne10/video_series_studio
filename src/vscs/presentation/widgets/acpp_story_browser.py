@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTreeWidgetItem, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
 
 from vscs.application.acpp import ACPPEditorError, ACPPEditorService
 from vscs.application.assets import AssetService
