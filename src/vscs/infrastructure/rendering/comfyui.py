@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
@@ -23,6 +23,7 @@ from vscs.application.rendering import (
     WorkflowCompatibilityValidator,
     WorkflowInputKind,
     WorkflowManifest,
+    WorkflowNodeSelector,
     WorkflowRegistry,
 )
 
@@ -81,7 +82,9 @@ class ComfyUIWorkflowCompiler:
     def load_workflow(self, manifest: WorkflowManifest) -> dict[str, object]:
         """Load one ComfyUI API workflow declared by a manifest."""
         if manifest.workflow_file is None:
-            raise ComfyUIAdapterError("workflow manifest does not declare workflow_file")
+            raise ComfyUIAdapterError(
+                "workflow manifest does not declare workflow_file"
+            )
         path = (self.workflow_root / manifest.workflow_file).resolve(strict=False)
         root = self.workflow_root.resolve(strict=False)
         if path != root and root not in path.parents:
@@ -119,34 +122,39 @@ class ComfyUIWorkflowCompiler:
         return workflow
 
     @staticmethod
-    def _resolve_node_id(workflow: dict[str, object], selector: object) -> str:
-        node_id = getattr(selector, "node_id")
-        if node_id is not None:
-            if node_id not in workflow:
-                raise ComfyUIAdapterError(f"workflow node does not exist: {node_id}")
-            return node_id
+    def _resolve_node_id(
+        workflow: dict[str, object],
+        selector: WorkflowNodeSelector,
+    ) -> str:
+        if selector.node_id is not None:
+            if selector.node_id not in workflow:
+                raise ComfyUIAdapterError(
+                    f"workflow node does not exist: {selector.node_id}"
+                )
+            return selector.node_id
 
-        title = getattr(selector, "node_title")
-        class_type = getattr(selector, "class_type")
         matches: list[str] = []
         for candidate_id, raw_node in workflow.items():
             node = raw_node if isinstance(raw_node, dict) else {}
             metadata = node.get("_meta", {})
             node_title = metadata.get("title") if isinstance(metadata, dict) else None
-            if title is not None and node_title != title:
+            if selector.node_title is not None and node_title != selector.node_title:
                 continue
-            if class_type is not None and node.get("class_type") != class_type:
+            if (
+                selector.class_type is not None
+                and node.get("class_type") != selector.class_type
+            ):
                 continue
             matches.append(candidate_id)
         if not matches:
-            logical_name = getattr(selector, "logical_name")
             raise ComfyUIAdapterError(
-                f"workflow node selector did not match: {logical_name}"
+                "workflow node selector did not match: "
+                f"{selector.logical_name}"
             )
         if len(matches) > 1:
-            logical_name = getattr(selector, "logical_name")
             raise ComfyUIAdapterError(
-                f"workflow node selector is ambiguous: {logical_name}"
+                "workflow node selector is ambiguous: "
+                f"{selector.logical_name}"
             )
         return matches[0]
 
@@ -178,7 +186,9 @@ class ComfyUIAdapter(RenderAdapter):
     registry: WorkflowRegistry
     compatibility: WorkflowCompatibilityValidator
     compiler: ComfyUIWorkflowCompiler
-    resolver: ComfyUIInputResolver = MetadataComfyUIInputResolver()
+    resolver: ComfyUIInputResolver = field(
+        default_factory=MetadataComfyUIInputResolver
+    )
     renderer: RendererKind = RendererKind.COMFYUI
 
     def capabilities(self, workflow_id: str) -> WorkflowCapabilities:
