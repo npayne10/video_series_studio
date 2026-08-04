@@ -1,6 +1,15 @@
 """Renderer-neutral prompt graph production knowledge contracts."""
 
 from .builder import PromptGraphBuilder, PromptGraphBuildResult
+from .compiler import (
+    PromptFragment,
+    PromptGraphCompilationError,
+    PromptGraphCompiler,
+    PromptPackage,
+    PromptPackageProvenance,
+    PromptSection,
+    PromptSectionKind,
+)
 from .context import PromptGraphBuildContext
 from .diagnostics import (
     PromptGraphBuildReport,
@@ -33,11 +42,14 @@ from .validation import (
 __all__ = [
     "PromptEdge",
     "PromptEdgeKind",
+    "PromptFragment",
     "PromptGraph",
     "PromptGraphBuildContext",
     "PromptGraphBuildReport",
     "PromptGraphBuildResult",
     "PromptGraphBuilder",
+    "PromptGraphCompilationError",
+    "PromptGraphCompiler",
     "PromptGraphCompleteness",
     "PromptGraphCycleError",
     "PromptGraphDiagnostic",
@@ -57,5 +69,9 @@ __all__ = [
     "PromptGraphValidator",
     "PromptNode",
     "PromptNodeKind",
+    "PromptPackage",
+    "PromptPackageProvenance",
+    "PromptSection",
+    "PromptSectionKind",
     "graph_checksum",
 ]
