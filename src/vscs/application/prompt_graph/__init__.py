@@ -37,6 +37,14 @@ from .differencing import (
     PromptGraphDiffer,
     PromptGraphSnapshotService,
 )
+from .incremental import (
+    CompilationDependency,
+    CompilationDependencyKind,
+    CompilationFingerprint,
+    CompiledPromptRecord,
+    IncrementalCompilationHistory,
+    IncrementalCompilationService,
+)
 from .models import (
     PromptEdge,
     PromptEdgeKind,
@@ -87,6 +95,12 @@ __all__ = [
     "BatchQueueSnapshot",
     "BatchQueueStatus",
     "CancellationPredicate",
+    "CompilationDependency",
+    "CompilationDependencyKind",
+    "CompilationFingerprint",
+    "CompiledPromptRecord",
+    "IncrementalCompilationHistory",
+    "IncrementalCompilationService",
     "ProfiledPromptPackage",
     "ProgressCallback",
     "PromptEdge",
