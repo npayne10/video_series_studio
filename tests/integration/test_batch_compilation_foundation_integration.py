@@ -5,6 +5,7 @@ from pathlib import Path
 from vscs.application.prompt_graph import (
     BatchCompilationHistory,
     BatchCompilationItem,
+    BatchCompilationItemResult,
     BatchCompilationItemStatus,
     BatchCompilationRequest,
     BatchCompilationScheduler,
@@ -101,16 +102,11 @@ def _sources(shot_id: str) -> tuple[PromptGraphSource, ...]:
     )
 
 
-def _item(
-    item_id: str,
-    shot_id: str,
-    *,
-    dependency_checksum: str = "cap-v1",
-) -> BatchCompilationItem:
+def _item(item_id: str, shot_id: str) -> BatchCompilationItem:
     dependency = CompilationDependency(
         CompilationDependencyKind.CANONICAL_ASSET,
         "CAP-SHP-IRON-HORIZON",
-        dependency_checksum,
+        "cap-v1",
     )
     return BatchCompilationItem(
         item_id,
@@ -216,9 +212,8 @@ def test_batch_foundation_compiles_tracks_skips_and_rebuilds(tmp_path: Path) -> 
         assert statistics.skipped_items == 2
         assert report is not None
         assert "BATCH-FOUNDATION-003" in report.to_markdown()
-        assert application.services.require(
-            BatchRecoveryService
-        ).pending_checkpoints() == ()
+        recovery = application.services.require(BatchRecoveryService)
+        assert recovery.pending_checkpoints() == ()
     finally:
         application.shutdown()
 
@@ -296,8 +291,6 @@ def test_batch_foundation_restores_only_unfinished_work_after_restart(
     try:
         recovery = first.services.require(BatchRecoveryService)
         recovery.begin(request)
-        from vscs.application.prompt_graph import BatchCompilationItemResult
-
         recovery.record_result(
             request.batch_id,
             BatchCompilationItemResult(
@@ -324,8 +317,7 @@ def test_batch_foundation_restores_only_unfinished_work_after_restart(
         assert finished is not None
         assert finished.job is not None
         assert tuple(result.item_id for result in finished.job.results) == ("ITEM-002",)
-        assert second.services.require(
-            BatchRecoveryService
-        ).pending_checkpoints() == ()
+        recovery = second.services.require(BatchRecoveryService)
+        assert recovery.pending_checkpoints() == ()
     finally:
         second.shutdown()
