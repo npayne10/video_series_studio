@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -36,7 +36,7 @@ class RenderOutput:
     workflow_id: str
     quality_level: QualityLevel
     version: str = "1.0"
-    created_at: datetime = datetime.now(UTC)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     checksum: str | None = None
 
     def __post_init__(self) -> None:
