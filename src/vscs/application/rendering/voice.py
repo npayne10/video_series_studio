@@ -135,10 +135,6 @@ class VoiceGenerationRequest:
         cue_ids = [cue.cue_id for cue in self.cues]
         if len(cue_ids) != len(set(cue_ids)):
             raise ValueError("dialogue cue IDs must be unique")
-        ordered = sorted(self.cues, key=lambda cue: cue.timing.start_seconds)
-        for previous, current in zip(ordered, ordered[1:], strict=False):
-            if current.timing.start_seconds < previous.timing.end_seconds:
-                raise ValueError("dialogue cue timing windows may not overlap")
 
 
 @dataclass(slots=True)
@@ -155,7 +151,10 @@ class VoiceProfileRegistry:
         """Return one voice profile by identity."""
         return self._profiles.get(profile_id)
 
-    def for_character(self, character_asset_id: str) -> tuple[VoiceProfile, ...]:
+    def for_character(
+        self,
+        character_asset_id: str,
+    ) -> tuple[VoiceProfile, ...]:
         """Return all profiles associated with one character asset."""
         return tuple(
             sorted(
@@ -170,4 +169,9 @@ class VoiceProfileRegistry:
 
     def list(self) -> tuple[VoiceProfile, ...]:
         """List profiles in stable identity order."""
-        return tuple(sorted(self._profiles.values(), key=lambda profile: profile.profile_id))
+        return tuple(
+            sorted(
+                self._profiles.values(),
+                key=lambda profile: profile.profile_id,
+            )
+        )
