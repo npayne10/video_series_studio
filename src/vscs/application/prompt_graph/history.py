@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-
-from vscs.application.rendering import QualityLevel, RendererKind
+from datetime import datetime
 
 from .batch import BatchCompilationJob, BatchCompilationStatus
 
@@ -16,8 +15,8 @@ class BatchHistoryRecord:
 
     batch_id: str
     status: BatchCompilationStatus
-    started_at: object
-    finished_at: object
+    started_at: datetime
+    finished_at: datetime
     duration_seconds: float
     total_items: int
     completed_items: int
