@@ -34,7 +34,15 @@ from .models import (
     PromptNode,
     PromptNodeKind,
 )
+from .preview import PromptPreview, PromptPreviewSection, PromptPreviewService
 from .registry import PromptGraphRegistry, PromptGraphSnapshotRegistry
+from .renderer_profiles import (
+    ProfiledPromptPackage,
+    RendererPromptCompiler,
+    RendererPromptProfile,
+    RendererPromptProfileRegistry,
+    default_renderer_prompt_profiles,
+)
 from .resolver import PromptGraphResolver, PromptGraphSource
 from .snapshot import PromptGraphSnapshot, graph_checksum
 from .validation import (
@@ -48,6 +56,7 @@ from .validation import (
 )
 
 __all__ = [
+    "ProfiledPromptPackage",
     "PromptEdge",
     "PromptEdgeKind",
     "PromptFragment",
@@ -85,7 +94,14 @@ __all__ = [
     "PromptNodeKind",
     "PromptPackage",
     "PromptPackageProvenance",
+    "PromptPreview",
+    "PromptPreviewSection",
+    "PromptPreviewService",
     "PromptSection",
     "PromptSectionKind",
+    "RendererPromptCompiler",
+    "RendererPromptProfile",
+    "RendererPromptProfileRegistry",
+    "default_renderer_prompt_profiles",
     "graph_checksum",
 ]
