@@ -19,6 +19,7 @@ from vscs.application.caps import (
 )
 from vscs.application.projects import ProjectService
 from vscs.application.prompt_graph import (
+    BatchCompilationScheduler,
     BatchPromptCompilationService,
     PromptGraphBuilder,
     PromptGraphCompiler,
@@ -207,7 +208,7 @@ def build_application_context(
         RendererPromptCompiler(),
     )
     services.register(PromptPreviewService, PromptPreviewService())
-    services.register(
+    batch_compiler = services.register(
         BatchPromptCompilationService,
         BatchPromptCompilationService(
             graph_builder,
@@ -215,6 +216,10 @@ def build_application_context(
             profile_registry,
             renderer_compiler,
         ),
+    )
+    services.register(
+        BatchCompilationScheduler,
+        BatchCompilationScheduler(batch_compiler),
     )
     services.register(RenderingContracts, RenderingContracts())
     adapter_registry = services.register(RenderAdapterRegistry, RenderAdapterRegistry())
