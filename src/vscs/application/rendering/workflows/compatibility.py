@@ -96,8 +96,8 @@ class WorkflowCompatibilityValidator:
                 len(request.assets.canonical_reference_ids) > 1
             ),
             loras=bool(request.assets.lora_ids),
-            audio=request.voice_package is not None,
-            lip_sync=request.lip_sync_package is not None,
+            audio=request.voice.request_id is not None,
+            lip_sync=request.lip_sync.required,
             seed_control=request.render.seed is not None,
         )
 
@@ -106,9 +106,7 @@ class WorkflowCompatibilityValidator:
         """Convert manifest capability names into the typed capability model."""
         available = set(manifest.capabilities)
         known = {item.name for item in fields(WorkflowCapabilities)}
-        return WorkflowCapabilities(
-            **{name: name in available for name in known}
-        )
+        return WorkflowCapabilities(**{name: name in available for name in known})
 
     def _validate_identity(
         self,
@@ -184,7 +182,7 @@ class WorkflowCompatibilityValidator:
                 CompatibilityDiagnostic(
                     "workflow.continuity_unresolved",
                     CompatibilitySeverity.WARNING,
-                    "A continuity package is referenced but was not supplied for validation.",
+                    "A continuity package is referenced but was not supplied.",
                     request.continuity.package_id,
                 )
             )
@@ -197,15 +195,18 @@ class WorkflowCompatibilityValidator:
                     continuity.shot_id,
                 )
             )
-        if continuity is not None and continuity.previous_frame is not None:
-            if "start_frame" not in manifest.capabilities:
-                diagnostics.append(
-                    CompatibilityDiagnostic(
-                        "workflow.continuity_start_frame_unsupported",
-                        CompatibilitySeverity.ERROR,
-                        "Workflow cannot consume the previous-shot boundary frame.",
-                    )
+        if (
+            continuity is not None
+            and continuity.previous_frame is not None
+            and "start_frame" not in manifest.capabilities
+        ):
+            diagnostics.append(
+                CompatibilityDiagnostic(
+                    "workflow.continuity_start_frame_unsupported",
+                    CompatibilitySeverity.ERROR,
+                    "Workflow cannot consume the previous-shot boundary frame.",
                 )
+            )
 
     @staticmethod
     def _validate_lip_sync(
@@ -214,13 +215,13 @@ class WorkflowCompatibilityValidator:
         lip_sync: LipSyncRequest | None,
         diagnostics: list[CompatibilityDiagnostic],
     ) -> None:
-        if request.lip_sync_package and lip_sync is None:
+        if request.lip_sync.required and lip_sync is None:
             diagnostics.append(
                 CompatibilityDiagnostic(
                     "workflow.lip_sync_unresolved",
                     CompatibilitySeverity.WARNING,
-                    "A lip-sync package is referenced but was not supplied for validation.",
-                    request.lip_sync_package.package_id,
+                    "A required lip-sync request was not supplied.",
+                    request.lip_sync.request_id,
                 )
             )
         if lip_sync is None:
