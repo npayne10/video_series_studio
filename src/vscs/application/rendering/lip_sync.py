@@ -113,11 +113,13 @@ class LipSyncRequest:
             LipSyncMode.SINGLE_SPEAKER,
             LipSyncMode.PRECISION_CLOSE_UP,
         }
-        if self.mode in single_modes:
-            if len(speaker_ids) != 1 or len(self.targets) != 1:
-                raise ValueError(
-                    "single-speaker modes require one speaker and one target"
-                )
+        if (
+            self.mode in single_modes
+            and (len(speaker_ids) != 1 or len(self.targets) != 1)
+        ):
+            raise ValueError(
+                "single-speaker modes require one speaker and one target"
+        )        
         if (
             self.mode is LipSyncMode.ALTERNATING_SPEAKERS
             and len(speaker_ids) < 2
