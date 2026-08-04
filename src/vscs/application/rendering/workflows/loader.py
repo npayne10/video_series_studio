@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .manifest import WorkflowManifest
-from .registry import DuplicateWorkflowError, WorkflowRegistry
+from .registry import DuplicateWorkflowManifestError, WorkflowRegistry
 
 
 class ManifestDiagnosticLevel(StrEnum):
@@ -119,7 +119,7 @@ class WorkflowManifestLoader:
                     )
                 )
                 continue
-            except DuplicateWorkflowError as exc:
+            except DuplicateWorkflowManifestError as exc:
                 diagnostics.append(
                     ManifestDiagnostic(
                         ManifestDiagnosticLevel.WARNING,
