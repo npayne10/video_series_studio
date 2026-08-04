@@ -8,6 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from vscs.application.acpp import ACPPEditorService
 from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.caps import (
     CanonicalReferenceRepository,
@@ -145,8 +146,12 @@ def build_application_context(
         ProjectService,
         ProjectService(configuration, database),
     )
-    services.register(StoryService, StoryService(projects))
+    stories = services.register(StoryService, StoryService(projects))
     services.register(ShotPlanningService, ShotPlanningService(projects))
+    services.register(
+        ACPPEditorService,
+        ACPPEditorService(projects, stories),
+    )
     asset_repository = services.register(
         AssetRepository,
         AssetRepository(database),
