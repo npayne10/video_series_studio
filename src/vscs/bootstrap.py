@@ -19,6 +19,7 @@ from vscs.application.caps import (
 )
 from vscs.application.projects import ProjectService
 from vscs.application.prompt_graph import (
+    BatchPromptCompilationService,
     PromptGraphBuilder,
     PromptGraphCompiler,
     PromptGraphDiagnosticsFactory,
@@ -188,21 +189,33 @@ def build_application_context(
         PromptGraphDiagnosticsFactory,
         PromptGraphDiagnosticsFactory(),
     )
-    services.register(
+    graph_builder = services.register(
         PromptGraphBuilder,
         PromptGraphBuilder(graph_resolver, graph_diagnostics),
     )
     graph_validator = services.register(PromptGraphValidator, PromptGraphValidator())
-    services.register(
+    graph_compiler = services.register(
         PromptGraphCompiler,
         PromptGraphCompiler(graph_validator),
     )
-    services.register(
+    profile_registry = services.register(
         RendererPromptProfileRegistry,
         RendererPromptProfileRegistry(default_renderer_prompt_profiles()),
     )
-    services.register(RendererPromptCompiler, RendererPromptCompiler())
+    renderer_compiler = services.register(
+        RendererPromptCompiler,
+        RendererPromptCompiler(),
+    )
     services.register(PromptPreviewService, PromptPreviewService())
+    services.register(
+        BatchPromptCompilationService,
+        BatchPromptCompilationService(
+            graph_builder,
+            graph_compiler,
+            profile_registry,
+            renderer_compiler,
+        ),
+    )
     services.register(RenderingContracts, RenderingContracts())
     adapter_registry = services.register(RenderAdapterRegistry, RenderAdapterRegistry())
     services.register(
