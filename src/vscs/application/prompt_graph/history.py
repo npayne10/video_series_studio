@@ -6,7 +6,11 @@ import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .batch import BatchCompilationJob, BatchCompilationStatus
+from .batch import (
+    BatchCompilationItemResult,
+    BatchCompilationJob,
+    BatchCompilationStatus,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,12 +77,10 @@ class BatchHistoryRecord:
         )
 
     @staticmethod
-    def _result_identity(result: object) -> str:
-        item_id = getattr(result, "item_id")
-        status = getattr(result, "status").value
-        package = getattr(result, "package")
+    def _result_identity(result: BatchCompilationItemResult) -> str:
+        package = result.package
         checksum = package.source.provenance.graph_checksum if package else ""
-        return f"{item_id}:{status}:{checksum}"
+        return f"{result.item_id}:{result.status.value}:{checksum}"
 
     @property
     def processed_items(self) -> int:
