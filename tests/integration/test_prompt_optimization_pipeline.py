@@ -68,12 +68,20 @@ def test_graph_compiles_to_optimized_renderer_prompt(tmp_path: Path) -> None:
                     sequence=4,
                 ),
                 PromptGraphSource(
+                    "continuity",
+                    PromptNodeKind.CONTINUITY,
+                    "Continuity",
+                    "Preserve spacecraft orientation, hull markings and engine state.",
+                    mandatory=True,
+                    sequence=5,
+                ),
+                PromptGraphSource(
                     "duplicate",
                     PromptNodeKind.OTHER,
                     "Repeated detail",
                     "The 145 metre Guild survey spacecraft has four rear fusion "
                     "engines producing controlled blue-white engine trails.",
-                    sequence=5,
+                    sequence=6,
                 ),
                 PromptGraphSource(
                     "renderer",
@@ -81,7 +89,7 @@ def test_graph_compiles_to_optimized_renderer_prompt(tmp_path: Path) -> None:
                     "Renderer",
                     "Renderer-neutral cinematic intent.",
                     mandatory=True,
-                    sequence=6,
+                    sequence=7,
                 ),
                 PromptGraphSource(
                     "quality",
@@ -89,14 +97,14 @@ def test_graph_compiles_to_optimized_renderer_prompt(tmp_path: Path) -> None:
                     "Quality",
                     "Preview quality at 24 fps.",
                     mandatory=True,
-                    sequence=7,
+                    sequence=8,
                 ),
                 PromptGraphSource(
                     "negative",
                     PromptNodeKind.NEGATIVE,
                     "Restrictions",
                     "No orange engine trails and no extra engines.",
-                    sequence=8,
+                    sequence=9,
                 ),
             ),
         )
@@ -126,6 +134,7 @@ def test_graph_compiles_to_optimized_renderer_prompt(tmp_path: Path) -> None:
         assert optimized.profiled.positive_prompt.count("blue-white engine trails") == 1
         assert "145 metre Guild survey spacecraft" in optimized.profiled.positive_prompt
         assert "four rear fusion engines" in optimized.profiled.positive_prompt
+        assert "Preserve spacecraft orientation" in optimized.profiled.positive_prompt
         assert "orange engine trails" in optimized.profiled.negative_prompt
         assert optimized.report.duplicate_fragments_removed == 1
         assert optimized.source.provenance.graph_checksum == package.provenance.graph_checksum
