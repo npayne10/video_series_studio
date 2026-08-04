@@ -32,7 +32,7 @@ def _item(item_id: str, shot_id: str) -> BatchCompilationItem:
         ),
         inventory=PromptGraphResourceInventory(
             canonical_asset_ids=frozenset({"CAP-SHP-IRON-HORIZON"}),
-            approved_reference_ids=frozenset({"REF-SHP-IRON-HORIZON"}),
+            reference_ids=frozenset({"REF-SHP-IRON-HORIZON"}),
         ),
         dependencies=(
             CompilationDependency(
@@ -66,12 +66,28 @@ def test_recovery_store_round_trips_complete_request(tmp_path: Path) -> None:
 
     restored = BatchRecoveryService(BatchRecoveryStore(path))
     checkpoint = restored.require("BATCH-RECOVERY")
+    inventory = checkpoint.request.items[0].inventory
 
     assert checkpoint.request.items[0].dependencies[0].checksum == "checksum-v1"
-    assert checkpoint.request.items[0].inventory.canonical_asset_ids == frozenset(
-        {"CAP-SHP-IRON-HORIZON"}
-    )
+    assert inventory.canonical_asset_ids == frozenset({"CAP-SHP-IRON-HORIZON"})
+    assert inventory.reference_ids == frozenset({"REF-SHP-IRON-HORIZON"})
     assert checkpoint.status_for("ITEM-001") is BatchCompilationItemStatus.COMPLETED
+
+
+def test_resource_inventory_serialization_is_deterministic() -> None:
+    inventory = PromptGraphResourceInventory(
+        canonical_asset_ids=frozenset({"CAP-002", "CAP-001"}),
+        reference_ids=frozenset({"REF-002", "REF-001"}),
+    )
+
+    serialized = inventory.to_dict()
+    restored = PromptGraphResourceInventory.from_dict(serialized)
+
+    assert serialized == {
+        "canonical_asset_ids": ["CAP-001", "CAP-002"],
+        "reference_ids": ["REF-001", "REF-002"],
+    }
+    assert restored == inventory
 
 
 def test_resume_excludes_successful_items_and_can_retry_failures(tmp_path: Path) -> None:
