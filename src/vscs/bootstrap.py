@@ -241,11 +241,7 @@ def build_application_context(
         BatchReportingService,
         BatchReportingService(batch_history, statistics_service),
     )
-    recovery_path = (
-        configuration.settings.environment.config_root
-        / "recovery"
-        / "batch_compilation.json"
-    )
+    recovery_path = _recovery_path(selected, configuration)
     recovery_store = services.register(
         BatchRecoveryStore,
         BatchRecoveryStore(recovery_path),
@@ -340,6 +336,17 @@ def build_application_context(
         logger=logger,
         environment_messages=messages,
     )
+
+
+def _recovery_path(
+    options: BootstrapOptions,
+    configuration: ConfigurationService,
+) -> Path:
+    if options.mode is StartupMode.TEST and options.config_path is not None:
+        root = options.config_path.expanduser().resolve(strict=False).parent
+    else:
+        root = configuration.settings.environment.config_root
+    return root / "recovery" / "batch_compilation.json"
 
 
 def _cap_provider(
