@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -42,7 +43,9 @@ class AssetPickerDialog(QDialog):
 
         self.search_edit = QLineEdit(self)
         self.search_edit.setObjectName("assetPickerSearch")
-        self.search_edit.setPlaceholderText("Search by asset name, ID, description or tag")
+        self.search_edit.setPlaceholderText(
+            "Search by asset name, ID, description or tag"
+        )
 
         self.category_combo = QComboBox(self)
         self.category_combo.setObjectName("assetPickerCategory")
@@ -62,11 +65,13 @@ class AssetPickerDialog(QDialog):
         self.asset_tree = QTreeWidget(self)
         self.asset_tree.setObjectName("assetPickerTree")
         self.asset_tree.setColumnCount(4)
-        self.asset_tree.setHeaderLabels(("Name", "Asset ID", "Category", "Status"))
+        self.asset_tree.setHeaderLabels(
+            ("Name", "Asset ID", "Category", "Status")
+        )
         self.asset_tree.setRootIsDecorated(False)
         self.asset_tree.setAlternatingRowColors(True)
         self.asset_tree.setSelectionMode(
-            QTreeWidget.SelectionMode.SingleSelection
+            QAbstractItemView.SelectionMode.SingleSelection
         )
         self.asset_tree.setSortingEnabled(True)
         self.asset_tree.sortItems(0, Qt.SortOrder.AscendingOrder)
@@ -154,7 +159,10 @@ class AssetPickerDialog(QDialog):
         query: str,
         category_value: object,
     ) -> bool:
-        if category_value is not None and asset.category.value != str(category_value):
+        if (
+            category_value is not None
+            and asset.category.value != str(category_value)
+        ):
             return False
         if not query:
             return True
