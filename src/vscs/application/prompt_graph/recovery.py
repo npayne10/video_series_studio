@@ -239,10 +239,7 @@ def _item_to_dict(item: BatchCompilationItem) -> dict[str, Any]:
     return {
         "item_id": item.item_id,
         "context": context,
-        "inventory": {
-            "canonical_asset_ids": list(item.inventory.canonical_asset_ids),
-            "approved_reference_ids": list(item.inventory.approved_reference_ids),
-        },
+        "inventory": item.inventory.to_dict(),
         "sequence": item.sequence,
         "renderer_profile_id": item.renderer_profile_id,
         "require_production_ready": item.require_production_ready,
@@ -262,16 +259,10 @@ def _item_from_dict(raw: dict[str, Any]) -> BatchCompilationItem:
     context_raw = dict(raw["context"])
     context_raw["renderer"] = RendererKind(context_raw["renderer"])
     context_raw["quality_level"] = QualityLevel(context_raw["quality_level"])
-    inventory = raw.get("inventory", {})
     return BatchCompilationItem(
         item_id=str(raw["item_id"]),
         context=PromptGraphBuildContext(**context_raw),
-        inventory=PromptGraphResourceInventory(
-            canonical_asset_ids=frozenset(inventory.get("canonical_asset_ids", [])),
-            approved_reference_ids=frozenset(
-                inventory.get("approved_reference_ids", [])
-            ),
-        ),
+        inventory=PromptGraphResourceInventory.from_dict(raw.get("inventory")),
         sequence=int(raw.get("sequence", 0)),
         renderer_profile_id=raw.get("renderer_profile_id"),
         require_production_ready=bool(raw.get("require_production_ready", True)),
