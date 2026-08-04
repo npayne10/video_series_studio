@@ -90,8 +90,11 @@ def _reference() -> CanonicalReference:
         file_path=Path("references/iron_horizon.png"),
         reference_type=CanonicalReferenceType.IMAGE,
         role=CanonicalReferenceRole.PRIMARY,
+        title="Iron Horizon starboard reference",
+        description="Approved canonical starboard view.",
+        notes="Use for hull and engine placement.",
+        version="1.0",
         status=CanonicalReferenceStatus.APPROVED,
-        notes="Approved starboard reference.",
         approved_by="Neill",
         approved_at=now,
         locked=True,
@@ -120,6 +123,7 @@ def test_complete_asset_resolution_produces_stable_fingerprint() -> None:
     assert first.cap is not None
     assert first.references[0].reference_id == "7"
     assert first.fingerprint is not None
+    assert second.fingerprint is not None
     assert first.fingerprint.checksum == second.fingerprint.checksum
 
 
