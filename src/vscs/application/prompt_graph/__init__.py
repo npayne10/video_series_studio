@@ -9,6 +9,7 @@ from .batch import (
     BatchCompilationRequest,
     BatchCompilationStatus,
     BatchPromptCompilationService,
+    CancellationPredicate,
     ProgressCallback,
 )
 from .builder import PromptGraphBuilder, PromptGraphBuildResult
@@ -55,6 +56,12 @@ from .renderer_profiles import (
     default_renderer_prompt_profiles,
 )
 from .resolver import PromptGraphResolver, PromptGraphSource
+from .scheduler import (
+    BatchCompilationScheduler,
+    BatchQueueEntry,
+    BatchQueueSnapshot,
+    BatchQueueStatus,
+)
 from .snapshot import PromptGraphSnapshot, graph_checksum
 from .validation import (
     PromptGraphCompleteness,
@@ -73,8 +80,13 @@ __all__ = [
     "BatchCompilationJob",
     "BatchCompilationProgress",
     "BatchCompilationRequest",
+    "BatchCompilationScheduler",
     "BatchCompilationStatus",
     "BatchPromptCompilationService",
+    "BatchQueueEntry",
+    "BatchQueueSnapshot",
+    "BatchQueueStatus",
+    "CancellationPredicate",
     "ProfiledPromptPackage",
     "ProgressCallback",
     "PromptEdge",
