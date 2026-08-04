@@ -14,6 +14,7 @@ from .batch import (
     BatchPromptCompilationService,
 )
 from .progress import BatchProgressTracker
+from .recovery import BatchRecoveryService
 from .reporting import BatchReportingService
 
 
@@ -103,6 +104,7 @@ class BatchCompilationScheduler:
     compilation_service: BatchPromptCompilationService
     progress_tracker: BatchProgressTracker | None = None
     reporting_service: BatchReportingService | None = None
+    recovery_service: BatchRecoveryService | None = None
     _entries: dict[str, _ScheduledBatch] = field(default_factory=dict)
     _order: list[str] = field(default_factory=list)
     _running_batch_id: str | None = None
@@ -110,10 +112,33 @@ class BatchCompilationScheduler:
     def enqueue(self, request: BatchCompilationRequest) -> BatchQueueEntry:
         if request.batch_id in self._entries:
             raise ValueError(f"Batch already scheduled: {request.batch_id}")
+        if self.recovery_service is not None:
+            self.recovery_service.begin(request)
         scheduled = _ScheduledBatch(request, datetime.now(UTC))
         self._entries[request.batch_id] = scheduled
         self._order.append(request.batch_id)
         return scheduled.snapshot()
+
+    def restore_pending(self, *, retry_failed: bool = True) -> tuple[BatchQueueEntry, ...]:
+        """Restore resumable requests not already present in this scheduler."""
+        if self.recovery_service is None:
+            return ()
+        restored: list[BatchQueueEntry] = []
+        for checkpoint in self.recovery_service.pending_checkpoints():
+            batch_id = checkpoint.request.batch_id
+            if batch_id in self._entries:
+                continue
+            request = self.recovery_service.resumable_request(
+                batch_id,
+                retry_failed=retry_failed,
+            )
+            if request is None:
+                continue
+            scheduled = _ScheduledBatch(request, datetime.now(UTC))
+            self._entries[batch_id] = scheduled
+            self._order.append(batch_id)
+            restored.append(scheduled.snapshot())
+        return tuple(restored)
 
     def get(self, batch_id: str) -> BatchQueueEntry | None:
         entry = self._entries.get(batch_id)
@@ -149,6 +174,8 @@ class BatchCompilationScheduler:
         scheduled = self._next_pending()
         if scheduled is None:
             return None
+        if self.recovery_service is not None:
+            self.recovery_service.begin(scheduled.request)
         scheduled.status = BatchQueueStatus.RUNNING
         scheduled.started_at = datetime.now(UTC)
         self._running_batch_id = scheduled.request.batch_id
@@ -165,6 +192,12 @@ class BatchCompilationScheduler:
             scheduled.progress = job.progress
             scheduled.status = self._queue_status(job.status)
             scheduled.finished_at = job.finished_at
+            if self.recovery_service is not None:
+                for result in job.results:
+                    self.recovery_service.record_result(
+                        scheduled.request.batch_id,
+                        result,
+                    )
             if self.progress_tracker is not None:
                 self.progress_tracker.update(job.progress, observed_at=job.finished_at)
             if self.reporting_service is not None:
