@@ -174,8 +174,6 @@ class BatchCompilationScheduler:
         scheduled = self._next_pending()
         if scheduled is None:
             return None
-        if self.recovery_service is not None:
-            self.recovery_service.begin(scheduled.request)
         scheduled.status = BatchQueueStatus.RUNNING
         scheduled.started_at = datetime.now(UTC)
         self._running_batch_id = scheduled.request.batch_id
