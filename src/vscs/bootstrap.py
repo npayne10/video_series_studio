@@ -21,6 +21,8 @@ from vscs.application.projects import ProjectService
 from vscs.application.prompt_graph import (
     BatchCompilationScheduler,
     BatchPromptCompilationService,
+    IncrementalCompilationHistory,
+    IncrementalCompilationService,
     PromptGraphBuilder,
     PromptGraphCompiler,
     PromptGraphDiagnosticsFactory,
@@ -208,6 +210,14 @@ def build_application_context(
         RendererPromptCompiler(),
     )
     services.register(PromptPreviewService, PromptPreviewService())
+    incremental_history = services.register(
+        IncrementalCompilationHistory,
+        IncrementalCompilationHistory(),
+    )
+    incremental = services.register(
+        IncrementalCompilationService,
+        IncrementalCompilationService(incremental_history),
+    )
     batch_compiler = services.register(
         BatchPromptCompilationService,
         BatchPromptCompilationService(
@@ -215,6 +225,7 @@ def build_application_context(
             graph_compiler,
             profile_registry,
             renderer_compiler,
+            incremental,
         ),
     )
     services.register(
