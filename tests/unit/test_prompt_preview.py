@@ -1,6 +1,7 @@
 """Tests for structured prompt previews."""
 
 from vscs.application.prompt_graph import (
+    ProfiledPromptPackage,
     PromptFragment,
     PromptGraphCompleteness,
     PromptGraphValidationReport,
@@ -9,7 +10,6 @@ from vscs.application.prompt_graph import (
     PromptPreviewService,
     PromptSection,
     PromptSectionKind,
-    ProfiledPromptPackage,
     RendererPromptProfileRegistry,
     default_renderer_prompt_profiles,
 )
