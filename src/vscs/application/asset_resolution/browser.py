@@ -111,16 +111,7 @@ class AssetBrowserService:
             ):
                 continue
             canonical = (
-                self.canonical.resolve(
-                    CanonicalResolutionRequest(
-                        asset.asset_id,
-                        require_approved_cap=selected.require_cap,
-                        require_primary_reference=selected.require_approved_references,
-                        minimum_approved_references=(
-                            1 if selected.require_approved_references else 0
-                        ),
-                    )
-                )
+                self.canonical.resolve(CanonicalResolutionRequest(asset.asset_id))
                 if self.canonical is not None
                 else None
             )
