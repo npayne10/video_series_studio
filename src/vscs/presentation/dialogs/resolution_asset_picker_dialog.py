@@ -44,8 +44,8 @@ class ResolutionAssetPickerDialog(QDialog):
         self.expected_categories = expected_categories
         self._items: dict[str, AssetBrowserItem] = {}
         self.setWindowTitle("Browse Production Assets")
-        self.resize(940, 580)
-        self.setMinimumSize(720, 440)
+        self.resize(1080, 600)
+        self.setMinimumSize(760, 460)
 
         self.search_edit = QLineEdit(self)
         self.search_edit.setObjectName("resolutionAssetPickerSearch")
@@ -76,7 +76,7 @@ class ResolutionAssetPickerDialog(QDialog):
 
         self.asset_tree = QTreeWidget(self)
         self.asset_tree.setObjectName("resolutionAssetPickerTree")
-        self.asset_tree.setColumnCount(7)
+        self.asset_tree.setColumnCount(9)
         self.asset_tree.setHeaderLabels(
             (
                 "Name",
@@ -86,6 +86,8 @@ class ResolutionAssetPickerDialog(QDialog):
                 "Resolution",
                 "CAP Version",
                 "Approved References",
+                "Canonical Status",
+                "Primary Reference",
             )
         )
         self.asset_tree.setRootIsDecorated(False)
@@ -149,7 +151,9 @@ class ResolutionAssetPickerDialog(QDialog):
             else self.expected_categories
         )
         statuses = (
-            frozenset({AssetStatus.APPROVED}) if self.approved_only.isChecked() else frozenset()
+            frozenset({AssetStatus.APPROVED})
+            if self.approved_only.isChecked()
+            else frozenset()
         )
         resolution_statuses = (
             frozenset({AssetResolutionStatus.RESOLVED})
@@ -177,6 +181,11 @@ class ResolutionAssetPickerDialog(QDialog):
         self.asset_tree.clear()
         self._items = {item.asset_id: item for item in result.items}
         for browser_item in result.items:
+            canonical_status = (
+                browser_item.canonical.status.value.title()
+                if browser_item.canonical is not None
+                else "—"
+            )
             item = QTreeWidgetItem(
                 (
                     browser_item.name,
@@ -186,6 +195,8 @@ class ResolutionAssetPickerDialog(QDialog):
                     browser_item.resolution_status.value.title(),
                     browser_item.cap_version or "—",
                     str(browser_item.approved_reference_count),
+                    canonical_status,
+                    browser_item.primary_reference_id or "—",
                 )
             )
             item.setData(0, Qt.ItemDataRole.UserRole, browser_item.asset_id)
@@ -194,7 +205,8 @@ class ResolutionAssetPickerDialog(QDialog):
             if browser_item.asset_id == selected_id:
                 self.asset_tree.setCurrentItem(item)
         self.result_label.setText(
-            f"{len(result.items)} matching asset(s) from {result.total_assets} project asset(s)"
+            f"{len(result.items)} matching asset(s) from "
+            f"{result.total_assets} project asset(s)"
         )
         self._update_selection()
 
@@ -204,8 +216,18 @@ class ResolutionAssetPickerDialog(QDialog):
         if selected is None:
             self.detail_label.clear()
             return
-        messages = tuple(diagnostic.message for diagnostic in selected.resolution.diagnostics)
-        self.detail_label.setText(" ".join(messages) if messages else "Ready for selection.")
+        messages = [
+            diagnostic.message for diagnostic in selected.resolution.diagnostics
+        ]
+        if selected.canonical is not None:
+            messages.extend(
+                diagnostic.message for diagnostic in selected.canonical.diagnostics
+            )
+        self.detail_label.setText(
+            " ".join(dict.fromkeys(messages))
+            if messages
+            else "Ready for selection."
+        )
 
     def _accept_selected(self) -> None:
         selected = self.selected_item
