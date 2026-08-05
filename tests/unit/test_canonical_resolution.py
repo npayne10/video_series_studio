@@ -10,12 +10,12 @@ from vscs.application.asset_resolution import (
 )
 from vscs.application.caps import CAPNotFoundError
 from vscs.domain.caps import (
-    CAPStatus,
     CanonicalAssetProfile,
     CanonicalReference,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
     CanonicalReferenceType,
+    CAPStatus,
 )
 
 

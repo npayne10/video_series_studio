@@ -9,16 +9,16 @@ from vscs.application.asset_resolution import (
     register_asset_resolution,
 )
 from vscs.application.assets import AssetService
-from vscs.application.caps import CAPService, CanonicalReferenceService
+from vscs.application.caps import CanonicalReferenceService, CAPService
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate, AssetStatus
 from vscs.domain.caps import (
-    CAPCreate,
-    CAPStatus,
     CanonicalReferenceCreate,
     CanonicalReferenceRole,
     CanonicalReferenceType,
+    CAPCreate,
+    CAPStatus,
 )
 
 

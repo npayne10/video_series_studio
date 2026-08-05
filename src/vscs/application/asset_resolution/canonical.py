@@ -8,16 +8,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from vscs.application.caps import (
+    CanonicalReferenceService,
     CAPNotFoundError,
     CAPService,
-    CanonicalReferenceService,
 )
 from vscs.domain.caps import (
-    CAPStatus,
     CanonicalReference,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
     CanonicalReferenceType,
+    CAPStatus,
 )
 
 from .models import (

@@ -18,9 +18,9 @@ from vscs.application.asset_resolution import (
 )
 from vscs.domain.assets import AssetCategory, AssetStatus
 from vscs.domain.caps import (
-    CAPStatus,
     CanonicalReferenceRole,
     CanonicalReferenceType,
+    CAPStatus,
 )
 from vscs.presentation.dialogs.resolution_asset_picker_dialog import (
     ResolutionAssetPickerDialog,
