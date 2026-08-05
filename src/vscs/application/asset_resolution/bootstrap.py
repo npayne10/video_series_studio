@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from vscs.application.assets import AssetService
 from vscs.application.caps import CanonicalReferenceService, CAPService
-from vscs.application.prompt_graph import PromptGraphResolver
+from vscs.application.prompt_graph import (
+    IncrementalCompilationHistory,
+    PromptGraphResolver,
+)
 from vscs.infrastructure.services import ApplicationServices
 
 from .browser import AssetBrowserService
 from .canonical import CanonicalResolutionService
 from .prompt_enrichment import PromptGraphAssetEnrichmentService
+from .propagation import AssetChangePropagationService, AssetDependencyIndex
 from .resolver import AssetResolutionService
 
 
@@ -30,12 +34,24 @@ def register_asset_resolution(services: ApplicationServices) -> AssetResolutionS
         AssetBrowserService,
         AssetBrowserService(assets, resolver, canonical),
     )
-    services.register(
+    enrichment = services.register(
         PromptGraphAssetEnrichmentService,
         PromptGraphAssetEnrichmentService(
             resolver,
             canonical,
             services.require(PromptGraphResolver),
+        ),
+    )
+    dependency_index = services.register(
+        AssetDependencyIndex,
+        AssetDependencyIndex(),
+    )
+    services.register(
+        AssetChangePropagationService,
+        AssetChangePropagationService(
+            dependency_index,
+            enrichment,
+            services.require(IncrementalCompilationHistory),
         ),
     )
     return resolver
