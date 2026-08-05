@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from PySide6.QtWidgets import QApplication, QDialog
 
 from vscs.application.acpp import ACPPEditorService, AssetBindingRole
+from vscs.application.asset_resolution import (
+    AssetBrowserService,
+    register_asset_resolution,
+)
 from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
@@ -44,6 +49,7 @@ def _prepare(tmp_path: Path) -> tuple[object, ProductionShot]:
             category=AssetCategory.SHIP,
         )
     )
+    register_asset_resolution(context.services)
     scene = Scene(
         scene_id="EP-001-SCN-001",
         episode_id="EP-001",
@@ -76,29 +82,27 @@ def test_acpp_browse_button_adds_selected_project_asset(
         DialogCode = QDialog.DialogCode
 
         def __init__(self, *_args: object) -> None:
-            self.selected_asset_id = "SHP-IRON-HORIZON"
+            self.selected_item = SimpleNamespace(asset_id="SHP-IRON-HORIZON")
 
         def exec(self) -> QDialog.DialogCode:
             return QDialog.DialogCode.Accepted
 
     monkeypatch.setattr(  # type: ignore[attr-defined]
         "vscs.presentation.dialogs.browseable_acpp_editor_dialog."
-        "AssetPickerDialog",
+        "ResolutionAssetPickerDialog",
         FakePicker,
     )
     dialog = BrowseableACPPEditorDialog(
         shot,
         context.services.require(ACPPEditorService),
-        context.services.require(AssetService),
+        context.services.require(AssetBrowserService),
     )
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     dialog.show()
     qapp.processEvents()
 
     initial = dialog.asset_list.count()
-    role_index = dialog.asset_role_combo.findData(
-        AssetBindingRole.VEHICLE.value
-    )
+    role_index = dialog.asset_role_combo.findData(AssetBindingRole.VEHICLE.value)
     dialog.asset_role_combo.setCurrentIndex(role_index)
     dialog.browse_asset_button.click()
     qapp.processEvents()
