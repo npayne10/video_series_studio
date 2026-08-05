@@ -27,6 +27,12 @@ from .models import (
     ResolvedReferenceBinding,
     stable_model_checksum,
 )
+from .prompt_enrichment import (
+    PromptAssetDependency,
+    PromptAssetEnrichmentRequest,
+    PromptAssetEnrichmentResult,
+    PromptGraphAssetEnrichmentService,
+)
 from .resolver import AssetResolutionService
 
 __all__ = [
@@ -47,6 +53,10 @@ __all__ = [
     "CanonicalResolutionResult",
     "CanonicalResolutionService",
     "CanonicalResolutionStatus",
+    "PromptAssetDependency",
+    "PromptAssetEnrichmentRequest",
+    "PromptAssetEnrichmentResult",
+    "PromptGraphAssetEnrichmentService",
     "ResolvedAssetBinding",
     "ResolvedCAPBinding",
     "ResolvedReferenceBinding",
