@@ -30,9 +30,12 @@ class PromptAssetEnrichmentRequest:
 
     def __post_init__(self) -> None:
         shot_id = self.shot_id.strip()
-        asset_ids = tuple(
-            dict.fromkeys(asset_id.strip().upper() for asset_id in self.asset_ids if asset_id.strip())
+        normalized_ids = (
+            asset_id.strip().upper()
+            for asset_id in self.asset_ids
+            if asset_id.strip()
         )
+        asset_ids = tuple(dict.fromkeys(normalized_ids))
         if not shot_id:
             raise ValueError("shot_id is required")
         if not asset_ids:
@@ -96,11 +99,18 @@ class PromptGraphAssetEnrichmentService:
             if resolution.asset is None or resolution.cap is None:
                 continue
 
-            references = tuple(reference.reference_id for reference in canonical.references)
+            references = tuple(
+                reference.reference_id for reference in canonical.references
+            )
             content = self._content(
                 resolution.cap.canonical_description,
                 resolution.cap.visual_identity,
                 resolution.cap.production_notes,
+            )
+            primary_reference_id = (
+                canonical.primary_reference.reference_id
+                if canonical.primary_reference is not None
+                else ""
             )
             attributes = (
                 ("asset_category", resolution.asset.category.value),
@@ -108,7 +118,7 @@ class PromptGraphAssetEnrichmentService:
                 ("cap_checksum", resolution.cap.checksum),
                 ("cap_version", resolution.cap.version),
                 ("canonical_status", canonical.status.value),
-                ("primary_reference_id", canonical.primary_reference.reference_id if canonical.primary_reference else ""),
+                ("primary_reference_id", primary_reference_id),
             )
             sources.append(
                 PromptGraphSource(
@@ -130,7 +140,9 @@ class PromptGraphAssetEnrichmentService:
                     asset_id,
                     resolution.asset.checksum,
                     resolution.cap.checksum,
-                    tuple(reference.checksum for reference in canonical.references),
+                    tuple(
+                        reference.checksum for reference in canonical.references
+                    ),
                 )
             )
 
@@ -147,7 +159,8 @@ class PromptGraphAssetEnrichmentService:
 
     @staticmethod
     def _content(description: str, visual_identity: str, notes: str) -> str:
-        return " ".join(part.strip() for part in (description, visual_identity, notes) if part.strip())
+        parts = (description, visual_identity, notes)
+        return " ".join(part.strip() for part in parts if part.strip())
 
     @staticmethod
     def _node_kind(category: AssetCategory) -> PromptNodeKind:
