@@ -22,7 +22,12 @@ from vscs.application.prompt_graph import (
     PromptGraphBuilder,
     PromptGraphResolver,
 )
-from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
+from vscs.bootstrap import (
+    ApplicationContext,
+    BootstrapOptions,
+    StartupMode,
+    build_application_context,
+)
 from vscs.domain.assets import AssetCategory, AssetCreate, AssetStatus
 from vscs.domain.caps import (
     CanonicalReferenceCreate,
@@ -46,7 +51,7 @@ def _options(tmp_path: Path) -> BootstrapOptions:
 
 
 def _create_ready_asset(
-    application: object,
+    application: ApplicationContext,
     project_root: Path,
     *,
     asset_id: str,
