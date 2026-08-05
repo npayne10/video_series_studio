@@ -11,6 +11,7 @@ from .canonical import (
     CanonicalResolutionRequest,
     CanonicalResolutionResult,
     CanonicalResolutionService,
+    CanonicalResolutionStatus,
 )
 from .models import (
     AssetResolutionRequest,
@@ -123,6 +124,12 @@ class AssetBrowserService:
                 if self.canonical is not None
                 else None
             )
+            if (
+                selected.require_approved_references
+                and canonical is not None
+                and canonical.status is not CanonicalResolutionStatus.READY
+            ):
+                continue
             items.append(
                 AssetBrowserItem(
                     asset.asset_id,
