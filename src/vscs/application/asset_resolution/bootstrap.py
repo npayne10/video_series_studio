@@ -6,14 +6,18 @@ from vscs.application.assets import AssetService
 from vscs.application.caps import CanonicalReferenceService, CAPService
 from vscs.infrastructure.services import ApplicationServices
 
+from .browser import AssetBrowserService
 from .resolver import AssetResolutionService
 
 
 def register_asset_resolution(services: ApplicationServices) -> AssetResolutionService:
-    """Register the shared authoritative asset-resolution service."""
+    """Register shared authoritative resolution and browsing services."""
+    assets = services.require(AssetService)
     resolver = AssetResolutionService(
-        services.require(AssetService),
+        assets,
         services.require(CAPService),
         services.require(CanonicalReferenceService),
     )
-    return services.register(AssetResolutionService, resolver)
+    registered = services.register(AssetResolutionService, resolver)
+    services.register(AssetBrowserService, AssetBrowserService(assets, registered))
+    return registered
