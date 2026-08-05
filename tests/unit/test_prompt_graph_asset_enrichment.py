@@ -22,9 +22,9 @@ from vscs.application.prompt_graph import (
 )
 from vscs.domain.assets import AssetCategory, AssetStatus
 from vscs.domain.caps import (
-    CAPStatus,
     CanonicalReferenceRole,
     CanonicalReferenceType,
+    CAPStatus,
 )
 
 
