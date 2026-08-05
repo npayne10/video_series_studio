@@ -11,12 +11,12 @@ from vscs.infrastructure.services import ApplicationServices
 
 def test_register_asset_resolution_uses_shared_dependencies() -> None:
     services = ApplicationServices()
-    assets = object()
-    caps = object()
-    references = object()
-    services.register(AssetService, assets)  # type: ignore[arg-type]
-    services.register(CAPService, caps)  # type: ignore[arg-type]
-    services.register(CanonicalReferenceService, references)  # type: ignore[arg-type]
+    assets = object.__new__(AssetService)
+    caps = object.__new__(CAPService)
+    references = object.__new__(CanonicalReferenceService)
+    services.register(AssetService, assets)
+    services.register(CAPService, caps)
+    services.register(CanonicalReferenceService, references)
 
     resolver = register_asset_resolution(services)
 
