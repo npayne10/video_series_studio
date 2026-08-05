@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from vscs.application.acpp import ACPPEditorService
+from vscs.application.asset_resolution import (
+    AssetBrowserService,
+    register_asset_resolution,
+)
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService
@@ -35,11 +39,16 @@ def install_story_browser() -> None:
     def create_content_area(window: Any) -> None:
         original_create_content(window)
         placeholder = window.content_stack.widget(2)
+        asset_browser = window.services.get(AssetBrowserService)
+        if asset_browser is None:
+            register_asset_resolution(window.services)
+            asset_browser = window.services.require(AssetBrowserService)
         window.story_browser = ACPPStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
             window.services.require(ShotPlanningService),
             window.services.require(ACPPEditorService),
+            asset_browser,
         )
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
