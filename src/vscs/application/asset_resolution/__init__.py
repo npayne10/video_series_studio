@@ -33,6 +33,14 @@ from .prompt_enrichment import (
     PromptAssetEnrichmentResult,
     PromptGraphAssetEnrichmentService,
 )
+from .propagation import (
+    AssetChangePropagationService,
+    AssetDependencyChange,
+    AssetDependencyChangeKind,
+    AssetDependencyIndex,
+    AssetPropagationReport,
+    ShotAssetDependencyRecord,
+)
 from .resolver import AssetResolutionService
 
 __all__ = [
@@ -40,7 +48,12 @@ __all__ = [
     "AssetBrowserItem",
     "AssetBrowserResult",
     "AssetBrowserService",
+    "AssetChangePropagationService",
+    "AssetDependencyChange",
+    "AssetDependencyChangeKind",
     "AssetDependencyFingerprint",
+    "AssetDependencyIndex",
+    "AssetPropagationReport",
     "AssetResolutionDiagnostic",
     "AssetResolutionRequest",
     "AssetResolutionResult",
@@ -60,6 +73,7 @@ __all__ = [
     "ResolvedAssetBinding",
     "ResolvedCAPBinding",
     "ResolvedReferenceBinding",
+    "ShotAssetDependencyRecord",
     "register_asset_resolution",
     "stable_model_checksum",
 ]
