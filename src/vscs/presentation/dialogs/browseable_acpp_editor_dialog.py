@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.acpp import ACPPEditorService, AssetBindingRole
-from vscs.application.assets import AssetService
+from vscs.application.asset_resolution import AssetBrowserService
 from vscs.application.shots import ProductionShot
 
 from .acpp_editor_dialog import ACPPEditorDialog
-from .asset_picker_dialog import AssetPickerDialog
+from .resolution_asset_picker_dialog import ResolutionAssetPickerDialog
 
 
 class BrowseableACPPEditorDialog(ACPPEditorDialog):
@@ -28,10 +28,10 @@ class BrowseableACPPEditorDialog(ACPPEditorDialog):
         self,
         shot: ProductionShot,
         service: ACPPEditorService,
-        assets: AssetService,
+        asset_browser: AssetBrowserService,
         parent: QWidget | None = None,
     ) -> None:
-        self.assets = assets
+        self.asset_browser = asset_browser
         super().__init__(shot, service, parent)
 
     def _build_assets_tab(self) -> None:
@@ -49,7 +49,7 @@ class BrowseableACPPEditorDialog(ACPPEditorDialog):
         self.browse_asset_button = QPushButton("Browse Assets…")
         self.browse_asset_button.setObjectName("browseACPPAssets")
         self.browse_asset_button.setToolTip(
-            "Browse canonical assets registered in the active VSCS project."
+            "Browse resolved assets, CAPs and approved canonical references."
         )
 
         self.asset_role_combo = QComboBox()
@@ -77,11 +77,11 @@ class BrowseableACPPEditorDialog(ACPPEditorDialog):
         self.tabs.addTab(page, "Assets")
 
     def _browse_asset(self) -> None:
-        picker = AssetPickerDialog(self.assets, self)
-        if picker.exec() != AssetPickerDialog.DialogCode.Accepted:
+        picker = ResolutionAssetPickerDialog(self.asset_browser, self)
+        if picker.exec() != ResolutionAssetPickerDialog.DialogCode.Accepted:
             return
-        asset_id = picker.selected_asset_id
-        if asset_id is None:
+        selected = picker.selected_item
+        if selected is None:
             return
-        self.asset_id_edit.setText(asset_id)
+        self.asset_id_edit.setText(selected.asset_id)
         self._add_asset()
