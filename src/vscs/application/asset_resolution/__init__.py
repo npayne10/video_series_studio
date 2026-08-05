@@ -7,6 +7,14 @@ from .browser import (
     AssetBrowserResult,
     AssetBrowserService,
 )
+from .canonical import (
+    CanonicalDependencyFingerprint,
+    CanonicalReferenceBinding,
+    CanonicalResolutionRequest,
+    CanonicalResolutionResult,
+    CanonicalResolutionService,
+    CanonicalResolutionStatus,
+)
 from .models import (
     AssetDependencyFingerprint,
     AssetResolutionDiagnostic,
@@ -33,6 +41,12 @@ __all__ = [
     "AssetResolutionService",
     "AssetResolutionSeverity",
     "AssetResolutionStatus",
+    "CanonicalDependencyFingerprint",
+    "CanonicalReferenceBinding",
+    "CanonicalResolutionRequest",
+    "CanonicalResolutionResult",
+    "CanonicalResolutionService",
+    "CanonicalResolutionStatus",
     "ResolvedAssetBinding",
     "ResolvedCAPBinding",
     "ResolvedReferenceBinding",
