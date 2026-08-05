@@ -6,12 +6,12 @@ from dataclasses import dataclass
 
 from vscs.application.assets import AssetNotFoundError, AssetService
 from vscs.application.caps import (
+    CanonicalReferenceService,
     CAPNotFoundError,
     CAPService,
-    CanonicalReferenceService,
 )
 from vscs.domain.assets import AssetStatus
-from vscs.domain.caps import CAPStatus, CanonicalReferenceStatus
+from vscs.domain.caps import CanonicalReferenceStatus, CAPStatus
 
 from .models import (
     AssetResolutionDiagnostic,
@@ -61,7 +61,10 @@ class AssetResolutionService:
             asset.tags,
             stable_model_checksum(asset),
         )
-        if request.expected_category is not None and asset.category is not request.expected_category:
+        if (
+            request.expected_category is not None
+            and asset.category is not request.expected_category
+        ):
             diagnostics.append(
                 AssetResolutionDiagnostic(
                     "asset.category_mismatch",
@@ -165,4 +168,8 @@ class AssetResolutionService:
         requests: tuple[AssetResolutionRequest, ...],
     ) -> tuple[AssetResolutionResult, ...]:
         """Resolve requests in deterministic asset-ID order."""
-        return tuple(self.resolve(request) for request in sorted(requests, key=lambda x: x.asset_id))
+        ordered_requests = sorted(
+            requests,
+            key=lambda request: request.asset_id,
+        )
+        return tuple(self.resolve(request) for request in ordered_requests)
