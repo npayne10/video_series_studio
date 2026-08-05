@@ -100,7 +100,9 @@ def test_resolves_approved_cap_and_selects_primary_reference() -> None:
     assert first.status is CanonicalResolutionStatus.READY
     assert first.primary_reference is not None
     assert first.primary_reference.reference_id == "7"
-    assert tuple(reference.reference_id for reference in first.references) == ("7", "9")
+    assert tuple(
+        reference.reference_id for reference in first.references
+    ) == ("7", "9")
     assert first.fingerprint is not None
     assert first.fingerprint.checksum == second.fingerprint.checksum
 
@@ -108,7 +110,9 @@ def test_resolves_approved_cap_and_selects_primary_reference() -> None:
 def test_missing_primary_reference_is_partial() -> None:
     service = CanonicalResolutionService(
         _Caps(_cap()),  # type: ignore[arg-type]
-        _References((_reference(9, CanonicalReferenceRole.SECONDARY),)),  # type: ignore[arg-type]
+        _References(
+            (_reference(9, CanonicalReferenceRole.SECONDARY),)
+        ),  # type: ignore[arg-type]
     )
 
     result = service.resolve(CanonicalResolutionRequest("CAP-SHP-IRON-HORIZON"))
@@ -144,7 +148,9 @@ def test_reference_filters_and_minimum_count_are_enforced() -> None:
     )
 
     assert result.status is CanonicalResolutionStatus.PARTIAL
-    assert tuple(reference.reference_id for reference in result.references) == ("7",)
+    assert tuple(
+        reference.reference_id for reference in result.references
+    ) == ("7",)
     assert {diagnostic.code for diagnostic in result.diagnostics} == {
         "reference.minimum_not_met"
     }
