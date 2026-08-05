@@ -2,6 +2,8 @@
 
 from vscs.application.asset_resolution import (
     AssetBrowserService,
+    AssetChangePropagationService,
+    AssetDependencyIndex,
     AssetResolutionService,
     CanonicalResolutionService,
     PromptGraphAssetEnrichmentService,
@@ -9,7 +11,10 @@ from vscs.application.asset_resolution import (
 )
 from vscs.application.assets import AssetService
 from vscs.application.caps import CanonicalReferenceService, CAPService
-from vscs.application.prompt_graph import PromptGraphResolver
+from vscs.application.prompt_graph import (
+    IncrementalCompilationHistory,
+    PromptGraphResolver,
+)
 from vscs.infrastructure.services import ApplicationServices
 
 
@@ -19,6 +24,10 @@ def test_register_asset_resolution_uses_shared_dependencies() -> None:
     caps = object.__new__(CAPService)
     references = object.__new__(CanonicalReferenceService)
     graph_resolver = services.register(PromptGraphResolver, PromptGraphResolver())
+    history = services.register(
+        IncrementalCompilationHistory,
+        IncrementalCompilationHistory(),
+    )
     services.register(AssetService, assets)
     services.register(CAPService, caps)
     services.register(CanonicalReferenceService, references)
@@ -27,6 +36,8 @@ def test_register_asset_resolution_uses_shared_dependencies() -> None:
     canonical = services.require(CanonicalResolutionService)
     browser = services.require(AssetBrowserService)
     enrichment = services.require(PromptGraphAssetEnrichmentService)
+    index = services.require(AssetDependencyIndex)
+    propagation = services.require(AssetChangePropagationService)
 
     assert services.require(AssetResolutionService) is resolver
     assert resolver.assets is assets
@@ -40,3 +51,6 @@ def test_register_asset_resolution_uses_shared_dependencies() -> None:
     assert enrichment.assets is resolver
     assert enrichment.canonical is canonical
     assert enrichment.resolver is graph_resolver
+    assert propagation.index is index
+    assert propagation.enrichment is enrichment
+    assert propagation.compilation_history is history
