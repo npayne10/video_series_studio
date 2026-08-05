@@ -14,6 +14,7 @@ from vscs.application.caps import (
 )
 from vscs.domain.caps import (
     CAPStatus,
+    CanonicalReference,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
     CanonicalReferenceType,
@@ -221,7 +222,8 @@ class CanonicalResolutionService:
                 AssetResolutionDiagnostic(
                     "reference.multiple_primaries",
                     AssetResolutionSeverity.WARNING,
-                    "Multiple approved primary references exist; the first stable match was selected.",
+                    "Multiple approved primary references exist; "
+                    "the first stable match was selected.",
                     cap.asset_id,
                 )
             )
@@ -245,7 +247,7 @@ class CanonicalResolutionService:
         )
 
     @staticmethod
-    def _binding(reference: object) -> CanonicalReferenceBinding:
+    def _binding(reference: CanonicalReference) -> CanonicalReferenceBinding:
         return CanonicalReferenceBinding(
             str(reference.id),
             reference.title,
