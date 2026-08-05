@@ -1,6 +1,7 @@
 """Bootstrap helper coverage for asset resolution."""
 
 from vscs.application.asset_resolution import (
+    AssetBrowserService,
     AssetResolutionService,
     register_asset_resolution,
 )
@@ -19,8 +20,11 @@ def test_register_asset_resolution_uses_shared_dependencies() -> None:
     services.register(CanonicalReferenceService, references)
 
     resolver = register_asset_resolution(services)
+    browser = services.require(AssetBrowserService)
 
     assert services.require(AssetResolutionService) is resolver
     assert resolver.assets is assets
     assert resolver.caps is caps
     assert resolver.references is references
+    assert browser.assets is assets
+    assert browser.resolver is resolver
