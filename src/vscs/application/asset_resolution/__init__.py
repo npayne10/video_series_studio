@@ -1,6 +1,12 @@
 """Asset Manager resolution contracts and services."""
 
 from .bootstrap import register_asset_resolution
+from .browser import (
+    AssetBrowserFilter,
+    AssetBrowserItem,
+    AssetBrowserResult,
+    AssetBrowserService,
+)
 from .models import (
     AssetDependencyFingerprint,
     AssetResolutionDiagnostic,
@@ -16,6 +22,10 @@ from .models import (
 from .resolver import AssetResolutionService
 
 __all__ = [
+    "AssetBrowserFilter",
+    "AssetBrowserItem",
+    "AssetBrowserResult",
+    "AssetBrowserService",
     "AssetDependencyFingerprint",
     "AssetResolutionDiagnostic",
     "AssetResolutionRequest",
