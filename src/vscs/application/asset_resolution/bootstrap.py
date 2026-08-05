@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import CAPService, CanonicalReferenceService
+from vscs.application.caps import CanonicalReferenceService, CAPService
 from vscs.infrastructure.services import ApplicationServices
 
 from .resolver import AssetResolutionService
