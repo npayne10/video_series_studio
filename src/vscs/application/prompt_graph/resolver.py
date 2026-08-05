@@ -40,11 +40,25 @@ class PromptGraphResolver:
         shot_id: str,
         sources: tuple[PromptGraphSource, ...],
     ) -> None:
-        """Register deterministic source data for one shot."""
-        self._sources[shot_id] = tuple(
-            sorted(sources, key=lambda item: (item.sequence, item.source_id))
-        )
+        """Replace deterministic source data for one shot."""
+        self._sources[shot_id] = self._ordered(sources)
+
+    def extend(
+        self,
+        shot_id: str,
+        sources: tuple[PromptGraphSource, ...],
+    ) -> None:
+        """Add or replace sources by source ID without discarding other contributors."""
+        merged = {source.source_id: source for source in self._sources.get(shot_id, ())}
+        merged.update({source.source_id: source for source in sources})
+        self._sources[shot_id] = self._ordered(tuple(merged.values()))
 
     def resolve(self, context: PromptGraphBuildContext) -> tuple[PromptGraphSource, ...]:
         """Resolve all authoritative sources currently available for a shot."""
         return self._sources.get(context.shot_id, ())
+
+    @staticmethod
+    def _ordered(
+        sources: tuple[PromptGraphSource, ...],
+    ) -> tuple[PromptGraphSource, ...]:
+        return tuple(sorted(sources, key=lambda item: (item.sequence, item.source_id)))
