@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
 
 from vscs.application.acpp import ACPPEditorError, ACPPEditorService
+from vscs.application.asset_resolution import AssetBrowserService
 from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectNotOpenError
 from vscs.application.shots import ShotPlanningService
@@ -26,9 +27,11 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         assets: AssetService,
         shot_plans: ShotPlanningService,
         acpp: ACPPEditorService,
+        asset_browser: AssetBrowserService,
         parent: QWidget | None = None,
     ) -> None:
         self.acpp = acpp
+        self.asset_browser = asset_browser
         super().__init__(stories, assets, shot_plans, parent)
         self.acpp_button = QPushButton("ACPP Editor", self)
         self.acpp_button.setObjectName("openACPPEditor")
@@ -91,7 +94,7 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         dialog = BrowseableACPPEditorDialog(
             shot,
             self.acpp,
-            self.assets,
+            self.asset_browser,
             self,
         )
         dialog.exec()
