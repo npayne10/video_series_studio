@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from vscs.application.assets import AssetService
 from vscs.domain.assets import AssetCategory, AssetStatus
 
+from .canonical import (
+    CanonicalResolutionRequest,
+    CanonicalResolutionResult,
+    CanonicalResolutionService,
+)
 from .models import (
     AssetResolutionRequest,
     AssetResolutionResult,
@@ -38,6 +43,7 @@ class AssetBrowserItem:
     description: str
     tags: tuple[str, ...]
     resolution: AssetResolutionResult
+    canonical: CanonicalResolutionResult | None = None
 
     @property
     def resolution_status(self) -> AssetResolutionStatus:
@@ -50,6 +56,12 @@ class AssetBrowserItem:
     @property
     def approved_reference_count(self) -> int:
         return len(self.resolution.references)
+
+    @property
+    def primary_reference_id(self) -> str | None:
+        if self.canonical is None or self.canonical.primary_reference is None:
+            return None
+        return self.canonical.primary_reference.reference_id
 
     @property
     def selectable(self) -> bool:
@@ -71,6 +83,7 @@ class AssetBrowserService:
 
     assets: AssetService
     resolver: AssetResolutionService
+    canonical: CanonicalResolutionService | None = None
 
     def browse(self, filter_: AssetBrowserFilter | None = None) -> AssetBrowserResult:
         selected = filter_ or AssetBrowserFilter()
@@ -96,6 +109,20 @@ class AssetBrowserService:
                 and resolution.status not in selected.resolution_statuses
             ):
                 continue
+            canonical = (
+                self.canonical.resolve(
+                    CanonicalResolutionRequest(
+                        asset.asset_id,
+                        require_approved_cap=selected.require_cap,
+                        require_primary_reference=selected.require_approved_references,
+                        minimum_approved_references=(
+                            1 if selected.require_approved_references else 0
+                        ),
+                    )
+                )
+                if self.canonical is not None
+                else None
+            )
             items.append(
                 AssetBrowserItem(
                     asset.asset_id,
@@ -105,9 +132,12 @@ class AssetBrowserService:
                     asset.description,
                     asset.tags,
                     resolution,
+                    canonical,
                 )
             )
-        ordered = tuple(sorted(items, key=lambda item: (item.name.casefold(), item.asset_id)))
+        ordered = tuple(
+            sorted(items, key=lambda item: (item.name.casefold(), item.asset_id))
+        )
         return AssetBrowserResult(selected, ordered, len(assets))
 
     def select(
