@@ -4,30 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QWidget
-
 from vscs.application.projects import ProjectService
-from vscs.application.story import (
-    StoryApprovalService,
-    StoryLifecycleService,
-    StoryMetadataService,
-    StoryStatus,
-    StoryStatusService,
-)
+from vscs.application.story import StoryStatus
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.presentation.widgets.story_workspace import (
     StoryEditorDialog,
     StoryWorkspaceWidget,
 )
-
-
-class _ProductionBrowser(QWidget):
-    def __init__(self) -> None:
-        super().__init__()
-        self.refresh_count = 0
-
-    def refresh(self) -> None:
-        self.refresh_count += 1
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -42,26 +25,14 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def _workspace(tmp_path: Path) -> tuple[object, StoryWorkspaceWidget]:
+def _workspace(tmp_path: Path, qtbot) -> tuple[object, StoryWorkspaceWidget]:
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
-    lifecycle = StoryLifecycleService(projects)
-    metadata = StoryMetadataService(projects, lifecycle)
-    statuses = StoryStatusService(projects, lifecycle)
-    approvals = StoryApprovalService(
-        projects,
-        lifecycle,
-        metadata,
-        statuses,
-    )
-    workspace = StoryWorkspaceWidget(
-        lifecycle,
-        metadata,
-        statuses,
-        approvals,
-        _ProductionBrowser(),
-    )
+    window = context.create_main_window()
+    qtbot.addWidget(window)
+    workspace = window.story_browser
+    assert isinstance(workspace, StoryWorkspaceWidget)
     return context, workspace
 
 
@@ -82,8 +53,7 @@ def test_story_editor_returns_normalized_values(qtbot) -> None:
 
 
 def test_workspace_lists_story_and_displays_readiness(tmp_path: Path, qtbot) -> None:
-    context, workspace = _workspace(tmp_path)
-    qtbot.addWidget(workspace)
+    context, workspace = _workspace(tmp_path, qtbot)
     story = workspace.lifecycle.create_story(title="Xorix")
     workspace.metadata.save_metadata(
         story.story_id,
@@ -99,15 +69,14 @@ def test_workspace_lists_story_and_displays_readiness(tmp_path: Path, qtbot) -> 
 
     assert workspace.story_list.count() == 1
     assert "Xorix" in workspace.story_list.item(0).text()
-    assert "100%" in workspace.details.text()
+    assert "100%" in workspace.story_details.text()
     assert workspace.analyse_button.isEnabled()
     assert not workspace.approve_button.isEnabled()
     context.shutdown()  # type: ignore[attr-defined]
 
 
 def test_workspace_action_state_follows_story_governance(tmp_path: Path, qtbot) -> None:
-    context, workspace = _workspace(tmp_path)
-    qtbot.addWidget(workspace)
+    context, workspace = _workspace(tmp_path, qtbot)
     story = workspace.lifecycle.create_story(title="Xorix")
     workspace.metadata.save_metadata(
         story.story_id,
@@ -148,13 +117,12 @@ def test_workspace_action_state_follows_story_governance(tmp_path: Path, qtbot) 
     context.shutdown()  # type: ignore[attr-defined]
 
 
-def test_workspace_refreshes_embedded_production_browser(tmp_path: Path, qtbot) -> None:
-    context, workspace = _workspace(tmp_path)
-    qtbot.addWidget(workspace)
-    browser = workspace.production_browser
-    initial_count = browser.refresh_count  # type: ignore[attr-defined]
+def test_workspace_preserves_production_browser_api(tmp_path: Path, qtbot) -> None:
+    context, workspace = _workspace(tmp_path, qtbot)
 
-    workspace.refresh()
-
-    assert browser.refresh_count == initial_count + 1  # type: ignore[attr-defined]
+    assert workspace.production_browser is workspace
+    assert hasattr(workspace, "tree")
+    assert hasattr(workspace, "dashboard_labels")
+    assert hasattr(workspace, "shot_plans")
+    assert hasattr(workspace, "acpp_button")
     context.shutdown()  # type: ignore[attr-defined]
