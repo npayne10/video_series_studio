@@ -169,7 +169,7 @@ class StoryLifecycleService:
             created_at=now,
             updated_at=now,
         )
-        stories = self.list_stories(include_archived=True) + (story,)
+        stories = (*self.list_stories(include_archived=True), story)
         self._write(stories)
         return story
 
@@ -225,7 +225,7 @@ class StoryLifecycleService:
             archived_at=None,
         )
         self._write(
-            self.list_stories(include_archived=True) + (duplicate,)
+            (*self.list_stories(include_archived=True), duplicate)
         )
         return duplicate
 
