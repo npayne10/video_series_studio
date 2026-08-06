@@ -65,10 +65,12 @@ def test_status_transition_updates_story_and_persists_history(tmp_path: Path) ->
         changed_by="Neill Payne",
     )
 
+    current = stories.story(story.story_id)
+    assert current is not None
     assert transition.previous_status is StoryStatus.DRAFT
     assert transition.new_status is StoryStatus.ANALYSED
     assert transition.changed_by == "Neill Payne"
-    assert stories.story(story.story_id).status is StoryStatus.ANALYSED  # type: ignore[union-attr]
+    assert current.status is StoryStatus.ANALYSED
     assert statuses.history(story.story_id) == (transition,)
     context.shutdown()  # type: ignore[attr-defined]
 
@@ -89,7 +91,9 @@ def test_approval_and_lock_statuses_require_approval_workflow(tmp_path: Path) ->
             reason="Attempted direct approval",
         )
 
-    assert stories.story(story.story_id).status is StoryStatus.ANALYSED  # type: ignore[union-attr]
+    current = stories.story(story.story_id)
+    assert current is not None
+    assert current.status is StoryStatus.ANALYSED
     context.shutdown()  # type: ignore[attr-defined]
 
 
@@ -104,7 +108,9 @@ def test_invalid_details_do_not_mutate_story_status(tmp_path: Path) -> None:
             reason="   ",
         )
 
-    assert stories.story(story.story_id).status is StoryStatus.DRAFT  # type: ignore[union-attr]
+    current = stories.story(story.story_id)
+    assert current is not None
+    assert current.status is StoryStatus.DRAFT
     assert statuses.history(story.story_id) == ()
     context.shutdown()  # type: ignore[attr-defined]
 
