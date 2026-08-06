@@ -1,6 +1,10 @@
 """Structured story application services."""
 
-from .bootstrap import register_story_lifecycle, register_story_metadata
+from .bootstrap import (
+    register_story_lifecycle,
+    register_story_metadata,
+    register_story_status,
+)
 from .containers import (
     ProductionContainerType,
     build_scene_id,
@@ -30,6 +34,12 @@ from .metadata import (
     StoryMetadataService,
 )
 from .service import StoryService, StoryServiceError
+from .status import (
+    StoryStatusError,
+    StoryStatusService,
+    StoryStatusSnapshot,
+    StoryStatusTransition,
+)
 
 __all__ = [
     "ProductionContainerType",
@@ -49,11 +59,16 @@ __all__ = [
     "StorySourceType",
     "StoryStatistics",
     "StoryStatus",
+    "StoryStatusError",
+    "StoryStatusService",
+    "StoryStatusSnapshot",
+    "StoryStatusTransition",
     "build_scene_id",
     "build_story_hierarchy",
     "infer_container_type",
     "normalize_container_id",
     "register_story_lifecycle",
     "register_story_metadata",
+    "register_story_status",
     "scene_status",
 ]
