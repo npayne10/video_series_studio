@@ -12,11 +12,7 @@ from vscs.application.asset_resolution import (
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
-    StoryApprovalService,
-    StoryLifecycleService,
-    StoryMetadataService,
     StoryService,
-    StoryStatusService,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
