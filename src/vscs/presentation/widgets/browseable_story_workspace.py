@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import ClassVar
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -37,7 +38,7 @@ class BrowseableStoryEditorDialog(StoryEditorDialog):
         "All files (*)"
     )
 
-    _SOURCE_TYPES = {
+    _SOURCE_TYPES: ClassVar[dict[str, StorySourceType]] = {
         ".docx": StorySourceType.DOCX,
         ".pdf": StorySourceType.PDF,
         ".md": StorySourceType.MARKDOWN,
