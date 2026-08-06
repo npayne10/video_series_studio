@@ -74,7 +74,8 @@ class StoryWorkspaceHelpDialog(QDialog):
             "<h2>Story-driven Production Workflow</h2>"
             "<pre>Idea\n  ↓\nStory\n  ↓\nStory Analysis\n  ↓\nStory Approval\n  ↓\n"
             "Production Planning\n  ↓\nAssets and CAPs\n  ↓\nScenes and Shots\n  ↓\n"
-            "Prompt Generation\n  ↓\nRendering\n  ↓\nLip-sync and Post Production\n  ↓\nRelease</pre>",
+            "Prompt Generation\n  ↓\nRendering\n  ↓\n"
+            "Lip-sync and Post Production\n  ↓\nRelease</pre>",
         ),
         (
             "Best Practices",
