@@ -8,6 +8,7 @@ import pytest
 
 from vscs.application.projects import ProjectService
 from vscs.application.story import (
+    StoryLifecycleError,
     StoryLifecycleService,
     StoryMetadataError,
     StoryMetadataService,
@@ -117,7 +118,7 @@ def test_metadata_completeness_explains_missing_required_fields(tmp_path: Path) 
 def test_metadata_requires_existing_editable_story(tmp_path: Path) -> None:
     context, stories, metadata_service = _services(tmp_path)
 
-    with pytest.raises(Exception, match="Story not found"):
+    with pytest.raises(StoryLifecycleError, match="Story not found"):
         metadata_service.save_metadata("STORY-999", synopsis="Missing")
 
     story = stories.create_story(title="Archived Story")
