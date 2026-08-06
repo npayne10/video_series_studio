@@ -15,8 +15,10 @@ from vscs.application.story import (
     StoryLifecycleService,
     StoryMetadataService,
     StoryService,
+    StoryStatusService,
     register_story_lifecycle,
     register_story_metadata,
+    register_story_status,
 )
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
@@ -53,6 +55,8 @@ def install_story_browser() -> None:
             register_story_lifecycle(window.services)
         if window.services.get(StoryMetadataService) is None:
             register_story_metadata(window.services)
+        if window.services.get(StoryStatusService) is None:
+            register_story_status(window.services)
         window.story_browser = ACPPStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
