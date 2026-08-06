@@ -5,6 +5,7 @@ from __future__ import annotations
 from vscs.application.projects import ProjectService
 from vscs.infrastructure.services import ApplicationServices
 
+from .approval import StoryApprovalService
 from .lifecycle import StoryLifecycleService
 from .metadata import StoryMetadataService
 from .status import StoryStatusService
@@ -43,3 +44,20 @@ def register_story_status(services: ApplicationServices) -> StoryStatusService:
         lifecycle,
     )
     return services.register(StoryStatusService, status)
+
+
+def register_story_approval(services: ApplicationServices) -> StoryApprovalService:
+    """Register approval governance using shared Story services."""
+    existing = services.get(StoryApprovalService)
+    if existing is not None:
+        return existing
+    lifecycle = register_story_lifecycle(services)
+    metadata = register_story_metadata(services)
+    status = register_story_status(services)
+    approval = StoryApprovalService(
+        services.require(ProjectService),
+        lifecycle,
+        metadata,
+        status,
+    )
+    return services.register(StoryApprovalService, approval)
