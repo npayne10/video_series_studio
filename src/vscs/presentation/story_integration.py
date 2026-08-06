@@ -12,7 +12,11 @@ from vscs.application.asset_resolution import (
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
+    StoryApprovalService,
+    StoryLifecycleService,
+    StoryMetadataService,
     StoryService,
+    StoryStatusService,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
@@ -22,7 +26,6 @@ from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
-from vscs.presentation.widgets.acpp_story_browser import ACPPStoryBrowserWidget
 from vscs.presentation.widgets.story_workspace import StoryWorkspaceWidget
 from vscs.presentation.windows.main_window import MainWindow
 
@@ -50,24 +53,26 @@ def install_story_browser() -> None:
         if asset_browser is None:
             register_asset_resolution(window.services)
             asset_browser = window.services.require(AssetBrowserService)
-        lifecycle = register_story_lifecycle(window.services)
-        metadata = register_story_metadata(window.services)
-        statuses = register_story_status(window.services)
-        approvals = register_story_approval(window.services)
-        production_browser = ACPPStoryBrowserWidget(
+        if window.services.get(StoryLifecycleService) is None:
+            register_story_lifecycle(window.services)
+        if window.services.get(StoryMetadataService) is None:
+            register_story_metadata(window.services)
+        if window.services.get(StoryStatusService) is None:
+            register_story_status(window.services)
+        if window.services.get(StoryApprovalService) is None:
+            register_story_approval(window.services)
+        window.story_browser = StoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
             window.services.require(ShotPlanningService),
             window.services.require(ACPPEditorService),
             asset_browser,
+            window.services.require(StoryLifecycleService),
+            window.services.require(StoryMetadataService),
+            window.services.require(StoryStatusService),
+            window.services.require(StoryApprovalService),
         )
-        window.story_browser = StoryWorkspaceWidget(
-            lifecycle,
-            metadata,
-            statuses,
-            approvals,
-            production_browser,
-        )
+        window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
