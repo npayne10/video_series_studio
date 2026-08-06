@@ -107,6 +107,7 @@ class StoryStatusService:
         changed_by: str = "VSCS User",
     ) -> StoryStatusTransition:
         """Apply one validated non-approval Story status transition."""
+        normalized_reason, normalized_actor = self._details(reason, changed_by)
         story = self._require_story(story_id)
         if new_status in self._RESERVED_TARGETS:
             raise StoryStatusError(
@@ -115,8 +116,8 @@ class StoryStatusService:
         if new_status is StoryStatus.ARCHIVED:
             return self.archive(
                 story_id,
-                reason=reason,
-                changed_by=changed_by,
+                reason=normalized_reason,
+                changed_by=normalized_actor,
             )
         self._validate_transition(story.status, new_status)
         self.stories.set_status(story_id, new_status)
@@ -124,8 +125,8 @@ class StoryStatusService:
             story_id,
             story.status,
             new_status,
-            reason,
-            changed_by,
+            normalized_reason,
+            normalized_actor,
         )
 
     def archive(
@@ -136,6 +137,7 @@ class StoryStatusService:
         changed_by: str = "VSCS User",
     ) -> StoryStatusTransition:
         """Archive a Story and record the state from which it was removed."""
+        normalized_reason, normalized_actor = self._details(reason, changed_by)
         story = self._require_story(story_id)
         self._validate_transition(story.status, StoryStatus.ARCHIVED)
         self.stories.archive_story(story_id)
@@ -143,8 +145,8 @@ class StoryStatusService:
             story_id,
             story.status,
             StoryStatus.ARCHIVED,
-            reason,
-            changed_by,
+            normalized_reason,
+            normalized_actor,
         )
 
     def restore(
@@ -155,6 +157,7 @@ class StoryStatusService:
         changed_by: str = "VSCS User",
     ) -> StoryStatusTransition:
         """Restore an archived Story to its pre-archive status."""
+        normalized_reason, normalized_actor = self._details(reason, changed_by)
         story = self._require_story(story_id)
         if story.status is not StoryStatus.ARCHIVED:
             raise StoryStatusError("Only archived Stories can be restored")
@@ -163,8 +166,8 @@ class StoryStatusService:
             story_id,
             StoryStatus.ARCHIVED,
             restored.status,
-            reason,
-            changed_by,
+            normalized_reason,
+            normalized_actor,
         )
 
     def history(
@@ -228,18 +231,12 @@ class StoryStatusService:
         reason: str,
         changed_by: str,
     ) -> StoryStatusTransition:
-        normalized_reason = reason.strip()
-        if not normalized_reason:
-            raise ValueError("Story status transition reason is required")
-        normalized_actor = changed_by.strip()
-        if not normalized_actor:
-            raise ValueError("Story status transition actor is required")
         transition = StoryStatusTransition(
             story_id=story_id,
             previous_status=previous_status,
             new_status=new_status,
-            reason=normalized_reason,
-            changed_by=normalized_actor,
+            reason=reason,
+            changed_by=changed_by,
             changed_at=datetime.now(UTC).isoformat(),
         )
         self._write((*self.history(), transition))
@@ -270,6 +267,16 @@ class StoryStatusService:
             raise StoryStatusError(
                 f"Unable to save Story status history: {exc}"
             ) from exc
+
+    @staticmethod
+    def _details(reason: str, changed_by: str) -> tuple[str, str]:
+        normalized_reason = reason.strip()
+        if not normalized_reason:
+            raise ValueError("Story status transition reason is required")
+        normalized_actor = changed_by.strip()
+        if not normalized_actor:
+            raise ValueError("Story status transition actor is required")
+        return normalized_reason, normalized_actor
 
     @staticmethod
     def _to_dict(transition: StoryStatusTransition) -> dict[str, Any]:
