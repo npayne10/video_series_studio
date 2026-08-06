@@ -1,5 +1,6 @@
 """Structured story application services."""
 
+from .bootstrap import register_story_lifecycle
 from .containers import (
     ProductionContainerType,
     build_scene_id,
@@ -42,5 +43,6 @@ __all__ = [
     "build_story_hierarchy",
     "infer_container_type",
     "normalize_container_id",
+    "register_story_lifecycle",
     "scene_status",
 ]
