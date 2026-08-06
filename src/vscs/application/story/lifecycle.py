@@ -81,26 +81,52 @@ class StoryLifecycleService:
             raise ProjectNotOpenError("No VSCS project is currently open")
         return self.projects.project_directory / "story" / self.FILE_NAME
 
-    def list_stories(self, *, include_archived: bool = False) -> tuple[StoryRecord, ...]:
+    def list_stories(
+        self,
+        *,
+        include_archived: bool = False,
+    ) -> tuple[StoryRecord, ...]:
         """Load stories in stable title and identity order."""
         path = self.story_file
         if not path.is_file():
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            stories = tuple(self._from_dict(item) for item in raw.get("stories", []))
-        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise StoryLifecycleError(f"Unable to load stories: {exc}") from exc
+            stories = tuple(
+                self._from_dict(item) for item in raw.get("stories", [])
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise StoryLifecycleError(
+                f"Unable to load stories: {exc}"
+            ) from exc
         if not include_archived:
             stories = tuple(story for story in stories if not story.archived)
-        return tuple(sorted(stories, key=lambda story: (story.title.casefold(), story.story_id)))
+        return tuple(
+            sorted(
+                stories,
+                key=lambda story: (story.title.casefold(), story.story_id),
+            )
+        )
 
-    def story(self, story_id: str, *, include_archived: bool = True) -> StoryRecord | None:
+    def story(
+        self,
+        story_id: str,
+        *,
+        include_archived: bool = True,
+    ) -> StoryRecord | None:
         """Return one story by stable identity."""
         return next(
             (
                 story
-                for story in self.list_stories(include_archived=include_archived)
+                for story in self.list_stories(
+                    include_archived=include_archived
+                )
                 if story.story_id == story_id
             ),
             None,
@@ -136,7 +162,8 @@ class StoryLifecycleService:
             source_path=source_path.strip(),
             status=(
                 StoryStatus.IMPORTED
-                if source_type is not StorySourceType.ORIGINAL or source_path.strip()
+                if source_type is not StorySourceType.ORIGINAL
+                or source_path.strip()
                 else StoryStatus.DRAFT
             ),
             created_at=now,
@@ -158,7 +185,9 @@ class StoryLifecycleService:
         """Replace editable story details without changing identity or creation time."""
         current = self._require_story(story_id)
         if current.archived:
-            raise StoryLifecycleError("Archived stories must be restored before editing")
+            raise StoryLifecycleError(
+                "Archived stories must be restored before editing"
+            )
         updated = replace(
             current,
             title=self._required(title, "Story title"),
@@ -167,7 +196,8 @@ class StoryLifecycleService:
             source_path=source_path.strip(),
             status=(
                 StoryStatus.IMPORTED
-                if source_type is not StorySourceType.ORIGINAL or source_path.strip()
+                if source_type is not StorySourceType.ORIGINAL
+                or source_path.strip()
                 else StoryStatus.DRAFT
             ),
             updated_at=self._timestamp(),
@@ -175,7 +205,12 @@ class StoryLifecycleService:
         self._replace(updated)
         return updated
 
-    def duplicate_story(self, story_id: str, *, title: str | None = None) -> StoryRecord:
+    def duplicate_story(
+        self,
+        story_id: str,
+        *,
+        title: str | None = None,
+    ) -> StoryRecord:
         """Create an editable draft copy without sharing lifecycle identity."""
         source = self._require_story(story_id)
         duplicate_title = title if title is not None else f"{source.title} Copy"
@@ -189,7 +224,9 @@ class StoryLifecycleService:
             updated_at=now,
             archived_at=None,
         )
-        self._write(self.list_stories(include_archived=True) + (duplicate,))
+        self._write(
+            self.list_stories(include_archived=True) + (duplicate,)
+        )
         return duplicate
 
     def archive_story(self, story_id: str) -> StoryRecord:
@@ -214,7 +251,8 @@ class StoryLifecycleService:
             return current
         restored_status = (
             StoryStatus.IMPORTED
-            if current.source_type is not StorySourceType.ORIGINAL or current.source_path
+            if current.source_type is not StorySourceType.ORIGINAL
+            or current.source_path
             else StoryStatus.DRAFT
         )
         restored = replace(
@@ -232,7 +270,9 @@ class StoryLifecycleService:
         if current is None:
             return False
         if not current.archived:
-            raise StoryLifecycleError("A story must be archived before permanent deletion")
+            raise StoryLifecycleError(
+                "A story must be archived before permanent deletion"
+            )
         remaining = tuple(
             story
             for story in self.list_stories(include_archived=True)
@@ -258,7 +298,10 @@ class StoryLifecycleService:
     def _write(self, stories: tuple[StoryRecord, ...]) -> None:
         path = self.story_file
         path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(stories, key=lambda story: (story.title.casefold(), story.story_id))
+        ordered = sorted(
+            stories,
+            key=lambda story: (story.title.casefold(), story.story_id),
+        )
         payload = {
             "schema_version": "1.0",
             "stories": [self._to_dict(story) for story in ordered],
@@ -266,13 +309,21 @@ class StoryLifecycleService:
         temporary = path.with_suffix(path.suffix + ".tmp")
         try:
             temporary.write_text(
-                json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                json.dumps(
+                    payload,
+                    indent=2,
+                    sort_keys=True,
+                    ensure_ascii=False,
+                )
+                + "\n",
                 encoding="utf-8",
             )
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise StoryLifecycleError(f"Unable to save stories: {exc}") from exc
+            raise StoryLifecycleError(
+                f"Unable to save stories: {exc}"
+            ) from exc
 
     @staticmethod
     def _required(value: str, label: str) -> str:
@@ -302,10 +353,14 @@ class StoryLifecycleService:
                 str(raw.get("source_type", StorySourceType.ORIGINAL.value))
             ),
             source_path=str(raw.get("source_path", "")),
-            status=StoryStatus(str(raw.get("status", StoryStatus.DRAFT.value))),
+            status=StoryStatus(
+                str(raw.get("status", StoryStatus.DRAFT.value))
+            ),
             created_at=str(raw.get("created_at", "")),
             updated_at=str(raw.get("updated_at", "")),
             archived_at=(
-                None if raw.get("archived_at") is None else str(raw["archived_at"])
+                None
+                if raw.get("archived_at") is None
+                else str(raw["archived_at"])
             ),
         )
