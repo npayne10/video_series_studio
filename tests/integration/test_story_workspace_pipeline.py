@@ -11,6 +11,8 @@ from vscs.application.story import (
     StoryStatusService,
 )
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
+from vscs.presentation.widgets.acpp_story_browser import ACPPStoryBrowserWidget
+from vscs.presentation.widgets.story_workspace import StoryWorkspaceWidget
 
 
 def test_main_window_installs_complete_story_workspace(tmp_path: Path, qtbot) -> None:
@@ -28,10 +30,12 @@ def test_main_window_installs_complete_story_workspace(tmp_path: Path, qtbot) ->
     window = context.create_main_window()
     qtbot.addWidget(window)
 
-    assert window.story_browser.objectName() == "storyWorkspace"
+    assert isinstance(window.story_browser, StoryWorkspaceWidget)
+    assert isinstance(window.story_browser, ACPPStoryBrowserWidget)
+    assert window.story_workspace is window.story_browser
     assert context.services.require(StoryLifecycleService)
     assert context.services.require(StoryMetadataService)
     assert context.services.require(StoryStatusService)
     assert context.services.require(StoryApprovalService)
-    assert window.story_browser.production_browser.objectName() == "storyBrowserV2"
+    assert window.story_browser.production_browser is window.story_browser
     context.shutdown()
