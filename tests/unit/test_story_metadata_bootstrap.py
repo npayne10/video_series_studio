@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from vscs.application.projects import ProjectService
 from vscs.application.story import (
     StoryLifecycleService,
@@ -14,7 +12,7 @@ from vscs.application.story import (
 from vscs.infrastructure.services import ApplicationServices
 
 
-def test_register_story_metadata_reuses_shared_dependencies(tmp_path: Path) -> None:
+def test_register_story_metadata_reuses_shared_dependencies() -> None:
     services = ApplicationServices()
     projects = ProjectService.__new__(ProjectService)
     services.register(ProjectService, projects)
