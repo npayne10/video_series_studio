@@ -6,10 +6,11 @@ narrative models and extractors are introduced by later Phase 18.2 increments.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Any, Mapping, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 class AnalysisStatus(StrEnum):
