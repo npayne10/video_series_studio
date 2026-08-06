@@ -26,7 +26,9 @@ from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
-from vscs.presentation.widgets.story_workspace import StoryWorkspaceWidget
+from vscs.presentation.widgets.browseable_story_workspace import (
+    BrowseableStoryWorkspaceWidget,
+)
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -61,7 +63,7 @@ def install_story_browser() -> None:
             register_story_status(window.services)
         if window.services.get(StoryApprovalService) is None:
             register_story_approval(window.services)
-        window.story_browser = StoryWorkspaceWidget(
+        window.story_browser = BrowseableStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
             window.services.require(ShotPlanningService),
