@@ -16,7 +16,13 @@ from vscs.application.caps import (
 )
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ShotPlanningService
-from vscs.application.story import StoryService
+from vscs.application.story import (
+    StoryApprovalService,
+    StoryLifecycleService,
+    StoryMetadataService,
+    StoryService,
+    StoryStatusService,
+)
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.infrastructure.configuration import (
     ConfigurationService,
@@ -50,6 +56,10 @@ def test_bootstrap_registers_complete_frontend_dependency_graph(
         DatabaseManager,
         ProjectService,
         StoryService,
+        StoryLifecycleService,
+        StoryMetadataService,
+        StoryStatusService,
+        StoryApprovalService,
         ShotPlanningService,
         AssetRepository,
         AssetService,
