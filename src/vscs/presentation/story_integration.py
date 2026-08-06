@@ -1,4 +1,4 @@
-"""Install the Story Browser into the existing VSCS main window shell."""
+"""Install the Story Workspace into the existing VSCS main window shell."""
 
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
 )
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.acpp_story_browser import ACPPStoryBrowserWidget
+from vscs.presentation.widgets.story_workspace import StoryWorkspaceWidget
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -53,20 +54,23 @@ def install_story_browser() -> None:
         if asset_browser is None:
             register_asset_resolution(window.services)
             asset_browser = window.services.require(AssetBrowserService)
-        if window.services.get(StoryLifecycleService) is None:
-            register_story_lifecycle(window.services)
-        if window.services.get(StoryMetadataService) is None:
-            register_story_metadata(window.services)
-        if window.services.get(StoryStatusService) is None:
-            register_story_status(window.services)
-        if window.services.get(StoryApprovalService) is None:
-            register_story_approval(window.services)
-        window.story_browser = ACPPStoryBrowserWidget(
+        lifecycle = register_story_lifecycle(window.services)
+        metadata = register_story_metadata(window.services)
+        statuses = register_story_status(window.services)
+        approvals = register_story_approval(window.services)
+        production_browser = ACPPStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
             window.services.require(ShotPlanningService),
             window.services.require(ACPPEditorService),
             asset_browser,
+        )
+        window.story_browser = StoryWorkspaceWidget(
+            lifecycle,
+            metadata,
+            statuses,
+            approvals,
+            production_browser,
         )
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
