@@ -1,6 +1,14 @@
 """Structured story application services."""
 
+from .approval import (
+    StoryApprovalAction,
+    StoryApprovalError,
+    StoryApprovalRecord,
+    StoryApprovalService,
+    StoryApprovalSnapshot,
+)
 from .bootstrap import (
+    register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
     register_story_status,
@@ -43,6 +51,11 @@ from .status import (
 
 __all__ = [
     "ProductionContainerType",
+    "StoryApprovalAction",
+    "StoryApprovalError",
+    "StoryApprovalRecord",
+    "StoryApprovalService",
+    "StoryApprovalSnapshot",
     "StoryHierarchy",
     "StoryItemStatus",
     "StoryLifecycleError",
@@ -67,6 +80,7 @@ __all__ = [
     "build_story_hierarchy",
     "infer_container_type",
     "normalize_container_id",
+    "register_story_approval",
     "register_story_lifecycle",
     "register_story_metadata",
     "register_story_status",
