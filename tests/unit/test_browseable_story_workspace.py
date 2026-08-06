@@ -22,9 +22,10 @@ def test_browse_button_selects_source_file_and_type(qtbot, monkeypatch) -> None:
 
     dialog.browse_source_button.click()
 
+    values = dialog.story_values()
     assert dialog.source_path_edit.text() == "D:/Stories/Xorix.docx"
-    assert dialog.source_type_combo.currentData() is StorySourceType.DOCX
-    assert dialog.story_values()["source_path"] == "D:/Stories/Xorix.docx"
+    assert values["source_type"] is StorySourceType.DOCX
+    assert values["source_path"] == "D:/Stories/Xorix.docx"
 
 
 def test_cancelled_file_browser_preserves_existing_path(qtbot, monkeypatch) -> None:
@@ -55,4 +56,4 @@ def test_unknown_file_extension_uses_other_source_type(qtbot, monkeypatch) -> No
 
     dialog.browse_source_button.click()
 
-    assert dialog.source_type_combo.currentData() is StorySourceType.OTHER
+    assert dialog.story_values()["source_type"] is StorySourceType.OTHER
