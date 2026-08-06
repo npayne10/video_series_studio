@@ -10,7 +10,12 @@ from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 
-from .lifecycle import StoryLifecycleError, StoryLifecycleService, StoryStatus
+from .lifecycle import (
+    StoryLifecycleError,
+    StoryLifecycleService,
+    StoryRecord,
+    StoryStatus,
+)
 
 
 class StoryStatusError(RuntimeError):
@@ -162,7 +167,10 @@ class StoryStatusService:
             changed_by,
         )
 
-    def history(self, story_id: str | None = None) -> tuple[StoryStatusTransition, ...]:
+    def history(
+        self,
+        story_id: str | None = None,
+    ) -> tuple[StoryStatusTransition, ...]:
         """Load status history in recorded chronological order."""
         path = self.history_file
         if not path.is_file():
@@ -188,7 +196,7 @@ class StoryStatusService:
             )
         return transitions
 
-    def _require_story(self, story_id: str):
+    def _require_story(self, story_id: str) -> StoryRecord:
         try:
             story = self.stories.story(story_id, include_archived=True)
         except StoryLifecycleError as exc:
