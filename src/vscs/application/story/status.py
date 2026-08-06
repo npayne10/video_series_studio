@@ -6,7 +6,7 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 
@@ -48,7 +48,9 @@ class StoryStatusService:
 
     FILE_NAME = "story_status_history.json"
     _RESERVED_TARGETS = frozenset({StoryStatus.APPROVED, StoryStatus.LOCKED})
-    _ALLOWED_TRANSITIONS: dict[StoryStatus, tuple[StoryStatus, ...]] = {
+    _ALLOWED_TRANSITIONS: ClassVar[
+        dict[StoryStatus, tuple[StoryStatus, ...]]
+    ] = {
         StoryStatus.DRAFT: (StoryStatus.ANALYSED, StoryStatus.ARCHIVED),
         StoryStatus.IMPORTED: (
             StoryStatus.DRAFT,
