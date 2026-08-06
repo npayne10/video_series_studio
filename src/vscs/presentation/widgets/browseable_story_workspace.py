@@ -21,6 +21,7 @@ from vscs.application.story import (
     StoryRecord,
     StorySourceType,
 )
+from vscs.presentation.help import StoryWorkspaceHelpDialog
 
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
 
@@ -141,3 +142,9 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         except (ValueError, StoryLifecycleError, StoryMetadataError) as exc:
             self._error(str(exc))
         self.refresh()
+
+    def _show_help(self) -> None:
+        self._story_help_dialog = StoryWorkspaceHelpDialog(self)
+        self._story_help_dialog.show()
+        self._story_help_dialog.raise_()
+        self._story_help_dialog.activateWindow()
