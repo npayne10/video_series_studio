@@ -13,8 +13,10 @@ from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
     StoryLifecycleService,
+    StoryMetadataService,
     StoryService,
     register_story_lifecycle,
+    register_story_metadata,
 )
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
@@ -49,6 +51,8 @@ def install_story_browser() -> None:
             asset_browser = window.services.require(AssetBrowserService)
         if window.services.get(StoryLifecycleService) is None:
             register_story_lifecycle(window.services)
+        if window.services.get(StoryMetadataService) is None:
+            register_story_metadata(window.services)
         window.story_browser = ACPPStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
