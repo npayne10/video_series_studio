@@ -7,6 +7,7 @@ from vscs.infrastructure.services import ApplicationServices
 
 from .lifecycle import StoryLifecycleService
 from .metadata import StoryMetadataService
+from .status import StoryStatusService
 
 
 def register_story_lifecycle(services: ApplicationServices) -> StoryLifecycleService:
@@ -29,3 +30,16 @@ def register_story_metadata(services: ApplicationServices) -> StoryMetadataServi
         lifecycle,
     )
     return services.register(StoryMetadataService, metadata)
+
+
+def register_story_status(services: ApplicationServices) -> StoryStatusService:
+    """Register Story status using the shared lifecycle dependency."""
+    existing = services.get(StoryStatusService)
+    if existing is not None:
+        return existing
+    lifecycle = register_story_lifecycle(services)
+    status = StoryStatusService(
+        services.require(ProjectService),
+        lifecycle,
+    )
+    return services.register(StoryStatusService, status)
