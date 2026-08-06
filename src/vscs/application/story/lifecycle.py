@@ -17,10 +17,13 @@ class StoryLifecycleError(RuntimeError):
 
 
 class StoryStatus(StrEnum):
-    """Lifecycle states available before analysis and approval phases."""
+    """Authoritative lifecycle states for a first-class Story."""
 
     DRAFT = "draft"
     IMPORTED = "imported"
+    ANALYSED = "analysed"
+    APPROVED = "approved"
+    LOCKED = "locked"
     ARCHIVED = "archived"
 
     @property
@@ -59,11 +62,17 @@ class StoryRecord:
     created_at: str = ""
     updated_at: str = ""
     archived_at: str | None = None
+    archived_from_status: StoryStatus | None = None
 
     @property
     def archived(self) -> bool:
         """Return whether the story is outside the active creative workflow."""
         return self.status is StoryStatus.ARCHIVED
+
+    @property
+    def locked(self) -> bool:
+        """Return whether ordinary editing is prohibited."""
+        return self.status is StoryStatus.LOCKED
 
 
 class StoryLifecycleService:
@@ -160,12 +169,7 @@ class StoryLifecycleService:
             description=description.strip(),
             source_type=source_type,
             source_path=source_path.strip(),
-            status=(
-                StoryStatus.IMPORTED
-                if source_type is not StorySourceType.ORIGINAL
-                or source_path.strip()
-                else StoryStatus.DRAFT
-            ),
+            status=self._editable_status(source_type, source_path),
             created_at=now,
             updated_at=now,
         )
@@ -182,11 +186,15 @@ class StoryLifecycleService:
         source_type: StorySourceType,
         source_path: str,
     ) -> StoryRecord:
-        """Replace editable story details without changing identity or creation time."""
+        """Replace editable details and invalidate later workflow states."""
         current = self._require_story(story_id)
         if current.archived:
             raise StoryLifecycleError(
                 "Archived stories must be restored before editing"
+            )
+        if current.locked:
+            raise StoryLifecycleError(
+                "Locked stories must be unlocked through the approval workflow"
             )
         updated = replace(
             current,
@@ -194,13 +202,10 @@ class StoryLifecycleService:
             description=description.strip(),
             source_type=source_type,
             source_path=source_path.strip(),
-            status=(
-                StoryStatus.IMPORTED
-                if source_type is not StorySourceType.ORIGINAL
-                or source_path.strip()
-                else StoryStatus.DRAFT
-            ),
+            status=self._editable_status(source_type, source_path),
             updated_at=self._timestamp(),
+            archived_at=None,
+            archived_from_status=None,
         )
         self._replace(updated)
         return updated
@@ -223,11 +228,35 @@ class StoryLifecycleService:
             created_at=now,
             updated_at=now,
             archived_at=None,
+            archived_from_status=None,
         )
         self._write(
             (*self.list_stories(include_archived=True), duplicate)
         )
         return duplicate
+
+    def set_status(
+        self,
+        story_id: str,
+        status: StoryStatus,
+    ) -> StoryRecord:
+        """Persist a validated status chosen by a dedicated workflow service."""
+        current = self._require_story(story_id)
+        if current.status is status:
+            return current
+        updated = replace(
+            current,
+            status=status,
+            updated_at=self._timestamp(),
+            archived_at=(
+                self._timestamp() if status is StoryStatus.ARCHIVED else None
+            ),
+            archived_from_status=(
+                current.status if status is StoryStatus.ARCHIVED else None
+            ),
+        )
+        self._replace(updated)
+        return updated
 
     def archive_story(self, story_id: str) -> StoryRecord:
         """Remove a story from active workflow without deleting its history."""
@@ -239,26 +268,26 @@ class StoryLifecycleService:
             current,
             status=StoryStatus.ARCHIVED,
             archived_at=now,
+            archived_from_status=current.status,
             updated_at=now,
         )
         self._replace(archived)
         return archived
 
     def restore_story(self, story_id: str) -> StoryRecord:
-        """Return an archived story to an editable lifecycle state."""
+        """Return an archived story to its pre-archive lifecycle state."""
         current = self._require_story(story_id)
         if not current.archived:
             return current
-        restored_status = (
-            StoryStatus.IMPORTED
-            if current.source_type is not StorySourceType.ORIGINAL
-            or current.source_path
-            else StoryStatus.DRAFT
+        restored_status = current.archived_from_status or self._editable_status(
+            current.source_type,
+            current.source_path,
         )
         restored = replace(
             current,
             status=restored_status,
             archived_at=None,
+            archived_from_status=None,
             updated_at=self._timestamp(),
         )
         self._replace(restored)
@@ -303,7 +332,7 @@ class StoryLifecycleService:
             key=lambda story: (story.title.casefold(), story.story_id),
         )
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "stories": [self._to_dict(story) for story in ordered],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
@@ -326,6 +355,17 @@ class StoryLifecycleService:
             ) from exc
 
     @staticmethod
+    def _editable_status(
+        source_type: StorySourceType,
+        source_path: str,
+    ) -> StoryStatus:
+        return (
+            StoryStatus.IMPORTED
+            if source_type is not StorySourceType.ORIGINAL or source_path.strip()
+            else StoryStatus.DRAFT
+        )
+
+    @staticmethod
     def _required(value: str, label: str) -> str:
         normalized = value.strip()
         if not normalized:
@@ -341,10 +381,16 @@ class StoryLifecycleService:
         raw = asdict(story)
         raw["source_type"] = story.source_type.value
         raw["status"] = story.status.value
+        raw["archived_from_status"] = (
+            None
+            if story.archived_from_status is None
+            else story.archived_from_status.value
+        )
         return raw
 
     @staticmethod
     def _from_dict(raw: dict[str, Any]) -> StoryRecord:
+        archived_from = raw.get("archived_from_status")
         return StoryRecord(
             story_id=str(raw["story_id"]),
             title=str(raw["title"]),
@@ -362,5 +408,10 @@ class StoryLifecycleService:
                 None
                 if raw.get("archived_at") is None
                 else str(raw["archived_at"])
+            ),
+            archived_from_status=(
+                None
+                if archived_from is None
+                else StoryStatus(str(archived_from))
             ),
         )
