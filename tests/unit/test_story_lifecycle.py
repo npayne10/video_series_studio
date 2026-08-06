@@ -13,7 +13,12 @@ from vscs.application.story import (
     StorySourceType,
     StoryStatus,
 )
-from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
+from vscs.bootstrap import (
+    ApplicationContext,
+    BootstrapOptions,
+    StartupMode,
+    build_application_context,
+)
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -28,26 +33,35 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def _service(tmp_path: Path) -> tuple[object, StoryLifecycleService]:
+def _service(
+    tmp_path: Path,
+) -> tuple[ApplicationContext, StoryLifecycleService]:
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
     return context, StoryLifecycleService(projects)
 
 
-def test_story_lifecycle_creates_and_persists_stable_identity(tmp_path: Path) -> None:
+def test_story_lifecycle_creates_and_persists_stable_identity(
+    tmp_path: Path,
+) -> None:
     context, service = _service(tmp_path)
-    story = service.create_story(title="Xorix", description="First-contact novel")
+    story = service.create_story(
+        title="Xorix",
+        description="First-contact novel",
+    )
 
     assert story.story_id == "STORY-001"
     assert story.status is StoryStatus.DRAFT
     assert story.created_at
     assert service.story(story.story_id) == story
     assert service.list_stories() == (story,)
-    context.shutdown()  # type: ignore[attr-defined]
+    context.shutdown()
 
 
-def test_imported_story_uses_imported_status_and_can_be_updated(tmp_path: Path) -> None:
+def test_imported_story_uses_imported_status_and_can_be_updated(
+    tmp_path: Path,
+) -> None:
     context, service = _service(tmp_path)
     story = service.create_story(
         title="Xorix Manuscript",
@@ -68,10 +82,12 @@ def test_imported_story_uses_imported_status_and_can_be_updated(tmp_path: Path) 
     assert updated.created_at == story.created_at
     assert updated.updated_at >= story.updated_at
     assert updated.source_path.endswith("Xorix_v2.docx")
-    context.shutdown()  # type: ignore[attr-defined]
+    context.shutdown()
 
 
-def test_duplicate_has_new_identity_and_editable_draft_state(tmp_path: Path) -> None:
+def test_duplicate_has_new_identity_and_editable_draft_state(
+    tmp_path: Path,
+) -> None:
     context, service = _service(tmp_path)
     original = service.create_story(
         title="Xorix",
@@ -79,14 +95,17 @@ def test_duplicate_has_new_identity_and_editable_draft_state(tmp_path: Path) -> 
         source_path="sources/Xorix.docx",
     )
 
-    duplicate = service.duplicate_story(original.story_id, title="Xorix Adaptation")
+    duplicate = service.duplicate_story(
+        original.story_id,
+        title="Xorix Adaptation",
+    )
 
     assert duplicate.story_id == "STORY-002"
     assert duplicate.story_id != original.story_id
     assert duplicate.status is StoryStatus.DRAFT
     assert duplicate.title == "Xorix Adaptation"
     assert duplicate.archived_at is None
-    context.shutdown()  # type: ignore[attr-defined]
+    context.shutdown()
 
 
 def test_archive_restore_and_controlled_delete(tmp_path: Path) -> None:
@@ -108,10 +127,12 @@ def test_archive_restore_and_controlled_delete(tmp_path: Path) -> None:
     service.archive_story(story.story_id)
     assert service.delete_story(story.story_id)
     assert service.story(story.story_id) is None
-    context.shutdown()  # type: ignore[attr-defined]
+    context.shutdown()
 
 
-def test_archived_story_must_be_restored_before_editing(tmp_path: Path) -> None:
+def test_archived_story_must_be_restored_before_editing(
+    tmp_path: Path,
+) -> None:
     context, service = _service(tmp_path)
     story = service.create_story(title="Xorix")
     service.archive_story(story.story_id)
@@ -124,7 +145,7 @@ def test_archived_story_must_be_restored_before_editing(tmp_path: Path) -> None:
             source_type=StorySourceType.ORIGINAL,
             source_path="",
         )
-    context.shutdown()  # type: ignore[attr-defined]
+    context.shutdown()
 
 
 def test_story_title_is_required(tmp_path: Path) -> None:
@@ -132,4 +153,4 @@ def test_story_title_is_required(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="title"):
         service.create_story(title="   ")
-    context.shutdown()  # type: ignore[attr-defined]
+    context.shutdown()
