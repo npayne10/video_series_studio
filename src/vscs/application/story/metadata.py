@@ -10,7 +10,12 @@ from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 
-from .lifecycle import StoryLifecycleError, StoryLifecycleService
+from .lifecycle import (
+    StoryLifecycleError,
+    StoryLifecycleService,
+    StorySourceType,
+    StoryStatus,
+)
 
 
 class StoryMetadataError(RuntimeError):
@@ -132,6 +137,10 @@ class StoryMetadataService:
             raise StoryMetadataError(
                 "Archived stories must be restored before metadata can be edited"
             )
+        if story.locked:
+            raise StoryMetadataError(
+                "Locked stories must be unlocked before metadata can be edited"
+            )
         if (
             estimated_runtime_minutes is not None
             and estimated_runtime_minutes <= 0
@@ -155,6 +164,17 @@ class StoryMetadataService:
         records = {item.story_id: item for item in self.list_metadata()}
         records[story_id] = metadata
         self._write(tuple(records.values()))
+        if story.status in {
+            StoryStatus.ANALYSED,
+            StoryStatus.APPROVED,
+        }:
+            editable_status = (
+                StoryStatus.IMPORTED
+                if story.source_type is not StorySourceType.ORIGINAL
+                or story.source_path
+                else StoryStatus.DRAFT
+            )
+            self.stories.set_status(story_id, editable_status)
         return metadata
 
     def delete_metadata(self, story_id: str) -> bool:
