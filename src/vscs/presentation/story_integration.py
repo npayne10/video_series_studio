@@ -12,10 +12,12 @@ from vscs.application.asset_resolution import (
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
+    StoryApprovalService,
     StoryLifecycleService,
     StoryMetadataService,
     StoryService,
     StoryStatusService,
+    register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
     register_story_status,
@@ -57,6 +59,8 @@ def install_story_browser() -> None:
             register_story_metadata(window.services)
         if window.services.get(StoryStatusService) is None:
             register_story_status(window.services)
+        if window.services.get(StoryApprovalService) is None:
+            register_story_approval(window.services)
         window.story_browser = ACPPStoryBrowserWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
