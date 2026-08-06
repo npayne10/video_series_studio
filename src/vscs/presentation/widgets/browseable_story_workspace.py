@@ -99,9 +99,15 @@ class BrowseableStoryEditorDialog(StoryEditorDialog):
             Path(selected_path).suffix.casefold(),
             StorySourceType.OTHER,
         )
-        source_index = self.source_type_combo.findData(source_type)
+        source_index = self.source_type_combo.findData(source_type.value)
         if source_index >= 0:
             self.source_type_combo.setCurrentIndex(source_index)
+
+    def story_values(self) -> dict[str, object]:
+        """Return lifecycle values with a strongly typed Story source type."""
+        values = super().story_values()
+        values["source_type"] = StorySourceType(str(values["source_type"]))
+        return values
 
 
 class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
