@@ -341,7 +341,15 @@ class StoryWorkspaceWidget(QWidget):
 
     def _set_actions(self, story: StoryRecord | None) -> None:
         enabled = story is not None
-        self.edit_button.setEnabled(enabled and not story.archived and not story.locked if story else False)
+        self.edit_button.setEnabled(
+            (
+                enabled 
+                and not story.archived 
+                and not story.locked
+            )      
+            if story 
+            else False
+        )
         self.duplicate_button.setEnabled(enabled)
         self.analyse_button.setEnabled(
             story is not None and story.status in {StoryStatus.DRAFT, StoryStatus.IMPORTED}
