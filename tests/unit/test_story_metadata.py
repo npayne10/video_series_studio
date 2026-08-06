@@ -12,6 +12,7 @@ from vscs.application.story import (
     StoryLifecycleService,
     StoryMetadataError,
     StoryMetadataService,
+    StoryStatus,
 )
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 
@@ -125,6 +126,32 @@ def test_metadata_requires_existing_editable_story(tmp_path: Path) -> None:
     stories.archive_story(story.story_id)
     with pytest.raises(StoryMetadataError, match="restored"):
         metadata_service.save_metadata(story.story_id, synopsis="Blocked")
+    context.shutdown()  # type: ignore[attr-defined]
+
+
+def test_locked_story_metadata_cannot_be_edited(tmp_path: Path) -> None:
+    context, stories, metadata_service = _services(tmp_path)
+    story = stories.create_story(title="Locked Story")
+    stories.set_status(story.story_id, StoryStatus.LOCKED)
+
+    with pytest.raises(StoryMetadataError, match="unlocked"):
+        metadata_service.save_metadata(story.story_id, synopsis="Blocked")
+    context.shutdown()  # type: ignore[attr-defined]
+
+
+def test_metadata_edit_invalidates_analysed_status(tmp_path: Path) -> None:
+    context, stories, metadata_service = _services(tmp_path)
+    story = stories.create_story(title="Xorix")
+    stories.set_status(story.story_id, StoryStatus.ANALYSED)
+
+    metadata_service.save_metadata(
+        story.story_id,
+        synopsis="Revised after analysis",
+    )
+
+    current = stories.story(story.story_id)
+    assert current is not None
+    assert current.status is StoryStatus.DRAFT
     context.shutdown()  # type: ignore[attr-defined]
 
 
