@@ -1,6 +1,8 @@
-"""Story-first workspace layered above the existing production hierarchy."""
+"""Story-first workspace extending the established production browser."""
 
 from __future__ import annotations
+
+from collections.abc import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -18,12 +20,15 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
+from vscs.application.acpp import ACPPEditorService
+from vscs.application.asset_resolution import AssetBrowserService
+from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectNotOpenError
+from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
     StoryApprovalError,
     StoryApprovalService,
@@ -33,11 +38,14 @@ from vscs.application.story import (
     StoryMetadataError,
     StoryMetadataService,
     StoryRecord,
+    StoryService,
     StorySourceType,
     StoryStatus,
     StoryStatusError,
     StoryStatusService,
 )
+
+from .acpp_story_browser import ACPPStoryBrowserWidget
 
 
 class StoryEditorDialog(QDialog):
@@ -53,9 +61,8 @@ class StoryEditorDialog(QDialog):
         self.setObjectName("storyEditorDialog")
         self.setWindowTitle("Edit Story" if story else "Create Story")
         self.resize(620, 700)
-        layout = QVBoxLayout(self)
+        root = QVBoxLayout(self)
         form = QFormLayout()
-
         self.title_edit = QLineEdit(story.title if story else "", self)
         self.title_edit.setObjectName("storyTitle")
         self.description_edit = QPlainTextEdit(story.description if story else "", self)
@@ -70,39 +77,34 @@ class StoryEditorDialog(QDialog):
             )
         self.source_path_edit = QLineEdit(story.source_path if story else "", self)
         self.source_path_edit.setObjectName("storySourcePath")
-
         self.synopsis_edit = QPlainTextEdit(metadata.synopsis if metadata else "", self)
         self.synopsis_edit.setObjectName("storySynopsis")
-        self.genres_edit = QLineEdit(
-            ", ".join(metadata.genres) if metadata else "",
-            self,
+        self.genres_edit = self._line_edit(
+            "storyGenres", ", ".join(metadata.genres) if metadata else ""
         )
-        self.genres_edit.setObjectName("storyGenres")
-        self.themes_edit = QLineEdit(
-            ", ".join(metadata.themes) if metadata else "",
-            self,
+        self.themes_edit = self._line_edit(
+            "storyThemes", ", ".join(metadata.themes) if metadata else ""
         )
-        self.themes_edit.setObjectName("storyThemes")
-        self.audience_edit = QLineEdit(metadata.target_audience if metadata else "", self)
-        self.audience_edit.setObjectName("storyTargetAudience")
-        self.language_edit = QLineEdit(metadata.language if metadata else "English", self)
-        self.language_edit.setObjectName("storyLanguage")
-        self.author_edit = QLineEdit(metadata.author if metadata else "", self)
-        self.author_edit.setObjectName("storyAuthor")
+        self.audience_edit = self._line_edit(
+            "storyTargetAudience", metadata.target_audience if metadata else ""
+        )
+        self.language_edit = self._line_edit(
+            "storyLanguage", metadata.language if metadata else "English"
+        )
+        self.author_edit = self._line_edit(
+            "storyAuthor", metadata.author if metadata else ""
+        )
         self.runtime_spin = QSpinBox(self)
         self.runtime_spin.setObjectName("storyEstimatedRuntime")
         self.runtime_spin.setRange(0, 100000)
         self.runtime_spin.setSpecialValueText("Not estimated")
         if metadata and metadata.estimated_runtime_minutes is not None:
             self.runtime_spin.setValue(round(metadata.estimated_runtime_minutes))
-        self.keywords_edit = QLineEdit(
-            ", ".join(metadata.keywords) if metadata else "",
-            self,
+        self.keywords_edit = self._line_edit(
+            "storyKeywords", ", ".join(metadata.keywords) if metadata else ""
         )
-        self.keywords_edit.setObjectName("storyKeywords")
         self.notes_edit = QPlainTextEdit(metadata.notes if metadata else "", self)
         self.notes_edit.setObjectName("storyNotes")
-
         form.addRow("Title *", self.title_edit)
         form.addRow("Description", self.description_edit)
         form.addRow("Source type", self.source_type_combo)
@@ -116,14 +118,13 @@ class StoryEditorDialog(QDialog):
         form.addRow("Estimated runtime (minutes)", self.runtime_spin)
         form.addRow("Keywords", self.keywords_edit)
         form.addRow("Notes", self.notes_edit)
-        layout.addLayout(form)
-
+        root.addLayout(form)
         hint = QLabel(
             "Genres, themes and keywords may be entered as comma-separated values.",
             self,
         )
         hint.setWordWrap(True)
-        layout.addWidget(hint)
+        root.addWidget(hint)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save
             | QDialogButtonBox.StandardButton.Cancel,
@@ -131,7 +132,12 @@ class StoryEditorDialog(QDialog):
         )
         buttons.accepted.connect(self._accept_if_valid)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        root.addWidget(buttons)
+
+    def _line_edit(self, name: str, value: str) -> QLineEdit:
+        edit = QLineEdit(value, self)
+        edit.setObjectName(name)
+        return edit
 
     def _accept_if_valid(self) -> None:
         if not self.title_edit.text().strip():
@@ -169,48 +175,55 @@ class StoryEditorDialog(QDialog):
         }
 
 
-class StoryWorkspaceWidget(QWidget):
-    """Manage first-class Stories while preserving the production browser."""
+class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
+    """Add Story governance without replacing the production browser API."""
 
     def __init__(
         self,
+        stories: StoryService,
+        assets: AssetService,
+        shot_plans: ShotPlanningService,
+        acpp: ACPPEditorService,
+        asset_browser: AssetBrowserService,
         lifecycle: StoryLifecycleService,
         metadata: StoryMetadataService,
         statuses: StoryStatusService,
         approvals: StoryApprovalService,
-        production_browser: QWidget,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent)
-        self.setObjectName("storyWorkspace")
+        self._story_workspace_ready = False
         self.lifecycle = lifecycle
         self.metadata = metadata
         self.statuses = statuses
         self.approvals = approvals
-        self.production_browser = production_browser
-        self._build_ui()
+        super().__init__(stories, assets, shot_plans, acpp, asset_browser, parent)
+        self.setObjectName("storyWorkspace")
+        self.production_browser = self
+        self._install_story_panel()
+        self._story_workspace_ready = True
         self.refresh()
 
-    def _build_ui(self) -> None:
-        root = QVBoxLayout(self)
+    def _install_story_panel(self) -> None:
+        root = self.layout()
+        if not isinstance(root, QVBoxLayout):
+            raise RuntimeError("Story Workspace root layout must be vertical.")
+        panel = QWidget(self)
+        panel.setObjectName("storyGovernancePanel")
+        panel_layout = QVBoxLayout(panel)
         header = QHBoxLayout()
-        title = QLabel("Story Workspace", self)
+        title = QLabel("Story Workspace", panel)
         title.setStyleSheet("font-size: 20px; font-weight: 700;")
         header.addWidget(title)
         header.addStretch(1)
-        self.show_archived = QCheckBox("Show archived", self)
+        self.show_archived = QCheckBox("Show archived", panel)
         self.show_archived.setObjectName("showArchivedStories")
         self.show_archived.toggled.connect(self.refresh)
         header.addWidget(self.show_archived)
-        self.help_button = QPushButton("Help", self)
+        self.help_button = QPushButton("Help", panel)
         self.help_button.setObjectName("storyWorkspaceHelp")
         self.help_button.clicked.connect(self._show_help)
         header.addWidget(self.help_button)
-        root.addLayout(header)
-
-        splitter = QSplitter(Qt.Orientation.Vertical, self)
-        story_panel = QWidget(splitter)
-        story_layout = QVBoxLayout(story_panel)
+        panel_layout.addLayout(header)
         toolbar = QHBoxLayout()
         self.new_button = self._button("New Story", "newStory", self._new_story)
         self.edit_button = self._button("Edit", "editStory", self._edit_story)
@@ -223,9 +236,7 @@ class StoryWorkspaceWidget(QWidget):
         self.approve_button = self._button("Approve", "approveStory", self._approve)
         self.lock_button = self._button("Lock", "lockStory", self._lock)
         self.unlock_button = self._button("Unlock", "unlockStory", self._unlock)
-        self.reopen_button = self._button(
-            "Reopen", "reopenStory", self._reopen
-        )
+        self.reopen_button = self._button("Reopen", "reopenStory", self._reopen)
         self.archive_button = self._button(
             "Archive", "archiveStory", self._archive_or_restore
         )
@@ -242,51 +253,49 @@ class StoryWorkspaceWidget(QWidget):
         ):
             toolbar.addWidget(button)
         toolbar.addStretch(1)
-        story_layout.addLayout(toolbar)
-
+        panel_layout.addLayout(toolbar)
         content = QHBoxLayout()
-        self.story_list = QListWidget(story_panel)
+        self.story_list = QListWidget(panel)
         self.story_list.setObjectName("storyList")
-        self.story_list.currentItemChanged.connect(self._show_selected)
+        self.story_list.currentItemChanged.connect(self._show_selected_story)
         content.addWidget(self.story_list, 1)
-        self.details = QLabel(story_panel)
-        self.details.setObjectName("storyWorkspaceDetails")
-        self.details.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.details.setWordWrap(True)
-        self.details.setTextFormat(Qt.TextFormat.RichText)
-        content.addWidget(self.details, 2)
-        story_layout.addLayout(content)
-        splitter.addWidget(story_panel)
-        splitter.addWidget(self.production_browser)
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 3)
-        root.addWidget(splitter, 1)
+        self.story_details = QLabel(panel)
+        self.story_details.setObjectName("storyWorkspaceDetails")
+        self.story_details.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.story_details.setWordWrap(True)
+        self.story_details.setTextFormat(Qt.TextFormat.RichText)
+        content.addWidget(self.story_details, 2)
+        panel_layout.addLayout(content)
+        root.insertWidget(0, panel)
 
-    def _button(self, text: str, name: str, slot: object) -> QPushButton:
+    def _button(
+        self, text: str, name: str, slot: Callable[[], None]
+    ) -> QPushButton:
         button = QPushButton(text, self)
         button.setObjectName(name)
-        button.clicked.connect(slot)  # type: ignore[arg-type]
+        button.clicked.connect(slot)
         return button
 
-    def refresh(self, *_args: object) -> None:
-        """Reload Story state and the existing production hierarchy."""
+    def refresh(self) -> None:
+        """Refresh production hierarchy and first-class Story state."""
+        super().refresh()
+        if not self._story_workspace_ready:
+            return
         selected_id = self._selected_story_id()
         self.story_list.clear()
         try:
-            stories = self.lifecycle.list_stories(
+            records = self.lifecycle.list_stories(
                 include_archived=self.show_archived.isChecked()
             )
         except ProjectNotOpenError:
-            self.details.setText("Open a project to manage Stories.")
-            self._set_actions(None)
-            self.production_browser.setEnabled(False)
+            self.story_details.setText("Open a project to manage Stories.")
+            self._set_story_actions(None)
             return
         except StoryLifecycleError as exc:
-            self.details.setText(str(exc))
-            self._set_actions(None)
+            self.story_details.setText(str(exc))
+            self._set_story_actions(None)
             return
-        self.production_browser.setEnabled(True)
-        for story in stories:
+        for story in records:
             item = QListWidgetItem(f"{story.title}  [{story.status.label}]")
             item.setData(Qt.ItemDataRole.UserRole, story.story_id)
             self.story_list.addItem(item)
@@ -294,15 +303,12 @@ class StoryWorkspaceWidget(QWidget):
                 self.story_list.setCurrentItem(item)
         if self.story_list.currentItem() is None and self.story_list.count():
             self.story_list.setCurrentRow(0)
-        if not stories:
-            self.details.setText(
+        if not records:
+            self.story_details.setText(
                 "<h3>No Story defined</h3><p>Create or import the Story before "
                 "planning a Production.</p>"
             )
-            self._set_actions(None)
-        refresh = getattr(self.production_browser, "refresh", None)
-        if callable(refresh):
-            refresh()
+            self._set_story_actions(None)
 
     def _selected_story_id(self) -> str | None:
         item = self.story_list.currentItem()
@@ -312,9 +318,9 @@ class StoryWorkspaceWidget(QWidget):
         story_id = self._selected_story_id()
         return None if story_id is None else self.lifecycle.story(story_id)
 
-    def _show_selected(self, *_args: object) -> None:
+    def _show_selected_story(self, *_args: object) -> None:
         story = self._selected_story()
-        self._set_actions(story)
+        self._set_story_actions(story)
         if story is None:
             return
         metadata = self.metadata.metadata(story.story_id)
@@ -322,9 +328,13 @@ class StoryWorkspaceWidget(QWidget):
         approval = self.approvals.snapshot(story.story_id)
         synopsis = metadata.synopsis if metadata and metadata.synopsis else "Not defined"
         author = metadata.author if metadata and metadata.author else "Not defined"
-        genres = ", ".join(metadata.genres) if metadata and metadata.genres else "Not defined"
+        genres = (
+            ", ".join(metadata.genres)
+            if metadata and metadata.genres
+            else "Not defined"
+        )
         missing = ", ".join(completeness.missing_fields) or "None"
-        self.details.setText(
+        self.story_details.setText(
             f"<h2>{story.title}</h2>"
             f"<p><b>ID:</b> {story.story_id}<br>"
             f"<b>Status:</b> {story.status.label}<br>"
@@ -336,31 +346,27 @@ class StoryWorkspaceWidget(QWidget):
             f"<h3>Readiness</h3>"
             f"<p><b>Metadata:</b> {completeness.percentage}%<br>"
             f"<b>Missing:</b> {missing}<br>"
-            f"<b>Ready to approve:</b> {'Yes' if approval.can_approve else 'No'}</p>"
+            f"<b>Ready to approve:</b> "
+            f"{'Yes' if approval.can_approve else 'No'}</p>"
         )
 
-    def _set_actions(self, story: StoryRecord | None) -> None:
-        enabled = story is not None
-        self.edit_button.setEnabled(
-            (
-                enabled 
-                and not story.archived 
-                and not story.locked
-            )      
-            if story 
-            else False
-        )
-        self.duplicate_button.setEnabled(enabled)
+    def _set_story_actions(self, story: StoryRecord | None) -> None:
+        can_edit = story is not None and not story.archived and not story.locked
+        self.edit_button.setEnabled(can_edit)
+        self.duplicate_button.setEnabled(story is not None)
         self.analyse_button.setEnabled(
-            story is not None and story.status in {StoryStatus.DRAFT, StoryStatus.IMPORTED}
+            story is not None
+            and story.status in {StoryStatus.DRAFT, StoryStatus.IMPORTED}
         )
         snapshot = self.approvals.snapshot(story.story_id) if story else None
         self.approve_button.setEnabled(bool(snapshot and snapshot.can_approve))
         self.lock_button.setEnabled(bool(snapshot and snapshot.can_lock))
         self.unlock_button.setEnabled(bool(snapshot and snapshot.can_unlock))
         self.reopen_button.setEnabled(bool(snapshot and snapshot.can_reopen))
-        self.archive_button.setEnabled(enabled)
-        self.archive_button.setText("Restore" if story and story.archived else "Archive")
+        self.archive_button.setEnabled(story is not None)
+        self.archive_button.setText(
+            "Restore" if story and story.archived else "Archive"
+        )
 
     def _new_story(self) -> None:
         dialog = StoryEditorDialog(parent=self)
@@ -377,7 +383,9 @@ class StoryWorkspaceWidget(QWidget):
         story = self._selected_story()
         if story is None:
             return
-        dialog = StoryEditorDialog(story, self.metadata.metadata(story.story_id), self)
+        dialog = StoryEditorDialog(
+            story, self.metadata.metadata(story.story_id), self
+        )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         try:
@@ -398,9 +406,15 @@ class StoryWorkspaceWidget(QWidget):
                 values = {
                     field: getattr(metadata, field)
                     for field in (
-                        "synopsis", "genres", "themes", "target_audience",
-                        "language", "author", "estimated_runtime_minutes",
-                        "keywords", "notes",
+                        "synopsis",
+                        "genres",
+                        "themes",
+                        "target_audience",
+                        "language",
+                        "author",
+                        "estimated_runtime_minutes",
+                        "keywords",
+                        "notes",
                     )
                 }
                 self.metadata.save_metadata(duplicate.story_id, **values)
@@ -442,16 +456,18 @@ class StoryWorkspaceWidget(QWidget):
         notes = f"Story {action} action completed through Story Workspace"
         try:
             if action == "approve":
-                self.approvals.approve(story.story_id, approved_by=actor, notes=notes)
+                self.approvals.approve(
+                    story.story_id, approved_by=actor, notes=notes
+                )
             elif action == "lock":
                 self.approvals.lock(story.story_id, locked_by=actor, notes=notes)
             elif action == "unlock":
-                self.approvals.unlock(story.story_id, unlocked_by=actor, notes=notes)
+                self.approvals.unlock(
+                    story.story_id, unlocked_by=actor, notes=notes
+                )
             else:
                 self.approvals.reopen_for_revision(
-                    story.story_id,
-                    reopened_by=actor,
-                    notes=notes,
+                    story.story_id, reopened_by=actor, notes=notes
                 )
         except (ValueError, StoryApprovalError) as exc:
             self._error(str(exc))
@@ -480,13 +496,12 @@ class StoryWorkspaceWidget(QWidget):
         QMessageBox.information(
             self,
             "Story Workspace Help",
-            "1. Create or import a Story.\n"
-            "2. Complete its metadata.\n"
-            "3. Mark it Analysed after reviewing the Story structure.\n"
-            "4. Approve and lock Story Canon.\n"
-            "5. Use the production browser below to plan scenes and shots.\n\n"
-            "Editing an analysed or approved Story returns it to an editable state. "
-            "Locked Stories must be reopened or unlocked first.",
+            "1. Create or import the Story.\n"
+            "2. Complete the core metadata.\n"
+            "3. Mark the Story as Analysed after review.\n"
+            "4. Approve and lock Story Canon before production.\n\n"
+            "The production hierarchy below remains available for Scene, Shot, "
+            "asset and ACPP planning.",
         )
 
     def _error(self, message: str) -> None:
