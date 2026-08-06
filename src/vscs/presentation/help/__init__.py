@@ -10,6 +10,7 @@ from .knowledge_registry import (
     build_default_knowledge_registry,
 )
 from .knowledge_topics import SCENE_TOPICS, KnowledgeTopic
+from .story_workspace_help import StoryWorkspaceHelpDialog
 from .workflow_hint import WorkflowHint
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "KnowledgeRegistry",
     "KnowledgeTopic",
     "KnowledgeTopicNotFoundError",
+    "StoryWorkspaceHelpDialog",
     "WorkflowHint",
     "build_default_knowledge_registry",
 ]
