@@ -68,9 +68,7 @@ class ApprovedStoryIntelligenceStore:
 class ApprovedStoryIntelligenceService:
     """Restore review decisions and promote approved entities to canonical assets."""
 
-    _CATEGORY_MAP: ClassVar[ 
-        dict[EntityResolutionCategory, AssetCategory]
-        ] = {
+    _CATEGORY_MAP: ClassVar[dict[EntityResolutionCategory, AssetCategory]] = {
         EntityResolutionCategory.CHARACTER: AssetCategory.CHARACTER,
         EntityResolutionCategory.SHIP: AssetCategory.SHIP,
         EntityResolutionCategory.PLANET: AssetCategory.PLANET,
@@ -80,9 +78,7 @@ class ApprovedStoryIntelligenceService:
         EntityResolutionCategory.TECHNOLOGY: AssetCategory.TECHNOLOGY,
         EntityResolutionCategory.ENVIRONMENT: AssetCategory.ENVIRONMENT,
     }
-    _PREFIX_MAP: ClassVar[
-        dict[EntityResolutionCategory, str]
-     ] = {
+    _PREFIX_MAP: ClassVar[dict[EntityResolutionCategory, str]] = {
         EntityResolutionCategory.CHARACTER: "CHR",
         EntityResolutionCategory.SHIP: "SHP",
         EntityResolutionCategory.PLANET: "PLN",
@@ -114,7 +110,10 @@ class ApprovedStoryIntelligenceService:
                 candidates.append(candidate)
                 continue
             changes: dict[str, object] = {"review_status": decision.review_status}
-            if decision.canonical_asset_id:
+            if (
+                decision.review_status is CandidateReviewStatus.APPROVED
+                and decision.canonical_asset_id
+            ):
                 changes.update(
                     {
                         "match_kind": ResolutionMatchKind.EXISTING,
@@ -202,13 +201,14 @@ class ApprovedStoryIntelligenceService:
         candidate: EntityCandidate,
     ) -> None:
         current = self.store.load(resolution.story_id)
+        keep_canonical_link = candidate.review_status is CandidateReviewStatus.APPROVED
         decision = StoryEntityDecision(
             candidate_id=candidate.candidate_id,
             name=candidate.name,
             category=candidate.category,
             review_status=candidate.review_status,
-            canonical_asset_id=candidate.matched_asset_id,
-            canonical_asset_name=candidate.matched_asset_name,
+            canonical_asset_id=candidate.matched_asset_id if keep_canonical_link else None,
+            canonical_asset_name=candidate.matched_asset_name if keep_canonical_link else None,
             description=candidate.description,
             aliases=candidate.aliases,
             attributes=candidate.attributes,
