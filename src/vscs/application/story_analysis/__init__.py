@@ -28,7 +28,7 @@ from vscs.application.story_analysis.engine import (
 from vscs.application.story_analysis.knowledge_graph import StoryKnowledgeGraphBuilder
 from vscs.application.story_analysis.pipeline import StoryAnalysisPipeline
 from vscs.application.story_analysis.registry import StoryAnalysisStageRegistry
-from vscs.application.story_analysis.source_reader import StorySourceReadError, StorySourceReader
+from vscs.application.story_analysis.source_reader import StorySourceReader, StorySourceReadError
 from vscs.application.story_analysis.stages import (
     AI_ENTITY_RESOLUTION_ARTIFACT,
     ANALYSIS_RESULT_ARTIFACT,

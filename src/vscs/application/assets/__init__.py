@@ -9,6 +9,14 @@ from vscs.application.assets.service import (
     AssetService,
     InvalidAssetPathError,
 )
+from vscs.application.assets.xpd_import import (
+    XPD_HEADERS,
+    XPD_SHEET_NAME,
+    XPDProvenanceStore,
+    XPDWorkbookError,
+    XPDWorkbookReader,
+)
+from vscs.application.assets.xpd_preview import XPDWorkbookImportService
 
 __all__ = [
     "AssetAlreadyExistsError",
@@ -19,4 +27,10 @@ __all__ = [
     "AssetRepositoryError",
     "AssetService",
     "InvalidAssetPathError",
+    "XPD_HEADERS",
+    "XPD_SHEET_NAME",
+    "XPDProvenanceStore",
+    "XPDWorkbookError",
+    "XPDWorkbookImportService",
+    "XPDWorkbookReader",
 ]

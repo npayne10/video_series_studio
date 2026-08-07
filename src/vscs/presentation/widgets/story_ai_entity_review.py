@@ -154,7 +154,11 @@ class AIEntityReviewDialog(QDialog):
         item = self.table.item(row, 0)
         candidate_id = item.data(Qt.ItemDataRole.UserRole) if item else None
         return next(
-            (candidate for candidate in self.result.candidates if candidate.candidate_id == candidate_id),
+            (
+                candidate 
+                for candidate in self.result.candidates 
+                if candidate.candidate_id == candidate_id
+            ),
             None,
         )
 

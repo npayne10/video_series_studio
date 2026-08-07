@@ -97,15 +97,15 @@ class EntityCandidate(BaseModel):
     matched_asset_name: str | None = None
 
     @model_validator(mode="after")
-    def _validate_match(self) -> "EntityCandidate":
+    def _validate_match(self) -> EntityCandidate:
         if self.match_kind is ResolutionMatchKind.EXISTING and not self.matched_asset_id:
             raise ValueError("Existing entity matches require matched_asset_id")
         return self
 
-    def approve(self) -> "EntityCandidate":
+    def approve(self) -> EntityCandidate:
         return self.model_copy(update={"review_status": CandidateReviewStatus.APPROVED})
 
-    def reject(self) -> "EntityCandidate":
+    def reject(self) -> EntityCandidate:
         return self.model_copy(update={"review_status": CandidateReviewStatus.REJECTED})
 
 
@@ -121,7 +121,7 @@ class EntityResolutionResult(BaseModel):
     diagnostics: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def _unique_candidates(self) -> "EntityResolutionResult":
+    def _unique_candidates(self) -> EntityResolutionResult:
         ids = [candidate.candidate_id for candidate in self.candidates]
         if len(ids) != len(set(ids)):
             raise ValueError("Entity candidate IDs must be unique")
