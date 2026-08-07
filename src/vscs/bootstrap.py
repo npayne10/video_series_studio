@@ -60,6 +60,7 @@ from vscs.application.rendering import (
 )
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import StoryService, register_story_approval
+from vscs.application.story_analysis import register_story_analysis
 from vscs.infrastructure.ai import (
     AICredentialStore,
     CAPGenerationProvider,
@@ -180,6 +181,7 @@ def build_application_context(
     projects = services.register(ProjectService, ProjectService(configuration, database))
     stories = services.register(StoryService, StoryService(projects))
     register_story_approval(services)
+    register_story_analysis(services)
     services.register(ShotPlanningService, ShotPlanningService(projects))
     services.register(ACPPEditorService, ACPPEditorService(projects, stories))
     services.register(PromptGraphRegistry, PromptGraphRegistry())
