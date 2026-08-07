@@ -37,7 +37,7 @@ from vscs.application.story_analysis import (
 
 
 class StoryIntelligenceDashboardDialog(QDialog):
-    """Operational review surface for approved Story Intelligence and production readiness."""
+    """Operational review surface for Story Intelligence and production readiness."""
 
     def __init__(
         self,
@@ -90,11 +90,13 @@ class StoryIntelligenceDashboardDialog(QDialog):
 
         metrics = QGridLayout()
         self.analysis_metric = self._metric("Analysis", metrics, 0, 0)
-        self.ai_metric = self._metric("AI confidence", metrics, 0, 1)
-        self.review_metric = self._metric("Entity review", metrics, 0, 2)
+        self.story_metric = self._metric("Story metadata", metrics, 0, 1)
+        self.ai_metric = self._metric("AI confidence", metrics, 0, 2)
+        self.review_metric = self._metric("Entity review", metrics, 0, 3)
         self.xpd_metric = self._metric("XPD coverage", metrics, 1, 0)
         self.cap_metric = self._metric("CAP readiness", metrics, 1, 1)
         self.graph_metric = self._metric("Knowledge graph", metrics, 1, 2)
+        self.production_metric = self._metric("Production gates", metrics, 1, 3)
         root.addLayout(metrics)
 
         coverage = QHBoxLayout()
@@ -236,14 +238,21 @@ class StoryIntelligenceDashboardDialog(QDialog):
         self.analysis_metric.setText(
             f"{snapshot.analysis_status.value}\n{snapshot.stage_count} stages"
         )
+        if snapshot.story_completeness_percent is None:
+            self.story_metric.setText("Not available")
+        else:
+            self.story_metric.setText(
+                f"{snapshot.story_completeness_percent}% complete\n"
+                f"{len(snapshot.missing_story_metadata)} fields missing"
+            )
         self.ai_metric.setText(f"{snapshot.ai_confidence:.0%}")
         self.review_metric.setText(
             f"{snapshot.approved_entities} approved / "
             f"{snapshot.proposed_entities} pending / {snapshot.rejected_entities} rejected"
         )
         self.xpd_metric.setText(
-            f"{snapshot.matched_entities}/{snapshot.entity_total} matched\n"
-            f"{snapshot.xpd_coverage_percent}% coverage"
+            f"{snapshot.matched_entities} canonical matches\n"
+            f"{snapshot.xpd_coverage_percent}% active coverage"
         )
         approved_assets = snapshot.cap_ready_assets + snapshot.cap_required_assets
         self.cap_metric.setText(
@@ -252,6 +261,10 @@ class StoryIntelligenceDashboardDialog(QDialog):
         )
         self.graph_metric.setText(
             f"{snapshot.graph_nodes} nodes\n{snapshot.graph_edges} edges"
+        )
+        self.production_metric.setText(
+            f"Planning: {'ready' if snapshot.ready_for_shot_planning else 'blocked'}\n"
+            f"Generation: {'ready' if snapshot.ready_for_generation else 'attention'}"
         )
         self.xpd_progress.setValue(snapshot.xpd_coverage_percent)
         cap_percent = (
@@ -362,6 +375,10 @@ class StoryIntelligenceDashboardDialog(QDialog):
             )
         else:
             self.readiness_list.addItem("No Story Intelligence blockers detected.")
+        if snapshot.missing_story_metadata:
+            self.readiness_list.addItem(
+                "Story metadata incomplete: " + ", ".join(snapshot.missing_story_metadata)
+            )
         self.diagnostics_list.clear()
         if snapshot.diagnostics:
             for diagnostic in snapshot.diagnostics:
