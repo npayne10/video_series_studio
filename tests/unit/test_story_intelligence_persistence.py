@@ -142,3 +142,28 @@ def test_rejected_candidate_and_ai_metadata_survive_reload(tmp_path: Path) -> No
     assert restored.candidates[0].review_status is CandidateReviewStatus.REJECTED
     intelligence = service.load("xorix-trailer")
     assert intelligence.narrative_metadata.themes == ("discovery",)
+
+
+def test_reset_drops_persisted_canonical_link_and_uses_fresh_resolution(tmp_path: Path) -> None:
+    service = ApprovedStoryIntelligenceService(_Assets(tmp_path))
+    stale = _candidate(
+        name="James Spence",
+        category=EntityResolutionCategory.CHARACTER,
+        matched_asset_id="CAP-CHR-025",
+    )
+    resolution = _resolution(stale)
+    service.approve(resolution, stale)
+
+    service.reset(resolution, stale)
+    decision = service.load("xorix-trailer").decisions[0]
+    assert decision.review_status is CandidateReviewStatus.PROPOSED
+    assert decision.canonical_asset_id is None
+
+    fresh = _candidate(
+        name="James Spence",
+        category=EntityResolutionCategory.CHARACTER,
+        matched_asset_id="CAP-CHR-001",
+    )
+    restored = service.restore(_resolution(fresh))
+    assert restored.candidates[0].review_status is CandidateReviewStatus.PROPOSED
+    assert restored.candidates[0].matched_asset_id == "CAP-CHR-001"
