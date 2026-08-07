@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QPushButton,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -26,6 +27,7 @@ from vscs.application.story import (
 from vscs.application.story_analysis import StoryAnalysisEngine
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
+from .story_ai_entity_review import AIEntityReviewDialog
 from .story_analysis_workspace import StoryAnalysisWorkspaceDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
 
@@ -120,6 +122,22 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
 
     analysis_engine: StoryAnalysisEngine | None = None
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.ai_review_button = QPushButton("Review AI Entities", self)
+        self.ai_review_button.setObjectName("reviewAIStoryEntities")
+        self.ai_review_button.clicked.connect(self._review_ai_entities)
+        root = self.layout()
+        if isinstance(root, QVBoxLayout):
+            ai_toolbar = QWidget(self)
+            ai_toolbar.setObjectName("storyAIReviewToolbar")
+            layout = QHBoxLayout(ai_toolbar)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addWidget(self.ai_review_button)
+            layout.addStretch(1)
+            root.insertWidget(1, ai_toolbar)
+        self._set_story_actions(self._selected_story())
+
     def _new_story(self) -> None:
         dialog = BrowseableStoryEditorDialog(parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -153,6 +171,8 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         super()._set_story_actions(story)
         self.analyse_button.setText("Analyse Story")
         self.analyse_button.setEnabled(story is not None and not story.archived)
+        if hasattr(self, "ai_review_button"):
+            self.ai_review_button.setEnabled(story is not None and not story.archived)
 
     def _mark_analysed(self) -> None:
         story = self._selected_story()
@@ -176,6 +196,20 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             except (ValueError, StoryStatusError) as exc:
                 self._error(str(exc))
         self.refresh()
+
+    def _review_ai_entities(self) -> None:
+        story = self._selected_story()
+        if story is None:
+            return
+        if self.analysis_engine is None:
+            self._error("Story Analysis Engine is not registered.")
+            return
+        self._ai_entity_review_dialog = AIEntityReviewDialog(
+            story,
+            self.analysis_engine,
+            parent=self,
+        )
+        self._ai_entity_review_dialog.exec()
 
     def _show_help(self) -> None:
         self._story_help_dialog = StoryWorkspaceHelpDialog(self)
