@@ -22,6 +22,7 @@ from vscs.application.story import (
     register_story_metadata,
     register_story_status,
 )
+from vscs.application.story_analysis import StoryAnalysisEngine
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
@@ -74,6 +75,7 @@ def install_story_browser() -> None:
             window.services.require(StoryStatusService),
             window.services.require(StoryApprovalService),
         )
+        window.story_browser.analysis_engine = window.services.require(StoryAnalysisEngine)
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
