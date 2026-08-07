@@ -6,6 +6,7 @@ import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import ClassVar
 
 from vscs.application.assets import AssetService
 from vscs.domain.assets import AssetCategory, AssetCreate, AssetStatus
@@ -67,7 +68,9 @@ class ApprovedStoryIntelligenceStore:
 class ApprovedStoryIntelligenceService:
     """Restore review decisions and promote approved entities to canonical assets."""
 
-    _CATEGORY_MAP = {
+    _CATEGORY_MAP: ClassVar[ 
+        dict[EntityResolutionCategory, AssetCategory]
+        ] = {
         EntityResolutionCategory.CHARACTER: AssetCategory.CHARACTER,
         EntityResolutionCategory.SHIP: AssetCategory.SHIP,
         EntityResolutionCategory.PLANET: AssetCategory.PLANET,
@@ -77,7 +80,9 @@ class ApprovedStoryIntelligenceService:
         EntityResolutionCategory.TECHNOLOGY: AssetCategory.TECHNOLOGY,
         EntityResolutionCategory.ENVIRONMENT: AssetCategory.ENVIRONMENT,
     }
-    _PREFIX_MAP = {
+    _PREFIX_MAP: ClassVar[
+        dict[EntityResolutionCategory, str]
+     ] = {
         EntityResolutionCategory.CHARACTER: "CHR",
         EntityResolutionCategory.SHIP: "SHP",
         EntityResolutionCategory.PLANET: "PLN",
