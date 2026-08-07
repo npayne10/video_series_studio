@@ -8,7 +8,6 @@ from vscs.application.story_analysis import (
 )
 from vscs.domain.story_analysis import Character, Location, Prop, Technology
 
-
 TRAILER_STORY = """# Arrival
 
 Commander James Spence stood beside the viewport on the Iron Horizon.

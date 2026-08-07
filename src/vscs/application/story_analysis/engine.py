@@ -132,7 +132,7 @@ class StoryStructureParser:
             )
 
         sections: list[StorySection] = []
-        for section_index, (title, heading_start, heading_end) in enumerate(headings):
+        for section_index, (title, _heading_start, heading_end) in enumerate(headings):
             section_end = (
                 headings[section_index + 1][1]
                 if section_index + 1 < len(headings)
@@ -206,7 +206,7 @@ class DeterministicStoryAnalyzer:
         )
         characters = self._characters(request, sentences)
         entities = self._other_entities(request, sentences, characters)
-        all_entities = tuple((*characters, *entities))
+        all_entities = (*characters, *entities)
         dialogues = self._dialogues(request, sentences, characters)
         actions = self._actions(request, sentences, all_entities)
         emotions = self._emotions(request, sentences, characters)
@@ -239,14 +239,22 @@ class DeterministicStoryAnalyzer:
             for match in _TITLE_NAME_PATTERN.finditer(sentence.text):
                 title = match.group("title")
                 name = match.group("name")
-                source = self._span(request, sentence.start_offset + match.start(), sentence.start_offset + match.end())
+                source = self._span(
+                    request, 
+                    sentence.start_offset + match.start(), 
+                    sentence.start_offset + match.end()
+                )
                 found.setdefault(name, (title, source))
 
             for match in _SPEAKER_AFTER_PATTERN.finditer(sentence.text):
                 name = match.group("name")
                 if name in found or len(name.split()) < 2:
                     continue
-                source = self._span(request, sentence.start_offset + match.start("name"), sentence.start_offset + match.end("name"))
+                source = self._span(
+                    request, 
+                    sentence.start_offset + match.start("name"), 
+                    sentence.start_offset + match.end("name")
+                )
                 found[name] = ("", source)
 
         return tuple(
@@ -492,7 +500,11 @@ class DeterministicStoryAnalyzer:
                     participant_entity_ids=participants,
                     location_entity_id=location_id,
                     sources=(
-                        self._span(request, section.start_offset, max(section.start_offset + 1, section.end_offset)),
+                        self._span(
+                            request, 
+                            section.start_offset, 
+                            max(section.start_offset + 1, section.end_offset),
+                        ),
                     ),
                     confidence=0.8,
                 )
