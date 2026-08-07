@@ -10,7 +10,7 @@ from vscs.application.story_analysis.ai_analysis import (
     EntityResolutionService,
 )
 from vscs.domain.story_analysis import (
-    AIEntityProposal,
+    AIEntityDraft,
     AIStoryAnalysisDraft,
     AnalysisResult,
     EntityResolutionCategory,
@@ -23,9 +23,8 @@ from tests.unit.test_xpd_workbook_import import _Assets, _row, _write_xpd
 class _Provider:
     def analyze_story(self, *, story_id: str, source_text: str, baseline: AnalysisResult):
         return AIStoryAnalysisDraft(
-            story_id=story_id,
             entities=(
-                AIEntityProposal(
+                AIEntityDraft(
                     name="Iron Horizon",
                     category=EntityResolutionCategory.SHIP,
                     description="Survey vessel",
