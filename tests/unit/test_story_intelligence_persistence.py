@@ -7,7 +7,6 @@ from pathlib import Path
 from vscs.application.story_analysis import ApprovedStoryIntelligenceService
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
 from vscs.domain.story_analysis import (
-    AIEntityDraft,
     AINarrativeMetadata,
     CandidateReviewStatus,
     EntityCandidate,
