@@ -10,8 +10,8 @@ from vscs.domain.story_analysis.entity_resolution import (
     AINarrativeMetadata,
     CandidateReviewStatus,
     EntityResolutionCategory,
-    SourceSpan,
 )
+from vscs.domain.story_analysis.models import SourceSpan
 
 
 class StoryEntityDecision(BaseModel):
