@@ -24,8 +24,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.assets import AssetError, AssetService
+from vscs.application.assets import AssetError, AssetService, XPDWorkbookImportService
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
+from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 
 
 class AssetEditorDialog(QDialog):
@@ -115,11 +116,12 @@ class AssetEditorDialog(QDialog):
 
 
 class AssetManagerWidget(QWidget):
-    """Browse, search, create, and remove project assets."""
+    """Browse, search, create, remove, and synchronize project assets."""
 
     def __init__(self, assets: AssetService, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.assets = assets
+        self.xpd_import = XPDWorkbookImportService(assets)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search asset ID, name, description, or tags")
@@ -129,6 +131,8 @@ class AssetManagerWidget(QWidget):
             self.category_filter.addItem(category.value.replace("_", " ").title(), category)
 
         self.add_button = QPushButton("Add Asset")
+        self.xpd_import_button = QPushButton("Import / Synchronise XPD")
+        self.xpd_import_button.setObjectName("importSynchroniseXPD")
         self.delete_button = QPushButton("Delete Selected")
         self.refresh_button = QPushButton("Refresh")
         self.summary_label = QLabel("No project open")
@@ -137,6 +141,7 @@ class AssetManagerWidget(QWidget):
         controls.addWidget(self.search_input, 1)
         controls.addWidget(self.category_filter)
         controls.addWidget(self.add_button)
+        controls.addWidget(self.xpd_import_button)
         controls.addWidget(self.delete_button)
         controls.addWidget(self.refresh_button)
 
@@ -156,6 +161,7 @@ class AssetManagerWidget(QWidget):
         self.search_input.textChanged.connect(self.refresh)
         self.category_filter.currentIndexChanged.connect(self.refresh)
         self.add_button.clicked.connect(self._add_asset)
+        self.xpd_import_button.clicked.connect(self._import_xpd)
         self.delete_button.clicked.connect(self._delete_selected)
         self.refresh_button.clicked.connect(self.refresh)
 
@@ -179,6 +185,7 @@ class AssetManagerWidget(QWidget):
     def set_enabled(self, enabled: bool) -> None:
         """Enable project-dependent actions while keeping filters usable."""
         self.add_button.setEnabled(enabled)
+        self.xpd_import_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
         self.refresh_button.setEnabled(enabled)
 
@@ -210,6 +217,14 @@ class AssetManagerWidget(QWidget):
         except (AssetError, ValueError) as exc:
             QMessageBox.critical(self, "Asset Error", str(exc))
             return
+        self.refresh()
+
+    def _import_xpd(self) -> None:
+        if self.assets.projects.project_directory is None:
+            QMessageBox.warning(self, "XPD Import", "Open a project before importing XPD.")
+            return
+        self._xpd_import_dialog = XPDImportDialog(self.xpd_import, self)
+        self._xpd_import_dialog.exec()
         self.refresh()
 
     def _delete_selected(self) -> None:
