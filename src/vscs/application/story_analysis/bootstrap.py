@@ -15,7 +15,7 @@ def register_story_analysis(
 ) -> StoryAnalysisPipeline:
     """Register the story-analysis framework and default analysis engine stage."""
 
-    selected_registry = registry or StoryAnalysisStageRegistry()
+    selected_registry = registry if registry is not None else StoryAnalysisStageRegistry()
     if not selected_registry.contains(StoryAnalysisEngineStage.stage_id):
         selected_registry.register(StoryAnalysisEngineStage())
     services.register(StoryAnalysisStageRegistry, selected_registry)
