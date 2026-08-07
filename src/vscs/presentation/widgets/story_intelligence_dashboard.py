@@ -31,8 +31,8 @@ from vscs.application.story_analysis import (
     StoryAnalysisRequest,
     StoryIntelligenceDashboardService,
     StoryIntelligenceDashboardSnapshot,
-    StorySourceReadError,
     StorySourceReader,
+    StorySourceReadError,
 )
 
 
