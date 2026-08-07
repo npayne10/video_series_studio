@@ -18,6 +18,12 @@ from vscs.application.story_analysis.contracts import (
     StoryAnalysisRequest,
     StoryAnalysisStage,
 )
+from vscs.application.story_analysis.dashboard import (
+    StoryIntelligenceDashboardService,
+    StoryIntelligenceDashboardSnapshot,
+    StoryIntelligenceEntityRow,
+    StoryProductionReadiness,
+)
 from vscs.application.story_analysis.engine import (
     DeterministicStoryAnalyzer,
     StorySection,
@@ -70,9 +76,13 @@ __all__ = [
     "StoryAnalysisStage",
     "StoryAnalysisStageRegistry",
     "StoryEntityCatalog",
+    "StoryIntelligenceDashboardService",
+    "StoryIntelligenceDashboardSnapshot",
+    "StoryIntelligenceEntityRow",
     "StoryIntelligenceError",
     "StoryKnowledgeGraphBuilder",
     "StoryKnowledgeGraphStage",
+    "StoryProductionReadiness",
     "StorySection",
     "StorySourceReadError",
     "StorySourceReader",

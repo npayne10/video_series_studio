@@ -26,11 +26,13 @@ from vscs.application.story import (
 from vscs.application.story_analysis import (
     ApprovedStoryIntelligenceService,
     StoryAnalysisEngine,
+    StoryIntelligenceDashboardService,
 )
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
 from .story_ai_entity_review import AIEntityReviewDialog
 from .story_analysis_workspace import StoryAnalysisWorkspaceDialog
+from .story_intelligence_dashboard import StoryIntelligenceDashboardDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
 
 
@@ -168,6 +170,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             return
         dialog = StoryAnalysisWorkspaceDialog(story, self.analysis_engine, parent=self)
         self._install_ai_review_action(dialog, story)
+        self._install_intelligence_dashboard_action(dialog, story)
         self._story_analysis_dialog = dialog
         dialog.exec()
         if dialog.analysis is None:
@@ -183,17 +186,21 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
                 self._error(str(exc))
         self.refresh()
 
+    def _analysis_toolbar(self, dialog: StoryAnalysisWorkspaceDialog) -> QHBoxLayout:
+        root = dialog.layout()
+        toolbar_item = root.itemAt(0) if root is not None else None
+        toolbar = toolbar_item.layout() if toolbar_item is not None else None
+        if not isinstance(toolbar, QHBoxLayout):
+            raise RuntimeError("Story Analysis toolbar is unavailable.")
+        return toolbar
+
     def _install_ai_review_action(
         self,
         dialog: StoryAnalysisWorkspaceDialog,
         story: StoryRecord,
     ) -> None:
         """Place the AI entity-review entry point in the analysis toolbar."""
-        root = dialog.layout()
-        toolbar_item = root.itemAt(0) if root is not None else None
-        toolbar = toolbar_item.layout() if toolbar_item is not None else None
-        if not isinstance(toolbar, QHBoxLayout):
-            raise RuntimeError("Story Analysis toolbar is unavailable.")
+        toolbar = self._analysis_toolbar(dialog)
         button = QPushButton("Review AI Entities", dialog)
         button.setObjectName("reviewAIStoryEntities")
         button.setToolTip(
@@ -202,6 +209,22 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         button.clicked.connect(lambda: self._review_ai_entities(story, dialog))
         toolbar.insertWidget(3, button)
         dialog.ai_review_button = button
+
+    def _install_intelligence_dashboard_action(
+        self,
+        dialog: StoryAnalysisWorkspaceDialog,
+        story: StoryRecord,
+    ) -> None:
+        """Place the operational Story Intelligence dashboard in the analysis toolbar."""
+        toolbar = self._analysis_toolbar(dialog)
+        button = QPushButton("Story Intelligence", dialog)
+        button.setObjectName("openStoryIntelligenceDashboard")
+        button.setToolTip(
+            "Open production-readiness metrics, XPD coverage and Story Intelligence actions."
+        )
+        button.clicked.connect(lambda: self._show_story_intelligence(story, dialog))
+        toolbar.insertWidget(4, button)
+        dialog.story_intelligence_button = button
 
     def _review_ai_entities(
         self,
@@ -218,6 +241,34 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             intelligence=self.intelligence_service,
         )
         self._ai_entity_review_dialog.exec()
+
+    def _show_story_intelligence(
+        self,
+        story: StoryRecord,
+        parent: QWidget | None = None,
+    ) -> None:
+        if self.analysis_engine is None:
+            self._error("Story Analysis Engine is not registered.")
+            return
+        if self.intelligence_service is None:
+            self._error("Approved Story Intelligence service is not registered.")
+            return
+        dashboard = StoryIntelligenceDashboardService(
+            self.intelligence_service.assets,
+            self.intelligence_service,
+            self.metadata,
+        )
+        self._story_intelligence_dashboard = StoryIntelligenceDashboardDialog(
+            story,
+            self.analysis_engine,
+            dashboard,
+            parent=parent or self,
+            review_callback=lambda: self._review_ai_entities(
+                story,
+                self._story_intelligence_dashboard,
+            ),
+        )
+        self._story_intelligence_dashboard.exec()
 
     def _show_help(self) -> None:
         self._story_help_dialog = StoryWorkspaceHelpDialog(self)
