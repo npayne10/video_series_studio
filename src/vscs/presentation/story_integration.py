@@ -23,6 +23,7 @@ from vscs.application.story import (
     register_story_status,
 )
 from vscs.application.story_analysis import StoryAnalysisEngine
+from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
@@ -64,6 +65,7 @@ def install_story_browser() -> None:
             register_story_status(window.services)
         if window.services.get(StoryApprovalService) is None:
             register_story_approval(window.services)
+        register_ai_story_analysis(window.services)
         window.story_browser = BrowseableStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),

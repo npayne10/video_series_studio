@@ -34,11 +34,14 @@ def test_default_story_analysis_registration_executes_engine_stage() -> None:
     assert result.timeline_events
 
 
-def test_custom_registry_keeps_custom_stages_and_adds_default_engine() -> None:
+def test_custom_registry_keeps_registry_and_adds_default_stages() -> None:
     services = ApplicationServices()
     registry = StoryAnalysisStageRegistry()
 
     register_story_analysis(services, registry)
 
-    assert registry.contains("story.analysis.engine")
-    assert len(registry.enabled_stages()) == 1
+    stage_ids = tuple(stage.stage_id for stage in registry.enabled_stages())
+    assert stage_ids == (
+        "story.analysis.engine",
+        "story.knowledge_graph",
+    )

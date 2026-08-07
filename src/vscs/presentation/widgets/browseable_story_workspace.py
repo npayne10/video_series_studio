@@ -26,6 +26,7 @@ from vscs.application.story import (
 from vscs.application.story_analysis import StoryAnalysisEngine
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
+from .story_ai_entity_review import AIEntityReviewDialog
 from .story_analysis_workspace import StoryAnalysisWorkspaceDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
 
@@ -162,6 +163,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             self._error("Story Analysis Engine is not registered.")
             return
         dialog = StoryAnalysisWorkspaceDialog(story, self.analysis_engine, parent=self)
+        self._install_ai_review_action(dialog, story)
         self._story_analysis_dialog = dialog
         dialog.exec()
         if dialog.analysis is None:
@@ -176,6 +178,41 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             except (ValueError, StoryStatusError) as exc:
                 self._error(str(exc))
         self.refresh()
+
+    def _install_ai_review_action(
+        self,
+        dialog: StoryAnalysisWorkspaceDialog,
+        story: StoryRecord,
+    ) -> None:
+        """Place the AI entity-review entry point in the analysis toolbar."""
+        root = dialog.layout()
+        toolbar_item = root.itemAt(0) if root is not None else None
+        toolbar = toolbar_item.layout() if toolbar_item is not None else None
+        if not isinstance(toolbar, QHBoxLayout):
+            raise RuntimeError("Story Analysis toolbar is unavailable.")
+        button = QPushButton("Review AI Entities", dialog)
+        button.setObjectName("reviewAIStoryEntities")
+        button.setToolTip(
+            "Review AI-proposed characters, ships, planets and other production entities."
+        )
+        button.clicked.connect(lambda: self._review_ai_entities(story, dialog))
+        toolbar.insertWidget(3, button)
+        dialog.ai_review_button = button
+
+    def _review_ai_entities(
+        self,
+        story: StoryRecord,
+        parent: QWidget | None = None,
+    ) -> None:
+        if self.analysis_engine is None:
+            self._error("Story Analysis Engine is not registered.")
+            return
+        self._ai_entity_review_dialog = AIEntityReviewDialog(
+            story,
+            self.analysis_engine,
+            parent=parent or self,
+        )
+        self._ai_entity_review_dialog.exec()
 
     def _show_help(self) -> None:
         self._story_help_dialog = StoryWorkspaceHelpDialog(self)
