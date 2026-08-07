@@ -16,7 +16,6 @@ from vscs.domain.story_analysis import (
     StoryKnowledgeGraph,
 )
 
-
 STORY = """# Arrival
 
 Commander James Spence stood beside Captain Cheryl Draker on the bridge.

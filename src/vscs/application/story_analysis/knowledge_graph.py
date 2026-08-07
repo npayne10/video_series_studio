@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hashlib import sha1
+from itertools import pairwise
 
 from vscs.domain.story_analysis import (
     Action,
@@ -304,7 +305,7 @@ class StoryKnowledgeGraphBuilder:
                         item.confidence,
                     )
                 )
-        for current, following in zip(ordered, ordered[1:], strict=False):
+        for current, following in pairwise(ordered):
             edges.append(
                 self._edge(
                     f"timeline:{current.event_id}:{following.event_id}",
@@ -333,7 +334,7 @@ class StoryKnowledgeGraphBuilder:
         confidence: float,
     ) -> GraphEdge:
         digest = sha1(
-            f"{kind.value}|{source}|{target}|{seed}".encode("utf-8"),
+            f"{kind.value}|{source}|{target}|{seed}".encode(),
             usedforsecurity=False,
         ).hexdigest()[:12]
         return GraphEdge(
