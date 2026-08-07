@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from vscs.application.assets import AssetService
+from vscs.application.story import StoryMetadataService
 from vscs.application.story_analysis.contracts import AnalysisStatus, StoryAnalysisReport
 from vscs.application.story_analysis.intelligence import ApprovedStoryIntelligenceService
 from vscs.application.story_analysis.stages import (
@@ -52,6 +53,8 @@ class StoryIntelligenceDashboardSnapshot:
     story_id: str
     analysis_status: AnalysisStatus
     stage_count: int
+    story_completeness_percent: int | None
+    missing_story_metadata: tuple[str, ...]
     ai_confidence: float
     entity_total: int
     approved_entities: int
@@ -86,9 +89,11 @@ class StoryIntelligenceDashboardService:
         self,
         assets: AssetService,
         intelligence: ApprovedStoryIntelligenceService,
+        metadata: StoryMetadataService | None = None,
     ) -> None:
         self.assets = assets
         self.intelligence = intelligence
+        self.metadata = metadata
 
     def build(self, report: StoryAnalysisReport) -> StoryIntelligenceDashboardSnapshot:
         resolution = report.artifacts.get(AI_ENTITY_RESOLUTION_ARTIFACT)
@@ -137,7 +142,8 @@ class StoryIntelligenceDashboardService:
         planning_ready = not reasons
         generation_ready = planning_ready and cap_required == 0
         readiness = self._readiness(planning_ready, generation_ready)
-        metadata = resolution.metadata if resolution is not None else None
+        narrative = resolution.metadata if resolution is not None else None
+        completeness_percent, missing_metadata = self._story_completeness(report.story_id)
         diagnostics = tuple(
             dict.fromkeys(
                 (
@@ -150,7 +156,9 @@ class StoryIntelligenceDashboardService:
             story_id=report.story_id,
             analysis_status=report.status,
             stage_count=len(report.stage_results),
-            ai_confidence=metadata.confidence if metadata is not None else 0.0,
+            story_completeness_percent=completeness_percent,
+            missing_story_metadata=missing_metadata,
+            ai_confidence=narrative.confidence if narrative is not None else 0.0,
             entity_total=len(rows),
             approved_entities=approved,
             proposed_entities=proposed,
@@ -167,11 +175,11 @@ class StoryIntelligenceDashboardService:
             ready_for_generation=generation_ready,
             readiness_reasons=reasons,
             entity_rows=rows,
-            summary=metadata.summary if metadata is not None else "",
-            themes=metadata.themes if metadata is not None else (),
-            tone=metadata.tone if metadata is not None else (),
-            setting=metadata.setting if metadata is not None else (),
-            production_notes=metadata.production_notes if metadata is not None else (),
+            summary=narrative.summary if narrative is not None else "",
+            themes=narrative.themes if narrative is not None else (),
+            tone=narrative.tone if narrative is not None else (),
+            setting=narrative.setting if narrative is not None else (),
+            production_notes=narrative.production_notes if narrative is not None else (),
             diagnostics=diagnostics,
         )
 
@@ -180,6 +188,15 @@ class StoryIntelligenceDashboardService:
             return {asset.asset_id: asset for asset in self.assets.list()}
         except Exception:
             return {}
+
+    def _story_completeness(self, story_id: str) -> tuple[int | None, tuple[str, ...]]:
+        if self.metadata is None:
+            return None, ()
+        try:
+            completeness = self.metadata.completeness(story_id)
+        except Exception:
+            return None, ()
+        return completeness.percentage, completeness.missing_fields
 
     def _entity_rows(self, resolution, assets) -> tuple[StoryIntelligenceEntityRow, ...]:
         if resolution is None:
@@ -245,7 +262,8 @@ class StoryIntelligenceDashboardService:
             1 for row in rows if row.review_status == CandidateReviewStatus.PROPOSED.value
         )
         if proposed:
-            reasons.append(f"{proposed} AI entit{'y' if proposed == 1 else 'ies'} await review.")
+            noun = "entity" if proposed == 1 else "entities"
+            reasons.append(f"{proposed} AI {noun} await review.")
         ambiguous = sum(
             1
             for row in rows
@@ -257,7 +275,8 @@ class StoryIntelligenceDashboardService:
             }
         )
         if ambiguous:
-            reasons.append(f"{ambiguous} entit{'y has' if ambiguous == 1 else 'ies have'} ambiguous XPD matching.")
+            noun = "entity has" if ambiguous == 1 else "entities have"
+            reasons.append(f"{ambiguous} {noun} ambiguous XPD matching.")
         missing = sum(
             1
             for row in rows
@@ -265,9 +284,8 @@ class StoryIntelligenceDashboardService:
             and row.canonical_asset_id is None
         )
         if missing:
-            reasons.append(
-                f"{missing} approved entit{'y lacks' if missing == 1 else 'ies lack'} a canonical asset."
-            )
+            noun = "entity lacks" if missing == 1 else "entities lack"
+            reasons.append(f"{missing} approved {noun} a canonical asset.")
         return tuple(reasons)
 
     @staticmethod
