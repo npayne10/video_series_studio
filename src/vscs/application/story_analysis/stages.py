@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from vscs.application.story_analysis.ai_analysis import EntityResolutionService
 from vscs.application.story_analysis.contracts import AnalysisContext, StageResult
 from vscs.application.story_analysis.engine import DeterministicStoryAnalyzer
 from vscs.application.story_analysis.knowledge_graph import StoryKnowledgeGraphBuilder
 from vscs.domain.story_analysis import AnalysisResult
 
 ANALYSIS_RESULT_ARTIFACT = "story.analysis.result"
+AI_ENTITY_RESOLUTION_ARTIFACT = "story.ai.entity_resolution"
 KNOWLEDGE_GRAPH_ARTIFACT = "story.knowledge_graph"
+STORY_KNOWLEDGE_GRAPH_ARTIFACT = KNOWLEDGE_GRAPH_ARTIFACT
 
 
 class StoryAnalysisEngineStage:
@@ -26,6 +29,32 @@ class StoryAnalysisEngineStage:
         return StageResult(
             stage_id=self.stage_id,
             artifacts={ANALYSIS_RESULT_ARTIFACT: result},
+            diagnostics=result.diagnostics,
+        )
+
+
+class AIStoryAnalysisStage:
+    """Enrich deterministic analysis with reviewable AI entity proposals."""
+
+    stage_id = "story.analysis.ai_entity_resolution"
+    order = 150
+    enabled = True
+
+    def __init__(self, service: EntityResolutionService) -> None:
+        self._service = service
+
+    def analyze(self, context: AnalysisContext) -> StageResult:
+        baseline = context.artifacts.get(ANALYSIS_RESULT_ARTIFACT)
+        if not isinstance(baseline, AnalysisResult):
+            raise RuntimeError("AI Story Analysis requires story.analysis.result")
+        result = self._service.analyze(
+            story_id=context.request.story_id,
+            source_text=context.request.source_text,
+            baseline=baseline,
+        )
+        return StageResult(
+            stage_id=self.stage_id,
+            artifacts={AI_ENTITY_RESOLUTION_ARTIFACT: result},
             diagnostics=result.diagnostics,
         )
 
