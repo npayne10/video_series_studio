@@ -17,15 +17,19 @@ from vscs.application.story_analysis.engine import (
     StoryTokenizer,
     TextSpan,
 )
+from vscs.application.story_analysis.knowledge_graph import StoryKnowledgeGraphBuilder
 from vscs.application.story_analysis.pipeline import StoryAnalysisPipeline
 from vscs.application.story_analysis.registry import StoryAnalysisStageRegistry
 from vscs.application.story_analysis.stages import (
     ANALYSIS_RESULT_ARTIFACT,
+    KNOWLEDGE_GRAPH_ARTIFACT,
     StoryAnalysisEngineStage,
+    StoryKnowledgeGraphStage,
 )
 
 __all__ = [
     "ANALYSIS_RESULT_ARTIFACT",
+    "KNOWLEDGE_GRAPH_ARTIFACT",
     "AnalysisContext",
     "AnalysisStatus",
     "DeterministicStoryAnalyzer",
@@ -37,6 +41,8 @@ __all__ = [
     "StoryAnalysisRequest",
     "StoryAnalysisStage",
     "StoryAnalysisStageRegistry",
+    "StoryKnowledgeGraphBuilder",
+    "StoryKnowledgeGraphStage",
     "StorySection",
     "StoryStructureParser",
     "StoryTokenizer",
