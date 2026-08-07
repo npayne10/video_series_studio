@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.unit.test_xpd_workbook_import import _Assets, _row, _write_xpd
+
 from vscs.application.assets import XPDWorkbookImportService
 from vscs.application.story_analysis.ai_analysis import (
     AssetServiceStoryEntityCatalog,
@@ -16,8 +18,6 @@ from vscs.domain.story_analysis import (
     EntityResolutionCategory,
     ResolutionMatchKind,
 )
-
-from tests.unit.test_xpd_workbook_import import _Assets, _row, _write_xpd
 
 
 class _Provider:

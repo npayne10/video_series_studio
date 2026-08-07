@@ -9,7 +9,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import BadZipFile, ZipFile
 
-from vscs.application.assets.service import AssetError, AssetService
+from vscs.application.assets.service import AssetService
 from vscs.domain.assets import (
     AssetCategory,
     AssetCreate,

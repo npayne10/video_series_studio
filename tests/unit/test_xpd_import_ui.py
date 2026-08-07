@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.unit.test_xpd_workbook_import import _Assets, _row, _write_xpd
+
 from vscs.application.assets import XPDWorkbookImportService
 from vscs.domain.assets import XPDImportDisposition
 from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 from vscs.presentation.widgets.asset_manager import AssetManagerWidget
-
-from tests.unit.test_xpd_workbook_import import _Assets, _row, _write_xpd
 
 
 def test_asset_manager_exposes_xpd_import_action(tmp_path: Path, qtbot) -> None:
