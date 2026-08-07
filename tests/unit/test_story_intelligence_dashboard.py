@@ -151,6 +151,34 @@ def test_dashboard_exposes_review_xpd_cap_and_readiness_metrics(tmp_path: Path) 
     assert snapshot.summary == "Arrival at Xorix"
 
 
+def test_dashboard_distinguishes_planning_readiness_from_cap_readiness(tmp_path: Path) -> None:
+    assets = _Assets(
+        tmp_path,
+        (
+            _asset("CAP-SHP-001", "Iron Horizon", AssetCategory.SHIP, "Review"),
+        ),
+    )
+    intelligence = ApprovedStoryIntelligenceService(assets)
+    dashboard = StoryIntelligenceDashboardService(assets, intelligence)
+
+    snapshot = dashboard.build(
+        _report(
+            _candidate(
+                "Iron Horizon",
+                EntityResolutionCategory.SHIP,
+                "CAP-SHP-001",
+                CandidateReviewStatus.APPROVED,
+            )
+        )
+    )
+
+    assert snapshot.ready_for_shot_planning is True
+    assert snapshot.ready_for_generation is False
+    assert snapshot.readiness is StoryProductionReadiness.ATTENTION
+    assert snapshot.cap_required_assets == 1
+    assert snapshot.entity_rows[0].action == "Prepare/approve CAP"
+
+
 def test_dashboard_marks_fully_reviewed_cap_ready_story_ready(tmp_path: Path) -> None:
     assets = _Assets(
         tmp_path,
