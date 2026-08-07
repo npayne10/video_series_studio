@@ -214,8 +214,8 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         self._ai_entity_review_dialog = AIEntityReviewDialog(
             story,
             self.analysis_engine,
-            self.intelligence_service,
             parent=parent or self,
+            intelligence=self.intelligence_service,
         )
         self._ai_entity_review_dialog.exec()
 
