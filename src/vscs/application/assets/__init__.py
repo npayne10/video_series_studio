@@ -14,9 +14,9 @@ from vscs.application.assets.xpd_import import (
     XPD_SHEET_NAME,
     XPDProvenanceStore,
     XPDWorkbookError,
-    XPDWorkbookImportService,
     XPDWorkbookReader,
 )
+from vscs.application.assets.xpd_preview import XPDWorkbookImportService
 
 __all__ = [
     "AssetAlreadyExistsError",
