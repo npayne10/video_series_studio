@@ -1,4 +1,4 @@
-"""Story Workspace extensions for selecting an existing Story source file."""
+"""Story Workspace extensions for selecting and analysing Story source files."""
 
 from __future__ import annotations
 
@@ -20,9 +20,13 @@ from vscs.application.story import (
     StoryMetadataError,
     StoryRecord,
     StorySourceType,
+    StoryStatus,
+    StoryStatusError,
 )
+from vscs.application.story_analysis import StoryAnalysisEngine
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
+from .story_analysis_workspace import StoryAnalysisWorkspaceDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
 
 
@@ -112,7 +116,9 @@ class BrowseableStoryEditorDialog(StoryEditorDialog):
 
 
 class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
-    """Story Workspace using the browse-enabled Story editor dialog."""
+    """Story Workspace with source browsing and Story Analysis review."""
+
+    analysis_engine: StoryAnalysisEngine | None = None
 
     def _new_story(self) -> None:
         dialog = BrowseableStoryEditorDialog(parent=self)
@@ -141,6 +147,34 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             self.metadata.save_metadata(story.story_id, **dialog.metadata_values())
         except (ValueError, StoryLifecycleError, StoryMetadataError) as exc:
             self._error(str(exc))
+        self.refresh()
+
+    def _set_story_actions(self, story: StoryRecord | None) -> None:
+        super()._set_story_actions(story)
+        self.analyse_button.setText("Analyse Story")
+        self.analyse_button.setEnabled(story is not None and not story.archived)
+
+    def _mark_analysed(self) -> None:
+        story = self._selected_story()
+        if story is None:
+            return
+        if self.analysis_engine is None:
+            self._error("Story Analysis Engine is not registered.")
+            return
+        dialog = StoryAnalysisWorkspaceDialog(story, self.analysis_engine, parent=self)
+        self._story_analysis_dialog = dialog
+        dialog.exec()
+        if dialog.analysis is None:
+            return
+        if story.status in {StoryStatus.DRAFT, StoryStatus.IMPORTED}:
+            try:
+                self.statuses.transition(
+                    story.story_id,
+                    StoryStatus.ANALYSED,
+                    reason="Story Analysis pipeline completed and was reviewed",
+                )
+            except (ValueError, StoryStatusError) as exc:
+                self._error(str(exc))
         self.refresh()
 
     def _show_help(self) -> None:
