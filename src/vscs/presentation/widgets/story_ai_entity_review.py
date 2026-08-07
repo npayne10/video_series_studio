@@ -39,8 +39,9 @@ class AIEntityReviewDialog(QDialog):
         self,
         story: StoryRecord,
         engine: StoryAnalysisEngine,
-        intelligence: ApprovedStoryIntelligenceService | None = None,
         parent: QWidget | None = None,
+        *,
+        intelligence: ApprovedStoryIntelligenceService | None = None,
     ) -> None:
         super().__init__(parent)
         self.story = story
