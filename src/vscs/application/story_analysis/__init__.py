@@ -20,6 +20,7 @@ from vscs.application.story_analysis.engine import (
 from vscs.application.story_analysis.knowledge_graph import StoryKnowledgeGraphBuilder
 from vscs.application.story_analysis.pipeline import StoryAnalysisPipeline
 from vscs.application.story_analysis.registry import StoryAnalysisStageRegistry
+from vscs.application.story_analysis.source_reader import StorySourceReadError, StorySourceReader
 from vscs.application.story_analysis.stages import (
     ANALYSIS_RESULT_ARTIFACT,
     KNOWLEDGE_GRAPH_ARTIFACT,
@@ -27,9 +28,12 @@ from vscs.application.story_analysis.stages import (
     StoryKnowledgeGraphStage,
 )
 
+STORY_KNOWLEDGE_GRAPH_ARTIFACT = KNOWLEDGE_GRAPH_ARTIFACT
+
 __all__ = [
     "ANALYSIS_RESULT_ARTIFACT",
     "KNOWLEDGE_GRAPH_ARTIFACT",
+    "STORY_KNOWLEDGE_GRAPH_ARTIFACT",
     "AnalysisContext",
     "AnalysisStatus",
     "DeterministicStoryAnalyzer",
@@ -44,6 +48,8 @@ __all__ = [
     "StoryKnowledgeGraphBuilder",
     "StoryKnowledgeGraphStage",
     "StorySection",
+    "StorySourceReadError",
+    "StorySourceReader",
     "StoryStructureParser",
     "StoryTokenizer",
     "TextSpan",
