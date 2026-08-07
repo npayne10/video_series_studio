@@ -256,6 +256,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         dashboard = StoryIntelligenceDashboardService(
             self.intelligence_service.assets,
             self.intelligence_service,
+            self.metadata,
         )
         self._story_intelligence_dashboard = StoryIntelligenceDashboardDialog(
             story,
