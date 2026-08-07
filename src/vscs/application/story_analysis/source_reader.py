@@ -31,7 +31,10 @@ class StorySourceReader:
                     "PDF story analysis is not available in Phase 18.2.5. "
                     "Use DOCX, Markdown, Final Draft or plain text for analysis."
                 )
-            elif story.source_type is StorySourceType.SCREENPLAY or path.suffix.casefold() == ".fdx":
+            elif (
+                story.source_type is StorySourceType.SCREENPLAY 
+                or path.suffix.casefold() == ".fdx"
+            ):
                 text = self._xml_text(path)
             else:
                 text = path.read_text(encoding="utf-8-sig")

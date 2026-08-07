@@ -36,7 +36,7 @@ from vscs.application.story_analysis import (
     StoryAnalysisEngine,
     StoryAnalysisRequest,
 )
-from vscs.application.story_analysis.source_reader import StorySourceReadError, StorySourceReader
+from vscs.application.story_analysis.source_reader import StorySourceReader, StorySourceReadError
 from vscs.domain.story_analysis import AnalysisResult, SourceSpan
 from vscs.domain.story_analysis.graph import GraphNode, GraphNodeKind, StoryKnowledgeGraph
 
@@ -286,10 +286,38 @@ class StoryAnalysisWorkspaceDialog(QDialog):
         query = self.search_edit.text().strip().casefold()
         selected_filter = self.filter_combo.currentText()
         groups = (
-            ("Characters", [entity for entity in self.analysis.entities if entity.kind.value == "character"]),
-            ("Locations", [entity for entity in self.analysis.entities if entity.kind.value == "location"]),
-            ("Technology", [entity for entity in self.analysis.entities if entity.kind.value == "technology"]),
-            ("Props", [entity for entity in self.analysis.entities if entity.kind.value == "prop"]),
+            (
+                "Characters", 
+                [
+                    entity 
+                    for entity in self.analysis.entities 
+                    if entity.kind.value == "character"
+                ],
+            ),
+            (
+                "Locations", 
+                [
+                    entity 
+                    for entity in self.analysis.entities 
+                    if entity.kind.value == "location"
+                ],
+            ),
+            (
+                "Technology", 
+                [
+                    entity 
+                    for entity in self.analysis.entities 
+                    if entity.kind.value == "technology"
+                ],
+            ),
+            (
+                "Props", 
+                [
+                    entity 
+                    for entity in self.analysis.entities 
+                    if entity.kind.value == "prop"
+                ],
+            ),
             ("Dialogue", list(self.analysis.dialogues)),
             ("Actions", list(self.analysis.actions)),
             ("Emotions", list(self.analysis.emotions)),

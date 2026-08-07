@@ -7,7 +7,7 @@ from zipfile import ZipFile
 import pytest
 
 from vscs.application.story import StoryRecord, StorySourceType
-from vscs.application.story_analysis import StorySourceReadError, StorySourceReader
+from vscs.application.story_analysis import StorySourceReader, StorySourceReadError
 
 
 def _story(path: str, source_type: StorySourceType) -> StoryRecord:

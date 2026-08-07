@@ -8,7 +8,6 @@ from vscs.application.story_analysis.bootstrap import register_story_analysis
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.widgets.story_analysis_workspace import StoryAnalysisWorkspaceDialog
 
-
 TRAILER = """# Arrival
 
 Commander James Spence stood beside the viewport on the Iron Horizon.
