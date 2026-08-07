@@ -17,6 +17,7 @@ from .graph import (
     GraphNodeKind,
     StoryKnowledgeGraph,
 )
+from .intelligence import ApprovedStoryIntelligence, StoryEntityDecision
 from .models import (
     Action,
     AnalysisResult,
@@ -41,6 +42,7 @@ __all__ = [
     "AIStoryAnalysisDraft",
     "Action",
     "AnalysisResult",
+    "ApprovedStoryIntelligence",
     "CandidateReviewStatus",
     "Character",
     "Dialogue",
@@ -61,6 +63,7 @@ __all__ = [
     "SourceSpan",
     "StoryAttribute",
     "StoryEntity",
+    "StoryEntityDecision",
     "StoryKnowledgeGraph",
     "Technology",
     "TimelineEvent",

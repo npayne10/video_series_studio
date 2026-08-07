@@ -50,6 +50,36 @@ class _Catalog:
         )
 
 
+class _CharacterProvider:
+    def analyze_story(self, *, story_id, source_text, baseline):
+        del story_id, source_text, baseline
+        return AIStoryAnalysisDraft(
+            entities=(
+                AIEntityDraft(
+                    name="James Spence",
+                    category=EntityResolutionCategory.CHARACTER,
+                    confidence=0.99,
+                ),
+            )
+        )
+
+
+class _CharacterCatalog:
+    def assets(self):
+        return (
+            ExistingAssetReference(
+                asset_id="CAP-CHR-001",
+                name="Commander James Spence",
+                category=AssetCategory.CHARACTER,
+            ),
+            ExistingAssetReference(
+                asset_id="CAP-CHR-002",
+                name="Captain Cheryl Draker",
+                category=AssetCategory.CHARACTER,
+            ),
+        )
+
+
 def test_entity_resolution_matches_existing_xpd_asset_and_keeps_new_entity() -> None:
     source = "Iron Horizon entered orbit. Xorix filled the viewport."
     result = EntityResolutionService(_Provider(), _Catalog()).analyze(
@@ -64,6 +94,19 @@ def test_entity_resolution_matches_existing_xpd_asset_and_keeps_new_entity() -> 
     assert planet.match_kind is ResolutionMatchKind.NEW
     assert ship.evidence[0].excerpt == "Iron Horizon entered orbit."
     assert result.metadata.themes == ("Discovery",)
+
+
+def test_character_rank_variant_matches_existing_xpd_identity() -> None:
+    result = EntityResolutionService(_CharacterProvider(), _CharacterCatalog()).analyze(
+        story_id="STORY-001",
+        source_text="James Spence entered the bridge.",
+        baseline=AnalysisResult(story_id="STORY-001"),
+    )
+
+    candidate = result.candidates[0]
+    assert candidate.match_kind is ResolutionMatchKind.EXISTING
+    assert candidate.matched_asset_id == "CAP-CHR-001"
+    assert candidate.matched_asset_name == "Commander James Spence"
 
 
 def test_candidate_review_state_is_explicit_and_immutable() -> None:

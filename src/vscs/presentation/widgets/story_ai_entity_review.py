@@ -19,8 +19,10 @@ from vscs.application.story import StoryRecord
 from vscs.application.story_analysis import (
     AI_ENTITY_RESOLUTION_ARTIFACT,
     AnalysisStatus,
+    ApprovedStoryIntelligenceService,
     StoryAnalysisEngine,
     StoryAnalysisRequest,
+    StoryIntelligenceError,
     StorySourceReader,
 )
 from vscs.domain.story_analysis import (
@@ -31,17 +33,20 @@ from vscs.domain.story_analysis import (
 
 
 class AIEntityReviewDialog(QDialog):
-    """Review, approve, or reject AI entity proposals without persisting canon."""
+    """Review, persist, approve, or reject AI-proposed production entities."""
 
     def __init__(
         self,
         story: StoryRecord,
         engine: StoryAnalysisEngine,
         parent: QWidget | None = None,
+        *,
+        intelligence: ApprovedStoryIntelligenceService | None = None,
     ) -> None:
         super().__init__(parent)
         self.story = story
         self.engine = engine
+        self.intelligence = intelligence
         self.result: EntityResolutionResult | None = None
         self.setObjectName("aiEntityReviewDialog")
         self.setWindowTitle(f"AI Entity Review — {story.title}")
@@ -50,8 +55,8 @@ class AIEntityReviewDialog(QDialog):
         root.addWidget(
             QLabel(
                 "AI-detected production entities remain proposals until approved. "
-                "Approval in this phase is review-session state only; canonical persistence "
-                "is introduced in Phase 18.2.7.",
+                "Approved decisions are persisted as Story Intelligence. Existing XPD matches "
+                "are linked to canon; approved new entities become Draft canonical assets.",
                 self,
             )
         )
@@ -115,6 +120,13 @@ class AIEntityReviewDialog(QDialog):
                 "AI enrichment is not available. Check the configured AI provider.",
             )
             return
+        try:
+            if self.intelligence is not None:
+                self.intelligence.save_metadata(resolution)
+                resolution = self.intelligence.restore(resolution)
+        except StoryIntelligenceError as exc:
+            QMessageBox.critical(self, "Story Intelligence", str(exc))
+            return
         self.result = resolution
         self._populate()
 
@@ -138,10 +150,20 @@ class AIEntityReviewDialog(QDialog):
                 item.setData(Qt.ItemDataRole.UserRole, candidate.candidate_id)
                 self.table.setItem(row, column, item)
         pending = len(self.result.pending_candidates)
+        approved = sum(
+            1
+            for item in self.result.candidates
+            if item.review_status is CandidateReviewStatus.APPROVED
+        )
+        rejected = sum(
+            1
+            for item in self.result.candidates
+            if item.review_status is CandidateReviewStatus.REJECTED
+        )
         matched = sum(1 for item in self.result.candidates if item.matched_asset_id)
         self.summary.setText(
             f"{len(self.result.candidates)} candidates — {pending} awaiting review — "
-            f"{matched} matched to existing XPD assets"
+            f"{approved} approved — {rejected} rejected — {matched} XPD-linked"
         )
         self.table.resizeColumnsToContents()
 
@@ -155,8 +177,8 @@ class AIEntityReviewDialog(QDialog):
         candidate_id = item.data(Qt.ItemDataRole.UserRole) if item else None
         return next(
             (
-                candidate 
-                for candidate in self.result.candidates 
+                candidate
+                for candidate in self.result.candidates
                 if candidate.candidate_id == candidate_id
             ),
             None,
@@ -174,17 +196,54 @@ class AIEntityReviewDialog(QDialog):
 
     def _approve(self) -> None:
         candidate = self._selected_candidate()
-        if candidate is not None:
+        if candidate is None or self.result is None:
+            return
+        if self.intelligence is None:
             self._replace(candidate.approve())
+            return
+        if candidate.matched_asset_id is None:
+            answer = QMessageBox.question(
+                self,
+                "Approve New Canonical Entity",
+                f"Approve '{candidate.name}' as a new canonical production entity?\n\n"
+                "VSCS will create a Draft XPD asset. CAP/production readiness will still "
+                "require the normal approval workflow.",
+            )
+            if answer is not QMessageBox.StandardButton.Yes:
+                return
+        try:
+            updated = self.intelligence.approve(self.result, candidate)
+        except Exception as exc:
+            QMessageBox.critical(self, "Story Intelligence", str(exc))
+            return
+        self._replace(updated)
 
     def _reject(self) -> None:
         candidate = self._selected_candidate()
-        if candidate is not None:
+        if candidate is None or self.result is None:
+            return
+        if self.intelligence is None:
             self._replace(candidate.reject())
+            return
+        try:
+            updated = self.intelligence.reject(self.result, candidate)
+        except StoryIntelligenceError as exc:
+            QMessageBox.critical(self, "Story Intelligence", str(exc))
+            return
+        self._replace(updated)
 
     def _reset(self) -> None:
         candidate = self._selected_candidate()
-        if candidate is not None:
+        if candidate is None or self.result is None:
+            return
+        if self.intelligence is None:
             self._replace(
                 candidate.model_copy(update={"review_status": CandidateReviewStatus.PROPOSED})
             )
+            return
+        try:
+            updated = self.intelligence.reset(self.result, candidate)
+        except StoryIntelligenceError as exc:
+            QMessageBox.critical(self, "Story Intelligence", str(exc))
+            return
+        self._replace(updated)

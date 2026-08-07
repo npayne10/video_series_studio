@@ -74,6 +74,29 @@ class AssetServiceStoryEntityCatalog:
 class EntityResolutionService:
     """Resolve AI entity proposals against the current production asset catalog."""
 
+    _CHARACTER_TITLES = (
+        "high commander",
+        "commander",
+        "captain",
+        "major",
+        "ambassador",
+        "admiral",
+        "general",
+        "colonel",
+        "lieutenant",
+        "doctor",
+        "professor",
+        "cmdr",
+        "capt",
+        "maj",
+        "adm",
+        "gen",
+        "col",
+        "lt",
+        "dr",
+        "prof",
+    )
+
     def __init__(
         self,
         provider: StoryAIAnalysisProvider,
@@ -142,11 +165,44 @@ class EntityResolutionService:
             return ResolutionMatchKind.EXISTING, exact[0]
         if len(exact) > 1:
             return ResolutionMatchKind.POSSIBLE_DUPLICATE, exact[0]
-        normalized = cls._normalize(name)
-        fuzzy = [asset for asset in compatible if cls._normalize(asset.name) == normalized]
-        if fuzzy:
-            return ResolutionMatchKind.POSSIBLE_DUPLICATE, fuzzy[0]
+
+        normalized_names = {cls._normalize(name), *(cls._normalize(alias) for alias in aliases)}
+        normalized_matches = [
+            asset for asset in compatible if cls._normalize(asset.name) in normalized_names
+        ]
+        if len(normalized_matches) == 1:
+            return ResolutionMatchKind.POSSIBLE_DUPLICATE, normalized_matches[0]
+        if len(normalized_matches) > 1:
+            return ResolutionMatchKind.POSSIBLE_DUPLICATE, normalized_matches[0]
+
+        if category is EntityResolutionCategory.CHARACTER:
+            character_names = {
+                cls._character_core(name),
+                *(cls._character_core(alias) for alias in aliases),
+            }
+            character_names.discard("")
+            title_matches = [
+                asset
+                for asset in compatible
+                if cls._character_core(asset.name) in character_names
+            ]
+            if len(title_matches) == 1:
+                return ResolutionMatchKind.EXISTING, title_matches[0]
+            if len(title_matches) > 1:
+                return ResolutionMatchKind.POSSIBLE_DUPLICATE, title_matches[0]
+
         return ResolutionMatchKind.NEW, None
+
+    @classmethod
+    def _character_core(cls, value: str) -> str:
+        """Normalize a character name while ignoring a leading rank or honorific."""
+        stripped = " ".join(value.casefold().replace(".", "").split())
+        for title in cls._CHARACTER_TITLES:
+            prefix = f"{title} "
+            if stripped.startswith(prefix):
+                stripped = stripped[len(prefix) :]
+                break
+        return cls._normalize(stripped)
 
     @staticmethod
     def _compatible(category: EntityResolutionCategory, asset_category: AssetCategory) -> bool:
