@@ -22,7 +22,10 @@ from vscs.application.story import (
     register_story_metadata,
     register_story_status,
 )
-from vscs.application.story_analysis import StoryAnalysisEngine
+from vscs.application.story_analysis import (
+    ApprovedStoryIntelligenceService,
+    StoryAnalysisEngine,
+)
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
@@ -66,6 +69,12 @@ def install_story_browser() -> None:
         if window.services.get(StoryApprovalService) is None:
             register_story_approval(window.services)
         register_ai_story_analysis(window.services)
+        intelligence = window.services.get(ApprovedStoryIntelligenceService)
+        if intelligence is None:
+            intelligence = window.services.register(
+                ApprovedStoryIntelligenceService,
+                ApprovedStoryIntelligenceService(window.services.require(AssetService)),
+            )
         window.story_browser = BrowseableStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
@@ -78,6 +87,7 @@ def install_story_browser() -> None:
             window.services.require(StoryApprovalService),
         )
         window.story_browser.analysis_engine = window.services.require(StoryAnalysisEngine)
+        window.story_browser.intelligence_service = intelligence
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
