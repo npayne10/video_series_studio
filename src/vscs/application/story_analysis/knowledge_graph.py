@@ -13,6 +13,7 @@ from vscs.domain.story_analysis import (
     Location,
     Prop,
     Relationship,
+    SourceSpan,
     Technology,
     TimelineEvent,
 )
@@ -166,12 +167,13 @@ class StoryKnowledgeGraphBuilder:
         edges: list[GraphEdge] = []
         for item in items:
             dialogue = index[item.dialogue_id]
-            if item.speaker_entity_id in index:
+            speaker = item.speaker_entity_id
+            if speaker is not None and speaker in index:
                 edges.append(
                     self._edge(
                         f"{item.dialogue_id}:speaker",
                         GraphEdgeKind.SPEAKS,
-                        index[item.speaker_entity_id],
+                        index[speaker],
                         dialogue,
                         "speaks",
                         (item.source,),
@@ -228,13 +230,14 @@ class StoryKnowledgeGraphBuilder:
                             item.confidence,
                         )
                     )
-            if item.location_entity_id in index:
+            location = item.location_entity_id
+            if location is not None and location in index:
                 edges.append(
                     self._edge(
                         f"{item.action_id}:location",
                         GraphEdgeKind.LOCATED_AT,
                         action,
-                        index[item.location_entity_id],
+                        index[location],
                         "located at",
                         (item.source,),
                         item.confidence,
@@ -288,13 +291,14 @@ class StoryKnowledgeGraphBuilder:
                             item.confidence,
                         )
                     )
-            if item.location_entity_id in index:
+            location = item.location_entity_id
+            if location is not None and location in index:
                 edges.append(
                     self._edge(
                         f"{item.event_id}:location",
                         GraphEdgeKind.LOCATED_AT,
                         event,
-                        index[item.location_entity_id],
+                        index[location],
                         "located at",
                         item.sources,
                         item.confidence,
@@ -325,7 +329,7 @@ class StoryKnowledgeGraphBuilder:
         source: str,
         target: str,
         label: str,
-        sources: tuple,
+        sources: tuple[SourceSpan, ...],
         confidence: float,
     ) -> GraphEdge:
         digest = sha1(
