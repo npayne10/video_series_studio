@@ -23,7 +23,10 @@ from vscs.application.story import (
     StoryStatus,
     StoryStatusError,
 )
-from vscs.application.story_analysis import StoryAnalysisEngine
+from vscs.application.story_analysis import (
+    ApprovedStoryIntelligenceService,
+    StoryAnalysisEngine,
+)
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
 from .story_ai_entity_review import AIEntityReviewDialog
@@ -120,6 +123,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
     """Story Workspace with source browsing and Story Analysis review."""
 
     analysis_engine: StoryAnalysisEngine | None = None
+    intelligence_service: ApprovedStoryIntelligenceService | None = None
 
     def _new_story(self) -> None:
         dialog = BrowseableStoryEditorDialog(parent=self)
@@ -210,6 +214,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         self._ai_entity_review_dialog = AIEntityReviewDialog(
             story,
             self.analysis_engine,
+            self.intelligence_service,
             parent=parent or self,
         )
         self._ai_entity_review_dialog.exec()
