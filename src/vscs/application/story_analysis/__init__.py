@@ -25,6 +25,11 @@ from vscs.application.story_analysis.engine import (
     StoryTokenizer,
     TextSpan,
 )
+from vscs.application.story_analysis.intelligence import (
+    ApprovedStoryIntelligenceService,
+    ApprovedStoryIntelligenceStore,
+    StoryIntelligenceError,
+)
 from vscs.application.story_analysis.knowledge_graph import StoryKnowledgeGraphBuilder
 from vscs.application.story_analysis.pipeline import StoryAnalysisPipeline
 from vscs.application.story_analysis.registry import StoryAnalysisStageRegistry
@@ -48,6 +53,8 @@ __all__ = [
     "AIStoryAnalysisStage",
     "AnalysisContext",
     "AnalysisStatus",
+    "ApprovedStoryIntelligenceService",
+    "ApprovedStoryIntelligenceStore",
     "AssetServiceStoryEntityCatalog",
     "DeterministicStoryAnalyzer",
     "EmptyStoryEntityCatalog",
@@ -63,6 +70,7 @@ __all__ = [
     "StoryAnalysisStage",
     "StoryAnalysisStageRegistry",
     "StoryEntityCatalog",
+    "StoryIntelligenceError",
     "StoryKnowledgeGraphBuilder",
     "StoryKnowledgeGraphStage",
     "StorySection",
