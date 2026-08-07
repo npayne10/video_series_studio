@@ -92,17 +92,13 @@ def _write_xpd(path: Path, data_rows: tuple[tuple[str, ...], ...]) -> None:
         cells = []
         for column, value in enumerate(values):
             ref = f"{_column_name(column)}{row_number}"
-            escaped = (
-                value.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            )
+            escaped = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cells.append(f'<c r="{ref}" t="inlineStr"><is><t>{escaped}</t></is></c>')
         xml_rows.append(f'<row r="{row_number}">{"".join(cells)}</row>')
     sheet = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f'<sheetData>{"".join(xml_rows)}</sheetData></worksheet>'
+        f"<sheetData>{''.join(xml_rows)}</sheetData></worksheet>"
     )
     workbook = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -183,7 +179,13 @@ def test_preview_classifies_new_update_unchanged_conflict_and_invalid(tmp_path: 
             description="",
             status=AssetStatus.APPROVED,
             file_path=None,
-            tags=("xpd:priority=A", "xpd:cap_status=Locked", "xpd:cap_version=1.0", "xpd:image=CAP-PLN-001.png", "xpd:prompt=CAP-PLN-001.md"),
+            tags=(
+                "xpd:priority=A",
+                "xpd:cap_status=Locked",
+                "xpd:cap_version=1.0",
+                "xpd:image=CAP-PLN-001.png",
+                "xpd:prompt=CAP-PLN-001.md",
+            ),
         ),
     )
     service = XPDWorkbookImportService(_Assets(tmp_path, existing))

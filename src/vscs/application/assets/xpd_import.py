@@ -99,8 +99,7 @@ class XPDWorkbookReader:
         normalized: list[XPDWorkbookRow] = []
         for row_number, values in enumerate(rows[1:], start=2):
             fields = {
-                header: values.get(index, "").strip()
-                for index, header in enumerate(XPD_HEADERS)
+                header: values.get(index, "").strip() for index, header in enumerate(XPD_HEADERS)
             }
             if not any(fields.values()):
                 continue
@@ -159,9 +158,7 @@ class XPDWorkbookReader:
                 value = cell.find(f"{namespace}v")
                 inline = cell.find(f"{namespace}is")
                 if cell_type == "inlineStr" and inline is not None:
-                    text = "".join(
-                        node.text or "" for node in inline.iter(f"{namespace}t")
-                    )
+                    text = "".join(node.text or "" for node in inline.iter(f"{namespace}t"))
                 elif value is None:
                     text = ""
                 elif cell_type == "s":
@@ -243,8 +240,7 @@ class XPDProvenanceStore:
         path = self._path()
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            asset_id: record.model_dump(mode="json")
-            for asset_id, record in sorted(records.items())
+            asset_id: record.model_dump(mode="json") for asset_id, record in sorted(records.items())
         }
         try:
             path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -279,10 +275,7 @@ class XPDWorkbookImportService:
         for asset in existing:
             by_name.setdefault(asset.name.casefold(), []).append(asset)
         provenance = self.provenance.load()
-        items = tuple(
-            self._classify(row, by_id, by_name, provenance)
-            for row in rows
-        )
+        items = tuple(self._classify(row, by_id, by_name, provenance) for row in rows)
         return XPDImportPreview(
             workbook_path=str(workbook_path.expanduser().resolve(strict=False)),
             workbook_hash=workbook_hash,
@@ -347,7 +340,10 @@ class XPDWorkbookImportService:
             )
         current = by_id.get(row.asset_id.casefold())
         if current is not None:
-            if current.name.casefold() != row.asset_name.casefold() or current.category is not row.category:
+            if (
+                current.name.casefold() != row.asset_name.casefold()
+                or current.category is not row.category
+            ):
                 return XPDImportItem(
                     row=row,
                     disposition=XPDImportDisposition.CONFLICT,
