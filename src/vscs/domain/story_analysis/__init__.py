@@ -1,5 +1,15 @@
 """Public domain API for VSCS story-analysis models."""
 
+from .entity_resolution import (
+    AIEntityDraft,
+    AINarrativeMetadata,
+    AIStoryAnalysisDraft,
+    CandidateReviewStatus,
+    EntityCandidate,
+    EntityResolutionCategory,
+    EntityResolutionResult,
+    ResolutionMatchKind,
+)
 from .graph import (
     GraphEdge,
     GraphEdgeKind,
@@ -26,12 +36,19 @@ from .models import (
 )
 
 __all__ = [
+    "AIEntityDraft",
+    "AINarrativeMetadata",
+    "AIStoryAnalysisDraft",
     "Action",
     "AnalysisResult",
+    "CandidateReviewStatus",
     "Character",
     "Dialogue",
     "Emotion",
+    "EntityCandidate",
     "EntityKind",
+    "EntityResolutionCategory",
+    "EntityResolutionResult",
     "GraphEdge",
     "GraphEdgeKind",
     "GraphNode",
@@ -40,6 +57,7 @@ __all__ = [
     "NarrativeEntity",
     "Prop",
     "Relationship",
+    "ResolutionMatchKind",
     "SourceSpan",
     "StoryAttribute",
     "StoryEntity",
