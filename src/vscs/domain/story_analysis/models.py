@@ -7,6 +7,7 @@ analysis, knowledge-graph, persistence, and production-planning phases.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -80,7 +81,7 @@ class StoryEntity(BaseModel):
 class Character(StoryEntity):
     """Person, creature, or sentient narrative participant."""
 
-    kind: EntityKind = EntityKind.CHARACTER
+    kind: Literal[EntityKind.CHARACTER] = EntityKind.CHARACTER
     narrative_role: str = ""
     traits: tuple[str, ...] = ()
 
@@ -88,21 +89,21 @@ class Character(StoryEntity):
 class Location(StoryEntity):
     """Narrative place or spatial setting."""
 
-    kind: EntityKind = EntityKind.LOCATION
+    kind: Literal[EntityKind.LOCATION] = EntityKind.LOCATION
     environment_notes: str = ""
 
 
 class Technology(StoryEntity):
     """Narrative technology, system, device class, or engineered capability."""
 
-    kind: EntityKind = EntityKind.TECHNOLOGY
+    kind: Literal[EntityKind.TECHNOLOGY] = EntityKind.TECHNOLOGY
     purpose: str = ""
 
 
 class Prop(StoryEntity):
     """Narratively significant physical object or production prop."""
 
-    kind: EntityKind = EntityKind.PROP
+    kind: Literal[EntityKind.PROP] = EntityKind.PROP
     usage: str = ""
 
 
@@ -142,7 +143,7 @@ class Emotion(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     emotion_id: str = Field(min_length=1, max_length=128)
-    subject_entity_id: str
+    subject_entity_id: str = Field(min_length=1)
     emotion: str = Field(min_length=1, max_length=120)
     intensity: float = Field(default=0.5, ge=0.0, le=1.0)
     source: SourceSpan
@@ -155,8 +156,8 @@ class Relationship(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     relationship_id: str = Field(min_length=1, max_length=128)
-    source_entity_id: str
-    target_entity_id: str
+    source_entity_id: str = Field(min_length=1)
+    target_entity_id: str = Field(min_length=1)
     relationship_type: str = Field(min_length=1, max_length=120)
     description: str = ""
     sources: tuple[SourceSpan, ...] = ()
@@ -202,7 +203,7 @@ class AnalysisResult(BaseModel):
 
     @model_validator(mode="after")
     def validate_identifiers(self) -> AnalysisResult:
-        """Require globally unique identifiers within each result collection."""
+        """Require unique identifiers within every result collection."""
         groups = (
             ("entity", (item.entity_id for item in self.entities)),
             ("dialogue", (item.dialogue_id for item in self.dialogues)),
