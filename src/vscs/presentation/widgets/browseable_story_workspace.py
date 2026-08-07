@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QPushButton,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -122,22 +121,6 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
 
     analysis_engine: StoryAnalysisEngine | None = None
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.ai_review_button = QPushButton("Review AI Entities", self)
-        self.ai_review_button.setObjectName("reviewAIStoryEntities")
-        self.ai_review_button.clicked.connect(self._review_ai_entities)
-        root = self.layout()
-        if isinstance(root, QVBoxLayout):
-            ai_toolbar = QWidget(self)
-            ai_toolbar.setObjectName("storyAIReviewToolbar")
-            layout = QHBoxLayout(ai_toolbar)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(self.ai_review_button)
-            layout.addStretch(1)
-            root.insertWidget(1, ai_toolbar)
-        self._set_story_actions(self._selected_story())
-
     def _new_story(self) -> None:
         dialog = BrowseableStoryEditorDialog(parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -171,8 +154,6 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         super()._set_story_actions(story)
         self.analyse_button.setText("Analyse Story")
         self.analyse_button.setEnabled(story is not None and not story.archived)
-        if hasattr(self, "ai_review_button"):
-            self.ai_review_button.setEnabled(story is not None and not story.archived)
 
     def _mark_analysed(self) -> None:
         story = self._selected_story()
@@ -182,6 +163,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             self._error("Story Analysis Engine is not registered.")
             return
         dialog = StoryAnalysisWorkspaceDialog(story, self.analysis_engine, parent=self)
+        self._install_ai_review_action(dialog, story)
         self._story_analysis_dialog = dialog
         dialog.exec()
         if dialog.analysis is None:
@@ -197,17 +179,38 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
                 self._error(str(exc))
         self.refresh()
 
-    def _review_ai_entities(self) -> None:
-        story = self._selected_story()
-        if story is None:
-            return
+    def _install_ai_review_action(
+        self,
+        dialog: StoryAnalysisWorkspaceDialog,
+        story: StoryRecord,
+    ) -> None:
+        """Place the AI entity-review entry point in the analysis toolbar."""
+        root = dialog.layout()
+        toolbar_item = root.itemAt(0) if root is not None else None
+        toolbar = toolbar_item.layout() if toolbar_item is not None else None
+        if not isinstance(toolbar, QHBoxLayout):
+            raise RuntimeError("Story Analysis toolbar is unavailable.")
+        button = QPushButton("Review AI Entities", dialog)
+        button.setObjectName("reviewAIStoryEntities")
+        button.setToolTip(
+            "Review AI-proposed characters, ships, planets and other production entities."
+        )
+        button.clicked.connect(lambda: self._review_ai_entities(story, dialog))
+        toolbar.insertWidget(3, button)
+        dialog.ai_review_button = button
+
+    def _review_ai_entities(
+        self,
+        story: StoryRecord,
+        parent: QWidget | None = None,
+    ) -> None:
         if self.analysis_engine is None:
             self._error("Story Analysis Engine is not registered.")
             return
         self._ai_entity_review_dialog = AIEntityReviewDialog(
             story,
             self.analysis_engine,
-            parent=self,
+            parent=parent or self,
         )
         self._ai_entity_review_dialog.exec()
 
