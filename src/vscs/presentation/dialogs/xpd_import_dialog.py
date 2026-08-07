@@ -19,7 +19,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.assets import XPDWorkbookError, XPDWorkbookImportService
+from vscs.application.assets import (
+    AssetError,
+    XPDWorkbookError,
+    XPDWorkbookImportService,
+)
 from vscs.domain.assets import XPDImportDisposition, XPDImportPreview
 
 
@@ -100,7 +104,7 @@ class XPDImportDialog(QDialog):
             return
         try:
             preview = self.service.preview(self._workbook_path)
-        except (XPDWorkbookError, ValueError) as exc:
+        except (AssetError, XPDWorkbookError, ValueError) as exc:
             QMessageBox.critical(self, "XPD Import", str(exc))
             return
         self.preview_result = preview
@@ -144,7 +148,9 @@ class XPDImportDialog(QDialog):
             "Unchanged rows will be retained, and Conflict/Invalid rows will be skipped."
         )
         if conflicts:
-            message += f"\n\n{conflicts} conflict(s) require manual review and will not be imported."
+            message += (
+                f"\n\n{conflicts} conflict(s) require manual review and will not be imported."
+            )
         if (
             QMessageBox.question(self, "Confirm XPD Import", message)
             is not QMessageBox.StandardButton.Yes
@@ -152,7 +158,7 @@ class XPDImportDialog(QDialog):
             return
         try:
             report = self.service.apply(self.preview_result)
-        except (XPDWorkbookError, ValueError) as exc:
+        except (AssetError, XPDWorkbookError, ValueError) as exc:
             QMessageBox.critical(self, "XPD Import", str(exc))
             return
         QMessageBox.information(
