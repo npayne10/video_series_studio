@@ -14,7 +14,7 @@ TRAILER_STORY = """# Arrival
 Commander James Spence stood beside the viewport on the Iron Horizon.
 Captain Cheryl Draker watched the planet below.
 \"Confirmed visual,\" Cheryl Draker said.
-James frowned as the ship entered the atmosphere.
+Commander James Spence frowned as the ship entered the atmosphere.
 
 # Discovery
 
