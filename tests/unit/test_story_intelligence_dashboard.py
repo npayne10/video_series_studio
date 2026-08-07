@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from vscs.application.story import StoryMetadataCompleteness
 from vscs.application.story_analysis import (
     AI_ENTITY_RESOLUTION_ARTIFACT,
     KNOWLEDGE_GRAPH_ARTIFACT,
@@ -37,6 +38,16 @@ class _Assets:
 
     def list(self, **_kwargs) -> tuple[Asset, ...]:
         return self._items
+
+
+class _Metadata:
+    def completeness(self, story_id: str) -> StoryMetadataCompleteness:
+        return StoryMetadataCompleteness(
+            story_id=story_id,
+            completed_fields=("synopsis", "genres", "themes", "language"),
+            missing_fields=("target_audience", "author"),
+            percentage=67,
+        )
 
 
 def _asset(
@@ -112,7 +123,7 @@ def test_dashboard_exposes_review_xpd_cap_and_readiness_metrics(tmp_path: Path) 
         ),
     )
     intelligence = ApprovedStoryIntelligenceService(assets)
-    dashboard = StoryIntelligenceDashboardService(assets, intelligence)
+    dashboard = StoryIntelligenceDashboardService(assets, intelligence, _Metadata())
 
     snapshot = dashboard.build(
         _report(
@@ -144,6 +155,8 @@ def test_dashboard_exposes_review_xpd_cap_and_readiness_metrics(tmp_path: Path) 
     assert snapshot.xpd_coverage_percent == 100
     assert snapshot.cap_ready_assets == 1
     assert snapshot.cap_required_assets == 1
+    assert snapshot.story_completeness_percent == 67
+    assert snapshot.missing_story_metadata == ("target_audience", "author")
     assert snapshot.ready_for_shot_planning is False
     assert snapshot.ready_for_generation is False
     assert snapshot.readiness is StoryProductionReadiness.BLOCKED
