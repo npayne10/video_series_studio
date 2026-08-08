@@ -25,7 +25,6 @@ from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.domain.caps import CanonicalReferenceView
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 
-
 _SELECTABLE_VIEWS = tuple(
     view for view in CanonicalReferenceView if view is not CanonicalReferenceView.MASTER
 )
@@ -144,13 +143,13 @@ def install_derived_reference_generation(cap_manager: QWidget) -> QPushButton | 
     button.setToolTip("Generate selected derived views from the locked ChatGPT MASTER")
 
     def open_dialog() -> None:
-        selected = getattr(cap_manager, "_selected_asset_id")()
+        selected = cap_manager._selected_asset_id()
         if selected is None:
             QMessageBox.information(cap_manager, "Derived References", "Select a CAP first.")
             return
         dialog = DerivedReferenceGenerationDialog(selected, service, cap_manager)
         if dialog.exec():
-            getattr(cap_manager, "refresh")()
+            cap_manager.refresh()
 
     button.clicked.connect(open_dialog)
     top_layout = cap_manager.layout()
@@ -160,6 +159,6 @@ def install_derived_reference_generation(cap_manager: QWidget) -> QPushButton | 
     if controls is None:
         return None
     controls.insertWidget(max(0, controls.count() - 3), button)
-    setattr(cap_manager, "derived_reference_button", button)
-    setattr(cap_manager, "derived_reference_service", service)
+    cap_manager.derived_reference_button = button
+    cap_manager.derived_reference_service = service
     return button

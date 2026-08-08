@@ -5,7 +5,6 @@ from pathlib import Path
 from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGeneratorRegistry,
     DerivedReferenceRequest,
-    GeneratedDerivedReference,
 )
 from vscs.domain.caps import CanonicalReferenceView
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider

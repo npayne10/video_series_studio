@@ -215,7 +215,9 @@ class DerivedReferenceGenerationService:
     @staticmethod
     def _prompt(description: str, visual_identity: str, view: CanonicalReferenceView) -> str:
         label = DerivedReferenceGenerationService._label(view)
-        visual = visual_identity.strip() or "Preserve every visible canonical feature from the MASTER."
+        visual = (
+            visual_identity.strip() or "Preserve every visible canonical feature from the MASTER."
+        )
         return (
             f"Create a canonical {label} production reference of the exact same asset shown in the "
             f"supplied MASTER image. Do not redesign, restyle, add, remove, or reinterpret canonical "
