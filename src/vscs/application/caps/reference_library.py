@@ -8,11 +8,8 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from vscs.application.caps.reference_service import (
-    CanonicalReferenceError,
-    CanonicalReferenceService,
-)
-from vscs.domain.caps import CanonicalReferenceStatus
+from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.domain.caps import CanonicalReference, CanonicalReferenceStatus
 from vscs.domain.caps.production_contract import (
     CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
@@ -104,7 +101,8 @@ class ReferenceLibraryService:
             if existing.family is CanonicalReferenceFamily.MASTER:
                 return existing
             raise ReferenceLibraryConflictError(
-                f"Reference record {reference_record_id} is already registered as {existing.family.value}"
+                f"Reference record {reference_record_id} is already registered as "
+                f"{existing.family.value}"
             )
         if self._active_master(snapshot, asset_id) is not None:
             raise ReferenceLibraryConflictError(
@@ -144,6 +142,9 @@ class ReferenceLibraryService:
         note: str = "",
     ) -> ReferenceLibraryEntry:
         reference = self._require_reference_for_asset(asset_id, reference_record_id)
+        generator_name = generator.strip()
+        if not generator_name:
+            raise ValueError("Derived reference generator is required")
         if family is CanonicalReferenceFamily.MASTER or view is CanonicalReferenceView.MASTER:
             raise ReferenceLibraryConflictError(
                 "Derived references cannot use the MASTER family or MASTER view"
@@ -157,6 +158,7 @@ class ReferenceLibraryService:
             raise ReferenceLibraryConflictError(
                 f"CAP {asset_id.upper()} requires a registered MASTER before derived references"
             )
+        master_reference = self.references.get(master.reference_record_id)
         entry = ReferenceLibraryEntry(
             reference_record_id=reference_record_id,
             asset_id=asset_id.upper(),
@@ -166,8 +168,8 @@ class ReferenceLibraryService:
             origin=CanonicalReferenceOrigin.VSCS_DERIVED,
             lifecycle=CanonicalReferenceLifecycle.CANDIDATE,
             parent_reference_id=master.reference_id,
-            generator=generator,
-            source_master_version=reference.version,
+            generator=generator_name,
+            source_master_version=master_reference.version,
             history=(
                 self._event(
                     ReferenceLifecycleAction.REGISTER,
@@ -202,7 +204,12 @@ class ReferenceLibraryService:
             if entry.asset_id == normalized
             and (include_archived or entry.lifecycle is not CanonicalReferenceLifecycle.ARCHIVED)
         )
-        return tuple(sorted(entries, key=lambda item: (item.family.value, item.view.value, item.reference_id)))
+        return tuple(
+            sorted(
+                entries,
+                key=lambda item: (item.family.value, item.view.value, item.reference_id),
+            )
+        )
 
     def mark_candidate(
         self,
@@ -218,7 +225,10 @@ class ReferenceLibraryService:
             raise InvalidReferenceLifecycleTransitionError(
                 f"Cannot mark a {entry.lifecycle.value} reference as candidate"
             )
-        self._ensure_legacy_candidate(reference_record_id, self.references.get(reference_record_id).status)
+        self._ensure_legacy_candidate(
+            reference_record_id,
+            self.references.get(reference_record_id).status,
+        )
         return self._transition(
             entry,
             CanonicalReferenceLifecycle.CANDIDATE,
@@ -253,8 +263,7 @@ class ReferenceLibraryService:
             ReferenceLifecycleAction.APPROVE,
             approver,
             note,
-            approved_by=approver,
-            approved_at=now,
+            approval=(approver, now),
         )
 
     def lock(
@@ -301,8 +310,7 @@ class ReferenceLibraryService:
             ReferenceLifecycleAction.REJECT,
             actor,
             note,
-            approved_by=None,
-            approved_at=None,
+            clear_approval=True,
         )
 
     def return_to_candidate(
@@ -315,7 +323,8 @@ class ReferenceLibraryService:
         entry = self.get(reference_record_id)
         if entry.lifecycle is CanonicalReferenceLifecycle.LOCKED:
             raise InvalidReferenceLifecycleTransitionError(
-                "Locked references require archival/version replacement; they cannot be silently reopened"
+                "Locked references require archival/version replacement; "
+                "they cannot be silently reopened"
             )
         if entry.lifecycle is CanonicalReferenceLifecycle.REJECTED:
             return self.mark_candidate(reference_record_id, actor=actor, note=note)
@@ -332,8 +341,7 @@ class ReferenceLibraryService:
             ReferenceLifecycleAction.RETURN_TO_CANDIDATE,
             actor,
             note,
-            approved_by=None,
-            approved_at=None,
+            clear_approval=True,
         )
 
     def archive(
@@ -382,7 +390,11 @@ class ReferenceLibraryService:
             approved_by=entry.approved_by,
         )
 
-    def _require_reference_for_asset(self, asset_id: str, reference_record_id: int):
+    def _require_reference_for_asset(
+        self,
+        asset_id: str,
+        reference_record_id: int,
+    ) -> CanonicalReference:
         cap = self.references.caps.get(asset_id)
         reference = self.references.get(reference_record_id)
         if reference.cap_id != cap.id:
@@ -394,7 +406,9 @@ class ReferenceLibraryService:
     def _store(self) -> ReferenceLibraryStore:
         project_directory = self.references.caps.assets.projects.project_directory
         if not self.references.caps.assets.projects.is_project_open or project_directory is None:
-            raise ReferenceLibraryError("Open a VSCS project before managing the CAP reference library")
+            raise ReferenceLibraryError(
+                "Open a VSCS project before managing the CAP reference library"
+            )
         return ReferenceLibraryStore(project_directory)
 
     @staticmethod
@@ -448,8 +462,8 @@ class ReferenceLibraryService:
         actor: str,
         note: str,
         *,
-        approved_by: str | None | object = ...,
-        approved_at: datetime | None | object = ...,
+        approval: tuple[str, datetime] | None = None,
+        clear_approval: bool = False,
     ) -> ReferenceLibraryEntry:
         now = datetime.now(UTC)
         updates: dict[str, object] = {
@@ -467,10 +481,11 @@ class ReferenceLibraryService:
                 ),
             ),
         }
-        if approved_by is not ...:
-            updates["approved_by"] = approved_by
-        if approved_at is not ...:
-            updates["approved_at"] = approved_at
+        if approval is not None:
+            updates["approved_by"], updates["approved_at"] = approval
+        elif clear_approval:
+            updates["approved_by"] = None
+            updates["approved_at"] = None
         updated = entry.model_copy(update=updates)
         snapshot = self._store().load()
         self._save_entry(snapshot, updated)
