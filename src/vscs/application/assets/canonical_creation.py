@@ -7,11 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vscs.application.assets.service import AssetError, AssetService
-from vscs.application.caps.reference_library import (
-    ReferenceLibraryConflictError,
-    ReferenceLibraryError,
-    ReferenceLibraryService,
-)
+from vscs.application.caps.reference_library import ReferenceLibraryError, ReferenceLibraryService
 from vscs.application.caps.reference_service import (
     CanonicalReferenceError,
     CanonicalReferenceService,
@@ -176,7 +172,6 @@ class CanonicalAssetCreationService:
             CAPError,
             CanonicalReferenceError,
             ReferenceLibraryError,
-            ReferenceLibraryConflictError,
             ValueError,
         ) as exc:
             raise CanonicalAssetCreationError(str(exc)) from exc
@@ -280,7 +275,7 @@ class CanonicalAssetCreationService:
         try:
             major, minor = version.split(".", maxsplit=1)
             return f"{int(major)}.{int(minor) + 1}"
-        except (ValueError, TypeError):
+        except ValueError:
             return f"{version}.1"
 
     def _rollback(
