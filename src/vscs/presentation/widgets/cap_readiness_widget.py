@@ -60,7 +60,11 @@ class CAPReadinessDialog(QDialog):
         layout.addWidget(buttons)
 
     @staticmethod
-    def _add_assessment(grid: QGridLayout, row: int, assessment: ReadinessAssessment) -> None:
+    def _add_assessment(
+        grid: QGridLayout,
+        row: int,
+        assessment: ReadinessAssessment,
+    ) -> None:
         name = QLabel(assessment.dimension.value.replace("_", " ").title())
         state = QLabel(assessment.state.value.replace("_", " ").upper())
         score = QProgressBar()
@@ -98,6 +102,16 @@ def install_cap_readiness(cap_manager: QWidget) -> QPushButton | None:
 
     install_cap_editor_contract_refactoring()
     install_cap_workspace_refactoring(cap_manager, projection_service)
+
+    # CAPManagerWidget connected these controls to its original refresh method in
+    # __init__. Rebind them after the instance-level production workspace refresh
+    # is installed so search/filter/Refresh can never repopulate the legacy table.
+    cap_manager.search_input.textChanged.disconnect()
+    cap_manager.search_input.textChanged.connect(cap_manager.refresh)
+    cap_manager.status_filter.currentIndexChanged.disconnect()
+    cap_manager.status_filter.currentIndexChanged.connect(cap_manager.refresh)
+    cap_manager.refresh_button.clicked.disconnect()
+    cap_manager.refresh_button.clicked.connect(cap_manager.refresh)
 
     button = QPushButton("Readiness")
     button.setObjectName("capReadinessButton")
