@@ -25,12 +25,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.assets import (
-    AssetError,
-    AssetService,
+from vscs.application.assets import AssetError, AssetService, XPDWorkbookImportService
+from vscs.application.assets.canonical_creation import (
     CanonicalAssetCreationError,
     CanonicalAssetCreationService,
-    XPDWorkbookImportService,
 )
 from vscs.application.caps import CanonicalReferenceService, CAPService, ReferenceLibraryService
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
