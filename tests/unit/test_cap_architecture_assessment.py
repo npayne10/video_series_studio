@@ -33,31 +33,16 @@ def test_external_chatgpt_master_reference_policy_removes_duplicate_authoring() 
     by_id = {item.capability_id: item for item in CAP_CAPABILITY_ASSESSMENTS}
 
     assert "externally in ChatGPT" in MASTER_REFERENCE_AUTHORING_POLICY
-    assert (
-        by_id["reference.generate-master"].disposition
-        is CAPAssessmentDisposition.REMOVE
-    )
-    assert (
-        by_id["reference.regenerate-feedback"].disposition
-        is CAPAssessmentDisposition.REMOVE
-    )
-    assert (
-        by_id["reference.structured-registry"].disposition
-        is CAPAssessmentDisposition.KEEP
-    )
+    assert by_id["reference.generate-master"].disposition is CAPAssessmentDisposition.REMOVE
+    assert by_id["reference.regenerate-feedback"].disposition is CAPAssessmentDisposition.REMOVE
+    assert by_id["reference.structured-registry"].disposition is CAPAssessmentDisposition.KEEP
 
 
 def test_legacy_reference_paths_are_retired_in_favour_of_structured_references() -> None:
     by_id = {item.capability_id: item for item in CAP_CAPABILITY_ASSESSMENTS}
 
-    assert (
-        by_id["cap.legacy-reference-paths"].disposition
-        is CAPAssessmentDisposition.REMOVE
-    )
-    assert (
-        by_id["reference.generic-role"].disposition
-        is CAPAssessmentDisposition.REPLACE
-    )
+    assert by_id["cap.legacy-reference-paths"].disposition is CAPAssessmentDisposition.REMOVE
+    assert by_id["reference.generic-role"].disposition is CAPAssessmentDisposition.REPLACE
 
 
 def test_production_contract_gaps_are_unique_and_block_phase_18_3_contract() -> None:
@@ -80,9 +65,6 @@ def test_production_contract_gaps_are_unique_and_block_phase_18_3_contract() -> 
 def test_story_specific_notes_are_replaced_by_structured_contract_fields() -> None:
     by_id = {item.capability_id: item for item in CAP_CAPABILITY_ASSESSMENTS}
 
-    assert (
-        by_id["cap.production-notes"].disposition
-        is CAPAssessmentDisposition.REPLACE
-    )
+    assert by_id["cap.production-notes"].disposition is CAPAssessmentDisposition.REPLACE
     assert "functional identity" in by_id["cap.production-notes"].target_contract
     assert "canonical constraints" in by_id["cap.production-notes"].target_contract
