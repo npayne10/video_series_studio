@@ -189,7 +189,11 @@ class DerivedReferenceGenerationService:
         existing_views = {
             entry.view
             for entry in entries
-            if entry.lifecycle is not CanonicalReferenceLifecycle.ARCHIVED
+            if entry.lifecycle
+            not in {
+                CanonicalReferenceLifecycle.ARCHIVED,
+                CanonicalReferenceLifecycle.REJECTED,
+            }
         }
         duplicates = tuple(view for view in normalized_views if view in existing_views)
         if duplicates:
