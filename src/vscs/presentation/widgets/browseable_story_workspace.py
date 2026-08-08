@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
+    QMessageBox,
     QPushButton,
     QWidget,
 )
@@ -25,8 +26,14 @@ from vscs.application.story import (
 )
 from vscs.application.story_analysis import (
     ApprovedStoryIntelligenceService,
+    CachedStoryAnalysisEngine,
+    StoryAnalysisCacheError,
+    StoryAnalysisCacheService,
+    StoryAnalysisCacheState,
     StoryAnalysisEngine,
     StoryIntelligenceDashboardService,
+    StorySourceReader,
+    StorySourceReadError,
 )
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
@@ -122,9 +129,10 @@ class BrowseableStoryEditorDialog(StoryEditorDialog):
 
 
 class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
-    """Story Workspace with source browsing and Story Analysis review."""
+    """Story Workspace with explicit analysis execution and cache-only review surfaces."""
 
     analysis_engine: StoryAnalysisEngine | None = None
+    analysis_cache: StoryAnalysisCacheService | None = None
     intelligence_service: ApprovedStoryIntelligenceService | None = None
 
     def _new_story(self) -> None:
@@ -165,12 +173,40 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         story = self._selected_story()
         if story is None:
             return
-        if self.analysis_engine is None:
-            self._error("Story Analysis Engine is not registered.")
+        if self.analysis_cache is None:
+            self._error("Story Analysis Cache is not registered.")
             return
-        dialog = StoryAnalysisWorkspaceDialog(story, self.analysis_engine, parent=self)
+        try:
+            source_text = StorySourceReader().read(story)
+            status = self.analysis_cache.status(story, source_text)
+        except (StorySourceReadError, StoryAnalysisCacheError) as exc:
+            self._error(str(exc))
+            return
+
+        if status.state is StoryAnalysisCacheState.MISSING:
+            if not self._run_analysis(story, source_text):
+                return
+        elif status.state is StoryAnalysisCacheState.STALE:
+            answer = QMessageBox.question(
+                self,
+                "Story Analysis Out of Date",
+                "The Story has changed since the last analysis.\n\n"
+                "Reanalyse now? This may call the configured AI provider.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if answer is QMessageBox.StandardButton.Yes and not self._run_analysis(
+                story, source_text
+            ):
+                return
+
+        cached_engine = CachedStoryAnalysisEngine(self.analysis_cache, story)
+        dialog = StoryAnalysisWorkspaceDialog(story, cached_engine, parent=self)
+        dialog.analyse_button.setText("Reload Cached Analysis")
+        dialog.graph_button.setText("Reload Cached Graph")
+        dialog.refresh_button.setText("Reload Cached")
         self._install_ai_review_action(dialog, story)
         self._install_intelligence_dashboard_action(dialog, story)
+        self._install_reanalyse_action(dialog, story, source_text)
         self._story_analysis_dialog = dialog
         dialog.exec()
         if dialog.analysis is None:
@@ -186,6 +222,19 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
                 self._error(str(exc))
         self.refresh()
 
+    def _run_analysis(self, story: StoryRecord, source_text: str) -> bool:
+        if self.analysis_cache is None:
+            return False
+        try:
+            report = self.analysis_cache.analyze(story, source_text)
+        except StoryAnalysisCacheError as exc:
+            self._error(str(exc))
+            return False
+        if report.status.value != "completed":
+            self._error("\n".join(report.diagnostics) or "Story Analysis failed.")
+            return False
+        return True
+
     def _analysis_toolbar(self, dialog: StoryAnalysisWorkspaceDialog) -> QHBoxLayout:
         root = dialog.layout()
         toolbar_item = root.itemAt(0) if root is not None else None
@@ -199,13 +248,10 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         dialog: StoryAnalysisWorkspaceDialog,
         story: StoryRecord,
     ) -> None:
-        """Place the AI entity-review entry point in the analysis toolbar."""
         toolbar = self._analysis_toolbar(dialog)
         button = QPushButton("Review AI Entities", dialog)
         button.setObjectName("reviewAIStoryEntities")
-        button.setToolTip(
-            "Review AI-proposed characters, ships, planets and other production entities."
-        )
+        button.setToolTip("Review cached AI-proposed production entities without rerunning AI.")
         button.clicked.connect(lambda: self._review_ai_entities(story, dialog))
         toolbar.insertWidget(3, button)
         dialog.ai_review_button = button
@@ -215,31 +261,71 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         dialog: StoryAnalysisWorkspaceDialog,
         story: StoryRecord,
     ) -> None:
-        """Place the operational Story Intelligence dashboard in the analysis toolbar."""
         toolbar = self._analysis_toolbar(dialog)
         button = QPushButton("Story Intelligence", dialog)
         button.setObjectName("openStoryIntelligenceDashboard")
-        button.setToolTip(
-            "Open production-readiness metrics, XPD coverage and Story Intelligence actions."
-        )
+        button.setToolTip("Open cached production-readiness metrics without rerunning AI.")
         button.clicked.connect(lambda: self._show_story_intelligence(story, dialog))
         toolbar.insertWidget(4, button)
         dialog.story_intelligence_button = button
+
+    def _install_reanalyse_action(
+        self,
+        dialog: StoryAnalysisWorkspaceDialog,
+        story: StoryRecord,
+        source_text: str,
+    ) -> None:
+        toolbar = self._analysis_toolbar(dialog)
+        button = QPushButton("Reanalyse Story", dialog)
+        button.setObjectName("reanalyseStoryExplicit")
+        button.setToolTip("Explicitly rerun Story Analysis and the configured AI provider.")
+        button.clicked.connect(lambda: self._reanalyse_from_dialog(story, source_text, dialog))
+        toolbar.insertWidget(5, button)
+        dialog.reanalyse_story_button = button
+
+    def _reanalyse_from_dialog(
+        self,
+        story: StoryRecord,
+        source_text: str,
+        dialog: StoryAnalysisWorkspaceDialog,
+    ) -> None:
+        answer = QMessageBox.question(
+            dialog,
+            "Reanalyse Story",
+            "Run Story Analysis again? This may call the configured AI provider.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if answer is not QMessageBox.StandardButton.Yes:
+            return
+        try:
+            current_source = StorySourceReader().read(story)
+        except StorySourceReadError as exc:
+            self._error(str(exc))
+            return
+        if self._run_analysis(story, current_source):
+            dialog.rebuild_analysis()
+
+    def _cached_engine(self, story: StoryRecord) -> CachedStoryAnalysisEngine | None:
+        if self.analysis_cache is None:
+            self._error("Story Analysis Cache is not registered.")
+            return None
+        return CachedStoryAnalysisEngine(self.analysis_cache, story)
 
     def _review_ai_entities(
         self,
         story: StoryRecord,
         parent: QWidget | None = None,
     ) -> None:
-        if self.analysis_engine is None:
-            self._error("Story Analysis Engine is not registered.")
+        engine = self._cached_engine(story)
+        if engine is None:
             return
         self._ai_entity_review_dialog = AIEntityReviewDialog(
             story,
-            self.analysis_engine,
+            engine,
             parent=parent or self,
             intelligence=self.intelligence_service,
         )
+        self._ai_entity_review_dialog.refresh_button.setText("Reload Cached Analysis")
         self._ai_entity_review_dialog.exec()
 
     def _show_story_intelligence(
@@ -247,8 +333,8 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         story: StoryRecord,
         parent: QWidget | None = None,
     ) -> None:
-        if self.analysis_engine is None:
-            self._error("Story Analysis Engine is not registered.")
+        engine = self._cached_engine(story)
+        if engine is None:
             return
         if self.intelligence_service is None:
             self._error("Approved Story Intelligence service is not registered.")
@@ -260,7 +346,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         )
         self._story_intelligence_dashboard = StoryIntelligenceDashboardDialog(
             story,
-            self.analysis_engine,
+            engine,
             dashboard,
             parent=parent or self,
             review_callback=lambda: self._review_ai_entities(
@@ -268,6 +354,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
                 self._story_intelligence_dashboard,
             ),
         )
+        self._story_intelligence_dashboard.refresh_button.setText("Reload Cached Dashboard")
         self._story_intelligence_dashboard.exec()
 
     def _show_help(self) -> None:

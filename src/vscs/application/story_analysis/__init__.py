@@ -9,6 +9,13 @@ from vscs.application.story_analysis.ai_analysis import (
     StoryEntityCatalog,
 )
 from vscs.application.story_analysis.bootstrap import register_story_analysis
+from vscs.application.story_analysis.cache import (
+    StoryAnalysisCacheError,
+    StoryAnalysisCacheService,
+    StoryAnalysisCacheState,
+    StoryAnalysisCacheStatus,
+)
+from vscs.application.story_analysis.cached_engine import CachedStoryAnalysisEngine
 from vscs.application.story_analysis.contracts import (
     AnalysisContext,
     AnalysisStatus,
@@ -62,12 +69,17 @@ __all__ = [
     "ApprovedStoryIntelligenceService",
     "ApprovedStoryIntelligenceStore",
     "AssetServiceStoryEntityCatalog",
+    "CachedStoryAnalysisEngine",
     "DeterministicStoryAnalyzer",
     "EmptyStoryEntityCatalog",
     "EntityResolutionService",
     "ExistingAssetReference",
     "StageResult",
     "StoryAIAnalysisProvider",
+    "StoryAnalysisCacheError",
+    "StoryAnalysisCacheService",
+    "StoryAnalysisCacheState",
+    "StoryAnalysisCacheStatus",
     "StoryAnalysisEngine",
     "StoryAnalysisEngineStage",
     "StoryAnalysisPipeline",
