@@ -156,15 +156,24 @@ class AssetEditorDialog(QDialog):
 
 
 class AssetEditDialog(QDialog):
-    """Edit registry metadata without changing canonical identity or MASTER authority."""
+    """Edit registry metadata and govern missing/revised MASTER selection."""
 
     open_canonical_profile_requested = Signal(str)
 
-    def __init__(self, asset: Asset, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        asset: Asset,
+        project_directory: Path | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.asset = asset
+        self.project_directory = (
+            project_directory.resolve(strict=False) if project_directory is not None else None
+        )
+        self.original_master = str(asset.file_path or "")
         self.setWindowTitle(f"Edit Asset — {asset.asset_id}")
-        self.setMinimumWidth(620)
+        self.setMinimumWidth(680)
 
         self.asset_id = QLineEdit(asset.asset_id)
         self.asset_id.setReadOnly(True)
@@ -177,10 +186,26 @@ class AssetEditDialog(QDialog):
         for status in AssetStatus:
             self.status.addItem(status.value.title(), status)
         self.status.setCurrentIndex(max(0, self.status.findData(asset.status)))
-        self.master_reference = QLineEdit(str(asset.file_path or ""))
+
+        self.master_reference = QLineEdit(self.original_master)
         self.master_reference.setReadOnly(True)
-        self.master_status = QLineEdit("Locked canonical authority")
+        self.master_browse_button = QPushButton("Browse…")
+        self.master_browse_button.setEnabled(self.project_directory is not None)
+        self.master_browse_button.clicked.connect(self._browse_master)
+        master_row = QHBoxLayout()
+        master_row.addWidget(self.master_reference, 1)
+        master_row.addWidget(self.master_browse_button)
+
+        initial_status = (
+            "Locked canonical authority" if self.original_master else "Missing — select a MASTER"
+        )
+        self.master_status = QLineEdit(initial_status)
         self.master_status.setReadOnly(True)
+        self.master_confirmation = QCheckBox(
+            "I confirm the selected replacement is the approved ChatGPT Master Canonical Reference"
+        )
+        self.master_confirmation.setEnabled(False)
+
         self.tags = QLineEdit(", ".join(asset.tags))
         self.description = QTextEdit(asset.description)
         self.description.setMinimumHeight(110)
@@ -194,22 +219,23 @@ class AssetEditDialog(QDialog):
         form.addRow("Name", self.name)
         form.addRow("Category", self.category)
         form.addRow("Status", self.status)
-        form.addRow("Master Canonical Reference", self.master_reference)
+        form.addRow("Master Canonical Reference", master_row)
         form.addRow("MASTER Status", self.master_status)
+        form.addRow("", self.master_confirmation)
         form.addRow("Tags (comma-separated)", self.tags)
         form.addRow("Description", self.description)
 
         note = QLabel(
-            "Asset ID and the MASTER reference are canonical identifiers and cannot be changed "
-            "from normal Asset editing. Canonical facts, visual identity, constraints, references, "
-            "and future MASTER revisions belong in Canonical Profiles."
+            "Asset ID remains immutable. Use Browse to attach a missing MASTER or propose a "
+            "new ChatGPT MASTER revision. Existing MASTER history is preserved; replacement is "
+            "blocked when active derived references still depend on it."
         )
         note.setWordWrap(True)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._validate_and_accept)
         buttons.rejected.connect(self.reject)
 
         actions = QHBoxLayout()
@@ -223,13 +249,66 @@ class AssetEditDialog(QDialog):
         layout.addWidget(buttons)
 
     def value(self) -> AssetUpdate:
-        """Return editable registry fields only."""
+        """Return editable registry fields; MASTER changes use the canonical service."""
         return AssetUpdate(
             name=self.name.text(),
             category=self.category.currentData(),
             status=self.status.currentData(),
             tags=tuple(tag.strip() for tag in self.tags.text().split(",")),
             description=self.description.toPlainText(),
+        )
+
+    def master_changed(self) -> bool:
+        return self.master_reference.text().strip() != self.original_master
+
+    def selected_master_path(self) -> Path | None:
+        text = self.master_reference.text().strip()
+        return Path(text) if text else None
+
+    def confirmed_chatgpt_master(self) -> bool:
+        return self.master_confirmation.isChecked()
+
+    def _validate_and_accept(self) -> None:
+        try:
+            self.value()
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid Asset", str(exc))
+            return
+        if self.master_changed() and not self.confirmed_chatgpt_master():
+            QMessageBox.warning(
+                self,
+                "Master Confirmation Required",
+                "Confirm that the selected image is the approved ChatGPT Master Canonical Reference.",
+            )
+            return
+        self.accept()
+
+    def _browse_master(self) -> None:
+        if self.project_directory is None:
+            return
+        selected_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Master Canonical Reference",
+            str(self.project_directory),
+            "Images (*.png *.jpg *.jpeg *.webp)",
+        )
+        if not selected_file:
+            return
+        selected_path = Path(selected_file).resolve(strict=False)
+        try:
+            relative = selected_path.relative_to(self.project_directory)
+        except ValueError:
+            QMessageBox.warning(
+                self,
+                "File Outside Project",
+                "Select a master reference located inside the active VSCS project directory.",
+            )
+            return
+        self.master_reference.setText(str(relative))
+        self.master_confirmation.setChecked(False)
+        self.master_confirmation.setEnabled(True)
+        self.master_status.setText(
+            "Pending MASTER revision" if self.original_master else "Pending MASTER attachment"
         )
 
 
@@ -394,7 +473,7 @@ class AssetManagerWidget(QWidget):
         except AssetError as exc:
             QMessageBox.critical(self, "Asset Error", str(exc))
             return
-        dialog = AssetEditDialog(asset, self)
+        dialog = AssetEditDialog(asset, self.assets.projects.project_directory, self)
         dialog.open_canonical_profile_requested.connect(self.open_canonical_profile_requested.emit)
         if not dialog.exec():
             return
@@ -408,6 +487,31 @@ class AssetManagerWidget(QWidget):
                 QMessageBox.StandardButton.No,
             )
             if answer is not QMessageBox.StandardButton.Yes:
+                return
+        if dialog.master_changed():
+            if self.canonical_creation is None:
+                QMessageBox.critical(
+                    self,
+                    "Asset Error",
+                    "Canonical Asset Creation services are not available.",
+                )
+                return
+            master_path = dialog.selected_master_path()
+            if master_path is None:
+                QMessageBox.critical(
+                    self,
+                    "Asset Error",
+                    "Master Canonical Reference is required.",
+                )
+                return
+            try:
+                self.canonical_creation.set_or_revise_master(
+                    asset.asset_id,
+                    master_path,
+                    confirmed_chatgpt_master=dialog.confirmed_chatgpt_master(),
+                )
+            except CanonicalAssetCreationError as exc:
+                QMessageBox.critical(self, "MASTER Revision Error", str(exc))
                 return
         try:
             self.assets.update(asset_id, dialog.value())
