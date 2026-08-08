@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -43,7 +44,10 @@ class ProductionProjectionDialog(QDialog):
         identity = QFormLayout()
         identity.addRow("Asset ID", QLabel(projection.identity.asset_id))
         identity.addRow("Canonical name", QLabel(projection.identity.canonical_name))
-        identity.addRow("Category", QLabel(projection.identity.category.value.replace("_", " ").title()))
+        identity.addRow(
+            "Category",
+            QLabel(projection.identity.category.value.replace("_", " ").title()),
+        )
         identity.addRow("CAP version", QLabel(projection.source_cap_version))
         identity.addRow("Projection schema", QLabel(projection.schema_version))
         identity.addRow("Checksum", self._wrapped(projection.checksum()))
@@ -61,11 +65,20 @@ class ProductionProjectionDialog(QDialog):
         readiness_box.setLayout(readiness)
 
         canonical = QFormLayout()
-        canonical.addRow("Canonical description", self._wrapped(projection.canonical_description or "—"))
+        canonical.addRow(
+            "Canonical description",
+            self._wrapped(projection.canonical_description or "—"),
+        )
         canonical.addRow("Visual identity", self._wrapped(projection.visual_identity or "—"))
-        canonical.addRow("Production guidance", self._wrapped(projection.production_guidance or "—"))
+        canonical.addRow(
+            "Production guidance",
+            self._wrapped(projection.production_guidance or "—"),
+        )
         canonical.addRow("Structured facts", QLabel(str(len(projection.facts))))
-        canonical.addRow("Functional capabilities", QLabel(str(len(projection.functional_identity))))
+        canonical.addRow(
+            "Functional capabilities",
+            QLabel(str(len(projection.functional_identity))),
+        )
         canonical.addRow("Canonical constraints", QLabel(str(len(projection.constraints))))
         canonical_box = QGroupBox("Production Contract")
         canonical_box.setLayout(canonical)
@@ -151,7 +164,9 @@ def install_cap_editor_contract_refactoring() -> None:
     def contract_init(self: Any, *args: Any, **kwargs: Any) -> None:
         original_init(self, *args, **kwargs)
         self.setMinimumSize(max(self.minimumWidth(), 960), max(self.minimumHeight(), 760))
-        self.setWindowTitle("Canonical Profile — Production Contract" if self.profile else "New Canonical Profile")
+        self.setWindowTitle(
+            "Canonical Profile — Production Contract" if self.profile else "New Canonical Profile"
+        )
 
         legacy_generate = getattr(self, "generate_reference_button", None)
         if legacy_generate is not None:
@@ -210,10 +225,10 @@ def install_cap_workspace_refactoring(
     )
     table.setSortingEnabled(False)
     table.horizontalHeader().setStretchLastSection(False)
-    table.horizontalHeader().setSectionResizeMode(1, table.horizontalHeader().ResizeMode.Stretch)
-    table.horizontalHeader().setSectionResizeMode(5, table.horizontalHeader().ResizeMode.ResizeToContents)
-    table.horizontalHeader().setSectionResizeMode(6, table.horizontalHeader().ResizeMode.ResizeToContents)
-    table.horizontalHeader().setSectionResizeMode(7, table.horizontalHeader().ResizeMode.ResizeToContents)
+    table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+    table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+    table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+    table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
 
     def refactored_refresh(self: Any) -> None:
         try:
