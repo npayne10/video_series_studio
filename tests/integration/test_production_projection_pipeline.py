@@ -69,13 +69,20 @@ def _prepare_location(
     return context, context.services.require(ProductionProjectionService), library
 
 
-def test_projection_publishes_only_approved_or_locked_references(tmp_path: Path) -> None:
-    context, service, library = _prepare_location(tmp_path)
-    references = context.services.require(CanonicalReferenceService)  # type: ignore[attr-defined]
+def _generation_service(
+    references: CanonicalReferenceService,
+    library: ReferenceLibraryService,
+) -> tuple[DerivedReferenceGenerationService, OfflineDerivedReferencePreviewProvider]:
     registry = DerivedReferenceGeneratorRegistry()
     provider = OfflineDerivedReferencePreviewProvider()
     registry.register(provider)
-    generation = DerivedReferenceGenerationService(references, library, registry)
+    return DerivedReferenceGenerationService(references, library, registry), provider
+
+
+def test_projection_publishes_only_approved_or_locked_references(tmp_path: Path) -> None:
+    context, service, library = _prepare_location(tmp_path)
+    references = context.services.require(CanonicalReferenceService)  # type: ignore[attr-defined]
+    generation, provider = _generation_service(references, library)
 
     created = generation.generate(
         "CAP-LOC-980",
@@ -104,13 +111,22 @@ def test_projection_publishes_only_approved_or_locked_references(tmp_path: Path)
 
 
 def test_require_ready_enforces_authoritative_production_gate(tmp_path: Path) -> None:
-    context, service, _library = _prepare_location(tmp_path)
+    context, service, library = _prepare_location(tmp_path)
     caps = context.services.require(CAPService)  # type: ignore[attr-defined]
+    references = context.services.require(CanonicalReferenceService)  # type: ignore[attr-defined]
 
     with pytest.raises(ProductionProjectionBlockedError) as exc_info:
         service.require_ready("CAP-LOC-980")
     assert exc_info.value.projection.production_ready is False
 
+    generation, provider = _generation_service(references, library)
+    required = generation.generate(
+        "CAP-LOC-980",
+        (CanonicalReferenceView.PRIMARY_THREE_QUARTER,),
+        provider_name=provider.name,
+        seed=200,
+    )
+    library.approve(required[0].reference_record_id, "Projection Test")
     caps.update(
         "CAP-LOC-980",
         CAPUpdate(
