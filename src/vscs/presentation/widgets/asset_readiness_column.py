@@ -60,7 +60,7 @@ def install_asset_readiness_column(
 
     def populate_with_readiness(row: int, asset: object) -> None:
         original(row, asset)
-        asset_id = str(getattr(asset, "asset_id"))
+        asset_id = str(asset.asset_id)
         try:
             report = service.evaluate(asset_id)
             item = _ReadinessItem(f"{report.overall_score}%")

@@ -7,8 +7,8 @@ from vscs.domain.assets import AssetCategory
 from vscs.domain.caps import (
     CanonicalReferenceLifecycle,
     CanonicalReferenceView,
-    CategoryReferenceTemplate,
     CAPStatus,
+    CategoryReferenceTemplate,
     ReadinessState,
 )
 

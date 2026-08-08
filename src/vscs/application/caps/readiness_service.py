@@ -7,7 +7,7 @@ from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.application.caps.service import CAPService
 from vscs.domain.assets import AssetCategory
-from vscs.domain.caps import CAPStatus, CanonicalReferenceLifecycle, CanonicalReferenceView
+from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView, CAPStatus
 from vscs.domain.caps.readiness import (
     ReadinessAssessment,
     ReadinessDimension,
