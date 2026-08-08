@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from PySide6.QtWidgets import QLabel
+
 from vscs.application.assets import AssetService
 from vscs.application.assets.canonical_creation import CanonicalAssetCreationService
 from vscs.application.caps import (
@@ -54,7 +56,10 @@ def _prepare(tmp_path: Path):
     return context, caps, references
 
 
-def test_cap_workspace_surfaces_projection_status_without_recalculating(qtbot, tmp_path: Path) -> None:
+def test_cap_workspace_surfaces_projection_status_without_recalculating(
+    qtbot,
+    tmp_path: Path,
+) -> None:
     context, _caps, _references = _prepare(tmp_path)
     window = context.create_main_window()
     qtbot.addWidget(window)
@@ -85,7 +90,10 @@ def test_cap_workspace_surfaces_projection_status_without_recalculating(qtbot, t
     context.shutdown()
 
 
-def test_refactored_refresh_remains_installed_for_search_and_refresh_button(qtbot, tmp_path: Path) -> None:
+def test_refactored_refresh_remains_installed_for_search_and_refresh_button(
+    qtbot,
+    tmp_path: Path,
+) -> None:
     context, _caps, _references = _prepare(tmp_path)
     window = context.create_main_window()
     qtbot.addWidget(window)
@@ -111,9 +119,7 @@ def test_cap_editor_explains_governed_reference_ownership(qtbot, tmp_path: Path)
     dialog = CAPEditorDialog(caps, references, caps.get("CAP-SHP-990"))
     qtbot.addWidget(dialog)
 
-    guidance = dialog.findChild(type(dialog.summary_label) if hasattr(dialog, "summary_label") else object, "capProductionContractGuidance")
-    # QLabel lookup through QObject API avoids coupling the editor to a layout position.
-    guidance = dialog.findChild(__import__("PySide6.QtWidgets", fromlist=["QLabel"]).QLabel, "capProductionContractGuidance")
+    guidance = dialog.findChild(QLabel, "capProductionContractGuidance")
     assert guidance is not None
     assert "ChatGPT MASTER" in guidance.text()
     assert "Generate Production References" in guidance.text()
