@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -31,7 +31,7 @@ from vscs.application.assets.canonical_creation import (
     CanonicalAssetCreationService,
 )
 from vscs.application.caps import CanonicalReferenceService, CAPService, ReferenceLibraryService
-from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
+from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus, AssetUpdate
 from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 
 
@@ -142,7 +142,6 @@ class AssetEditorDialog(QDialog):
         )
         if not selected_file:
             return
-
         selected_path = Path(selected_file).resolve(strict=False)
         try:
             relative_path = selected_path.relative_to(self.project_directory)
@@ -153,12 +152,91 @@ class AssetEditorDialog(QDialog):
                 "Select a master reference located inside the active VSCS project directory.",
             )
             return
-
         self.file_path.setText(str(relative_path))
 
 
+class AssetEditDialog(QDialog):
+    """Edit registry metadata without changing canonical identity or MASTER authority."""
+
+    open_canonical_profile_requested = Signal(str)
+
+    def __init__(self, asset: Asset, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.asset = asset
+        self.setWindowTitle(f"Edit Asset — {asset.asset_id}")
+        self.setMinimumWidth(620)
+
+        self.asset_id = QLineEdit(asset.asset_id)
+        self.asset_id.setReadOnly(True)
+        self.name = QLineEdit(asset.name)
+        self.category = QComboBox()
+        for category in AssetCategory:
+            self.category.addItem(category.value.replace("_", " ").title(), category)
+        self.category.setCurrentIndex(max(0, self.category.findData(asset.category)))
+        self.status = QComboBox()
+        for status in AssetStatus:
+            self.status.addItem(status.value.title(), status)
+        self.status.setCurrentIndex(max(0, self.status.findData(asset.status)))
+        self.master_reference = QLineEdit(str(asset.file_path or ""))
+        self.master_reference.setReadOnly(True)
+        self.master_status = QLineEdit("Locked canonical authority")
+        self.master_status.setReadOnly(True)
+        self.tags = QLineEdit(", ".join(asset.tags))
+        self.description = QTextEdit(asset.description)
+        self.description.setMinimumHeight(110)
+        self.open_cap_button = QPushButton("Open Canonical Profile")
+        self.open_cap_button.clicked.connect(
+            lambda: self.open_canonical_profile_requested.emit(asset.asset_id)
+        )
+
+        form = QFormLayout()
+        form.addRow("Asset ID", self.asset_id)
+        form.addRow("Name", self.name)
+        form.addRow("Category", self.category)
+        form.addRow("Status", self.status)
+        form.addRow("Master Canonical Reference", self.master_reference)
+        form.addRow("MASTER Status", self.master_status)
+        form.addRow("Tags (comma-separated)", self.tags)
+        form.addRow("Description", self.description)
+
+        note = QLabel(
+            "Asset ID and the MASTER reference are canonical identifiers and cannot be changed "
+            "from normal Asset editing. Canonical facts, visual identity, constraints, references, "
+            "and future MASTER revisions belong in Canonical Profiles."
+        )
+        note.setWordWrap(True)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        actions = QHBoxLayout()
+        actions.addWidget(self.open_cap_button)
+        actions.addStretch(1)
+
+        layout = QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(note)
+        layout.addLayout(actions)
+        layout.addWidget(buttons)
+
+    def value(self) -> AssetUpdate:
+        """Return editable registry fields only."""
+        return AssetUpdate(
+            name=self.name.text(),
+            category=self.category.currentData(),
+            status=self.status.currentData(),
+            tags=tuple(tag.strip() for tag in self.tags.text().split(",")),
+            description=self.description.toPlainText(),
+        )
+
+
 class AssetManagerWidget(QWidget):
-    """Browse, search, create, remove, and synchronize project assets."""
+    """Browse, search, create, edit, remove, and synchronize project assets."""
+
+    open_canonical_profile_requested = Signal(str)
 
     def __init__(
         self,
@@ -187,6 +265,7 @@ class AssetManagerWidget(QWidget):
             self.category_filter.addItem(category.value.replace("_", " ").title(), category)
 
         self.add_button = QPushButton("Add Asset")
+        self.edit_button = QPushButton("Edit Selected")
         self.xpd_import_button = QPushButton("Import / Synchronise XPD")
         self.xpd_import_button.setObjectName("importSynchroniseXPD")
         self.delete_button = QPushButton("Delete Selected")
@@ -197,6 +276,7 @@ class AssetManagerWidget(QWidget):
         controls.addWidget(self.search_input, 1)
         controls.addWidget(self.category_filter)
         controls.addWidget(self.add_button)
+        controls.addWidget(self.edit_button)
         controls.addWidget(self.xpd_import_button)
         controls.addWidget(self.delete_button)
         controls.addWidget(self.refresh_button)
@@ -217,9 +297,11 @@ class AssetManagerWidget(QWidget):
         self.search_input.textChanged.connect(self.refresh)
         self.category_filter.currentIndexChanged.connect(self.refresh)
         self.add_button.clicked.connect(self._add_asset)
+        self.edit_button.clicked.connect(self._edit_selected)
         self.xpd_import_button.clicked.connect(self._import_xpd)
         self.delete_button.clicked.connect(self._delete_selected)
         self.refresh_button.clicked.connect(self.refresh)
+        self.table.itemDoubleClicked.connect(lambda _item: self._edit_selected())
 
     def refresh(self) -> None:
         """Reload the table from the active project database."""
@@ -231,7 +313,6 @@ class AssetManagerWidget(QWidget):
             self.summary_label.setText("Open a project to manage assets")
             self.set_enabled(False)
             return
-
         self.set_enabled(True)
         self.table.setRowCount(len(assets))
         for row, asset in enumerate(assets):
@@ -241,6 +322,7 @@ class AssetManagerWidget(QWidget):
     def set_enabled(self, enabled: bool) -> None:
         """Enable project-dependent actions while keeping filters usable."""
         self.add_button.setEnabled(enabled)
+        self.edit_button.setEnabled(enabled)
         self.xpd_import_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
         self.refresh_button.setEnabled(enabled)
@@ -259,6 +341,15 @@ class AssetManagerWidget(QWidget):
                 item.setData(Qt.ItemDataRole.UserRole, asset.asset_id)
             self.table.setItem(row, column, item)
 
+    def _selected_asset_id(self) -> str | None:
+        row = self.table.currentRow()
+        if row < 0:
+            return None
+        item = self.table.item(row, 0)
+        if item is None:
+            return None
+        return str(item.data(Qt.ItemDataRole.UserRole))
+
     def _add_asset(self) -> None:
         project_directory = self.assets.projects.project_directory
         if project_directory is None:
@@ -271,7 +362,6 @@ class AssetManagerWidget(QWidget):
                 "Canonical Asset Creation services are not available.",
             )
             return
-
         dialog = AssetEditorDialog(project_directory, self)
         if not dialog.exec():
             return
@@ -294,6 +384,38 @@ class AssetManagerWidget(QWidget):
             ),
         )
 
+    def _edit_selected(self) -> None:
+        asset_id = self._selected_asset_id()
+        if asset_id is None:
+            QMessageBox.information(self, "Edit Asset", "Select an asset to edit.")
+            return
+        try:
+            asset = self.assets.get(asset_id)
+        except AssetError as exc:
+            QMessageBox.critical(self, "Asset Error", str(exc))
+            return
+        dialog = AssetEditDialog(asset, self)
+        dialog.open_canonical_profile_requested.connect(self.open_canonical_profile_requested.emit)
+        if not dialog.exec():
+            return
+        if dialog.category.currentData() is not asset.category:
+            answer = QMessageBox.warning(
+                self,
+                "Category Change",
+                "Changing the Asset category may change canonical reference requirements and "
+                "production readiness. Continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer is not QMessageBox.StandardButton.Yes:
+                return
+        try:
+            self.assets.update(asset_id, dialog.value())
+        except (AssetError, ValueError) as exc:
+            QMessageBox.critical(self, "Asset Error", str(exc))
+            return
+        self.refresh()
+
     def _import_xpd(self) -> None:
         if self.assets.projects.project_directory is None:
             QMessageBox.warning(self, "XPD Import", "Open a project before importing XPD.")
@@ -303,13 +425,9 @@ class AssetManagerWidget(QWidget):
         self.refresh()
 
     def _delete_selected(self) -> None:
-        row = self.table.currentRow()
-        if row < 0:
+        asset_id = self._selected_asset_id()
+        if asset_id is None:
             return
-        item = self.table.item(row, 0)
-        if item is None:
-            return
-        asset_id = str(item.data(Qt.ItemDataRole.UserRole))
         answer = QMessageBox.question(
             self,
             "Delete Asset",
