@@ -447,7 +447,7 @@ class ReferenceLibraryService:
         snapshot: ReferenceLibrarySnapshot,
         entry: ReferenceLibraryEntry,
     ) -> None:
-        entries = tuple(
+        entries = (
             *(
             existing
             for existing in snapshot.entries
