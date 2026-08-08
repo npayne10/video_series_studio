@@ -20,7 +20,12 @@ from vscs.application.caps.derived_reference_generation import (
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
-from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView, CAPStatus, CAPUpdate
+from vscs.domain.caps import (
+    CanonicalReferenceLifecycle,
+    CanonicalReferenceView,
+    CAPStatus,
+    CAPUpdate,
+)
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 
 
@@ -36,7 +41,9 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def _prepare_location(tmp_path: Path) -> tuple[object, ProductionProjectionService, ReferenceLibraryService]:
+def _prepare_location(
+    tmp_path: Path,
+) -> tuple[object, ProductionProjectionService, ReferenceLibraryService]:
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     project = tmp_path / "Production"
