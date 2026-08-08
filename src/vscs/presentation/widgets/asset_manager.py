@@ -32,7 +32,7 @@ from vscs.application.assets import (
     CanonicalAssetCreationService,
     XPDWorkbookImportService,
 )
-from vscs.application.caps import CAPService, CanonicalReferenceService, ReferenceLibraryService
+from vscs.application.caps import CanonicalReferenceService, CAPService, ReferenceLibraryService
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
 from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 

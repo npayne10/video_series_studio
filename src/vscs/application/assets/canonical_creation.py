@@ -7,21 +7,21 @@ from pathlib import Path
 
 from vscs.application.assets.service import AssetError, AssetService
 from vscs.application.caps import (
-    CAPError,
-    CAPService,
     CanonicalReferenceError,
     CanonicalReferenceService,
+    CAPError,
+    CAPService,
     ReferenceLibraryError,
     ReferenceLibraryService,
 )
 from vscs.domain.assets import Asset, AssetCreate
 from vscs.domain.caps import (
-    CAPCreate,
-    CAPStatus,
     CanonicalReferenceCreate,
     CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
     CanonicalReferenceType,
+    CAPCreate,
+    CAPStatus,
 )
 
 
