@@ -1,10 +1,5 @@
 """Application services for production assets."""
 
-from vscs.application.assets.canonical_creation import (
-    CanonicalAssetCreationError,
-    CanonicalAssetCreationResult,
-    CanonicalAssetCreationService,
-)
 from vscs.application.assets.repository import AssetRepository, AssetRepositoryError
 from vscs.application.assets.service import (
     AssetAlreadyExistsError,
@@ -33,9 +28,6 @@ __all__ = [
     "AssetRepository",
     "AssetRepositoryError",
     "AssetService",
-    "CanonicalAssetCreationError",
-    "CanonicalAssetCreationResult",
-    "CanonicalAssetCreationService",
     "InvalidAssetPathError",
     "XPDProvenanceStore",
     "XPDWorkbookError",
