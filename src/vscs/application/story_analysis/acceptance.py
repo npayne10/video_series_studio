@@ -11,7 +11,7 @@ from vscs.domain.story_analysis import CandidateReviewStatus, EntityResolutionRe
 from .cache import StoryAnalysisCacheService, StoryAnalysisCacheState
 from .dashboard import StoryIntelligenceDashboardService
 from .intelligence import ApprovedStoryIntelligenceService, StoryIntelligenceError
-from .source_reader import StorySourceReadError, StorySourceReader
+from .source_reader import StorySourceReader, StorySourceReadError
 from .stages import (
     AI_ENTITY_RESOLUTION_ARTIFACT,
     ANALYSIS_RESULT_ARTIFACT,
