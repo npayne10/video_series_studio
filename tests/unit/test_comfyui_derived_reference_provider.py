@@ -34,9 +34,10 @@ class _Client:
         assert prompt_id == "prompt-1"
         assert self.prompt is not None
         queue_path = Path(self.prompt["171"]["inputs"]["queue_file"])
-        jobs = json.loads(queue_path.read_text(encoding="utf-8"))
-        job = jobs[0]
-        destination = Path(job["directory"]) / str(job["filename"])
+        payload = json.loads(queue_path.read_text(encoding="utf-8"))
+        job = payload["jobs"][0]
+        output = job["output"]
+        destination = Path(output["candidate_directory"]) / str(output["candidate_filename"])
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(b"real-png-candidate")
         return {"status": {"completed": True}}
@@ -84,12 +85,18 @@ def test_comfyui_provider_compiles_master_conditioned_runtime_job(tmp_path: Path
     assert client.prompt["170:169"]["inputs"]["seed"] == 42
 
     queue_path = Path(client.prompt["171"]["inputs"]["queue_file"])
-    job = json.loads(queue_path.read_text(encoding="utf-8"))[0]
-    assert Path(job["master_reference"]) == master
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    assert tuple(payload) == ("jobs",)
+    assert len(payload["jobs"]) == 1
+    job = payload["jobs"][0]
+    assert Path(job["reference_inputs"][0]) == master
+    assert job["asset_category"] == "ship"
     assert job["positive_prompt"] == "Produce the exact same ship from above."
     assert job["negative_prompt"] == "identity drift"
     assert job["view"] == "top"
-    assert job["enable_4steps_lora"] is True
+    assert job["generation"]["enable_turbo_mode"] is True
+    assert job["generation_policy"]["force_standard_mode"] is True
+    assert job["output"]["candidate_filename"].endswith(".png")
 
     runtime = project / ".vscs" / "runtime" / "comfyui"
     assert tuple((runtime / "compiled").glob("*.json"))
