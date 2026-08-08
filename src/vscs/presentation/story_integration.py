@@ -24,6 +24,7 @@ from vscs.application.story import (
 )
 from vscs.application.story_analysis import (
     ApprovedStoryIntelligenceService,
+    StoryAnalysisCacheService,
     StoryAnalysisEngine,
 )
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
@@ -75,6 +76,16 @@ def install_story_browser() -> None:
                 ApprovedStoryIntelligenceService,
                 ApprovedStoryIntelligenceService(window.services.require(AssetService)),
             )
+        analysis_engine = window.services.require(StoryAnalysisEngine)
+        analysis_cache = window.services.get(StoryAnalysisCacheService)
+        if analysis_cache is None:
+            analysis_cache = window.services.register(
+                StoryAnalysisCacheService,
+                StoryAnalysisCacheService(
+                    window.services.require(AssetService),
+                    analysis_engine,
+                ),
+            )
         window.story_browser = BrowseableStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
@@ -86,7 +97,8 @@ def install_story_browser() -> None:
             window.services.require(StoryStatusService),
             window.services.require(StoryApprovalService),
         )
-        window.story_browser.analysis_engine = window.services.require(StoryAnalysisEngine)
+        window.story_browser.analysis_engine = analysis_engine
+        window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)
