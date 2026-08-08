@@ -175,11 +175,15 @@ class StoryAnalysisAcceptanceService:
                     f"artifact:{artifact_id}",
                     title,
                     AcceptanceLevel.PASS if present else AcceptanceLevel.FAIL,
-                    "Persisted and readable." if present else "Required cached artifact is missing.",
+                    "Persisted and readable."
+                    if present
+                    else "Required cached artifact is missing.",
                 )
             )
 
-        provider_level = AcceptanceLevel.PASS if status.provider != "Unknown" else AcceptanceLevel.WARNING
+        provider_level = (
+            AcceptanceLevel.PASS if status.provider != "Unknown" else AcceptanceLevel.WARNING
+        )
         checks.append(
             self._check(
                 "provider",
@@ -236,7 +240,9 @@ class StoryAnalysisAcceptanceService:
                 )
 
         snapshot = self.dashboard.build(report)
-        review_level = AcceptanceLevel.PASS if snapshot.proposed_entities == 0 else AcceptanceLevel.WARNING
+        review_level = (
+            AcceptanceLevel.PASS if snapshot.proposed_entities == 0 else AcceptanceLevel.WARNING
+        )
         checks.append(
             self._check(
                 "entity-review",
@@ -253,8 +259,12 @@ class StoryAnalysisAcceptanceService:
             self._check(
                 "shot-planning",
                 "Shot Planning readiness",
-                AcceptanceLevel.PASS if snapshot.ready_for_shot_planning else AcceptanceLevel.WARNING,
-                "Ready." if snapshot.ready_for_shot_planning else "; ".join(snapshot.readiness_reasons),
+                AcceptanceLevel.PASS
+                if snapshot.ready_for_shot_planning
+                else AcceptanceLevel.WARNING,
+                "Ready."
+                if snapshot.ready_for_shot_planning
+                else "; ".join(snapshot.readiness_reasons),
             )
         )
         checks.append(

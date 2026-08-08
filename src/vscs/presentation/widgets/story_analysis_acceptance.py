@@ -60,7 +60,9 @@ class StoryAnalysisAcceptanceDialog(QDialog):
         actions.addStretch(1)
         refresh = QPushButton("Refresh Acceptance Report", self)
         refresh.setObjectName("refreshStoryAnalysisAcceptance")
-        refresh.setToolTip("Re-evaluate persisted artifacts without rerunning Story Analysis or AI.")
+        refresh.setToolTip(
+            "Re-evaluate persisted artifacts without rerunning Story Analysis or AI."
+        )
         refresh.clicked.connect(self.refresh_report)
         actions.addWidget(refresh)
         close = QPushButton("Close", self)
