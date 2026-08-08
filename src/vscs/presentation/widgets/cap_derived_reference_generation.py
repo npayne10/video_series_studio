@@ -22,19 +22,15 @@ from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGeneratorRegistry,
 )
 from vscs.application.caps.reference_library import ReferenceLibraryService
-from vscs.domain.caps import CanonicalReferenceView
+from vscs.domain.caps import CanonicalReferenceView, ReferenceRequirement
 from vscs.infrastructure.ai.comfyui_derived_reference_provider import (
     ComfyUIDerivedReferenceProvider,
 )
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 
-_SELECTABLE_VIEWS = tuple(
-    view for view in CanonicalReferenceView if view is not CanonicalReferenceView.MASTER
-)
-
 
 class DerivedReferenceGenerationDialog(QDialog):
-    """Choose derived views and generator without redefining canonical identity."""
+    """Choose category-aware derived views without redefining canonical identity."""
 
     def __init__(
         self,
@@ -45,14 +41,18 @@ class DerivedReferenceGenerationDialog(QDialog):
         super().__init__(parent)
         self.asset_id = asset_id
         self.service = service
+        self.coverage = service.coverage(asset_id)
         self.setWindowTitle(f"Generate Production References — {asset_id}")
-        self.setMinimumWidth(680)
+        self.setMinimumWidth(760)
 
         intro = QLabel(
-            "Selected views are generated from the locked ChatGPT MASTER. Every output enters "
-            "the CAP as a Candidate and must be reviewed before production use."
+            "Reference requirements come from the asset category template. Selected views are "
+            "generated from the locked ChatGPT MASTER and enter the CAP as Candidates for review."
         )
         intro.setWordWrap(True)
+
+        self.coverage_label = QLabel(self._coverage_text())
+        self.coverage_label.setWordWrap(True)
 
         self.provider = QComboBox()
         for name in service.providers.names():
@@ -63,10 +63,20 @@ class DerivedReferenceGenerationDialog(QDialog):
 
         self.checkboxes: dict[CanonicalReferenceView, QCheckBox] = {}
         grid = QGridLayout()
-        for index, view in enumerate(_SELECTABLE_VIEWS):
-            checkbox = QCheckBox(view.value.replace("_", " ").title())
+        views = tuple(
+            view
+            for view in self.coverage.template.applicable_views
+            if view is not CanonicalReferenceView.MASTER
+        )
+        for index, view in enumerate(views):
+            requirement = self.coverage.template.requirement_for(view)
+            level = self._requirement_label(requirement)
+            present = view in self.coverage.present_views
+            state = "Present" if present else "Missing"
+            checkbox = QCheckBox(f"{view.value.replace('_', ' ').title()} — {level} ({state})")
+            checkbox.setEnabled(not present)
             self.checkboxes[view] = checkbox
-            grid.addWidget(checkbox, index // 3, index % 3)
+            grid.addWidget(checkbox, index // 2, index % 2)
 
         self.width = QSpinBox()
         self.width.setRange(256, 8192)
@@ -93,6 +103,16 @@ class DerivedReferenceGenerationDialog(QDialog):
         settings.addWidget(QLabel("Seed"), 2, 0)
         settings.addWidget(self.seed, 2, 1)
 
+        self.generate_missing_button = QPushButton("Generate Missing Required Views")
+        self.generate_missing_button.setObjectName("generateMissingRequiredViews")
+        self.generate_missing_button.clicked.connect(self._generate_missing_required)
+        generatable_missing = tuple(
+            view
+            for view in self.coverage.missing_required
+            if view is not CanonicalReferenceView.MASTER
+        )
+        self.generate_missing_button.setEnabled(bool(generatable_missing))
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -102,9 +122,11 @@ class DerivedReferenceGenerationDialog(QDialog):
 
         layout = QVBoxLayout(self)
         layout.addWidget(intro)
+        layout.addWidget(self.coverage_label)
         layout.addLayout(settings)
-        layout.addWidget(QLabel("Production reference views"))
+        layout.addWidget(QLabel("Category production reference views"))
         layout.addLayout(grid)
+        layout.addWidget(self.generate_missing_button)
         layout.addWidget(buttons)
 
     def selected_views(self) -> tuple[CanonicalReferenceView, ...]:
@@ -115,6 +137,31 @@ class DerivedReferenceGenerationDialog(QDialog):
         if not views:
             QMessageBox.warning(self, "Derived References", "Select at least one view to generate.")
             return
+        self._run_generation(views)
+
+    def _generate_missing_required(self) -> None:
+        provider_name = str(self.provider.currentData() or "")
+        try:
+            created = self.service.generate_missing_required(
+                self.asset_id,
+                provider_name=provider_name,
+                width=self.width.value(),
+                height=self.height.value(),
+                seed=self.seed.value(),
+            )
+        except (DerivedReferenceGenerationError, OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.critical(self, "Derived Reference Generation", str(exc))
+            return
+        if not created:
+            QMessageBox.information(
+                self,
+                "Reference Coverage Complete",
+                "No required derived reference views are missing for this category.",
+            )
+            return
+        self._generation_complete(len(created))
+
+    def _run_generation(self, views: tuple[CanonicalReferenceView, ...]) -> None:
         provider_name = str(self.provider.currentData() or "")
         try:
             created = self.service.generate(
@@ -128,12 +175,36 @@ class DerivedReferenceGenerationDialog(QDialog):
         except (DerivedReferenceGenerationError, OSError, RuntimeError, ValueError) as exc:
             QMessageBox.critical(self, "Derived Reference Generation", str(exc))
             return
+        self._generation_complete(len(created))
+
+    def _generation_complete(self, count: int) -> None:
         QMessageBox.information(
             self,
             "Derived References Created",
-            f"Created {len(created)} Candidate reference(s). Review and approve them before use.",
+            f"Created {count} Candidate reference(s). Review and approve them before use.",
         )
         self.accept()
+
+    def _coverage_text(self) -> str:
+        category = self.coverage.category.value.replace("_", " ").title()
+        missing_required = self._views_text(self.coverage.missing_required)
+        missing_recommended = self._views_text(self.coverage.missing_recommended)
+        return (
+            f"Category: {category}  |  Missing required: {missing_required}  |  "
+            f"Missing recommended: {missing_recommended}"
+        )
+
+    @staticmethod
+    def _views_text(views: tuple[CanonicalReferenceView, ...]) -> str:
+        if not views:
+            return "None"
+        return ", ".join(view.value.replace("_", " ").title() for view in views)
+
+    @staticmethod
+    def _requirement_label(requirement: ReferenceRequirement | None) -> str:
+        if requirement is None:
+            return "Not applicable"
+        return requirement.value.title()
 
 
 def install_derived_reference_generation(cap_manager: QWidget) -> QPushButton | None:
@@ -152,7 +223,7 @@ def install_derived_reference_generation(cap_manager: QWidget) -> QPushButton | 
     )
     button = QPushButton("Generate Production References")
     button.setObjectName("generateProductionReferences")
-    button.setToolTip("Generate selected derived views from the locked ChatGPT MASTER")
+    button.setToolTip("Generate category-aware derived views from the locked ChatGPT MASTER")
 
     def open_dialog() -> None:
         selected = cap_manager._selected_asset_id()

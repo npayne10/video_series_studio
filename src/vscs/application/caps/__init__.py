@@ -35,6 +35,7 @@ from vscs.application.caps.reference_service import (
     InvalidCanonicalReferencePathError,
     InvalidCanonicalReferenceTransitionError,
 )
+from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.application.caps.repository import CAPRepository, CAPRepositoryError
 from vscs.application.caps.service import (
     CAPAlreadyExistsError,
@@ -69,6 +70,7 @@ __all__ = (
     "CanonicalReferenceRepository",
     "CanonicalReferenceRepositoryError",
     "CanonicalReferenceService",
+    "CategoryReferenceTemplateService",
     "InvalidCAPReferencePathError",
     "InvalidCanonicalReferencePathError",
     "InvalidCanonicalReferenceTransitionError",
