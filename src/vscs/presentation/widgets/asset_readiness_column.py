@@ -44,7 +44,32 @@ def install_asset_readiness_column(
     )
     table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
     table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-    table.setSortingEnabled(True)
+
+    # QTableWidget must not keep automatic sorting enabled while AssetManager.refresh()
+    # populates cells one at a time. Qt otherwise moves partially populated rows as soon
+    # as a sortable cell is inserted, splitting one logical asset across multiple rows.
+    # Keep population stable and perform a one-shot sort only when the operator clicks a
+    # header. This preserves sortable columns without corrupting refreshed row identity.
+    table.setSortingEnabled(False)
+    header = table.horizontalHeader()
+    header.setSectionsClickable(True)
+    sort_state = {"column": -1, "order": Qt.SortOrder.AscendingOrder}
+
+    def sort_once(column: int) -> None:
+        order = Qt.SortOrder.AscendingOrder
+        if sort_state["column"] == column:
+            order = (
+                Qt.SortOrder.DescendingOrder
+                if sort_state["order"] is Qt.SortOrder.AscendingOrder
+                else Qt.SortOrder.AscendingOrder
+            )
+        sort_state["column"] = column
+        sort_state["order"] = order
+        table.sortItems(column, order)
+        header.setSortIndicator(column, order)
+        header.setSortIndicatorShown(True)
+
+    header.sectionClicked.connect(sort_once)
 
     readiness_filter = QComboBox()
     readiness_filter.setObjectName("assetReadinessFilter")
