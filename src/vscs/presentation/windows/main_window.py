@@ -21,11 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import (
-    CanonicalReferenceService,
-    CAPGeneratorService,
-    CAPService,
-)
+from vscs.application.caps import CanonicalReferenceService, CAPGeneratorService, CAPService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -154,7 +150,11 @@ class MainWindow(QMainWindow):
         self.content_stack.addWidget(self.dashboard)
         self.content_stack.addWidget(self._placeholder_page("Projects"))
         self.content_stack.addWidget(self._placeholder_page("Story"))
-        self.asset_manager = AssetManagerWidget(self.assets)
+        self.asset_manager = AssetManagerWidget(
+            self.assets,
+            self.caps,
+            self.canonical_references,
+        )
         self.content_stack.addWidget(self.asset_manager)
         self.cap_manager = CAPManagerWidget(
             self.caps,
