@@ -29,6 +29,10 @@ from vscs.domain.caps.production_contract import (
     ProductionAssetProjection,
     ProductionReference,
 )
+from vscs.domain.caps.production_projection import (
+    ProductionProjection,
+    ProductionProjectionResult,
+)
 from vscs.domain.caps.readiness import (
     ReadinessAssessment,
     ReadinessDimension,
@@ -94,6 +98,8 @@ __all__ = (
     "GeneratedCAPDraft",
     "GeneratedCanonicalAsset",
     "ProductionAssetProjection",
+    "ProductionProjection",
+    "ProductionProjectionResult",
     "ProductionReference",
     "ReadinessAssessment",
     "ReadinessDimension",
