@@ -27,6 +27,7 @@ from vscs.application.story import (
 from vscs.application.story_analysis import (
     ApprovedStoryIntelligenceService,
     CachedStoryAnalysisEngine,
+    StoryAnalysisAcceptanceService,
     StoryAnalysisCacheError,
     StoryAnalysisCacheService,
     StoryAnalysisCacheState,
@@ -38,6 +39,7 @@ from vscs.application.story_analysis import (
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
 from .story_ai_entity_review import AIEntityReviewDialog
+from .story_analysis_acceptance import StoryAnalysisAcceptanceDialog
 from .story_analysis_workspace import StoryAnalysisWorkspaceDialog
 from .story_intelligence_dashboard import StoryIntelligenceDashboardDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
@@ -206,6 +208,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         dialog.refresh_button.setText("Reload Cached")
         self._install_ai_review_action(dialog, story)
         self._install_intelligence_dashboard_action(dialog, story)
+        self._install_acceptance_action(dialog, story)
         self._install_reanalyse_action(dialog, story, source_text)
         self._story_analysis_dialog = dialog
         dialog.exec()
@@ -269,6 +272,21 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         toolbar.insertWidget(4, button)
         dialog.story_intelligence_button = button
 
+    def _install_acceptance_action(
+        self,
+        dialog: StoryAnalysisWorkspaceDialog,
+        story: StoryRecord,
+    ) -> None:
+        toolbar = self._analysis_toolbar(dialog)
+        button = QPushButton("Integration Acceptance", dialog)
+        button.setObjectName("openStoryAnalysisAcceptance")
+        button.setToolTip(
+            "Validate cached Story Analysis integration and persistence without rerunning AI."
+        )
+        button.clicked.connect(lambda: self._show_acceptance_report(story, dialog))
+        toolbar.insertWidget(5, button)
+        dialog.acceptance_button = button
+
     def _install_reanalyse_action(
         self,
         dialog: StoryAnalysisWorkspaceDialog,
@@ -280,7 +298,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         button.setObjectName("reanalyseStoryExplicit")
         button.setToolTip("Explicitly rerun Story Analysis and the configured AI provider.")
         button.clicked.connect(lambda: self._reanalyse_from_dialog(story, source_text, dialog))
-        toolbar.insertWidget(5, button)
+        toolbar.insertWidget(6, button)
         dialog.reanalyse_story_button = button
 
     def _reanalyse_from_dialog(
@@ -356,6 +374,34 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         )
         self._story_intelligence_dashboard.refresh_button.setText("Reload Cached Dashboard")
         self._story_intelligence_dashboard.exec()
+
+    def _show_acceptance_report(
+        self,
+        story: StoryRecord,
+        parent: QWidget | None = None,
+    ) -> None:
+        if self.analysis_cache is None:
+            self._error("Story Analysis Cache is not registered.")
+            return
+        if self.intelligence_service is None:
+            self._error("Approved Story Intelligence service is not registered.")
+            return
+        dashboard = StoryIntelligenceDashboardService(
+            self.intelligence_service.assets,
+            self.intelligence_service,
+            self.metadata,
+        )
+        service = StoryAnalysisAcceptanceService(
+            self.analysis_cache,
+            self.intelligence_service,
+            dashboard,
+        )
+        self._story_analysis_acceptance_dialog = StoryAnalysisAcceptanceDialog(
+            story,
+            service,
+            parent=parent or self,
+        )
+        self._story_analysis_acceptance_dialog.exec()
 
     def _show_help(self) -> None:
         self._story_help_dialog = StoryWorkspaceHelpDialog(self)

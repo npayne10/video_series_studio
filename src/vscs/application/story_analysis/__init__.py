@@ -1,5 +1,11 @@
 """Public API for the VSCS story-analysis framework."""
 
+from vscs.application.story_analysis.acceptance import (
+    AcceptanceLevel,
+    StoryAnalysisAcceptanceCheck,
+    StoryAnalysisAcceptanceReport,
+    StoryAnalysisAcceptanceService,
+)
 from vscs.application.story_analysis.ai_analysis import (
     AssetServiceStoryEntityCatalog,
     EmptyStoryEntityCatalog,
@@ -64,6 +70,7 @@ __all__ = [
     "KNOWLEDGE_GRAPH_ARTIFACT",
     "STORY_KNOWLEDGE_GRAPH_ARTIFACT",
     "AIStoryAnalysisStage",
+    "AcceptanceLevel",
     "AnalysisContext",
     "AnalysisStatus",
     "ApprovedStoryIntelligenceService",
@@ -76,6 +83,9 @@ __all__ = [
     "ExistingAssetReference",
     "StageResult",
     "StoryAIAnalysisProvider",
+    "StoryAnalysisAcceptanceCheck",
+    "StoryAnalysisAcceptanceReport",
+    "StoryAnalysisAcceptanceService",
     "StoryAnalysisCacheError",
     "StoryAnalysisCacheService",
     "StoryAnalysisCacheState",
