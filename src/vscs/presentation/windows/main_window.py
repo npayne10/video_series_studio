@@ -30,6 +30,7 @@ from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.asset_manager import AssetManagerWidget
+from vscs.presentation.widgets.asset_readiness_column import install_asset_readiness_column
 from vscs.presentation.widgets.cap_derived_reference_generation import (
     install_derived_reference_generation,
 )
@@ -156,6 +157,11 @@ class MainWindow(QMainWindow):
         self.content_stack.addWidget(self._placeholder_page("Story"))
         self.asset_manager = AssetManagerWidget(
             self.assets,
+            self.caps,
+            self.canonical_references,
+        )
+        self.asset_readiness_service = install_asset_readiness_column(
+            self.asset_manager,
             self.caps,
             self.canonical_references,
         )
