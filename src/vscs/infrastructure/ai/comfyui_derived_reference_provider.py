@@ -51,7 +51,9 @@ class ComfyUIDerivedReferenceProvider:
         workflows: ManagedWorkflowRegistry | None = None,
         client: XCICCoreClient | None = None,
     ) -> None:
-        self.configuration = configuration or ComfyUIDerivedReferenceConfiguration.from_environment()
+        self.configuration = (
+            configuration or ComfyUIDerivedReferenceConfiguration.from_environment()
+        )
         self.workflows = workflows or default_workflow_registry()
         self.client = client or XCICCoreClient(self.configuration.base_url)
 
