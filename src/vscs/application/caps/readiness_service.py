@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
@@ -51,7 +53,7 @@ _VISUAL_IDENTITY_CATEGORIES = {
 class CAPReadinessService:
     """Single deterministic authority for CAP readiness decisions."""
 
-    _WEIGHTS = {
+    _WEIGHTS: ClassVar[dict[ReadinessDimension, int]] = {
         ReadinessDimension.IDENTITY: 25,
         ReadinessDimension.REFERENCES: 30,
         ReadinessDimension.GENERATION: 20,
