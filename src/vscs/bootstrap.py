@@ -167,9 +167,7 @@ def build_application_context(
     logger: logging.Logger | None = None
     if selected.configure_logging:
         settings = configuration.settings.logging
-        root = configuration.settings.environment.logs_root.expanduser().resolve(
-            strict=False
-        )
+        root = configuration.settings.environment.logs_root.expanduser().resolve(strict=False)
         logging_service = LoggingService(
             root,
             level=settings.level,

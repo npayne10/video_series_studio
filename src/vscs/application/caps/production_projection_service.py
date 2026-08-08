@@ -104,9 +104,7 @@ class ProductionProjectionService:
 
     def production_ready(self) -> tuple[ProductionProjection, ...]:
         """Return only projections whose authoritative Production gate is Ready."""
-        return tuple(
-            projection for projection in self.project_all() if projection.production_ready
-        )
+        return tuple(projection for projection in self.project_all() if projection.production_ready)
 
     def checksum(self, asset_id: str) -> str:
         """Return the deterministic projection fingerprint for invalidation/caching."""
