@@ -45,8 +45,12 @@ class _ComfyClient:
         assert prompt_id == "derived-1"
         assert self.prompt is not None
         queue_path = Path(self.prompt["171"]["inputs"]["queue_file"])
-        job = json.loads(queue_path.read_text(encoding="utf-8"))[0]
-        output = Path(job["directory"]) / str(job["filename"])
+        payload = json.loads(queue_path.read_text(encoding="utf-8"))
+        job = payload["jobs"][0]
+        output_config = job["output"]
+        output = Path(output_config["candidate_directory"]) / str(
+            output_config["candidate_filename"]
+        )
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_bytes(b"generated-png")
         return {"status": {"completed": True}}
