@@ -13,7 +13,11 @@ from vscs.application.caps import CanonicalReferenceService, CAPService, Referen
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
-from vscs.domain.caps import CanonicalReferenceFamily, CanonicalReferenceLifecycle
+from vscs.domain.caps import (
+    CanonicalReferenceFamily,
+    CanonicalReferenceLifecycle,
+    CanonicalReferenceStatus,
+)
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -97,4 +101,75 @@ def test_asset_creation_requires_explicit_master_confirmation(tmp_path: Path) ->
 
     with pytest.raises(AssetNotFoundError):
         context.services.require(AssetService).get("CAP-SHP-901")
+    context.shutdown()
+
+
+def test_edit_can_attach_missing_master_and_seed_cap(tmp_path: Path) -> None:
+    context = build_application_context(_options(tmp_path))
+    projects = context.services.require(ProjectService)
+    project = tmp_path / "Production"
+    projects.create(project, name="Production")
+    assets = context.services.require(AssetService)
+    assets.create(
+        AssetCreate(
+            asset_id="CAP-SHP-902",
+            name="Imported Tug",
+            category=AssetCategory.SHIP,
+            description="Legacy asset without CAP master.",
+        )
+    )
+    master = project / "references" / "imported_master.png"
+    master.parent.mkdir(parents=True)
+    master.write_bytes(b"master")
+
+    result = _service(context).set_or_revise_master(
+        "CAP-SHP-902",
+        Path("references/imported_master.png"),
+        confirmed_chatgpt_master=True,
+        actor="Neill",
+    )
+
+    assert result.lifecycle is CanonicalReferenceLifecycle.LOCKED
+    assert assets.get("CAP-SHP-902").file_path == Path("references/imported_master.png")
+    assert context.services.require(CAPService).get("CAP-SHP-902").asset_id == "CAP-SHP-902"
+    context.shutdown()
+
+
+def test_edit_revises_master_and_archives_previous_reference(tmp_path: Path) -> None:
+    context = build_application_context(_options(tmp_path))
+    projects = context.services.require(ProjectService)
+    project = tmp_path / "Production"
+    projects.create(project, name="Production")
+    references_dir = project / "references"
+    references_dir.mkdir(parents=True)
+    (references_dir / "master_v1.png").write_bytes(b"master-v1")
+    (references_dir / "master_v2.png").write_bytes(b"master-v2")
+    service = _service(context)
+
+    first = service.create(
+        AssetCreate(
+            asset_id="CAP-SHP-903",
+            name="Revision Tug",
+            category=AssetCategory.SHIP,
+        ),
+        Path("references/master_v1.png"),
+        confirmed_chatgpt_master=True,
+        actor="Neill",
+    )
+    second = service.set_or_revise_master(
+        "CAP-SHP-903",
+        Path("references/master_v2.png"),
+        confirmed_chatgpt_master=True,
+        actor="Neill",
+    )
+
+    references = context.services.require(CanonicalReferenceService)
+    old_reference = references.get(first.reference_record_id)
+    new_reference = references.get(second.reference_record_id)
+    assert old_reference.status is CanonicalReferenceStatus.ARCHIVED
+    assert new_reference.version == "1.1"
+    assert second.lifecycle is CanonicalReferenceLifecycle.LOCKED
+    assert context.services.require(AssetService).get("CAP-SHP-903").file_path == Path(
+        "references/master_v2.png"
+    )
     context.shutdown()
