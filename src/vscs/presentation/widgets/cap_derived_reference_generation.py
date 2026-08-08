@@ -73,9 +73,7 @@ class DerivedReferenceGenerationDialog(QDialog):
             level = self._requirement_label(requirement)
             present = view in self.coverage.present_views
             state = "Present" if present else "Missing"
-            checkbox = QCheckBox(
-                f"{view.value.replace('_', ' ').title()} — {level} ({state})"
-            )
+            checkbox = QCheckBox(f"{view.value.replace('_', ' ').title()} — {level} ({state})")
             checkbox.setEnabled(not present)
             self.checkboxes[view] = checkbox
             grid.addWidget(checkbox, index // 2, index % 2)

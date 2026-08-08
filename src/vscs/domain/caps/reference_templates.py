@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from vscs.domain.assets import AssetCategory
 from vscs.domain.caps.production_contract import CanonicalReferenceView
@@ -36,11 +36,7 @@ class CategoryReferenceTemplate(BaseModel):
         optional = set(self.optional_views)
         if CanonicalReferenceView.MASTER not in required:
             raise ValueError("Every category reference template must require the MASTER view")
-        if (
-            required & recommended
-            or required & optional
-            or recommended & optional
-        ):
+        if required & recommended or required & optional or recommended & optional:
             raise ValueError("Required, recommended and optional reference views must be disjoint")
         return self
 
@@ -97,7 +93,9 @@ class CategoryReferenceTemplateRegistry:
         try:
             return self._templates[category]
         except KeyError as exc:
-            raise KeyError(f"No canonical reference template is registered for {category.value}") from exc
+            raise KeyError(
+                f"No canonical reference template is registered for {category.value}"
+            ) from exc
 
     def categories(self) -> tuple[AssetCategory, ...]:
         return tuple(sorted(self._templates, key=lambda category: category.value))

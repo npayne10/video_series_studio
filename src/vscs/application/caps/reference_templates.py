@@ -48,12 +48,8 @@ class CategoryReferenceTemplateService:
         missing_recommended = tuple(
             view for view in template.recommended_views if view not in active_views
         )
-        present_optional = tuple(
-            view for view in template.optional_views if view in active_views
-        )
-        present_views = tuple(
-            view for view in template.applicable_views if view in active_views
-        )
+        present_optional = tuple(view for view in template.optional_views if view in active_views)
+        present_views = tuple(view for view in template.applicable_views if view in active_views)
         return ReferenceCoverage(
             category=asset.category,
             template=template,
@@ -67,7 +63,5 @@ class CategoryReferenceTemplateService:
         """Return only generatable missing required views; MASTER is externally authored."""
         coverage = self.coverage(asset_id)
         return tuple(
-            view
-            for view in coverage.missing_required
-            if view is not CanonicalReferenceView.MASTER
+            view for view in coverage.missing_required if view is not CanonicalReferenceView.MASTER
         )

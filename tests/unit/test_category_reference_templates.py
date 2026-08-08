@@ -39,7 +39,9 @@ def test_ship_template_requires_complete_exterior_turnaround() -> None:
         template.requirement_for(CanonicalReferenceView.PRIMARY_THREE_QUARTER)
         is ReferenceRequirement.RECOMMENDED
     )
-    assert template.requirement_for(CanonicalReferenceView.INTERIOR) is ReferenceRequirement.OPTIONAL
+    assert (
+        template.requirement_for(CanonicalReferenceView.INTERIOR) is ReferenceRequirement.OPTIONAL
+    )
 
 
 def test_character_template_focuses_on_identity_coverage() -> None:
