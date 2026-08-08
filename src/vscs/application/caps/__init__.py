@@ -1,5 +1,15 @@
 """Canonical Asset Profile application exports."""
 
+from vscs.application.caps.architecture_assessment import (
+    CAP_CAPABILITY_ASSESSMENTS,
+    CAP_PRODUCTION_CONTRACT_GAPS,
+    MASTER_REFERENCE_AUTHORING_POLICY,
+    CAPAssessmentDisposition,
+    CAPCapabilityAssessment,
+    CAPContractGap,
+    blocking_gaps,
+    disposition_counts,
+)
 from vscs.application.caps.asset_generator import (
     CanonicalAssetGenerationError,
     CanonicalAssetGeneratorService,
@@ -28,8 +38,14 @@ from vscs.application.caps.service import (
 )
 
 __all__ = (
+    "CAP_CAPABILITY_ASSESSMENTS",
+    "CAP_PRODUCTION_CONTRACT_GAPS",
+    "MASTER_REFERENCE_AUTHORING_POLICY",
     "CAPAlreadyExistsError",
+    "CAPAssessmentDisposition",
     "CAPAssetNotFoundError",
+    "CAPCapabilityAssessment",
+    "CAPContractGap",
     "CAPError",
     "CAPGenerationError",
     "CAPGeneratorService",
@@ -48,4 +64,6 @@ __all__ = (
     "InvalidCAPReferencePathError",
     "InvalidCanonicalReferencePathError",
     "InvalidCanonicalReferenceTransitionError",
+    "blocking_gaps",
+    "disposition_counts",
 )
