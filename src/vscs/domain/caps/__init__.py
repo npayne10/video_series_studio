@@ -35,6 +35,13 @@ from vscs.domain.caps.reference_library import (
     ReferenceLifecycleAction,
     ReferenceLifecycleEvent,
 )
+from vscs.domain.caps.reference_templates import (
+    CategoryReferenceTemplate,
+    CategoryReferenceTemplateRegistry,
+    ReferenceCoverage,
+    ReferenceRequirement,
+    default_category_reference_templates,
+)
 from vscs.domain.caps.references import (
     CanonicalReference,
     CanonicalReferenceCreate,
@@ -71,14 +78,19 @@ __all__ = (
     "CanonicalReferenceType",
     "CanonicalReferenceUpdate",
     "CanonicalReferenceView",
+    "CategoryReferenceTemplate",
+    "CategoryReferenceTemplateRegistry",
     "ExtractedCanonicalFact",
     "FunctionalCapability",
     "GeneratedCAPDraft",
     "GeneratedCanonicalAsset",
     "ProductionAssetProjection",
     "ProductionReference",
+    "ReferenceCoverage",
     "ReferenceLibraryEntry",
     "ReferenceLibrarySnapshot",
     "ReferenceLifecycleAction",
     "ReferenceLifecycleEvent",
+    "ReferenceRequirement",
+    "default_category_reference_templates",
 )
