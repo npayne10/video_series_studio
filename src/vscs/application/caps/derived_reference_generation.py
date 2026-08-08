@@ -8,6 +8,7 @@ from typing import Protocol
 
 from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.domain.caps import (
     CanonicalReferenceCreate,
     CanonicalReferenceFamily,
@@ -15,6 +16,7 @@ from vscs.domain.caps import (
     CanonicalReferenceRole,
     CanonicalReferenceType,
     CanonicalReferenceView,
+    ReferenceCoverage,
 )
 
 
@@ -97,10 +99,46 @@ class DerivedReferenceGenerationService:
         references: CanonicalReferenceService,
         library: ReferenceLibraryService,
         providers: DerivedReferenceGeneratorRegistry,
+        templates: CategoryReferenceTemplateService | None = None,
     ) -> None:
         self.references = references
         self.library = library
         self.providers = providers
+        self.templates = templates or CategoryReferenceTemplateService(references, library)
+
+    def coverage(self, asset_id: str) -> ReferenceCoverage:
+        """Return category-template coverage for the active CAP reference set."""
+        return self.templates.coverage(asset_id)
+
+    def generate_missing_required(
+        self,
+        asset_id: str,
+        *,
+        provider_name: str,
+        actor: str = "Derived Reference Generation",
+        width: int = 1280,
+        height: int = 720,
+        seed: int = 0,
+    ) -> tuple[int, ...]:
+        """Generate every currently missing required derived view for the asset category."""
+        coverage = self.coverage(asset_id)
+        if CanonicalReferenceView.MASTER in coverage.missing_required:
+            raise DerivedReferenceGenerationError(
+                "The category template requires a MASTER reference. Attach and lock the approved "
+                "ChatGPT MASTER before generating derived views."
+            )
+        views = self.templates.missing_required_views(asset_id)
+        if not views:
+            return ()
+        return self.generate(
+            asset_id,
+            views,
+            provider_name=provider_name,
+            actor=actor,
+            width=width,
+            height=height,
+            seed=seed,
+        )
 
     def generate(
         self,
