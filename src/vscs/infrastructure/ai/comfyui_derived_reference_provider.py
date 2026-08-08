@@ -100,12 +100,19 @@ class ComfyUIDerivedReferenceProvider:
         output_name = f"{request.asset_id}_{request.view.value}_{request.seed:010d}.png"
         queue_path = queue_root / f"derived_reference_{job_id}.json"
         output_path = output_root / output_name
+        queue_payload = {
+            "jobs": [
+                self._queue_job(
+                    request,
+                    master,
+                    output_root,
+                    output_name,
+                    job_id=job_id,
+                )
+            ]
+        }
         queue_path.write_text(
-            json.dumps(
-                [self._queue_job(request, master, output_root, output_name)],
-                indent=2,
-                ensure_ascii=False,
-            ),
+            json.dumps(queue_payload, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
 
@@ -184,29 +191,48 @@ class ComfyUIDerivedReferenceProvider:
         master: Path,
         output_root: Path,
         output_name: str,
+        *,
+        job_id: str,
     ) -> dict[str, object]:
-        """Write the six logical values exposed by XCICQwenReferenceJobLoader.
-
-        The explicit aliases make the runtime payload self-describing while retaining the
-        original XCIC field names used by the reference-pack job loader.
-        """
+        """Build the exact job schema consumed by XCICQwenReferenceJobLoader v2.2."""
         return {
-            "image": str(master),
-            "input_image": str(master),
-            "master_reference": str(master),
-            "positive_prompt": request.prompt,
-            "prompt": request.prompt,
-            "negative_prompt": request.negative_prompt,
-            "enable_4steps_lora": self.configuration.enable_lightning_lora,
-            "enable_lightning_lora": self.configuration.enable_lightning_lora,
-            "directory": str(output_root),
-            "output_directory": str(output_root),
-            "filename": output_name,
-            "output_filename": output_name,
+            "job_id": job_id,
             "asset_id": request.asset_id,
+            "asset_category": self._asset_category(request.asset_id),
+            "reference_inputs": [str(master)],
+            "positive_prompt": request.prompt,
+            "negative_prompt": request.negative_prompt,
+            "generation": {
+                "enable_turbo_mode": self.configuration.enable_lightning_lora,
+            },
+            "generation_policy": {
+                "force_standard_mode": self.configuration.quality_mode == "standard",
+            },
+            "output": {
+                "candidate_directory": str(output_root),
+                "candidate_filename": output_name,
+            },
             "view": request.view.value,
             "seed": request.seed,
         }
+
+    @staticmethod
+    def _asset_category(asset_id: str) -> str:
+        """Map VSCS asset-ID prefixes to XCIC Qwen preservation profiles."""
+        parts = asset_id.upper().split("-")
+        prefix = parts[1] if len(parts) > 1 else ""
+        return {
+            "CHR": "character",
+            "SHP": "ship",
+            "PLN": "planet",
+            "LOC": "location",
+            "ENV": "environment",
+            "UNI": "uniform",
+            "PRP": "prop",
+            "TEC": "technology",
+            "VEH": "vehicle",
+            "EFF": "effect",
+        }.get(prefix, "asset")
 
     @staticmethod
     def _wait_for_output(expected: Path, output_root: Path) -> Path:
