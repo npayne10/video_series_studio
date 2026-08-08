@@ -26,7 +26,10 @@ def test_asset_edit_dialog_protects_identity_and_master(qtbot) -> None:
     assert dialog.asset_id.isReadOnly()
     assert dialog.master_reference.isReadOnly()
     assert dialog.master_status.isReadOnly()
-    assert dialog.master_reference.text() == "references\\Guild_Tug_MASTER.png" or dialog.master_reference.text() == "references/Guild_Tug_MASTER.png"
+    assert (
+        dialog.master_reference.text() == "references\\Guild_Tug_MASTER.png"
+        or dialog.master_reference.text() == "references/Guild_Tug_MASTER.png"
+    )
     assert dialog.open_cap_button.text() == "Open Canonical Profile"
 
 
