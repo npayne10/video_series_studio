@@ -1,6 +1,6 @@
 """UI contract tests for the Phase 18.2.11.2.7 CAP readiness report."""
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QProgressBar
 
 from vscs.domain.caps import (
     ReadinessAssessment,
@@ -34,7 +34,8 @@ def test_readiness_dialog_exposes_typed_dimension_scores(
     dialog = CAPReadinessDialog(report)
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
+    progress = dialog.findChild(QProgressBar, "overallReadinessProgress")
     assert dialog.windowTitle() == "CAP Readiness — CAP-CHR-001"
-    progress = dialog.findChild(type(dialog).mro()[1], "overallReadinessProgress")
     assert dialog.report.overall_score == 86
     assert progress is not None
+    assert progress.value() == 86
