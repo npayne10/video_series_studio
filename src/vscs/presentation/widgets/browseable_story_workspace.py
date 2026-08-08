@@ -32,8 +32,8 @@ from vscs.application.story_analysis import (
     StoryAnalysisCacheState,
     StoryAnalysisEngine,
     StoryIntelligenceDashboardService,
-    StorySourceReadError,
     StorySourceReader,
+    StorySourceReadError,
 )
 from vscs.presentation.help import StoryWorkspaceHelpDialog
 
