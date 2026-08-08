@@ -30,6 +30,9 @@ from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.asset_manager import AssetManagerWidget
+from vscs.presentation.widgets.cap_derived_reference_generation import (
+    install_derived_reference_generation,
+)
 from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
@@ -161,6 +164,7 @@ class MainWindow(QMainWindow):
             self.cap_generator,
             self.canonical_references,
         )
+        self.derived_reference_button = install_derived_reference_generation(self.cap_manager)
         self.content_stack.addWidget(self.cap_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
@@ -296,6 +300,8 @@ class MainWindow(QMainWindow):
         self.asset_manager.add_button.setEnabled(active)
         self.asset_manager.edit_button.setEnabled(active)
         self.cap_manager.add_button.setEnabled(active)
+        if self.derived_reference_button is not None:
+            self.derived_reference_button.setEnabled(active)
         self.dashboard.new_project_button.setEnabled(not active)
         self.dashboard.open_project_button.setEnabled(not active)
 
