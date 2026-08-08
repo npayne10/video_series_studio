@@ -15,6 +15,14 @@ from vscs.application.caps.asset_generator import (
     CanonicalAssetGeneratorService,
 )
 from vscs.application.caps.generator import CAPGenerationError, CAPGeneratorService
+from vscs.application.caps.reference_library import (
+    InvalidReferenceLifecycleTransitionError,
+    ReferenceLibraryConflictError,
+    ReferenceLibraryError,
+    ReferenceLibraryNotFoundError,
+    ReferenceLibraryService,
+    ReferenceLibraryStore,
+)
 from vscs.application.caps.reference_repository import (
     CanonicalReferenceRepository,
     CanonicalReferenceRepositoryError,
@@ -42,8 +50,8 @@ __all__ = (
     "CAP_PRODUCTION_CONTRACT_GAPS",
     "MASTER_REFERENCE_AUTHORING_POLICY",
     "CAPAlreadyExistsError",
-    "CAPAssetNotFoundError",
     "CAPAssessmentDisposition",
+    "CAPAssetNotFoundError",
     "CAPCapabilityAssessment",
     "CAPContractGap",
     "CAPError",
@@ -64,6 +72,12 @@ __all__ = (
     "InvalidCAPReferencePathError",
     "InvalidCanonicalReferencePathError",
     "InvalidCanonicalReferenceTransitionError",
+    "InvalidReferenceLifecycleTransitionError",
+    "ReferenceLibraryConflictError",
+    "ReferenceLibraryError",
+    "ReferenceLibraryNotFoundError",
+    "ReferenceLibraryService",
+    "ReferenceLibraryStore",
     "blocking_gaps",
     "disposition_counts",
 )

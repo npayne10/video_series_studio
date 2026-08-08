@@ -29,6 +29,12 @@ from vscs.domain.caps.production_contract import (
     ProductionAssetProjection,
     ProductionReference,
 )
+from vscs.domain.caps.reference_library import (
+    ReferenceLibraryEntry,
+    ReferenceLibrarySnapshot,
+    ReferenceLifecycleAction,
+    ReferenceLifecycleEvent,
+)
 from vscs.domain.caps.references import (
     CanonicalReference,
     CanonicalReferenceCreate,
@@ -71,4 +77,8 @@ __all__ = (
     "GeneratedCanonicalAsset",
     "ProductionAssetProjection",
     "ProductionReference",
+    "ReferenceLibraryEntry",
+    "ReferenceLibrarySnapshot",
+    "ReferenceLifecycleAction",
+    "ReferenceLifecycleEvent",
 )
