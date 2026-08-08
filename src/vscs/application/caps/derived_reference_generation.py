@@ -35,6 +35,7 @@ class DerivedReferenceRequest:
     width: int = 1280
     height: int = 720
     seed: int = 0
+    project_directory: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +125,7 @@ class DerivedReferenceGenerationService:
         project = self.references.caps.assets.projects.project_directory
         if project is None:
             raise DerivedReferenceGenerationError("Open a project before generating references")
+        project = project.resolve(strict=False)
 
         entries = self.library.list_for_cap(asset_id)
         master = next(
@@ -172,6 +174,7 @@ class DerivedReferenceGenerationService:
                 width=width,
                 height=height,
                 seed=seed + offset,
+                project_directory=project,
             )
             generated = provider.generate(request)
             suffix = Path(generated.filename).suffix or ".png"
@@ -189,7 +192,7 @@ class DerivedReferenceGenerationService:
                     file_path=relative_path,
                     description=request.prompt,
                     notes=(
-                        f"VSCS derived production reference\n"
+                        "VSCS derived production reference\n"
                         f"Provider: {generated.provider_name}\n"
                         f"Model: {generated.model or 'unspecified'}\n"
                         f"MASTER: {master.reference_id}\n"
@@ -219,11 +222,12 @@ class DerivedReferenceGenerationService:
             visual_identity.strip() or "Preserve every visible canonical feature from the MASTER."
         )
         return (
-            f"Create a canonical {label} production reference of the exact same asset shown in the "
-            f"supplied MASTER image. Do not redesign, restyle, add, remove, or reinterpret canonical "
-            f"features. Preserve geometry, proportions, materials, colours, markings and identity. "
-            f"Asset canon: {description.strip()} Visual identity: {visual} "
-            f"Requested viewpoint only: {label}. Neutral reference presentation, no dramatic action."
+            f"Using the supplied MASTER image as the absolute visual identity authority, create a "
+            f"canonical {label} production reference of the exact same asset. Do not redesign, "
+            f"restyle, add, remove, or reinterpret canonical features. Preserve geometry, "
+            f"proportions, materials, colours, markings and identity exactly. Asset canon: "
+            f"{description.strip()} Visual identity: {visual} Requested viewpoint only: {label}. "
+            f"Neutral production-reference presentation, no dramatic action or scene context."
         )
 
     @staticmethod
