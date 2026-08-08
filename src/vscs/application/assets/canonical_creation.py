@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -163,21 +164,16 @@ class CanonicalAssetCreationService:
         reference_record_id: int | None,
     ) -> None:
         if reference_record_id is not None:
-            try:
+            with suppress(CanonicalReferenceError):
                 self.references.unlock(reference_record_id)
-            except CanonicalReferenceError:
-                pass
-            try:
+
+            with suppress(CanonicalReferenceError):
                 self.references.delete(reference_record_id)
-            except CanonicalReferenceError:
-                pass
+
         if cap_created and asset is not None:
-            try:
+            with suppress(CAPError):
                 self.caps.delete(asset.asset_id)
-            except CAPError:
-                pass
+
         if asset is not None:
-            try:
+            with suppress(AssetError):
                 self.assets.delete(asset.asset_id)
-            except AssetError:
-                pass

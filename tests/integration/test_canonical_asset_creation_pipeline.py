@@ -67,9 +67,9 @@ def test_asset_creation_seeds_draft_cap_and_locked_master(tmp_path: Path) -> Non
         context.services.require(CAPService).get("CAP-SHP-900").canonical_description
         == "Canonical test tug."
     )
-    entry = ReferenceLibraryService(
-        context.services.require(CanonicalReferenceService)
-    ).get(result.reference_record_id)
+    entry = ReferenceLibraryService(context.services.require(CanonicalReferenceService)).get(
+        result.reference_record_id
+    )
     assert entry.family is CanonicalReferenceFamily.MASTER
     assert entry.lifecycle is CanonicalReferenceLifecycle.LOCKED
     assert entry.approved_by == "Neill"
