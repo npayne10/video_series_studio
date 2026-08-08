@@ -4,13 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from vscs.application.assets import CanonicalAssetCreationError, CanonicalAssetCreationService
-from vscs.application.caps import (
-    CanonicalReferenceService,
-    CAPService,
-    ReferenceLibraryService,
+from vscs.application.assets import (
+    AssetNotFoundError,
+    AssetService,
+    CanonicalAssetCreationError,
+    CanonicalAssetCreationService,
 )
-from vscs.application.assets import AssetService
+from vscs.application.caps import CanonicalReferenceService, CAPService, ReferenceLibraryService
+from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.domain.caps import CanonicalReferenceFamily, CanonicalReferenceLifecycle
@@ -42,7 +43,7 @@ def _service(context) -> CanonicalAssetCreationService:
 
 def test_asset_creation_seeds_draft_cap_and_locked_master(tmp_path: Path) -> None:
     context = build_application_context(_options(tmp_path))
-    projects = context.services.require(__import__("vscs.application.projects", fromlist=["ProjectService"]).ProjectService)
+    projects = context.services.require(ProjectService)
     project = tmp_path / "Production"
     projects.create(project, name="Production")
     master = project / "references" / "tug_master.png"
@@ -62,7 +63,10 @@ def test_asset_creation_seeds_draft_cap_and_locked_master(tmp_path: Path) -> Non
     )
 
     assert result.asset.file_path == Path("references/tug_master.png")
-    assert context.services.require(CAPService).get("CAP-SHP-900").canonical_description == "Canonical test tug."
+    assert (
+        context.services.require(CAPService).get("CAP-SHP-900").canonical_description
+        == "Canonical test tug."
+    )
     entry = ReferenceLibraryService(
         context.services.require(CanonicalReferenceService)
     ).get(result.reference_record_id)
@@ -75,7 +79,7 @@ def test_asset_creation_seeds_draft_cap_and_locked_master(tmp_path: Path) -> Non
 
 def test_asset_creation_requires_explicit_master_confirmation(tmp_path: Path) -> None:
     context = build_application_context(_options(tmp_path))
-    projects = context.services.require(__import__("vscs.application.projects", fromlist=["ProjectService"]).ProjectService)
+    projects = context.services.require(ProjectService)
     project = tmp_path / "Production"
     projects.create(project, name="Production")
     master = project / "master.png"
@@ -92,6 +96,6 @@ def test_asset_creation_requires_explicit_master_confirmation(tmp_path: Path) ->
             confirmed_chatgpt_master=False,
         )
 
-    with pytest.raises(Exception):
+    with pytest.raises(AssetNotFoundError):
         context.services.require(AssetService).get("CAP-SHP-901")
     context.shutdown()
