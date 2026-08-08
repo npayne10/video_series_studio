@@ -4,9 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from vscs.application.assets import (
-    AssetNotFoundError,
-    AssetService,
+from vscs.application.assets import AssetNotFoundError, AssetService
+from vscs.application.assets.canonical_creation import (
     CanonicalAssetCreationError,
     CanonicalAssetCreationService,
 )
