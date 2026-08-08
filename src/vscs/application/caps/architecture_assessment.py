@@ -39,7 +39,8 @@ class CAPContractGap:
 MASTER_REFERENCE_AUTHORING_POLICY = (
     "Master canonical references are authored externally in ChatGPT. VSCS registers, "
     "classifies, validates, approves, locks, versions and supplies those references to "
-    "downstream production; it is not the authoritative master-reference authoring system."
+    "downstream production. VSCS may generate governed derived production references from "
+    "the approved master, but it is not the authoritative master-reference authoring system."
 )
 
 
@@ -98,7 +99,7 @@ CAP_CAPABILITY_ASSESSMENTS: tuple[CAPCapabilityAssessment, ...] = (
         "Primary / Secondary / Supplementary reference roles",
         CAPAssessmentDisposition.REPLACE,
         "Importance alone cannot tell production which viewpoint/reference to use for a shot.",
-        "Use production roles/viewpoints such as primary, front, rear, port, starboard, top, detail and variant.",
+        "Use production roles/viewpoints such as master, front, rear, port, starboard, top, detail and variant.",
     ),
     CAPCapabilityAssessment(
         "reference.lifecycle",
@@ -119,7 +120,7 @@ CAP_CAPABILITY_ASSESSMENTS: tuple[CAPCapabilityAssessment, ...] = (
         "Canonical reference gallery and preview",
         CAPAssessmentDisposition.KEEP,
         "Human visual review remains necessary for canonical governance.",
-        "Gallery exposes role, lifecycle, provenance and readiness without authoring new masters.",
+        "Gallery exposes role, lifecycle, provenance and readiness without redefining the master.",
     ),
     CAPCapabilityAssessment(
         "reference.delete",
@@ -133,28 +134,28 @@ CAP_CAPABILITY_ASSESSMENTS: tuple[CAPCapabilityAssessment, ...] = (
         "Evaluate Selected Image",
         CAPAssessmentDisposition.REFINE,
         "Technical QC can add value but must not become a second canonical authority.",
-        "Retain as optional non-authoritative quality validation for imported master references.",
+        "Retain as optional non-authoritative quality validation for master and derived references.",
     ),
     CAPCapabilityAssessment(
         "reference.semantic-evaluation",
         "Semantic Evaluate Selected",
         CAPAssessmentDisposition.REFINE,
         "Semantic comparison can detect drift but is not allowed to create or redefine canon.",
-        "Retain only as optional advisory compliance checking against approved CAP facts/constraints.",
+        "Retain as advisory consistency checking against the approved master and CAP constraints.",
     ),
     CAPCapabilityAssessment(
         "reference.generate-master",
         "Generate Canonical Images",
-        CAPAssessmentDisposition.REMOVE,
-        "Master reference authoring is already assigned to the approved ChatGPT workflow.",
-        "VSCS imports and governs master references instead of competing with the authoring workflow.",
+        CAPAssessmentDisposition.REPLACE,
+        "VSCS must not author the MASTER, but image generation remains valuable for missing production views.",
+        "Replace with Generate Production References driven by an approved MASTER and requested view roles.",
     ),
     CAPCapabilityAssessment(
         "reference.regenerate-feedback",
         "Regenerate canonical reference from feedback",
-        CAPAssessmentDisposition.REMOVE,
-        "It duplicates external master-reference authoring and creates two competing sources of truth.",
-        "Feedback belongs to the external ChatGPT authoring cycle; the returned master is re-imported/versioned.",
+        CAPAssessmentDisposition.REFINE,
+        "Regeneration is valid for derived candidates but must never silently replace the MASTER.",
+        "Regenerate only derived production references from the immutable approved MASTER plus feedback.",
     ),
     CAPCapabilityAssessment(
         "cap.ai-draft-generation",
@@ -202,7 +203,7 @@ CAP_PRODUCTION_CONTRACT_GAPS: tuple[CAPContractGap, ...] = (
     CAPContractGap(
         "gap.reference-origin",
         "Explicit reference origin/authoring provenance",
-        "The contract must record externally authored ChatGPT master references without implying VSCS created them.",
+        "The contract must distinguish ChatGPT-authored masters from VSCS-derived production references.",
     ),
     CAPContractGap(
         "gap.reference-selection",

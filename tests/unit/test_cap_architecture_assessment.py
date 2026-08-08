@@ -29,17 +29,21 @@ def test_assessment_exercises_all_rationalisation_dispositions() -> None:
     assert counts[CAPAssessmentDisposition.REMOVE] > 0
 
 
-def test_external_chatgpt_master_reference_policy_removes_duplicate_authoring() -> None:
+def test_chatgpt_owns_master_while_vscs_may_generate_derived_references() -> None:
     by_id = {item.capability_id: item for item in CAP_CAPABILITY_ASSESSMENTS}
 
     assert "externally in ChatGPT" in MASTER_REFERENCE_AUTHORING_POLICY
+    assert "derived production references" in MASTER_REFERENCE_AUTHORING_POLICY
     assert (
         by_id["reference.generate-master"].disposition
-        is CAPAssessmentDisposition.REMOVE
+        is CAPAssessmentDisposition.REPLACE
     )
+    assert "Generate Production References" in by_id[
+        "reference.generate-master"
+    ].target_contract
     assert (
         by_id["reference.regenerate-feedback"].disposition
-        is CAPAssessmentDisposition.REMOVE
+        is CAPAssessmentDisposition.REFINE
     )
     assert (
         by_id["reference.structured-registry"].disposition

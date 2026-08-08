@@ -6,7 +6,9 @@ Audit the existing Canonical Asset Profile subsystem before Production Planning.
 
 ## Governing decision
 
-**Master canonical references are authored externally in ChatGPT.** VSCS is the canonical governance and production-consumption system for those masters: it registers, classifies, validates, approves, locks, versions and supplies them downstream. VSCS must not maintain a competing master-reference authoring workflow.
+**Master canonical references are authored externally in ChatGPT.** VSCS is the canonical governance and production-consumption system for those masters: it registers, classifies, validates, approves, locks, versions and supplies them downstream. VSCS does not maintain a competing MASTER-authoring workflow.
+
+VSCS **may generate governed derived production references** from the approved MASTER to provide missing production coverage such as front, rear, side, top, bottom, interior or detail views. Derived references never redefine the MASTER and require normal candidate/review/approval governance.
 
 ## Current architecture findings
 
@@ -26,7 +28,7 @@ The audit also found architectural overlap and missing production semantics:
 2. Reference roles are only `Primary`, `Secondary` and `Supplementary`. They express importance, not production viewpoint such as front, rear, port, starboard, top or detail.
 3. `production_notes` can mix canonical behavior, constraints, production guidance and story-specific actions.
 4. The CAP Manager can generate CAP drafts from manually pasted story context even though Approved Story Intelligence is now the upstream story contract.
-5. The CAP UI contains canonical image generation and feedback-regeneration workflows, despite the approved external ChatGPT master-reference workflow.
+5. The current image-generation UI does not distinguish forbidden MASTER authoring from permitted derived production-view generation.
 6. A single production-readiness concept cannot distinguish identity readiness from reference/planning/generation readiness.
 7. No category-specific reference coverage contract currently defines what a ship, character, location, vehicle or prop needs.
 8. No deterministic downstream reference-selection contract exists for Shot Planning and Prompt Compilation.
@@ -48,7 +50,8 @@ The audit also found architectural overlap and missing production semantics:
 - Reference lifecycle: add explicit rejection and formalize lock behavior.
 - Reference deletion: approved/locked references should archive instead of being destructively deleted.
 - Technical image evaluation: retain as optional non-authoritative QC.
-- Semantic image evaluation: retain only as advisory compliance checking against approved CAP facts/constraints.
+- Semantic image evaluation: retain as advisory consistency checking against the approved MASTER and CAP facts/constraints.
+- Regenerate from Feedback: retain only for derived production-reference candidates; never use it to silently replace the MASTER.
 
 ### REPLACE
 
@@ -56,14 +59,14 @@ The audit also found architectural overlap and missing production semantics:
 - Primary/Secondary/Supplementary role model → production reference role/viewpoint taxonomy.
 - CAP draft generation from pasted story text → optional assistance sourced from Approved Story Intelligence/XPD facts.
 - Single Production Readiness result → separate identity, reference, planning and generation readiness gates.
+- `Generate Canonical Images` → `Generate Production References`, driven by an approved MASTER and explicit requested view roles.
 
 ### REMOVE / DEPRECATE FROM THE CANONICAL WORKFLOW
 
 - Legacy CAP `reference_paths` once migration to structured references is complete.
-- `Generate Canonical Images` as a master-reference authoring function.
-- `Regenerate from Feedback` as a master-reference authoring function.
+- Any VSCS workflow that authors or silently regenerates the authoritative MASTER reference.
 
-The generation implementation may remain temporarily for migration/backward compatibility, but later 18.2.11 phases must remove it from the authoritative CAP workflow and UI. No destructive removal is performed in 18.2.11.1.
+Existing generation implementation may remain temporarily for migration/backward compatibility. Later 18.2.11 phases must redirect it to derived-reference generation only.
 
 ## Production-contract gaps to close before Phase 18.3
 
@@ -72,7 +75,7 @@ The generation implementation may remain temporarily for migration/backward comp
 3. Explicit canonical constraints/prohibited variations.
 4. Viewpoint/production reference roles.
 5. Category-specific required and optional reference sets.
-6. Explicit reference origin/authoring provenance, including ChatGPT master provenance.
+6. Explicit reference origin/authoring provenance distinguishing ChatGPT MASTER references and VSCS-derived references.
 7. Deterministic downstream reference-selection API.
 8. Separate identity/reference/planning/generation readiness gates.
 9. Explicit canonical variant contract.
@@ -91,7 +94,7 @@ Canonical Asset Profile
         ├─ Functional identity
         ├─ Constraints
         ├─ Production guidance
-        ├─ Approved typed references
+        ├─ MASTER + approved derived references
         └─ Readiness gates
         ↓
 Read-only CAP Production Contract
@@ -103,18 +106,19 @@ Scene-specific facts such as current action, camera, lighting, dialogue, emotion
 
 ## Multi-reference requirement
 
-CAPs must support multiple references. Later subphases will formalize category-specific role sets. A ship, for example, may use Primary Three-Quarter, Front, Rear, Port, Starboard, Top and optional detail references. A character will use a different role set. The downstream selector must request the smallest appropriate approved reference subset for the planned shot rather than indiscriminately passing every image.
+CAPs must support multiple references. Exactly one MASTER is authoritative. Later subphases will formalize category-specific role sets. A ship, for example, may use the MASTER plus Front, Rear, Port, Starboard, Top, Bottom and optional detail references. A character will use a different role set. The downstream selector must request the smallest appropriate approved reference subset for the planned shot rather than indiscriminately passing every image.
 
 ## Acceptance criteria for 18.2.11.1
 
 - Every major existing CAP capability has an explicit architectural disposition.
-- Master-reference authoring policy is explicit and testable.
+- MASTER-reference authoring policy is explicit and testable.
+- ChatGPT remains the authoritative MASTER creator.
+- VSCS-derived production-reference generation is retained as a governed capability.
 - Structured references are selected as the future single reference source of truth.
-- Redundant generation/regeneration functions are identified for removal/deprecation rather than extended.
 - Required Production Planning contract gaps are explicitly recorded.
 - Assessment is represented in code and unit tests so later phases cannot silently reintroduce rejected architecture.
 - No existing CAP data or behavior is destructively migrated in this assessment-only phase.
 
 ## Next work
 
-Phase 18.2.11.2 should define and implement the **Canonical Profile Production Contract data model**, including structured facts, functional identity, constraints, production guidance and migration compatibility. The multi-reference taxonomy and readiness implementation should then build on that stable contract.
+Phase 18.2.11.2 defines and implements the **Canonical Profile Production Contract data model**, including structured facts, functional identity, constraints, production guidance, MASTER/derived provenance and migration compatibility. The category reference templates, readiness and production projection implementation then build on that stable contract.
