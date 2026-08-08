@@ -34,34 +34,17 @@ def test_chatgpt_owns_master_while_vscs_may_generate_derived_references() -> Non
 
     assert "externally in ChatGPT" in MASTER_REFERENCE_AUTHORING_POLICY
     assert "derived production references" in MASTER_REFERENCE_AUTHORING_POLICY
-    assert (
-        by_id["reference.generate-master"].disposition
-        is CAPAssessmentDisposition.REPLACE
-    )
-    assert "Generate Production References" in by_id[
-        "reference.generate-master"
-    ].target_contract
-    assert (
-        by_id["reference.regenerate-feedback"].disposition
-        is CAPAssessmentDisposition.REFINE
-    )
-    assert (
-        by_id["reference.structured-registry"].disposition
-        is CAPAssessmentDisposition.KEEP
-    )
+    assert by_id["reference.generate-master"].disposition is CAPAssessmentDisposition.REPLACE
+    assert "Generate Production References" in by_id["reference.generate-master"].target_contract
+    assert by_id["reference.regenerate-feedback"].disposition is CAPAssessmentDisposition.REFINE
+    assert by_id["reference.structured-registry"].disposition is CAPAssessmentDisposition.KEEP
 
 
 def test_legacy_reference_paths_are_retired_in_favour_of_structured_references() -> None:
     by_id = {item.capability_id: item for item in CAP_CAPABILITY_ASSESSMENTS}
 
-    assert (
-        by_id["cap.legacy-reference-paths"].disposition
-        is CAPAssessmentDisposition.REMOVE
-    )
-    assert (
-        by_id["reference.generic-role"].disposition
-        is CAPAssessmentDisposition.REPLACE
-    )
+    assert by_id["cap.legacy-reference-paths"].disposition is CAPAssessmentDisposition.REMOVE
+    assert by_id["reference.generic-role"].disposition is CAPAssessmentDisposition.REPLACE
 
 
 def test_production_contract_gaps_are_unique_and_block_phase_18_3_contract() -> None:
@@ -84,9 +67,6 @@ def test_production_contract_gaps_are_unique_and_block_phase_18_3_contract() -> 
 def test_story_specific_notes_are_replaced_by_structured_contract_fields() -> None:
     by_id = {item.capability_id: item for item in CAP_CAPABILITY_ASSESSMENTS}
 
-    assert (
-        by_id["cap.production-notes"].disposition
-        is CAPAssessmentDisposition.REPLACE
-    )
+    assert by_id["cap.production-notes"].disposition is CAPAssessmentDisposition.REPLACE
     assert "functional identity" in by_id["cap.production-notes"].target_contract
     assert "canonical constraints" in by_id["cap.production-notes"].target_contract

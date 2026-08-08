@@ -231,9 +231,7 @@ CAP_PRODUCTION_CONTRACT_GAPS: tuple[CAPContractGap, ...] = (
 def disposition_counts() -> dict[CAPAssessmentDisposition, int]:
     """Return deterministic audit totals for reporting and regression tests."""
     return {
-        disposition: sum(
-            item.disposition is disposition for item in CAP_CAPABILITY_ASSESSMENTS
-        )
+        disposition: sum(item.disposition is disposition for item in CAP_CAPABILITY_ASSESSMENTS)
         for disposition in CAPAssessmentDisposition
     }
 

@@ -219,7 +219,9 @@ class CanonicalProductionContract(BaseModel):
             if reference.family is CanonicalReferenceFamily.MASTER
         ]
         if len(masters) != 1:
-            raise ValueError("A Canonical Production Contract requires exactly one MASTER reference")
+            raise ValueError(
+                "A Canonical Production Contract requires exactly one MASTER reference"
+            )
 
         master_id = masters[0].reference_id
         known_ids = set(reference_ids)
@@ -228,12 +230,14 @@ class CanonicalProductionContract(BaseModel):
                 raise ValueError(
                     f"Parent reference {reference.parent_reference_id!r} is not part of this CAP"
                 )
-            if reference.origin is CanonicalReferenceOrigin.VSCS_DERIVED:
-                if reference.parent_reference_id != master_id:
-                    raise ValueError(
-                        "Phase 18.2.11 requires VSCS-derived production views to trace directly "
-                        "to the current MASTER reference"
-                    )
+            if (
+                reference.origin is CanonicalReferenceOrigin.VSCS_DERIVED
+                and reference.parent_reference_id != master_id
+            ):
+                raise ValueError(
+                    "Phase 18.2.11 requires VSCS-derived production views to trace directly "
+                    "to the current MASTER reference"
+                )
         return self
 
 
