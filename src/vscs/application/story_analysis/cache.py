@@ -152,16 +152,14 @@ class StoryAnalysisCacheService:
         current_revision = self.revision(story, source_text)
         cached_revision = str(payload.get("analysis_revision", ""))
         if not allow_stale and current_revision != cached_revision:
-            raise StoryAnalysisCacheError(
-                "Story Analysis is out of date. Choose Reanalyse Story."
-            )
+            raise StoryAnalysisCacheError("Story Analysis is out of date. Choose Reanalyse Story.")
         try:
             artifacts: dict[str, object] = {}
             if raw := payload.get("analysis_result"):
                 artifacts[ANALYSIS_RESULT_ARTIFACT] = AnalysisResult.model_validate(raw)
             if raw := payload.get("ai_entity_resolution"):
-                artifacts[AI_ENTITY_RESOLUTION_ARTIFACT] = (
-                    EntityResolutionResult.model_validate(raw)
+                artifacts[AI_ENTITY_RESOLUTION_ARTIFACT] = EntityResolutionResult.model_validate(
+                    raw
                 )
             if raw := payload.get("knowledge_graph"):
                 artifacts[KNOWLEDGE_GRAPH_ARTIFACT] = StoryKnowledgeGraph.model_validate(raw)
@@ -169,27 +167,19 @@ class StoryAnalysisCacheService:
                 StageResult(
                     stage_id=str(item["stage_id"]),
                     status=AnalysisStatus(str(item["status"])),
-                    diagnostics=tuple(
-                        str(value) for value in item.get("diagnostics", [])
-                    ),
+                    diagnostics=tuple(str(value) for value in item.get("diagnostics", [])),
                 )
                 for item in payload.get("stage_results", [])
             )
             return StoryAnalysisReport(
                 story_id=story.story_id,
-                status=AnalysisStatus(
-                    str(payload.get("status", AnalysisStatus.COMPLETED.value))
-                ),
+                status=AnalysisStatus(str(payload.get("status", AnalysisStatus.COMPLETED.value))),
                 stage_results=stage_results,
                 artifacts=artifacts,
-                diagnostics=tuple(
-                    str(value) for value in payload.get("diagnostics", [])
-                ),
+                diagnostics=tuple(str(value) for value in payload.get("diagnostics", [])),
             )
         except (KeyError, TypeError, ValueError) as exc:
-            raise StoryAnalysisCacheError(
-                f"Cached Story Analysis is invalid: {exc}"
-            ) from exc
+            raise StoryAnalysisCacheError(f"Cached Story Analysis is invalid: {exc}") from exc
 
     def _save_report(
         self,
@@ -222,9 +212,7 @@ class StoryAnalysisCacheService:
                 for item in report.stage_results
             ],
             "analysis_result": (
-                analysis.model_dump(mode="json")
-                if isinstance(analysis, AnalysisResult)
-                else None
+                analysis.model_dump(mode="json") if isinstance(analysis, AnalysisResult) else None
             ),
             "ai_entity_resolution": (
                 resolution.model_dump(mode="json")
@@ -232,9 +220,7 @@ class StoryAnalysisCacheService:
                 else None
             ),
             "knowledge_graph": (
-                graph.model_dump(mode="json")
-                if isinstance(graph, StoryKnowledgeGraph)
-                else None
+                graph.model_dump(mode="json") if isinstance(graph, StoryKnowledgeGraph) else None
             ),
         }
         path = self._path(story.story_id)
@@ -245,9 +231,7 @@ class StoryAnalysisCacheService:
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise StoryAnalysisCacheError(
-                f"Unable to persist Story Analysis cache: {exc}"
-            ) from exc
+            raise StoryAnalysisCacheError(f"Unable to persist Story Analysis cache: {exc}") from exc
 
     @staticmethod
     def _provider(report: StoryAnalysisReport) -> str:
@@ -265,20 +249,14 @@ class StoryAnalysisCacheService:
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise StoryAnalysisCacheError(
-                f"Unable to read Story Analysis cache: {exc}"
-            ) from exc
+            raise StoryAnalysisCacheError(f"Unable to read Story Analysis cache: {exc}") from exc
         if not isinstance(value, dict):
-            raise StoryAnalysisCacheError(
-                "Story Analysis cache must contain a JSON object"
-            )
+            raise StoryAnalysisCacheError("Story Analysis cache must contain a JSON object")
         return value
 
     def _path(self, story_id: str) -> Path:
         project = self.assets.projects.project_directory
         if project is None:
-            raise StoryAnalysisCacheError(
-                "Open a VSCS project before using Story Analysis"
-            )
+            raise StoryAnalysisCacheError("Open a VSCS project before using Story Analysis")
         safe_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", story_id).strip("._") or "story"
         return project / ".vscs" / self.DIRECTORY / f"{safe_id}.json"

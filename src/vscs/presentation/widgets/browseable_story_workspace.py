@@ -279,9 +279,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         button = QPushButton("Reanalyse Story", dialog)
         button.setObjectName("reanalyseStoryExplicit")
         button.setToolTip("Explicitly rerun Story Analysis and the configured AI provider.")
-        button.clicked.connect(
-            lambda: self._reanalyse_from_dialog(story, source_text, dialog)
-        )
+        button.clicked.connect(lambda: self._reanalyse_from_dialog(story, source_text, dialog))
         toolbar.insertWidget(5, button)
         dialog.reanalyse_story_button = button
 
