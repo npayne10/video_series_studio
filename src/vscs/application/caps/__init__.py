@@ -15,6 +15,11 @@ from vscs.application.caps.asset_generator import (
     CanonicalAssetGeneratorService,
 )
 from vscs.application.caps.generator import CAPGenerationError, CAPGeneratorService
+from vscs.application.caps.production_projection_service import (
+    ProductionProjectionBlockedError,
+    ProductionProjectionError,
+    ProductionProjectionService,
+)
 from vscs.application.caps.readiness_service import CAPReadinessService
 from vscs.application.caps.reference_library import (
     InvalidReferenceLifecycleTransitionError,
@@ -77,6 +82,9 @@ __all__ = (
     "InvalidCanonicalReferencePathError",
     "InvalidCanonicalReferenceTransitionError",
     "InvalidReferenceLifecycleTransitionError",
+    "ProductionProjectionBlockedError",
+    "ProductionProjectionError",
+    "ProductionProjectionService",
     "ReferenceLibraryConflictError",
     "ReferenceLibraryError",
     "ReferenceLibraryNotFoundError",

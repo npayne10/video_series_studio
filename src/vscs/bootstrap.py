@@ -14,8 +14,11 @@ from vscs.application.caps import (
     CanonicalReferenceRepository,
     CanonicalReferenceService,
     CAPGeneratorService,
+    CAPReadinessService,
     CAPRepository,
     CAPService,
+    ProductionProjectionService,
+    ReferenceLibraryService,
 )
 from vscs.application.projects import ProjectService
 from vscs.application.prompt_graph import (
@@ -164,9 +167,7 @@ def build_application_context(
     logger: logging.Logger | None = None
     if selected.configure_logging:
         settings = configuration.settings.logging
-        root = configuration.settings.environment.logs_root.expanduser().resolve(
-            strict=False
-        )
+        root = configuration.settings.environment.logs_root.expanduser().resolve(strict=False)
         logging_service = LoggingService(
             root,
             level=settings.level,
@@ -310,9 +311,15 @@ def build_application_context(
         CanonicalReferenceRepository,
         CanonicalReferenceRepository(database),
     )
-    services.register(
+    references = services.register(
         CanonicalReferenceService,
         CanonicalReferenceService(caps, reference_repository),
+    )
+    reference_library = ReferenceLibraryService(references)
+    readiness = CAPReadinessService(caps, references, reference_library)
+    services.register(
+        ProductionProjectionService,
+        ProductionProjectionService(caps, references, reference_library, readiness),
     )
     provider = _cap_provider(configuration, selected.mode)
     services.register(CAPGeneratorService, CAPGeneratorService(assets, caps, provider))
