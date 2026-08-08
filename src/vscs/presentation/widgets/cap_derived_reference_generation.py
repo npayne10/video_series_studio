@@ -23,6 +23,9 @@ from vscs.application.caps.derived_reference_generation import (
 )
 from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.domain.caps import CanonicalReferenceView
+from vscs.infrastructure.ai.comfyui_derived_reference_provider import (
+    ComfyUIDerivedReferenceProvider,
+)
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 
 _SELECTABLE_VIEWS = tuple(
@@ -54,6 +57,9 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.provider = QComboBox()
         for name in service.providers.names():
             self.provider.addItem(name, name)
+        comfy_index = self.provider.findData("ComfyUI — Qwen Derived Reference v2.1")
+        if comfy_index >= 0:
+            self.provider.setCurrentIndex(comfy_index)
 
         self.checkboxes: dict[CanonicalReferenceView, QCheckBox] = {}
         grid = QGridLayout()
@@ -65,9 +71,14 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.width = QSpinBox()
         self.width.setRange(256, 8192)
         self.width.setValue(1280)
+        self.width.setToolTip(
+            "Recorded as requested size. Qwen reference workflow currently derives actual geometry "
+            "from the MASTER through FluxKontextImageScale."
+        )
         self.height = QSpinBox()
         self.height.setRange(256, 8192)
         self.height.setValue(720)
+        self.height.setToolTip(self.width.toolTip())
         self.seed = QSpinBox()
         self.seed.setRange(0, 2_147_483_647)
         self.seed.setValue(0)
@@ -114,7 +125,7 @@ class DerivedReferenceGenerationDialog(QDialog):
                 height=self.height.value(),
                 seed=self.seed.value(),
             )
-        except (DerivedReferenceGenerationError, OSError, ValueError) as exc:
+        except (DerivedReferenceGenerationError, OSError, RuntimeError, ValueError) as exc:
             QMessageBox.critical(self, "Derived Reference Generation", str(exc))
             return
         QMessageBox.information(
@@ -126,12 +137,13 @@ class DerivedReferenceGenerationDialog(QDialog):
 
 
 def install_derived_reference_generation(cap_manager: QWidget) -> QPushButton | None:
-    """Attach the 18.2.11.2.5 control to the existing CAP Manager without a UI rewrite."""
+    """Attach the governed derived-reference generator controls to the CAP Manager."""
     references = getattr(cap_manager, "references", None)
     if references is None:
         return None
 
     registry = DerivedReferenceGeneratorRegistry()
+    registry.register(ComfyUIDerivedReferenceProvider())
     registry.register(OfflineDerivedReferencePreviewProvider())
     service = DerivedReferenceGenerationService(
         references,
