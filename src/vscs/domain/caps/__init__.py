@@ -29,6 +29,15 @@ from vscs.domain.caps.production_contract import (
     ProductionAssetProjection,
     ProductionReference,
 )
+from vscs.domain.caps.readiness import (
+    ReadinessAssessment,
+    ReadinessDimension,
+    ReadinessGap,
+    ReadinessReport,
+    ReadinessResult,
+    ReadinessSeverity,
+    ReadinessState,
+)
 from vscs.domain.caps.reference_library import (
     ReferenceLibraryEntry,
     ReferenceLibrarySnapshot,
@@ -86,6 +95,13 @@ __all__ = (
     "GeneratedCanonicalAsset",
     "ProductionAssetProjection",
     "ProductionReference",
+    "ReadinessAssessment",
+    "ReadinessDimension",
+    "ReadinessGap",
+    "ReadinessReport",
+    "ReadinessResult",
+    "ReadinessSeverity",
+    "ReadinessState",
     "ReferenceCoverage",
     "ReferenceLibraryEntry",
     "ReferenceLibrarySnapshot",
