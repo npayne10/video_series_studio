@@ -96,7 +96,7 @@ def test_projection_publishes_only_approved_or_locked_references(tmp_path: Path)
         CanonicalReferenceView.MASTER
     }
 
-    library.approve(created[0].reference_record_id, "Projection Test")
+    library.approve(created[0], "Projection Test")
     projection = service.project("CAP-LOC-980")
     assert {reference.view for reference in projection.references} == {
         CanonicalReferenceView.MASTER,
@@ -126,7 +126,7 @@ def test_require_ready_enforces_authoritative_production_gate(tmp_path: Path) ->
         provider_name=provider.name,
         seed=200,
     )
-    library.approve(required[0].reference_record_id, "Projection Test")
+    library.approve(required[0], "Projection Test")
     caps.update(
         "CAP-LOC-980",
         CAPUpdate(
