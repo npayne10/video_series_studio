@@ -7,14 +7,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vscs.application.assets.service import AssetError, AssetService
-from vscs.application.caps import (
-    CanonicalReferenceError,
-    CanonicalReferenceService,
-    CAPError,
-    CAPService,
+from vscs.application.caps.reference_library import (
     ReferenceLibraryError,
     ReferenceLibraryService,
 )
+from vscs.application.caps.reference_service import (
+    CanonicalReferenceError,
+    CanonicalReferenceService,
+)
+from vscs.application.caps.service import CAPError, CAPService
 from vscs.domain.assets import Asset, AssetCreate
 from vscs.domain.caps import (
     CanonicalReferenceCreate,
