@@ -98,8 +98,6 @@ def test_approved_required_views_unlock_generation_readiness(tmp_path: Path) -> 
     assert report.references.state is ReadinessState.READY
     assert report.generation.state is ReadinessState.READY
     assert report.production.state is ReadinessState.BLOCKED
-    assert any(
-        gap.code == "production.functional_identity" for gap in report.production.gaps
-    )
+    assert any(gap.code == "production.functional_identity" for gap in report.production.gaps)
     assert any(gap.code == "production.constraints" for gap in report.production.gaps)
     context.shutdown()  # type: ignore[attr-defined]

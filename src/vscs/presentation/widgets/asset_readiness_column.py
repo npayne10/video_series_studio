@@ -65,8 +65,10 @@ def install_asset_readiness_column(
             report = service.evaluate(asset_id)
             item = _ReadinessItem(f"{report.overall_score}%")
             item.setData(Qt.ItemDataRole.UserRole, report.overall_score)
-            state = "ready" if report.production_ready else (
-                "blocked" if report.blocking_gaps else "partial"
+            state = (
+                "ready"
+                if report.production_ready
+                else ("blocked" if report.blocking_gaps else "partial")
             )
             item.setData(_STATE_ROLE, state)
             item.setToolTip(

@@ -111,14 +111,18 @@ class CAPReadinessService:
     def blocking_gaps(self, asset_id: str) -> tuple[ReadinessGap, ...]:
         return self.evaluate(asset_id).blocking_gaps
 
-    def _identity(self, cap: object, entries: tuple[object, ...], category: AssetCategory) -> ReadinessAssessment:
+    def _identity(
+        self, cap: object, entries: tuple[object, ...], category: AssetCategory
+    ) -> ReadinessAssessment:
         gaps: list[ReadinessGap] = []
         checks = 3
         passed = 0
         if str(getattr(cap, "title", "")).strip():
             passed += 1
         else:
-            gaps.append(self._gap("identity.name", ReadinessDimension.IDENTITY, "Canonical name is missing"))
+            gaps.append(
+                self._gap("identity.name", ReadinessDimension.IDENTITY, "Canonical name is missing")
+            )
         if str(getattr(cap, "canonical_description", "")).strip():
             passed += 1
         else:
@@ -148,9 +152,10 @@ class CAPReadinessService:
                     "Approved ChatGPT MASTER is not locked",
                 )
             )
-        if category in _VISUAL_IDENTITY_CATEGORIES and not str(
-            getattr(cap, "visual_identity", "")
-        ).strip():
+        if (
+            category in _VISUAL_IDENTITY_CATEGORIES
+            and not str(getattr(cap, "visual_identity", "")).strip()
+        ):
             checks += 1
             gaps.append(
                 self._gap(
@@ -164,9 +169,11 @@ class CAPReadinessService:
             checks += 1
             passed += 1
         score = round(passed * 100 / checks)
-        state = ReadinessState.READY if not any(
-            gap.severity is ReadinessSeverity.BLOCKING for gap in gaps
-        ) else (ReadinessState.PARTIAL if score else ReadinessState.NOT_READY)
+        state = (
+            ReadinessState.READY
+            if not any(gap.severity is ReadinessSeverity.BLOCKING for gap in gaps)
+            else (ReadinessState.PARTIAL if score else ReadinessState.NOT_READY)
+        )
         return ReadinessAssessment(
             dimension=ReadinessDimension.IDENTITY,
             state=state,
@@ -217,15 +224,19 @@ class CAPReadinessService:
                 )
             )
 
-        required_ratio = len(required_ready) / len(template.required_views) if template.required_views else 1.0
+        required_ratio = (
+            len(required_ready) / len(template.required_views) if template.required_views else 1.0
+        )
         if template.recommended_views:
             recommended_ratio = len(recommended_ready) / len(template.recommended_views)
             score = round(required_ratio * 80 + recommended_ratio * 20)
         else:
             score = round(required_ratio * 100)
         blocking = any(gap.severity is ReadinessSeverity.BLOCKING for gap in gaps)
-        state = ReadinessState.READY if not blocking else (
-            ReadinessState.PARTIAL if score else ReadinessState.NOT_READY
+        state = (
+            ReadinessState.READY
+            if not blocking
+            else (ReadinessState.PARTIAL if score else ReadinessState.NOT_READY)
         )
         return ReadinessAssessment(
             dimension=ReadinessDimension.REFERENCES,
@@ -266,11 +277,7 @@ class CAPReadinessService:
                 )
             )
         score = round(
-            (
-                int(cap_status is CAPStatus.APPROVED)
-                + int(identity.ready)
-                + int(references.ready)
-            )
+            (int(cap_status is CAPStatus.APPROVED) + int(identity.ready) + int(references.ready))
             * 100
             / 3
         )
