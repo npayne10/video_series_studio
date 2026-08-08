@@ -14,8 +14,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.caps import CAPReadinessService, ReferenceLibraryService
+from vscs.application.caps import (
+    CAPReadinessService,
+    ProductionProjectionService,
+    ReferenceLibraryService,
+)
 from vscs.domain.caps import ReadinessAssessment, ReadinessReport, ReadinessSeverity
+from vscs.presentation.widgets.cap_ui_refactoring import (
+    install_cap_editor_contract_refactoring,
+    install_cap_workspace_refactoring,
+)
 
 
 class CAPReadinessDialog(QDialog):
@@ -74,12 +82,23 @@ class CAPReadinessDialog(QDialog):
 
 
 def install_cap_readiness(cap_manager: QWidget) -> QPushButton | None:
-    """Attach the readiness report action to an existing CAP Manager."""
+    """Attach readiness and the Phase 18.2.11.2.9 production-contract workspace."""
     references = getattr(cap_manager, "references", None)
     caps = getattr(cap_manager, "caps", None)
     if references is None or caps is None:
         return None
-    service = CAPReadinessService(caps, references, ReferenceLibraryService(references))
+    library = ReferenceLibraryService(references)
+    service = CAPReadinessService(caps, references, library)
+    projection_service = ProductionProjectionService(
+        caps,
+        references,
+        library=library,
+        readiness=service,
+    )
+
+    install_cap_editor_contract_refactoring()
+    install_cap_workspace_refactoring(cap_manager, projection_service)
+
     button = QPushButton("Readiness")
     button.setObjectName("capReadinessButton")
     button.setToolTip("Evaluate deterministic CAP production readiness")
@@ -106,4 +125,5 @@ def install_cap_readiness(cap_manager: QWidget) -> QPushButton | None:
     controls.insertWidget(max(0, controls.count() - 3), button)
     cap_manager.readiness_service = service
     cap_manager.readiness_button = button
+    cap_manager.production_projection_service = projection_service
     return button
