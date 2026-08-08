@@ -34,6 +34,7 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
     install_derived_reference_generation,
 )
 from vscs.presentation.widgets.cap_manager import CAPManagerWidget
+from vscs.presentation.widgets.cap_readiness_widget import install_cap_readiness
 from vscs.presentation.widgets.dashboard import DashboardWidget
 
 
@@ -165,6 +166,7 @@ class MainWindow(QMainWindow):
             self.canonical_references,
         )
         self.derived_reference_button = install_derived_reference_generation(self.cap_manager)
+        self.cap_readiness_button = install_cap_readiness(self.cap_manager)
         self.content_stack.addWidget(self.cap_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
@@ -218,66 +220,51 @@ class MainWindow(QMainWindow):
         parent_directory = QFileDialog.getExistingDirectory(
             self,
             "Choose Project Parent Directory",
-            str(Path.home()),
         )
         if not parent_directory:
             return
-        project_directory = Path(parent_directory) / project_name
         try:
-            project = self.projects.create(project_directory, name=project_name)
+            project = self.projects.create(Path(parent_directory), name=project_name)
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
-        self._update_project_state()
-        self.dashboard.set_active_project(project.name, project_directory)
         self.statusBar().showMessage(f"Created project: {project.name}", 5000)
+        self._update_project_state()
 
     def _open_project(self) -> None:
-        project_directory = QFileDialog.getExistingDirectory(
-            self,
-            "Open VSCS Project",
-            str(Path.home()),
-        )
-        if not project_directory:
+        directory = QFileDialog.getExistingDirectory(self, "Open VSCS Project")
+        if not directory:
             return
-        project_path = Path(project_directory)
         try:
-            project = self.projects.open(project_path)
+            project = self.projects.open(Path(directory))
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
-        self._update_project_state()
-        self.dashboard.set_active_project(project.name, project_path)
         self.statusBar().showMessage(f"Opened project: {project.name}", 5000)
+        self._update_project_state()
 
     def _save_project(self) -> None:
         try:
-            self.projects.save()
+            project = self.projects.save()
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
-        project = self.projects.current_project
-        if project is not None:
-            self.statusBar().showMessage(f"Saved project: {project.name}", 5000)
+        self.statusBar().showMessage(f"Saved project: {project.name}", 5000)
 
     def _close_project(self) -> None:
-        if not self.projects.is_project_open:
-            return
-        if (
-            QMessageBox.question(self, "Close Project", "Close the active project?")
-            is not QMessageBox.StandardButton.Yes
-        ):
-            return
         self.projects.close()
         self._update_project_state()
-        self.dashboard.clear_active_project()
-        self.asset_manager.refresh()
-        self.cap_manager.refresh()
         self.statusBar().showMessage("Project closed", 5000)
 
+    def _update_project_state(self) -> None:
+        has_project = self.projects.is_project_open
+        self.save_project_action.setEnabled(has_project)
+        self.close_project_action.setEnabled(has_project)
+        self.asset_manager.refresh()
+        self.cap_manager.refresh()
+
     def _show_settings_dialog(self) -> None:
-        dialog = SettingsDialog(self.configuration, self)
-        dialog.exec()
+        SettingsDialog(self.configuration, self).exec()
 
     def _show_plugin_manager(self) -> None:
         PluginManagerDialog(self.plugins, self).exec()
@@ -286,35 +273,5 @@ class MainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "About VSCS",
-            "Video Series Studio\nVSCS Framework v0.1\n\n"
-            "A professional production platform for cinematic television series.",
+            "Video Series Studio\nProfessional production framework for structured cinematic series.",
         )
-
-    def _update_project_state(self) -> None:
-        """Synchronize all project-aware interface elements."""
-        active = self.projects.is_project_open
-        self.new_project_action.setEnabled(not active)
-        self.open_project_action.setEnabled(not active)
-        self.save_project_action.setEnabled(active)
-        self.close_project_action.setEnabled(active)
-        self.asset_manager.add_button.setEnabled(active)
-        self.asset_manager.edit_button.setEnabled(active)
-        self.cap_manager.add_button.setEnabled(active)
-        if self.derived_reference_button is not None:
-            self.derived_reference_button.setEnabled(active)
-        self.dashboard.new_project_button.setEnabled(not active)
-        self.dashboard.open_project_button.setEnabled(not active)
-
-        if active and self.projects.current_project is not None:
-            project = self.projects.current_project
-            project_directory = self.projects.project_directory
-            assert project_directory is not None
-            self.setWindowTitle(f"{self.BASE_TITLE} — {project.name}")
-            self.navigation_dock.setWindowTitle(project.name)
-            self.dashboard.set_active_project(project.name, project_directory)
-            self.statusBar().showMessage(f"Active project: {project.name}")
-        else:
-            self.setWindowTitle(self.BASE_TITLE)
-            self.navigation_dock.setWindowTitle("Workspace")
-            self.dashboard.clear_active_project()
-            self.statusBar().showMessage("No project open")
