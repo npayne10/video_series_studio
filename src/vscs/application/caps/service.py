@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vscs.application.assets import AssetService
+from vscs.application.assets.service import AssetService
 from vscs.application.caps.repository import CAPRepository, CAPRepositoryError
 from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
 from vscs.infrastructure.logging import LoggingService

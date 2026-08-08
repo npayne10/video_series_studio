@@ -21,11 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import (
-    CanonicalReferenceService,
-    CAPGeneratorService,
-    CAPService,
-)
+from vscs.application.caps import CanonicalReferenceService, CAPGeneratorService, CAPService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -154,7 +150,11 @@ class MainWindow(QMainWindow):
         self.content_stack.addWidget(self.dashboard)
         self.content_stack.addWidget(self._placeholder_page("Projects"))
         self.content_stack.addWidget(self._placeholder_page("Story"))
-        self.asset_manager = AssetManagerWidget(self.assets)
+        self.asset_manager = AssetManagerWidget(
+            self.assets,
+            self.caps,
+            self.canonical_references,
+        )
         self.content_stack.addWidget(self.asset_manager)
         self.cap_manager = CAPManagerWidget(
             self.caps,
@@ -176,6 +176,7 @@ class MainWindow(QMainWindow):
         self.close_project_action.triggered.connect(self._close_project)
         self.dashboard.new_project_button.clicked.connect(self.new_project_action.trigger)
         self.dashboard.open_project_button.clicked.connect(self.open_project_action.trigger)
+        self.asset_manager.open_canonical_profile_requested.connect(self._open_canonical_profile)
 
     def _restore_default_workspace(self) -> None:
         default_workspace = self.configuration.settings.workspace.default_workspace
@@ -198,6 +199,12 @@ class MainWindow(QMainWindow):
 
     def _select_navigation_item(self, row: int) -> None:
         self.navigation.setCurrentRow(row)
+
+    def _open_canonical_profile(self, asset_id: str) -> None:
+        """Navigate from Asset editing to the canonical governance workspace."""
+        self._select_navigation_item(4)
+        self.cap_manager.refresh()
+        self.statusBar().showMessage(f"Canonical Profiles — {asset_id}", 5000)
 
     def _create_project(self) -> None:
         name, accepted = QInputDialog.getText(self, "New Project", "Project name:")
@@ -287,6 +294,7 @@ class MainWindow(QMainWindow):
         self.save_project_action.setEnabled(active)
         self.close_project_action.setEnabled(active)
         self.asset_manager.add_button.setEnabled(active)
+        self.asset_manager.edit_button.setEnabled(active)
         self.cap_manager.add_button.setEnabled(active)
         self.dashboard.new_project_button.setEnabled(not active)
         self.dashboard.open_project_button.setEnabled(not active)

@@ -19,6 +19,8 @@ from vscs.application.assets.xpd_import import (
 from vscs.application.assets.xpd_preview import XPDWorkbookImportService
 
 __all__ = [
+    "XPD_HEADERS",
+    "XPD_SHEET_NAME",
     "AssetAlreadyExistsError",
     "AssetError",
     "AssetNotFoundError",
@@ -27,8 +29,6 @@ __all__ = [
     "AssetRepositoryError",
     "AssetService",
     "InvalidAssetPathError",
-    "XPD_HEADERS",
-    "XPD_SHEET_NAME",
     "XPDProvenanceStore",
     "XPDWorkbookError",
     "XPDWorkbookImportService",
