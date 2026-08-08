@@ -48,7 +48,41 @@ Optional override: environment variable `VSCS_COMFYUI_URL`.
 
 ## Queue contract
 
-For compatibility with the existing `XCICQwenReferenceJobLoader`, the runtime queue is a JSON list and each item carries the six logical loader outputs: MASTER image, positive prompt, negative prompt, Lightning-LoRA flag, output directory and output filename. Self-describing aliases are included for diagnostics and forward compatibility.
+The runtime queue matches `XCICQwenReferenceJobLoader` v2.2 exactly. The root is a JSON object with a `jobs` array. Each job supplies:
+
+- `job_id`
+- `asset_category`
+- `reference_inputs` — the locked MASTER path is the first approved reference
+- `positive_prompt`
+- `negative_prompt`
+- `generation.enable_turbo_mode`
+- `generation_policy.force_standard_mode`
+- `output.candidate_directory`
+- `output.candidate_filename`
+
+VSCS also records `asset_id`, requested `view`, and `seed` as harmless diagnostic/provenance fields. Asset category is inferred from the canonical asset ID prefix so the custom loader can apply its category-specific preservation language.
+
+The top-level queue shape is therefore:
+
+```json
+{
+  "jobs": [
+    {
+      "job_id": "...",
+      "asset_category": "ship",
+      "reference_inputs": ["...MASTER.png"],
+      "positive_prompt": "...",
+      "negative_prompt": "...",
+      "generation": {"enable_turbo_mode": true},
+      "generation_policy": {"force_standard_mode": true},
+      "output": {
+        "candidate_directory": "...",
+        "candidate_filename": "...png"
+      }
+    }
+  ]
+}
+```
 
 ## Lifecycle
 
