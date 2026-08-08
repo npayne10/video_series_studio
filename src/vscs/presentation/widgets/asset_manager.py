@@ -6,6 +6,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -24,19 +25,26 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.assets import AssetError, AssetService, XPDWorkbookImportService
+from vscs.application.assets import (
+    AssetError,
+    AssetService,
+    CanonicalAssetCreationError,
+    CanonicalAssetCreationService,
+    XPDWorkbookImportService,
+)
+from vscs.application.caps import CAPService, CanonicalReferenceService, ReferenceLibraryService
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
 from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 
 
 class AssetEditorDialog(QDialog):
-    """Collect the core metadata required to register an asset."""
+    """Collect metadata and the approved ChatGPT MASTER for a new canonical asset."""
 
     def __init__(self, project_directory: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.project_directory = project_directory.resolve(strict=False)
         self.setWindowTitle("New Asset")
-        self.setMinimumWidth(520)
+        self.setMinimumWidth(620)
 
         self.asset_id = QLineEdit()
         self.name = QLineEdit()
@@ -47,9 +55,12 @@ class AssetEditorDialog(QDialog):
         for status in AssetStatus:
             self.status.addItem(status.value.title(), status)
         self.file_path = QLineEdit()
-        self.file_path.setPlaceholderText("Select a file inside the project")
+        self.file_path.setPlaceholderText("Select the approved ChatGPT master image")
         self.browse_button = QPushButton("Browse…")
         self.browse_button.clicked.connect(self._browse_for_file)
+        self.master_confirmation = QCheckBox(
+            "I confirm this is the approved ChatGPT Master Canonical Reference"
+        )
         self.tags = QLineEdit()
         self.description = QTextEdit()
         self.description.setMinimumHeight(110)
@@ -63,40 +74,73 @@ class AssetEditorDialog(QDialog):
         form.addRow("Name", self.name)
         form.addRow("Category", self.category)
         form.addRow("Status", self.status)
-        form.addRow("Project-relative file", file_row)
+        form.addRow("Master Canonical Reference", file_row)
+        form.addRow("", self.master_confirmation)
         form.addRow("Tags (comma-separated)", self.tags)
         form.addRow("Description", self.description)
+
+        note = QLabel(
+            "Saving creates the Asset, a Draft Canonical Profile, and one locked MASTER "
+            "reference. Additional production views are managed from the CAP workflow."
+        )
+        note.setWordWrap(True)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._validate_and_accept)
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
+        layout.addWidget(note)
         layout.addWidget(buttons)
 
     def value(self) -> AssetCreate:
         """Return validated asset input from the current fields."""
-        file_text = self.file_path.text().strip()
         return AssetCreate(
             asset_id=self.asset_id.text(),
             name=self.name.text(),
             category=self.category.currentData(),
             status=self.status.currentData(),
-            file_path=Path(file_text) if file_text else None,
+            file_path=self.master_reference_path(),
             tags=tuple(tag.strip() for tag in self.tags.text().split(",")),
             description=self.description.toPlainText(),
         )
 
+    def master_reference_path(self) -> Path:
+        """Return the selected MASTER as a project-relative path."""
+        file_text = self.file_path.text().strip()
+        if not file_text:
+            raise ValueError("Master Canonical Reference is required")
+        return Path(file_text)
+
+    def confirmed_chatgpt_master(self) -> bool:
+        return self.master_confirmation.isChecked()
+
+    def _validate_and_accept(self) -> None:
+        try:
+            self.value()
+            self.master_reference_path()
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid Asset", str(exc))
+            return
+        if not self.confirmed_chatgpt_master():
+            QMessageBox.warning(
+                self,
+                "Master Confirmation Required",
+                "Confirm that the selected image is the approved ChatGPT Master Canonical Reference.",
+            )
+            return
+        self.accept()
+
     def _browse_for_file(self) -> None:
-        """Select an existing project file and store its project-relative path."""
+        """Select the approved master image and store its project-relative path."""
         selected_file, _ = QFileDialog.getOpenFileName(
             self,
-            "Select Asset File",
+            "Select Master Canonical Reference",
             str(self.project_directory),
-            "All Files (*)",
+            "Images (*.png *.jpg *.jpeg *.webp)",
         )
         if not selected_file:
             return
@@ -108,7 +152,7 @@ class AssetEditorDialog(QDialog):
             QMessageBox.warning(
                 self,
                 "File Outside Project",
-                "Select a file located inside the active VSCS project directory.",
+                "Select a master reference located inside the active VSCS project directory.",
             )
             return
 
@@ -118,10 +162,24 @@ class AssetEditorDialog(QDialog):
 class AssetManagerWidget(QWidget):
     """Browse, search, create, remove, and synchronize project assets."""
 
-    def __init__(self, assets: AssetService, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        assets: AssetService,
+        caps: CAPService | None = None,
+        references: CanonicalReferenceService | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.assets = assets
         self.xpd_import = XPDWorkbookImportService(assets)
+        self.canonical_creation: CanonicalAssetCreationService | None = None
+        if caps is not None and references is not None:
+            self.canonical_creation = CanonicalAssetCreationService(
+                assets,
+                caps,
+                references,
+                ReferenceLibraryService(references),
+            )
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search asset ID, name, description, or tags")
@@ -146,7 +204,7 @@ class AssetManagerWidget(QWidget):
         controls.addWidget(self.refresh_button)
 
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(("Asset ID", "Name", "Category", "Status", "File"))
+        self.table.setHorizontalHeaderLabels(("Asset ID", "Name", "Category", "Status", "MASTER"))
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
@@ -208,16 +266,35 @@ class AssetManagerWidget(QWidget):
         if project_directory is None:
             QMessageBox.warning(self, "Asset Error", "Open a project before adding an asset.")
             return
+        if self.canonical_creation is None:
+            QMessageBox.critical(
+                self,
+                "Asset Error",
+                "Canonical Asset Creation services are not available.",
+            )
+            return
 
         dialog = AssetEditorDialog(project_directory, self)
         if not dialog.exec():
             return
         try:
-            self.assets.create(dialog.value())
-        except (AssetError, ValueError) as exc:
+            result = self.canonical_creation.create(
+                dialog.value(),
+                dialog.master_reference_path(),
+                confirmed_chatgpt_master=dialog.confirmed_chatgpt_master(),
+            )
+        except (CanonicalAssetCreationError, ValueError) as exc:
             QMessageBox.critical(self, "Asset Error", str(exc))
             return
         self.refresh()
+        QMessageBox.information(
+            self,
+            "Canonical Asset Created",
+            (
+                f"{result.asset.asset_id} was created with a Draft CAP and locked MASTER "
+                f"reference {result.production_reference_id}."
+            ),
+        )
 
     def _import_xpd(self) -> None:
         if self.assets.projects.project_directory is None:
