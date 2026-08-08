@@ -1,4 +1,4 @@
-"""UI contract coverage for Phase 18.2.11.2.5."""
+"""UI contract coverage for Phase 18.2.11.2.5 and 18.2.11.2.5a."""
 
 from pathlib import Path
 
@@ -66,7 +66,7 @@ def test_dialog_exposes_selectable_views_and_provider(qtbot, tmp_path: Path) -> 
     context.shutdown()
 
 
-def test_main_window_installs_generate_production_references_button(qtbot, tmp_path: Path) -> None:
+def test_main_window_installs_comfyui_production_provider(qtbot, tmp_path: Path) -> None:
     context = build_application_context(_options(tmp_path))
     window = context.create_main_window()
     qtbot.addWidget(window)
@@ -74,4 +74,7 @@ def test_main_window_installs_generate_production_references_button(qtbot, tmp_p
     assert window.derived_reference_button is not None
     assert window.derived_reference_button.text() == "Generate Production References"
     assert not window.derived_reference_button.isEnabled()
+    providers = window.cap_manager.derived_reference_service.providers.names()
+    assert "ComfyUI — Qwen Derived Reference v2.1" in providers
+    assert "VSCS Offline Derived Preview" in providers
     context.shutdown()
