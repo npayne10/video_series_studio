@@ -448,10 +448,13 @@ class ReferenceLibraryService:
         entry: ReferenceLibraryEntry,
     ) -> None:
         entries = tuple(
+            *(
             existing
             for existing in snapshot.entries
             if existing.reference_record_id != entry.reference_record_id
-        ) + (entry,)
+            ),
+            entry,
+        )
         self._store().save(ReferenceLibrarySnapshot(entries=entries))
 
     def _transition(
@@ -469,8 +472,8 @@ class ReferenceLibraryService:
         updates: dict[str, object] = {
             "lifecycle": lifecycle,
             "updated_at": now,
-            "history": entry.history
-            + (
+            "history": (
+                *entry.history,
                 self._event(
                     action,
                     actor=actor,
