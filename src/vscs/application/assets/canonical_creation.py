@@ -19,9 +19,9 @@ from vscs.domain.caps import (
     CAPCreate,
     CAPStatus,
     CanonicalReferenceCreate,
+    CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
     CanonicalReferenceType,
-    CanonicalReferenceLifecycle,
 )
 
 
@@ -100,14 +100,22 @@ class CanonicalAssetCreationService:
                 ),
             )
             reference_record_id = reference.id
-            entry = self.library.register_master(
+            self.library.register_master(
                 created_asset.asset_id,
                 reference.id,
                 actor=actor,
                 note="MASTER registered from Asset Creation",
             )
-            entry = self.library.approve(reference.id, actor, note="Confirmed during Asset Creation")
-            entry = self.library.lock(reference.id, actor=actor, note="MASTER locked at creation")
+            self.library.approve(
+                reference.id,
+                actor,
+                note="Confirmed during Asset Creation",
+            )
+            entry = self.library.lock(
+                reference.id,
+                actor=actor,
+                note="MASTER locked at creation",
+            )
             return CanonicalAssetCreationResult(
                 asset=created_asset,
                 cap_asset_id=created_asset.asset_id,
@@ -115,7 +123,13 @@ class CanonicalAssetCreationService:
                 production_reference_id=entry.reference_id,
                 lifecycle=entry.lifecycle,
             )
-        except (AssetError, CAPError, CanonicalReferenceError, ReferenceLibraryError, ValueError) as exc:
+        except (
+            AssetError,
+            CAPError,
+            CanonicalReferenceError,
+            ReferenceLibraryError,
+            ValueError,
+        ) as exc:
             self._rollback(created_asset, cap_created, reference_record_id)
             raise CanonicalAssetCreationError(str(exc)) from exc
 
@@ -128,9 +142,13 @@ class CanonicalAssetCreationService:
         resolved = path if path.is_absolute() else project / path
         resolved = resolved.resolve(strict=False)
         if not resolved.exists() or not resolved.is_file():
-            raise CanonicalAssetCreationError(f"Master Canonical Reference does not exist: {resolved}")
+            raise CanonicalAssetCreationError(
+                f"Master Canonical Reference does not exist: {resolved}"
+            )
         if resolved.suffix.casefold() not in {".png", ".jpg", ".jpeg", ".webp"}:
-            raise CanonicalAssetCreationError("Master Canonical Reference must be a PNG, JPG, JPEG, or WebP image")
+            raise CanonicalAssetCreationError(
+                "Master Canonical Reference must be a PNG, JPG, JPEG, or WebP image"
+            )
         try:
             return resolved.relative_to(project.resolve(strict=False))
         except ValueError as exc:
@@ -146,16 +164,20 @@ class CanonicalAssetCreationService:
     ) -> None:
         if reference_record_id is not None:
             try:
+                self.references.unlock(reference_record_id)
+            except CanonicalReferenceError:
+                pass
+            try:
                 self.references.delete(reference_record_id)
-            except Exception:
+            except CanonicalReferenceError:
                 pass
         if cap_created and asset is not None:
             try:
                 self.caps.delete(asset.asset_id)
-            except Exception:
+            except CAPError:
                 pass
         if asset is not None:
             try:
                 self.assets.delete(asset.asset_id)
-            except Exception:
+            except AssetError:
                 pass
