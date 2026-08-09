@@ -37,7 +37,7 @@ class DatabaseIntegrityError(DatabaseError):
 class DatabaseManager:
     """Manage the SQLite database belonging to the active VSCS project."""
 
-    SCHEMA_VERSION = 4
+    SCHEMA_VERSION = 5
     APPLICATION_VERSION = "0.1.0"
 
     def __init__(self) -> None:
@@ -145,6 +145,7 @@ class DatabaseManager:
             2: self._migrate_to_canonical_references,
             3: self._migrate_reference_statuses,
             4: self._migrate_reference_approvals,
+            5: self._migrate_structured_cap_knowledge,
         }
         while schema.version < self.SCHEMA_VERSION:
             next_version = schema.version + 1
@@ -159,11 +160,7 @@ class DatabaseManager:
     def _migrate_to_canonical_references(database_session: Session) -> None:
         bind = database_session.get_bind()
         reference_table = cast(Table, CanonicalReferenceRecord.__table__)
-        Base.metadata.create_all(
-            bind=bind,
-            tables=[reference_table],
-            checkfirst=True,
-        )
+        Base.metadata.create_all(bind=bind, tables=[reference_table], checkfirst=True)
 
     @staticmethod
     def _migrate_reference_statuses(database_session: Session) -> None:
@@ -204,6 +201,28 @@ class DatabaseManager:
         database_session.execute(
             text("UPDATE canonical_references SET locked = 1 WHERE status = 'approved'")
         )
+
+    @staticmethod
+    def _migrate_structured_cap_knowledge(database_session: Session) -> None:
+        columns = {
+            row[1]
+            for row in database_session.execute(text("PRAGMA table_info(canonical_asset_profiles)"))
+        }
+        additions = {
+            "structured_schema_version": "INTEGER NOT NULL DEFAULT 1",
+            "facts_json": "TEXT NOT NULL DEFAULT '[]'",
+            "functional_identity_json": "TEXT NOT NULL DEFAULT '[]'",
+            "constraints_json": "TEXT NOT NULL DEFAULT '[]'",
+            "semantic_tags_json": "TEXT NOT NULL DEFAULT '[]'",
+            "production_classifications_json": "TEXT NOT NULL DEFAULT '[]'",
+            "behaviour_references_json": "TEXT NOT NULL DEFAULT '[]'",
+            "production_metadata_json": "TEXT NOT NULL DEFAULT '{}'",
+        }
+        for name, definition in additions.items():
+            if name not in columns:
+                database_session.execute(
+                    text(f"ALTER TABLE canonical_asset_profiles ADD COLUMN {name} {definition}")
+                )
 
     @staticmethod
     def _configure_sqlite(engine: Engine) -> None:
