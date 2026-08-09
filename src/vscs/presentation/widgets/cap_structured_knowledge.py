@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from PySide6.QtWidgets import (
@@ -20,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.caps import CAPStructuredKnowledgeService, StructuredKnowledgeError
+from vscs.application.caps import StructuredKnowledgeError
 from vscs.domain.caps import (
     CanonicalConstraintKind,
     KnowledgeAuthority,
@@ -80,7 +81,10 @@ class StructuredKnowledgeProposalDialog(QDialog):
                 ("Capability", capability.capability, capability.authority.value),
             )
         for constraint in knowledge.constraints:
-            _add_row(preview, (constraint.kind.value.title(), constraint.rule, constraint.authority.value))
+            _add_row(
+                preview,
+                (constraint.kind.value.title(), constraint.rule, constraint.authority.value),
+            )
         preview.horizontalHeader().setStretchLastSection(True)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -119,7 +123,9 @@ def install_structured_cap_editor() -> None:
         self.structured_tabs.addTab(facts_page, "Facts")
 
         self.capabilities_table = QTableWidget(0, 3)
-        self.capabilities_table.setHorizontalHeaderLabels(("Capability", "Description", "Authority"))
+        self.capabilities_table.setHorizontalHeaderLabels(
+            ("Capability", "Description", "Authority")
+        )
         capabilities_page = _table_page(
             self.capabilities_table,
             ("New Capability", "", "approved"),
@@ -127,7 +133,9 @@ def install_structured_cap_editor() -> None:
         self.structured_tabs.addTab(capabilities_page, "Capabilities")
 
         self.constraints_table = QTableWidget(0, 4)
-        self.constraints_table.setHorizontalHeaderLabels(("Kind", "Rule", "Rationale", "Authority"))
+        self.constraints_table.setHorizontalHeaderLabels(
+            ("Kind", "Rule", "Rationale", "Authority")
+        )
         constraints_page = _table_page(
             self.constraints_table,
             ("required", "New Constraint", "", "approved"),
@@ -139,16 +147,24 @@ def install_structured_cap_editor() -> None:
         self.semantic_tags_input = QLineEdit()
         self.semantic_tags_input.setPlaceholderText("Comma-separated production tags")
         self.production_classifications_input = QLineEdit()
-        self.production_classifications_input.setPlaceholderText("Comma-separated classifications")
+        self.production_classifications_input.setPlaceholderText(
+            "Comma-separated classifications"
+        )
         self.behaviour_references_input = QLineEdit()
-        self.behaviour_references_input.setPlaceholderText("Comma-separated behaviour contract IDs")
+        self.behaviour_references_input.setPlaceholderText(
+            "Comma-separated behaviour contract IDs"
+        )
         self.production_metadata_table = QTableWidget(0, 2)
         self.production_metadata_table.setHorizontalHeaderLabels(("Key", "Value"))
         metadata_buttons = QHBoxLayout()
         add_metadata = QPushButton("Add Metadata")
         remove_metadata = QPushButton("Remove Selected")
-        add_metadata.clicked.connect(lambda: _add_row(self.production_metadata_table, ("key", "value")))
-        remove_metadata.clicked.connect(lambda: _remove_selected(self.production_metadata_table))
+        add_metadata.clicked.connect(
+            lambda: _add_row(self.production_metadata_table, ("key", "value"))
+        )
+        remove_metadata.clicked.connect(
+            lambda: _remove_selected(self.production_metadata_table)
+        )
         metadata_buttons.addWidget(add_metadata)
         metadata_buttons.addWidget(remove_metadata)
         metadata_buttons.addStretch(1)
@@ -156,14 +172,17 @@ def install_structured_cap_editor() -> None:
         metadata_box.addWidget(self.production_metadata_table)
         metadata_box.addLayout(metadata_buttons)
         classification_form.addRow("Semantic tags", self.semantic_tags_input)
-        classification_form.addRow("Production classifications", self.production_classifications_input)
+        classification_form.addRow(
+            "Production classifications",
+            self.production_classifications_input,
+        )
         classification_form.addRow("Behaviour references", self.behaviour_references_input)
         classification_form.addRow("Production metadata", metadata_box)
         self.structured_tabs.addTab(classification_page, "Classification")
 
         heading = QLabel(
-            "Structured Production Knowledge — machine-readable facts, capabilities and constraints. "
-            "Human-entered values are saved as Approved."
+            "Structured Production Knowledge — machine-readable facts, capabilities and "
+            "constraints. Human-entered values are saved as Approved."
         )
         heading.setWordWrap(True)
         heading.setObjectName("capStructuredKnowledgeGuidance")
@@ -173,7 +192,7 @@ def install_structured_cap_editor() -> None:
         parent = self.parent()
         generator = getattr(parent, "generator", None)
         self._structured_service = (
-            CAPStructuredKnowledgeService(self.caps, generator.provider)
+            getattr(generator, "structured_knowledge", None)
             if generator is not None
             else None
         )
@@ -197,7 +216,11 @@ def install_structured_cap_editor() -> None:
                     form = candidate
                     break
         if isinstance(form, QFormLayout):
-            form.insertRow(max(0, form.rowCount() - 1), "Structured Production Knowledge", container)
+            form.insertRow(
+                max(0, form.rowCount() - 1),
+                "Structured Production Knowledge",
+                container,
+            )
         else:
             self.layout().insertWidget(max(0, self.layout().count() - 1), container)
 
@@ -346,16 +369,16 @@ def _load_knowledge(dialog: Any, profile: Any) -> None:
 
 
 def _apply_to_editor(dialog: Any, knowledge: StructuredCAPKnowledge) -> None:
-    class Profile:
-        facts = knowledge.facts
-        functional_identity = knowledge.functional_identity
-        constraints = knowledge.constraints
-        semantic_tags = knowledge.semantic_tags
-        production_classifications = knowledge.production_classifications
-        behaviour_references = knowledge.behaviour_references
-        production_metadata = knowledge.production_metadata
-
-    _load_knowledge(dialog, Profile())
+    profile = SimpleNamespace(
+        facts=knowledge.facts,
+        functional_identity=knowledge.functional_identity,
+        constraints=knowledge.constraints,
+        semantic_tags=knowledge.semantic_tags,
+        production_classifications=knowledge.production_classifications,
+        behaviour_references=knowledge.behaviour_references,
+        production_metadata=knowledge.production_metadata,
+    )
+    _load_knowledge(dialog, profile)
 
 
 def _propose(dialog: Any) -> None:
