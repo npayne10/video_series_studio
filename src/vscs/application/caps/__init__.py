@@ -51,6 +51,11 @@ from vscs.application.caps.service import (
     CAPService,
     InvalidCAPReferencePathError,
 )
+from vscs.application.caps.structured_knowledge import (
+    CAPStructuredKnowledgeService,
+    StructuredKnowledgeError,
+    StructuredKnowledgeProposal,
+)
 
 __all__ = (
     "CAP_CAPABILITY_ASSESSMENTS",
@@ -69,6 +74,7 @@ __all__ = (
     "CAPRepository",
     "CAPRepositoryError",
     "CAPService",
+    "CAPStructuredKnowledgeService",
     "CanonicalAssetGenerationError",
     "CanonicalAssetGeneratorService",
     "CanonicalReferenceError",
@@ -90,6 +96,8 @@ __all__ = (
     "ReferenceLibraryNotFoundError",
     "ReferenceLibraryService",
     "ReferenceLibraryStore",
+    "StructuredKnowledgeError",
+    "StructuredKnowledgeProposal",
     "blocking_gaps",
     "disposition_counts",
 )
