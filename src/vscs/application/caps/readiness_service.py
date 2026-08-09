@@ -323,7 +323,7 @@ class CAPReadinessService:
         functional_identity = tuple(
             item
             for item in (getattr(cap, "functional_identity", ()) or ())
-            if is_production_authority(getattr(item, "authority"))
+            if is_production_authority(item.authority)
         )
         if category in _FUNCTIONAL_IDENTITY_CATEGORIES:
             checks += 1
@@ -341,7 +341,7 @@ class CAPReadinessService:
         constraints = tuple(
             item
             for item in (getattr(cap, "constraints", ()) or ())
-            if is_production_authority(getattr(item, "authority"))
+            if is_production_authority(item.authority)
         )
         if category in _CONSTRAINT_CATEGORIES:
             checks += 1
