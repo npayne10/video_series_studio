@@ -53,7 +53,7 @@ def _remove_reference(dialog: Any) -> None:
         "the managed file and its generation manifest as well."
     )
     delete_all = box.addButton("Delete File and Reference", QMessageBox.ButtonRole.DestructiveRole)
-    reference_only = box.addButton("Remove Reference Only", QMessageBox.ButtonRole.AcceptRole)
+    box.addButton("Remove Reference Only", QMessageBox.ButtonRole.AcceptRole)
     cancel = box.addButton(QMessageBox.StandardButton.Cancel)
     box.setDefaultButton(cancel)
     box.exec()
