@@ -41,7 +41,7 @@ class LocalPreviewImageProvider:
 <foreignObject x="64" y="170" width="{request.width - 128}" height="{request.height - 290}">
 <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:sans-serif;color:#e7edf5;font-size:20px;line-height:1.45;white-space:pre-wrap;overflow:hidden">{prompt}</div>
 </foreignObject>
-<text x="64" y="{request.height - 90}" fill="#a9b7c9" font-family="sans-serif" font-size="17">Model: {escape(request.model)} · Seed: {seed} · {request.width}×{request.height}</text>
+<text x="64" y="{request.height - 90}" fill="#a9b7c9" font-family="sans-serif" font-size="17">Model: {escape(request.model)} · Seed: {seed} · {request.width}x{request.height}</text>
 <text x="64" y="{request.height - 58}" fill="#8391a3" font-family="sans-serif" font-size="14">Negative prompt: {negative or 'None'}</text>
 </svg>'''
             values.append(
