@@ -85,20 +85,32 @@ class CAPReadinessDialog(QDialog):
         return "\n".join(lines) if lines else "No readiness gaps."
 
 
-def install_cap_readiness(cap_manager: QWidget) -> QPushButton | None:
-    """Attach readiness and the Phase 18.2.11.2.9 production-contract workspace."""
+def install_cap_readiness(
+    cap_manager: QWidget,
+    projection_service: ProductionProjectionService | None = None,
+) -> QPushButton | None:
+    """Attach readiness and the production-contract workspace to a CAP Manager.
+
+    When the composition root supplies the shared ProductionProjectionService, the UI
+    consumes that exact application service. The fallback construction is retained for
+    isolated widget tests and embedding contexts that do not own ApplicationServices.
+    """
     references = getattr(cap_manager, "references", None)
     caps = getattr(cap_manager, "caps", None)
     if references is None or caps is None:
         return None
-    library = ReferenceLibraryService(references)
-    service = CAPReadinessService(caps, references, library)
-    projection_service = ProductionProjectionService(
-        caps,
-        references,
-        library=library,
-        readiness=service,
-    )
+
+    if projection_service is None:
+        library = ReferenceLibraryService(references)
+        service = CAPReadinessService(caps, references, library)
+        projection_service = ProductionProjectionService(
+            caps,
+            references,
+            library=library,
+            readiness=service,
+        )
+    else:
+        service = projection_service.readiness
 
     install_cap_editor_contract_refactoring()
     install_cap_workspace_refactoring(cap_manager, projection_service)
