@@ -1,7 +1,7 @@
 """Stable downstream production projection contract.
 
-Phase 18.2.11.2.8 publishes canonical asset data without exposing CAP repositories,
-legacy persistence models, or presentation-specific state to production consumers.
+Production Planning and later systems consume this immutable projection rather than
+CAP persistence or presentation models.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class ProductionProjection(BaseModel):
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    schema_version: str = Field(default="1.0", min_length=1, max_length=32)
+    schema_version: str = Field(default="2.0", min_length=1, max_length=32)
     identity: CanonicalIdentity
     canonical_description: str = Field(min_length=1)
     facts: tuple[CanonicalFact, ...] = ()
@@ -34,6 +34,11 @@ class ProductionProjection(BaseModel):
     functional_identity: tuple[FunctionalCapability, ...] = ()
     constraints: tuple[CanonicalConstraint, ...] = ()
     production_guidance: str = ""
+    semantic_tags: tuple[str, ...] = ()
+    production_classifications: tuple[str, ...] = ()
+    behaviour_references: tuple[str, ...] = ()
+    production_metadata: dict[str, str] = Field(default_factory=dict)
+    structured_schema_version: int = Field(default=1, ge=1)
     references: tuple[ProductionReference, ...] = ()
     readiness: ReadinessReport
     source_cap_version: str = Field(min_length=1, max_length=32)
