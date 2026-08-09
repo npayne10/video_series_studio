@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from PySide6.QtWidgets import QTableWidgetItem
+
 from vscs.application.assets import AssetService
 from vscs.application.caps import CanonicalReferenceService, CAPService
 from vscs.application.projects import ProjectService
@@ -60,18 +62,12 @@ def test_cap_editor_exposes_structured_production_knowledge(qtbot, tmp_path: Pat
 
     dialog.facts_table.insertRow(0)
     for column, value in enumerate(("class", "Survey Vessel", "", "approved")):
-        from PySide6.QtWidgets import QTableWidgetItem
-
         dialog.facts_table.setItem(0, column, QTableWidgetItem(value))
     dialog.capabilities_table.insertRow(0)
     for column, value in enumerate(("Orbital flight", "Operates in orbit", "approved")):
-        from PySide6.QtWidgets import QTableWidgetItem
-
         dialog.capabilities_table.setItem(0, column, QTableWidgetItem(value))
     dialog.constraints_table.insertRow(0)
     for column, value in enumerate(("required", "Preserve hull", "Continuity", "approved")):
-        from PySide6.QtWidgets import QTableWidgetItem
-
         dialog.constraints_table.setItem(0, column, QTableWidgetItem(value))
 
     update = dialog.update_value()
