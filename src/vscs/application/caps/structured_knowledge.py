@@ -117,8 +117,7 @@ class CAPStructuredKnowledgeService:
             constraints=constraints,
             semantic_tags=tuple(dict.fromkeys((*asset.tags, *draft.semantic_tags))),
             production_classifications=(
-                tuple(draft.production_classifications)
-                or (asset.category.value,)
+                tuple(draft.production_classifications) or (asset.category.value,)
             ),
             behaviour_references=draft.behaviour_references,
             production_metadata={

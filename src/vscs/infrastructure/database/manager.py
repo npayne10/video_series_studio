@@ -164,7 +164,8 @@ class DatabaseManager:
 
     @staticmethod
     def _migrate_reference_statuses(database_session: Session) -> None:
-        database_session.execute(text("""
+        database_session.execute(
+            text("""
             UPDATE canonical_references
             SET status = CASE LOWER(TRIM(status))
                 WHEN 'working' THEN 'imported'
@@ -175,7 +176,8 @@ class DatabaseManager:
                 WHEN 'archived' THEN 'archived'
                 ELSE 'imported'
             END
-        """))
+        """)
+        )
 
     @staticmethod
     def _migrate_reference_approvals(database_session: Session) -> None:
@@ -194,8 +196,7 @@ class DatabaseManager:
         if "locked" not in columns:
             database_session.execute(
                 text(
-                    "ALTER TABLE canonical_references "
-                    "ADD COLUMN locked BOOLEAN NOT NULL DEFAULT 0"
+                    "ALTER TABLE canonical_references ADD COLUMN locked BOOLEAN NOT NULL DEFAULT 0"
                 )
             )
         database_session.execute(

@@ -74,14 +74,10 @@ class ProductionProjectionService:
                 version=cap.version,
             ),
             canonical_description=cap.canonical_description,
-            facts=tuple(
-                item for item in cap.facts if is_production_authority(item.authority)
-            ),
+            facts=tuple(item for item in cap.facts if is_production_authority(item.authority)),
             visual_identity=cap.visual_identity,
             functional_identity=tuple(
-                item
-                for item in cap.functional_identity
-                if is_production_authority(item.authority)
+                item for item in cap.functional_identity if is_production_authority(item.authority)
             ),
             constraints=tuple(
                 item for item in cap.constraints if is_production_authority(item.authority)

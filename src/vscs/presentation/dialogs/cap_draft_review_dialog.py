@@ -194,7 +194,9 @@ class CAPDraftReviewDialog(QDialog):
     @staticmethod
     def _terms(text: str) -> tuple[str, ...]:
         return tuple(
-            dict.fromkeys(item.strip() for item in text.replace("\n", ",").split(",") if item.strip())
+            dict.fromkeys(
+                item.strip() for item in text.replace("\n", ",").split(",") if item.strip()
+            )
         )
 
     @staticmethod

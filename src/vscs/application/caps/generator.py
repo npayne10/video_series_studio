@@ -160,8 +160,7 @@ class CAPGeneratorService:
             )
         if draft.contradictions:
             sections.append(
-                "Source contradictions:\n"
-                + "\n".join(f"- {item}" for item in draft.contradictions)
+                "Source contradictions:\n" + "\n".join(f"- {item}" for item in draft.contradictions)
             )
         if draft.canonical_facts:
             fact_lines = []

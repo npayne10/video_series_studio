@@ -193,17 +193,13 @@ class CAPRepository:
             ),
             structured_schema_version=record.structured_schema_version,
             facts=cls._decode(record.facts_json, _FACTS, ()),
-            functional_identity=cls._decode(
-                record.functional_identity_json, _CAPABILITIES, ()
-            ),
+            functional_identity=cls._decode(record.functional_identity_json, _CAPABILITIES, ()),
             constraints=cls._decode(record.constraints_json, _CONSTRAINTS, ()),
             semantic_tags=cls._decode(record.semantic_tags_json, _STRINGS, ()),
             production_classifications=cls._decode(
                 record.production_classifications_json, _STRINGS, ()
             ),
-            behaviour_references=cls._decode(
-                record.behaviour_references_json, _STRINGS, ()
-            ),
+            behaviour_references=cls._decode(record.behaviour_references_json, _STRINGS, ()),
             production_metadata=cls._decode(record.production_metadata_json, _METADATA, {}),
             created_at=record.created_at,
             updated_at=record.updated_at,

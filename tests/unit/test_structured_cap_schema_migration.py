@@ -60,8 +60,7 @@ def test_schema_four_database_is_upgraded_without_replacing_legacy_cap_fields(
         assert schema is not None
         assert schema.version == 5
         columns = {
-            row[1]
-            for row in session.execute(text("PRAGMA table_info(canonical_asset_profiles)"))
+            row[1] for row in session.execute(text("PRAGMA table_info(canonical_asset_profiles)"))
         }
         assert {
             "structured_schema_version",

@@ -50,9 +50,7 @@ def test_ai_proposal_is_non_mutating_until_explicitly_applied(tmp_path: Path) ->
 
     proposal = service.propose("CAP-LOC-778")
     assert proposal.knowledge.facts
-    assert all(
-        fact.authority is KnowledgeAuthority.PROPOSED for fact in proposal.knowledge.facts
-    )
+    assert all(fact.authority is KnowledgeAuthority.PROPOSED for fact in proposal.knowledge.facts)
     assert caps.get("CAP-LOC-778").facts == ()
 
     applied = service.apply("CAP-LOC-778", proposal.knowledge)

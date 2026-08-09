@@ -85,7 +85,9 @@ def _remove_reference(dialog: Any) -> None:
         candidates = [absolute_file]
         if dialog.profile is not None:
             candidates.append(
-                _generation_manifest(dialog.project_directory, dialog.profile.asset_id, absolute_file)
+                _generation_manifest(
+                    dialog.project_directory, dialog.profile.asset_id, absolute_file
+                )
             )
         for path in candidates:
             try:

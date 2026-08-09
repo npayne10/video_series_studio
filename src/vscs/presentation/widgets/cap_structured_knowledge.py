@@ -133,9 +133,7 @@ def install_structured_cap_editor() -> None:
         self.structured_tabs.addTab(capabilities_page, "Capabilities")
 
         self.constraints_table = QTableWidget(0, 4)
-        self.constraints_table.setHorizontalHeaderLabels(
-            ("Kind", "Rule", "Rationale", "Authority")
-        )
+        self.constraints_table.setHorizontalHeaderLabels(("Kind", "Rule", "Rationale", "Authority"))
         constraints_page = _table_page(
             self.constraints_table,
             ("required", "New Constraint", "", "approved"),
@@ -147,13 +145,9 @@ def install_structured_cap_editor() -> None:
         self.semantic_tags_input = QLineEdit()
         self.semantic_tags_input.setPlaceholderText("Comma-separated production tags")
         self.production_classifications_input = QLineEdit()
-        self.production_classifications_input.setPlaceholderText(
-            "Comma-separated classifications"
-        )
+        self.production_classifications_input.setPlaceholderText("Comma-separated classifications")
         self.behaviour_references_input = QLineEdit()
-        self.behaviour_references_input.setPlaceholderText(
-            "Comma-separated behaviour contract IDs"
-        )
+        self.behaviour_references_input.setPlaceholderText("Comma-separated behaviour contract IDs")
         self.production_metadata_table = QTableWidget(0, 2)
         self.production_metadata_table.setHorizontalHeaderLabels(("Key", "Value"))
         metadata_buttons = QHBoxLayout()
@@ -162,9 +156,7 @@ def install_structured_cap_editor() -> None:
         add_metadata.clicked.connect(
             lambda: _add_row(self.production_metadata_table, ("key", "value"))
         )
-        remove_metadata.clicked.connect(
-            lambda: _remove_selected(self.production_metadata_table)
-        )
+        remove_metadata.clicked.connect(lambda: _remove_selected(self.production_metadata_table))
         metadata_buttons.addWidget(add_metadata)
         metadata_buttons.addWidget(remove_metadata)
         metadata_buttons.addStretch(1)
@@ -192,9 +184,7 @@ def install_structured_cap_editor() -> None:
         parent = self.parent()
         generator = getattr(parent, "generator", None)
         self._structured_service = (
-            getattr(generator, "structured_knowledge", None)
-            if generator is not None
-            else None
+            getattr(generator, "structured_knowledge", None) if generator is not None else None
         )
         self.propose_structured_button.setEnabled(
             self.profile is not None and self._structured_service is not None
@@ -359,9 +349,7 @@ def _load_knowledge(dialog: Any, profile: Any) -> None:
             ),
         )
     dialog.semantic_tags_input.setText(", ".join(profile.semantic_tags))
-    dialog.production_classifications_input.setText(
-        ", ".join(profile.production_classifications)
-    )
+    dialog.production_classifications_input.setText(", ".join(profile.production_classifications))
     dialog.behaviour_references_input.setText(", ".join(profile.behaviour_references))
     dialog.production_metadata_table.setRowCount(0)
     for key, value in sorted(profile.production_metadata.items()):
