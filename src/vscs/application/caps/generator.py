@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vscs.application.assets import AssetService
 from vscs.application.caps.service import CAPService
+from vscs.application.caps.structured_knowledge import CAPStructuredKnowledgeService
 from vscs.domain.caps import (
     CanonicalConstraintKind,
     CAPCreate,
@@ -34,6 +35,7 @@ class CAPGeneratorService:
         self.assets = assets
         self.caps = caps
         self.provider = provider
+        self.structured_knowledge = CAPStructuredKnowledgeService(caps, provider)
         self._logger = LoggingService.get_logger("caps.generator")
 
     def generate_draft(self, asset_id: str, story_context: str) -> GeneratedCAPDraft:
