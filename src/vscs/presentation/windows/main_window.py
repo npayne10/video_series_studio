@@ -21,7 +21,12 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import CanonicalReferenceService, CAPGeneratorService, CAPService
+from vscs.application.caps import (
+    CanonicalReferenceService,
+    CAPGeneratorService,
+    CAPService,
+    ProductionProjectionService,
+)
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.logging import LoggingService
@@ -53,6 +58,7 @@ class MainWindow(QMainWindow):
         self.caps = services.require(CAPService)
         self.cap_generator = services.get(CAPGeneratorService)
         self.canonical_references = services.get(CanonicalReferenceService)
+        self.production_projection = services.get(ProductionProjectionService)
         self.plugins = services.require(PluginManager)
         self.logger = LoggingService.get_logger("presentation.main_window")
         self.setObjectName("mainWindow")
@@ -172,7 +178,10 @@ class MainWindow(QMainWindow):
             self.canonical_references,
         )
         self.derived_reference_button = install_derived_reference_generation(self.cap_manager)
-        self.cap_readiness_button = install_cap_readiness(self.cap_manager)
+        self.cap_readiness_button = install_cap_readiness(
+            self.cap_manager,
+            self.production_projection,
+        )
         self.content_stack.addWidget(self.cap_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
