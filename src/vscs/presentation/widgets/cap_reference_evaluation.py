@@ -30,7 +30,7 @@ def _format_report(report: Any, report_path: Path) -> str:
     return (
         f"Decision: {report.decision.value.upper()}\n"
         f"Overall technical score: {report.overall_score}/100\n"
-        f"Image: {report.width} × {report.height}\n\n"
+        f"Image: {report.width} x {report.height}\n\n"
         f"Technical metrics\n{metrics}\n\n"
         f"Warnings\n{warnings}\n\n"
         f"Required visual review\n{checks}\n\n"
