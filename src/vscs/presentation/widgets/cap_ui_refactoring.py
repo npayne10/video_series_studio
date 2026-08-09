@@ -11,6 +11,7 @@ from types import MethodType
 from typing import Any
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -39,7 +41,8 @@ class ProductionProjectionDialog(QDialog):
         self.projection = projection
         self.setObjectName("productionProjectionDialog")
         self.setWindowTitle(f"Production Projection — {projection.identity.asset_id}")
-        self.setMinimumSize(900, 680)
+        self.setMinimumSize(640, 480)
+        self._size_to_available_screen()
 
         identity = QFormLayout()
         identity.addRow("Asset ID", QLabel(projection.identity.asset_id))
@@ -91,6 +94,7 @@ class ProductionProjectionDialog(QDialog):
         self.references.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.references.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.references.setAlternatingRowColors(True)
+        self.references.setMinimumHeight(220)
         self.references.setRowCount(len(projection.references))
         for row, reference in enumerate(projection.references):
             values = (
@@ -111,20 +115,44 @@ class ProductionProjectionDialog(QDialog):
         gaps_layout = QVBoxLayout(gaps_box)
         gaps_layout.addWidget(gaps)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.reject)
-
         top = QHBoxLayout()
         top.addWidget(identity_box, 1)
         top.addWidget(readiness_box, 1)
 
+        content = QWidget()
+        content.setObjectName("productionProjectionScrollContent")
+        content_layout = QVBoxLayout(content)
+        content_layout.addLayout(top)
+        content_layout.addWidget(canonical_box)
+        content_layout.addWidget(QLabel("Published Production References (Approved / Locked only)"))
+        content_layout.addWidget(self.references)
+        content_layout.addWidget(gaps_box)
+        content_layout.addStretch(1)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setObjectName("productionProjectionScrollArea")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setWidget(content)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(self.reject)
+
         layout = QVBoxLayout(self)
-        layout.addLayout(top)
-        layout.addWidget(canonical_box)
-        layout.addWidget(QLabel("Published Production References (Approved / Locked only)"))
-        layout.addWidget(self.references, 1)
-        layout.addWidget(gaps_box)
+        layout.addWidget(self.scroll_area, 1)
         layout.addWidget(buttons)
+
+    def _size_to_available_screen(self) -> None:
+        """Choose an initial size that always fits inside the current desktop."""
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        if screen is None:
+            self.resize(900, 680)
+            return
+        available = screen.availableGeometry()
+        width = min(980, max(640, int(available.width() * 0.85)))
+        height = min(760, max(480, int(available.height() * 0.85)))
+        self.resize(width, height)
 
     @staticmethod
     def _wrapped(text: str) -> QLabel:
