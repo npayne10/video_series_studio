@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import yaml
 
@@ -47,7 +47,7 @@ class StyleKnowledge:
 class CAIEKnowledgeBase:
     """Load and resolve YAML knowledge without embedding design facts in code."""
 
-    STYLE_ALIASES = {
+    STYLE_ALIASES: ClassVar[dict[str, str]] = {
         "grounded_cinematic": "xorix_grounded_scifi",
         "neutral_reference": "xorix_grounded_scifi",
     }
