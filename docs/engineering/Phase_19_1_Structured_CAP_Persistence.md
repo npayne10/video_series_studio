@@ -74,6 +74,22 @@ AI output is non-mutating and remains Proposed. The operator reviews the proposa
 
 Unsupported information must remain empty rather than being invented.
 
+## Migration Assistant
+
+The Canonical Profiles workspace exposes **Modernise CAP…** for legacy CAPs that do not yet contain structured production knowledge.
+
+The governed migration sequence is:
+
+1. Select a legacy CAP.
+2. Choose **Modernise CAP…**.
+3. Analyse the existing canonical description, visual identity, production notes, asset description and tags through the configured CAP intelligence provider.
+4. Present the structured result as Proposed knowledge for human review.
+5. Require an explicit approval confirmation before persistence.
+6. Promote reviewed facts, capabilities and constraints to Approved authority and persist classifications, behaviour references and production metadata.
+7. Refresh the Canonical Profiles workspace so deterministic Readiness and Production Projection immediately consume the newly approved structured knowledge.
+
+The action is disabled when no CAP is selected or when the selected CAP already contains structured production knowledge. It never silently overwrites or automatically promotes AI output.
+
 ## Readiness integration
 
 `CAPReadinessService` continues to be deterministic and AI-free. Categories that require capabilities or constraints only pass those gates when persisted structured values have Approved or Canonical authority.
@@ -108,8 +124,9 @@ Phase 19.1 is accepted when:
 5. Approved structured knowledge is published by Production Projection.
 6. AI proposal generation does not mutate the CAP before human approval.
 7. CAP editor can create and update structured facts, capabilities, constraints, classifications, behaviours, and metadata.
-8. Existing Phase 18 CAP, reference, readiness, projection, UI, and generation tests remain green.
-9. Full repository Ruff and pytest acceptance passes.
+8. The Modernise CAP migration assistant is available for legacy CAPs, preserves the human approval boundary, persists approved structured knowledge and becomes unavailable once migration is complete.
+9. Existing Phase 18 CAP, reference, readiness, projection, UI, and generation tests remain green.
+10. Full repository Ruff, type-check and pytest acceptance passes.
 
 ## Architectural record
 
