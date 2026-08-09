@@ -8,7 +8,6 @@ from vscs.application.assets import AssetService
 from vscs.application.assets.canonical_creation import CanonicalAssetCreationService
 from vscs.application.caps import (
     CanonicalReferenceService,
-    CAPReadinessService,
     CAPService,
     ProductionProjectionBlockedError,
     ProductionProjectionService,
@@ -53,9 +52,9 @@ def _services(tmp_path: Path):
     assets = context.services.require(AssetService)
     caps = context.services.require(CAPService)
     references = context.services.require(CanonicalReferenceService)
-    library = ReferenceLibraryService(references)
-    readiness = CAPReadinessService(caps, references, library)
     projection = context.services.require(ProductionProjectionService)
+    library = projection.library
+    readiness = projection.readiness
 
     registry = DerivedReferenceGeneratorRegistry()
     provider = OfflineDerivedReferencePreviewProvider()
@@ -191,10 +190,8 @@ def test_location_contract_reaches_production_ready_end_to_end(qtbot, tmp_path: 
     assert manager.table.item(0, 0).text() == "CAP-LOC-991"
     assert manager.table.item(0, 5).text() == "2"
     assert manager.table.item(0, 7).text() == "READY"
-    assert manager.production_projection_service is projection_service or (
-        manager.production_projection_service.project("CAP-LOC-991").checksum()
-        == published.checksum()
-    )
+    assert manager.production_projection_service is projection_service
+    assert manager.readiness_service is readiness
 
     context.shutdown()
 
