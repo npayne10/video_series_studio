@@ -132,9 +132,7 @@ def test_location_contract_reaches_production_ready_end_to_end(qtbot, tmp_path: 
     initial = projection_service.project("CAP-LOC-991")
     initial_checksum = initial.checksum()
     assert initial.production_ready is False
-    assert {reference.view for reference in initial.references} == {
-        CanonicalReferenceView.MASTER
-    }
+    assert {reference.view for reference in initial.references} == {CanonicalReferenceView.MASTER}
     assert templates.coverage("CAP-LOC-991").missing_required == (
         CanonicalReferenceView.PRIMARY_THREE_QUARTER,
     )
