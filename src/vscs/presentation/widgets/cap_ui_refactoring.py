@@ -252,9 +252,10 @@ def install_cap_workspace_refactoring(
                 production = "READY" if projection.production_ready else "BLOCKED"
                 if projection.production_ready:
                     ready_count += 1
-                blocker_text = "\n".join(
-                    gap.message for gap in projection.readiness.blocking_gaps
-                ) or "No production blockers"
+                blocker_text = (
+                    "\n".join(gap.message for gap in projection.readiness.blocking_gaps)
+                    or "No production blockers"
+                )
             except (RuntimeError, ValueError, CAPError):
                 asset = self.caps.assets.get(profile.asset_id)
                 category = asset.category.value
@@ -280,9 +281,7 @@ def install_cap_workspace_refactoring(
                 if column in {6, 7}:
                     item.setToolTip(blocker_text)
                 self.table.setItem(row, column, item)
-        self.summary_label.setText(
-            f"{len(profiles)} CAP(s) — {ready_count} production ready"
-        )
+        self.summary_label.setText(f"{len(profiles)} CAP(s) — {ready_count} production ready")
         update_projection_enabled()
 
     cap_manager.refresh = MethodType(refactored_refresh, cap_manager)
