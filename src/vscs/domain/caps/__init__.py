@@ -63,6 +63,14 @@ from vscs.domain.caps.references import (
     CanonicalReferenceType,
     CanonicalReferenceUpdate,
 )
+from vscs.domain.caps.structured_knowledge import (
+    KnowledgeAuthority,
+    PersistedCanonicalConstraint,
+    PersistedCanonicalFact,
+    PersistedFunctionalCapability,
+    StructuredCAPKnowledge,
+    is_production_authority,
+)
 
 __all__ = (
     "CAPCanonAnalysis",
@@ -97,6 +105,10 @@ __all__ = (
     "FunctionalCapability",
     "GeneratedCAPDraft",
     "GeneratedCanonicalAsset",
+    "KnowledgeAuthority",
+    "PersistedCanonicalConstraint",
+    "PersistedCanonicalFact",
+    "PersistedFunctionalCapability",
     "ProductionAssetProjection",
     "ProductionProjection",
     "ProductionProjectionResult",
@@ -114,5 +126,7 @@ __all__ = (
     "ReferenceLifecycleAction",
     "ReferenceLifecycleEvent",
     "ReferenceRequirement",
+    "StructuredCAPKnowledge",
     "default_category_reference_templates",
+    "is_production_authority",
 )
