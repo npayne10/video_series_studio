@@ -21,6 +21,7 @@ from vscs.application.caps import (
 )
 from vscs.domain.caps import ReadinessAssessment, ReadinessReport, ReadinessSeverity
 from vscs.presentation.widgets.cap_structured_knowledge import install_structured_cap_editor
+from vscs.presentation.widgets.cap_structured_migration import install_modernise_cap_action
 from vscs.presentation.widgets.cap_ui_refactoring import (
     install_cap_editor_contract_refactoring,
     install_cap_workspace_refactoring,
@@ -111,6 +112,7 @@ def install_cap_readiness(
     install_cap_editor_contract_refactoring()
     install_structured_cap_editor()
     install_cap_workspace_refactoring(cap_manager, projection_service)
+    install_modernise_cap_action(cap_manager)
 
     cap_manager.search_input.textChanged.disconnect()
     cap_manager.search_input.textChanged.connect(cap_manager.refresh)
