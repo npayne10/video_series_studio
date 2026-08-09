@@ -1,4 +1,4 @@
-"""Domain contract tests for Phase 18.2.11.2.8 Production Projection API."""
+"""Domain contract tests for Production Projection API."""
 
 from vscs.domain.assets import AssetCategory
 from vscs.domain.caps import (
@@ -44,7 +44,8 @@ def test_projection_is_versioned_immutable_and_checksum_is_deterministic() -> No
 
     duplicate = ProductionProjection.model_validate(projection.model_dump())
 
-    assert projection.schema_version == "1.0"
+    assert projection.schema_version == "2.0"
+    assert projection.structured_schema_version == 1
     assert projection.production_ready is True
     assert projection.generation_ready is True
     assert projection.checksum() == duplicate.checksum()
