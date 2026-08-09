@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel, QScrollArea
 
 from vscs.application.assets import AssetService
 from vscs.application.assets.canonical_creation import CanonicalAssetCreationService
@@ -141,5 +141,29 @@ def test_projection_inspector_uses_authoritative_projection(qtbot, tmp_path: Pat
     assert dialog.references.rowCount() == len(projection.references) == 1
     assert dialog.references.item(0, 2).text() == "Master"
     assert dialog.references.item(0, 3).text() == "Locked"
+
+    context.shutdown()
+
+
+def test_projection_inspector_is_resizable_and_scrollable(qtbot, tmp_path: Path) -> None:
+    context, _caps, _references = _prepare(tmp_path)
+    window = context.create_main_window()
+    qtbot.addWidget(window)
+    projection = window.cap_manager.production_projection_service.project("CAP-SHP-990")
+
+    dialog = ProductionProjectionDialog(projection)
+    qtbot.addWidget(dialog)
+
+    scroll_area = dialog.findChild(QScrollArea, "productionProjectionScrollArea")
+    assert scroll_area is dialog.scroll_area
+    assert scroll_area.widgetResizable() is True
+    assert scroll_area.widget() is not None
+    assert dialog.minimumWidth() <= 640
+    assert dialog.minimumHeight() <= 480
+
+    original_size = dialog.size()
+    dialog.resize(original_size.width() + 80, original_size.height() + 60)
+    assert dialog.width() == original_size.width() + 80
+    assert dialog.height() == original_size.height() + 60
 
     context.shutdown()
