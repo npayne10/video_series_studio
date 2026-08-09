@@ -90,12 +90,10 @@ class XCICCoreRenderer:
         source = self.workflow.editable_path
         if not source.is_file():
             raise XCICCoreCompileError(
-                (
-                    f"Configured XCIC workflow not found: {source}. "
-                    "XCIC Core will not reuse a stale compiled workflow. "
-                    "Export the loader-based workflow using "
-                    "ComfyUI 'Save (API Format)'."
-                )
+                f"Configured XCIC workflow not found: {source}. "
+                "XCIC Core will not reuse a stale compiled workflow. "
+                "Export the loader-based workflow using "
+                "ComfyUI 'Save (API Format)'."
             )
         api, _removed = compile_workflow(source, self.workflow.compiled_path)
         return api
@@ -109,14 +107,12 @@ class XCICCoreRenderer:
         if len(matches) != 1:
             source = self.workflow.editable_path
             raise XCICCoreRenderingError(
-                (
-                    f"Expected exactly one {self.workflow.loader_class} node, "
-                    f"found {len(matches)} in {source}. "
-                    "Confirm VSCS is using the API-format export of the "
-                    "loader-based workflow, not "
-                    "qwen_xcic_api_workflow.json from the older "
-                    "direct-patching integration."
-                )
+                f"Expected exactly one {self.workflow.loader_class} node, "
+                f"found {len(matches)} in {source}. "
+                "Confirm VSCS is using the API-format export of the "
+                "loader-based workflow, not "
+                "qwen_xcic_api_workflow.json from the older "
+                "direct-patching integration."
             )
         return matches[0]
 
