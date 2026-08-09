@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from vscs.application.assets import AssetService
 from vscs.application.caps.service import CAPService
-from vscs.domain.caps import CAPCreate, CAPStatus
+from vscs.domain.caps import (
+    CanonicalConstraintKind,
+    CAPCreate,
+    CAPStatus,
+    KnowledgeAuthority,
+    PersistedCanonicalConstraint,
+    PersistedCanonicalFact,
+)
 from vscs.domain.caps.generation import CAPGenerationRequest, GeneratedCAPDraft
 from vscs.infrastructure.ai.provider import AIProviderError, CAPGenerationProvider
 from vscs.infrastructure.logging import LoggingService
@@ -50,6 +57,37 @@ class CAPGeneratorService:
     def create_from_draft(self, asset_id: str, draft: GeneratedCAPDraft) -> CAPCreate:
         """Persist an explicitly approved generated draft as a Draft CAP."""
         notes = self._production_notes(draft)
+        facts = tuple(
+            PersistedCanonicalFact(
+                key=f"fact_{index:03d}",
+                value=fact.fact,
+                source=fact.evidence,
+                authority=KnowledgeAuthority.APPROVED,
+                confidence=fact.confidence,
+            )
+            for index, fact in enumerate(draft.canonical_facts, start=1)
+        )
+        constraints = tuple(
+            PersistedCanonicalConstraint(
+                kind=CanonicalConstraintKind.REQUIRED,
+                rule=rule,
+                rationale="Approved CAP continuity rule",
+                source=draft.source_summary,
+                authority=KnowledgeAuthority.APPROVED,
+                confidence=draft.confidence.continuity_rules,
+            )
+            for rule in draft.continuity_rules
+        ) + tuple(
+            PersistedCanonicalConstraint(
+                kind=CanonicalConstraintKind.FORBIDDEN,
+                rule=rule,
+                rationale="Approved prohibited variation",
+                source=draft.source_summary,
+                authority=KnowledgeAuthority.APPROVED,
+                confidence=draft.confidence.prohibited_variations,
+            )
+            for rule in draft.prohibited_variations
+        )
         value = CAPCreate(
             asset_id=asset_id,
             title=draft.title,
@@ -58,6 +96,9 @@ class CAPGeneratorService:
             canonical_description=draft.canonical_description,
             visual_identity=draft.visual_identity,
             production_notes=notes,
+            facts=facts,
+            constraints=constraints,
+            production_metadata={"structured_source": "approved-cap-draft"},
         )
         self.caps.create(value)
         self._logger.info("Approved generated CAP draft stored for asset: %s", asset_id)
