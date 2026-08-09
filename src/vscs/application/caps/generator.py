@@ -80,26 +80,29 @@ class CAPGeneratorService:
             )
             for capability in draft.functional_capabilities
         )
-        constraints = tuple(
-            PersistedCanonicalConstraint(
-                kind=CanonicalConstraintKind.REQUIRED,
-                rule=rule,
-                rationale="Approved CAP continuity rule",
-                source=draft.source_summary,
-                authority=KnowledgeAuthority.APPROVED,
-                confidence=draft.confidence.continuity_rules,
-            )
-            for rule in draft.continuity_rules
-        ) + tuple(
-            PersistedCanonicalConstraint(
-                kind=CanonicalConstraintKind.FORBIDDEN,
-                rule=rule,
-                rationale="Approved prohibited variation",
-                source=draft.source_summary,
-                authority=KnowledgeAuthority.APPROVED,
-                confidence=draft.confidence.prohibited_variations,
-            )
-            for rule in draft.prohibited_variations
+        constraints = (
+            *(
+                PersistedCanonicalConstraint(
+                    kind=CanonicalConstraintKind.REQUIRED,
+                    rule=rule,
+                    rationale="Approved CAP continuity rule",
+                    source=draft.source_summary,
+                    authority=KnowledgeAuthority.APPROVED,
+                    confidence=draft.confidence.continuity_rules,
+                )
+                for rule in draft.continuity_rules
+            ),
+            *(
+                PersistedCanonicalConstraint(
+                    kind=CanonicalConstraintKind.FORBIDDEN,
+                    rule=rule,
+                    rationale="Approved prohibited variation",
+                    source=draft.source_summary,
+                    authority=KnowledgeAuthority.APPROVED,
+                    confidence=draft.confidence.prohibited_variations,
+                )
+                for rule in draft.prohibited_variations
+            ),
         )
         value = CAPCreate(
             asset_id=asset_id,
