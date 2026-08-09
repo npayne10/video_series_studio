@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import CAPReadinessService, CAPService, ProductionProjectionService
+from vscs.application.caps import CAPService, ProductionProjectionService
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
