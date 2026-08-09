@@ -102,8 +102,14 @@ class OpenAICAPGenerationProvider:
             "CAP Draft Package using only canonical_facts from the supplied analysis. Never promote "
             "an uncertainty, contradiction, or unsupported inference into canon. Preserve all "
             "uncertainties as unresolved_questions. Copy canonical_facts and contradictions into "
-            "the result. Score confidence for every draft section and overall. Lower confidence "
-            "when facts are sparse, indirect, or visually incomplete."
+            "the result. Also emit structured functional_capabilities, semantic_tags, "
+            "production_classifications, behaviour_references, and production_metadata only when "
+            "they are directly supported by the approved canonical facts. Functional capabilities "
+            "must describe what the asset can actually do in production, not visual adjectives. "
+            "Continuity rules and prohibited variations must be explicit production constraints. "
+            "Leave a structured collection empty rather than inventing unsupported information. "
+            "Score confidence for every draft section and overall, lowering confidence when facts "
+            "are sparse, indirect, or incomplete."
         )
         input_text = (
             f"Asset ID: {request.asset_id}\n"
