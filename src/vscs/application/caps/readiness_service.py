@@ -18,6 +18,7 @@ from vscs.domain.caps.readiness import (
     ReadinessSeverity,
     ReadinessState,
 )
+from vscs.domain.caps.structured_knowledge import is_production_authority
 
 _APPROVED_REFERENCE_STATES = {
     CanonicalReferenceLifecycle.APPROVED,
@@ -319,7 +320,11 @@ class CAPReadinessService:
                 )
             )
 
-        functional_identity = tuple(getattr(cap, "functional_identity", ()) or ())
+        functional_identity = tuple(
+            item
+            for item in (getattr(cap, "functional_identity", ()) or ())
+            if is_production_authority(getattr(item, "authority"))
+        )
         if category in _FUNCTIONAL_IDENTITY_CATEGORIES:
             checks += 1
             if functional_identity:
@@ -329,11 +334,15 @@ class CAPReadinessService:
                     self._gap(
                         "production.functional_identity",
                         ReadinessDimension.PRODUCTION,
-                        "Structured functional capabilities are required for this category",
+                        "Approved structured functional capabilities are required for this category",
                     )
                 )
 
-        constraints = tuple(getattr(cap, "constraints", ()) or ())
+        constraints = tuple(
+            item
+            for item in (getattr(cap, "constraints", ()) or ())
+            if is_production_authority(getattr(item, "authority"))
+        )
         if category in _CONSTRAINT_CATEGORIES:
             checks += 1
             if constraints:
@@ -343,7 +352,7 @@ class CAPReadinessService:
                     self._gap(
                         "production.constraints",
                         ReadinessDimension.PRODUCTION,
-                        "Structured canonical constraints are required for this category",
+                        "Approved structured canonical constraints are required for this category",
                     )
                 )
 
