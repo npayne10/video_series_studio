@@ -11,6 +11,7 @@ from vscs.domain.caps.production_contract import (
     CanonicalReferenceLifecycle,
 )
 from vscs.domain.caps.production_projection import ProductionProjection
+from vscs.domain.caps.structured_knowledge import is_production_authority
 
 
 class ProductionProjectionError(RuntimeError):
@@ -28,12 +29,7 @@ class ProductionProjectionBlockedError(ProductionProjectionError):
 
 
 class ProductionProjectionService:
-    """Publish repository-independent canonical asset projections.
-
-    The diagnostic `project` API always returns the best canonical projection that can
-    be assembled from persisted data. `require_ready` applies the authoritative Phase
-    18.2.11.2.7 Production Readiness gate before downstream execution.
-    """
+    """Publish repository-independent canonical asset projections."""
 
     def __init__(
         self,
@@ -78,11 +74,24 @@ class ProductionProjectionService:
                 version=cap.version,
             ),
             canonical_description=cap.canonical_description,
-            facts=tuple(getattr(cap, "facts", ()) or ()),
+            facts=tuple(
+                item for item in cap.facts if is_production_authority(item.authority)
+            ),
             visual_identity=cap.visual_identity,
-            functional_identity=tuple(getattr(cap, "functional_identity", ()) or ()),
-            constraints=tuple(getattr(cap, "constraints", ()) or ()),
+            functional_identity=tuple(
+                item
+                for item in cap.functional_identity
+                if is_production_authority(item.authority)
+            ),
+            constraints=tuple(
+                item for item in cap.constraints if is_production_authority(item.authority)
+            ),
             production_guidance=cap.production_notes,
+            semantic_tags=cap.semantic_tags,
+            production_classifications=cap.production_classifications,
+            behaviour_references=cap.behaviour_references,
+            production_metadata=cap.production_metadata,
+            structured_schema_version=cap.structured_schema_version,
             references=production_references,
             readiness=readiness,
             source_cap_version=cap.version,
