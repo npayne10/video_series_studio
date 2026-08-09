@@ -8,6 +8,12 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from vscs.domain.caps.structured_knowledge import (
+    PersistedCanonicalConstraint,
+    PersistedCanonicalFact,
+    PersistedFunctionalCapability,
+)
+
 
 class CAPStatus(StrEnum):
     """Review state for a Canonical Asset Profile."""
@@ -31,6 +37,14 @@ class CAPCreate(BaseModel):
     visual_identity: str = ""
     production_notes: str = ""
     reference_paths: tuple[Path, ...] = ()
+    structured_schema_version: int = Field(default=1, ge=1)
+    facts: tuple[PersistedCanonicalFact, ...] = ()
+    functional_identity: tuple[PersistedFunctionalCapability, ...] = ()
+    constraints: tuple[PersistedCanonicalConstraint, ...] = ()
+    semantic_tags: tuple[str, ...] = ()
+    production_classifications: tuple[str, ...] = ()
+    behaviour_references: tuple[str, ...] = ()
+    production_metadata: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("asset_id")
     @classmethod
@@ -55,6 +69,14 @@ class CAPUpdate(BaseModel):
     visual_identity: str | None = None
     production_notes: str | None = None
     reference_paths: tuple[Path, ...] | None = None
+    structured_schema_version: int | None = Field(default=None, ge=1)
+    facts: tuple[PersistedCanonicalFact, ...] | None = None
+    functional_identity: tuple[PersistedFunctionalCapability, ...] | None = None
+    constraints: tuple[PersistedCanonicalConstraint, ...] | None = None
+    semantic_tags: tuple[str, ...] | None = None
+    production_classifications: tuple[str, ...] | None = None
+    behaviour_references: tuple[str, ...] | None = None
+    production_metadata: dict[str, str] | None = None
 
     @field_validator("reference_paths")
     @classmethod
@@ -78,5 +100,13 @@ class CanonicalAssetProfile(BaseModel):
     visual_identity: str
     production_notes: str
     reference_paths: tuple[Path, ...]
+    structured_schema_version: int = 1
+    facts: tuple[PersistedCanonicalFact, ...] = ()
+    functional_identity: tuple[PersistedFunctionalCapability, ...] = ()
+    constraints: tuple[PersistedCanonicalConstraint, ...] = ()
+    semantic_tags: tuple[str, ...] = ()
+    production_classifications: tuple[str, ...] = ()
+    behaviour_references: tuple[str, ...] = ()
+    production_metadata: dict[str, str] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
