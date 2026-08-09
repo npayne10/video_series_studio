@@ -11,6 +11,7 @@ from vscs.domain.caps import (
     KnowledgeAuthority,
     PersistedCanonicalConstraint,
     PersistedCanonicalFact,
+    PersistedFunctionalCapability,
 )
 from vscs.domain.caps.generation import CAPGenerationRequest, GeneratedCAPDraft
 from vscs.infrastructure.ai.provider import AIProviderError, CAPGenerationProvider
@@ -67,6 +68,16 @@ class CAPGeneratorService:
             )
             for index, fact in enumerate(draft.canonical_facts, start=1)
         )
+        capabilities = tuple(
+            PersistedFunctionalCapability(
+                capability=capability,
+                description="Approved CAP functional capability",
+                source=draft.source_summary,
+                authority=KnowledgeAuthority.APPROVED,
+                confidence=draft.confidence.functional_capabilities,
+            )
+            for capability in draft.functional_capabilities
+        )
         constraints = tuple(
             PersistedCanonicalConstraint(
                 kind=CanonicalConstraintKind.REQUIRED,
@@ -97,8 +108,15 @@ class CAPGeneratorService:
             visual_identity=draft.visual_identity,
             production_notes=notes,
             facts=facts,
+            functional_identity=capabilities,
             constraints=constraints,
-            production_metadata={"structured_source": "approved-cap-draft"},
+            semantic_tags=draft.semantic_tags,
+            production_classifications=draft.production_classifications,
+            behaviour_references=draft.behaviour_references,
+            production_metadata={
+                "structured_source": "approved-cap-draft",
+                **draft.production_metadata,
+            },
         )
         self.caps.create(value)
         self._logger.info("Approved generated CAP draft stored for asset: %s", asset_id)
@@ -125,6 +143,11 @@ class CAPGeneratorService:
                 "Prohibited variations:\n"
                 + "\n".join(f"- {item}" for item in draft.prohibited_variations)
             )
+        if draft.functional_capabilities:
+            sections.append(
+                "Functional capabilities:\n"
+                + "\n".join(f"- {item}" for item in draft.functional_capabilities)
+            )
         if draft.unresolved_questions:
             sections.append(
                 "Unresolved questions:\n"
@@ -150,6 +173,7 @@ class CAPGeneratorService:
             f"- Production notes: {confidence.production_notes:.0%}\n"
             f"- Continuity rules: {confidence.continuity_rules:.0%}\n"
             f"- Prohibited variations: {confidence.prohibited_variations:.0%}\n"
+            f"- Functional capabilities: {confidence.functional_capabilities:.0%}\n"
             f"- Overall: {confidence.overall:.0%}"
         )
         if draft.source_summary:
