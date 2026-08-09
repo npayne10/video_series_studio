@@ -38,7 +38,8 @@ class CAPDraftReviewDialog(QDialog):
 
         notice = QLabel(
             "This content is AI-assisted and is not canon. Review every section, its "
-            "supporting facts, unresolved questions, and confidence before creating the Draft CAP."
+            "supporting facts, structured production knowledge, unresolved questions, "
+            "and confidence before creating the Draft CAP."
         )
         notice.setWordWrap(True)
 
@@ -48,6 +49,11 @@ class CAPDraftReviewDialog(QDialog):
         self.production_notes = QTextEdit()
         self.continuity_rules = QTextEdit()
         self.prohibited_variations = QTextEdit()
+        self.functional_capabilities = QTextEdit()
+        self.semantic_tags = QLineEdit()
+        self.production_classifications = QLineEdit()
+        self.behaviour_references = QLineEdit()
+        self.production_metadata = QTextEdit()
         self.unresolved_questions = QTextEdit()
         self.source_summary = QTextEdit()
         self.canonical_facts = QTextEdit()
@@ -74,6 +80,26 @@ class CAPDraftReviewDialog(QDialog):
             "Prohibited variations (one per line)",
             self.prohibited_variations,
         )
+        production_form.addRow(
+            "Functional capabilities (one per line)",
+            self.functional_capabilities,
+        )
+
+        structured_tab = QWidget()
+        structured_form = QFormLayout(structured_tab)
+        structured_form.addRow("Semantic tags (comma separated)", self.semantic_tags)
+        structured_form.addRow(
+            "Production classifications (comma separated)",
+            self.production_classifications,
+        )
+        structured_form.addRow(
+            "Behaviour references (comma separated)",
+            self.behaviour_references,
+        )
+        structured_form.addRow(
+            "Production metadata (key=value, one per line)",
+            self.production_metadata,
+        )
 
         evidence_tab = QWidget()
         evidence_form = QFormLayout(evidence_tab)
@@ -95,6 +121,7 @@ class CAPDraftReviewDialog(QDialog):
         tabs = QTabWidget()
         tabs.addTab(identity_tab, "Canonical Identity")
         tabs.addTab(production_tab, "Production & Continuity")
+        tabs.addTab(structured_tab, "Structured Knowledge")
         tabs.addTab(evidence_tab, "Evidence & Questions")
         tabs.addTab(confidence_tab, "Confidence")
 
@@ -126,6 +153,13 @@ class CAPDraftReviewDialog(QDialog):
         self.production_notes.setPlainText(draft.production_notes)
         self.continuity_rules.setPlainText("\n".join(draft.continuity_rules))
         self.prohibited_variations.setPlainText("\n".join(draft.prohibited_variations))
+        self.functional_capabilities.setPlainText("\n".join(draft.functional_capabilities))
+        self.semantic_tags.setText(", ".join(draft.semantic_tags))
+        self.production_classifications.setText(", ".join(draft.production_classifications))
+        self.behaviour_references.setText(", ".join(draft.behaviour_references))
+        self.production_metadata.setPlainText(
+            "\n".join(f"{key}={value}" for key, value in sorted(draft.production_metadata.items()))
+        )
         self.unresolved_questions.setPlainText("\n".join(draft.unresolved_questions))
         self.source_summary.setPlainText(draft.source_summary)
         self.canonical_facts.setPlainText(self._format_facts(draft))
@@ -141,6 +175,11 @@ class CAPDraftReviewDialog(QDialog):
             production_notes=self.production_notes.toPlainText(),
             continuity_rules=self._lines(self.continuity_rules),
             prohibited_variations=self._lines(self.prohibited_variations),
+            functional_capabilities=self._lines(self.functional_capabilities),
+            semantic_tags=self._terms(self.semantic_tags.text()),
+            production_classifications=self._terms(self.production_classifications.text()),
+            behaviour_references=self._terms(self.behaviour_references.text()),
+            production_metadata=self._metadata(self.production_metadata),
             unresolved_questions=self._lines(self.unresolved_questions),
             source_summary=self.source_summary.toPlainText(),
             canonical_facts=self._draft.canonical_facts,
@@ -151,6 +190,21 @@ class CAPDraftReviewDialog(QDialog):
     @staticmethod
     def _lines(editor: QTextEdit) -> tuple[str, ...]:
         return tuple(line.strip() for line in editor.toPlainText().splitlines() if line.strip())
+
+    @staticmethod
+    def _terms(text: str) -> tuple[str, ...]:
+        return tuple(
+            dict.fromkeys(item.strip() for item in text.replace("\n", ",").split(",") if item.strip())
+        )
+
+    @staticmethod
+    def _metadata(editor: QTextEdit) -> dict[str, str]:
+        values: dict[str, str] = {}
+        for line in editor.toPlainText().splitlines():
+            key, separator, value = line.partition("=")
+            if separator and key.strip() and value.strip():
+                values[key.strip()] = value.strip()
+        return values
 
     @staticmethod
     def _format_facts(draft: GeneratedCAPDraft) -> str:
@@ -169,7 +223,9 @@ class CAPDraftReviewDialog(QDialog):
             f"Visual identity: {confidence.visual_identity:.0%}\n"
             f"Production notes: {confidence.production_notes:.0%}\n"
             f"Continuity rules: {confidence.continuity_rules:.0%}\n"
-            f"Prohibited variations: {confidence.prohibited_variations:.0%}\n\n"
+            f"Prohibited variations: {confidence.prohibited_variations:.0%}\n"
+            f"Functional capabilities: {confidence.functional_capabilities:.0%}\n"
+            f"Classifications: {confidence.classifications:.0%}\n\n"
             f"Overall confidence: {confidence.overall:.0%}"
         )
 
