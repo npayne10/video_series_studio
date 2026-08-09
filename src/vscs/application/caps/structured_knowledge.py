@@ -80,6 +80,16 @@ class CAPStructuredKnowledgeService:
             )
             for index, fact in enumerate(draft.canonical_facts, start=1)
         )
+        capabilities = tuple(
+            PersistedFunctionalCapability(
+                capability=capability,
+                description="AI-proposed functional capability",
+                source=draft.source_summary,
+                authority=KnowledgeAuthority.PROPOSED,
+                confidence=draft.confidence.functional_capabilities,
+            )
+            for capability in draft.functional_capabilities
+        )
         constraints = tuple(
             PersistedCanonicalConstraint(
                 kind=CanonicalConstraintKind.REQUIRED,
@@ -103,14 +113,18 @@ class CAPStructuredKnowledgeService:
         )
         knowledge = StructuredCAPKnowledge(
             facts=facts,
-            functional_identity=(),
+            functional_identity=capabilities,
             constraints=constraints,
-            semantic_tags=tuple(asset.tags),
-            production_classifications=(asset.category.value,),
-            behaviour_references=(),
+            semantic_tags=tuple(dict.fromkeys((*asset.tags, *draft.semantic_tags))),
+            production_classifications=(
+                tuple(draft.production_classifications)
+                or (asset.category.value,)
+            ),
+            behaviour_references=draft.behaviour_references,
             production_metadata={
                 "migration_source": "phase-19.1-ai-proposal",
                 "provider": type(self.provider).__name__,
+                **draft.production_metadata,
             },
         )
         return StructuredKnowledgeProposal(
