@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from vscs.application.assets.xpd_import import XPD_SHEET_NAME
 from vscs.application.assets.xpd_import import (
-    XPD_SHEET_NAME,
     XPDWorkbookImportService as _BaseXPDWorkbookImportService,
 )
 from vscs.domain.assets import XPDImportDisposition, XPDImportItem, XPDImportPreview
