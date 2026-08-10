@@ -3,16 +3,25 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QWidget
+from PySide6.QtWidgets import (
+    QDialog,
+    QMessageBox,
+    QPushButton,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from vscs.application.story import (
     EpisodePlan,
     EpisodePlanStatus,
+    GovernedShotPlanningService,
     ScenePlanningError,
     ScenePlanningService,
     ScenePlanStatus,
 )
 
+from .governed_shot_planner import GovernedShotPlannerDialog
 from .scene_planner import ScenePlanEditorDialog, ScenePlannerDialog
 
 
@@ -26,6 +35,21 @@ class IterativeScenePlannerDialog(ScenePlannerDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(service, episode, parent)
+        self.shot_service: GovernedShotPlanningService | None = getattr(
+            service,
+            "shot_planning_service",
+            None,
+        )
+        self.shots_button = QPushButton("Shot Planner…", self)
+        self.shots_button.setObjectName("governedShotPlannerButton")
+        self.shots_button.setToolTip(
+            "Plan authoritative shots for the selected production-ready Scene Plan"
+        )
+        root = self.layout()
+        if isinstance(root, QVBoxLayout):
+            root.insertWidget(4, self.shots_button)
+        self.shots_button.clicked.connect(self._open_shots)
+        self._update_actions()
 
     def refresh(self) -> None:
         """Reload governed Scene Plans plus inactive legacy scene references."""
@@ -81,6 +105,12 @@ class IterativeScenePlannerDialog(ScenePlannerDialog):
         self.delete_button.setEnabled(draft)
         self.ready_button.setEnabled(episode_ready and draft and current)
         self.draft_button.setEnabled(ready)
+        if hasattr(self, "shots_button"):
+            self.shots_button.setEnabled(
+                self.shot_service is not None
+                and scene is not None
+                and self.service.is_production_ready(scene)
+            )
 
     def _new(self) -> None:
         episode = self.service.episodes.plan(self.episode_id)
@@ -147,4 +177,15 @@ class IterativeScenePlannerDialog(ScenePlannerDialog):
         except ScenePlanningError as exc:
             QMessageBox.warning(self, "Scene Planner", str(exc))
             return
+        self.refresh()
+
+    def _open_shots(self) -> None:
+        scene = self._selected()
+        if (
+            scene is None
+            or self.shot_service is None
+            or not self.service.is_production_ready(scene)
+        ):
+            return
+        GovernedShotPlannerDialog(self.shot_service, scene, self).exec()
         self.refresh()

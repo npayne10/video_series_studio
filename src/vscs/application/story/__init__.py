@@ -9,6 +9,7 @@ from .approval import (
 )
 from .bootstrap import (
     register_episode_planning,
+    register_governed_shot_planning,
     register_scene_planning,
     register_story_approval,
     register_story_lifecycle,
@@ -56,6 +57,12 @@ from .scene_planning import (
     ScenePlanStatus,
 )
 from .service import StoryService, StoryServiceError
+from .shot_planning import (
+    GovernedShotPlanningError,
+    GovernedShotPlanningService,
+    ShotPlan,
+    ShotPlanStatus,
+)
 from .status import (
     StoryStatusError,
     StoryStatusService,
@@ -70,12 +77,16 @@ __all__ = [
     "EpisodePlanStatus",
     "EpisodePlanningError",
     "EpisodePlanningService",
+    "GovernedShotPlanningError",
+    "GovernedShotPlanningService",
     "IterativeScenePlanningService",
     "ProductionContainerType",
     "ScenePlan",
     "ScenePlanStatus",
     "ScenePlanningError",
     "ScenePlanningService",
+    "ShotPlan",
+    "ShotPlanStatus",
     "StoryApprovalAction",
     "StoryApprovalError",
     "StoryApprovalRecord",
@@ -106,6 +117,7 @@ __all__ = [
     "infer_container_type",
     "normalize_container_id",
     "register_episode_planning",
+    "register_governed_shot_planning",
     "register_scene_planning",
     "register_story_approval",
     "register_story_lifecycle",
