@@ -1,5 +1,6 @@
 """Behaviour Profile application persistence and governance contracts."""
 
+from vscs.application.behaviours.integration import ensure_behaviour_profile_service
 from vscs.application.behaviours.repository import (
     BehaviourProfileRepository,
     BehaviourProfileRepositoryError,
@@ -18,4 +19,5 @@ __all__ = [
     "BehaviourProfileRepositoryError",
     "BehaviourProfileService",
     "BehaviourProfileServiceError",
+    "ensure_behaviour_profile_service",
 ]
