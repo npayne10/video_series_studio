@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from vscs.domain.behaviours import (
     BehaviourCategory,
     BehaviourProfile,
 )
+from vscs.domain.projects import ProjectMetadata
 from vscs.infrastructure.database import DatabaseManager
 
 
@@ -30,10 +32,13 @@ def _profile(*, version: str = "1.0", name: str = "Dock") -> BehaviourProfile:
 
 
 @pytest.fixture
-def service(tmp_path: Path) -> BehaviourProfileService:
+def service(tmp_path: Path) -> Iterator[BehaviourProfileService]:
     database = DatabaseManager()
-    database.open(tmp_path / "project.db")
-    return BehaviourProfileService(BehaviourProfileRepository(database))
+    database.open(tmp_path, ProjectMetadata(name="Behaviour Governance"))
+    try:
+        yield BehaviourProfileService(BehaviourProfileRepository(database))
+    finally:
+        database.close()
 
 
 def test_new_profiles_must_enter_as_draft(service: BehaviourProfileService) -> None:
@@ -104,7 +109,9 @@ def test_production_resolution_prefers_canonical_then_highest_version(
     service.transition("BEP-SHP-DOCK", "2.0", BehaviourAuthority.PROPOSED)
     service.transition("BEP-SHP-DOCK", "2.0", BehaviourAuthority.APPROVED)
 
-    assert service.production_profile("BEP-SHP-DOCK").version == "2.0"  # type: ignore[union-attr]
+    resolved_approved = service.production_profile("BEP-SHP-DOCK")
+    assert resolved_approved is not None
+    assert resolved_approved.version == "2.0"
 
     service.transition("BEP-SHP-DOCK", "1.0", BehaviourAuthority.CANONICAL)
     resolved = service.production_profile("BEP-SHP-DOCK")
