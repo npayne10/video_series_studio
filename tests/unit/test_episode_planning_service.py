@@ -8,12 +8,18 @@ import pytest
 
 from vscs.application.projects import ProjectService
 from vscs.application.story import (
+    EpisodePlan,
     EpisodePlanningError,
     EpisodePlanningService,
     EpisodePlanStatus,
     StoryLifecycleService,
 )
-from vscs.bootstrap import ApplicationContext, BootstrapOptions, StartupMode, build_application_context
+from vscs.bootstrap import (
+    ApplicationContext,
+    BootstrapOptions,
+    StartupMode,
+    build_application_context,
+)
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -37,7 +43,7 @@ def _service(tmp_path: Path) -> tuple[ApplicationContext, EpisodePlanningService
     return context, EpisodePlanningService(projects, stories), story.story_id
 
 
-def _create(service: EpisodePlanningService, story_id: str, sequence: int = 1):
+def _create(service: EpisodePlanningService, story_id: str, sequence: int = 1) -> EpisodePlan:
     return service.create(
         story_id=story_id,
         sequence_number=sequence,
