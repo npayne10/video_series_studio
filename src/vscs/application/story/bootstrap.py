@@ -9,6 +9,7 @@ from .approval import StoryApprovalService
 from .episode_planning import EpisodePlanningService
 from .lifecycle import StoryLifecycleService
 from .metadata import StoryMetadataService
+from .scene_planning import ScenePlanningService
 from .status import StoryStatusService
 
 
@@ -74,3 +75,15 @@ def register_episode_planning(services: ApplicationServices) -> EpisodePlanningS
         register_story_lifecycle(services),
     )
     return services.register(EpisodePlanningService, planner)
+
+
+def register_scene_planning(services: ApplicationServices) -> ScenePlanningService:
+    """Register Scene Planning using the authoritative Episode Planner service."""
+    existing = services.get(ScenePlanningService)
+    if existing is not None:
+        return existing
+    planner = ScenePlanningService(
+        services.require(ProjectService),
+        register_episode_planning(services),
+    )
+    return services.register(ScenePlanningService, planner)
