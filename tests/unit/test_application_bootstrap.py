@@ -88,11 +88,13 @@ def test_bootstrap_creates_real_main_window_without_event_loop(
 
     assert isinstance(window, MainWindow)
     assert window.services is context.services
-    assert window.navigation.count() == 8
+    assert window.navigation.count() == 9
+    assert window.navigation.item(5).text() == "Behaviour Profiles"
     assert window.navigation.currentItem().text() == "Dashboard"
-    assert window.content_stack.count() == 8
+    assert window.content_stack.count() == 9
     assert window.statusBar().currentMessage() == "No project open"
     assert not window.save_project_action.isEnabled()
+    assert not window.behaviour_manager.new_button.isEnabled()
 
     context.shutdown()
 
@@ -115,6 +117,7 @@ def test_project_created_through_injected_service_updates_frontend(
     assert window.save_project_action.isEnabled()
     assert window.asset_manager.add_button.isEnabled()
     assert window.cap_manager.add_button.isEnabled()
+    assert window.behaviour_manager.new_button.isEnabled()
 
     context.shutdown()
 
