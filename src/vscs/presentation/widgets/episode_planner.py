@@ -1,4 +1,4 @@
-"""Episode Planner UI for Phase 19.3.1."""
+"""Episode Planner UI for Phase 19.3.1 and Scene Planner integration."""
 
 from __future__ import annotations
 
@@ -28,8 +28,10 @@ from vscs.application.story import (
     EpisodePlanningError,
     EpisodePlanningService,
     EpisodePlanStatus,
+    ScenePlanningService,
     StoryRecord,
 )
+from vscs.presentation.widgets.scene_planner import ScenePlannerDialog
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,10 +166,12 @@ class EpisodePlannerDialog(QDialog):
         service: EpisodePlanningService,
         story: StoryRecord,
         parent: QWidget | None = None,
+        scene_service: ScenePlanningService | None = None,
     ) -> None:
         super().__init__(parent)
         self.service = service
         self.story = story
+        self.scene_service = scene_service
         self.setObjectName("episodePlannerDialog")
         self.setWindowTitle(f"Episode Planner — {story.title}")
         self.setMinimumSize(760, 480)
@@ -188,12 +192,15 @@ class EpisodePlannerDialog(QDialog):
         self.delete_button = QPushButton("Delete Draft", self)
         self.ready_button = QPushButton("Mark Ready", self)
         self.draft_button = QPushButton("Return to Draft", self)
+        self.scenes_button = QPushButton("Scene Planner…", self)
+        self.scenes_button.setObjectName("scenePlannerButton")
         for button in (
             self.new_button,
             self.edit_button,
             self.delete_button,
             self.ready_button,
             self.draft_button,
+            self.scenes_button,
         ):
             toolbar.addWidget(button)
         toolbar.addStretch(1)
@@ -219,6 +226,7 @@ class EpisodePlannerDialog(QDialog):
         self.delete_button.clicked.connect(self._delete)
         self.ready_button.clicked.connect(self._mark_ready)
         self.draft_button.clicked.connect(self._return_to_draft)
+        self.scenes_button.clicked.connect(self._open_scenes)
         self.table.itemSelectionChanged.connect(self._update_actions)
         self.table.itemDoubleClicked.connect(lambda _item: self._edit())
         self.refresh()
@@ -261,6 +269,7 @@ class EpisodePlannerDialog(QDialog):
         self.delete_button.setEnabled(draft)
         self.ready_button.setEnabled(draft)
         self.draft_button.setEnabled(ready)
+        self.scenes_button.setEnabled(plan is not None and self.scene_service is not None)
 
     def _new(self) -> None:
         dialog = EpisodePlanEditorDialog(self.story, parent=self)
@@ -350,6 +359,13 @@ class EpisodePlannerDialog(QDialog):
             return
         self.refresh()
 
+    def _open_scenes(self) -> None:
+        plan = self._selected()
+        if plan is None or self.scene_service is None:
+            return
+        ScenePlannerDialog(self.scene_service, plan, self).exec()
+        self.refresh()
+
     @staticmethod
     def _runtime_label(seconds: int) -> str:
         minutes, remainder = divmod(seconds, 60)
@@ -359,6 +375,7 @@ class EpisodePlannerDialog(QDialog):
 def install_episode_planner(
     workspace: QWidget,
     service: EpisodePlanningService,
+    scene_service: ScenePlanningService | None = None,
 ) -> QPushButton:
     """Install the Episode Planner action into the Story governance toolbar."""
     button = QPushButton("Episode Planner…", workspace)
@@ -389,7 +406,12 @@ def install_episode_planner(
         story = selected_story()
         if story is None:
             return
-        EpisodePlannerDialog(service, story, workspace).exec()
+        EpisodePlannerDialog(
+            service,
+            story,
+            workspace,
+            scene_service=scene_service,
+        ).exec()
 
     story_list = getattr(workspace, "story_list", None)
     if story_list is not None:
