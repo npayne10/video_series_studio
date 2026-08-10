@@ -6,6 +6,7 @@ from vscs.application.projects import ProjectService
 from vscs.infrastructure.services import ApplicationServices
 
 from .approval import StoryApprovalService
+from .episode_planning import EpisodePlanningService
 from .lifecycle import StoryLifecycleService
 from .metadata import StoryMetadataService
 from .status import StoryStatusService
@@ -61,3 +62,15 @@ def register_story_approval(services: ApplicationServices) -> StoryApprovalServi
         status,
     )
     return services.register(StoryApprovalService, approval)
+
+
+def register_episode_planning(services: ApplicationServices) -> EpisodePlanningService:
+    """Register the project-backed Episode Planner service."""
+    existing = services.get(EpisodePlanningService)
+    if existing is not None:
+        return existing
+    planner = EpisodePlanningService(
+        services.require(ProjectService),
+        register_story_lifecycle(services),
+    )
+    return services.register(EpisodePlanningService, planner)
