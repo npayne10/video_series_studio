@@ -41,9 +41,13 @@ def install_asset_resolver_navigation() -> None:
         original_update_actions(self)
         _update_asset_action(self)
 
-    setattr(GovernedShotPlannerDialog, "__init__", init_with_asset_resolver)
-    setattr(GovernedShotPlannerDialog, "_update_actions", update_actions_with_assets)
-    setattr(GovernedShotPlannerDialog, "_asset_resolver_installed", True)
+    setattr(GovernedShotPlannerDialog, "__init__", init_with_asset_resolver)  # noqa: B010
+    setattr(  # noqa: B010
+        GovernedShotPlannerDialog,
+        "_update_actions",
+        update_actions_with_assets,
+    )
+    setattr(GovernedShotPlannerDialog, "_asset_resolver_installed", True)  # noqa: B010
 
 
 def _asset_service(dialog: Any) -> GovernedAssetResolutionService | None:
