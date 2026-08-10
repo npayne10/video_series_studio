@@ -5,7 +5,13 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QWidget
 
-from vscs.application.story import EpisodePlan, EpisodePlanStatus, ScenePlanningError, ScenePlanningService, ScenePlanStatus
+from vscs.application.story import (
+    EpisodePlan,
+    EpisodePlanStatus,
+    ScenePlanningError,
+    ScenePlanningService,
+    ScenePlanStatus,
+)
 
 from .scene_planner import ScenePlanEditorDialog, ScenePlannerDialog
 
