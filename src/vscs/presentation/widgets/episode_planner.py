@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -31,6 +32,20 @@ from vscs.application.story import (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class EpisodePlanEditorValues:
+    """Strongly typed values returned by the Episode Plan editor."""
+
+    sequence_number: int
+    title: str
+    story_scope: str
+    production_objective: str
+    target_runtime_seconds: int
+    continuity_in: str
+    continuity_out: str
+    production_constraints: tuple[str, ...]
+
+
 class EpisodePlanEditorDialog(QDialog):
     """Create or edit one production-useful episode plan."""
 
@@ -50,6 +65,7 @@ class EpisodePlanEditorDialog(QDialog):
 
         root = QVBoxLayout(self)
         scroll = QScrollArea(self)
+        scroll.setObjectName("episodePlanScrollArea")
         scroll.setWidgetResizable(True)
         content = QWidget(scroll)
         form = QFormLayout(content)
@@ -121,23 +137,23 @@ class EpisodePlanEditorDialog(QDialog):
             return
         self.accept()
 
-    def values(self) -> dict[str, object]:
+    def values(self) -> EpisodePlanEditorValues:
         """Return normalized editor values."""
         constraints = tuple(
             line.strip()
             for line in self.constraints_edit.toPlainText().splitlines()
             if line.strip()
         )
-        return {
-            "sequence_number": self.sequence_spin.value(),
-            "title": self.title_edit.text().strip(),
-            "story_scope": self.scope_edit.toPlainText().strip(),
-            "production_objective": self.objective_edit.toPlainText().strip(),
-            "target_runtime_seconds": self.runtime_spin.value(),
-            "continuity_in": self.continuity_in_edit.toPlainText().strip(),
-            "continuity_out": self.continuity_out_edit.toPlainText().strip(),
-            "production_constraints": constraints,
-        }
+        return EpisodePlanEditorValues(
+            sequence_number=self.sequence_spin.value(),
+            title=self.title_edit.text().strip(),
+            story_scope=self.scope_edit.toPlainText().strip(),
+            production_objective=self.objective_edit.toPlainText().strip(),
+            target_runtime_seconds=self.runtime_spin.value(),
+            continuity_in=self.continuity_in_edit.toPlainText().strip(),
+            continuity_out=self.continuity_out_edit.toPlainText().strip(),
+            production_constraints=constraints,
+        )
 
 
 class EpisodePlannerDialog(QDialog):
@@ -253,8 +269,18 @@ class EpisodePlannerDialog(QDialog):
             return
         values = dialog.values()
         try:
-            self.service.create(story_id=self.story.story_id, **values)
-        except (TypeError, EpisodePlanningError) as exc:
+            self.service.create(
+                story_id=self.story.story_id,
+                sequence_number=values.sequence_number,
+                title=values.title,
+                story_scope=values.story_scope,
+                production_objective=values.production_objective,
+                target_runtime_seconds=values.target_runtime_seconds,
+                continuity_in=values.continuity_in,
+                continuity_out=values.continuity_out,
+                production_constraints=values.production_constraints,
+            )
+        except EpisodePlanningError as exc:
             QMessageBox.warning(self, "Episode Planner", str(exc))
             return
         self.refresh()
@@ -267,10 +293,18 @@ class EpisodePlannerDialog(QDialog):
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         values = dialog.values()
-        values.pop("sequence_number", None)
         try:
-            self.service.update(plan.episode_id, **values)
-        except (TypeError, EpisodePlanningError) as exc:
+            self.service.update(
+                plan.episode_id,
+                title=values.title,
+                story_scope=values.story_scope,
+                production_objective=values.production_objective,
+                target_runtime_seconds=values.target_runtime_seconds,
+                continuity_in=values.continuity_in,
+                continuity_out=values.continuity_out,
+                production_constraints=values.production_constraints,
+            )
+        except EpisodePlanningError as exc:
             QMessageBox.warning(self, "Episode Planner", str(exc))
             return
         self.refresh()
