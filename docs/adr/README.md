@@ -28,5 +28,9 @@ Each ADR records:
 - [ADR-0010 — Structured Production Knowledge Authority and Persistence](ADR-0010-Structured-Production-Knowledge.md)
 - [ADR-0011 — Behaviour Profile Domain Model](ADR-0011-Behaviour-Profile-Domain-Model.md)
 - [ADR-0012 — Behaviour Profile Persistence and Repository](ADR-0012-Behaviour-Profile-Persistence-and-Repository.md)
+- [ADR-0013 — Behaviour Profile Services and Governance](ADR-0013-Behaviour-Profile-Services-and-Governance.md)
+- [ADR-0014 — Behaviour Profile Editor](ADR-0014-Behaviour-Profile-Editor.md)
+- [ADR-0015 — CAP ↔ Behaviour Profile Integration](ADR-0015-CAP-Behaviour-Profile-Integration.md)
+- [ADR-0016 — Episode Planner](ADR-0016-Episode-Planner.md)
 
 ADRs are immutable in intent once Accepted. Clarifications may be added, but a material architectural change should create a new ADR that explicitly supersedes the earlier decision.
