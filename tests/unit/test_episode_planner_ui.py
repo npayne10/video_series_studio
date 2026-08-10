@@ -22,7 +22,9 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def test_episode_editor_is_resizable_scrollable_and_production_focused(qtbot, tmp_path: Path) -> None:
+def test_episode_editor_is_resizable_scrollable_and_production_focused(
+    qtbot, tmp_path: Path
+) -> None:
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
@@ -37,13 +39,23 @@ def test_episode_editor_is_resizable_scrollable_and_production_focused(qtbot, tm
     assert dialog.minimumWidth() <= 640
     assert dialog.minimumHeight() <= 480
     assert dialog.findChild(type(dialog.scope_edit), "episodeStoryScope") is dialog.scope_edit
-    assert dialog.findChild(type(dialog.objective_edit), "episodeProductionObjective") is dialog.objective_edit
-    assert dialog.findChild(type(dialog.constraints_edit), "episodeProductionConstraints") is dialog.constraints_edit
-    assert dialog.findChild(type(dialog.runtime_spin), "episodeTargetRuntime") is dialog.runtime_spin
+    assert (
+        dialog.findChild(type(dialog.objective_edit), "episodeProductionObjective")
+        is dialog.objective_edit
+    )
+    assert (
+        dialog.findChild(type(dialog.constraints_edit), "episodeProductionConstraints")
+        is dialog.constraints_edit
+    )
+    assert (
+        dialog.findChild(type(dialog.runtime_spin), "episodeTargetRuntime") is dialog.runtime_spin
+    )
     context.shutdown()
 
 
-def test_episode_planner_lists_persisted_story_episodes_and_governance(qtbot, tmp_path: Path) -> None:
+def test_episode_planner_lists_persisted_story_episodes_and_governance(
+    qtbot, tmp_path: Path
+) -> None:
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
@@ -80,7 +92,9 @@ def test_episode_planner_lists_persisted_story_episodes_and_governance(qtbot, tm
     context.shutdown()
 
 
-def test_main_story_workspace_exposes_episode_planner_for_selected_story(qtbot, tmp_path: Path) -> None:
+def test_main_story_workspace_exposes_episode_planner_for_selected_story(
+    qtbot, tmp_path: Path
+) -> None:
     context = build_application_context(_options(tmp_path))
     projects = context.services.require(ProjectService)
     projects.create(tmp_path / "Demo", name="Demo")
