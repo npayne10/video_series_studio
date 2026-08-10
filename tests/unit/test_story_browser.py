@@ -54,6 +54,16 @@ def _scene_item(browser: StoryBrowserV2Widget) -> QTreeWidgetItem:
     return act.child(0)
 
 
+def _legacy_browser(context, qtbot: object) -> StoryBrowserV2Widget:
+    browser = StoryBrowserV2Widget(
+        context.services.require(StoryService),
+        context.services.require(AssetService),
+    )
+    qtbot.addWidget(browser)  # type: ignore[attr-defined]
+    browser.refresh()
+    return browser
+
+
 def test_story_workspace_uses_story_browser_v2(
     qtbot: object,
     qapp: QApplication,
@@ -79,27 +89,25 @@ def test_story_browser_displays_production_hierarchy_and_generated_shots(
     projects.create(tmp_path / "Demo", name="Demo")
     stories = context.services.require(StoryService)
     stories.save_scene(_scene())
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    browser = _legacy_browser(context, qtbot)
 
-    window.story_browser.refresh()
-    production = window.story_browser.tree.topLevelItem(0)
+    production = browser.tree.topLevelItem(0)
     assert production.text(0) == "Current Production"
     assert production.child(0).text(0) == "Season 1"
-    scene_item = _scene_item(window.story_browser)
+    scene_item = _scene_item(browser)
     assert scene_item.text(0) == "Unexplained Signal"
 
     stories.plan_scene("EP-001-SCN-001")
-    window.story_browser.refresh()
-    scene_item = _scene_item(window.story_browser)
+    browser.refresh()
+    scene_item = _scene_item(browser)
     assert scene_item.childCount() > 0
 
     shot_item = scene_item.child(0)
-    window.story_browser.tree.setCurrentItem(shot_item)
+    browser.tree.setCurrentItem(shot_item)
     qtbot.waitUntil(  # type: ignore[attr-defined]
-        lambda: "Camera" in window.story_browser.details.toPlainText()
+        lambda: "Camera" in browser.details.toPlainText()
     )
-    assert "Lighting" in window.story_browser.details.toPlainText()
+    assert "Lighting" in browser.details.toPlainText()
 
     context.shutdown()
 
@@ -112,14 +120,12 @@ def test_story_browser_scene_selection_exposes_scene_details(
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     context.services.require(StoryService).save_scene(_scene())
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    browser = _legacy_browser(context, qtbot)
 
-    window.story_browser.refresh()
-    item = _scene_item(window.story_browser)
-    window.story_browser.tree.setCurrentItem(item)
+    item = _scene_item(browser)
+    browser.tree.setCurrentItem(item)
     data = item.data(0, Qt.ItemDataRole.UserRole)
-    details = window.story_browser.details.toPlainText()
+    details = browser.details.toPlainText()
 
     assert data[0] == "scene"
     assert data[2] == "EP-001-SCN-001"
@@ -137,10 +143,7 @@ def test_story_browser_dashboard_and_filters(
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     context.services.require(StoryService).save_scene(_scene())
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
-    browser = window.story_browser
-    browser.refresh()
+    browser = _legacy_browser(context, qtbot)
 
     assert browser.dashboard_labels["containers"].text() == "1"
     assert browser.dashboard_labels["scenes"].text() == "1"

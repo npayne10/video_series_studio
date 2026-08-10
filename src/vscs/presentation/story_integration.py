@@ -35,11 +35,17 @@ from vscs.application.story_analysis.ai_composition import register_ai_story_ana
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
     GuidedFirstSceneEditorDialog,
 )
+from vscs.presentation.widgets import episode_planner as episode_planner_module
+from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.browseable_story_workspace import (
     BrowseableStoryWorkspaceWidget,
 )
 from vscs.presentation.widgets.episode_planner import install_episode_planner
+from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
+from vscs.presentation.widgets.production_planning_workspace import (
+    install_production_planning_workspace,
+)
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -52,6 +58,16 @@ def install_story_browser() -> None:
         story_browser_module,
         "SceneEditorDialog",
         GuidedFirstSceneEditorDialog,
+    )
+    setattr(  # noqa: B010
+        episode_planner_module,
+        "ScenePlannerDialog",
+        IterativeScenePlannerDialog,
+    )
+    setattr(  # noqa: B010
+        planning_workspace_module,
+        "ScenePlannerDialog",
+        IterativeScenePlannerDialog,
     )
 
     original_create_content = MainWindow._create_content_area
@@ -109,10 +125,21 @@ def install_story_browser() -> None:
         window.story_browser.analysis_engine = analysis_engine
         window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
+        episode_service = window.services.require(EpisodePlanningService)
+        scene_service = window.services.require(ScenePlanningService)
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
-            window.services.require(EpisodePlanningService),
-            window.services.require(ScenePlanningService),
+            episode_service,
+            scene_service,
+        )
+        window.episode_planner_button.setText("Production Planning…")
+        window.episode_planner_button.setToolTip(
+            "Open the authoritative Episode → Scene → Shot production-planning environment"
+        )
+        window.open_in_planner_button = install_production_planning_workspace(
+            window.story_browser,
+            episode_service,
+            scene_service,
         )
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)

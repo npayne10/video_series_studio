@@ -99,11 +99,19 @@ def test_scene_plan_persists_only_scene_level_production_intent(tmp_path: Path) 
     context.shutdown()
 
 
-def test_scene_planning_requires_a_ready_episode(tmp_path: Path) -> None:
-    context, _episodes, service, episode_id = _services(tmp_path, ready=False)
+def test_draft_episode_allows_scene_iteration_but_not_ready_promotion(tmp_path: Path) -> None:
+    context, episodes, service, episode_id = _services(tmp_path, ready=False)
 
+    scene = _create(service, episode_id)
+    assert scene.status is ScenePlanStatus.DRAFT
+    assert service.is_upstream_current(scene)
+    assert not service.is_production_ready(scene)
     with pytest.raises(ScenePlanningError, match="Ready Episode Plan"):
-        _create(service, episode_id)
+        service.mark_ready(scene.scene_id)
+
+    episodes.mark_ready(episode_id)
+    ready_scene = service.mark_ready(scene.scene_id)
+    assert service.is_production_ready(ready_scene)
     context.shutdown()
 
 

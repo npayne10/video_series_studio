@@ -92,7 +92,7 @@ def test_episode_planner_lists_persisted_story_episodes_and_governance(
     context.shutdown()
 
 
-def test_main_story_workspace_exposes_episode_planner_for_selected_story(
+def test_main_story_workspace_exposes_production_planning_for_selected_story(
     qtbot, tmp_path: Path
 ) -> None:
     context = build_application_context(_options(tmp_path))
@@ -112,5 +112,5 @@ def test_main_story_workspace_exposes_episode_planner_for_selected_story(
     window.story_browser.story_list.setCurrentRow(0)
     qtbot.waitUntil(button.isEnabled)
 
-    assert button.text() == "Episode Planner…"
+    assert button.text() == "Production Planning…"
     context.shutdown()
