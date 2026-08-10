@@ -2,7 +2,9 @@
 
 ## Status
 
-Implementation / acceptance candidate.
+**Complete — Integration & Acceptance passed.**
+
+Phase 19.1 implementation is complete on `phase-19.1-structured-cap-persistence`. The clean acceptance run passes repository-wide Ruff lint and format checks, strict mypy under the documented legacy-debt baseline, and the complete pytest suite.
 
 ## Objective
 
@@ -127,6 +129,21 @@ Phase 19.1 is accepted when:
 8. The Modernise CAP migration assistant is available for legacy CAPs, preserves the human approval boundary, persists approved structured knowledge and becomes unavailable once migration is complete.
 9. Existing Phase 18 CAP, reference, readiness, projection, UI, and generation tests remain green.
 10. Full repository Ruff, type-check and pytest acceptance passes.
+
+All ten criteria are satisfied.
+
+## Acceptance evidence
+
+The clean Phase 19.1 acceptance run completed the full CI sequence successfully:
+
+- Qt runtime dependencies installed for headless UI testing.
+- `ruff check .` passed.
+- `ruff format --check .` passed.
+- `mypy` passed with strict mode retained globally and inherited legacy typing debt explicitly scoped by module.
+- `pytest --cov=vscs --cov-report=term-missing` passed the full 759-test suite.
+- Repository coverage remained above the required 70% threshold; the preceding diagnostic execution measured 71.79%.
+
+The final integration correction also persists the Scene Editor's explicit client size alongside Qt native geometry so geometry restoration is deterministic in both desktop and headless CI environments.
 
 ## Architectural record
 
