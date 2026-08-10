@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PySide6.QtWidgets import QScrollArea
+from PySide6.QtWidgets import QDialogButtonBox, QScrollArea
 
 from vscs.application.behaviours import BehaviourProfileRepository, BehaviourProfileService
 from vscs.domain.assets import AssetCategory
@@ -49,6 +49,8 @@ def test_editor_is_resizable_scrollable_and_round_trips_draft(qtbot) -> None:
     assert dialog.minimumHeight() <= 480
     assert isinstance(dialog.scroll_area, QScrollArea)
     assert dialog.scroll_area.widgetResizable()
+    assert not dialog.profile_id_edit.isEnabled()
+    assert not dialog.version_edit.isEnabled()
 
     dialog.resize(700, 500)
     rebuilt = dialog.build_profile()
@@ -61,9 +63,21 @@ def test_governed_profile_is_read_only(qtbot) -> None:
 
     assert not dialog.name_edit.isEnabled()
     assert not dialog.tabs.isEnabled()
-    save = dialog.buttons.button(dialog.buttons.StandardButton.Save)
+    save = dialog.buttons.button(QDialogButtonBox.StandardButton.Save)
     assert save is not None
     assert not save.isEnabled()
+
+
+def test_manager_does_not_query_without_project(behaviour_service, qtbot) -> None:
+    manager = BehaviourProfileManagerWidget(
+        behaviour_service,
+        project_available=lambda: False,
+    )
+    qtbot.addWidget(manager)
+
+    assert manager.table.rowCount() == 0
+    assert not manager.edit_button.isEnabled()
+    assert not manager.delete_button.isEnabled()
 
 
 def test_manager_exposes_governance_actions(behaviour_service, qtbot) -> None:
