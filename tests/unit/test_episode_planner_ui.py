@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-
 from vscs.application.projects import ProjectService
 from vscs.application.story import EpisodePlanningService, StoryLifecycleService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
