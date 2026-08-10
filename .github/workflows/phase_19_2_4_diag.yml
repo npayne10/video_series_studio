@@ -1,0 +1,20 @@
+name: Phase 19.2.4 Ruff Diagnostic
+on:
+  push:
+    branches: [phase-19.2.4-behaviour-profile-editor]
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install ruff
+      - name: Capture Ruff
+        shell: bash
+        run: ruff check . > ruff-report.txt 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase-19-2-4-ruff-report
+          path: ruff-report.txt
