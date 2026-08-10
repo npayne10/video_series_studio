@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QPushButton, QTreeWidgetItem
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTreeWidgetItem
 
 from vscs.application.story import EpisodePlanningService, ScenePlanningService
 
@@ -59,16 +60,12 @@ def install_production_planning_workspace(
 
     workspace.refresh = consolidated_refresh
 
-    try:
+    with suppress(RuntimeError, TypeError):
         workspace.refresh_button.clicked.disconnect()
-    except (RuntimeError, TypeError):
-        pass
     workspace.refresh_button.clicked.connect(consolidated_refresh)
 
-    try:
+    with suppress(RuntimeError, TypeError):
         workspace.show_archived.toggled.disconnect(original_refresh)
-    except (RuntimeError, TypeError):
-        pass
     workspace.show_archived.toggled.connect(consolidated_refresh)
 
     workspace.story_list.currentItemChanged.connect(
