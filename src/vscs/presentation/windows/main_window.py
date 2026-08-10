@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.assets import AssetService
+from vscs.application.behaviours import ensure_behaviour_profile_service
 from vscs.application.caps import (
     CanonicalReferenceService,
     CAPGeneratorService,
@@ -36,6 +37,7 @@ from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.asset_manager import AssetManagerWidget
 from vscs.presentation.widgets.asset_readiness_column import install_asset_readiness_column
+from vscs.presentation.widgets.behaviour_profile_manager import BehaviourProfileManagerWidget
 from vscs.presentation.widgets.cap_derived_reference_generation import (
     install_derived_reference_generation,
 )
@@ -56,6 +58,7 @@ class MainWindow(QMainWindow):
         self.projects = services.require(ProjectService)
         self.assets = services.require(AssetService)
         self.caps = services.require(CAPService)
+        self.behaviours = ensure_behaviour_profile_service(services)
         self.cap_generator = services.get(CAPGeneratorService)
         self.canonical_references = services.get(CanonicalReferenceService)
         self.production_projection = services.get(ProductionProjectionService)
@@ -115,6 +118,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction("Dashboard", lambda: self._select_navigation_item(0))
         view_menu.addAction("Assets", lambda: self._select_navigation_item(3))
         view_menu.addAction("Canonical Profiles", lambda: self._select_navigation_item(4))
+        view_menu.addAction("Behaviour Profiles", lambda: self._select_navigation_item(5))
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
         tools_menu.addAction(self.plugin_manager_action)
@@ -140,6 +144,7 @@ class MainWindow(QMainWindow):
             "Story",
             "Assets",
             "Canonical Profiles",
+            "Behaviour Profiles",
             "Production Planning",
             "Render Queue",
             "Post-Production",
@@ -183,6 +188,11 @@ class MainWindow(QMainWindow):
             self.production_projection,
         )
         self.content_stack.addWidget(self.cap_manager)
+        self.behaviour_manager = BehaviourProfileManagerWidget(
+            self.behaviours,
+            project_available=lambda: self.projects.is_project_open,
+        )
+        self.content_stack.addWidget(self.behaviour_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
         self.setCentralWidget(self.content_stack)
@@ -217,6 +227,8 @@ class MainWindow(QMainWindow):
             self.asset_manager.refresh()
         elif section == "Canonical Profiles":
             self.cap_manager.refresh()
+        elif section == "Behaviour Profiles":
+            self.behaviour_manager.refresh()
 
     def _select_navigation_item(self, row: int) -> None:
         self.navigation.setCurrentRow(row)
@@ -290,6 +302,7 @@ class MainWindow(QMainWindow):
         self.dashboard.clear_active_project()
         self.asset_manager.refresh()
         self.cap_manager.refresh()
+        self.behaviour_manager.refresh()
         self.statusBar().showMessage("Project closed", 5000)
 
     def _show_settings_dialog(self) -> None:
@@ -317,6 +330,7 @@ class MainWindow(QMainWindow):
         self.asset_manager.add_button.setEnabled(active)
         self.asset_manager.edit_button.setEnabled(active)
         self.cap_manager.add_button.setEnabled(active)
+        self.behaviour_manager.new_button.setEnabled(active)
         if self.derived_reference_button is not None:
             self.derived_reference_button.setEnabled(active)
         if self.cap_readiness_button is not None:
@@ -326,6 +340,7 @@ class MainWindow(QMainWindow):
 
         self.asset_manager.refresh()
         self.cap_manager.refresh()
+        self.behaviour_manager.refresh()
 
         if active and self.projects.current_project is not None:
             project = self.projects.current_project
