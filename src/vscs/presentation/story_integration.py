@@ -120,7 +120,7 @@ def install_story_browser() -> None:
         episode_service = window.services.require(EpisodePlanningService)
         scene_service = window.services.require(ScenePlanningService)
         shot_service = window.services.require(GovernedShotPlanningService)
-        setattr(scene_service, "shot_planning_service", shot_service)
+        setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
             episode_service,
