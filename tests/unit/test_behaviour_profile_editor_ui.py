@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PySide6.QtWidgets import QDialog, QScrollArea
+from PySide6.QtWidgets import QScrollArea
 
 from vscs.application.behaviours import BehaviourProfileRepository, BehaviourProfileService
 from vscs.domain.assets import AssetCategory
