@@ -272,9 +272,7 @@ class GovernedShotPlanningService:
             shot_id: replace(by_id[shot_id], sequence_number=index)
             for index, shot_id in enumerate(ordered_shot_ids, start=1)
         }
-        all_plans = tuple(
-            replacements.get(plan.shot_id, plan) for plan in self.list_plans()
-        )
+        all_plans = tuple(replacements.get(plan.shot_id, plan) for plan in self.list_plans())
         self._write(all_plans)
         return self.list_plans(scene_id=scene_id)
 
