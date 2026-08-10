@@ -26,5 +26,6 @@ Each ADR records:
 - **ADR-0001 through ADR-0008** — reserved for retrospective Phase 18 decisions when formalized.
 - **ADR-0009** — reserved for Production Package & Prompt Compilation.
 - [ADR-0010 — Structured Production Knowledge Authority and Persistence](ADR-0010-Structured-Production-Knowledge.md)
+- [ADR-0011 — Behaviour Profile Domain Model](ADR-0011-Behaviour-Profile-Domain-Model.md)
 
 ADRs are immutable in intent once Accepted. Clarifications may be added, but a material architectural change should create a new ADR that explicitly supersedes the earlier decision.
