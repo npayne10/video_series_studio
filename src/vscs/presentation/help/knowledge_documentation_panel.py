@@ -79,20 +79,15 @@ class KnowledgeDocumentationPanel(QWidget):
         ]
         if topic.examples:
             examples = "".join(
-                f"<li><code>{escape(example)}</code></li>"
-                for example in topic.examples
+                f"<li><code>{escape(example)}</code></li>" for example in topic.examples
             )
             sections.append(f"<h3>Examples</h3><ul>{examples}</ul>")
         if topic.common_mistakes:
-            mistakes = "".join(
-                f"<li>{escape(mistake)}</li>"
-                for mistake in topic.common_mistakes
-            )
+            mistakes = "".join(f"<li>{escape(mistake)}</li>" for mistake in topic.common_mistakes)
             sections.append(f"<h3>Common mistakes</h3><ul>{mistakes}</ul>")
         if topic.related_topics:
             related = "".join(
-                f"<li><code>{escape(topic_id)}</code></li>"
-                for topic_id in topic.related_topics
+                f"<li><code>{escape(topic_id)}</code></li>" for topic_id in topic.related_topics
             )
             sections.append(f"<h3>Related topics</h3><ul>{related}</ul>")
         return "".join(sections)

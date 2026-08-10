@@ -31,9 +31,7 @@ class ProductionGraph:
                 indegree[node.node_id] += 1
                 dependants[dependency].append(node.node_id)
 
-        ready = deque(
-            sorted(node_id for node_id, count in indegree.items() if count == 0)
-        )
+        ready = deque(sorted(node_id for node_id, count in indegree.items() if count == 0))
         ordered: list[ProductionNode] = []
         while ready:
             node_id = ready.popleft()
@@ -49,9 +47,7 @@ class ProductionGraph:
     def ready_nodes(self) -> tuple[ProductionNode, ...]:
         """Return pending nodes whose dependencies are completed."""
         completed = {
-            node.node_id
-            for node in self.pipeline.nodes
-            if node.state is ProductionState.COMPLETED
+            node.node_id for node in self.pipeline.nodes if node.state is ProductionState.COMPLETED
         }
         return tuple(
             node

@@ -1,4 +1,5 @@
 """Scene and Shot Intelligence Engine public API."""
+
 from .blocking_planner import RuleBasedBlockingPlanner
 from .builder import ProductionPlanBuilder, SSIEBuildError
 from .camera_planner import RuleBasedCameraPlanner

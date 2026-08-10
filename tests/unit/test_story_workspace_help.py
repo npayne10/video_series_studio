@@ -10,8 +10,7 @@ def test_story_workspace_help_contains_required_sections(qtbot) -> None:
     qtbot.addWidget(dialog)
 
     titles = [
-        dialog.section_list.item(index).text()
-        for index in range(dialog.section_list.count())
+        dialog.section_list.item(index).text() for index in range(dialog.section_list.count())
     ]
 
     assert titles == [

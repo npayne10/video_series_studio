@@ -196,9 +196,7 @@ def test_metadata_mismatches_can_be_warnings(tmp_path: Path) -> None:
 
     assert result.passed is True
     assert result.warnings
-    assert all(
-        item.severity is RenderValidationSeverity.WARNING for item in result.warnings
-    )
+    assert all(item.severity is RenderValidationSeverity.WARNING for item in result.warnings)
 
 
 def test_tolerances_and_checksum_policy_are_applied(tmp_path: Path) -> None:

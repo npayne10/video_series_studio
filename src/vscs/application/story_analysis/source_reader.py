@@ -32,8 +32,7 @@ class StorySourceReader:
                     "Use DOCX, Markdown, Final Draft or plain text for analysis."
                 )
             elif (
-                story.source_type is StorySourceType.SCREENPLAY 
-                or path.suffix.casefold() == ".fdx"
+                story.source_type is StorySourceType.SCREENPLAY or path.suffix.casefold() == ".fdx"
             ):
                 text = self._xml_text(path)
             else:
@@ -63,7 +62,9 @@ class StorySourceReader:
             document = archive.read("word/document.xml")
         root = ElementTree.fromstring(document)
         paragraphs: list[str] = []
-        for paragraph in root.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"):
+        for paragraph in root.iter(
+            "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"
+        ):
             text = "".join(
                 node.text or ""
                 for node in paragraph.iter(

@@ -91,9 +91,7 @@ class ACPPPromptCompiler:
     def compile(self, resolution: ACPPResolutionResult) -> CompiledProductionPrompt:
         """Compile one resolved package into a stable prompt artifact."""
         if self.config.require_resolved_package and not resolution.passed:
-            raise PromptCompilationError(
-                "Cannot compile prompts from a failed resource resolution"
-            )
+            raise PromptCompilationError("Cannot compile prompts from a failed resource resolution")
 
         package = resolution.package
         prompt_package_ids = tuple(
@@ -112,11 +110,7 @@ class ACPPPromptCompiler:
         for contribution in contributions:
             negative_values.extend(contribution.negative_fragments)
         negative_prompt = "; ".join(
-            dict.fromkeys(
-                value.strip()
-                for value in negative_values
-                if value.strip()
-            )
+            dict.fromkeys(value.strip() for value in negative_values if value.strip())
         )
         reference_ids = tuple(
             dict.fromkeys(
@@ -196,8 +190,7 @@ class ACPPPromptCompiler:
             if fragment.strip()
         )
         canonical_assets = "; ".join(
-            f"{binding.role.value}: {binding.asset_id}"
-            for binding in package.assets
+            f"{binding.role.value}: {binding.asset_id}" for binding in package.assets
         )
         reference_binding = "; ".join(
             f"{binding.asset_id} -> {', '.join(binding.canonical_reference_ids)}"
@@ -284,8 +277,7 @@ class ACPPPromptCompiler:
             "positive_prompt": positive_prompt,
             "negative_prompt": negative_prompt,
             "sections": [
-                {"name": section.name, "content": section.content}
-                for section in sections
+                {"name": section.name, "content": section.content} for section in sections
             ],
             "canonical_reference_ids": list(reference_ids),
             "prompt_package_ids": list(prompt_package_ids),

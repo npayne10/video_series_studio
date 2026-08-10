@@ -87,9 +87,7 @@ def test_welcome_overlay_covers_dialog_and_card_stays_inside(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "welcome.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "welcome.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     dialog.resize(900, 680)
     _show(dialog, qapp)
@@ -129,9 +127,7 @@ def test_spotlight_contains_the_navigated_target(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "accuracy.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "accuracy.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _start_guide(dialog, qapp)
     dialog.onboarding.go_to(1)
@@ -198,9 +194,7 @@ def test_spotlight_tracks_target_after_guided_scrolling(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "scrolling.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "scrolling.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     dialog.resize(900, 680)
     _start_guide(dialog, qapp)
@@ -213,9 +207,7 @@ def test_spotlight_tracks_target_after_guided_scrolling(
     target_center_overlay = dialog.tour_overlay.mapFromGlobal(target_center_global)
     assert dialog.tour_overlay.spotlight_rect.contains(target_center_overlay)
     viewport_rect = dialog.scroll_area.viewport().rect()
-    target_top_left = dialog.scroll_area.viewport().mapFromGlobal(
-        target.mapToGlobal(QPoint(0, 0))
-    )
+    target_top_left = dialog.scroll_area.viewport().mapFromGlobal(target.mapToGlobal(QPoint(0, 0)))
     assert viewport_rect.adjusted(-20, -20, 20, 20).contains(target_top_left)
 
 
@@ -224,9 +216,7 @@ def test_overlay_resize_keeps_tour_focus_and_geometry(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "focus-redraw.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "focus-redraw.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _start_guide(dialog, qapp)
     assert dialog.tour_overlay.next_button.hasFocus()

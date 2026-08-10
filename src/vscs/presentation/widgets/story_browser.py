@@ -103,9 +103,7 @@ class StoryBrowserWidget(QWidget):
 
         self._set_enabled(True)
         self.empty_label.setVisible(not scenes)
-        self.empty_label.setText(
-            "No scenes yet. Use New Scene to add structured story material."
-        )
+        self.empty_label.setText("No scenes yet. Use New Scene to add structured story material.")
         for scene in scenes:
             scene_label = scene.scene_name or scene.heading
             scene_item = QTreeWidgetItem(
@@ -301,9 +299,7 @@ class StoryBrowserWidget(QWidget):
         lighting = shot.lighting_plan
         blocking = shot.blocking_plan
         continuity = shot.continuity_plan
-        continuity_state = (
-            continuity.location_state if continuity else "Not planned"
-        )
+        continuity_state = continuity.location_state if continuity else "Not planned"
         self.details.setHtml(
             f"<h2>{shot.shot_id}</h2>"
             f"<p><b>Purpose:</b> {shot.purpose.value}</p>"

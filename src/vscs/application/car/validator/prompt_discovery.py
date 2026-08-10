@@ -1,4 +1,5 @@
 """Prompt package discovery for behaviour assets."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -83,21 +84,13 @@ class PromptPackageDiscoverer:
         recognised_files = (*PROMPT_PACKAGE_MANIFEST_NAMES, *PROMPT_PACKAGE_README_NAMES)
         if any((path / name).is_file() for name in recognised_files):
             return True
-        return any(
-            (path / name).is_dir() for name in PROMPT_PACKAGE_REQUIRED_DIRECTORIES
-        )
+        return any((path / name).is_dir() for name in PROMPT_PACKAGE_REQUIRED_DIRECTORIES)
 
     def _inspect_package(self, package_path: Path) -> PromptPackage:
-        directories = {
-            name: package_path / name for name in PROMPT_PACKAGE_REQUIRED_DIRECTORIES
-        }
-        missing = tuple(
-            name for name, path in directories.items() if not path.is_dir()
-        )
+        directories = {name: package_path / name for name in PROMPT_PACKAGE_REQUIRED_DIRECTORIES}
+        missing = tuple(name for name, path in directories.items() if not path.is_dir())
         empty = tuple(
-            name
-            for name, path in directories.items()
-            if path.is_dir() and not any(path.iterdir())
+            name for name, path in directories.items() if path.is_dir() and not any(path.iterdir())
         )
         expected = set(PROMPT_PACKAGE_REQUIRED_DIRECTORIES)
         extra = tuple(

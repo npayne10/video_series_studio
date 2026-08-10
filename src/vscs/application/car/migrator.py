@@ -51,9 +51,7 @@ BEHAVIOUR_DIRECTORIES = (
     "prompts",
     "tests",
 )
-BEHAVIOUR_FILES = (
-    "behaviour.json",
-)
+BEHAVIOUR_FILES = ("behaviour.json",)
 
 
 class CarMigrationError(RuntimeError):
@@ -167,10 +165,7 @@ class CarRepositoryMigrator:
             self._prepare_behaviour_asset(asset, report, apply=apply)
             return
 
-        warning = (
-            f"Unknown asset class; no migration template applied: "
-            f"{asset.relative_path}"
-        )
+        warning = f"Unknown asset class; no migration template applied: {asset.relative_path}"
         report.warnings.append(warning)
         report.actions.append(
             MigrationAction(
@@ -282,9 +277,7 @@ class CarRepositoryMigrator:
                 )
                 return
             report.skipped += 1
-            report.actions.append(
-                self._action("create_directory", relative_path, "exists", asset)
-            )
+            report.actions.append(self._action("create_directory", relative_path, "exists", asset))
             return
 
         if apply:

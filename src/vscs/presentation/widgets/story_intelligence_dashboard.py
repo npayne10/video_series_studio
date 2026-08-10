@@ -232,9 +232,7 @@ class StoryIntelligenceDashboardDialog(QDialog):
         snapshot = self.snapshot
         if snapshot is None:
             return
-        self.readiness_label.setText(
-            f"Production readiness: {snapshot.readiness.value.upper()}"
-        )
+        self.readiness_label.setText(f"Production readiness: {snapshot.readiness.value.upper()}")
         self.analysis_metric.setText(
             f"{snapshot.analysis_status.value}\n{snapshot.stage_count} stages"
         )
@@ -259,18 +257,14 @@ class StoryIntelligenceDashboardDialog(QDialog):
             f"{snapshot.cap_ready_assets}/{approved_assets} ready\n"
             f"{snapshot.cap_required_assets} require CAP"
         )
-        self.graph_metric.setText(
-            f"{snapshot.graph_nodes} nodes\n{snapshot.graph_edges} edges"
-        )
+        self.graph_metric.setText(f"{snapshot.graph_nodes} nodes\n{snapshot.graph_edges} edges")
         self.production_metric.setText(
             f"Planning: {'ready' if snapshot.ready_for_shot_planning else 'blocked'}\n"
             f"Generation: {'ready' if snapshot.ready_for_generation else 'attention'}"
         )
         self.xpd_progress.setValue(snapshot.xpd_coverage_percent)
         cap_percent = (
-            round((snapshot.cap_ready_assets / approved_assets) * 100)
-            if approved_assets
-            else 100
+            round((snapshot.cap_ready_assets / approved_assets) * 100) if approved_assets else 100
         )
         self.cap_progress.setValue(cap_percent)
         self._populate_entities()
@@ -356,9 +350,7 @@ class StoryIntelligenceDashboardDialog(QDialog):
         if snapshot is None:
             return
         self.shot_planning_label.setText(
-            "Shot Planning: READY"
-            if snapshot.ready_for_shot_planning
-            else "Shot Planning: BLOCKED"
+            "Shot Planning: READY" if snapshot.ready_for_shot_planning else "Shot Planning: BLOCKED"
         )
         self.generation_label.setText(
             "Generation Assets: READY"

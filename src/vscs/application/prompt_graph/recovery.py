@@ -48,10 +48,7 @@ class BatchRecoveryCheckpoint:
             BatchCompilationItemStatus.COMPLETED,
             BatchCompilationItemStatus.SKIPPED,
         }
-        return all(
-            self.status_for(item.item_id) in terminal
-            for item in self.request.items
-        )
+        return all(self.status_for(item.item_id) in terminal for item in self.request.items)
 
 
 @dataclass(slots=True)
@@ -66,9 +63,7 @@ class BatchRecoveryStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "version": 1,
-            "checkpoints": [
-                _checkpoint_to_dict(checkpoints[key]) for key in sorted(checkpoints)
-            ],
+            "checkpoints": [_checkpoint_to_dict(checkpoints[key]) for key in sorted(checkpoints)],
         }
         temporary = self.path.with_suffix(f"{self.path.suffix}.tmp")
         temporary.write_text(
@@ -88,9 +83,7 @@ class BatchRecoveryStore:
             return
         payload = {
             "version": 1,
-            "checkpoints": [
-                _checkpoint_to_dict(checkpoints[key]) for key in sorted(checkpoints)
-            ],
+            "checkpoints": [_checkpoint_to_dict(checkpoints[key]) for key in sorted(checkpoints)],
         }
         self.path.write_text(
             json.dumps(payload, indent=2, sort_keys=True),
@@ -118,15 +111,12 @@ class BatchRecoveryService:
 
     def __post_init__(self) -> None:
         self._checkpoints = {
-            checkpoint.request.batch_id: checkpoint
-            for checkpoint in self.store.load_all()
+            checkpoint.request.batch_id: checkpoint for checkpoint in self.store.load_all()
         }
 
     def begin(self, request: BatchCompilationRequest) -> BatchRecoveryCheckpoint:
         checkpoint = self._checkpoints.get(request.batch_id)
-        if checkpoint is None or (
-            checkpoint.complete and checkpoint.request != request
-        ):
+        if checkpoint is None or (checkpoint.complete and checkpoint.request != request):
             checkpoint = BatchRecoveryCheckpoint(request)
         elif checkpoint.request != request:
             raise ValueError(f"Recovery request changed for batch: {request.batch_id}")
@@ -200,9 +190,7 @@ class BatchRecoveryService:
 def _checkpoint_to_dict(checkpoint: BatchRecoveryCheckpoint) -> dict[str, Any]:
     return {
         "request": _request_to_dict(checkpoint.request),
-        "item_statuses": [
-            [item_id, status.value] for item_id, status in checkpoint.item_statuses
-        ],
+        "item_statuses": [[item_id, status.value] for item_id, status in checkpoint.item_statuses],
         "updated_at": checkpoint.updated_at.isoformat(),
     }
 

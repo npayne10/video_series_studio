@@ -27,7 +27,11 @@ def _evaluate_production_readiness(dialog: Any) -> None:
         return
 
     project_root = Path(dialog.project_directory)
-    image_path = reference.file_path if reference.file_path.is_absolute() else project_root / reference.file_path
+    image_path = (
+        reference.file_path
+        if reference.file_path.is_absolute()
+        else project_root / reference.file_path
+    )
     report_root = (
         project_root
         / "Canonical Assets"
@@ -61,7 +65,9 @@ def _evaluate_production_readiness(dialog: Any) -> None:
         report_root.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(UTC)
         latest_path = report_root / f"{image_path.stem}.pre.json"
-        history_path = report_root / f"{image_path.stem}.{timestamp.strftime('%Y%m%dT%H%M%S%fZ')}.pre.json"
+        history_path = (
+            report_root / f"{image_path.stem}.{timestamp.strftime('%Y%m%dT%H%M%S%fZ')}.pre.json"
+        )
         payload = report.as_dict()
         payload.update(
             {

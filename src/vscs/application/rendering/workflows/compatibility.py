@@ -92,9 +92,7 @@ class WorkflowCompatibilityValidator:
             start_frame=has_previous,
             end_frame=has_next,
             reference_images=has_references,
-            multiple_reference_images=(
-                len(request.assets.canonical_reference_ids) > 1
-            ),
+            multiple_reference_images=(len(request.assets.canonical_reference_ids) > 1),
             loras=bool(request.assets.lora_ids),
             audio=request.voice.request_id is not None,
             lip_sync=request.lip_sync.required,
@@ -248,10 +246,7 @@ class WorkflowCompatibilityValidator:
             LipSyncMode.ALTERNATING_SPEAKERS,
             LipSyncMode.MULTIPLE_SPEAKERS,
         }
-        if (
-            lip_sync.mode in multi_modes
-            and "multiple_speakers" not in manifest.capabilities
-        ):
+        if lip_sync.mode in multi_modes and "multiple_speakers" not in manifest.capabilities:
             diagnostics.append(
                 CompatibilityDiagnostic(
                     "workflow.multiple_speakers_unsupported",

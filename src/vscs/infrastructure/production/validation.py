@@ -98,17 +98,13 @@ class RenderValidationResult:
     @property
     def passed(self) -> bool:
         """Return whether no error-severity findings were produced."""
-        return not any(
-            issue.severity is RenderValidationSeverity.ERROR for issue in self.issues
-        )
+        return not any(issue.severity is RenderValidationSeverity.ERROR for issue in self.issues)
 
     @property
     def warnings(self) -> tuple[RenderValidationIssue, ...]:
         """Return warning-severity findings."""
         return tuple(
-            issue
-            for issue in self.issues
-            if issue.severity is RenderValidationSeverity.WARNING
+            issue for issue in self.issues if issue.severity is RenderValidationSeverity.WARNING
         )
 
 
@@ -161,16 +157,12 @@ class RenderValidator:
                 continue
             size_bytes = path.stat().st_size
             if self.policy.require_nonempty_file and size_bytes <= 0:
-                issues.append(
-                    self._issue("OUTPUT_EMPTY", f"Render output is empty: {path}", path)
-                )
+                issues.append(self._issue("OUTPUT_EMPTY", f"Render output is empty: {path}", path))
                 continue
             try:
                 measured = self.probe.probe(path)
             except (OSError, ValueError, RuntimeError) as exc:
-                issues.append(
-                    self._issue("PROBE_FAILED", f"Unable to probe {path}: {exc}", path)
-                )
+                issues.append(self._issue("PROBE_FAILED", f"Unable to probe {path}: {exc}", path))
                 continue
             self._validate_probe(job, measured, issues)
             checksum = self.file_checksum(path) if self.policy.checksum_outputs else None
@@ -194,9 +186,11 @@ class RenderValidator:
             issues.append(self._issue("VIDEO_STREAM_MISSING", "No video stream found", path))
         self._compare_int("WIDTH_MISMATCH", job.width, measured.width, path, issues)
         self._compare_int("HEIGHT_MISMATCH", job.height, measured.height, path, issues)
-        if measured.frames_per_second is not None and abs(
-            measured.frames_per_second - job.frames_per_second
-        ) > self.policy.frame_rate_tolerance:
+        if (
+            measured.frames_per_second is not None
+            and abs(measured.frames_per_second - job.frames_per_second)
+            > self.policy.frame_rate_tolerance
+        ):
             issues.append(
                 self._metadata_issue(
                     "FRAME_RATE_MISMATCH",
@@ -205,9 +199,10 @@ class RenderValidator:
                     path,
                 )
             )
-        if measured.frame_count is not None and abs(
-            measured.frame_count - job.frame_count
-        ) > self.policy.frame_count_tolerance:
+        if (
+            measured.frame_count is not None
+            and abs(measured.frame_count - job.frame_count) > self.policy.frame_count_tolerance
+        ):
             issues.append(
                 self._metadata_issue(
                     "FRAME_COUNT_MISMATCH",
@@ -216,14 +211,15 @@ class RenderValidator:
                 )
             )
         expected_duration = job.frame_count / job.frames_per_second
-        if measured.duration_seconds is not None and abs(
-            measured.duration_seconds - expected_duration
-        ) > self.policy.duration_tolerance_seconds:
+        if (
+            measured.duration_seconds is not None
+            and abs(measured.duration_seconds - expected_duration)
+            > self.policy.duration_tolerance_seconds
+        ):
             issues.append(
                 self._metadata_issue(
                     "DURATION_MISMATCH",
-                    f"Expected {expected_duration:.3f}s, found "
-                    f"{measured.duration_seconds:.3f}s",
+                    f"Expected {expected_duration:.3f}s, found {measured.duration_seconds:.3f}s",
                     path,
                 )
             )

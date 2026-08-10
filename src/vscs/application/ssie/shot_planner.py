@@ -1,4 +1,5 @@
 """Configurable deterministic shot planning for SSIE scenes."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -44,9 +45,7 @@ class ShotPlannerConfig:
         if self.minimum_shot_duration_seconds <= 0:
             raise ValueError("minimum shot duration must be greater than zero")
         if self.maximum_shot_duration_seconds < self.minimum_shot_duration_seconds:
-            raise ValueError(
-                "maximum shot duration must not be less than minimum shot duration"
-            )
+            raise ValueError("maximum shot duration must not be less than minimum shot duration")
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,10 +117,7 @@ class RuleBasedShotPlanner:
             )
         ]
 
-        if (
-            self.config.include_transition_shots
-            and scene.transition_in is not SceneTransition.CUT
-        ):
+        if self.config.include_transition_shots and scene.transition_in is not SceneTransition.CUT:
             specs.append(
                 _ShotSpec(
                     ShotPurpose.TRANSITION,
@@ -308,9 +304,7 @@ class RuleBasedShotPlanner:
                 "Maintain participant appearance, wardrobe, and spatial continuity."
             )
         if scene.time_of_day:
-            requirements.append(
-                f"Maintain {scene.time_of_day.strip()} lighting continuity."
-            )
+            requirements.append(f"Maintain {scene.time_of_day.strip()} lighting continuity.")
         return tuple(requirements)
 
     @staticmethod

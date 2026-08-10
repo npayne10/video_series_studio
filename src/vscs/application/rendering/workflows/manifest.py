@@ -79,9 +79,7 @@ class WorkflowNodeSelector:
         if not self.logical_name.strip():
             raise ValueError("logical_name is required")
         if not any((self.node_id, self.node_title, self.class_type)):
-            raise ValueError(
-                "a node selector requires node_id, node_title or class_type"
-            )
+            raise ValueError("a node selector requires node_id, node_title or class_type")
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,8 +134,7 @@ class WorkflowManifest:
         if len(input_kinds) != len(set(input_kinds)):
             raise ValueError("workflow input bindings must be unique")
         requirement_keys = [
-            (requirement.kind, requirement.identifier)
-            for requirement in self.requirements
+            (requirement.kind, requirement.identifier) for requirement in self.requirements
         ]
         if len(requirement_keys) != len(set(requirement_keys)):
             raise ValueError("workflow requirements must be unique")
@@ -157,11 +154,7 @@ class WorkflowManifest:
     ) -> WorkflowNodeBinding | None:
         """Return one binding by renderer-neutral input identity."""
         return next(
-            (
-                binding
-                for binding in self.bindings
-                if binding.input_kind is input_kind
-            ),
+            (binding for binding in self.bindings if binding.input_kind is input_kind),
             None,
         )
 
@@ -194,11 +187,7 @@ class WorkflowManifest:
             WorkflowRequirement(
                 kind=WorkflowRequirementKind(str(item.get("kind", ""))),
                 identifier=str(item.get("identifier", "")),
-                version=(
-                    str(item["version"])
-                    if item.get("version") is not None
-                    else None
-                ),
+                version=(str(item["version"]) if item.get("version") is not None else None),
                 optional=bool(item.get("optional", False)),
             )
             for item in _mapping_sequence(
@@ -209,27 +198,20 @@ class WorkflowManifest:
         return cls(
             metadata=metadata,
             quality_levels=tuple(
-                QualityLevel(str(value))
-                for value in raw.get("quality_levels", ())
+                QualityLevel(str(value)) for value in raw.get("quality_levels", ())
             ),
-            capabilities=tuple(
-                str(value) for value in raw.get("capabilities", ())
-            ),
+            capabilities=tuple(str(value) for value in raw.get("capabilities", ())),
             bindings=bindings,
             requirements=requirements,
             output_kinds=tuple(
-                RenderOutputKind(str(value))
-                for value in raw.get("output_kinds", ())
+                RenderOutputKind(str(value)) for value in raw.get("output_kinds", ())
             ),
             lip_sync_modes=tuple(
-                LipSyncMode(str(value))
-                for value in raw.get("lip_sync_modes", ())
+                LipSyncMode(str(value)) for value in raw.get("lip_sync_modes", ())
             ),
             tags=tuple(str(value) for value in raw.get("tags", ())),
             workflow_file=(
-                str(raw["workflow_file"])
-                if raw.get("workflow_file") is not None
-                else None
+                str(raw["workflow_file"]) if raw.get("workflow_file") is not None else None
             ),
             extra=tuple(
                 (str(key), str(value))
@@ -280,9 +262,7 @@ def _binding_from_dict(raw: dict[str, Any]) -> WorkflowNodeBinding:
         selector=WorkflowNodeSelector(
             logical_name=str(selector_raw.get("logical_name", "")),
             node_id=(
-                str(selector_raw["node_id"])
-                if selector_raw.get("node_id") is not None
-                else None
+                str(selector_raw["node_id"]) if selector_raw.get("node_id") is not None else None
             ),
             node_title=(
                 str(selector_raw["node_title"])

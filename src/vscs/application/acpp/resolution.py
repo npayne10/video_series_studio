@@ -108,8 +108,7 @@ class ACPPResolutionResult:
     def passed(self) -> bool:
         """Return whether no error-level diagnostics were emitted."""
         return not any(
-            diagnostic.severity is ResolutionSeverity.ERROR
-            for diagnostic in self.diagnostics
+            diagnostic.severity is ResolutionSeverity.ERROR for diagnostic in self.diagnostics
         )
 
 

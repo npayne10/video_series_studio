@@ -172,14 +172,8 @@ class CanonicalResolutionService:
         selected = tuple(
             reference
             for reference in approved
-            if (
-                not request.reference_types
-                or reference.reference_type in request.reference_types
-            )
-            and (
-                not request.reference_roles
-                or reference.role in request.reference_roles
-            )
+            if (not request.reference_types or reference.reference_type in request.reference_types)
+            and (not request.reference_roles or reference.role in request.reference_roles)
         )
         ordered = tuple(
             sorted(
@@ -193,9 +187,7 @@ class CanonicalResolutionService:
         )
         bindings = tuple(self._binding(reference) for reference in ordered)
         primaries = tuple(
-            reference
-            for reference in bindings
-            if reference.role is CanonicalReferenceRole.PRIMARY
+            reference for reference in bindings if reference.role is CanonicalReferenceRole.PRIMARY
         )
         primary = primaries[0] if primaries else None
 
@@ -229,13 +221,10 @@ class CanonicalResolutionService:
             )
 
         has_errors = any(
-            diagnostic.severity is AssetResolutionSeverity.ERROR
-            for diagnostic in diagnostics
+            diagnostic.severity is AssetResolutionSeverity.ERROR for diagnostic in diagnostics
         )
         status = (
-            CanonicalResolutionStatus.PARTIAL
-            if has_errors
-            else CanonicalResolutionStatus.READY
+            CanonicalResolutionStatus.PARTIAL if has_errors else CanonicalResolutionStatus.READY
         )
         return CanonicalResolutionResult(
             request,

@@ -13,9 +13,7 @@ CONTAINER_TOPICS = (
             "container ID while keeping the Scene ID stable and generated."
         ),
         examples=("Episode", "Trailer", "Teaser", "Promo", "Test", "Special"),
-        common_mistakes=(
-            "Creating trailer scenes inside an episode merely to obtain a Scene ID.",
-        ),
+        common_mistakes=("Creating trailer scenes inside an episode merely to obtain a Scene ID.",),
         related_topics=("scene.container_id", "scene.sequence"),
         documentation_page="docs/story/scene_editor.md#production-container",
     ),

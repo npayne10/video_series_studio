@@ -35,16 +35,22 @@ def _scene(scene_id: str, container_id: str, sequence: int) -> Scene:
 def test_service_generates_container_aware_scene_ids(tmp_path: Path) -> None:
     stories = _open_project(tmp_path)
 
-    assert stories.generate_container_scene_id(
-        ProductionContainerType.EPISODE,
-        "EP-001",
-        2,
-    ) == "EP-001-SCN-002"
-    assert stories.generate_container_scene_id(
-        ProductionContainerType.TRAILER,
-        "T01",
-        3,
-    ) == "T01-SCN-003"
+    assert (
+        stories.generate_container_scene_id(
+            ProductionContainerType.EPISODE,
+            "EP-001",
+            2,
+        )
+        == "EP-001-SCN-002"
+    )
+    assert (
+        stories.generate_container_scene_id(
+            ProductionContainerType.TRAILER,
+            "T01",
+            3,
+        )
+        == "T01-SCN-003"
+    )
 
 
 def test_service_tracks_sequence_per_container(tmp_path: Path) -> None:

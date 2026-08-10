@@ -117,8 +117,7 @@ class PromptGraphValidationReport:
     @property
     def passed(self) -> bool:
         return not any(
-            issue.severity is PromptGraphValidationSeverity.ERROR
-            for issue in self.issues
+            issue.severity is PromptGraphValidationSeverity.ERROR for issue in self.issues
         )
 
 
@@ -126,9 +125,7 @@ class PromptGraphValidationReport:
 class PromptGraphValidator:
     """Validate graph integrity and production completeness without compilation."""
 
-    policy: PromptGraphValidationPolicy = field(
-        default_factory=PromptGraphValidationPolicy
-    )
+    policy: PromptGraphValidationPolicy = field(default_factory=PromptGraphValidationPolicy)
 
     def validate(
         self,
@@ -190,16 +187,13 @@ class PromptGraphValidator:
             )
         )
         passed = not any(
-            issue.severity is PromptGraphValidationSeverity.ERROR
-            for issue in sorted_issues
+            issue.severity is PromptGraphValidationSeverity.ERROR for issue in sorted_issues
         )
         completeness = PromptGraphCompleteness(
             score=earned,
             maximum_score=maximum,
             percentage=percentage,
-            production_ready=(
-                passed and percentage >= self.policy.production_ready_threshold
-            ),
+            production_ready=(passed and percentage >= self.policy.production_ready_threshold),
         )
         return PromptGraphValidationReport(
             graph.metadata.graph_id,
@@ -259,9 +253,7 @@ class PromptGraphValidator:
         issues: list[PromptGraphValidationIssue],
     ) -> tuple[int, int]:
         nodes = tuple(
-            node
-            for node in graph.nodes
-            if node.kind in self.policy.canonical_asset_kinds
+            node for node in graph.nodes if node.kind in self.policy.canonical_asset_kinds
         )
         earned = 0
         maximum = 0
@@ -311,8 +303,7 @@ class PromptGraphValidator:
             unresolved = tuple(
                 reference_id
                 for reference_id in node.reference_ids
-                if inventory.reference_ids
-                and reference_id not in inventory.reference_ids
+                if inventory.reference_ids and reference_id not in inventory.reference_ids
             )
             if unresolved:
                 issues.append(

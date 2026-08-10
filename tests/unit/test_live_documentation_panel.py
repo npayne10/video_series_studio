@@ -78,9 +78,7 @@ def test_help_button_updates_live_panel_and_keeps_popup_help(
     dialog = LiveDocumentationSceneEditorDialog()
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     binding = next(
-        item
-        for item in dialog.knowledge_provider.bindings()
-        if item.topic_id == "scene.location"
+        item for item in dialog.knowledge_provider.bindings() if item.topic_id == "scene.location"
     )
 
     binding.button.click()

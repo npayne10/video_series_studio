@@ -103,9 +103,7 @@ SCENE_TOPICS = (
             "Write a concise narrative summary focused on the scene's dramatic purpose. "
             "SSIE uses it to infer scene intent and shot coverage."
         ),
-        examples=(
-            "The crew enters orbit around Xorix and sees the planet for the first time.",
-        ),
+        examples=("The crew enters orbit around Xorix and sees the planet for the first time.",),
         common_mistakes=("Listing camera instructions instead of the story event.",),
         related_topics=("scene.heading", "scene.dialogue"),
         documentation_page="docs/story/scene_editor.md#summary",

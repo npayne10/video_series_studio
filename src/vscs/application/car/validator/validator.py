@@ -1,4 +1,5 @@
 """CAR repository validator orchestration."""
+
 from __future__ import annotations
 
 import logging

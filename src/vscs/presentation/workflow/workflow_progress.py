@@ -91,8 +91,8 @@ class WorkflowProgressChecklist(QFrame):
                 button.setAutoRaise(True)
                 button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
                 button.clicked.connect(
-                    lambda _checked=False, step_id=state.step.step_id: (
-                        self.step_requested.emit(step_id)
+                    lambda _checked=False, step_id=state.step.step_id: self.step_requested.emit(
+                        step_id
                     )
                 )
                 self.steps_layout.addWidget(button)
@@ -106,8 +106,7 @@ class WorkflowProgressChecklist(QFrame):
                 state.step.step_id == self._active_step_id,
             )
             button.setAccessibleName(
-                f"{'Completed' if state.completed else 'Incomplete'}: "
-                f"{state.step.label}"
+                f"{'Completed' if state.completed else 'Incomplete'}: {state.step.label}"
             )
             button.setToolTip(state.step.recommendation)
             button.style().unpolish(button)
@@ -123,9 +122,7 @@ class WorkflowProgressChecklist(QFrame):
         if next_state is None:
             self.next_step_label.setText("Scene complete. Ready to save.")
         else:
-            self.next_step_label.setText(
-                f"Next recommended step: {next_state.step.recommendation}"
-            )
+            self.next_step_label.setText(f"Next recommended step: {next_state.step.recommendation}")
 
     def set_active_step(self, step_id: str | None) -> None:
         """Mark the workflow step currently selected for guided navigation."""

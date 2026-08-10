@@ -30,12 +30,15 @@ class ACPPSerializer:
 
     def dumps(self, package: ClipProductionPackage) -> str:
         """Serialize one package to canonical indented JSON."""
-        return json.dumps(
-            self.to_dict(package),
-            indent=2,
-            sort_keys=True,
-            ensure_ascii=False,
-        ) + "\n"
+        return (
+            json.dumps(
+                self.to_dict(package),
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
 
     def loads(self, payload: str) -> ClipProductionPackage:
         """Restore one package from JSON text."""
@@ -183,23 +186,15 @@ class ACPPSerializer:
                 incoming_clip_id=_optional_text(continuity.get("incoming_clip_id")),
                 start_reference_id=_optional_text(continuity.get("start_reference_id")),
                 end_reference_id=_optional_text(continuity.get("end_reference_id")),
-                requirements=tuple(
-                    str(value) for value in continuity.get("requirements", [])
-                ),
-                outgoing_state=tuple(
-                    str(value) for value in continuity.get("outgoing_state", [])
-                ),
+                requirements=tuple(str(value) for value in continuity.get("requirements", [])),
+                outgoing_state=tuple(str(value) for value in continuity.get("outgoing_state", [])),
             ),
             audio=AudioSpecification(
                 dialogue_lines=tuple(str(value) for value in audio.get("dialogue_lines", [])),
-                voice_profile_ids=tuple(
-                    str(value) for value in audio.get("voice_profile_ids", [])
-                ),
+                voice_profile_ids=tuple(str(value) for value in audio.get("voice_profile_ids", [])),
                 ambience_profile_id=_optional_text(audio.get("ambience_profile_id")),
                 music_cue_id=_optional_text(audio.get("music_cue_id")),
-                sound_effect_ids=tuple(
-                    str(value) for value in audio.get("sound_effect_ids", [])
-                ),
+                sound_effect_ids=tuple(str(value) for value in audio.get("sound_effect_ids", [])),
             ),
             output=OutputSpecification(
                 relative_directory=str(output["relative_directory"]),
@@ -208,9 +203,7 @@ class ACPPSerializer:
             ),
             schema_version=str(raw.get("schema_version", "1.0")),
             dependencies=tuple(str(value) for value in raw.get("dependencies", [])),
-            metadata={
-                str(key): str(value) for key, value in raw.get("metadata", {}).items()
-            },
+            metadata={str(key): str(value) for key, value in raw.get("metadata", {}).items()},
         )
 
 

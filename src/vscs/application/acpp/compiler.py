@@ -164,8 +164,7 @@ class SSIEToACPPCompiler:
             )
         ):
             raise ACPPCompilationError(
-                f"Shot {shot.shot_id} is missing camera, lighting, "
-                "blocking, or continuity planning"
+                f"Shot {shot.shot_id} is missing camera, lighting, blocking, or continuity planning"
             )
 
     @staticmethod
@@ -190,9 +189,7 @@ class SSIEToACPPCompiler:
                 asset_id=asset_id,
                 role=role,
                 behaviour_package_ids=(
-                    shot.behaviour_package_ids
-                    if role is AssetBindingRole.SUBJECT
-                    else ()
+                    shot.behaviour_package_ids if role is AssetBindingRole.SUBJECT else ()
                 ),
             )
             for asset_id, role in roles.items()
@@ -218,8 +215,7 @@ class SSIEToACPPCompiler:
             f"{camera.composition}; {camera.focus_strategy}."
         )
         lighting_intent = (
-            f"{lighting.mood.value}; key {lighting.key_direction}; "
-            f"contrast {lighting.contrast}."
+            f"{lighting.mood.value}; key {lighting.key_direction}; contrast {lighting.contrast}."
         )
         behaviour_intent = " ".join(
             f"{subject.asset_id}: {subject.action} at {subject.position}."

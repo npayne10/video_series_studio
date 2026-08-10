@@ -32,9 +32,7 @@ def test_navigator_maps_every_workflow_step_to_a_target(
     }
 
     assert {
-        step_id
-        for step_id in expected
-        if dialog.workflow_navigator.target(step_id) is not None
+        step_id for step_id in expected if dialog.workflow_navigator.target(step_id) is not None
     } == expected
 
 

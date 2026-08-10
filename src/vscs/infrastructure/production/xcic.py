@@ -132,22 +132,18 @@ class XCICCoreWorkflowCompiler:
             )
         path = self.reference_resolver.resolve(reference_id)
         if not path.is_file():
-            raise XCICWorkflowCompilationError(
-                f"Resolved XCIC reference does not exist: {path}"
-            )
+            raise XCICWorkflowCompilationError(f"Resolved XCIC reference does not exist: {path}")
         return path
 
     def _loader_id(self, prompt: dict[str, Any]) -> str:
         matches = [
             node_id
             for node_id, node in prompt.items()
-            if isinstance(node, dict)
-            and node.get("class_type") == self.workflow.loader_class
+            if isinstance(node, dict) and node.get("class_type") == self.workflow.loader_class
         ]
         if len(matches) != 1:
             raise XCICWorkflowCompilationError(
-                f"Expected exactly one {self.workflow.loader_class} node, "
-                f"found {len(matches)}"
+                f"Expected exactly one {self.workflow.loader_class} node, found {len(matches)}"
             )
         return matches[0]
 
@@ -155,9 +151,7 @@ class XCICCoreWorkflowCompiler:
     def _seed(job: RenderJob) -> int:
         if job.seed_policy is SeedPolicy.FIXED:
             if job.fixed_seed is None:
-                raise XCICWorkflowCompilationError(
-                    "Fixed seed policy requires fixed_seed"
-                )
+                raise XCICWorkflowCompilationError("Fixed seed policy requires fixed_seed")
             return job.fixed_seed
         if job.seed_policy is SeedPolicy.DERIVED:
             digest = hashlib.sha256(

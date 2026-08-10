@@ -85,7 +85,9 @@ class PluginSettings(BaseModel):
     @field_validator("disabled")
     @classmethod
     def normalize_disabled_plugins(cls, plugin_ids: list[str]) -> list[str]:
-        return list(dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip()))
+        return list(
+            dict.fromkeys(plugin_id.strip() for plugin_id in plugin_ids if plugin_id.strip())
+        )
 
 
 class LoggingSettings(BaseModel):

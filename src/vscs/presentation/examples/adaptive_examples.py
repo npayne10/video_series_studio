@@ -11,17 +11,20 @@ def heading_suggestions(prefix: str, locations: tuple[str, ...] = ()) -> tuple[s
 
     interior = normalized.startswith("INT")
     defaults = (
-        "INT. MAURITANIA BRIDGE - NIGHT",
-        "INT. ENGINEERING - DAY",
-        "INT. SHUTTLE - CONTINUOUS",
-    ) if interior else (
-        "EXT. XORIX SPACEPORT - DAY",
-        "EXT. FOREST CLEARING - DUSK",
-        "EXT. ORBITAL PLATFORM - NIGHT",
+        (
+            "INT. MAURITANIA BRIDGE - NIGHT",
+            "INT. ENGINEERING - DAY",
+            "INT. SHUTTLE - CONTINUOUS",
+        )
+        if interior
+        else (
+            "EXT. XORIX SPACEPORT - DAY",
+            "EXT. FOREST CLEARING - DUSK",
+            "EXT. ORBITAL PLATFORM - NIGHT",
+        )
     )
     asset_suggestions = tuple(
-        f"{'INT.' if interior else 'EXT.'} {name.upper()} - "
-        f"{'NIGHT' if interior else 'DAY'}"
+        f"{'INT.' if interior else 'EXT.'} {name.upper()} - {'NIGHT' if interior else 'DAY'}"
         for name in locations[:5]
     )
     candidates = asset_suggestions + defaults

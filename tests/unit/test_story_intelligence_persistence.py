@@ -58,9 +58,7 @@ def _candidate(
         category=category,
         description=f"Canonical {category.value}",
         confidence=0.95,
-        match_kind=(
-            ResolutionMatchKind.EXISTING if matched_asset_id else ResolutionMatchKind.NEW
-        ),
+        match_kind=(ResolutionMatchKind.EXISTING if matched_asset_id else ResolutionMatchKind.NEW),
         matched_asset_id=matched_asset_id,
         matched_asset_name=name if matched_asset_id else None,
     )

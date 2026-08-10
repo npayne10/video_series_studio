@@ -1,4 +1,5 @@
 """Tests for behaviour prompt package discovery."""
+
 from pathlib import Path
 
 from vscs.application.car.validator.prompt_discovery import PromptPackageDiscoverer

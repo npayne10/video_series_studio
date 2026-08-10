@@ -53,9 +53,7 @@ def test_provider_prefers_project_aware_examples() -> None:
 
 
 def test_provider_supplies_adaptive_heading_suggestions() -> None:
-    provider = ExampleProvider(
-        context=ExampleContext(locations=("Xorix Spaceport",))
-    )
+    provider = ExampleProvider(context=ExampleContext(locations=("Xorix Spaceport",)))
 
     interior = provider.adaptive("scene.heading", "INT")
     exterior = provider.adaptive("scene.heading", "EXT.")
@@ -86,9 +84,7 @@ def test_scene_editor_uses_project_assets_for_examples(
     qtbot: object,
     qapp: QApplication,
 ) -> None:
-    locations = (
-        _asset("LOC-IRON-HORIZON", "Iron Horizon", AssetCategory.LOCATION),
-    )
+    locations = (_asset("LOC-IRON-HORIZON", "Iron Horizon", AssetCategory.LOCATION),)
     characters = (
         _asset("CHR-JAMES", "James", AssetCategory.CHARACTER),
         _asset("CHR-CHERYL", "Cheryl", AssetCategory.CHARACTER),

@@ -229,9 +229,7 @@ def test_story_browser_asset_catalogs_separate_characters(
     window = context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
-    assert [asset.asset_id for asset in window.story_browser._participant_assets()] == [
-        "CHR-JAMES"
-    ]
+    assert [asset.asset_id for asset in window.story_browser._participant_assets()] == ["CHR-JAMES"]
     assert [asset.asset_id for asset in window.story_browser._required_assets()] == [
         "PROP-CONSOLE",
         "SHP-IRON",

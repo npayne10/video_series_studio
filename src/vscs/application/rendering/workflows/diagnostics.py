@@ -41,25 +41,18 @@ class WorkflowCompatibilityReport:
     @property
     def passed(self) -> bool:
         """Return whether no error diagnostic was produced."""
-        return not any(
-            item.severity is CompatibilitySeverity.ERROR
-            for item in self.diagnostics
-        )
+        return not any(item.severity is CompatibilitySeverity.ERROR for item in self.diagnostics)
 
     @property
     def errors(self) -> tuple[CompatibilityDiagnostic, ...]:
         """Return error findings only."""
         return tuple(
-            item
-            for item in self.diagnostics
-            if item.severity is CompatibilitySeverity.ERROR
+            item for item in self.diagnostics if item.severity is CompatibilitySeverity.ERROR
         )
 
     @property
     def warnings(self) -> tuple[CompatibilityDiagnostic, ...]:
         """Return warning findings only."""
         return tuple(
-            item
-            for item in self.diagnostics
-            if item.severity is CompatibilitySeverity.WARNING
+            item for item in self.diagnostics if item.severity is CompatibilitySeverity.WARNING
         )

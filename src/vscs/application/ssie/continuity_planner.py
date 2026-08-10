@@ -1,4 +1,5 @@
 """Deterministic continuity planning for SSIE shots."""
+
 from __future__ import annotations
 
 from .models import ContinuityPlan, Scene, ShotPlan
@@ -15,9 +16,7 @@ class RuleBasedContinuityPlanner:
     ) -> ContinuityPlan:
         incoming = list(shot.continuity_requirements)
         if previous_shot is not None:
-            incoming.append(
-                f"Continue spatial and performance state from {previous_shot.shot_id}."
-            )
+            incoming.append(f"Continue spatial and performance state from {previous_shot.shot_id}.")
 
         participant_states = tuple(
             f"{asset_id}: preserve approved appearance, wardrobe, position, and condition"
@@ -26,8 +25,7 @@ class RuleBasedContinuityPlanner:
         prop_ids = tuple(
             asset_id
             for asset_id in shot.required_asset_ids
-            if asset_id not in shot.subject_asset_ids
-            and asset_id != scene.location_asset_id
+            if asset_id not in shot.subject_asset_ids and asset_id != scene.location_asset_id
         )
         prop_states = tuple(
             f"{asset_id}: preserve placement, orientation, and interaction state"

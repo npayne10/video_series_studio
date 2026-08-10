@@ -78,9 +78,7 @@ class CAPAssetResolutionCatalog:
         if project_directory is None:
             return None
         path = (
-            reference_path
-            if reference_path.is_absolute()
-            else project_directory / reference_path
+            reference_path if reference_path.is_absolute() else project_directory / reference_path
         )
         if not path.is_file():
             return None
@@ -138,9 +136,7 @@ class FilesystemBehaviourResolutionCatalog:
         manifest = self._load_manifest(manifest_path)
         prompts = self.discoverer.discover(package_path / "prompts")
         return BehaviourResolutionRecord(
-            package_id=str(
-                manifest.get("asset_id") or manifest.get("id") or package_id
-            ),
+            package_id=str(manifest.get("asset_id") or manifest.get("id") or package_id),
             version=str(manifest.get("version") or "1.0"),
             structurally_valid=(
                 bool(manifest)
@@ -148,9 +144,7 @@ class FilesystemBehaviourResolutionCatalog:
                 and prompts.valid_package_count == prompts.package_count
             ),
             manifest_path=str(manifest_path),
-            prompt_package_ids=tuple(
-                package.name for package in prompts.packages
-            ),
+            prompt_package_ids=tuple(package.name for package in prompts.packages),
             dependency_ids=self._dependency_ids(manifest),
             checksum=self._file_checksum(manifest_path),
         )

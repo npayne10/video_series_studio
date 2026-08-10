@@ -56,9 +56,7 @@ def test_workflow_registry_registers_filters_and_removes() -> None:
         preview,
         production,
     )
-    assert registry.list(quality_level=QualityLevel.PRODUCTION) == (
-        production,
-    )
+    assert registry.list(quality_level=QualityLevel.PRODUCTION) == (production,)
     assert registry.list(tag="ltx") == (preview, production)
     assert registry.remove("preview") is preview
     assert registry.get("preview") is None

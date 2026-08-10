@@ -35,9 +35,7 @@ from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_cont
 from vscs.infrastructure.rendering import ComfyUIAdapter, ComfyUIWorkflowCompiler
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-_REFERENCE_MANIFEST_ROOT = (
-    _REPOSITORY_ROOT / "resources" / "workflows" / "manifests"
-)
+_REFERENCE_MANIFEST_ROOT = _REPOSITORY_ROOT / "resources" / "workflows" / "manifests"
 
 
 def _install_reference_manifests(root: Path) -> Path:

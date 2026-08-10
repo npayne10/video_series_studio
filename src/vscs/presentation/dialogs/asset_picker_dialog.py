@@ -43,9 +43,7 @@ class AssetPickerDialog(QDialog):
 
         self.search_edit = QLineEdit(self)
         self.search_edit.setObjectName("assetPickerSearch")
-        self.search_edit.setPlaceholderText(
-            "Search by asset name, ID, description or tag"
-        )
+        self.search_edit.setPlaceholderText("Search by asset name, ID, description or tag")
 
         self.category_combo = QComboBox(self)
         self.category_combo.setObjectName("assetPickerCategory")
@@ -65,14 +63,10 @@ class AssetPickerDialog(QDialog):
         self.asset_tree = QTreeWidget(self)
         self.asset_tree.setObjectName("assetPickerTree")
         self.asset_tree.setColumnCount(4)
-        self.asset_tree.setHeaderLabels(
-            ("Name", "Asset ID", "Category", "Status")
-        )
+        self.asset_tree.setHeaderLabels(("Name", "Asset ID", "Category", "Status"))
         self.asset_tree.setRootIsDecorated(False)
         self.asset_tree.setAlternatingRowColors(True)
-        self.asset_tree.setSelectionMode(
-            QAbstractItemView.SelectionMode.SingleSelection
-        )
+        self.asset_tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.asset_tree.setSortingEnabled(True)
         self.asset_tree.sortItems(0, Qt.SortOrder.AscendingOrder)
 
@@ -80,13 +74,10 @@ class AssetPickerDialog(QDialog):
         self.result_label.setObjectName("assetPickerResultCount")
 
         self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
-        self.select_button = self.buttons.button(
-            QDialogButtonBox.StandardButton.Ok
-        )
+        self.select_button = self.buttons.button(QDialogButtonBox.StandardButton.Ok)
         self.select_button.setText("Select Asset")
         self.select_button.setEnabled(False)
 
@@ -99,9 +90,7 @@ class AssetPickerDialog(QDialog):
         self.search_edit.textChanged.connect(self._apply_filters)
         self.category_combo.currentIndexChanged.connect(self._apply_filters)
         self.asset_tree.currentItemChanged.connect(self._update_selection)
-        self.asset_tree.itemDoubleClicked.connect(
-            lambda _item, _column: self._accept_selected()
-        )
+        self.asset_tree.itemDoubleClicked.connect(lambda _item, _column: self._accept_selected())
         self.buttons.accepted.connect(self._accept_selected)
         self.buttons.rejected.connect(self.reject)
 
@@ -130,9 +119,7 @@ class AssetPickerDialog(QDialog):
         selected_id = self.selected_asset_id
         self.asset_tree.clear()
         matches = tuple(
-            asset
-            for asset in self._all_assets
-            if self._matches(asset, query, category_value)
+            asset for asset in self._all_assets if self._matches(asset, query, category_value)
         )
         for asset in matches:
             item = QTreeWidgetItem(
@@ -159,10 +146,7 @@ class AssetPickerDialog(QDialog):
         query: str,
         category_value: object,
     ) -> bool:
-        if (
-            category_value is not None
-            and asset.category.value != str(category_value)
-        ):
+        if category_value is not None and asset.category.value != str(category_value):
             return False
         if not query:
             return True

@@ -96,8 +96,7 @@ class IncrementalCompilationHistory:
                 record.item_id
                 for record in self._records.values()
                 if any(
-                    dependency.kind is kind
-                    and dependency.dependency_id == dependency_id
+                    dependency.kind is kind and dependency.dependency_id == dependency_id
                     for dependency in record.fingerprint.dependencies
                 )
             )

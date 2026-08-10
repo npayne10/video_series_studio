@@ -53,8 +53,7 @@ class SceneEditorDialog(QDialog):
         self.resize(760, 900)
 
         intro = QLabel(
-            "Create the story-level scene information used by SSIE. "
-            "Fields marked * are required."
+            "Create the story-level scene information used by SSIE. Fields marked * are required."
         )
         intro.setWordWrap(True)
 
@@ -65,9 +64,7 @@ class SceneEditorDialog(QDialog):
         )
         self.scene_name_edit = QLineEdit()
         self.scene_name_edit.setPlaceholderText("Example: Emergence at Xorix")
-        self.scene_name_edit.setToolTip(
-            "A short human-readable name shown in the Story Browser."
-        )
+        self.scene_name_edit.setToolTip("A short human-readable name shown in the Story Browser.")
         self.episode_id_edit = QLineEdit(default_episode_id)
         self.episode_id_edit.setPlaceholderText("EP-001")
         self.episode_id_edit.setToolTip(
@@ -118,9 +115,7 @@ class SceneEditorDialog(QDialog):
 
         self.participant_search = QLineEdit()
         self.participant_search.setObjectName("sceneParticipantSearch")
-        self.participant_search.setPlaceholderText(
-            "Search characters by name or asset ID..."
-        )
+        self.participant_search.setPlaceholderText("Search characters by name or asset ID...")
         self.participant_search.setClearButtonEnabled(True)
         self.participant_search.setToolTip(
             "Filter the available character assets, then tick everyone present in the scene."
@@ -202,8 +197,7 @@ class SceneEditorDialog(QDialog):
         form.addRow("Estimated duration (seconds)", self.duration_spin)
 
         self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
         self.save_button = self.buttons.button(QDialogButtonBox.StandardButton.Save)
         self.save_button.setText("Save Scene")
@@ -341,9 +335,7 @@ class SceneEditorDialog(QDialog):
             "Unavailable asset",
         )
         self.time_of_day_edit.setText(scene.time_of_day or "")
-        self.transition_combo.setCurrentIndex(
-            self.transition_combo.findData(scene.transition_in)
-        )
+        self.transition_combo.setCurrentIndex(self.transition_combo.findData(scene.transition_in))
         self.duration_spin.setValue(scene.estimated_duration_seconds or 30.0)
         self._update_participant_help()
         self._update_asset_help()
@@ -413,9 +405,7 @@ class SceneEditorDialog(QDialog):
                 visible_by_header[index] = False
                 continue
             searchable = item.data(_SEARCH_ROLE)
-            matches = not normalized or (
-                isinstance(searchable, str) and normalized in searchable
-            )
+            matches = not normalized or (isinstance(searchable, str) and normalized in searchable)
             item.setHidden(not matches)
             if grouped and matches and current_header >= 0:
                 visible_by_header[current_header] = True
@@ -487,9 +477,7 @@ class SceneEditorDialog(QDialog):
         valid = not missing and bool(self.scene_id_edit.text().strip())
         self.save_button.setEnabled(valid)
         self.validation_label.setText(
-            "Complete the required fields: " + ", ".join(missing) + "."
-            if missing
-            else ""
+            "Complete the required fields: " + ", ".join(missing) + "." if missing else ""
         )
 
     @staticmethod

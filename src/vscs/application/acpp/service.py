@@ -81,11 +81,7 @@ class ACPPEditorService:
     def package_for_shot(self, shot_id: str) -> ClipProductionPackage | None:
         """Return the current package associated with one shot."""
         return next(
-            (
-                package
-                for package in self.list_packages()
-                if package.identity.shot_id == shot_id
-            ),
+            (package for package in self.list_packages() if package.identity.shot_id == shot_id),
             None,
         )
 
@@ -123,9 +119,7 @@ class ACPPEditorService:
             )
         )
         continuity = "\n".join(
-            value
-            for value in (shot.continuity_notes, shot.blocking_notes)
-            if value
+            value for value in (shot.continuity_notes, shot.blocking_notes) if value
         )
         return ClipProductionPackage(
             identity=ClipIdentity(
@@ -154,9 +148,7 @@ class ACPPEditorService:
             ),
             continuity=ContinuityBinding(
                 requirements=tuple(
-                    value
-                    for value in (shot.continuity_notes, shot.blocking_notes)
-                    if value
+                    value for value in (shot.continuity_notes, shot.blocking_notes) if value
                 )
             ),
             audio=AudioSpecification(dialogue_lines=shot.dialogue_lines),

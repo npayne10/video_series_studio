@@ -92,9 +92,7 @@ class StoryApprovalService:
             story_id=story.story_id,
             status=story.status,
             metadata_complete=metadata_complete,
-            can_approve=(
-                story.status is StoryStatus.ANALYSED and metadata_complete
-            ),
+            can_approve=(story.status is StoryStatus.ANALYSED and metadata_complete),
             can_lock=story.status is StoryStatus.APPROVED,
             can_unlock=story.status is StoryStatus.LOCKED,
             can_reopen=story.status in {StoryStatus.APPROVED, StoryStatus.LOCKED},
@@ -115,9 +113,7 @@ class StoryApprovalService:
         completeness = self.metadata.completeness(story_id)
         if not completeness.complete:
             missing = ", ".join(completeness.missing_fields)
-            raise StoryApprovalError(
-                f"Story metadata is incomplete: {missing}"
-            )
+            raise StoryApprovalError(f"Story metadata is incomplete: {missing}")
         self.stories.set_status(story_id, StoryStatus.APPROVED)
         return self._record(
             story_id,
@@ -211,9 +207,7 @@ class StoryApprovalService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            records = tuple(
-                self._from_dict(item) for item in raw.get("records", [])
-            )
+            records = tuple(self._from_dict(item) for item in raw.get("records", []))
         except (
             OSError,
             json.JSONDecodeError,
@@ -221,13 +215,9 @@ class StoryApprovalService:
             TypeError,
             ValueError,
         ) as exc:
-            raise StoryApprovalError(
-                f"Unable to load Story approval history: {exc}"
-            ) from exc
+            raise StoryApprovalError(f"Unable to load Story approval history: {exc}") from exc
         if story_id is not None:
-            records = tuple(
-                record for record in records if record.story_id == story_id
-            )
+            records = tuple(record for record in records if record.story_id == story_id)
         return records
 
     def _require_story(self, story_id: str) -> StoryRecord:
@@ -235,9 +225,7 @@ class StoryApprovalService:
         if story is None:
             raise StoryApprovalError(f"Story not found: {story_id}")
         if story.status is StoryStatus.ARCHIVED:
-            raise StoryApprovalError(
-                "Archived Stories must be restored before approval governance"
-            )
+            raise StoryApprovalError("Archived Stories must be restored before approval governance")
         return story
 
     @staticmethod
@@ -293,9 +281,7 @@ class StoryApprovalService:
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise StoryApprovalError(
-                f"Unable to save Story approval history: {exc}"
-            ) from exc
+            raise StoryApprovalError(f"Unable to save Story approval history: {exc}") from exc
 
     @staticmethod
     def _to_dict(record: StoryApprovalRecord) -> dict[str, Any]:

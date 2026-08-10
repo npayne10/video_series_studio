@@ -54,9 +54,7 @@ class BatchStatisticsService:
         processed = sum(record.processed_items for record in records)
         durations = tuple(record.duration_seconds for record in records)
         completion_values = tuple(
-            record.processed_items * 100.0 / record.total_items
-            if record.total_items
-            else 100.0
+            record.processed_items * 100.0 / record.total_items if record.total_items else 100.0
             for record in records
         )
         fastest = min(

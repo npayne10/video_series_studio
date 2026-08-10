@@ -221,11 +221,7 @@ class ACPPEditorDialog(QDialog):
 
     @staticmethod
     def _lines(edit: QPlainTextEdit) -> tuple[str, ...]:
-        return tuple(
-            line.strip()
-            for line in edit.toPlainText().splitlines()
-            if line.strip()
-        )
+        return tuple(line.strip() for line in edit.toPlainText().splitlines() if line.strip())
 
     @staticmethod
     def _optional(edit: QLineEdit) -> str | None:
@@ -239,9 +235,7 @@ class ACPPEditorDialog(QDialog):
         self.episode_id_edit.setText(identity.episode_id)
         self.scene_id_edit.setText(identity.scene_id)
         self.shot_id_edit.setText(identity.shot_id)
-        self.status_combo.setCurrentText(
-            package.metadata.get("editor_status", "draft")
-        )
+        self.status_combo.setCurrentText(package.metadata.get("editor_status", "draft"))
         prompt = package.prompt
         self.visual_edit.setPlainText(prompt.positive_visual_intent)
         self.negative_edit.setPlainText("\n".join(prompt.negative_constraints))
@@ -272,15 +266,11 @@ class ACPPEditorDialog(QDialog):
         self.frames_spin.setValue(render.frame_count)
         self.quality_combo.setCurrentText(render.quality_mode.value.title())
         self.seed_combo.setCurrentText(render.seed_policy.value.title())
-        self.fixed_seed_edit.setText(
-            "" if render.fixed_seed is None else str(render.fixed_seed)
-        )
+        self.fixed_seed_edit.setText("" if render.fixed_seed is None else str(render.fixed_seed))
         self.output_directory_edit.setText(package.output.relative_directory)
         self.filename_edit.setText(package.output.filename_stem)
         self.container_edit.setText(package.output.container)
-        self.version_label.setText(
-            f"Version {package.metadata.get('editor_version', '1')}"
-        )
+        self.version_label.setText(f"Version {package.metadata.get('editor_version', '1')}")
 
     def _append_asset(self, binding: AssetBinding) -> None:
         item = f"{binding.role.value}: {binding.asset_id}"
@@ -305,9 +295,7 @@ class ACPPEditorDialog(QDialog):
         self._append_asset(
             AssetBinding(
                 asset_id=asset_id,
-                role=AssetBindingRole(
-                    str(self.asset_role_combo.currentData())
-                ),
+                role=AssetBindingRole(str(self.asset_role_combo.currentData())),
             )
         )
         self.asset_id_edit.clear()
@@ -333,25 +321,19 @@ class ACPPEditorDialog(QDialog):
                 height=self.height_spin.value(),
                 frames_per_second=self.fps_spin.value(),
                 frame_count=self.frames_spin.value(),
-                quality_mode=RenderQualityMode(
-                    str(self.quality_combo.currentData())
-                ),
+                quality_mode=RenderQualityMode(str(self.quality_combo.currentData())),
                 seed_policy=SeedPolicy(str(self.seed_combo.currentData())),
                 fixed_seed=int(fixed_seed) if fixed_seed else None,
             ),
             assets=self._asset_bindings(),
             prompt=PromptSpecification(
-                positive_visual_intent=(
-                    self.visual_edit.toPlainText().strip()
-                ),
+                positive_visual_intent=(self.visual_edit.toPlainText().strip()),
                 negative_constraints=self._lines(self.negative_edit),
                 camera_language=self.camera_edit.toPlainText().strip(),
                 lighting_intent=self.lighting_edit.toPlainText().strip(),
                 behaviour_intent=self.behaviour_edit.toPlainText().strip(),
                 environment_intent=self.environment_edit.toPlainText().strip(),
-                continuity_intent=(
-                    self.continuity_prompt_edit.toPlainText().strip()
-                ),
+                continuity_intent=(self.continuity_prompt_edit.toPlainText().strip()),
             ),
             continuity=ContinuityBinding(
                 incoming_clip_id=self._optional(self.incoming_clip_edit),
@@ -368,9 +350,7 @@ class ACPPEditorDialog(QDialog):
                 sound_effect_ids=self._lines(self.effects_edit),
             ),
             output=OutputSpecification(
-                relative_directory=(
-                    self.output_directory_edit.text().strip()
-                ),
+                relative_directory=(self.output_directory_edit.text().strip()),
                 filename_stem=self.filename_edit.text().strip(),
                 container=self.container_edit.text().strip() or "mp4",
             ),
@@ -385,17 +365,10 @@ class ACPPEditorDialog(QDialog):
             self.save_button.setEnabled(False)
             return False
         result = self.service.validate(package)
-        messages = [
-            f"{issue.code}: {issue.message}" for issue in result.issues
-        ]
-        validation_text = (
-            "Validation passed" if result.passed else " · ".join(messages)
-        )
+        messages = [f"{issue.code}: {issue.message}" for issue in result.issues]
+        validation_text = "Validation passed" if result.passed else " · ".join(messages)
         self.validation_label.setText(validation_text)
-        can_save = bool(
-            package.prompt.positive_visual_intent
-            and package.output.filename_stem
-        )
+        can_save = bool(package.prompt.positive_visual_intent and package.output.filename_stem)
         self.save_button.setEnabled(can_save)
         return result.passed
 

@@ -30,11 +30,7 @@ def test_bootstrap_registers_batch_service_with_shared_dependencies(
 
         assert service.builder is context.services.require(PromptGraphBuilder)
         assert service.graph_compiler is context.services.require(PromptGraphCompiler)
-        assert service.profile_registry is context.services.require(
-            RendererPromptProfileRegistry
-        )
-        assert service.renderer_compiler is context.services.require(
-            RendererPromptCompiler
-        )
+        assert service.profile_registry is context.services.require(RendererPromptProfileRegistry)
+        assert service.renderer_compiler is context.services.require(RendererPromptCompiler)
     finally:
         context.shutdown()

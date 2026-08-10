@@ -1,4 +1,5 @@
 """Public API for the CAR Repository Verifier."""
+
 from .models import (
     AssetValidationResult,
     RepositoryValidationResult,

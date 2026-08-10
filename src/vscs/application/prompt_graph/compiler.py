@@ -159,9 +159,7 @@ class PromptGraphCompiler:
     ) -> PromptPackage:
         validation = self.validator.validate(graph, inventory)
         if not validation.passed:
-            raise PromptGraphCompilationError(
-                "prompt graph contains error-level validation issues"
-            )
+            raise PromptGraphCompilationError("prompt graph contains error-level validation issues")
         if require_production_ready and not validation.completeness.production_ready:
             raise PromptGraphCompilationError(
                 "prompt graph does not meet the production-readiness threshold"
@@ -195,8 +193,7 @@ class PromptGraphCompiler:
         )
         positive = self._join_sections(
             sections,
-            set(PromptSectionKind)
-            - {PromptSectionKind.NEGATIVE, PromptSectionKind.RESTRICTIONS},
+            set(PromptSectionKind) - {PromptSectionKind.NEGATIVE, PromptSectionKind.RESTRICTIONS},
         )
         canonical_asset_ids = tuple(
             sorted(

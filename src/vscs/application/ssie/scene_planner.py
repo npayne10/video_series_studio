@@ -1,4 +1,5 @@
 """Deterministic scene-level production planning for SSIE."""
+
 from __future__ import annotations
 
 from .models import Scene, ScenePlan
@@ -90,9 +91,7 @@ class RuleBasedScenePlanner:
                 "Preserve participant identity, wardrobe, props, and blocking continuity."
             )
         if scene.time_of_day:
-            requirements.append(
-                f"Preserve {scene.time_of_day.strip()} environmental continuity."
-            )
+            requirements.append(f"Preserve {scene.time_of_day.strip()} environmental continuity.")
         return tuple(requirements)
 
     @staticmethod

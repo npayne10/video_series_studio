@@ -79,9 +79,7 @@ def test_enter_starts_guide_from_welcome(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "welcome-enter.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "welcome-enter.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 
@@ -99,9 +97,7 @@ def test_welcome_tab_navigation_stays_inside_overlay(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "welcome-tab.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "welcome-tab.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 
@@ -123,9 +119,7 @@ def test_enter_and_space_navigate_tour(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "tour-navigation.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "tour-navigation.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _start_guide(dialog, qapp)
 
@@ -145,9 +139,7 @@ def test_tour_tab_navigation_stays_inside_card(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "tour-tab.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "tour-tab.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _start_guide(dialog, qapp)
 
@@ -174,9 +166,7 @@ def test_space_activates_try_it_and_focuses_target(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "try-it.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "try-it.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _start_guide(dialog, qapp)
     dialog.onboarding.go_to(3)
@@ -196,9 +186,7 @@ def test_keyboard_identity_entry_is_not_interrupted(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "identity.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "identity.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _start_guide(dialog, qapp)
     dialog.onboarding.go_to(3)
@@ -228,9 +216,7 @@ def test_skipping_welcome_releases_focus_to_editor(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "skip-focus.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "skip-focus.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 
@@ -249,9 +235,7 @@ def test_escape_closes_scene_editor_without_focus_trap(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "escape.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "escape.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 

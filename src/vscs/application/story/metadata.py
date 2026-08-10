@@ -89,9 +89,7 @@ class StoryMetadataService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            records = tuple(
-                self._from_dict(item) for item in raw.get("metadata", [])
-            )
+            records = tuple(self._from_dict(item) for item in raw.get("metadata", []))
         except (
             OSError,
             json.JSONDecodeError,
@@ -99,19 +97,13 @@ class StoryMetadataService:
             TypeError,
             ValueError,
         ) as exc:
-            raise StoryMetadataError(
-                f"Unable to load Story metadata: {exc}"
-            ) from exc
+            raise StoryMetadataError(f"Unable to load Story metadata: {exc}") from exc
         return tuple(sorted(records, key=lambda item: item.story_id))
 
     def metadata(self, story_id: str) -> StoryMetadata | None:
         """Return metadata for one Story, or ``None`` when not defined."""
         return next(
-            (
-                item
-                for item in self.list_metadata()
-                if item.story_id == story_id
-            ),
+            (item for item in self.list_metadata() if item.story_id == story_id),
             None,
         )
 
@@ -141,13 +133,8 @@ class StoryMetadataService:
             raise StoryMetadataError(
                 "Locked stories must be unlocked before metadata can be edited"
             )
-        if (
-            estimated_runtime_minutes is not None
-            and estimated_runtime_minutes <= 0
-        ):
-            raise ValueError(
-                "Estimated runtime must be greater than zero when provided"
-            )
+        if estimated_runtime_minutes is not None and estimated_runtime_minutes <= 0:
+            raise ValueError("Estimated runtime must be greater than zero when provided")
         metadata = StoryMetadata(
             story_id=story_id,
             synopsis=synopsis.strip(),
@@ -170,8 +157,7 @@ class StoryMetadataService:
         }:
             editable_status = (
                 StoryStatus.IMPORTED
-                if story.source_type is not StorySourceType.ORIGINAL
-                or story.source_path
+                if story.source_type is not StorySourceType.ORIGINAL or story.source_path
                 else StoryStatus.DRAFT
             )
             self.stories.set_status(story_id, editable_status)
@@ -197,12 +183,8 @@ class StoryMetadataService:
             "language": metadata.language if metadata else "",
             "author": metadata.author if metadata else "",
         }
-        completed = tuple(
-            field for field in self.REQUIRED_FIELDS if bool(values[field])
-        )
-        missing = tuple(
-            field for field in self.REQUIRED_FIELDS if not bool(values[field])
-        )
+        completed = tuple(field for field in self.REQUIRED_FIELDS if bool(values[field]))
+        missing = tuple(field for field in self.REQUIRED_FIELDS if not bool(values[field]))
         percentage = round(100 * len(completed) / len(self.REQUIRED_FIELDS))
         return StoryMetadataCompleteness(
             story_id=story_id,
@@ -217,8 +199,7 @@ class StoryMetadataService:
         payload = {
             "schema_version": "1.0",
             "metadata": [
-                self._to_dict(item)
-                for item in sorted(records, key=lambda value: value.story_id)
+                self._to_dict(item) for item in sorted(records, key=lambda value: value.story_id)
             ],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
@@ -236,17 +217,11 @@ class StoryMetadataService:
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise StoryMetadataError(
-                f"Unable to save Story metadata: {exc}"
-            ) from exc
+            raise StoryMetadataError(f"Unable to save Story metadata: {exc}") from exc
 
     @staticmethod
     def _normalized_values(values: tuple[str, ...]) -> tuple[str, ...]:
-        normalized = {
-            value.strip()
-            for value in values
-            if value.strip()
-        }
+        normalized = {value.strip() for value in values if value.strip()}
         return tuple(sorted(normalized, key=str.casefold))
 
     @staticmethod
@@ -268,9 +243,7 @@ class StoryMetadataService:
             target_audience=str(raw.get("target_audience", "")),
             language=str(raw.get("language", "English")),
             author=str(raw.get("author", "")),
-            estimated_runtime_minutes=(
-                None if runtime is None else float(runtime)
-            ),
+            estimated_runtime_minutes=(None if runtime is None else float(runtime)),
             keywords=tuple(str(value) for value in raw.get("keywords", [])),
             notes=str(raw.get("notes", "")),
             updated_at=str(raw.get("updated_at", "")),

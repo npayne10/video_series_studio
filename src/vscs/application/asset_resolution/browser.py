@@ -133,9 +133,7 @@ class AssetBrowserService:
                     canonical,
                 )
             )
-        ordered = tuple(
-            sorted(items, key=lambda item: (item.name.casefold(), item.asset_id))
-        )
+        ordered = tuple(sorted(items, key=lambda item: (item.name.casefold(), item.asset_id)))
         return AssetBrowserResult(selected, ordered, len(assets))
 
     def select(

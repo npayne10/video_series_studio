@@ -62,9 +62,7 @@ def test_dialogue_editor_limits_new_speakers_to_selected_participants(
 
     editor.add_entry("CHR-JAMES", "That signal should not be there.")
 
-    assert editor.dialogue_lines() == (
-        "CHR-JAMES: That signal should not be there.",
-    )
+    assert editor.dialogue_lines() == ("CHR-JAMES: That signal should not be there.",)
     with pytest.raises(ValueError, match="selected scene participants"):
         editor.add_entry("CHR-SANDRA", "I agree.")
 
@@ -150,8 +148,7 @@ def test_deselecting_participant_prevents_new_dialogue_for_that_speaker(
     james_item = next(
         dialog.participant_list.item(index)
         for index in range(dialog.participant_list.count())
-        if dialog.participant_list.item(index).data(Qt.ItemDataRole.UserRole)
-        == "CHR-JAMES"
+        if dialog.participant_list.item(index).data(Qt.ItemDataRole.UserRole) == "CHR-JAMES"
     )
     james_item.setCheckState(Qt.CheckState.Checked)
     dialog.dialogue_editor.add_entry("CHR-JAMES", "We proceed.")
@@ -160,9 +157,7 @@ def test_deselecting_participant_prevents_new_dialogue_for_that_speaker(
 
     with pytest.raises(ValueError, match="selected scene participants"):
         dialog.dialogue_editor.add_entry("CHR-JAMES", "Another line.")
-    assert dialog.dialogue_editor.dialogue_lines() == (
-        "CHR-JAMES: We proceed.",
-    )
+    assert dialog.dialogue_editor.dialogue_lines() == ("CHR-JAMES: We proceed.",)
 
 
 def test_scene_editor_places_long_form_inside_scroll_area(

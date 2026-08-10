@@ -82,6 +82,7 @@ def test_graph_and_snapshot_registries_are_deterministic() -> None:
         )
     )
 
-    assert tuple(
-        item.snapshot_id for item in snapshots.list_for_graph("PG-001")
-    ) == ("SNAP-001", "SNAP-002")
+    assert tuple(item.snapshot_id for item in snapshots.list_for_graph("PG-001")) == (
+        "SNAP-001",
+        "SNAP-002",
+    )

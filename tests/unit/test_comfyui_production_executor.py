@@ -119,13 +119,7 @@ def _request(
 def test_executor_submits_workflow_and_returns_outputs() -> None:
     client = StubClient(
         history={
-            "outputs": {
-                "9": {
-                    "videos": [
-                        {"filename": "clip-001.mp4", "subfolder": "production"}
-                    ]
-                }
-            }
+            "outputs": {"9": {"videos": [{"filename": "clip-001.mp4", "subfolder": "production"}]}}
         }
     )
     executor = ComfyUIProductionExecutor(StubCompiler(), client)

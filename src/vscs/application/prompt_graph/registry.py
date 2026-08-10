@@ -36,18 +36,11 @@ class PromptGraphRegistry:
 
     def list(self) -> tuple[PromptGraph, ...]:
         """Return graphs in stable graph-ID order."""
-        return tuple(
-            self._graphs[graph_id]
-            for graph_id in sorted(self._graphs)
-        )
+        return tuple(self._graphs[graph_id] for graph_id in sorted(self._graphs))
 
     def for_shot(self, shot_id: str) -> tuple[PromptGraph, ...]:
         """Return all graph versions associated with a shot."""
-        return tuple(
-            graph
-            for graph in self.list()
-            if graph.metadata.shot_id == shot_id
-        )
+        return tuple(graph for graph in self.list() if graph.metadata.shot_id == shot_id)
 
 
 @dataclass(slots=True)

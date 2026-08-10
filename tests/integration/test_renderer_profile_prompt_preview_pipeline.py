@@ -103,18 +103,22 @@ def test_graph_compiles_through_renderer_profile_into_preview(tmp_path: Path) ->
                 ),
             ),
         )
-        graph = application.services.require(PromptGraphBuilder).build(
-            PromptGraphBuildContext(
-                "GRAPH-001",
-                "XORIX",
-                "EP-001",
-                "SCN-001",
-                "SHT-001",
-                renderer=RendererKind.COMFYUI,
-                quality_level=QualityLevel.PRODUCTION,
-                workflow_id="ltx23_production_v1",
+        graph = (
+            application.services.require(PromptGraphBuilder)
+            .build(
+                PromptGraphBuildContext(
+                    "GRAPH-001",
+                    "XORIX",
+                    "EP-001",
+                    "SCN-001",
+                    "SHT-001",
+                    renderer=RendererKind.COMFYUI,
+                    quality_level=QualityLevel.PRODUCTION,
+                    workflow_id="ltx23_production_v1",
+                )
             )
-        ).graph
+            .graph
+        )
         package = application.services.require(PromptGraphCompiler).compile(
             graph,
             PromptGraphResourceInventory(
@@ -122,9 +126,9 @@ def test_graph_compiles_through_renderer_profile_into_preview(tmp_path: Path) ->
                 reference_ids=frozenset({"REF-SHP-IRON-HORIZON-01"}),
             ),
         )
-        profile = application.services.require(
-            RendererPromptProfileRegistry
-        ).resolve(RendererKind.COMFYUI, QualityLevel.PRODUCTION)
+        profile = application.services.require(RendererPromptProfileRegistry).resolve(
+            RendererKind.COMFYUI, QualityLevel.PRODUCTION
+        )
         profiled = application.services.require(RendererPromptCompiler).compile(
             package,
             profile,

@@ -64,7 +64,9 @@ def _evaluate_selected(dialog: Any) -> None:
     gallery = getattr(dialog, "reference_gallery", None)
     reference = None if gallery is None else gallery.selected_reference()
     if reference is None or reference.reference_type is not CanonicalReferenceType.IMAGE:
-        QMessageBox.information(dialog, "Semantic Image Evaluation", "Select an image reference first.")
+        QMessageBox.information(
+            dialog, "Semantic Image Evaluation", "Select an image reference first."
+        )
         return
     if dialog.profile is None or dialog.project_directory is None:
         return
@@ -74,7 +76,9 @@ def _evaluate_selected(dialog: Any) -> None:
         configuration.load()
         api_key = AICredentialStore().get_openai_api_key()
         if not api_key:
-            raise SIEEError("Configure an OpenAI API key in VSCS Settings before running semantic evaluation.")
+            raise SIEEError(
+                "Configure an OpenAI API key in VSCS Settings before running semantic evaluation."
+            )
         model = configuration.settings.ai.openai_model
         provider = OpenAISemanticImageEvaluator(api_key=api_key, model=model)
         asset = dialog.caps.assets.get(dialog.profile.asset_id)
@@ -121,8 +125,7 @@ def _evaluate_selected(dialog: Any) -> None:
         else QMessageBox.Icon.Warning
     )
     box.setText(
-        f"{reference.title}: {report.decision.value.upper()} "
-        f"({report.overall_score}/100 semantic)"
+        f"{reference.title}: {report.decision.value.upper()} ({report.overall_score}/100 semantic)"
     )
     box.setInformativeText(report.summary)
     box.setDetailedText(_format_report(report, report_path.relative_to(dialog.project_directory)))

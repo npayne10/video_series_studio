@@ -19,12 +19,7 @@ from vscs.application.rendering import (
     WorkflowManifestLoader,
 )
 
-REFERENCE_ROOT = (
-    Path(__file__).resolve().parents[2]
-    / "resources"
-    / "workflows"
-    / "manifests"
-)
+REFERENCE_ROOT = Path(__file__).resolve().parents[2] / "resources" / "workflows" / "manifests"
 
 
 def _request(

@@ -36,9 +36,7 @@ def _complete(dialog: ValidationExplanationsSceneEditorDialog) -> None:
     location_index = dialog.location_combo.findData("LOC-XORIX-ORBIT")
     assert location_index >= 0
     dialog.location_combo.setCurrentIndex(location_index)
-    dialog.summary_edit.setPlainText(
-        "The crew enters orbit and sees Xorix for the first time."
-    )
+    dialog.summary_edit.setPlainText("The crew enters orbit and sees Xorix for the first time.")
 
 
 def test_missing_fields_explain_requirement_and_reason(
@@ -64,9 +62,7 @@ def test_complete_scene_reports_ready_to_save(
     qtbot: object,
     qapp: QApplication,
 ) -> None:
-    dialog = ValidationExplanationsSceneEditorDialog(
-        location_assets=(_location(),)
-    )
+    dialog = ValidationExplanationsSceneEditorDialog(location_assets=(_location(),))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
     _complete(dialog)
@@ -80,9 +76,7 @@ def test_malformed_container_id_blocks_save_with_identity_explanation(
     qtbot: object,
     qapp: QApplication,
 ) -> None:
-    dialog = ValidationExplanationsSceneEditorDialog(
-        location_assets=(_location(),)
-    )
+    dialog = ValidationExplanationsSceneEditorDialog(location_assets=(_location(),))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _complete(dialog)
 
@@ -90,9 +84,7 @@ def test_malformed_container_id_blocks_save_with_identity_explanation(
 
     assert not dialog.save_button.isEnabled()
     issue = next(
-        item
-        for item in dialog.validation_explanations
-        if item.topic_id == "scene.container_id"
+        item for item in dialog.validation_explanations if item.topic_id == "scene.container_id"
     )
     assert issue.severity is ValidationSeverity.ERROR
     assert "letters, numbers and single hyphens" in issue.message

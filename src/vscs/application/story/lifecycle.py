@@ -101,9 +101,7 @@ class StoryLifecycleService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            stories = tuple(
-                self._from_dict(item) for item in raw.get("stories", [])
-            )
+            stories = tuple(self._from_dict(item) for item in raw.get("stories", []))
         except (
             OSError,
             json.JSONDecodeError,
@@ -111,9 +109,7 @@ class StoryLifecycleService:
             TypeError,
             ValueError,
         ) as exc:
-            raise StoryLifecycleError(
-                f"Unable to load stories: {exc}"
-            ) from exc
+            raise StoryLifecycleError(f"Unable to load stories: {exc}") from exc
         if not include_archived:
             stories = tuple(story for story in stories if not story.archived)
         return tuple(
@@ -133,9 +129,7 @@ class StoryLifecycleService:
         return next(
             (
                 story
-                for story in self.list_stories(
-                    include_archived=include_archived
-                )
+                for story in self.list_stories(include_archived=include_archived)
                 if story.story_id == story_id
             ),
             None,
@@ -143,10 +137,7 @@ class StoryLifecycleService:
 
     def next_story_id(self) -> str:
         """Return the next available deterministic project-local story identity."""
-        existing = {
-            story.story_id
-            for story in self.list_stories(include_archived=True)
-        }
+        existing = {story.story_id for story in self.list_stories(include_archived=True)}
         sequence = 1
         while f"STORY-{sequence:03d}" in existing:
             sequence += 1
@@ -189,9 +180,7 @@ class StoryLifecycleService:
         """Replace editable details and invalidate later workflow states."""
         current = self._require_story(story_id)
         if current.archived:
-            raise StoryLifecycleError(
-                "Archived stories must be restored before editing"
-            )
+            raise StoryLifecycleError("Archived stories must be restored before editing")
         if current.locked:
             raise StoryLifecycleError(
                 "Locked stories must be unlocked through the approval workflow"
@@ -230,9 +219,7 @@ class StoryLifecycleService:
             archived_at=None,
             archived_from_status=None,
         )
-        self._write(
-            (*self.list_stories(include_archived=True), duplicate)
-        )
+        self._write((*self.list_stories(include_archived=True), duplicate))
         return duplicate
 
     def set_status(
@@ -248,12 +235,8 @@ class StoryLifecycleService:
             current,
             status=status,
             updated_at=self._timestamp(),
-            archived_at=(
-                self._timestamp() if status is StoryStatus.ARCHIVED else None
-            ),
-            archived_from_status=(
-                current.status if status is StoryStatus.ARCHIVED else None
-            ),
+            archived_at=(self._timestamp() if status is StoryStatus.ARCHIVED else None),
+            archived_from_status=(current.status if status is StoryStatus.ARCHIVED else None),
         )
         self._replace(updated)
         return updated
@@ -299,9 +282,7 @@ class StoryLifecycleService:
         if current is None:
             return False
         if not current.archived:
-            raise StoryLifecycleError(
-                "A story must be archived before permanent deletion"
-            )
+            raise StoryLifecycleError("A story must be archived before permanent deletion")
         remaining = tuple(
             story
             for story in self.list_stories(include_archived=True)
@@ -317,10 +298,7 @@ class StoryLifecycleService:
         return story
 
     def _replace(self, replacement: StoryRecord) -> None:
-        stories = {
-            story.story_id: story
-            for story in self.list_stories(include_archived=True)
-        }
+        stories = {story.story_id: story for story in self.list_stories(include_archived=True)}
         stories[replacement.story_id] = replacement
         self._write(tuple(stories.values()))
 
@@ -350,9 +328,7 @@ class StoryLifecycleService:
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise StoryLifecycleError(
-                f"Unable to save stories: {exc}"
-            ) from exc
+            raise StoryLifecycleError(f"Unable to save stories: {exc}") from exc
 
     @staticmethod
     def _editable_status(
@@ -382,9 +358,7 @@ class StoryLifecycleService:
         raw["source_type"] = story.source_type.value
         raw["status"] = story.status.value
         raw["archived_from_status"] = (
-            None
-            if story.archived_from_status is None
-            else story.archived_from_status.value
+            None if story.archived_from_status is None else story.archived_from_status.value
         )
         return raw
 
@@ -399,19 +373,11 @@ class StoryLifecycleService:
                 str(raw.get("source_type", StorySourceType.ORIGINAL.value))
             ),
             source_path=str(raw.get("source_path", "")),
-            status=StoryStatus(
-                str(raw.get("status", StoryStatus.DRAFT.value))
-            ),
+            status=StoryStatus(str(raw.get("status", StoryStatus.DRAFT.value))),
             created_at=str(raw.get("created_at", "")),
             updated_at=str(raw.get("updated_at", "")),
-            archived_at=(
-                None
-                if raw.get("archived_at") is None
-                else str(raw["archived_at"])
-            ),
+            archived_at=(None if raw.get("archived_at") is None else str(raw["archived_at"])),
             archived_from_status=(
-                None
-                if archived_from is None
-                else StoryStatus(str(archived_from))
+                None if archived_from is None else StoryStatus(str(archived_from))
             ),
         )

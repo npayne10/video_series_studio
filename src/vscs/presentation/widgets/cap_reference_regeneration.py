@@ -30,10 +30,7 @@ def _metadata_paths(dialog: Any, reference: Any) -> tuple[Path, Path, Path]:
     project_root = Path(dialog.project_directory)
     image_path = _absolute_path(dialog, reference.file_path)
     metadata_root = (
-        project_root
-        / "Canonical Assets"
-        / dialog.profile.asset_id.upper()
-        / ".metadata"
+        project_root / "Canonical Assets" / dialog.profile.asset_id.upper() / ".metadata"
     )
     return (
         metadata_root / "evaluation" / f"{image_path.stem}.pre.json",
@@ -61,7 +58,9 @@ def _feedback(pre: dict[str, Any], siee: dict[str, Any]) -> tuple[str, ...]:
             values.extend(str(item).strip() for item in source if str(item).strip())
     violations = siee.get("violations", [])
     if isinstance(violations, list):
-        values.extend(f"Correct this detected violation: {item}" for item in violations if str(item).strip())
+        values.extend(
+            f"Correct this detected violation: {item}" for item in violations if str(item).strip()
+        )
     return tuple(dict.fromkeys(values))
 
 
@@ -85,12 +84,20 @@ def _regenerate(dialog: Any) -> None:
     gallery = getattr(dialog, "reference_gallery", None)
     reference = None if gallery is None else gallery.selected_reference()
     if reference is None:
-        QMessageBox.information(dialog, "Regenerate from Feedback", "Select an image reference first.")
+        QMessageBox.information(
+            dialog, "Regenerate from Feedback", "Select an image reference first."
+        )
         return
     if reference.reference_type is not CanonicalReferenceType.IMAGE:
-        QMessageBox.warning(dialog, "Regenerate from Feedback", "Only image references can be regenerated.")
+        QMessageBox.warning(
+            dialog, "Regenerate from Feedback", "Only image references can be regenerated."
+        )
         return
-    if dialog.profile is None or dialog.project_directory is None or dialog.reference_service is None:
+    if (
+        dialog.profile is None
+        or dialog.project_directory is None
+        or dialog.reference_service is None
+    ):
         return
 
     try:

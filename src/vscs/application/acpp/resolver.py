@@ -91,9 +91,11 @@ class ACPPResourceResolver:
 
         metadata = dict(package.metadata)
         prefix = self.config.metadata_prefix
-        metadata[f"{prefix}.status"] = "resolved" if not any(
-            item.severity is ResolutionSeverity.ERROR for item in diagnostics
-        ) else "failed"
+        metadata[f"{prefix}.status"] = (
+            "resolved"
+            if not any(item.severity is ResolutionSeverity.ERROR for item in diagnostics)
+            else "failed"
+        )
         metadata[f"{prefix}.asset_count"] = str(len(resolved_bindings))
         metadata[f"{prefix}.provenance_count"] = str(len(provenance))
 
@@ -257,9 +259,7 @@ class ACPPResourceResolver:
         code: str,
         message: str,
     ) -> ResolutionDiagnostic:
-        severity = (
-            ResolutionSeverity.ERROR if binding.required else ResolutionSeverity.WARNING
-        )
+        severity = ResolutionSeverity.ERROR if binding.required else ResolutionSeverity.WARNING
         return ResolutionDiagnostic(
             severity=severity,
             code=code,

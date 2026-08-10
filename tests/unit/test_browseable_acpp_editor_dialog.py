@@ -88,8 +88,7 @@ def test_acpp_browse_button_adds_selected_project_asset(
             return QDialog.DialogCode.Accepted
 
     monkeypatch.setattr(  # type: ignore[attr-defined]
-        "vscs.presentation.dialogs.browseable_acpp_editor_dialog."
-        "ResolutionAssetPickerDialog",
+        "vscs.presentation.dialogs.browseable_acpp_editor_dialog.ResolutionAssetPickerDialog",
         FakePicker,
     )
     dialog = BrowseableACPPEditorDialog(
@@ -109,8 +108,7 @@ def test_acpp_browse_button_adds_selected_project_asset(
 
     assert dialog.asset_list.count() == initial + 1
     assert (
-        dialog.asset_list.item(dialog.asset_list.count() - 1).text()
-        == "vehicle: SHP-IRON-HORIZON"
+        dialog.asset_list.item(dialog.asset_list.count() - 1).text() == "vehicle: SHP-IRON-HORIZON"
     )
     assert dialog.asset_id_edit.text() == ""
 

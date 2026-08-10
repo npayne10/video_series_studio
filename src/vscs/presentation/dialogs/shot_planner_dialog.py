@@ -69,9 +69,7 @@ class ShotPlannerDialog(QDialog):
 
         self.shot_list = QListWidget(self)
         self.shot_list.setObjectName("shotPlannerList")
-        self.shot_list.setDragDropMode(
-            QAbstractItemView.DragDropMode.InternalMove
-        )
+        self.shot_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.shot_list.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         self.add_button = QPushButton("New Shot", self)
@@ -224,8 +222,7 @@ class ShotPlannerDialog(QDialog):
             return
         for shot in shots:
             item = QListWidgetItem(
-                f"{shot.sequence_number:03d} — {shot.title} "
-                f"[{shot.status.label}]"
+                f"{shot.sequence_number:03d} — {shot.title} [{shot.status.label}]"
             )
             item.setData(Qt.ItemDataRole.UserRole, shot.shot_id)
             self.shot_list.addItem(item)
@@ -352,9 +349,7 @@ class ShotPlannerDialog(QDialog):
             ),
             estimated_duration_seconds=self.duration_spin.value(),
             continuity_from_shot_id=self.continuity_combo.currentData(),
-            continuity_notes=(
-                self.continuity_notes_edit.toPlainText().strip()
-            ),
+            continuity_notes=(self.continuity_notes_edit.toPlainText().strip()),
             blocking_notes=self.blocking_edit.toPlainText().strip(),
             storyboard_reference=self.storyboard_edit.text().strip(),
             dialogue_lines=tuple(
@@ -363,11 +358,7 @@ class ShotPlannerDialog(QDialog):
                 if line.strip()
             ),
         )
-        status = (
-            ShotPlanningStatus.READY
-            if shot.ready
-            else ShotPlanningStatus.DRAFT
-        )
+        status = ShotPlanningStatus.READY if shot.ready else ShotPlanningStatus.DRAFT
         return replace(shot, status=status)
 
     def _save_current(self) -> None:
@@ -405,16 +396,10 @@ class ShotPlannerDialog(QDialog):
 
     def _persist_visual_order(self, *_args: object) -> None:
         ordered = tuple(
-            str(
-                self.shot_list.item(index).data(
-                    Qt.ItemDataRole.UserRole
-                )
-            )
+            str(self.shot_list.item(index).data(Qt.ItemDataRole.UserRole))
             for index in range(self.shot_list.count())
         )
-        if ordered and all(
-            self.shots.shot(shot_id) is not None for shot_id in ordered
-        ):
+        if ordered and all(self.shots.shot(shot_id) is not None for shot_id in ordered):
             self.shots.reorder_scene(self.scene_id, ordered)
             self.refresh(self._current_shot_id)
 
@@ -427,6 +412,4 @@ class ShotPlannerDialog(QDialog):
         if self.duration_spin.value() <= 0:
             issues.append("Duration must be greater than zero")
         self.save_button.setEnabled(not issues)
-        self.validation_label.setText(
-            "Ready to save" if not issues else " · ".join(issues)
-        )
+        self.validation_label.setText("Ready to save" if not issues else " · ".join(issues))

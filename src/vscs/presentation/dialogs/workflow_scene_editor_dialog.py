@@ -58,9 +58,7 @@ class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
         self.summary_label = QLabel(self.summary_frame)
         self.summary_label.setObjectName("sceneWorkflowSummaryText")
         self.summary_label.setWordWrap(True)
-        self.summary_label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse
-        )
+        self.summary_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         summary_layout.addWidget(self.summary_title)
         summary_layout.addWidget(self.summary_label)
 

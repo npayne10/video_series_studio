@@ -91,9 +91,7 @@ class StoryEditorDialog(QDialog):
         self.language_edit = self._line_edit(
             "storyLanguage", metadata.language if metadata else "English"
         )
-        self.author_edit = self._line_edit(
-            "storyAuthor", metadata.author if metadata else ""
-        )
+        self.author_edit = self._line_edit("storyAuthor", metadata.author if metadata else "")
         self.runtime_spin = QSpinBox(self)
         self.runtime_spin.setObjectName("storyEstimatedRuntime")
         self.runtime_spin.setRange(0, 100000)
@@ -126,8 +124,7 @@ class StoryEditorDialog(QDialog):
         hint.setWordWrap(True)
         root.addWidget(hint)
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel,
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
         buttons.accepted.connect(self._accept_if_valid)
@@ -227,19 +224,13 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         toolbar = QHBoxLayout()
         self.new_button = self._button("New Story", "newStory", self._new_story)
         self.edit_button = self._button("Edit", "editStory", self._edit_story)
-        self.duplicate_button = self._button(
-            "Duplicate", "duplicateStory", self._duplicate_story
-        )
-        self.analyse_button = self._button(
-            "Mark Analysed", "analyseStory", self._mark_analysed
-        )
+        self.duplicate_button = self._button("Duplicate", "duplicateStory", self._duplicate_story)
+        self.analyse_button = self._button("Mark Analysed", "analyseStory", self._mark_analysed)
         self.approve_button = self._button("Approve", "approveStory", self._approve)
         self.lock_button = self._button("Lock", "lockStory", self._lock)
         self.unlock_button = self._button("Unlock", "unlockStory", self._unlock)
         self.reopen_button = self._button("Reopen", "reopenStory", self._reopen)
-        self.archive_button = self._button(
-            "Archive", "archiveStory", self._archive_or_restore
-        )
+        self.archive_button = self._button("Archive", "archiveStory", self._archive_or_restore)
         for button in (
             self.new_button,
             self.edit_button,
@@ -268,9 +259,7 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         panel_layout.addLayout(content)
         root.insertWidget(0, panel)
 
-    def _button(
-        self, text: str, name: str, slot: Callable[[], None]
-    ) -> QPushButton:
+    def _button(self, text: str, name: str, slot: Callable[[], None]) -> QPushButton:
         button = QPushButton(text, self)
         button.setObjectName(name)
         button.clicked.connect(slot)
@@ -284,9 +273,7 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         selected_id = self._selected_story_id()
         self.story_list.clear()
         try:
-            records = self.lifecycle.list_stories(
-                include_archived=self.show_archived.isChecked()
-            )
+            records = self.lifecycle.list_stories(include_archived=self.show_archived.isChecked())
         except ProjectNotOpenError:
             self.story_details.setText("Open a project to manage Stories.")
             self._set_story_actions(None)
@@ -328,11 +315,7 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         approval = self.approvals.snapshot(story.story_id)
         synopsis = metadata.synopsis if metadata and metadata.synopsis else "Not defined"
         author = metadata.author if metadata and metadata.author else "Not defined"
-        genres = (
-            ", ".join(metadata.genres)
-            if metadata and metadata.genres
-            else "Not defined"
-        )
+        genres = ", ".join(metadata.genres) if metadata and metadata.genres else "Not defined"
         missing = ", ".join(completeness.missing_fields) or "None"
         self.story_details.setText(
             f"<h2>{story.title}</h2>"
@@ -355,8 +338,7 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         self.edit_button.setEnabled(can_edit)
         self.duplicate_button.setEnabled(story is not None)
         self.analyse_button.setEnabled(
-            story is not None
-            and story.status in {StoryStatus.DRAFT, StoryStatus.IMPORTED}
+            story is not None and story.status in {StoryStatus.DRAFT, StoryStatus.IMPORTED}
         )
         snapshot = self.approvals.snapshot(story.story_id) if story else None
         self.approve_button.setEnabled(bool(snapshot and snapshot.can_approve))
@@ -364,9 +346,7 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         self.unlock_button.setEnabled(bool(snapshot and snapshot.can_unlock))
         self.reopen_button.setEnabled(bool(snapshot and snapshot.can_reopen))
         self.archive_button.setEnabled(story is not None)
-        self.archive_button.setText(
-            "Restore" if story and story.archived else "Archive"
-        )
+        self.archive_button.setText("Restore" if story and story.archived else "Archive")
 
     def _new_story(self) -> None:
         dialog = StoryEditorDialog(parent=self)
@@ -383,9 +363,7 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         story = self._selected_story()
         if story is None:
             return
-        dialog = StoryEditorDialog(
-            story, self.metadata.metadata(story.story_id), self
-        )
+        dialog = StoryEditorDialog(story, self.metadata.metadata(story.story_id), self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         try:
@@ -456,19 +434,13 @@ class StoryWorkspaceWidget(ACPPStoryBrowserWidget):
         notes = f"Story {action} action completed through Story Workspace"
         try:
             if action == "approve":
-                self.approvals.approve(
-                    story.story_id, approved_by=actor, notes=notes
-                )
+                self.approvals.approve(story.story_id, approved_by=actor, notes=notes)
             elif action == "lock":
                 self.approvals.lock(story.story_id, locked_by=actor, notes=notes)
             elif action == "unlock":
-                self.approvals.unlock(
-                    story.story_id, unlocked_by=actor, notes=notes
-                )
+                self.approvals.unlock(story.story_id, unlocked_by=actor, notes=notes)
             else:
-                self.approvals.reopen_for_revision(
-                    story.story_id, reopened_by=actor, notes=notes
-                )
+                self.approvals.reopen_for_revision(story.story_id, reopened_by=actor, notes=notes)
         except (ValueError, StoryApprovalError) as exc:
             self._error(str(exc))
         self.refresh()

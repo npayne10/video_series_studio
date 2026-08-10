@@ -1,4 +1,5 @@
 """Configuration asset validation mixin."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,9 +23,7 @@ else:
 
 
 class ConfigurationValidationMixin(_ConfigurationMixinBase):
-    def _validate_configuration_asset(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_configuration_asset(self, asset: Any, result: AssetValidationResult) -> None:
         self._validate_configuration_required_files(asset, result)
         self._validate_configuration_profile(asset, result)
         self._validate_configuration_description(asset, result)
@@ -44,9 +43,7 @@ class ConfigurationValidationMixin(_ConfigurationMixinBase):
                     {"required_file": name},
                 )
 
-    def _validate_configuration_profile(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_configuration_profile(self, asset: Any, result: AssetValidationResult) -> None:
         path = Path(asset.path) / DEFAULT_PROFILE
         if not path.is_file():
             return
@@ -170,9 +167,7 @@ class ConfigurationValidationMixin(_ConfigurationMixinBase):
         ):
             if field not in profile:
                 continue
-            for reference in self._extract_reference_values(
-                profile[field], field, path, result
-            ):
+            for reference in self._extract_reference_values(profile[field], field, path, result):
                 reference_id = reference.strip()
                 if (
                     reference_id
@@ -215,10 +210,7 @@ class ConfigurationValidationMixin(_ConfigurationMixinBase):
                             ValidationSeverity.WARNING,
                             ValidationCode.INVALID_PROFILE,
                             path,
-                            (
-                                f"Reference entry '{field}[{index}]' does not declare "
-                                "an asset ID."
-                            ),
+                            (f"Reference entry '{field}[{index}]' does not declare an asset ID."),
                         )
                 else:
                     self._add_asset_diagnostic(
@@ -226,10 +218,7 @@ class ConfigurationValidationMixin(_ConfigurationMixinBase):
                         ValidationSeverity.ERROR,
                         ValidationCode.INVALID_PROFILE,
                         path,
-                        (
-                            f"Reference entry '{field}[{index}]' must be a string "
-                            "or object."
-                        ),
+                        (f"Reference entry '{field}[{index}]' must be a string or object."),
                         {"actual_type": type(item).__name__},
                     )
             return reference_ids
@@ -240,9 +229,7 @@ class ConfigurationValidationMixin(_ConfigurationMixinBase):
             nested_reference_ids: list[str] = []
             for key, item in value.items():
                 nested_reference_ids.extend(
-                    self._extract_reference_values(
-                        item, f"{field}.{key}", path, result
-                    )
+                    self._extract_reference_values(item, f"{field}.{key}", path, result)
                 )
             return nested_reference_ids
         self._add_asset_diagnostic(

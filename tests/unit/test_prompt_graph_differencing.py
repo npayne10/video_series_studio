@@ -93,8 +93,7 @@ def test_snapshot_diff_classifies_added_and_modified_nodes() -> None:
     continuity = next(
         change
         for change in diff.changes
-        if change.area is PromptGraphChangeArea.NODE
-        and change.subject == "continuity"
+        if change.area is PromptGraphChangeArea.NODE and change.subject == "continuity"
     )
     assert continuity.kind is PromptGraphChangeKind.MODIFIED
     assert continuity.continuity_sensitive

@@ -38,9 +38,10 @@ def test_loader_writes_and_parses_manifest(tmp_path: Path) -> None:
     loaded = WorkflowManifestLoader(tmp_path).parse_file(path)
 
     assert loaded == manifest
-    assert json.loads(path.read_text(encoding="utf-8"))["metadata"][
-        "workflow_id"
-    ] == manifest.workflow_id
+    assert (
+        json.loads(path.read_text(encoding="utf-8"))["metadata"]["workflow_id"]
+        == manifest.workflow_id
+    )
 
 
 def test_discovery_loads_valid_files_and_reports_invalid_files(
@@ -69,14 +70,9 @@ def test_discovery_handles_duplicates_and_missing_root(tmp_path: Path) -> None:
     result = WorkflowManifestLoader(root).discover(WorkflowRegistry())
 
     assert result.loaded_count == 1
-    assert any(
-        item.level is ManifestDiagnosticLevel.WARNING
-        for item in result.diagnostics
-    )
+    assert any(item.level is ManifestDiagnosticLevel.WARNING for item in result.diagnostics)
 
-    missing = WorkflowManifestLoader(tmp_path / "missing").discover(
-        WorkflowRegistry()
-    )
+    missing = WorkflowManifestLoader(tmp_path / "missing").discover(WorkflowRegistry())
     assert missing.discovered_files == 0
     assert missing.error_count == 0
 

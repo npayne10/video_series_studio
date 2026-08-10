@@ -90,9 +90,5 @@ def keyboard_focus_areas() -> tuple[str, ...]:
 def keyboard_focus_test_nodes() -> tuple[str, ...]:
     """Return deduplicated regression nodes in stable order."""
     return tuple(
-        dict.fromkeys(
-            node
-            for evidence in KEYBOARD_FOCUS_MATRIX
-            for node in evidence.test_nodes
-        )
+        dict.fromkeys(node for evidence in KEYBOARD_FOCUS_MATRIX for node in evidence.test_nodes)
     )

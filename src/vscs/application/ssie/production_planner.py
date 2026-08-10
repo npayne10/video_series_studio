@@ -1,4 +1,5 @@
 """Coordinate camera, lighting, blocking, and continuity planning."""
+
 from __future__ import annotations
 
 from dataclasses import replace

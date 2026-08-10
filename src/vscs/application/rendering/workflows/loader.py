@@ -46,10 +46,7 @@ class ManifestDiscoveryResult:
     @property
     def error_count(self) -> int:
         """Return the number of error diagnostics."""
-        return sum(
-            item.level is ManifestDiagnosticLevel.ERROR
-            for item in self.diagnostics
-        )
+        return sum(item.level is ManifestDiagnosticLevel.ERROR for item in self.diagnostics)
 
 
 class WorkflowManifestLoader:
@@ -67,10 +64,7 @@ class WorkflowManifestLoader:
             raise ValueError("workflow manifest root must be an object")
         manifest = WorkflowManifest.from_dict(raw)
         if manifest.metadata.manifest_version not in self.SUPPORTED_MANIFEST_VERSIONS:
-            raise ValueError(
-                "unsupported manifest version: "
-                f"{manifest.metadata.manifest_version}"
-            )
+            raise ValueError(f"unsupported manifest version: {manifest.metadata.manifest_version}")
         return manifest
 
     def discover(

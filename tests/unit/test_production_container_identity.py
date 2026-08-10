@@ -65,9 +65,7 @@ def test_trailer_selection_generates_trailer_scene_identity(
 
     index = dialog.production_type_combo.findData(ProductionContainerType.TRAILER)
     if index < 0:
-        index = dialog.production_type_combo.findData(
-            ProductionContainerType.TRAILER.value
-        )
+        index = dialog.production_type_combo.findData(ProductionContainerType.TRAILER.value)
     assert index >= 0
     dialog.production_type_combo.setCurrentIndex(index)
 
@@ -113,13 +111,9 @@ def test_container_controls_have_vkf_and_live_documentation(
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
     assert (
-        dialog.knowledge_provider.topic_for(dialog.production_type_combo)
-        == "scene.production_type"
+        dialog.knowledge_provider.topic_for(dialog.production_type_combo) == "scene.production_type"
     )
-    assert (
-        dialog.knowledge_provider.topic_for(dialog.episode_id_edit)
-        == "scene.container_id"
-    )
+    assert dialog.knowledge_provider.topic_for(dialog.episode_id_edit) == "scene.container_id"
     dialog.show_live_topic("scene.production_type")
     assert dialog.documentation_panel.topic_id == "scene.production_type"
     assert "Production Type" in dialog.documentation_panel.content_label.text()

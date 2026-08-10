@@ -1,4 +1,5 @@
 """Validation rules for SSIE foundation models."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -26,9 +27,7 @@ class SSIEValidationResult:
 
     @property
     def passed(self) -> bool:
-        return not any(
-            issue.severity is SSIEValidationSeverity.ERROR for issue in self.issues
-        )
+        return not any(issue.severity is SSIEValidationSeverity.ERROR for issue in self.issues)
 
 
 class SSIEValidator:
@@ -53,10 +52,7 @@ class SSIEValidator:
                 "Scene sequence number must be at least 1.",
                 scene.scene_id,
             )
-        if (
-            scene.estimated_duration_seconds is not None
-            and scene.estimated_duration_seconds <= 0
-        ):
+        if scene.estimated_duration_seconds is not None and scene.estimated_duration_seconds <= 0:
             self._error(
                 result,
                 "INVALID_SCENE_DURATION",
@@ -115,10 +111,7 @@ class SSIEValidator:
                     "Shot description must not be empty.",
                     shot.shot_id,
                 )
-            if (
-                shot.estimated_duration_seconds is not None
-                and shot.estimated_duration_seconds <= 0
-            ):
+            if shot.estimated_duration_seconds is not None and shot.estimated_duration_seconds <= 0:
                 self._error(
                     result,
                     "INVALID_SHOT_DURATION",

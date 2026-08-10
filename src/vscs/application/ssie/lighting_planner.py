@@ -1,4 +1,5 @@
 """Deterministic lighting planning for SSIE shots."""
+
 from __future__ import annotations
 
 from .models import LightingMood, LightingPlan, Scene, ShotPlan, ShotPurpose

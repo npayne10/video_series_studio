@@ -100,9 +100,7 @@ def test_asset_enrichment_adds_canonical_graph_source_and_inventory() -> None:
         resolver,
     )
 
-    result = service.enrich(
-        PromptAssetEnrichmentRequest("SHT-001", ("CAP-SHP-IRON-HORIZON",))
-    )
+    result = service.enrich(PromptAssetEnrichmentRequest("SHT-001", ("CAP-SHP-IRON-HORIZON",)))
 
     assert result.ready
     assert result.canonical_asset_ids == ("CAP-SHP-IRON-HORIZON",)
@@ -127,21 +125,23 @@ def test_builder_receives_enriched_assets_without_losing_existing_sources() -> N
         _Canonical(),  # type: ignore[arg-type]
         resolver,
     )
-    service.enrich(
-        PromptAssetEnrichmentRequest("SHT-001", ("CAP-SHP-IRON-HORIZON",))
-    )
-    graph = PromptGraphBuilder(
-        resolver,
-        PromptGraphDiagnosticsFactory(),
-    ).build(
-        PromptGraphBuildContext(
-            "GRAPH-001",
-            "XORIX",
-            "EP-001",
-            "SCN-001",
-            "SHT-001",
+    service.enrich(PromptAssetEnrichmentRequest("SHT-001", ("CAP-SHP-IRON-HORIZON",)))
+    graph = (
+        PromptGraphBuilder(
+            resolver,
+            PromptGraphDiagnosticsFactory(),
         )
-    ).graph
+        .build(
+            PromptGraphBuildContext(
+                "GRAPH-001",
+                "XORIX",
+                "EP-001",
+                "SCN-001",
+                "SHT-001",
+            )
+        )
+        .graph
+    )
 
     ship = next(node for node in graph.nodes if node.kind is PromptNodeKind.SHIP)
     assert ship.canonical_asset_id == "CAP-SHP-IRON-HORIZON"

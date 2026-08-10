@@ -30,9 +30,7 @@ class GuidedNavigationSceneEditorDialog(BeginnerWorkflowSceneEditorDialog):
             self._workflow_targets(),
             {step.step_id: step.topic_id for step in SCENE_WORKFLOW_STEPS},
         )
-        self.workflow_navigator.navigation_started.connect(
-            self.workflow_checklist.set_active_step
-        )
+        self.workflow_navigator.navigation_started.connect(self.workflow_checklist.set_active_step)
 
     def _workflow_targets(self) -> dict[str, QWidget]:
         """Return exact focus targets for every Scene Editor workflow step."""

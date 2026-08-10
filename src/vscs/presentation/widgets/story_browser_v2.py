@@ -44,9 +44,7 @@ class StoryBrowserV2Widget(StoryBrowserWidget):
         self.setObjectName("storyBrowserV2")
         self._install_dashboard()
         self._install_filters()
-        self.tree.setHeaderLabels(
-            ("Production Item", "Type", "Status", "Duration", "Assets")
-        )
+        self.tree.setHeaderLabels(("Production Item", "Type", "Status", "Duration", "Assets"))
         self.tree.setSortingEnabled(False)
         self.tree.setUniformRowHeights(True)
         self.tree.currentItemChanged.connect(self._update_action_state)

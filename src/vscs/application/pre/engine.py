@@ -104,7 +104,10 @@ class ProductionReadinessEngine:
         metrics = semantic.get("metrics", [])
         if isinstance(metrics, list):
             for metric in metrics:
-                if isinstance(metric, dict) and str(metric.get("name", "")).casefold() == "canon consistency":
+                if (
+                    isinstance(metric, dict)
+                    and str(metric.get("name", "")).casefold() == "canon consistency"
+                ):
                     score = metric.get("score")
                     if isinstance(score, int) and 0 <= score <= 100:
                         return score
@@ -119,7 +122,9 @@ class ProductionReadinessEngine:
                 continue
             for metric in metrics:
                 if isinstance(metric, dict) and metric.get("blocking") is True:
-                    reasons.append(f"{label}: {metric.get('name', 'blocking failure')} — {metric.get('summary', '')}".strip())
+                    reasons.append(
+                        f"{label}: {metric.get('name', 'blocking failure')} — {metric.get('summary', '')}".strip()
+                    )
         return tuple(reasons)
 
     @staticmethod
@@ -147,9 +152,13 @@ class ProductionReadinessEngine:
             values.extend(str(value).strip() for value in raw if str(value).strip())
         warnings = technical.get("warnings", [])
         if isinstance(warnings, list):
-            values.extend(f"Resolve technical issue: {value}" for value in warnings if str(value).strip())
+            values.extend(
+                f"Resolve technical issue: {value}" for value in warnings if str(value).strip()
+            )
         if risk in {CanonRisk.HIGH, CanonRisk.CRITICAL}:
-            values.append("Do not approve as a canon-locked Primary until canon violations are resolved.")
+            values.append(
+                "Do not approve as a canon-locked Primary until canon violations are resolved."
+            )
         if blocking:
             values.append("Regenerate after resolving every blocking evaluation failure.")
         return tuple(dict.fromkeys(values))

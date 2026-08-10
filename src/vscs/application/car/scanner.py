@@ -323,8 +323,7 @@ class CarRepositoryScanner:
                     severity="warning",
                     code="unknown_asset_class",
                     message=(
-                        f"Unable to classify category '{category}' with CAP prefix "
-                        f"'{prefix}'."
+                        f"Unable to classify category '{category}' with CAP prefix '{prefix}'."
                     ),
                     path=str(path.relative_to(self.root)),
                 )
@@ -364,13 +363,10 @@ class CarRepositoryScanner:
         try:
             relative = path.relative_to(self.root)
         except ValueError as error:
-            raise CarScanError(
-                f"Asset directory is outside CAR root: {path}"
-            ) from error
+            raise CarScanError(f"Asset directory is outside CAR root: {path}") from error
         if len(relative.parts) != 2:
             raise CarScanError(
-                "Asset directory must be directly below a category directory: "
-                f"{relative}"
+                f"Asset directory must be directly below a category directory: {relative}"
             )
 
     def _read_json(
@@ -398,8 +394,7 @@ class CarRepositoryScanner:
                     severity="warning",
                     code="json_invalid",
                     message=(
-                        f"Invalid JSON at line {error.lineno}, column {error.colno}: "
-                        f"{error.msg}"
+                        f"Invalid JSON at line {error.lineno}, column {error.colno}: {error.msg}"
                     ),
                     path=str(path.relative_to(self.root)),
                 )
@@ -457,9 +452,7 @@ def detect_repository_version(
 
     folder_names = set(folders or ())
     if not folder_names:
-        folder_names = {
-            child.name for child in asset_directory.iterdir() if child.is_dir()
-        }
+        folder_names = {child.name for child in asset_directory.iterdir() if child.is_dir()}
 
     if "canon" in folder_names or "metadata" in folder_names:
         return "2.0"

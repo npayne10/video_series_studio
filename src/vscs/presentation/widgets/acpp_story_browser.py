@@ -36,8 +36,7 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         self.acpp_button = QPushButton("ACPP Editor", self)
         self.acpp_button.setObjectName("openACPPEditor")
         self.acpp_button.setToolTip(
-            "Create or edit the Advanced Clip Production Package "
-            "for the selected shot."
+            "Create or edit the Advanced Clip Production Package for the selected shot."
         )
         toolbar_item = self.layout().itemAt(2)
         toolbar = toolbar_item.layout() if toolbar_item is not None else None
@@ -54,10 +53,7 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
         if not hasattr(self, "acpp_button"):
             return
         try:
-            packages = {
-                package.identity.shot_id: package
-                for package in self.acpp.list_packages()
-            }
+            packages = {package.identity.shot_id: package for package in self.acpp.list_packages()}
         except (ProjectNotOpenError, ACPPEditorError):
             self.acpp_button.setEnabled(False)
             return
@@ -104,15 +100,9 @@ class ACPPStoryBrowserWidget(ShotPlanningStoryBrowserWidget):
     def _select_production_shot(self, shot_id: str) -> None:
         for item in self._walk_items():
             data = item.data(0, Qt.ItemDataRole.UserRole)
-            if (
-                data
-                and str(data[0]) == self.SHOT_KIND
-                and str(data[1]) == shot_id
-            ):
+            if data and str(data[0]) == self.SHOT_KIND and str(data[1]) == shot_id:
                 self.tree.setCurrentItem(item)
                 return
 
     def _update_acpp_action_state(self, *_args: object) -> None:
-        self.acpp_button.setEnabled(
-            self._selected_production_shot_id() is not None
-        )
+        self.acpp_button.setEnabled(self._selected_production_shot_id() is not None)

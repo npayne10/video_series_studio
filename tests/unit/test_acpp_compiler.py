@@ -55,9 +55,7 @@ def test_compiler_creates_one_package_per_shot_in_order() -> None:
         shot.shot_id for shot in plan.scene_plans[0].shots
     ]
     assert packages[0].identity.clip_id.endswith("SC002-SH001-CL001")
-    assert packages[-1].identity.clip_id.endswith(
-        f"SC002-SH{len(packages):03d}-CL001"
-    )
+    assert packages[-1].identity.clip_id.endswith(f"SC002-SH{len(packages):03d}-CL001")
 
 
 def test_compiler_converts_duration_to_frames() -> None:

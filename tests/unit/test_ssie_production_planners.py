@@ -1,4 +1,5 @@
 """Tests for SSIE camera, lighting, blocking, and continuity planning."""
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -63,15 +64,12 @@ def test_camera_planner_maps_cinematic_intent() -> None:
 def test_lighting_planner_preserves_scene_continuity_key() -> None:
     plan = RuleBasedScenePlanner().plan_scene(_scene())
     continuity_keys = {
-        shot.lighting_plan.continuity_key
-        for shot in plan.shots
-        if shot.lighting_plan is not None
+        shot.lighting_plan.continuity_key for shot in plan.shots if shot.lighting_plan is not None
     }
 
     assert continuity_keys == {"LOC-MAURITANIA-BRIDGE:night:tense"}
     assert all(
-        shot.lighting_plan is not None
-        and shot.lighting_plan.mood is LightingMood.TENSE
+        shot.lighting_plan is not None and shot.lighting_plan.mood is LightingMood.TENSE
         for shot in plan.shots
     )
 
@@ -102,13 +100,9 @@ def test_continuity_planner_links_consecutive_shots() -> None:
         for requirement in first.continuity_plan.incoming_requirements
     )
     assert any(
-        first.shot_id in requirement
-        for requirement in second.continuity_plan.incoming_requirements
+        first.shot_id in requirement for requirement in second.continuity_plan.incoming_requirements
     )
-    assert any(
-        "PROP-BRIDGE-CONSOLE" in state
-        for state in second.continuity_plan.prop_states
-    )
+    assert any("PROP-BRIDGE-CONSOLE" in state for state in second.continuity_plan.prop_states)
 
 
 def test_validator_rejects_partial_production_enrichment() -> None:
@@ -125,7 +119,4 @@ def test_validator_rejects_partial_production_enrichment() -> None:
     result = SSIEValidator().validate_scene_plan(invalid_plan)
 
     assert result.passed is False
-    assert any(
-        issue.code == "INCOMPLETE_SHOT_PRODUCTION_PLAN"
-        for issue in result.issues
-    )
+    assert any(issue.code == "INCOMPLETE_SHOT_PRODUCTION_PLAN" for issue in result.issues)

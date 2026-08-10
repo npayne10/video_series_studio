@@ -245,13 +245,9 @@ class PromptGraphDiffer:
     ) -> list[PromptGraphChange]:
         changes: list[PromptGraphChange] = []
         for value in sorted(set(before) - set(after)):
-            changes.append(
-                PromptGraphChange(PromptGraphChangeKind.REMOVED, area, value, value, "")
-            )
+            changes.append(PromptGraphChange(PromptGraphChangeKind.REMOVED, area, value, value, ""))
         for value in sorted(set(after) - set(before)):
-            changes.append(
-                PromptGraphChange(PromptGraphChangeKind.ADDED, area, value, "", value)
-            )
+            changes.append(PromptGraphChange(PromptGraphChangeKind.ADDED, area, value, "", value))
         return changes
 
     @staticmethod

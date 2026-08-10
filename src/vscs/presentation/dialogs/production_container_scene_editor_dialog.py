@@ -53,9 +53,7 @@ class ProductionContainerSceneEditorDialog(LiveDocumentationSceneEditorDialog):
 
         self.production_type_combo = QComboBox(self)
         self.production_type_combo.setObjectName("sceneProductionContainerType")
-        self.production_type_combo.setToolTip(
-            "Choose the kind of production that owns this scene."
-        )
+        self.production_type_combo.setToolTip("Choose the kind of production that owns this scene.")
         for container_type in ProductionContainerType:
             self.production_type_combo.addItem(
                 container_type.label,
@@ -89,9 +87,7 @@ class ProductionContainerSceneEditorDialog(LiveDocumentationSceneEditorDialog):
         self._bind_live_topic(self.production_type_combo, "scene.production_type")
         self._bind_live_topic(self.episode_id_edit, "scene.container_id")
 
-        self.production_type_combo.currentIndexChanged.connect(
-            self._production_type_changed
-        )
+        self.production_type_combo.currentIndexChanged.connect(self._production_type_changed)
         self.episode_id_edit.editingFinished.connect(self._normalize_container_field)
 
         if self._editing:

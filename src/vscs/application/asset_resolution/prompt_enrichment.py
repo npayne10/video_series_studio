@@ -31,9 +31,7 @@ class PromptAssetEnrichmentRequest:
     def __post_init__(self) -> None:
         shot_id = self.shot_id.strip()
         normalized_ids = (
-            asset_id.strip().upper()
-            for asset_id in self.asset_ids
-            if asset_id.strip()
+            asset_id.strip().upper() for asset_id in self.asset_ids if asset_id.strip()
         )
         asset_ids = tuple(dict.fromkeys(normalized_ids))
         if not shot_id:
@@ -68,8 +66,7 @@ class PromptAssetEnrichmentResult:
     @property
     def ready(self) -> bool:
         return not any(
-            diagnostic.severity is AssetResolutionSeverity.ERROR
-            for diagnostic in self.diagnostics
+            diagnostic.severity is AssetResolutionSeverity.ERROR for diagnostic in self.diagnostics
         )
 
 
@@ -99,9 +96,7 @@ class PromptGraphAssetEnrichmentService:
             if resolution.asset is None or resolution.cap is None:
                 continue
 
-            references = tuple(
-                reference.reference_id for reference in canonical.references
-            )
+            references = tuple(reference.reference_id for reference in canonical.references)
             content = self._content(
                 resolution.cap.canonical_description,
                 resolution.cap.visual_identity,
@@ -140,9 +135,7 @@ class PromptGraphAssetEnrichmentService:
                     asset_id,
                     resolution.asset.checksum,
                     resolution.cap.checksum,
-                    tuple(
-                        reference.checksum for reference in canonical.references
-                    ),
+                    tuple(reference.checksum for reference in canonical.references),
                 )
             )
 

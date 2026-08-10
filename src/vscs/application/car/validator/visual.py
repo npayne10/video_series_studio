@@ -1,4 +1,5 @@
 """Visual asset validation mixin."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,9 +34,7 @@ class VisualValidationMixin(_VisualMixinBase):
         self._validate_canonical_images(asset, result)
         self._validate_visual_prompts(asset, result)
 
-    def _validate_visual_directories(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_visual_directories(self, asset: Any, result: AssetValidationResult) -> None:
         for name in VISUAL_REQUIRED_DIRECTORIES:
             path = Path(asset.path) / name
             if not path.exists() or not path.is_dir():
@@ -48,9 +47,7 @@ class VisualValidationMixin(_VisualMixinBase):
                     {"directory": name},
                 )
 
-    def _validate_visual_manifest(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_visual_manifest(self, asset: Any, result: AssetValidationResult) -> None:
         path = Path(asset.path) / DEFAULT_MANIFEST
         if not path.is_file():
             self._add_asset_diagnostic(
@@ -79,9 +76,7 @@ class VisualValidationMixin(_VisualMixinBase):
         self._validate_declared_asset_id(asset, result, payload, path, DEFAULT_MANIFEST)
         self._record_file_hash(path, result, False)
 
-    def _validate_visual_metadata(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_visual_metadata(self, asset: Any, result: AssetValidationResult) -> None:
         directory = Path(asset.path) / METADATA_FOLDER
         if not directory.is_dir():
             return
@@ -114,9 +109,7 @@ class VisualValidationMixin(_VisualMixinBase):
             self._validate_declared_asset_id(asset, result, payload, path, name)
             self._record_file_hash(path, result, False)
 
-    def _validate_canonical_images(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_canonical_images(self, asset: Any, result: AssetValidationResult) -> None:
         directory = Path(asset.path) / CANON_FOLDER
         if not directory.is_dir():
             return
@@ -152,9 +145,7 @@ class VisualValidationMixin(_VisualMixinBase):
                 continue
             self._record_file_hash(path, result, True)
 
-    def _validate_visual_prompts(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_visual_prompts(self, asset: Any, result: AssetValidationResult) -> None:
         directory = Path(asset.path) / PROMPTS_FOLDER
         if not directory.is_dir():
             return
@@ -194,7 +185,5 @@ class VisualValidationMixin(_VisualMixinBase):
                     path, result, ValidationCode.INVALID_JSON, "visual prompt JSON"
                 )
                 if payload is not None:
-                    self._validate_declared_asset_id(
-                        asset, result, payload, path, path.name
-                    )
+                    self._validate_declared_asset_id(asset, result, payload, path, path.name)
             self._record_file_hash(path, result, False)

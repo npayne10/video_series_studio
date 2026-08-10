@@ -76,9 +76,9 @@ def test_default_registry_resolves_preview_and_production() -> None:
 
 
 def test_renderer_compiler_preserves_positive_negative_separation() -> None:
-    profile = RendererPromptProfileRegistry(
-        default_renderer_prompt_profiles()
-    ).resolve(RendererKind.COMFYUI, QualityLevel.PRODUCTION)
+    profile = RendererPromptProfileRegistry(default_renderer_prompt_profiles()).resolve(
+        RendererKind.COMFYUI, QualityLevel.PRODUCTION
+    )
 
     compiled = RendererPromptCompiler().compile(_package(), profile)
 

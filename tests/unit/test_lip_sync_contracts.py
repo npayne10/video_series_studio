@@ -41,9 +41,7 @@ def test_single_speaker_lip_sync_requires_matching_face_target() -> None:
         mode=LipSyncMode.SINGLE_SPEAKER,
         source_video_path="renders/SCN-001/CLIP-001.mp4",
         output_directory="renders/SCN-001/lipsync",
-        dialogue_cues=(
-            _cue("CUE-001", "CHR-JAMES", 0.5, 2.0, "FACE-JAMES"),
-        ),
+        dialogue_cues=(_cue("CUE-001", "CHR-JAMES", 0.5, 2.0, "FACE-JAMES"),),
         targets=(
             LipSyncTarget(
                 target_id="FACE-JAMES",
@@ -90,12 +88,8 @@ def test_lip_sync_modes_validate_off_screen_and_precision_rules() -> None:
             mode=LipSyncMode.PRECISION_CLOSE_UP,
             source_video_path="renders/clip.mp4",
             output_directory="renders/lipsync",
-            dialogue_cues=(
-                _cue("CUE-001", "CHR-JAMES", 0.0, 1.0, "FACE-JAMES"),
-            ),
-            targets=(
-                LipSyncTarget("FACE-JAMES", "CHR-JAMES"),
-            ),
+            dialogue_cues=(_cue("CUE-001", "CHR-JAMES", 0.0, 1.0, "FACE-JAMES"),),
+            targets=(LipSyncTarget("FACE-JAMES", "CHR-JAMES"),),
         )
 
 

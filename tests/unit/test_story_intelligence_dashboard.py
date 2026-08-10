@@ -167,9 +167,7 @@ def test_dashboard_exposes_review_xpd_cap_and_readiness_metrics(tmp_path: Path) 
 def test_dashboard_distinguishes_planning_readiness_from_cap_readiness(tmp_path: Path) -> None:
     assets = _Assets(
         tmp_path,
-        (
-            _asset("CAP-SHP-001", "Iron Horizon", AssetCategory.SHIP, "Review"),
-        ),
+        (_asset("CAP-SHP-001", "Iron Horizon", AssetCategory.SHIP, "Review"),),
     )
     intelligence = ApprovedStoryIntelligenceService(assets)
     dashboard = StoryIntelligenceDashboardService(assets, intelligence)
@@ -195,9 +193,7 @@ def test_dashboard_distinguishes_planning_readiness_from_cap_readiness(tmp_path:
 def test_dashboard_marks_fully_reviewed_cap_ready_story_ready(tmp_path: Path) -> None:
     assets = _Assets(
         tmp_path,
-        (
-            _asset("CAP-CHR-001", "Commander James Spence", AssetCategory.CHARACTER, "Locked"),
-        ),
+        (_asset("CAP-CHR-001", "Commander James Spence", AssetCategory.CHARACTER, "Locked"),),
     )
     intelligence = ApprovedStoryIntelligenceService(assets)
     dashboard = StoryIntelligenceDashboardService(assets, intelligence)

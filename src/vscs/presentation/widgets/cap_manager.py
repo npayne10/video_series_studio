@@ -143,9 +143,7 @@ class CanonicalReferenceEditorDialog(QDialog):
     def _load(self, reference: CanonicalReference) -> None:
         self.title.setText(reference.title)
         self.file_path.setText(str(reference.file_path))
-        self.reference_type.setCurrentIndex(
-            self.reference_type.findData(reference.reference_type)
-        )
+        self.reference_type.setCurrentIndex(self.reference_type.findData(reference.reference_type))
         self.role.setCurrentIndex(self.role.findData(reference.role))
         self.version.setText(reference.version)
         self.status.setCurrentIndex(self.status.findData(reference.status))
@@ -348,11 +346,7 @@ class CAPEditorDialog(QDialog):
         return None if item is None else int(item.data(Qt.ItemDataRole.UserRole))
 
     def _add_reference(self) -> None:
-        if (
-            self.profile is None
-            or self.reference_service is None
-            or self.project_directory is None
-        ):
+        if self.profile is None or self.reference_service is None or self.project_directory is None:
             return
         dialog = CanonicalReferenceEditorDialog(self.project_directory, parent=self)
         if not dialog.exec():

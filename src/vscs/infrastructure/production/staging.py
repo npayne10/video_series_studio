@@ -174,13 +174,9 @@ class AssetStager:
             raise AssetStagingError("Staging manifest checksum mismatch")
         for artifact in manifest.artifacts:
             if not artifact.staged_path.is_file():
-                raise AssetStagingError(
-                    f"Staged artifact is missing: {artifact.staged_path}"
-                )
+                raise AssetStagingError(f"Staged artifact is missing: {artifact.staged_path}")
             if self.file_checksum(artifact.staged_path) != artifact.checksum:
-                raise AssetStagingError(
-                    f"Staged artifact checksum mismatch: {artifact.asset_id}"
-                )
+                raise AssetStagingError(f"Staged artifact checksum mismatch: {artifact.asset_id}")
 
     def cleanup(self, manifest: StagingManifest) -> None:
         """Remove one job staging directory without deleting shared cache data."""
@@ -193,12 +189,15 @@ class AssetStager:
     @staticmethod
     def dumps(manifest: StagingManifest) -> str:
         """Serialize a staging manifest to stable JSON."""
-        return json.dumps(
-            AssetStager.to_dict(manifest),
-            indent=2,
-            sort_keys=True,
-            ensure_ascii=False,
-        ) + "\n"
+        return (
+            json.dumps(
+                AssetStager.to_dict(manifest),
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
 
     @staticmethod
     def loads(payload: str) -> StagingManifest:
@@ -251,17 +250,14 @@ class AssetStager:
                     size_bytes=int(item["size_bytes"]),
                     cache_reused=bool(item["cache_reused"]),
                     metadata=tuple(
-                        (str(value[0]), str(value[1]))
-                        for value in item.get("metadata", [])
+                        (str(value[0]), str(value[1])) for value in item.get("metadata", [])
                     ),
                 )
                 for item in raw.get("artifacts", [])
             ),
             checksum=str(raw["checksum"]),
             schema_version=str(raw.get("schema_version", "1.0")),
-            metadata={
-                str(key): str(value) for key, value in raw.get("metadata", {}).items()
-            },
+            metadata={str(key): str(value) for key, value in raw.get("metadata", {}).items()},
         )
 
     def _stage_item(self, item: StagingPlanItem) -> StagedArtifact | None:
@@ -287,9 +283,7 @@ class AssetStager:
         if self.config.verify_after_copy:
             staged_checksum = self.file_checksum(item.destination_path)
             if staged_checksum != checksum:
-                raise AssetStagingError(
-                    f"Staged checksum mismatch for {request.asset_id}"
-                )
+                raise AssetStagingError(f"Staged checksum mismatch for {request.asset_id}")
         return StagedArtifact(
             asset_id=request.asset_id,
             kind=request.kind,
@@ -365,9 +359,7 @@ class AssetStager:
     @staticmethod
     def _safe_segment(value: str) -> str:
         safe = "".join(
-            character
-            if character.isalnum() or character in "-_."
-            else "_"
+            character if character.isalnum() or character in "-_." else "_"
             for character in value.strip()
         )
         if safe in {"", ".", ".."}:

@@ -58,9 +58,7 @@ def test_registry_selects_compatible_executor() -> None:
     )
     image = MockProductionExecutor(
         executor_id="image",
-        capabilities=frozenset(
-            {RenderCapability.TEXT_TO_VIDEO, RenderCapability.IMAGE_TO_VIDEO}
-        ),
+        capabilities=frozenset({RenderCapability.TEXT_TO_VIDEO, RenderCapability.IMAGE_TO_VIDEO}),
     )
     registry.register(text)
     registry.register(image)
@@ -74,9 +72,7 @@ def test_registry_selects_compatible_executor() -> None:
 
 def test_registry_rejects_duplicates_and_unsupported_jobs() -> None:
     registry = ExecutorRegistry()
-    executor = MockProductionExecutor(
-        capabilities=frozenset({RenderCapability.TEXT_TO_VIDEO})
-    )
+    executor = MockProductionExecutor(capabilities=frozenset({RenderCapability.TEXT_TO_VIDEO}))
     registry.register(executor)
 
     with pytest.raises(ExecutorRegistryError):

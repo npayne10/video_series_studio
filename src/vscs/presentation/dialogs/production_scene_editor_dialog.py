@@ -109,9 +109,7 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
         self.time_of_day_edit.hide()
         self.time_of_day_edit.deleteLater()
 
-        previous_transition = (
-            scene.transition_in if scene is not None else SceneTransition.CUT
-        )
+        previous_transition = scene.transition_in if scene is not None else SceneTransition.CUT
         old_transition_combo = self.transition_combo
         self.transition_combo = TransitionComboBox(self)
         self.transition_combo.setObjectName("sceneTransitionSelector")
@@ -175,9 +173,7 @@ class ProductionSceneEditorDialog(StructuredSceneEditorDialog):
                 self.production_estimate_label,
             )
 
-        self.duration_preset_combo.currentIndexChanged.connect(
-            self._apply_duration_preset
-        )
+        self.duration_preset_combo.currentIndexChanged.connect(self._apply_duration_preset)
         self.duration_spin.valueChanged.connect(self._duration_changed)
         self._select_matching_preset(self.duration_spin.value())
         self._update_production_estimate()

@@ -40,9 +40,7 @@ class WorkflowDiagnosticsFormatter:
             (CompatibilitySeverity.INFO, "Information"),
         )
         for severity, heading in grouped:
-            items = tuple(
-                item for item in report.diagnostics if item.severity is severity
-            )
+            items = tuple(item for item in report.diagnostics if item.severity is severity)
             if not items:
                 continue
             lines.extend(("", f"{heading}:"))
@@ -73,9 +71,7 @@ class WorkflowDiagnosticsFormatter:
             (ManifestDiagnosticLevel.INFO, "Information"),
         )
         for level, heading in grouped:
-            items = tuple(
-                item for item in result.diagnostics if item.level is level
-            )
+            items = tuple(item for item in result.diagnostics if item.level is level)
             if not items:
                 continue
             lines.extend(("", f"{heading}:"))
