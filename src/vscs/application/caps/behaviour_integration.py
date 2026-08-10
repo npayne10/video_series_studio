@@ -46,7 +46,9 @@ class CAPBehaviourIntegrationService:
             if asset.category not in profile.applicable_asset_categories:
                 continue
             resolved.append(profile)
-        return tuple(sorted(resolved, key=lambda profile: (profile.name.lower(), profile.profile_id)))
+        return tuple(
+            sorted(resolved, key=lambda profile: (profile.name.lower(), profile.profile_id))
+        )
 
     def resolve_for_cap(self, asset_id: str) -> tuple[BehaviourProfile, ...]:
         """Resolve all persisted CAP BEP identities to authoritative versions."""
@@ -78,9 +80,7 @@ class CAPBehaviourIntegrationService:
         asset = self.caps.assets.get(cap.asset_id)
         normalized = tuple(
             dict.fromkeys(
-                profile_id.strip().upper()
-                for profile_id in profile_ids
-                if profile_id.strip()
+                profile_id.strip().upper() for profile_id in profile_ids if profile_id.strip()
             )
         )
         for profile_id in normalized:
