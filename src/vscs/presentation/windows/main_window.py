@@ -24,6 +24,7 @@ from vscs.application.assets import AssetService
 from vscs.application.behaviours import ensure_behaviour_profile_service
 from vscs.application.caps import (
     CanonicalReferenceService,
+    CAPBehaviourIntegrationService,
     CAPGeneratorService,
     CAPService,
     ProductionProjectionService,
@@ -38,6 +39,7 @@ from vscs.presentation.dialogs.settings_dialog import SettingsDialog
 from vscs.presentation.widgets.asset_manager import AssetManagerWidget
 from vscs.presentation.widgets.asset_readiness_column import install_asset_readiness_column
 from vscs.presentation.widgets.behaviour_profile_manager import BehaviourProfileManagerWidget
+from vscs.presentation.widgets.cap_behaviour_profiles import install_cap_behaviour_profiles
 from vscs.presentation.widgets.cap_derived_reference_generation import (
     install_derived_reference_generation,
 )
@@ -59,6 +61,13 @@ class MainWindow(QMainWindow):
         self.assets = services.require(AssetService)
         self.caps = services.require(CAPService)
         self.behaviours = ensure_behaviour_profile_service(services)
+        cap_behaviour_integration = services.get(CAPBehaviourIntegrationService)
+        if cap_behaviour_integration is None:
+            cap_behaviour_integration = services.register(
+                CAPBehaviourIntegrationService,
+                CAPBehaviourIntegrationService(self.caps, self.behaviours),
+            )
+        self.cap_behaviour_integration = cap_behaviour_integration
         self.cap_generator = services.get(CAPGeneratorService)
         self.canonical_references = services.get(CanonicalReferenceService)
         self.production_projection = services.get(ProductionProjectionService)
@@ -186,6 +195,10 @@ class MainWindow(QMainWindow):
         self.cap_readiness_button = install_cap_readiness(
             self.cap_manager,
             self.production_projection,
+        )
+        self.cap_behaviour_profiles_button = install_cap_behaviour_profiles(
+            self.cap_manager,
+            self.cap_behaviour_integration,
         )
         self.content_stack.addWidget(self.cap_manager)
         self.behaviour_manager = BehaviourProfileManagerWidget(
@@ -335,6 +348,8 @@ class MainWindow(QMainWindow):
             self.derived_reference_button.setEnabled(active)
         if self.cap_readiness_button is not None:
             self.cap_readiness_button.setEnabled(active)
+        if not active:
+            self.cap_behaviour_profiles_button.setEnabled(False)
         self.dashboard.new_project_button.setEnabled(not active)
         self.dashboard.open_project_button.setEnabled(not active)
 
