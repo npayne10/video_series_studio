@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from vscs.application.projects import ProjectService
+from vscs.application.shots import ShotPlanningService
 from vscs.infrastructure.services import ApplicationServices
 
 from .approval import StoryApprovalService
@@ -11,6 +12,7 @@ from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
 from .metadata import StoryMetadataService
 from .service import StoryService
+from .shot_planning import GovernedShotPlanningService
 from .status import StoryStatusService
 
 
@@ -89,3 +91,18 @@ def register_scene_planning(services: ApplicationServices) -> IterativeScenePlan
         services.require(StoryService),
     )
     return services.register(IterativeScenePlanningService, planner)
+
+
+def register_governed_shot_planning(
+    services: ApplicationServices,
+) -> GovernedShotPlanningService:
+    """Register authoritative Shot Planning beneath governed Scene Planning."""
+    existing = services.get(GovernedShotPlanningService)
+    if existing is not None:
+        return existing
+    planner = GovernedShotPlanningService(
+        services.require(ProjectService),
+        register_scene_planning(services),
+        services.require(ShotPlanningService),
+    )
+    return services.register(GovernedShotPlanningService, planner)
