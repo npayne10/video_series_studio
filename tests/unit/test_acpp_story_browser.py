@@ -7,6 +7,9 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from vscs.application.acpp import ACPPEditorService
+from vscs.application.asset_resolution import AssetBrowserService
+from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
 from vscs.application.ssie import Scene
@@ -51,19 +54,24 @@ def test_story_browser_enables_acpp_only_for_production_shot(
         description="Master view of the bridge.",
     )
     context.services.require(ShotPlanningService).save_shot(shot)
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
-    window.story_browser.refresh()
+    browser = ACPPStoryBrowserWidget(
+        context.services.require(StoryService),
+        context.services.require(AssetService),
+        context.services.require(ShotPlanningService),
+        context.services.require(ACPPEditorService),
+        context.services.require(AssetBrowserService),
+    )
+    qtbot.addWidget(browser)  # type: ignore[attr-defined]
+    browser.refresh()
 
-    assert isinstance(window.story_browser, ACPPStoryBrowserWidget)
-    assert not window.story_browser.acpp_button.isEnabled()
+    assert not browser.acpp_button.isEnabled()
     production_shot = next(
         item
-        for item in window.story_browser._walk_items()
+        for item in browser._walk_items()
         if (data := item.data(0, Qt.ItemDataRole.UserRole))
-        and str(data[0]) == window.story_browser.SHOT_KIND
+        and str(data[0]) == browser.SHOT_KIND
     )
-    window.story_browser.tree.setCurrentItem(production_shot)
+    browser.tree.setCurrentItem(production_shot)
     qapp.processEvents()
-    assert window.story_browser.acpp_button.isEnabled()
+    assert browser.acpp_button.isEnabled()
     context.shutdown()
