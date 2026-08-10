@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from vscs.application.acpp import ACPPEditorService
-from vscs.application.asset_resolution import AssetBrowserService
+from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
@@ -37,6 +37,7 @@ def test_story_browser_enables_acpp_only_for_production_shot(
 ) -> None:
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
+    register_asset_resolution(context.services)
     scene = Scene(
         scene_id="EP-001-SCN-001",
         episode_id="EP-001",
