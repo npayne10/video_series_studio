@@ -23,10 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.asset_resolution import (
-    AssetResolutionRequest,
-    AssetResolutionStatus,
-)
+from vscs.application.asset_resolution import AssetResolutionRequest, AssetResolutionStatus
 from vscs.application.story import (
     AssetBindingStatus,
     GovernedAssetResolutionError,
