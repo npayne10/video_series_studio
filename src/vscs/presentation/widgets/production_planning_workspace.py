@@ -179,7 +179,9 @@ def _refresh_authoritative_overview(
         episode_item.setData(0, Qt.ItemDataRole.UserRole, (EPISODE_KIND, episode.episode_id))
         workspace.tree.addTopLevelItem(episode_item)
 
-        for scene in sorted(by_episode.get(episode.episode_id, []), key=lambda item: item.sequence_number):
+        for scene in sorted(
+            by_episode.get(episode.episode_id, []), key=lambda item: item.sequence_number
+        ):
             status = scene.status.value.title()
             if not scenes.is_upstream_current(scene):
                 status = f"{status} / Stale"
@@ -199,7 +201,9 @@ def _refresh_authoritative_overview(
             )
             episode_item.addChild(scene_item)
 
-            for shot in sorted(by_scene.get(scene.scene_id, []), key=lambda item: item.sequence_number):
+            for shot in sorted(
+                by_scene.get(scene.scene_id, []), key=lambda item: item.sequence_number
+            ):
                 shot_status = shot.status.value.title()
                 if shots is not None and not shots.is_upstream_current(shot):
                     shot_status = f"{shot_status} / Stale"
