@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -120,9 +121,11 @@ def install_cap_behaviour_profiles(
 
     root_layout = manager.layout()
     if root_layout is not None and root_layout.count() > 0:
-        controls = root_layout.itemAt(0).layout()
-        if controls is not None:
-            controls.insertWidget(max(0, controls.count() - 1), button)
+        first_item = root_layout.itemAt(0)
+        if first_item is not None:
+            controls = first_item.layout()
+            if isinstance(controls, QHBoxLayout):
+                controls.insertWidget(max(0, controls.count() - 1), button)
 
     def update_enabled() -> None:
         button.setEnabled(manager._selected_asset_id() is not None)
