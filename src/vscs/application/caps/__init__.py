@@ -14,6 +14,12 @@ from vscs.application.caps.asset_generator import (
     CanonicalAssetGenerationError,
     CanonicalAssetGeneratorService,
 )
+from vscs.application.caps.behaviour_integration import (
+    BehaviourProfileIncompatibleError,
+    BehaviourProfileUnavailableError,
+    CAPBehaviourIntegrationError,
+    CAPBehaviourIntegrationService,
+)
 from vscs.application.caps.generator import CAPGenerationError, CAPGeneratorService
 from vscs.application.caps.production_projection_service import (
     ProductionProjectionBlockedError,
@@ -61,9 +67,13 @@ __all__ = (
     "CAP_CAPABILITY_ASSESSMENTS",
     "CAP_PRODUCTION_CONTRACT_GAPS",
     "MASTER_REFERENCE_AUTHORING_POLICY",
+    "BehaviourProfileIncompatibleError",
+    "BehaviourProfileUnavailableError",
     "CAPAlreadyExistsError",
     "CAPAssessmentDisposition",
     "CAPAssetNotFoundError",
+    "CAPBehaviourIntegrationError",
+    "CAPBehaviourIntegrationService",
     "CAPCapabilityAssessment",
     "CAPContractGap",
     "CAPError",
