@@ -249,8 +249,12 @@ class GovernedAssetResolutionService:
     def mark_ready(self, binding_id: str) -> ShotAssetBinding:
         """Approve one current fully resolved Shot asset binding for production."""
         current = self._require_binding(binding_id)
-        if current.status is AssetBindingStatus.READY and self.is_production_ready(current):
-            return current
+        if current.status is AssetBindingStatus.READY:
+            if self.is_production_ready(current):
+                return current
+            raise GovernedAssetResolutionError(
+                "Ready asset bindings must return to Draft before re-approval"
+            )
         shot = self._require_ready_shot(current.shot_id)
         if current.shot_contract_hash != self._shot_contract_hash(shot):
             raise GovernedAssetResolutionError(
