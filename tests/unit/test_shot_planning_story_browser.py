@@ -7,8 +7,9 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from vscs.application.assets import AssetService
 from vscs.application.projects import ProjectService
-from vscs.application.shots import ProductionShot
+from vscs.application.shots import ProductionShot, ShotPlanningService
 from vscs.application.ssie import Scene, SceneTransition
 from vscs.application.story import StoryService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
@@ -56,6 +57,17 @@ def _find_kind(
     return None
 
 
+def _legacy_shot_browser(context, qtbot: object) -> ShotPlanningStoryBrowserWidget:
+    browser = ShotPlanningStoryBrowserWidget(
+        context.services.require(StoryService),
+        context.services.require(AssetService),
+        context.services.require(ShotPlanningService),
+    )
+    qtbot.addWidget(browser)  # type: ignore[attr-defined]
+    browser.refresh()
+    return browser
+
+
 def test_story_browser_exposes_shot_planner_for_scene(
     qtbot: object,
     qapp: QApplication,
@@ -64,11 +76,7 @@ def test_story_browser_exposes_shot_planner_for_scene(
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     context.services.require(StoryService).save_scene(_scene())
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
-    browser = window.story_browser
-    assert isinstance(browser, ShotPlanningStoryBrowserWidget)
-    browser.refresh()
+    browser = _legacy_shot_browser(context, qtbot)
 
     scene_item = _find_kind(browser, "scene")
     assert scene_item is not None
@@ -86,9 +94,7 @@ def test_story_browser_displays_persistent_production_shot(
     context = build_application_context(_options(tmp_path))
     context.services.require(ProjectService).create(tmp_path / "Demo", name="Demo")
     context.services.require(StoryService).save_scene(_scene())
-    window = context.create_main_window()
-    qtbot.addWidget(window)  # type: ignore[attr-defined]
-    browser = window.story_browser
+    browser = _legacy_shot_browser(context, qtbot)
     browser.shot_plans.save_shot(
         ProductionShot(
             shot_id="EP-001-SCN-001-SHT-001",
