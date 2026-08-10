@@ -66,7 +66,13 @@ def _planning(tmp_path: Path, *, ready_scene: bool = True, scene_runtime: int = 
     return context, episodes, scenes, shots, legacy, scene
 
 
-def _create(shots: GovernedShotPlanningService, scene_id: str, *, sequence: int = 1, runtime: int = 5):
+def _create(
+    shots: GovernedShotPlanningService,
+    scene_id: str,
+    *,
+    sequence: int = 1,
+    runtime: int = 5,
+):
     return shots.create(
         scene_id=scene_id,
         sequence_number=sequence,
@@ -95,14 +101,20 @@ def test_governed_shot_plan_persists_only_shot_level_intent(tmp_path: Path) -> N
 
 
 def test_shot_planning_requires_current_ready_scene(tmp_path: Path) -> None:
-    context, _episodes, _scenes, shots, _legacy, scene = _planning(tmp_path, ready_scene=False)
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        ready_scene=False,
+    )
     with pytest.raises(GovernedShotPlanningError, match="Ready Scene Plan"):
         _create(shots, scene.scene_id)
     context.shutdown()
 
 
 def test_shot_runtime_budget_cannot_exceed_scene_target(tmp_path: Path) -> None:
-    context, _episodes, _scenes, shots, _legacy, scene = _planning(tmp_path, scene_runtime=10)
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=10,
+    )
     _create(shots, scene.scene_id, sequence=1, runtime=7)
     assert shots.remaining_runtime_seconds(scene.scene_id) == 3
     with pytest.raises(GovernedShotPlanningError, match="runtime exceeds"):
