@@ -8,7 +8,7 @@ from typing import Any
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QPushButton, QTreeWidgetItem
 
-from vscs.application.story import EpisodePlan, EpisodePlanningService, ScenePlanningService
+from vscs.application.story import EpisodePlanningService, ScenePlanningService
 
 from .episode_planner import EpisodePlannerDialog
 from .scene_planner import ScenePlannerDialog
@@ -16,6 +16,14 @@ from .scene_planner import ScenePlannerDialog
 
 EPISODE_KIND = "episode_plan"
 SCENE_KIND = "scene_plan"
+LEGACY_ACTIONS = (
+    "new_button",
+    "edit_button",
+    "delete_button",
+    "plan_button",
+    "shot_planner_button",
+    "acpp_button",
+)
 
 
 def install_production_planning_workspace(
@@ -29,19 +37,7 @@ def install_production_planning_workspace(
 
     workspace.episode_planning_service = episode_service
     workspace.scene_planning_service = scene_service
-
-    for name in (
-        "new_button",
-        "edit_button",
-        "delete_button",
-        "plan_button",
-        "shot_planner_button",
-        "acpp_button",
-    ):
-        button = getattr(workspace, name, None)
-        if button is not None:
-            button.hide()
-            button.setEnabled(False)
+    _disable_legacy_actions(workspace)
 
     workspace.refresh_button.setText("Refresh Overview")
     workspace.refresh_button.setToolTip("Refresh the governed production-planning overview")
@@ -94,6 +90,14 @@ def install_production_planning_workspace(
     return open_button
 
 
+def _disable_legacy_actions(workspace: Any) -> None:
+    for name in LEGACY_ACTIONS:
+        button = getattr(workspace, name, None)
+        if button is not None:
+            button.hide()
+            button.setEnabled(False)
+
+
 def _production_toolbar(workspace: Any) -> QHBoxLayout:
     root = workspace.layout()
     if root is None:
@@ -115,6 +119,7 @@ def _refresh_authoritative_overview(
     episodes: EpisodePlanningService,
     scenes: ScenePlanningService,
 ) -> None:
+    _disable_legacy_actions(workspace)
     story = workspace._selected_story()
     workspace.tree.clear()
     workspace.details.clear()
