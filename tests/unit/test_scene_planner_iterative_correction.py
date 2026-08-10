@@ -49,7 +49,9 @@ def _draft_planning(tmp_path: Path):
     return context, episodes, scenes, legacy_story, episode
 
 
-def test_draft_episode_enables_scene_creation_but_not_ready_promotion(qtbot, tmp_path: Path) -> None:
+def test_draft_episode_enables_scene_creation_but_not_ready_promotion(
+    qtbot, tmp_path: Path
+) -> None:
     context, _episodes, scenes, _legacy_story, episode = _draft_planning(tmp_path)
     scene = scenes.create(
         episode_id=episode.episode_id,
