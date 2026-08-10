@@ -73,7 +73,9 @@ class ShotPlanEditorDialog(QDialog):
         self.objective_edit = QPlainTextEdit(plan.production_objective if plan else "", self)
         self.runtime_spin = QSpinBox(self)
         self.runtime_spin.setRange(1, max(1, scene.target_runtime_seconds))
-        self.runtime_spin.setValue(plan.target_runtime_seconds if plan else min(5, scene.target_runtime_seconds))
+        self.runtime_spin.setValue(
+            plan.target_runtime_seconds if plan else min(5, scene.target_runtime_seconds)
+        )
         self.action_edit = QPlainTextEdit(plan.required_action if plan else "", self)
         self.dialogue_edit = QPlainTextEdit(plan.dialogue_requirement if plan else "", self)
         self.continuity_in_edit = QPlainTextEdit(plan.continuity_in if plan else "", self)
@@ -233,7 +235,15 @@ class GovernedShotPlannerDialog(QDialog):
         self.table = QTableWidget(0, 7, self)
         self.table.setObjectName("governedShotPlannerTable")
         self.table.setHorizontalHeaderLabels(
-            ["Shot", "Title", "Runtime", "Status", "Narrative Purpose", "Required Action", "Objective"]
+            [
+                "Shot",
+                "Title",
+                "Runtime",
+                "Status",
+                "Narrative Purpose",
+                "Required Action",
+                "Objective",
+            ]
         )
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -348,7 +358,11 @@ class GovernedShotPlannerDialog(QDialog):
         row = self.table.currentRow()
         governed = shot is not None
         self.up_button.setEnabled(governed and row > 0)
-        self.down_button.setEnabled(governed and row >= 0 and row < len(self.service.list_plans(scene_id=self.scene_id)) - 1)
+        self.down_button.setEnabled(
+            governed
+            and row >= 0
+            and row < len(self.service.list_plans(scene_id=self.scene_id)) - 1
+        )
 
     def _new(self) -> None:
         scene = self.service.scenes.plan(self.scene_id)
@@ -387,7 +401,9 @@ class GovernedShotPlannerDialog(QDialog):
         if shot is None or scene is None or shot.status is not ShotPlanStatus.DRAFT:
             return
         dialog = ShotPlanEditorDialog(scene, scene.scene_constraints, shot, self)
-        remaining = self.service.remaining_runtime_seconds(self.scene_id) + shot.target_runtime_seconds
+        remaining = (
+            self.service.remaining_runtime_seconds(self.scene_id) + shot.target_runtime_seconds
+        )
         dialog.runtime_spin.setMaximum(max(1, remaining))
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
