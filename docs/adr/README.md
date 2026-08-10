@@ -32,5 +32,6 @@ Each ADR records:
 - [ADR-0014 — Behaviour Profile Editor](ADR-0014-Behaviour-Profile-Editor.md)
 - [ADR-0015 — CAP ↔ Behaviour Profile Integration](ADR-0015-CAP-Behaviour-Profile-Integration.md)
 - [ADR-0016 — Episode Planner](ADR-0016-Episode-Planner.md)
+- [ADR-0017 — Scene Planner](ADR-0017-Scene-Planner.md)
 
 ADRs are immutable in intent once Accepted. Clarifications may be added, but a material architectural change should create a new ADR that explicitly supersedes the earlier decision.

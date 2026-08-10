@@ -13,12 +13,14 @@ from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
     EpisodePlanningService,
+    ScenePlanningService,
     StoryApprovalService,
     StoryLifecycleService,
     StoryMetadataService,
     StoryService,
     StoryStatusService,
     register_episode_planning,
+    register_scene_planning,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
@@ -74,6 +76,8 @@ def install_story_browser() -> None:
             register_story_approval(window.services)
         if window.services.get(EpisodePlanningService) is None:
             register_episode_planning(window.services)
+        if window.services.get(ScenePlanningService) is None:
+            register_scene_planning(window.services)
         register_ai_story_analysis(window.services)
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
@@ -108,6 +112,7 @@ def install_story_browser() -> None:
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
             window.services.require(EpisodePlanningService),
+            window.services.require(ScenePlanningService),
         )
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)

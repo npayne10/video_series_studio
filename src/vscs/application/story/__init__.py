@@ -9,6 +9,7 @@ from .approval import (
 )
 from .bootstrap import (
     register_episode_planning,
+    register_scene_planning,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
@@ -48,6 +49,12 @@ from .metadata import (
     StoryMetadataError,
     StoryMetadataService,
 )
+from .scene_planning import (
+    ScenePlan,
+    ScenePlanningError,
+    ScenePlanningService,
+    ScenePlanStatus,
+)
 from .service import StoryService, StoryServiceError
 from .status import (
     StoryStatusError,
@@ -62,6 +69,10 @@ __all__ = [
     "EpisodePlanningError",
     "EpisodePlanningService",
     "ProductionContainerType",
+    "ScenePlan",
+    "ScenePlanStatus",
+    "ScenePlanningError",
+    "ScenePlanningService",
     "StoryApprovalAction",
     "StoryApprovalError",
     "StoryApprovalRecord",
@@ -92,6 +103,7 @@ __all__ = [
     "infer_container_type",
     "normalize_container_id",
     "register_episode_planning",
+    "register_scene_planning",
     "register_story_approval",
     "register_story_lifecycle",
     "register_story_metadata",

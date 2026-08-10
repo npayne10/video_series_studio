@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete; local acceptance pending.
+Complete — formally accepted on the development machine.
 
 ## Objective
 
@@ -105,4 +105,4 @@ The following are Phase 19.3.2+ responsibilities:
 
 ## Acceptance
 
-Phase 19.3.1 is accepted only after Ruff lint, Ruff formatting, mypy, focused Episode Planner tests, Story UI regressions, full pytest/coverage, and manual UI verification all pass locally.
+Formal local acceptance completed after Ruff lint, Ruff formatting, mypy, focused Episode Planner tests, Story UI regressions, full pytest/coverage, and manual UI verification all passed.
