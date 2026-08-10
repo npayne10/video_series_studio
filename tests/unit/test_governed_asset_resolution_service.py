@@ -200,6 +200,21 @@ def test_ready_binding_requires_approved_asset_cap_and_reference(tmp_path: Path)
     context.shutdown()
 
 
+def test_ready_binding_must_return_to_draft_before_reapproval(tmp_path: Path) -> None:
+    context, _shots, service, shot = _planning(tmp_path)
+    asset_id = _approved_ship(context, tmp_path)
+    ready = service.mark_ready(_binding(service, shot.shot_id, asset_id=asset_id).binding_id)
+
+    context.services.require(AssetService).update(
+        asset_id,
+        AssetUpdate(description="Changed after approval."),
+    )
+
+    with pytest.raises(GovernedAssetResolutionError, match="return to Draft"):
+        service.mark_ready(ready.binding_id)
+    context.shutdown()
+
+
 def test_asset_change_marks_ready_binding_stale(tmp_path: Path) -> None:
     context, _shots, service, shot = _planning(tmp_path)
     asset_id = _approved_ship(context, tmp_path)
