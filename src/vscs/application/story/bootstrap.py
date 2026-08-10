@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from vscs.application.asset_resolution import AssetBrowserService, AssetResolutionService
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ShotPlanningService
 from vscs.infrastructure.services import ApplicationServices
 
 from .approval import StoryApprovalService
+from .asset_resolver import GovernedAssetResolutionService
 from .episode_planning import EpisodePlanningService
 from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
@@ -106,3 +108,19 @@ def register_governed_shot_planning(
         services.require(ShotPlanningService),
     )
     return services.register(GovernedShotPlanningService, planner)
+
+
+def register_governed_asset_resolution(
+    services: ApplicationServices,
+) -> GovernedAssetResolutionService:
+    """Register authoritative asset binding beneath governed Shot Planning."""
+    existing = services.get(GovernedAssetResolutionService)
+    if existing is not None:
+        return existing
+    resolver = GovernedAssetResolutionService(
+        services.require(ProjectService),
+        register_governed_shot_planning(services),
+        services.require(AssetResolutionService),
+        services.require(AssetBrowserService),
+    )
+    return services.register(GovernedAssetResolutionService, resolver)
