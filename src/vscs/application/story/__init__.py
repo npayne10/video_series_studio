@@ -7,8 +7,15 @@ from .approval import (
     StoryApprovalService,
     StoryApprovalSnapshot,
 )
+from .asset_resolver import (
+    AssetBindingStatus,
+    GovernedAssetResolutionError,
+    GovernedAssetResolutionService,
+    ShotAssetBinding,
+)
 from .bootstrap import (
     register_episode_planning,
+    register_governed_asset_resolution,
     register_governed_shot_planning,
     register_scene_planning,
     register_story_approval,
@@ -73,10 +80,13 @@ from .status import (
 ScenePlanningService = IterativeScenePlanningService
 
 __all__ = [
+    "AssetBindingStatus",
     "EpisodePlan",
     "EpisodePlanStatus",
     "EpisodePlanningError",
     "EpisodePlanningService",
+    "GovernedAssetResolutionError",
+    "GovernedAssetResolutionService",
     "GovernedShotPlanningError",
     "GovernedShotPlanningService",
     "IterativeScenePlanningService",
@@ -85,6 +95,7 @@ __all__ = [
     "ScenePlanStatus",
     "ScenePlanningError",
     "ScenePlanningService",
+    "ShotAssetBinding",
     "ShotPlan",
     "ShotPlanStatus",
     "StoryApprovalAction",
@@ -117,6 +128,7 @@ __all__ = [
     "infer_container_type",
     "normalize_container_id",
     "register_episode_planning",
+    "register_governed_asset_resolution",
     "register_governed_shot_planning",
     "register_scene_planning",
     "register_story_approval",
