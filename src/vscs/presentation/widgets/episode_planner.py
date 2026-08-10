@@ -367,9 +367,11 @@ def install_episode_planner(
     button.setEnabled(False)
 
     panel = workspace.findChild(QWidget, "storyGovernancePanel")
-    if panel is None or panel.layout() is None:
+    if panel is None:
         raise RuntimeError("Story governance panel is unavailable")
     panel_layout = panel.layout()
+    if panel_layout is None:
+        raise RuntimeError("Story governance panel layout is unavailable")
     toolbar_item = panel_layout.itemAt(1)
     toolbar = toolbar_item.layout() if toolbar_item is not None else None
     if isinstance(toolbar, QHBoxLayout):
