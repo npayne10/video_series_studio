@@ -76,7 +76,9 @@ class ScenePlanningService:
         if episode_id is not None:
             normalized_episode = episode_id.strip().upper()
             plans = tuple(plan for plan in plans if plan.episode_id == normalized_episode)
-        return tuple(sorted(plans, key=lambda plan: (plan.episode_id, plan.sequence_number, plan.scene_id)))
+        return tuple(
+            sorted(plans, key=lambda plan: (plan.episode_id, plan.sequence_number, plan.scene_id))
+        )
 
     def plan(self, scene_id: str) -> ScenePlan | None:
         """Return one scene plan by stable identity."""
@@ -85,10 +87,13 @@ class ScenePlanningService:
 
     def next_sequence_number(self, episode_id: str) -> int:
         """Return the next scene sequence number for an Episode."""
-        return max(
-            (plan.sequence_number for plan in self.list_plans(episode_id=episode_id)),
-            default=0,
-        ) + 1
+        return (
+            max(
+                (plan.sequence_number for plan in self.list_plans(episode_id=episode_id)),
+                default=0,
+            )
+            + 1
+        )
 
     def allocated_runtime_seconds(self, episode_id: str) -> int:
         """Return total scene runtime allocated within an Episode."""
@@ -143,7 +148,9 @@ class ScenePlanningService:
         self._validate_runtime_budget(episode, runtime)
         events = self._values(required_events)
         if not events:
-            raise ScenePlanningError("At least one required story event is needed for Shot Planning")
+            raise ScenePlanningError(
+                "At least one required story event is needed for Shot Planning"
+            )
         plan = ScenePlan(
             scene_id=scene_id,
             episode_id=episode.episode_id,
@@ -185,7 +192,9 @@ class ScenePlanningService:
         self._validate_runtime_budget(episode, runtime, excluding_scene_id=current.scene_id)
         events = self._values(required_events)
         if not events:
-            raise ScenePlanningError("At least one required story event is needed for Shot Planning")
+            raise ScenePlanningError(
+                "At least one required story event is needed for Shot Planning"
+            )
         updated = replace(
             current,
             title=self._required(title, "Scene title"),
@@ -240,7 +249,9 @@ class ScenePlanningService:
         self._required(scene.production_objective, "Production objective")
         self._required(scene.setting_requirement, "Setting requirement")
         if not scene.required_events:
-            raise ScenePlanningError("At least one required story event is needed for Shot Planning")
+            raise ScenePlanningError(
+                "At least one required story event is needed for Shot Planning"
+            )
         self._runtime(scene.target_runtime_seconds)
 
     def _validate_runtime_budget(
@@ -282,15 +293,16 @@ class ScenePlanningService:
 
     def _replace(self, updated: ScenePlan) -> None:
         plans = tuple(
-            updated if plan.scene_id == updated.scene_id else plan
-            for plan in self.list_plans()
+            updated if plan.scene_id == updated.scene_id else plan for plan in self.list_plans()
         )
         self._write(plans)
 
     def _write(self, plans: tuple[ScenePlan, ...]) -> None:
         path = self.planning_file
         path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(plans, key=lambda plan: (plan.episode_id, plan.sequence_number, plan.scene_id))
+        ordered = sorted(
+            plans, key=lambda plan: (plan.episode_id, plan.sequence_number, plan.scene_id)
+        )
         payload = {
             "schema_version": self.SCHEMA_VERSION,
             "scenes": [self._to_dict(plan) for plan in ordered],

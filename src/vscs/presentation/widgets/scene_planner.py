@@ -375,7 +375,9 @@ class ScenePlannerDialog(QDialog):
             scene,
             self,
         )
-        remaining = self.service.remaining_runtime_seconds(self.episode_id) + scene.target_runtime_seconds
+        remaining = (
+            self.service.remaining_runtime_seconds(self.episode_id) + scene.target_runtime_seconds
+        )
         dialog.runtime_spin.setMaximum(max(1, remaining))
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return

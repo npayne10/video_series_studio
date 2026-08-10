@@ -62,7 +62,9 @@ def _services(
     return context, episodes, ScenePlanningService(projects, episodes), episode.episode_id
 
 
-def _create(service: ScenePlanningService, episode_id: str, *, sequence: int = 1, runtime: int = 300):
+def _create(
+    service: ScenePlanningService, episode_id: str, *, sequence: int = 1, runtime: int = 300
+):
     return service.create(
         episode_id=episode_id,
         sequence_number=sequence,
