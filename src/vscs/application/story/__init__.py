@@ -58,9 +58,9 @@ from .status import (
 
 __all__ = [
     "EpisodePlan",
+    "EpisodePlanStatus",
     "EpisodePlanningError",
     "EpisodePlanningService",
-    "EpisodePlanStatus",
     "ProductionContainerType",
     "StoryApprovalAction",
     "StoryApprovalError",
