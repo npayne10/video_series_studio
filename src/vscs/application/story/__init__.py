@@ -8,6 +8,7 @@ from .approval import (
     StoryApprovalSnapshot,
 )
 from .bootstrap import (
+    register_episode_planning,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
@@ -18,6 +19,12 @@ from .containers import (
     build_scene_id,
     infer_container_type,
     normalize_container_id,
+)
+from .episode_planning import (
+    EpisodePlan,
+    EpisodePlanningError,
+    EpisodePlanningService,
+    EpisodePlanStatus,
 )
 from .hierarchy import (
     StoryHierarchy,
@@ -50,6 +57,10 @@ from .status import (
 )
 
 __all__ = [
+    "EpisodePlan",
+    "EpisodePlanStatus",
+    "EpisodePlanningError",
+    "EpisodePlanningService",
     "ProductionContainerType",
     "StoryApprovalAction",
     "StoryApprovalError",
@@ -80,6 +91,7 @@ __all__ = [
     "build_story_hierarchy",
     "infer_container_type",
     "normalize_container_id",
+    "register_episode_planning",
     "register_story_approval",
     "register_story_lifecycle",
     "register_story_metadata",

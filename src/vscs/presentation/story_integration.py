@@ -12,11 +12,13 @@ from vscs.application.asset_resolution import (
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
+    EpisodePlanningService,
     StoryApprovalService,
     StoryLifecycleService,
     StoryMetadataService,
     StoryService,
     StoryStatusService,
+    register_episode_planning,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
@@ -35,6 +37,7 @@ from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.browseable_story_workspace import (
     BrowseableStoryWorkspaceWidget,
 )
+from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -69,6 +72,8 @@ def install_story_browser() -> None:
             register_story_status(window.services)
         if window.services.get(StoryApprovalService) is None:
             register_story_approval(window.services)
+        if window.services.get(EpisodePlanningService) is None:
+            register_episode_planning(window.services)
         register_ai_story_analysis(window.services)
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
@@ -100,6 +105,10 @@ def install_story_browser() -> None:
         window.story_browser.analysis_engine = analysis_engine
         window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
+        window.episode_planner_button = install_episode_planner(
+            window.story_browser,
+            window.services.require(EpisodePlanningService),
+        )
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)
         placeholder.deleteLater()
