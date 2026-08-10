@@ -14,7 +14,12 @@ from vscs.application.story import (
     ScenePlanStatus,
     StoryLifecycleService,
 )
-from vscs.bootstrap import ApplicationContext, BootstrapOptions, StartupMode, build_application_context
+from vscs.bootstrap import (
+    ApplicationContext,
+    BootstrapOptions,
+    StartupMode,
+    build_application_context,
+)
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
