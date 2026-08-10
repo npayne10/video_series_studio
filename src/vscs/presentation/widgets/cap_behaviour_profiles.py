@@ -85,9 +85,7 @@ class CAPBehaviourProfilesDialog(QDialog):
             item.setData(Qt.ItemDataRole.UserRole, profile.profile_id)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(
-                Qt.CheckState.Checked
-                if profile.profile_id in linked
-                else Qt.CheckState.Unchecked
+                Qt.CheckState.Checked if profile.profile_id in linked else Qt.CheckState.Unchecked
             )
             item.setToolTip(profile.description or profile.action)
             self.profiles.addItem(item)
