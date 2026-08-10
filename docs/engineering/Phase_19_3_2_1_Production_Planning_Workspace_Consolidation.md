@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation and canonical formatting complete; final CI and local acceptance pending.
+Implementation, canonical formatting and strict-typing corrections complete; final CI and local acceptance pending.
 
 ## Objective
 
