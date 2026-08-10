@@ -18,13 +18,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libegl1
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
-      - name: Capture focused pytest output
+      - name: Capture full pytest output
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          pytest tests/unit/test_behaviour_profile_repository.py tests/integration/test_behaviour_profile_schema_migration.py -vv > phase-19-2-2-pytest.txt 2>&1 || true
+          pytest -vv > phase-19-2-2-pytest.txt 2>&1 || true
       - name: Upload pytest output
         uses: actions/upload-artifact@v4
         with:
-          name: phase-19-2-2-pytest-output
+          name: phase-19-2-2-full-pytest-output
           path: phase-19-2-2-pytest.txt
