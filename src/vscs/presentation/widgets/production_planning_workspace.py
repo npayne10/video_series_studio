@@ -33,7 +33,10 @@ def install_production_planning_workspace(
 ) -> QPushButton:
     """Make governed Episode/Scene planners the only authoritative planning path."""
     if getattr(workspace, "_production_planning_consolidated", False):
-        return workspace.open_in_planner_button
+        existing_button = getattr(workspace, "open_in_planner_button", None)
+        if isinstance(existing_button, QPushButton):
+            return existing_button
+        raise RuntimeError("Consolidated planning workspace has no navigation button")
 
     workspace.episode_planning_service = episode_service
     workspace.scene_planning_service = scene_service
@@ -104,7 +107,10 @@ def _production_toolbar(workspace: Any) -> QHBoxLayout:
         if not isinstance(layout, QHBoxLayout):
             continue
         for child_index in range(layout.count()):
-            child = layout.itemAt(child_index).widget()
+            layout_item = layout.itemAt(child_index)
+            if layout_item is None:
+                continue
+            child = layout_item.widget()
             if child is workspace.refresh_button:
                 return layout
     raise RuntimeError("Production overview toolbar is unavailable")
@@ -268,9 +274,9 @@ def _open_selected(workspace: Any) -> None:
     episodes: EpisodePlanningService = workspace.episode_planning_service
     scenes: ScenePlanningService = workspace.scene_planning_service
     if kind == EPISODE_KIND:
-        dialog = EpisodePlannerDialog(episodes, story, workspace, scene_service=scenes)
-        _select_table_identity(dialog.table, str(data[1]))
-        dialog.exec()
+        episode_dialog = EpisodePlannerDialog(episodes, story, workspace, scene_service=scenes)
+        _select_table_identity(episode_dialog.table, str(data[1]))
+        episode_dialog.exec()
         workspace.refresh()
         return
 
@@ -278,9 +284,9 @@ def _open_selected(workspace: Any) -> None:
         episode = episodes.plan(str(data[2]))
         if episode is None:
             return
-        dialog = ScenePlannerDialog(scenes, episode, workspace)
-        _select_table_identity(dialog.table, str(data[1]))
-        dialog.exec()
+        scene_dialog = ScenePlannerDialog(scenes, episode, workspace)
+        _select_table_identity(scene_dialog.table, str(data[1]))
+        scene_dialog.exec()
         workspace.refresh()
 
 
