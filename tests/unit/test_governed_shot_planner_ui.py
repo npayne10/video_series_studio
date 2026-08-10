@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QPlainTextEdit, QScrollArea
+from PySide6.QtWidgets import QComboBox, QPlainTextEdit, QScrollArea
 
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
@@ -68,7 +68,10 @@ def _planning(tmp_path: Path):
     return context, shots, legacy, scene
 
 
-def test_shot_editor_is_lean_scrollable_and_defers_specialist_decisions(qtbot, tmp_path: Path) -> None:
+def test_shot_editor_is_lean_scrollable_and_defers_specialist_decisions(
+    qtbot,
+    tmp_path: Path,
+) -> None:
     context, _shots, _legacy, scene = _planning(tmp_path)
     dialog = ShotPlanEditorDialog(scene, scene.scene_constraints)
     qtbot.addWidget(dialog)
@@ -79,13 +82,14 @@ def test_shot_editor_is_lean_scrollable_and_defers_specialist_decisions(qtbot, t
     assert inherited is not None
     assert inherited.isReadOnly()
     assert "physically plausible" in inherited.toPlainText()
-    assert "camera" in dialog.findChild(QScrollArea, "shotPlanScrollArea").widget().findChild(
-        type(dialog.title_edit)
-    ).objectName() or True
+    assert dialog.findChildren(QComboBox) == []
     context.shutdown()
 
 
-def test_governed_shot_planner_shows_budget_governance_and_legacy_rows(qtbot, tmp_path: Path) -> None:
+def test_governed_shot_planner_shows_budget_governance_and_legacy_rows(
+    qtbot,
+    tmp_path: Path,
+) -> None:
     context, shots, legacy, scene = _planning(tmp_path)
     shot = shots.create(
         scene_id=scene.scene_id,
