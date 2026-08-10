@@ -153,5 +153,7 @@ def test_scene_planner_surfaces_stale_scene_after_episode_change(qtbot, tmp_path
     dialog.show()
 
     assert "Stale" in dialog.table.item(0, 3).text()
-    assert not scenes.is_production_ready(scenes.plan(scene.scene_id))  # type: ignore[arg-type]
+    stale_scene = scenes.plan(scene.scene_id)
+    assert stale_scene is not None
+    assert not scenes.is_production_ready(stale_scene)
     context.shutdown()
