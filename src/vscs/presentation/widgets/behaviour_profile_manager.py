@@ -92,9 +92,9 @@ class BehaviourProfileEditorDialog(QDialog):
         self.asset_categories = QListWidget()
         self.asset_categories.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         self.asset_categories.setMaximumHeight(150)
-        for category in AssetCategory:
-            item = QListWidgetItem(category.value.replace("_", " ").title())
-            item.setData(Qt.ItemDataRole.UserRole, category)
+        for asset_category in AssetCategory:
+            item = QListWidgetItem(asset_category.value.replace("_", " ").title())
+            item.setData(Qt.ItemDataRole.UserRole, asset_category)
             self.asset_categories.addItem(item)
         self.authority_label = QLabel(BehaviourAuthority.DRAFT.value.title())
 
@@ -163,7 +163,6 @@ class BehaviourProfileEditorDialog(QDialog):
         )
         self.metadata_edit.setPlainText(json.dumps(profile.metadata, indent=2, sort_keys=True))
 
-        # Persistent BEP identity is immutable after creation, including for Drafts.
         self.profile_id_edit.setEnabled(False)
         self.version_edit.setEnabled(False)
 
@@ -266,8 +265,10 @@ class BehaviourProfileManagerWidget(QWidget):
         self.search_edit.setPlaceholderText("Search behaviours...")
         self.category_filter = QComboBox()
         self.category_filter.addItem("All categories", None)
-        for category in BehaviourCategory:
-            self.category_filter.addItem(category.value.replace("_", " ").title(), category)
+        for behaviour_category in BehaviourCategory:
+            self.category_filter.addItem(
+                behaviour_category.value.replace("_", " ").title(), behaviour_category
+            )
         self.authority_filter = QComboBox()
         self.authority_filter.addItem("All authority", None)
         for authority in BehaviourAuthority:
