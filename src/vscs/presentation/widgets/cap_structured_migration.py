@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtWidgets import QMessageBox, QPushButton, QWidget
+from PySide6.QtWidgets import QBoxLayout, QMessageBox, QPushButton, QWidget
 
 from vscs.application.caps import StructuredKnowledgeError
 from vscs.presentation.widgets.cap_structured_knowledge import (
@@ -12,10 +12,11 @@ from vscs.presentation.widgets.cap_structured_knowledge import (
 )
 
 
-def install_modernise_cap_action(cap_manager: QWidget) -> QPushButton | None:
+def install_modernise_cap_action(cap_manager: Any) -> QPushButton | None:
     """Add the governed one-click legacy CAP modernization workflow."""
-    if getattr(cap_manager, "modernise_cap_button", None) is not None:
-        return cap_manager.modernise_cap_button
+    existing = getattr(cap_manager, "modernise_cap_button", None)
+    if isinstance(existing, QPushButton):
+        return existing
 
     generator = getattr(cap_manager, "generator", None)
     service = getattr(generator, "structured_knowledge", None)
@@ -33,7 +34,8 @@ def install_modernise_cap_action(cap_manager: QWidget) -> QPushButton | None:
         selector = getattr(cap_manager, "_selected_asset_id", None)
         if selector is None:
             return None
-        return selector()
+        selected = selector()
+        return selected if isinstance(selected, str) else None
 
     def update_enabled() -> None:
         asset_id = selected_asset_id()
@@ -76,7 +78,8 @@ def install_modernise_cap_action(cap_manager: QWidget) -> QPushButton | None:
             QMessageBox.critical(cap_manager, "Modernise CAP", str(exc))
             return
 
-        review = StructuredKnowledgeProposalDialog(proposal.knowledge, cap_manager)
+        parent = cap_manager if isinstance(cap_manager, QWidget) else None
+        review = StructuredKnowledgeProposalDialog(proposal.knowledge, parent)
         if not review.exec():
             return
 
@@ -125,8 +128,11 @@ def install_modernise_cap_action(cap_manager: QWidget) -> QPushButton | None:
     top_layout = cap_manager.layout()
     if top_layout is None or top_layout.count() == 0:
         return None
-    controls = top_layout.itemAt(0).layout()
-    if controls is None:
+    first_item = top_layout.itemAt(0)
+    if first_item is None:
+        return None
+    controls = first_item.layout()
+    if not isinstance(controls, QBoxLayout):
         return None
     controls.insertWidget(max(0, controls.count() - 3), button)
 
