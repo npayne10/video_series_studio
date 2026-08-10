@@ -14,7 +14,6 @@ from vscs.application.story import EpisodePlanningService, ScenePlanningService
 from .episode_planner import EpisodePlannerDialog
 from .scene_planner import ScenePlannerDialog
 
-
 EPISODE_KIND = "episode_plan"
 SCENE_KIND = "scene_plan"
 LEGACY_ACTIONS = (
@@ -292,6 +291,6 @@ def _select_table_identity(table: Any, identity: str) -> None:
 
 
 def _duration(seconds: int | float) -> str:
-    total = int(round(seconds))
+    total = round(seconds)
     minutes, remainder = divmod(total, 60)
     return f"{minutes}:{remainder:02d}"
