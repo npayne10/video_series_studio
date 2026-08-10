@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete; local acceptance pending.
+Implementation complete; CI and local acceptance pending.
 
 ## Objective
 
