@@ -32,7 +32,11 @@ def _open_database(tmp_path: Path) -> DatabaseManager:
     return database
 
 
-def _profile(*, version: str = "1.0", authority: BehaviourAuthority = BehaviourAuthority.DRAFT):
+def _profile(
+    *,
+    version: str = "1.0",
+    authority: BehaviourAuthority = BehaviourAuthority.DRAFT,
+) -> BehaviourProfile:
     return BehaviourProfile(
         profile_id="BEP-SHP-DOCK",
         name="Ship Docking",
@@ -113,7 +117,9 @@ def test_behaviour_profile_round_trips_complete_structured_contract(tmp_path: Pa
         database.close()
 
 
-def test_repository_preserves_multiple_versions_and_rejects_duplicate_identity(tmp_path: Path) -> None:
+def test_repository_preserves_multiple_versions_and_rejects_duplicate_identity(
+    tmp_path: Path,
+) -> None:
     database = _open_database(tmp_path)
     try:
         repository = BehaviourProfileRepository(database)
@@ -149,7 +155,8 @@ def test_repository_filters_searches_updates_and_deletes_profiles(tmp_path: Path
         assert len(repository.list(category=BehaviourCategory.LOCOMOTION)) == 1
         assert len(repository.list(authority=BehaviourAuthority.APPROVED)) == 1
         assert len(repository.list(asset_category=AssetCategory.SHIP)) == 1
-        assert repository.list(asset_category=AssetCategory.CHARACTER)[0].profile_id == "BEP-CHR-WALK"
+        character_profiles = repository.list(asset_category=AssetCategory.CHARACTER)
+        assert character_profiles[0].profile_id == "BEP-CHR-WALK"
 
         changed = _profile().model_copy(
             update={
