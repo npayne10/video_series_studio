@@ -31,9 +31,7 @@ class BehaviourGovernanceError(BehaviourProfileServiceError):
 
 _ALLOWED_TRANSITIONS: dict[BehaviourAuthority, frozenset[BehaviourAuthority]] = {
     BehaviourAuthority.DRAFT: frozenset({BehaviourAuthority.PROPOSED}),
-    BehaviourAuthority.PROPOSED: frozenset(
-        {BehaviourAuthority.DRAFT, BehaviourAuthority.APPROVED}
-    ),
+    BehaviourAuthority.PROPOSED: frozenset({BehaviourAuthority.DRAFT, BehaviourAuthority.APPROVED}),
     BehaviourAuthority.APPROVED: frozenset({BehaviourAuthority.CANONICAL}),
     BehaviourAuthority.CANONICAL: frozenset(),
 }
@@ -173,9 +171,7 @@ class BehaviourProfileService:
         """Delete only disposable draft versions; governed history is retained."""
         profile = self.get(profile_id, version)
         if profile.authority is not BehaviourAuthority.DRAFT:
-            raise BehaviourGovernanceError(
-                "Only draft Behaviour Profile versions may be deleted"
-            )
+            raise BehaviourGovernanceError("Only draft Behaviour Profile versions may be deleted")
         try:
             return self.repository.delete(profile.profile_id, profile.version)
         except BehaviourProfileRepositoryError as exc:
