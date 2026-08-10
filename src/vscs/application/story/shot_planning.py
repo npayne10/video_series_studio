@@ -12,8 +12,8 @@ from typing import Any
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
 
-from .scene_planning import ScenePlan, ScenePlanStatus
 from .iterative_scene_planning import IterativeScenePlanningService
+from .scene_planning import ScenePlan, ScenePlanStatus
 
 
 class GovernedShotPlanningError(RuntimeError):
@@ -83,7 +83,12 @@ class GovernedShotPlanningService:
         if scene_id is not None:
             normalized = scene_id.strip().upper()
             plans = tuple(plan for plan in plans if plan.scene_id == normalized)
-        return tuple(sorted(plans, key=lambda plan: (plan.scene_id, plan.sequence_number, plan.shot_id)))
+        return tuple(
+            sorted(
+                plans,
+                key=lambda plan: (plan.scene_id, plan.sequence_number, plan.shot_id),
+            )
+        )
 
     def plan(self, shot_id: str) -> ShotPlan | None:
         """Return one governed Shot Plan by stable identity."""
@@ -102,7 +107,13 @@ class GovernedShotPlanningService:
 
     def next_sequence_number(self, scene_id: str) -> int:
         """Return the next governed shot sequence number for a Scene."""
-        return max((plan.sequence_number for plan in self.list_plans(scene_id=scene_id)), default=0) + 1
+        return (
+            max(
+                (plan.sequence_number for plan in self.list_plans(scene_id=scene_id)),
+                default=0,
+            )
+            + 1
+        )
 
     def allocated_runtime_seconds(self, scene_id: str) -> int:
         """Return governed shot runtime allocated within one Scene."""
@@ -245,7 +256,11 @@ class GovernedShotPlanningService:
         self._write(remaining)
         return True
 
-    def reorder_scene(self, scene_id: str, ordered_shot_ids: tuple[str, ...]) -> tuple[ShotPlan, ...]:
+    def reorder_scene(
+        self,
+        scene_id: str,
+        ordered_shot_ids: tuple[str, ...],
+    ) -> tuple[ShotPlan, ...]:
         """Persist explicit governed Shot Plan order within one Scene."""
         current = self.list_plans(scene_id=scene_id)
         by_id = {plan.shot_id: plan for plan in current}
@@ -257,7 +272,9 @@ class GovernedShotPlanningService:
             shot_id: replace(by_id[shot_id], sequence_number=index)
             for index, shot_id in enumerate(ordered_shot_ids, start=1)
         }
-        all_plans = tuple(replacements.get(plan.shot_id, plan) for plan in self.list_plans())
+        all_plans = tuple(
+            replacements.get(plan.shot_id, plan) for plan in self.list_plans()
+        )
         self._write(all_plans)
         return self.list_plans(scene_id=scene_id)
 
@@ -306,13 +323,18 @@ class GovernedShotPlanningService:
         return shot
 
     def _replace(self, updated: ShotPlan) -> None:
-        plans = tuple(updated if plan.shot_id == updated.shot_id else plan for plan in self.list_plans())
+        plans = tuple(
+            updated if plan.shot_id == updated.shot_id else plan for plan in self.list_plans()
+        )
         self._write(plans)
 
     def _write(self, plans: tuple[ShotPlan, ...]) -> None:
         path = self.planning_file
         path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(plans, key=lambda plan: (plan.scene_id, plan.sequence_number, plan.shot_id))
+        ordered = sorted(
+            plans,
+            key=lambda plan: (plan.scene_id, plan.sequence_number, plan.shot_id),
+        )
         payload = {
             "schema_version": self.SCHEMA_VERSION,
             "shots": [self._to_dict(plan) for plan in ordered],
@@ -370,7 +392,12 @@ class GovernedShotPlanningService:
             "continuity_out": scene.continuity_out,
             "scene_constraints": list(scene.scene_constraints),
         }
-        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        canonical = json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @staticmethod
