@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 
 from vscs.application.behaviours import (
     BehaviourProfileRepository,
@@ -172,5 +173,29 @@ def test_repository_filters_searches_updates_and_deletes_profiles(tmp_path: Path
         assert repository.delete("BEP-SHP-DOCK", "1.0") is True
         assert repository.get("BEP-SHP-DOCK", "1.0") is None
         assert repository.delete("BEP-SHP-DOCK", "1.0") is False
+    finally:
+        database.close()
+
+
+def test_repository_rejects_corrupt_persisted_structured_behaviour_data(tmp_path: Path) -> None:
+    database = _open_database(tmp_path)
+    try:
+        repository = BehaviourProfileRepository(database)
+        repository.create(_profile())
+        with database.session() as session:
+            session.execute(
+                text(
+                    "UPDATE behaviour_profiles SET parameters_json = :invalid "
+                    "WHERE profile_id = :profile_id AND version = :version"
+                ),
+                {
+                    "invalid": "{not-valid-json",
+                    "profile_id": "BEP-SHP-DOCK",
+                    "version": "1.0",
+                },
+            )
+
+        with pytest.raises(BehaviourProfileRepositoryError, match="parameters"):
+            repository.get("BEP-SHP-DOCK", "1.0")
     finally:
         database.close()
