@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -214,6 +215,8 @@ def install_structured_cap_editor() -> None:
         else:
             self.layout().insertWidget(max(0, self.layout().count() - 1), container)
 
+        _make_editor_scrollable(self)
+
         if self.profile is not None:
             _load_knowledge(self, self.profile)
 
@@ -253,6 +256,46 @@ def install_structured_cap_editor() -> None:
     editor.create_value = structured_create_value
     editor.update_value = structured_update_value
     editor._phase_19_1_structured_installed = True
+
+
+def _make_editor_scrollable(dialog: Any) -> None:
+    """Keep the expanded CAP production contract usable on smaller displays."""
+    outer_layout = dialog.layout()
+    if not isinstance(outer_layout, QVBoxLayout):
+        return
+
+    form_index = -1
+    form: QFormLayout | None = None
+    for index in range(outer_layout.count()):
+        candidate = outer_layout.itemAt(index).layout()
+        if isinstance(candidate, QFormLayout):
+            form_index = index
+            form = candidate
+            break
+    if form is None or form_index < 0:
+        return
+
+    outer_layout.takeAt(form_index)
+    content = QWidget()
+    content.setObjectName("capEditorScrollContent")
+    content.setLayout(form)
+
+    scroll = QScrollArea()
+    scroll.setObjectName("capEditorScrollArea")
+    scroll.setWidgetResizable(True)
+    scroll.setWidget(content)
+    outer_layout.insertWidget(form_index, scroll, 1)
+
+    dialog.setMinimumSize(600, 420)
+    screen = dialog.screen()
+    if screen is None:
+        dialog.resize(900, 650)
+        return
+    available = screen.availableGeometry()
+    dialog.resize(
+        min(1000, max(700, int(available.width() * 0.80))),
+        min(760, max(500, int(available.height() * 0.85))),
+    )
 
 
 def _table_page(table: QTableWidget, defaults: tuple[str, ...]) -> QWidget:
