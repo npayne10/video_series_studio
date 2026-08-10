@@ -36,6 +36,7 @@ from .hierarchy import (
     build_story_hierarchy,
     scene_status,
 )
+from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import (
     StoryLifecycleError,
     StoryLifecycleService,
@@ -52,7 +53,6 @@ from .metadata import (
 from .scene_planning import (
     ScenePlan,
     ScenePlanningError,
-    ScenePlanningService,
     ScenePlanStatus,
 )
 from .service import StoryService, StoryServiceError
@@ -63,11 +63,14 @@ from .status import (
     StoryStatusTransition,
 )
 
+ScenePlanningService = IterativeScenePlanningService
+
 __all__ = [
     "EpisodePlan",
     "EpisodePlanStatus",
     "EpisodePlanningError",
     "EpisodePlanningService",
+    "IterativeScenePlanningService",
     "ProductionContainerType",
     "ScenePlan",
     "ScenePlanStatus",
