@@ -58,7 +58,7 @@ def test_schema_four_database_is_upgraded_without_replacing_legacy_cap_fields(
     with database.session() as session:
         schema = session.scalar(select(SchemaVersion).where(SchemaVersion.id == 1))
         assert schema is not None
-        assert schema.version == 5
+        assert schema.version == 6
         columns = {
             row[1] for row in session.execute(text("PRAGMA table_info(canonical_asset_profiles)"))
         }
@@ -72,6 +72,11 @@ def test_schema_four_database_is_upgraded_without_replacing_legacy_cap_fields(
             "behaviour_references_json",
             "production_metadata_json",
         } <= columns
+        tables = {
+            row[0]
+            for row in session.execute(text("SELECT name FROM sqlite_master WHERE type = 'table'"))
+        }
+        assert "behaviour_profiles" in tables
         row = session.execute(
             text(
                 "SELECT canonical_description, visual_identity, production_notes, "
