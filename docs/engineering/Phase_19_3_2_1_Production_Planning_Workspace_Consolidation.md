@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation, canonical formatting and strict-typing corrections complete; final CI and local acceptance pending.
+Implementation, canonical formatting, strict typing, and legacy regression-test alignment complete; final CI and local acceptance pending.
 
 ## Objective
 
@@ -18,96 +18,43 @@ Authoritative hierarchy:
 
 ## Story Workspace changes
 
-The Story Workspace remains responsible for Story creation, analysis, approval and governance.
+The Story Workspace is the story-level entry point and governed production overview. It is not an independent production-object editor.
 
-Its production-planning entry point is renamed from `Episode Planner…` to `Production Planning…`.
+- The story-level planning action is labelled **Production Planning…**.
+- Governed Episode and Scene plans are projected from `EpisodePlanningService` and `ScenePlanningService`.
+- `Open in Planner` routes Episode selections to the Episode Planner and Scene selections to the Scene Planner.
+- Draft, Ready, and upstream-stale state is visible in the overview.
+- Runtime metrics are based on governed production plans.
 
-The lower Production Overview is converted from a legacy authoring surface into a governed planning navigator. It now projects data from:
+## Competing authoring paths
 
-- `EpisodePlanningService`;
-- `ScenePlanningService`.
+The following legacy Story Workspace actions are hidden and disabled in the consolidated workspace:
 
-The overview no longer treats legacy Story/SSIE records as Phase 19.3 planning authority.
+- New Scene
+- Edit Scene
+- Delete Scene
+- Generate SSIE Plan
+- direct Shot Planner
+- ACPP Editor
 
-## Removed competing authoring controls
+The underlying legacy components and persisted project records remain available for compatibility and regression coverage, but they are not presented as authoritative production planning.
 
-The following legacy Story Workspace actions are hidden and disabled:
+## Compatibility and regression policy
 
-- New Scene;
-- Edit Scene;
-- Delete Scene;
-- Generate SSIE Plan;
-- direct legacy Shot Planner;
-- direct ACPP Editor.
+Pre-19.3.2.1 Story Browser, Shot Browser, and ACPP Browser component tests continue to exercise their legacy components directly. They no longer use the application main window as evidence that those legacy authoring paths remain part of the authoritative Story Workspace.
 
-The underlying legacy data and services remain intact for compatibility and future explicit migration. This phase performs no destructive conversion.
+This preserves backwards-compatible component behaviour while enforcing the Phase 19.3.2.1 main-window architecture contract.
 
-## Production Overview
+## Acceptance criteria
 
-The lower Story Workspace tree displays:
+1. Story Workspace exposes exactly one production-planning entry point.
+2. Episode and Scene plans shown in the overview originate from governed planning services.
+3. Legacy Scene/SSIE/Shot/ACPP authoring actions are not available from the authoritative Story Workspace.
+4. Existing legacy records are not deleted or silently migrated.
+5. Episode and Scene selections navigate to their authoritative planners.
+6. Upstream-stale Scene Plans are visibly identified.
+7. Ruff lint, Ruff format, strict mypy, and the complete pytest suite pass before Phase 19.3.2.1 is accepted.
 
-- governed Episode Plans;
-- governed Scene Plans nested beneath their Episode;
-- Draft/Ready state;
-- Scene staleness when its upstream Episode contract has changed;
-- runtime targets.
+## Architecture record
 
-The dashboard is recomputed from governed planning records. Shot and asset totals remain zero at this stage because governed Shot Planning and Asset Resolution belong to later Phase 19.3 sub-phases.
-
-## Navigation
-
-The lower toolbar is reduced to:
-
-- Open in Planner;
-- Refresh Overview.
-
-`Open in Planner` is context-sensitive:
-
-- Episode selection opens Episode Planner at that Episode;
-- Scene selection opens Scene Planner at that Scene.
-
-Double-clicking a governed planning row follows the same authoritative route.
-
-## Automation, continuity, usability and realism
-
-### Automation
-
-Downstream systems have one clear source of truth instead of choosing between legacy and governed planning records.
-
-### Continuity
-
-Episode/Scene Ready state and upstream-staleness rules remain authoritative and are surfaced in the navigator.
-
-### Ease of use
-
-The operator enters production planning once. The Story Workspace provides orientation and navigation without duplicating editing controls.
-
-### Grounded realism
-
-Production/realism constraints continue to flow through Episode and Scene planning; consolidation prevents those constraints from being bypassed by a separate legacy editing path.
-
-## Tests
-
-Focused acceptance covers:
-
-- `Production Planning…` as the sole Story-level planning entry;
-- all legacy duplicate authoring controls hidden and disabled;
-- governed Episode/Scene plans projected into Production Overview;
-- legacy scene records preserved but excluded from authoritative planning display;
-- context-sensitive `Open in Planner` state;
-- governed dashboard counts;
-- stale Scene state surfaced;
-- Episode Planner regression updated for the consolidated label;
-- full repository regression suite.
-
-## Explicitly deferred
-
-- destructive migration/removal of legacy Story/SSIE/Shot/ACPP data;
-- governed Shot Planner implementation (Phase 19.3.3);
-- governed Shot projection into Production Overview;
-- Asset Resolver, Camera, Lighting and Environment planner projections;
-- final Planning Review and Integration.
-
-## Acceptance
-
-Phase 19.3.2.1 is accepted only after Ruff lint, Ruff formatting, strict mypy, focused consolidation Qt tests, Episode/Scene regressions, complete pytest/coverage, and manual verification that the Story Workspace exposes only one authoritative production-planning environment.
+See ADR-0018 — Authoritative Production Planning Workspace.
