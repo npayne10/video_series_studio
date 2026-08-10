@@ -5,7 +5,7 @@ from __future__ import annotations
 from vscs.application.behaviours import BehaviourProfileService
 from vscs.application.caps.service import CAPService
 from vscs.domain.behaviours import BehaviourProfile
-from vscs.domain.caps import CAPUpdate, CanonicalAssetProfile
+from vscs.domain.caps import CanonicalAssetProfile, CAPUpdate
 
 
 class CAPBehaviourIntegrationError(RuntimeError):
