@@ -23,7 +23,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.asset_resolution import AssetResolutionStatus
+from vscs.application.asset_resolution import (
+    AssetResolutionRequest,
+    AssetResolutionStatus,
+)
 from vscs.application.story import (
     AssetBindingStatus,
     GovernedAssetResolutionError,
@@ -121,7 +124,7 @@ class AssetBindingEditorDialog(QDialog):
         root.addStretch(1)
         root.addWidget(buttons)
 
-        self.category_combo.currentIndexChanged.connect(self._reload_assets)
+        self.category_combo.currentIndexChanged.connect(lambda _index: self._reload_assets())
         self.asset_combo.currentIndexChanged.connect(self._refresh_readiness)
         self._reload_assets(binding.asset_id if binding else "")
 
@@ -151,9 +154,14 @@ class AssetBindingEditorDialog(QDialog):
             self.readiness_label.setText("Unbound — requirement may be saved as Draft.")
             return
         result = self.service.resolver.resolve(
-            self.service.resolution_request(asset_id, category)
-            if hasattr(self.service, "resolution_request")
-            else self._resolution_request(asset_id, category)
+            AssetResolutionRequest(
+                asset_id,
+                expected_category=category,
+                require_approved_asset=True,
+                require_cap=True,
+                require_approved_cap=True,
+                require_approved_references=True,
+            )
         )
         if result.status is AssetResolutionStatus.RESOLVED:
             reference_count = len(result.references)
@@ -164,19 +172,6 @@ class AssetBindingEditorDialog(QDialog):
             return
         diagnostics = "; ".join(item.message for item in result.diagnostics) or result.status.value
         self.readiness_label.setText(f"{result.status.value.title()} — {diagnostics}")
-
-    @staticmethod
-    def _resolution_request(asset_id: str, category: AssetCategory):
-        from vscs.application.asset_resolution import AssetResolutionRequest
-
-        return AssetResolutionRequest(
-            asset_id,
-            expected_category=category,
-            require_approved_asset=True,
-            require_cap=True,
-            require_approved_cap=True,
-            require_approved_references=True,
-        )
 
     def _accept_if_valid(self) -> None:
         if not self.role_edit.text().strip():
