@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from vscs.application.projects import ProjectService
 from vscs.application.ssie import Scene
 
-from .episode_planning import EpisodePlanStatus
+from .episode_planning import EpisodePlanningService, EpisodePlanStatus
 from .scene_planning import ScenePlan, ScenePlanningError, ScenePlanningService, ScenePlanStatus
 from .service import StoryService
 
@@ -14,16 +15,19 @@ from .service import StoryService
 class IterativeScenePlanningService(ScenePlanningService):
     """Allow Draft Episode/Scene iteration while protecting Shot Planning authority."""
 
-    def __init__(self, projects, episodes, legacy_story: StoryService | None = None) -> None:
+    def __init__(
+        self,
+        projects: ProjectService,
+        episodes: EpisodePlanningService,
+        legacy_story: StoryService | None = None,
+    ) -> None:
         super().__init__(projects, episodes)
         self.legacy_story = legacy_story or StoryService(projects)
 
     def legacy_scenes(self, episode_id: str) -> tuple[Scene, ...]:
         """Return preserved legacy scenes that have not become authoritative Scene Plans."""
         normalized = episode_id.strip().upper()
-        authoritative_ids = {
-            plan.scene_id for plan in self.list_plans(episode_id=normalized)
-        }
+        authoritative_ids = {plan.scene_id for plan in self.list_plans(episode_id=normalized)}
         return tuple(
             scene
             for scene in self.legacy_story.list_scenes()
@@ -38,9 +42,8 @@ class IterativeScenePlanningService(ScenePlanningService):
         checked separately and still requires a Ready Episode.
         """
         episode = self.episodes.plan(scene.episode_id)
-        return (
-            episode is not None
-            and scene.episode_contract_hash == self._episode_contract_hash(episode)
+        return episode is not None and scene.episode_contract_hash == self._episode_contract_hash(
+            episode
         )
 
     def is_production_ready(self, scene: ScenePlan) -> bool:
