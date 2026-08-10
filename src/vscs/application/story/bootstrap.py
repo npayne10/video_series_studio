@@ -7,9 +7,10 @@ from vscs.infrastructure.services import ApplicationServices
 
 from .approval import StoryApprovalService
 from .episode_planning import EpisodePlanningService
+from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
 from .metadata import StoryMetadataService
-from .scene_planning import ScenePlanningService
+from .service import StoryService
 from .status import StoryStatusService
 
 
@@ -77,13 +78,14 @@ def register_episode_planning(services: ApplicationServices) -> EpisodePlanningS
     return services.register(EpisodePlanningService, planner)
 
 
-def register_scene_planning(services: ApplicationServices) -> ScenePlanningService:
-    """Register Scene Planning using the authoritative Episode Planner service."""
-    existing = services.get(ScenePlanningService)
+def register_scene_planning(services: ApplicationServices) -> IterativeScenePlanningService:
+    """Register iterative Scene Planning beneath authoritative Episode Planning."""
+    existing = services.get(IterativeScenePlanningService)
     if existing is not None:
         return existing
-    planner = ScenePlanningService(
+    planner = IterativeScenePlanningService(
         services.require(ProjectService),
         register_episode_planning(services),
+        services.require(StoryService),
     )
-    return services.register(ScenePlanningService, planner)
+    return services.register(IterativeScenePlanningService, planner)
