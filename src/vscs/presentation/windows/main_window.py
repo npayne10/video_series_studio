@@ -188,7 +188,10 @@ class MainWindow(QMainWindow):
             self.production_projection,
         )
         self.content_stack.addWidget(self.cap_manager)
-        self.behaviour_manager = BehaviourProfileManagerWidget(self.behaviours)
+        self.behaviour_manager = BehaviourProfileManagerWidget(
+            self.behaviours,
+            project_available=lambda: self.projects.is_project_open,
+        )
         self.content_stack.addWidget(self.behaviour_manager)
         for section in ("Production Planning", "Render Queue", "Post-Production"):
             self.content_stack.addWidget(self._placeholder_page(section))
