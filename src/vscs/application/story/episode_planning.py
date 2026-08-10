@@ -84,7 +84,10 @@ class EpisodePlanningService:
 
     def next_sequence_number(self, story_id: str) -> int:
         """Return the next episode sequence for one Story."""
-        return max((plan.sequence_number for plan in self.list_plans(story_id=story_id)), default=0) + 1
+        return (
+            max((plan.sequence_number for plan in self.list_plans(story_id=story_id)), default=0)
+            + 1
+        )
 
     def create(
         self,
@@ -172,7 +175,9 @@ class EpisodePlanningService:
             return False
         if current.status is not EpisodePlanStatus.DRAFT:
             raise EpisodePlanningError("Ready episode plans must return to Draft before deletion")
-        remaining = tuple(plan for plan in self.list_plans() if plan.episode_id != current.episode_id)
+        remaining = tuple(
+            plan for plan in self.list_plans() if plan.episode_id != current.episode_id
+        )
         self._write(remaining)
         return True
 
@@ -194,8 +199,7 @@ class EpisodePlanningService:
 
     def _replace(self, updated: EpisodePlan) -> None:
         plans = tuple(
-            updated if plan.episode_id == updated.episode_id else plan
-            for plan in self.list_plans()
+            updated if plan.episode_id == updated.episode_id else plan for plan in self.list_plans()
         )
         self._write(plans)
 
@@ -237,7 +241,9 @@ class EpisodePlanningService:
             target_runtime_seconds=int(raw["target_runtime_seconds"]),
             continuity_in=str(raw.get("continuity_in", "")),
             continuity_out=str(raw.get("continuity_out", "")),
-            production_constraints=tuple(str(value) for value in raw.get("production_constraints", [])),
+            production_constraints=tuple(
+                str(value) for value in raw.get("production_constraints", [])
+            ),
             status=EpisodePlanStatus(str(raw.get("status", EpisodePlanStatus.DRAFT.value))),
         )
 
