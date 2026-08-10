@@ -103,7 +103,7 @@ class BehaviourParameter(BaseModel):
         return tuple(dict.fromkeys(item.strip() for item in value if item.strip()))
 
     @model_validator(mode="after")
-    def validate_bounds_and_enum(self) -> "BehaviourParameter":
+    def validate_bounds_and_enum(self) -> BehaviourParameter:
         if self.minimum is not None and self.maximum is not None and self.minimum > self.maximum:
             raise ValueError("Behaviour parameter minimum cannot exceed maximum")
         if self.parameter_type is BehaviourParameterType.ENUM and not self.allowed_values:
@@ -124,7 +124,7 @@ class BehaviourPrecondition(BaseModel):
     description: str = ""
 
     @model_validator(mode="after")
-    def validate_value_requirement(self) -> "BehaviourPrecondition":
+    def validate_value_requirement(self) -> BehaviourPrecondition:
         existence_operators = {
             BehaviourConditionOperator.EXISTS,
             BehaviourConditionOperator.NOT_EXISTS,
@@ -213,7 +213,9 @@ class BehaviourProfile(BaseModel):
     def normalize_profile_id(cls, value: str) -> str:
         normalized = value.strip().upper().replace(" ", "-")
         if not re.fullmatch(r"BEP-[A-Z0-9][A-Z0-9_-]*", normalized):
-            raise ValueError("Behaviour Profile IDs must start with 'BEP-' and use letters, numbers, '-' or '_'")
+            raise ValueError(
+                "Behaviour Profile IDs must start with 'BEP-' and use letters, numbers, '-' or '_'"
+            )
         return normalized
 
     @field_validator("action")
@@ -249,7 +251,7 @@ class BehaviourProfile(BaseModel):
         }
 
     @model_validator(mode="after")
-    def validate_unique_parameter_names(self) -> "BehaviourProfile":
+    def validate_unique_parameter_names(self) -> BehaviourProfile:
         names = [parameter.name for parameter in self.parameters]
         if len(names) != len(set(names)):
             raise ValueError("Behaviour Profile parameter names must be unique")
