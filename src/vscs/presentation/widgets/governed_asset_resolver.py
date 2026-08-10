@@ -33,7 +33,6 @@ from vscs.application.story import (
 )
 from vscs.domain.assets import AssetCategory
 
-
 EXCLUDED_CATEGORIES = {
     AssetCategory.CAMERA,
     AssetCategory.LIGHTING,
