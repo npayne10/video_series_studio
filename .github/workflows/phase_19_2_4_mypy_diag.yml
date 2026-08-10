@@ -1,0 +1,20 @@
+name: Phase 19.2.4 Mypy Diagnostic
+on:
+  push:
+    branches: [phase-19.2.4-behaviour-profile-editor]
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[dev]'
+      - name: Capture mypy
+        shell: bash
+        run: mypy > mypy-report.txt 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase-19-2-4-mypy-report
+          path: mypy-report.txt
