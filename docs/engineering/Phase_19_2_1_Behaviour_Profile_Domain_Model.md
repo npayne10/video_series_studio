@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implementation complete — acceptance pending local verification.**
+**Accepted — local verification passed.**
 
 ## Objective
 
@@ -119,10 +119,12 @@ Phase 19.2.1 is accepted when:
 9. Repository Ruff, formatting, mypy and full pytest acceptance remain green.
 10. No UI regression is introduced because Phase 19.2.1 adds no UI surface.
 
+All acceptance criteria were verified on the development machine before Phase 19.2.2 began.
+
 ## Architectural record
 
 See `docs/adr/ADR-0011-Behaviour-Profile-Domain-Model.md`.
 
 ## Next phase
 
-**Phase 19.2.2 — Behaviour Profile Persistence & Repository** will persist BEPs and define repository contracts without changing the domain responsibility established here.
+**Phase 19.2.2 — Behaviour Profile Persistence & Repository** persists BEPs and defines repository contracts without changing the domain responsibility established here.

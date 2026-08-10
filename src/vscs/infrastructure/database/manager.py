@@ -14,7 +14,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from vscs.domain.projects import ProjectMetadata
-from vscs.infrastructure.database.models import Base, CanonicalReferenceRecord, SchemaVersion
+from vscs.infrastructure.database.models import (
+    Base,
+    BehaviourProfileRecord,
+    CanonicalReferenceRecord,
+    SchemaVersion,
+)
 from vscs.infrastructure.logging import LoggingService
 
 
@@ -37,7 +42,7 @@ class DatabaseIntegrityError(DatabaseError):
 class DatabaseManager:
     """Manage the SQLite database belonging to the active VSCS project."""
 
-    SCHEMA_VERSION = 5
+    SCHEMA_VERSION = 6
     APPLICATION_VERSION = "0.1.0"
 
     def __init__(self) -> None:
@@ -146,6 +151,7 @@ class DatabaseManager:
             3: self._migrate_reference_statuses,
             4: self._migrate_reference_approvals,
             5: self._migrate_structured_cap_knowledge,
+            6: self._migrate_behaviour_profiles,
         }
         while schema.version < self.SCHEMA_VERSION:
             next_version = schema.version + 1
@@ -224,6 +230,12 @@ class DatabaseManager:
                 database_session.execute(
                     text(f"ALTER TABLE canonical_asset_profiles ADD COLUMN {name} {definition}")
                 )
+
+    @staticmethod
+    def _migrate_behaviour_profiles(database_session: Session) -> None:
+        bind = database_session.get_bind()
+        behaviour_table = cast(Table, BehaviourProfileRecord.__table__)
+        Base.metadata.create_all(bind=bind, tables=[behaviour_table], checkfirst=True)
 
     @staticmethod
     def _configure_sqlite(engine: Engine) -> None:

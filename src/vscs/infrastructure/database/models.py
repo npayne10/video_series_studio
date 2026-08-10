@@ -127,3 +127,49 @@ class CanonicalReferenceRecord(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+
+
+class BehaviourProfileRecord(Base):
+    """Persist one version of a provider-neutral Behaviour Profile."""
+
+    __tablename__ = "behaviour_profiles"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "version",
+            name="uq_behaviour_profiles_profile_version",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    profile_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    version: Mapped[str] = mapped_column(String(32), nullable=False)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    category: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    applicable_asset_categories_json: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="[]",
+    )
+    aliases_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    parameters_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    preconditions_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    constraints_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    outcomes_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    interactions_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    tags_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    authority: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    provenance_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
