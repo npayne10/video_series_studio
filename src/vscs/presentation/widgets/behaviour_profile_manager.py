@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
@@ -58,7 +59,9 @@ _METADATA = TypeAdapter(dict[str, str])
 class BehaviourProfileEditorDialog(QDialog):
     """Scrollable, resizable structured editor for one Behaviour Profile version."""
 
-    def __init__(self, profile: BehaviourProfile | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, profile: BehaviourProfile | None = None, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self.profile = profile
         self.setObjectName("behaviourProfileEditorDialog")
@@ -90,13 +93,9 @@ class BehaviourProfileEditorDialog(QDialog):
         self.asset_categories.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         self.asset_categories.setMaximumHeight(150)
         for category in AssetCategory:
-            item = QTableWidgetItem()  # type: ignore[assignment]
-            del item
-            from PySide6.QtWidgets import QListWidgetItem
-
-            list_item = QListWidgetItem(category.value.replace("_", " ").title())
-            list_item.setData(Qt.ItemDataRole.UserRole, category)
-            self.asset_categories.addItem(list_item)
+            item = QListWidgetItem(category.value.replace("_", " ").title())
+            item.setData(Qt.ItemDataRole.UserRole, category)
+            self.asset_categories.addItem(item)
         self.authority_label = QLabel(BehaviourAuthority.DRAFT.value.title())
 
         form.addRow("Profile ID", self.profile_id_edit)
@@ -151,19 +150,26 @@ class BehaviourProfileEditorDialog(QDialog):
         self.category_combo.setCurrentIndex(self.category_combo.findData(profile.category))
         for row in range(self.asset_categories.count()):
             item = self.asset_categories.item(row)
-            item.setSelected(item.data(Qt.ItemDataRole.UserRole) in profile.applicable_asset_categories)
+            item.setSelected(
+                item.data(Qt.ItemDataRole.UserRole) in profile.applicable_asset_categories
+            )
         self.parameters_edit.setPlainText(self._dump(profile.parameters))
         self.preconditions_edit.setPlainText(self._dump(profile.preconditions))
         self.constraints_edit.setPlainText(self._dump(profile.constraints))
         self.outcomes_edit.setPlainText(self._dump(profile.outcomes))
         self.interactions_edit.setPlainText(self._dump(profile.interactions))
-        self.provenance_edit.setPlainText(json.dumps(profile.provenance.model_dump(mode="json"), indent=2))
+        self.provenance_edit.setPlainText(
+            json.dumps(profile.provenance.model_dump(mode="json"), indent=2)
+        )
         self.metadata_edit.setPlainText(json.dumps(profile.metadata, indent=2, sort_keys=True))
+
+        # Persistent BEP identity is immutable after creation, including for Drafts.
+        self.profile_id_edit.setEnabled(False)
+        self.version_edit.setEnabled(False)
+
         governed = profile.authority is not BehaviourAuthority.DRAFT
         for widget in (
-            self.profile_id_edit,
             self.name_edit,
-            self.version_edit,
             self.action_edit,
             self.description_edit,
             self.aliases_edit,
@@ -179,29 +185,46 @@ class BehaviourProfileEditorDialog(QDialog):
 
     @staticmethod
     def _dump(values: tuple[object, ...]) -> str:
-        return json.dumps([value.model_dump(mode="json") for value in values], indent=2)  # type: ignore[attr-defined]
+        return json.dumps(
+            [value.model_dump(mode="json") for value in values],  # type: ignore[attr-defined]
+            indent=2,
+        )
 
     @staticmethod
     def _terms(value: str) -> tuple[str, ...]:
         return tuple(dict.fromkeys(part.strip() for part in value.split(",") if part.strip()))
 
-    @staticmethod
-    def _parse(editor: QPlainTextEdit, adapter: TypeAdapter[object], label: str) -> object:
-        try:
-            raw = json.loads(editor.toPlainText() or "[]")
-            return adapter.validate_python(raw)
-        except (json.JSONDecodeError, ValidationError) as exc:
-            raise ValueError(f"Invalid {label}: {exc}") from exc
-
     def build_profile(self) -> BehaviourProfile:
         categories = tuple(
-            item.data(Qt.ItemDataRole.UserRole)
-            for item in self.asset_categories.selectedItems()
+            item.data(Qt.ItemDataRole.UserRole) for item in self.asset_categories.selectedItems()
         )
         authority = self.profile.authority if self.profile is not None else BehaviourAuthority.DRAFT
-        provenance_raw = json.loads(self.provenance_edit.toPlainText() or "{}")
-        metadata_raw = json.loads(self.metadata_edit.toPlainText() or "{}")
+        schema_version = self.profile.schema_version if self.profile is not None else 1
+        try:
+            parameters = _PARAMETERS.validate_python(
+                json.loads(self.parameters_edit.toPlainText() or "[]")
+            )
+            preconditions = _PRECONDITIONS.validate_python(
+                json.loads(self.preconditions_edit.toPlainText() or "[]")
+            )
+            constraints = _CONSTRAINTS.validate_python(
+                json.loads(self.constraints_edit.toPlainText() or "[]")
+            )
+            outcomes = _OUTCOMES.validate_python(
+                json.loads(self.outcomes_edit.toPlainText() or "[]")
+            )
+            interactions = _INTERACTIONS.validate_python(
+                json.loads(self.interactions_edit.toPlainText() or "[]")
+            )
+            provenance_raw = json.loads(self.provenance_edit.toPlainText() or "{}")
+            metadata_raw = json.loads(self.metadata_edit.toPlainText() or "{}")
+            provenance = BehaviourProvenance.model_validate(provenance_raw)
+            metadata = _METADATA.validate_python(metadata_raw)
+        except (json.JSONDecodeError, ValidationError) as exc:
+            raise ValueError(f"Invalid structured Behaviour Profile data: {exc}") from exc
+
         return BehaviourProfile(
+            schema_version=schema_version,
             profile_id=self.profile_id_edit.text(),
             name=self.name_edit.text(),
             version=self.version_edit.text(),
@@ -210,24 +233,31 @@ class BehaviourProfileEditorDialog(QDialog):
             action=self.action_edit.text(),
             applicable_asset_categories=categories,
             aliases=self._terms(self.aliases_edit.text()),
-            parameters=_PARAMETERS.validate_python(json.loads(self.parameters_edit.toPlainText() or "[]")),
-            preconditions=_PRECONDITIONS.validate_python(json.loads(self.preconditions_edit.toPlainText() or "[]")),
-            constraints=_CONSTRAINTS.validate_python(json.loads(self.constraints_edit.toPlainText() or "[]")),
-            outcomes=_OUTCOMES.validate_python(json.loads(self.outcomes_edit.toPlainText() or "[]")),
-            interactions=_INTERACTIONS.validate_python(json.loads(self.interactions_edit.toPlainText() or "[]")),
+            parameters=parameters,
+            preconditions=preconditions,
+            constraints=constraints,
+            outcomes=outcomes,
+            interactions=interactions,
             tags=self._terms(self.tags_edit.text()),
             authority=authority,
-            provenance=BehaviourProvenance.model_validate(provenance_raw),
-            metadata=_METADATA.validate_python(metadata_raw),
+            provenance=provenance,
+            metadata=metadata,
         )
 
 
 class BehaviourProfileManagerWidget(QWidget):
     """Workspace for browsing, editing and governing Behaviour Profiles."""
 
-    def __init__(self, service: BehaviourProfileService, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        service: BehaviourProfileService,
+        parent: QWidget | None = None,
+        *,
+        project_available: Callable[[], bool] | None = None,
+    ) -> None:
         super().__init__(parent)
         self.service = service
+        self.project_available = project_available or (lambda: True)
         self.setObjectName("behaviourProfileManager")
         layout = QVBoxLayout(self)
 
@@ -290,13 +320,9 @@ class BehaviourProfileManagerWidget(QWidget):
         self.new_button.clicked.connect(self._new)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
-        self.submit_button.clicked.connect(
-            lambda: self._transition(BehaviourAuthority.PROPOSED)
-        )
+        self.submit_button.clicked.connect(lambda: self._transition(BehaviourAuthority.PROPOSED))
         self.rework_button.clicked.connect(lambda: self._transition(BehaviourAuthority.DRAFT))
-        self.approve_button.clicked.connect(
-            lambda: self._transition(BehaviourAuthority.APPROVED)
-        )
+        self.approve_button.clicked.connect(lambda: self._transition(BehaviourAuthority.APPROVED))
         self.canonical_button.clicked.connect(
             lambda: self._transition(BehaviourAuthority.CANONICAL)
         )
@@ -305,6 +331,10 @@ class BehaviourProfileManagerWidget(QWidget):
         self.refresh()
 
     def refresh(self) -> None:
+        if not self.project_available():
+            self.table.setRowCount(0)
+            self._update_actions()
+            return
         try:
             profiles = self.service.list(
                 query=self.search_edit.text(),
@@ -331,7 +361,7 @@ class BehaviourProfileManagerWidget(QWidget):
 
     def _selected(self) -> BehaviourProfile | None:
         row = self.table.currentRow()
-        if row < 0:
+        if row < 0 or not self.project_available():
             return None
         item = self.table.item(row, 0)
         if item is None:
@@ -347,13 +377,25 @@ class BehaviourProfileManagerWidget(QWidget):
         selected = profile is not None
         self.edit_button.setEnabled(selected)
         self.revise_button.setEnabled(selected)
-        self.delete_button.setEnabled(selected and profile.authority is BehaviourAuthority.DRAFT if profile else False)
-        self.submit_button.setEnabled(selected and profile.authority is BehaviourAuthority.DRAFT if profile else False)
-        self.rework_button.setEnabled(selected and profile.authority is BehaviourAuthority.PROPOSED if profile else False)
-        self.approve_button.setEnabled(selected and profile.authority is BehaviourAuthority.PROPOSED if profile else False)
-        self.canonical_button.setEnabled(selected and profile.authority is BehaviourAuthority.APPROVED if profile else False)
+        self.delete_button.setEnabled(
+            selected and profile.authority is BehaviourAuthority.DRAFT if profile else False
+        )
+        self.submit_button.setEnabled(
+            selected and profile.authority is BehaviourAuthority.DRAFT if profile else False
+        )
+        self.rework_button.setEnabled(
+            selected and profile.authority is BehaviourAuthority.PROPOSED if profile else False
+        )
+        self.approve_button.setEnabled(
+            selected and profile.authority is BehaviourAuthority.PROPOSED if profile else False
+        )
+        self.canonical_button.setEnabled(
+            selected and profile.authority is BehaviourAuthority.APPROVED if profile else False
+        )
 
-    def _run_dialog(self, profile: BehaviourProfile | None, persist: Callable[[BehaviourProfile], object]) -> None:
+    def _run_dialog(
+        self, profile: BehaviourProfile | None, persist: Callable[[BehaviourProfile], object]
+    ) -> None:
         dialog = BehaviourProfileEditorDialog(profile, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
@@ -366,7 +408,8 @@ class BehaviourProfileManagerWidget(QWidget):
         self.refresh()
 
     def _new(self) -> None:
-        self._run_dialog(None, self.service.create)
+        if self.project_available():
+            self._run_dialog(None, self.service.create)
 
     def _edit(self) -> None:
         profile = self._selected()
@@ -381,7 +424,10 @@ class BehaviourProfileManagerWidget(QWidget):
         profile = self._selected()
         if profile is None:
             return
-        if QMessageBox.question(self, "Delete Draft", "Delete this draft Behaviour Profile?") != QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(self, "Delete Draft", "Delete this draft Behaviour Profile?")
+            != QMessageBox.StandardButton.Yes
+        ):
             return
         try:
             self.service.delete_draft(profile.profile_id, profile.version)
