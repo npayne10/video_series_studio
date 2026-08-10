@@ -108,9 +108,7 @@ def test_abandoned_claim_is_released_after_threshold() -> None:
         claimed_by="worker-missing",
         updated_at=NOW - timedelta(minutes=10),
     )
-    engine = ProductionRecoveryEngine(
-        ProductionRecoveryConfig(abandon_claim_after_seconds=60)
-    )
+    engine = ProductionRecoveryEngine(ProductionRecoveryConfig(abandon_claim_after_seconds=60))
 
     result = engine.reconcile(_pipeline(), _queue(entry), now=NOW)
 

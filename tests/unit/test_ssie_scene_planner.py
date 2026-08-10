@@ -1,4 +1,5 @@
 """Tests for deterministic SSIE scene and shot planning."""
+
 from __future__ import annotations
 
 from dataclasses import replace

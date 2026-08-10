@@ -39,9 +39,9 @@ class ProductionPipelineSerializer:
 
     def checksum(self, pipeline: ProductionPipeline) -> str:
         """Return a deterministic SHA-256 checksum."""
-        encoded = json.dumps(
-            self.to_dict(pipeline), sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
+        encoded = json.dumps(self.to_dict(pipeline), sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
         return hashlib.sha256(encoded).hexdigest()
 
     @staticmethod
@@ -84,14 +84,11 @@ class ProductionPipelineSerializer:
                     state=ProductionState(str(item["state"])),
                     clip_id=None if item.get("clip_id") is None else str(item["clip_id"]),
                     artifact_id=(
-                        None
-                        if item.get("artifact_id") is None
-                        else str(item["artifact_id"])
+                        None if item.get("artifact_id") is None else str(item["artifact_id"])
                     ),
                     dependencies=tuple(str(value) for value in item.get("dependencies", [])),
                     metadata=tuple(
-                        (str(pair[0]), str(pair[1]))
-                        for pair in item.get("metadata", [])
+                        (str(pair[0]), str(pair[1])) for pair in item.get("metadata", [])
                     ),
                 )
             )

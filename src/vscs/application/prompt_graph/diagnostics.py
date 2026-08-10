@@ -30,8 +30,7 @@ class PromptGraphBuildReport:
     @property
     def passed(self) -> bool:
         return not any(
-            item.severity is PromptGraphDiagnosticSeverity.ERROR
-            for item in self.diagnostics
+            item.severity is PromptGraphDiagnosticSeverity.ERROR for item in self.diagnostics
         )
 
 

@@ -22,9 +22,7 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
     _ACTION_HINTS: ClassVar[dict[str, str]] = {
         "production_type": "Confirm the production type, then continue.",
         "container_id": "Enter a valid container ID using letters, numbers and hyphens.",
-        "scene_identity": (
-            "Enter a short scene name and a screenplay heading before continuing."
-        ),
+        "scene_identity": ("Enter a short scene name and a screenplay heading before continuing."),
         "location": "Select one canonical Location or Environment asset.",
         "validation": (
             "Complete the remaining required fields shown by Validation before continuing."
@@ -49,9 +47,7 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
         self._connect_guided_action_signals()
 
     def _connect_guided_action_signals(self) -> None:
-        self.production_type_combo.currentIndexChanged.connect(
-            self._refresh_guided_action
-        )
+        self.production_type_combo.currentIndexChanged.connect(self._refresh_guided_action)
         self.episode_id_edit.textChanged.connect(self._refresh_guided_action)
         self.scene_name_edit.installEventFilter(self)
         self.heading_edit.installEventFilter(self)
@@ -60,12 +56,8 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
         self.summary_edit.textChanged.connect(self._refresh_guided_action)
         self.participant_list.itemChanged.connect(self._refresh_guided_action)
         self.asset_list.itemChanged.connect(self._refresh_guided_action)
-        self.dialogue_editor.dialogue_list.model().rowsInserted.connect(
-            self._refresh_guided_action
-        )
-        self.dialogue_editor.dialogue_list.model().rowsRemoved.connect(
-            self._refresh_guided_action
-        )
+        self.dialogue_editor.dialogue_list.model().rowsInserted.connect(self._refresh_guided_action)
+        self.dialogue_editor.dialogue_list.model().rowsRemoved.connect(self._refresh_guided_action)
         self.duration_spin.valueChanged.connect(self._refresh_guided_action)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
@@ -118,20 +110,14 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
             return self.production_type_combo.currentIndex() >= 0
         if step_id == "container_id":
             container_id = self.episode_id_edit.text().strip().upper()
-            return bool(container_id) and bool(
-                self._CONTAINER_PATTERN.fullmatch(container_id)
-            )
+            return bool(container_id) and bool(self._CONTAINER_PATTERN.fullmatch(container_id))
         if step_id == "scene_identity":
-            return bool(
-                self.scene_name_edit.text().strip()
-                and self.heading_edit.text().strip()
-            )
+            return bool(self.scene_name_edit.text().strip() and self.heading_edit.text().strip())
         if step_id == "location":
             return bool(self.selected_location_id())
         if step_id in {"validation", "save"}:
             return not any(
-                issue.severity is ValidationSeverity.ERROR
-                for issue in self.validation_explanations
+                issue.severity is ValidationSeverity.ERROR for issue in self.validation_explanations
             )
         return True
 
@@ -187,11 +173,7 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
 
     def _action_topic(self, step_id: str) -> str | None:
         if step_id == "scene_identity":
-            return (
-                "scene.name"
-                if not self.scene_name_edit.text().strip()
-                else "scene.heading"
-            )
+            return "scene.name" if not self.scene_name_edit.text().strip() else "scene.heading"
         if step_id in {"validation", "save"}:
             blocking = next(
                 (
@@ -229,9 +211,7 @@ class GuidedFirstSceneEditorDialog(GuidedTourSceneEditorDialog):
     def _is_active_guided_step(self, step_id: str) -> bool:
         current = self.onboarding.state.current_step
         return bool(
-            self._guided_action_active
-            and current is not None
-            and current.step_id == step_id
+            self._guided_action_active and current is not None and current.step_id == step_id
         )
 
     def _complete_guided_action(self) -> None:

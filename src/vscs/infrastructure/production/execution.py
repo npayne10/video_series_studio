@@ -155,9 +155,7 @@ class RenderExecutionService:
                 duration_seconds=request.lease_duration_seconds,
                 now=current,
             )
-            result = executor.execute(
-                ExecutionRequest(job, request.worker, lease, current)
-            )
+            result = executor.execute(ExecutionRequest(job, request.worker, lease, current))
         except Exception as exc:
             claimed = queue.entry(entry.entry_id)
             if claimed is not None and claimed.state is QueueState.CLAIMED:
@@ -302,18 +300,12 @@ class RenderExecutionService:
     def _executor(self, job: RenderJob, worker: WorkerIdentity) -> ProductionExecutor:
         executor = self.registry.get(worker.executor_id)
         if executor is None:
-            raise RenderExecutionError(
-                f"Worker executor is not registered: {worker.executor_id}"
-            )
+            raise RenderExecutionError(f"Worker executor is not registered: {worker.executor_id}")
         required = frozenset(job.required_capabilities)
         if not required.issubset(executor.capabilities):
-            raise RenderExecutionError(
-                f"Executor does not support render job: {job.job_id}"
-            )
+            raise RenderExecutionError(f"Executor does not support render job: {job.job_id}")
         if not required.issubset(worker.capabilities):
-            raise RenderExecutionError(
-                f"Worker does not support render job: {job.job_id}"
-            )
+            raise RenderExecutionError(f"Worker does not support render job: {job.job_id}")
         return executor
 
     @staticmethod

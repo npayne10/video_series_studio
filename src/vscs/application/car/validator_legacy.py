@@ -118,9 +118,7 @@ BEHAVIOUR_REQUIRED_DIRECTORIES = (
     "tests",
 )
 
-BEHAVIOUR_REQUIRED_FILES = (
-    "behaviour.json",
-)
+BEHAVIOUR_REQUIRED_FILES = ("behaviour.json",)
 
 SUPPORTED_IMAGE_EXTENSIONS = {
     ".png",
@@ -135,6 +133,7 @@ SUPPORTED_IMAGE_EXTENSIONS = {
 # =============================================================================
 # Validation Severity
 # =============================================================================
+
 
 class ValidationSeverity(Enum):
     """Severity of a validation message."""
@@ -151,6 +150,7 @@ class ValidationSeverity(Enum):
 # =============================================================================
 # Validation Codes
 # =============================================================================
+
 
 class ValidationCode(Enum):
     """Stable validation identifiers."""
@@ -192,6 +192,7 @@ class ValidationCode(Enum):
 # Diagnostics
 # =============================================================================
 
+
 @dataclass(slots=True)
 class ValidationDiagnostic:
     """
@@ -215,9 +216,9 @@ class ValidationDiagnostic:
 # Asset Validation Result
 # =============================================================================
 
+
 @dataclass(slots=True)
 class AssetValidationResult:
-
     asset_id: str
 
     asset_class: AssetClass
@@ -241,9 +242,9 @@ class AssetValidationResult:
 # Repository Validation Result
 # =============================================================================
 
+
 @dataclass(slots=True)
 class RepositoryValidationResult:
-
     repository: AssetRepositoryInfo | None
 
     passed: bool = True
@@ -275,6 +276,7 @@ class RepositoryValidationResult:
 # Validator
 # =============================================================================
 
+
 class CarRepositoryValidator:
     """
     Canonical Asset Repository validator.
@@ -298,10 +300,7 @@ class CarRepositoryValidator:
 
         self._asset_ids: set[str] = set()
 
-        self._file_hashes: dict[
-            str,
-            list[str]
-        ] = {}
+        self._file_hashes: dict[str, list[str]] = {}
 
     # -------------------------------------------------------------------------
 
@@ -314,9 +313,7 @@ class CarRepositoryValidator:
         sha = hashlib.sha256()
 
         with path.open("rb") as f:
-
             while True:
-
                 chunk = f.read(65536)
 
                 if not chunk:
@@ -335,16 +332,13 @@ class CarRepositoryValidator:
         """
 
         try:
-
             with path.open(
                 "r",
                 encoding="utf-8",
             ) as f:
-
                 return json.load(f)
 
         except Exception:
-
             LOGGER.exception(
                 "Unable to read JSON %s",
                 path,
@@ -360,9 +354,7 @@ class CarRepositoryValidator:
 
         Full implementation continues in Part 2.
         """
-        raise NotImplementedError(
-            "Implemented in Phase 12.1.1 Part 2."
-        )
+        raise NotImplementedError("Implemented in Phase 12.1.1 Part 2.")
 
     # -------------------------------------------------------------------------
 
@@ -393,8 +385,8 @@ class CarRepositoryValidator:
         Implemented in Part 5.
         """
         raise NotImplementedError()
-        
-     # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
 
     def validate(self) -> RepositoryValidationResult:
         """
@@ -410,9 +402,7 @@ class CarRepositoryValidator:
 
         self.scan_result = self.scanner.scan()
 
-        self.result = RepositoryValidationResult(
-            repository=self.scan_result.repository
-        )
+        self.result = RepositoryValidationResult(repository=self.scan_result.repository)
 
         self.result.total_assets = len(self.scan_result.assets)
 
@@ -425,7 +415,6 @@ class CarRepositoryValidator:
         # Asset validation
         #
         for asset in self.scan_result.assets:
-
             asset_result = self.validate_asset(asset)
 
             self.result.assets.append(asset_result)
@@ -439,7 +428,6 @@ class CarRepositoryValidator:
         # Count diagnostics
         #
         for diagnostic in self.result.diagnostics:
-
             if diagnostic.severity == ValidationSeverity.WARNING:
                 self.result.warnings += 1
 
@@ -450,9 +438,7 @@ class CarRepositoryValidator:
                 self.result.critical += 1
 
         for asset in self.result.assets:
-
             for diagnostic in asset.diagnostics:
-
                 if diagnostic.severity == ValidationSeverity.WARNING:
                     self.result.warnings += 1
 
@@ -464,10 +450,7 @@ class CarRepositoryValidator:
 
         self.result.repository_health = self.calculate_health()
 
-        self.result.passed = (
-            self.result.critical == 0
-            and self.result.errors == 0
-        )
+        self.result.passed = self.result.critical == 0 and self.result.errors == 0
 
         LOGGER.info(
             "Repository validation complete (%s assets)",
@@ -489,7 +472,6 @@ class CarRepositoryValidator:
         repository = self.scan_result.repository
 
         if repository is None:
-
             self.result.diagnostics.append(
                 ValidationDiagnostic(
                     severity=ValidationSeverity.CRITICAL,
@@ -506,7 +488,6 @@ class CarRepositoryValidator:
         # Repository existence
         #
         if not self.repository.exists():
-
             self.result.diagnostics.append(
                 ValidationDiagnostic(
                     severity=ValidationSeverity.CRITICAL,
@@ -523,7 +504,6 @@ class CarRepositoryValidator:
         # Version validation
         #
         if repository.version != REPOSITORY_VERSION:
-
             self.result.diagnostics.append(
                 ValidationDiagnostic(
                     severity=ValidationSeverity.WARNING,
@@ -546,7 +526,6 @@ class CarRepositoryValidator:
         # Scanner issues
         #
         for issue in self.scan_result.issues:
-
             self.result.diagnostics.append(
                 ValidationDiagnostic(
                     severity=ValidationSeverity.WARNING,
@@ -583,7 +562,6 @@ class CarRepositoryValidator:
         # Duplicate Asset ID detection
         #
         if asset.asset_id in self._asset_ids:
-
             result.passed = False
 
             self.result.duplicate_asset_ids.add(asset.asset_id)
@@ -599,14 +577,12 @@ class CarRepositoryValidator:
             )
 
         else:
-
             self._asset_ids.add(asset.asset_id)
 
         #
         # Asset directory exists
         #
         if not asset.path.exists():
-
             result.passed = False
 
             result.diagnostics.append(
@@ -625,19 +601,15 @@ class CarRepositoryValidator:
         # Dispatch by asset class
         #
         if asset.asset_class == AssetClass.VISUAL:
-
             self._validate_visual_asset(asset, result)
 
         elif asset.asset_class == AssetClass.CONFIGURATION:
-
             self._validate_configuration_asset(asset, result)
 
         elif asset.asset_class == AssetClass.BEHAVIOUR:
-
             self._validate_behaviour_asset(asset, result)
 
         else:
-
             result.passed = False
 
             result.diagnostics.append(
@@ -659,23 +631,17 @@ class CarRepositoryValidator:
     # -------------------------------------------------------------------------
 
     def _validate_visual_asset(self, asset, result) -> None:
-        raise NotImplementedError(
-            "Implemented in Phase 12.1.1 Part 3."
-        )
+        raise NotImplementedError("Implemented in Phase 12.1.1 Part 3.")
 
     # -------------------------------------------------------------------------
 
     def _validate_configuration_asset(self, asset, result) -> None:
-        raise NotImplementedError(
-            "Implemented in Phase 12.1.1 Part 4."
-        )
+        raise NotImplementedError("Implemented in Phase 12.1.1 Part 4.")
 
     # -------------------------------------------------------------------------
 
     def _validate_behaviour_asset(self, asset, result) -> None:
-        raise NotImplementedError(
-            "Implemented in Phase 12.1.1 Part 4."
-        )
+        raise NotImplementedError("Implemented in Phase 12.1.1 Part 4.")
 
     # -------------------------------------------------------------------------
 
@@ -758,20 +724,15 @@ class CarRepositoryValidator:
         asset_path = Path(asset.path)
 
         for directory_name in VISUAL_REQUIRED_DIRECTORIES:
-
             directory_path = asset_path / directory_name
 
             if not directory_path.exists():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_DIRECTORY,
                     path=directory_path,
-                    message=(
-                        f"Required visual asset directory "
-                        f"'{directory_name}' is missing."
-                    ),
+                    message=(f"Required visual asset directory '{directory_name}' is missing."),
                     details={
                         "directory": directory_name,
                     },
@@ -780,16 +741,12 @@ class CarRepositoryValidator:
                 continue
 
             if not directory_path.is_dir():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_DIRECTORY,
                     path=directory_path,
-                    message=(
-                        f"Required path '{directory_name}' exists "
-                        f"but is not a directory."
-                    ),
+                    message=(f"Required path '{directory_name}' exists but is not a directory."),
                     details={
                         "directory": directory_name,
                         "expected_type": "directory",
@@ -810,7 +767,6 @@ class CarRepositoryValidator:
         manifest_path = Path(asset.path) / DEFAULT_MANIFEST
 
         if not manifest_path.exists():
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -825,7 +781,6 @@ class CarRepositoryValidator:
             return
 
         if not manifest_path.is_file():
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -847,7 +802,6 @@ class CarRepositoryValidator:
             return
 
         if not isinstance(manifest, dict):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -895,20 +849,15 @@ class CarRepositoryValidator:
             return
 
         for metadata_name in VISUAL_METADATA_FILES:
-
             metadata_path = metadata_directory / metadata_name
 
             if not metadata_path.exists():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_METADATA,
                     path=metadata_path,
-                    message=(
-                        f"Required visual metadata file "
-                        f"'{metadata_name}' is missing."
-                    ),
+                    message=(f"Required visual metadata file '{metadata_name}' is missing."),
                     details={
                         "required_file": metadata_name,
                     },
@@ -917,16 +866,12 @@ class CarRepositoryValidator:
                 continue
 
             if not metadata_path.is_file():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_METADATA,
                     path=metadata_path,
-                    message=(
-                        f"Metadata path '{metadata_name}' exists "
-                        f"but is not a file."
-                    ),
+                    message=(f"Metadata path '{metadata_name}' exists but is not a file."),
                     details={
                         "required_file": metadata_name,
                         "expected_type": "file",
@@ -946,16 +891,12 @@ class CarRepositoryValidator:
                 continue
 
             if not isinstance(metadata, dict):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_SCHEMA,
                     path=metadata_path,
-                    message=(
-                        f"Metadata file '{metadata_name}' must "
-                        f"contain a JSON object."
-                    ),
+                    message=(f"Metadata file '{metadata_name}' must contain a JSON object."),
                     details={
                         "actual_type": type(metadata).__name__,
                     },
@@ -1004,40 +945,28 @@ class CarRepositoryValidator:
         canonical_images = sorted(
             path
             for path in canon_directory.rglob("*")
-            if (
-                path.is_file()
-                and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-            )
+            if (path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
         )
 
         result.image_count = len(canonical_images)
 
         if not canonical_images:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.MISSING_CANONICAL_IMAGE,
                 path=canon_directory,
-                message=(
-                    "Visual asset does not contain a supported "
-                    "canonical image."
-                ),
+                message=("Visual asset does not contain a supported canonical image."),
                 details={
-                    "supported_extensions": sorted(
-                        SUPPORTED_IMAGE_EXTENSIONS
-                    ),
+                    "supported_extensions": sorted(SUPPORTED_IMAGE_EXTENSIONS),
                 },
             )
 
             return
 
         for image_path in canonical_images:
-
             try:
-
                 if image_path.stat().st_size == 0:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
@@ -1049,7 +978,6 @@ class CarRepositoryValidator:
                     continue
 
             except OSError as exc:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
@@ -1092,16 +1020,11 @@ class CarRepositoryValidator:
         if not prompts_directory.is_dir():
             return
 
-        prompt_files = sorted(
-            path
-            for path in prompts_directory.rglob("*")
-            if path.is_file()
-        )
+        prompt_files = sorted(path for path in prompts_directory.rglob("*") if path.is_file())
 
         result.prompt_count = len(prompt_files)
 
         if not prompt_files:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
@@ -1116,11 +1039,8 @@ class CarRepositoryValidator:
             return
 
         for prompt_path in prompt_files:
-
             try:
-
                 if prompt_path.stat().st_size == 0:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.WARNING,
@@ -1130,7 +1050,6 @@ class CarRepositoryValidator:
                     )
 
             except OSError as exc:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.WARNING,
@@ -1145,7 +1064,6 @@ class CarRepositoryValidator:
                 continue
 
             if prompt_path.suffix.lower() == ".json":
-
                 prompt_data = self._load_json_for_asset(
                     path=prompt_path,
                     result=result,
@@ -1154,7 +1072,6 @@ class CarRepositoryValidator:
                 )
 
                 if prompt_data is not None:
-
                     self._validate_declared_asset_id(
                         asset=asset,
                         result=result,
@@ -1222,12 +1139,10 @@ class CarRepositoryValidator:
         """
 
         try:
-
             with path.open("r", encoding="utf-8") as handle:
                 return json.load(handle)
 
         except json.JSONDecodeError as exc:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -1243,7 +1158,6 @@ class CarRepositoryValidator:
             )
 
         except UnicodeDecodeError as exc:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -1256,7 +1170,6 @@ class CarRepositoryValidator:
             )
 
         except OSError as exc:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -1300,11 +1213,9 @@ class CarRepositoryValidator:
         declared_field = None
 
         for field_name in ("asset_id", "assetId", "id"):
-
             value = document.get(field_name)
 
             if value is not None:
-
                 declared_asset_id = str(value).strip()
                 declared_field = field_name
                 break
@@ -1315,15 +1226,13 @@ class CarRepositoryValidator:
         expected_asset_id = str(asset.asset_id).strip()
 
         if declared_asset_id != expected_asset_id:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_SCHEMA,
                 path=document_path,
                 message=(
-                    f"Asset ID declared in {document_name} does not "
-                    f"match the repository asset ID."
+                    f"Asset ID declared in {document_name} does not match the repository asset ID."
                 ),
                 details={
                     "field": declared_field,
@@ -1362,11 +1271,9 @@ class CarRepositoryValidator:
         """
 
         try:
-
             file_hash = self.calculate_sha256(path)
 
         except OSError as exc:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
@@ -1381,13 +1288,9 @@ class CarRepositoryValidator:
             return None
 
         try:
-
-            relative_path = str(
-                path.relative_to(self.repository)
-            )
+            relative_path = str(path.relative_to(self.repository))
 
         except ValueError:
-
             relative_path = str(path)
 
         result.file_hashes[relative_path] = file_hash
@@ -1398,20 +1301,15 @@ class CarRepositoryValidator:
         )
 
         if detect_duplicates and known_paths:
-
             duplicate_paths = [*known_paths, relative_path]
 
             if self.result is not None:
-
-                repository_duplicates = (
-                    self.result.duplicate_hashes.setdefault(
-                        file_hash,
-                        [],
-                    )
+                repository_duplicates = self.result.duplicate_hashes.setdefault(
+                    file_hash,
+                    [],
                 )
 
                 for duplicate_path in duplicate_paths:
-
                     if duplicate_path not in repository_duplicates:
                         repository_duplicates.append(duplicate_path)
 
@@ -1420,10 +1318,7 @@ class CarRepositoryValidator:
                 severity=ValidationSeverity.WARNING,
                 code=ValidationCode.DUPLICATE_HASH,
                 path=path,
-                message=(
-                    "Canonical image has the same content hash as "
-                    "another canonical image."
-                ),
+                message=("Canonical image has the same content hash as another canonical image."),
                 details={
                     "sha256": file_hash,
                     "matching_files": duplicate_paths,
@@ -1499,20 +1394,15 @@ class CarRepositoryValidator:
         asset_path = Path(asset.path)
 
         for file_name in CONFIGURATION_REQUIRED_FILES:
-
             file_path = asset_path / file_name
 
             if not file_path.exists():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_FILE,
                     path=file_path,
-                    message=(
-                        f"Required configuration file "
-                        f"'{file_name}' is missing."
-                    ),
+                    message=(f"Required configuration file '{file_name}' is missing."),
                     details={
                         "required_file": file_name,
                     },
@@ -1521,15 +1411,13 @@ class CarRepositoryValidator:
                 continue
 
             if not file_path.is_file():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_FILE,
                     path=file_path,
                     message=(
-                        f"Required configuration path "
-                        f"'{file_name}' exists but is not a file."
+                        f"Required configuration path '{file_name}' exists but is not a file."
                     ),
                     details={
                         "required_file": file_name,
@@ -1576,16 +1464,12 @@ class CarRepositoryValidator:
             return
 
         if not isinstance(profile, dict):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_PROFILE,
                 path=profile_path,
-                message=(
-                    "Configuration profile must contain a JSON object "
-                    "at its root."
-                ),
+                message=("Configuration profile must contain a JSON object at its root."),
                 details={
                     "actual_type": type(profile).__name__,
                 },
@@ -1594,7 +1478,6 @@ class CarRepositoryValidator:
             return
 
         if not profile:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
@@ -1672,23 +1555,18 @@ class CarRepositoryValidator:
         )
 
         for field_name in string_fields:
-
             if field_name not in profile:
                 continue
 
             value = profile[field_name]
 
             if not isinstance(value, str):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_PROFILE,
                     path=profile_path,
-                    message=(
-                        f"Configuration profile field "
-                        f"'{field_name}' must be a string."
-                    ),
+                    message=(f"Configuration profile field '{field_name}' must be a string."),
                     details={
                         "field": field_name,
                         "actual_type": type(value).__name__,
@@ -1698,16 +1576,12 @@ class CarRepositoryValidator:
                 continue
 
             if not value.strip():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.WARNING,
                     code=ValidationCode.INVALID_PROFILE,
                     path=profile_path,
-                    message=(
-                        f"Configuration profile field "
-                        f"'{field_name}' is empty."
-                    ),
+                    message=(f"Configuration profile field '{field_name}' is empty."),
                     details={
                         "field": field_name,
                     },
@@ -1736,23 +1610,18 @@ class CarRepositoryValidator:
         )
 
         for field_name in version_fields:
-
             if field_name not in profile:
                 continue
 
             value = profile[field_name]
 
             if isinstance(value, bool):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_PROFILE,
                     path=profile_path,
-                    message=(
-                        f"Configuration version field "
-                        f"'{field_name}' cannot be Boolean."
-                    ),
+                    message=(f"Configuration version field '{field_name}' cannot be Boolean."),
                     details={
                         "field": field_name,
                         "actual": value,
@@ -1762,18 +1631,13 @@ class CarRepositoryValidator:
                 continue
 
             if isinstance(value, int):
-
                 if value < 0:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
                         code=ValidationCode.INVALID_PROFILE,
                         path=profile_path,
-                        message=(
-                            f"Configuration version field "
-                            f"'{field_name}' cannot be negative."
-                        ),
+                        message=(f"Configuration version field '{field_name}' cannot be negative."),
                         details={
                             "field": field_name,
                             "actual": value,
@@ -1783,18 +1647,13 @@ class CarRepositoryValidator:
                 continue
 
             if isinstance(value, str):
-
                 if not value.strip():
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.WARNING,
                         code=ValidationCode.INVALID_PROFILE,
                         path=profile_path,
-                        message=(
-                            f"Configuration version field "
-                            f"'{field_name}' is empty."
-                        ),
+                        message=(f"Configuration version field '{field_name}' is empty."),
                         details={
                             "field": field_name,
                         },
@@ -1808,8 +1667,7 @@ class CarRepositoryValidator:
                 code=ValidationCode.INVALID_PROFILE,
                 path=profile_path,
                 message=(
-                    f"Configuration version field "
-                    f"'{field_name}' must be a string or integer."
+                    f"Configuration version field '{field_name}' must be a string or integer."
                 ),
                 details={
                     "field": field_name,
@@ -1852,7 +1710,6 @@ class CarRepositoryValidator:
         known_asset_ids = self._get_scanned_asset_ids()
 
         for field_name in reference_fields:
-
             if field_name not in profile:
                 continue
 
@@ -1864,7 +1721,6 @@ class CarRepositoryValidator:
             )
 
             for reference in references:
-
                 reference_id = reference.strip()
 
                 if not reference_id:
@@ -1874,15 +1730,13 @@ class CarRepositoryValidator:
                     continue
 
                 if known_asset_ids and reference_id not in known_asset_ids:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.WARNING,
                         code=ValidationCode.INVALID_PROFILE,
                         path=profile_path,
                         message=(
-                            f"Configuration profile references unknown "
-                            f"asset '{reference_id}'."
+                            f"Configuration profile references unknown asset '{reference_id}'."
                         ),
                         details={
                             "field": field_name,
@@ -1909,20 +1763,15 @@ class CarRepositoryValidator:
             return references
 
         if isinstance(value, str):
-
             references.append(value)
             return references
 
         if isinstance(value, list):
-
             for index, item in enumerate(value):
-
                 if isinstance(item, str):
-
                     references.append(item)
 
                 elif isinstance(item, dict):
-
                     reference = self._reference_from_mapping(item)
 
                     if reference is not None:
@@ -1945,16 +1794,13 @@ class CarRepositoryValidator:
                         )
 
                 else:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
                         code=ValidationCode.INVALID_PROFILE,
                         path=profile_path,
                         message=(
-                            f"Reference entry "
-                            f"'{field_name}[{index}]' must be a "
-                            f"string or object."
+                            f"Reference entry '{field_name}[{index}]' must be a string or object."
                         ),
                         details={
                             "field": field_name,
@@ -1966,33 +1812,23 @@ class CarRepositoryValidator:
             return references
 
         if isinstance(value, dict):
-
             direct_reference = self._reference_from_mapping(value)
 
             if direct_reference is not None:
-
                 references.append(direct_reference)
                 return references
 
             for key, item in value.items():
-
                 if isinstance(item, str):
-
                     references.append(item)
 
                 elif isinstance(item, list):
-
                     for nested_index, nested_item in enumerate(item):
-
                         if isinstance(nested_item, str):
-
                             references.append(nested_item)
 
                         elif isinstance(nested_item, dict):
-
-                            nested_reference = self._reference_from_mapping(
-                                nested_item
-                            )
+                            nested_reference = self._reference_from_mapping(nested_item)
 
                             if nested_reference is not None:
                                 references.append(nested_reference)
@@ -2017,7 +1853,6 @@ class CarRepositoryValidator:
                                 )
 
                         else:
-
                             self._add_asset_diagnostic(
                                 result=result,
                                 severity=ValidationSeverity.ERROR,
@@ -2033,30 +1868,24 @@ class CarRepositoryValidator:
                                     "field": field_name,
                                     "key": str(key),
                                     "index": nested_index,
-                                    "actual_type": (
-                                        type(nested_item).__name__
-                                    ),
+                                    "actual_type": (type(nested_item).__name__),
                                 },
                             )
 
                 elif isinstance(item, dict):
-
                     nested_reference = self._reference_from_mapping(item)
 
                     if nested_reference is not None:
                         references.append(nested_reference)
 
                 elif item is not None:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
                         code=ValidationCode.INVALID_PROFILE,
                         path=profile_path,
                         message=(
-                            f"Reference mapping value "
-                            f"'{field_name}.{key}' has an "
-                            f"unsupported type."
+                            f"Reference mapping value '{field_name}.{key}' has an unsupported type."
                         ),
                         details={
                             "field": field_name,
@@ -2072,10 +1901,7 @@ class CarRepositoryValidator:
             severity=ValidationSeverity.ERROR,
             code=ValidationCode.INVALID_PROFILE,
             path=profile_path,
-            message=(
-                f"Configuration reference field "
-                f"'{field_name}' has an unsupported type."
-            ),
+            message=(f"Configuration reference field '{field_name}' has an unsupported type."),
             details={
                 "field": field_name,
                 "actual_type": type(value).__name__,
@@ -2101,7 +1927,6 @@ class CarRepositoryValidator:
             "ref",
             "id",
         ):
-
             candidate = value.get(field_name)
 
             if isinstance(candidate, str) and candidate.strip():
@@ -2133,16 +1958,12 @@ class CarRepositoryValidator:
         maximum_depth = 32
 
         if depth > maximum_depth:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_PROFILE,
                 path=profile_path,
-                message=(
-                    "Configuration profile exceeds the maximum "
-                    "supported nesting depth."
-                ),
+                message=("Configuration profile exceeds the maximum supported nesting depth."),
                 details={
                     "json_path": value_path,
                     "maximum_depth": maximum_depth,
@@ -2152,20 +1973,14 @@ class CarRepositoryValidator:
             return
 
         if isinstance(value, dict):
-
             for key, child_value in value.items():
-
                 if not isinstance(key, str):
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
                         code=ValidationCode.INVALID_PROFILE,
                         path=profile_path,
-                        message=(
-                            "Configuration object contains a "
-                            "non-string key."
-                        ),
+                        message=("Configuration object contains a non-string key."),
                         details={
                             "json_path": value_path,
                             "actual_type": type(key).__name__,
@@ -2187,9 +2002,7 @@ class CarRepositoryValidator:
             return
 
         if isinstance(value, list):
-
             for index, child_value in enumerate(value):
-
                 child_path = f"{value_path}[{index}]"
 
                 self._validate_configuration_values(
@@ -2203,34 +2016,25 @@ class CarRepositoryValidator:
             return
 
         if isinstance(value, float):
-
             if value != value:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_PROFILE,
                     path=profile_path,
-                    message=(
-                        "Configuration profile contains a NaN "
-                        "numeric value."
-                    ),
+                    message=("Configuration profile contains a NaN numeric value."),
                     details={
                         "json_path": value_path,
                     },
                 )
 
             elif value in (float("inf"), float("-inf")):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_PROFILE,
                     path=profile_path,
-                    message=(
-                        "Configuration profile contains an infinite "
-                        "numeric value."
-                    ),
+                    message=("Configuration profile contains an infinite numeric value."),
                     details={
                         "json_path": value_path,
                         "actual": str(value),
@@ -2254,21 +2058,15 @@ class CarRepositoryValidator:
             return
 
         try:
-
-            description = description_path.read_text(
-                encoding="utf-8"
-            )
+            description = description_path.read_text(encoding="utf-8")
 
         except UnicodeDecodeError as exc:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_SCHEMA,
                 path=description_path,
-                message=(
-                    "Configuration description is not valid UTF-8."
-                ),
+                message=("Configuration description is not valid UTF-8."),
                 details={
                     "error": str(exc),
                 },
@@ -2277,7 +2075,6 @@ class CarRepositoryValidator:
             return
 
         except OSError as exc:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -2294,7 +2091,6 @@ class CarRepositoryValidator:
         stripped_description = description.strip()
 
         if not stripped_description:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
@@ -2304,15 +2100,12 @@ class CarRepositoryValidator:
             )
 
         elif len(stripped_description) < 20:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
                 code=ValidationCode.INVALID_SCHEMA,
                 path=description_path,
-                message=(
-                    "Configuration description is unusually short."
-                ),
+                message=("Configuration description is unusually short."),
                 details={
                     "character_count": len(stripped_description),
                     "recommended_minimum": 20,
@@ -2320,16 +2113,12 @@ class CarRepositoryValidator:
             )
 
         if "\x00" in description:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_SCHEMA,
                 path=description_path,
-                message=(
-                    "Configuration description contains null "
-                    "characters."
-                ),
+                message=("Configuration description contains null characters."),
             )
 
         self._record_file_hash(
@@ -2392,8 +2181,8 @@ class CarRepositoryValidator:
         if not prefix.isalpha():
             return False
 
-        return any(character.isdigit() for character in parts[-1])        
-        
+        return any(character.isdigit() for character in parts[-1])
+
     # -------------------------------------------------------------------------
 
     def _validate_behaviour_asset(
@@ -2468,20 +2257,15 @@ class CarRepositoryValidator:
         asset_path = Path(asset.path)
 
         for directory_name in BEHAVIOUR_REQUIRED_DIRECTORIES:
-
             directory_path = asset_path / directory_name
 
             if not directory_path.exists():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_DIRECTORY,
                     path=directory_path,
-                    message=(
-                        f"Required behaviour directory "
-                        f"'{directory_name}' is missing."
-                    ),
+                    message=(f"Required behaviour directory '{directory_name}' is missing."),
                     details={
                         "directory": directory_name,
                     },
@@ -2490,15 +2274,13 @@ class CarRepositoryValidator:
                 continue
 
             if not directory_path.is_dir():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_DIRECTORY,
                     path=directory_path,
                     message=(
-                        f"Required behaviour path '{directory_name}' "
-                        f"exists but is not a directory."
+                        f"Required behaviour path '{directory_name}' exists but is not a directory."
                     ),
                     details={
                         "directory": directory_name,
@@ -2507,20 +2289,15 @@ class CarRepositoryValidator:
                 )
 
         for file_name in BEHAVIOUR_REQUIRED_FILES:
-
             file_path = asset_path / file_name
 
             if not file_path.exists():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_FILE,
                     path=file_path,
-                    message=(
-                        f"Required behaviour file "
-                        f"'{file_name}' is missing."
-                    ),
+                    message=(f"Required behaviour file '{file_name}' is missing."),
                     details={
                         "required_file": file_name,
                     },
@@ -2529,16 +2306,12 @@ class CarRepositoryValidator:
                 continue
 
             if not file_path.is_file():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.MISSING_FILE,
                     path=file_path,
-                    message=(
-                        f"Required behaviour path '{file_name}' "
-                        f"exists but is not a file."
-                    ),
+                    message=(f"Required behaviour path '{file_name}' exists but is not a file."),
                     details={
                         "required_file": file_name,
                         "expected_type": "file",
@@ -2576,16 +2349,12 @@ class CarRepositoryValidator:
             return
 
         if not isinstance(behaviour, dict):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_BEHAVIOUR,
                 path=behaviour_path,
-                message=(
-                    "Behaviour definition must contain a JSON object "
-                    "at its root."
-                ),
+                message=("Behaviour definition must contain a JSON object at its root."),
                 details={
                     "actual_type": type(behaviour).__name__,
                 },
@@ -2594,7 +2363,6 @@ class CarRepositoryValidator:
             return
 
         if not behaviour:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -2681,7 +2449,6 @@ class CarRepositoryValidator:
         identity_fields_found = 0
 
         for field_name in optional_string_fields:
-
             if field_name not in behaviour:
                 continue
 
@@ -2689,16 +2456,12 @@ class CarRepositoryValidator:
             value = behaviour[field_name]
 
             if not isinstance(value, str):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Behaviour field '{field_name}' must be "
-                        f"a string."
-                    ),
+                    message=(f"Behaviour field '{field_name}' must be a string."),
                     details={
                         "field": field_name,
                         "actual_type": type(value).__name__,
@@ -2708,22 +2471,18 @@ class CarRepositoryValidator:
                 continue
 
             if not value.strip():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.WARNING,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Behaviour field '{field_name}' is empty."
-                    ),
+                    message=(f"Behaviour field '{field_name}' is empty."),
                     details={
                         "field": field_name,
                     },
                 )
 
         if identity_fields_found == 0:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
@@ -2738,7 +2497,6 @@ class CarRepositoryValidator:
         enabled = behaviour.get("enabled")
 
         if enabled is not None and not isinstance(enabled, bool):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -2772,23 +2530,18 @@ class CarRepositoryValidator:
         )
 
         for field_name in version_fields:
-
             if field_name not in behaviour:
                 continue
 
             value = behaviour[field_name]
 
             if isinstance(value, bool):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Behaviour version field '{field_name}' "
-                        f"cannot be Boolean."
-                    ),
+                    message=(f"Behaviour version field '{field_name}' cannot be Boolean."),
                     details={
                         "field": field_name,
                         "actual": value,
@@ -2798,18 +2551,13 @@ class CarRepositoryValidator:
                 continue
 
             if isinstance(value, int):
-
                 if value < 0:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
                         code=ValidationCode.INVALID_BEHAVIOUR,
                         path=behaviour_path,
-                        message=(
-                            f"Behaviour version field '{field_name}' "
-                            f"cannot be negative."
-                        ),
+                        message=(f"Behaviour version field '{field_name}' cannot be negative."),
                         details={
                             "field": field_name,
                             "actual": value,
@@ -2819,18 +2567,13 @@ class CarRepositoryValidator:
                 continue
 
             if isinstance(value, str):
-
                 if not value.strip():
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.WARNING,
                         code=ValidationCode.INVALID_BEHAVIOUR,
                         path=behaviour_path,
-                        message=(
-                            f"Behaviour version field '{field_name}' "
-                            f"is empty."
-                        ),
+                        message=(f"Behaviour version field '{field_name}' is empty."),
                         details={
                             "field": field_name,
                         },
@@ -2843,10 +2586,7 @@ class CarRepositoryValidator:
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_BEHAVIOUR,
                 path=behaviour_path,
-                message=(
-                    f"Behaviour version field '{field_name}' must "
-                    f"be a string or integer."
-                ),
+                message=(f"Behaviour version field '{field_name}' must be a string or integer."),
                 details={
                     "field": field_name,
                     "actual_type": type(value).__name__,
@@ -2886,9 +2626,7 @@ class CarRepositoryValidator:
             "module",
             "script",
         ):
-
             if field_name in behaviour:
-
                 entry_field = field_name
                 entry_value = behaviour[field_name]
                 break
@@ -2897,20 +2635,15 @@ class CarRepositoryValidator:
             return
 
         if isinstance(entry_value, str):
-
             entry_value = entry_value.strip()
 
             if not entry_value:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Behaviour entry-point field "
-                        f"'{entry_field}' is empty."
-                    ),
+                    message=(f"Behaviour entry-point field '{entry_field}' is empty."),
                     details={
                         "field": entry_field,
                     },
@@ -2929,7 +2662,6 @@ class CarRepositoryValidator:
             return
 
         if isinstance(entry_value, dict):
-
             supported_fields = (
                 "module",
                 "function",
@@ -2940,13 +2672,10 @@ class CarRepositoryValidator:
             )
 
             declared_values = {
-                key: value
-                for key, value in entry_value.items()
-                if key in supported_fields
+                key: value for key, value in entry_value.items() if key in supported_fields
             }
 
             if not declared_values:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
@@ -2964,9 +2693,7 @@ class CarRepositoryValidator:
                 return
 
             for field_name, value in declared_values.items():
-
                 if not isinstance(value, str) or not value.strip():
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
@@ -2982,13 +2709,9 @@ class CarRepositoryValidator:
                         },
                     )
 
-            path_value = (
-                entry_value.get("path")
-                or entry_value.get("script")
-            )
+            path_value = entry_value.get("path") or entry_value.get("script")
 
             if isinstance(path_value, str) and path_value.strip():
-
                 self._validate_behaviour_relative_path(
                     declared_path=path_value.strip(),
                     behaviour_path=behaviour_path,
@@ -3003,10 +2726,7 @@ class CarRepositoryValidator:
             severity=ValidationSeverity.ERROR,
             code=ValidationCode.INVALID_BEHAVIOUR,
             path=behaviour_path,
-            message=(
-                f"Behaviour entry-point field '{entry_field}' must "
-                f"be a string or object."
-            ),
+            message=(f"Behaviour entry-point field '{entry_field}' must be a string or object."),
             details={
                 "field": entry_field,
                 "actual_type": type(entry_value).__name__,
@@ -3030,13 +2750,10 @@ class CarRepositoryValidator:
         looks_like_path = (
             "/" in entry_value
             or "\\" in entry_value
-            or entry_value.lower().endswith(
-                (".py", ".ps1", ".js", ".ts", ".bat", ".cmd")
-            )
+            or entry_value.lower().endswith((".py", ".ps1", ".js", ".ts", ".bat", ".cmd"))
         )
 
         if looks_like_path:
-
             self._validate_behaviour_relative_path(
                 declared_path=entry_value,
                 behaviour_path=behaviour_path,
@@ -3047,20 +2764,15 @@ class CarRepositoryValidator:
             return
 
         if ":" in entry_value:
-
             module_name, callable_name = entry_value.rsplit(":", 1)
 
             if not module_name.strip() or not callable_name.strip():
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        "Behaviour module entry point must use the "
-                        "format 'module:callable'."
-                    ),
+                    message=("Behaviour module entry point must use the format 'module:callable'."),
                     details={
                         "field": entry_field,
                         "actual": entry_value,
@@ -3073,7 +2785,6 @@ class CarRepositoryValidator:
             return
 
         if "." not in entry_value:
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
@@ -3108,7 +2819,6 @@ class CarRepositoryValidator:
         relative_path = Path(normalised_value)
 
         if relative_path.is_absolute():
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
@@ -3125,23 +2835,18 @@ class CarRepositoryValidator:
         candidate_path = asset_path / relative_path
 
         try:
-
             resolved_asset_path = asset_path.resolve()
             resolved_candidate = candidate_path.resolve()
 
             resolved_candidate.relative_to(resolved_asset_path)
 
         except (OSError, ValueError):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_BEHAVIOUR,
                 path=behaviour_path,
-                message=(
-                    "Behaviour entry-point path escapes the asset "
-                    "directory."
-                ),
+                message=("Behaviour entry-point path escapes the asset directory."),
                 details={
                     "declared_path": declared_path,
                 },
@@ -3150,30 +2855,24 @@ class CarRepositoryValidator:
             return
 
         if not candidate_path.exists():
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.WARNING,
                 code=ValidationCode.MISSING_FILE,
                 path=candidate_path,
-                message=(
-                    "Behaviour entry-point file does not currently exist."
-                ),
+                message=("Behaviour entry-point file does not currently exist."),
                 details={
                     "declared_path": declared_path,
                 },
             )
 
         elif not candidate_path.is_file():
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_BEHAVIOUR,
                 path=candidate_path,
-                message=(
-                    "Behaviour entry-point path exists but is not a file."
-                ),
+                message=("Behaviour entry-point path exists but is not a file."),
                 details={
                     "declared_path": declared_path,
                 },
@@ -3200,16 +2899,12 @@ class CarRepositoryValidator:
             return
 
         if not isinstance(execution, dict):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_BEHAVIOUR,
                 path=behaviour_path,
-                message=(
-                    "Behaviour execution settings must contain "
-                    "a JSON object."
-                ),
+                message=("Behaviour execution settings must contain a JSON object."),
                 details={
                     "actual_type": type(execution).__name__,
                 },
@@ -3226,25 +2921,16 @@ class CarRepositoryValidator:
         )
 
         for field_name in boolean_fields:
-
-            if (
-                field_name in execution
-                and not isinstance(execution[field_name], bool)
-            ):
-
+            if field_name in execution and not isinstance(execution[field_name], bool):
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Execution field '{field_name}' must be Boolean."
-                    ),
+                    message=(f"Execution field '{field_name}' must be Boolean."),
                     details={
                         "field": f"execution.{field_name}",
-                        "actual_type": type(
-                            execution[field_name]
-                        ).__name__,
+                        "actual_type": type(execution[field_name]).__name__,
                     },
                 )
 
@@ -3259,25 +2945,18 @@ class CarRepositoryValidator:
         )
 
         for field_name in non_negative_number_fields:
-
             if field_name not in execution:
                 continue
 
             value = execution[field_name]
 
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-            ):
-
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Execution field '{field_name}' must be numeric."
-                    ),
+                    message=(f"Execution field '{field_name}' must be numeric."),
                     details={
                         "field": f"execution.{field_name}",
                         "actual_type": type(value).__name__,
@@ -3285,16 +2964,12 @@ class CarRepositoryValidator:
                 )
 
             elif value < 0:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Execution field '{field_name}' cannot "
-                        f"be negative."
-                    ),
+                    message=(f"Execution field '{field_name}' cannot be negative."),
                     details={
                         "field": f"execution.{field_name}",
                         "actual": value,
@@ -3307,15 +2982,12 @@ class CarRepositoryValidator:
             environment,
             (str, dict),
         ):
-
             self._add_asset_diagnostic(
                 result=result,
                 severity=ValidationSeverity.ERROR,
                 code=ValidationCode.INVALID_BEHAVIOUR,
                 path=behaviour_path,
-                message=(
-                    "Execution environment must be a string or object."
-                ),
+                message=("Execution environment must be a string or object."),
                 details={
                     "field": "execution.environment",
                     "actual_type": type(environment).__name__,
@@ -3345,9 +3017,7 @@ class CarRepositoryValidator:
             "asset_references",
             "assetReferences",
         ):
-
             if field_name in behaviour:
-
                 dependency_field = field_name
                 dependency_value = behaviour[field_name]
                 break
@@ -3366,23 +3036,18 @@ class CarRepositoryValidator:
         seen_dependencies: set[str] = set()
 
         for dependency in dependencies:
-
             dependency_id = dependency.strip()
 
             if not dependency_id:
                 continue
 
             if dependency_id in seen_dependencies:
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.WARNING,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Behaviour dependency '{dependency_id}' "
-                        f"is declared more than once."
-                    ),
+                    message=(f"Behaviour dependency '{dependency_id}' is declared more than once."),
                     details={
                         "field": dependency_field,
                         "dependency": dependency_id,
@@ -3398,16 +3063,12 @@ class CarRepositoryValidator:
                 and known_asset_ids
                 and dependency_id not in known_asset_ids
             ):
-
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.WARNING,
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
-                    message=(
-                        f"Behaviour references unknown asset "
-                        f"'{dependency_id}'."
-                    ),
+                    message=(f"Behaviour references unknown asset '{dependency_id}'."),
                     details={
                         "field": dependency_field,
                         "dependency": dependency_id,
@@ -3433,21 +3094,16 @@ class CarRepositoryValidator:
             return dependencies
 
         if isinstance(value, str):
-
             dependencies.append(value)
             return dependencies
 
         if isinstance(value, list):
-
             for index, item in enumerate(value):
-
                 if isinstance(item, str):
-
                     dependencies.append(item)
                     continue
 
                 if isinstance(item, dict):
-
                     reference = self._reference_from_mapping(item)
 
                     if reference is not None:
@@ -3477,8 +3133,7 @@ class CarRepositoryValidator:
                     code=ValidationCode.INVALID_BEHAVIOUR,
                     path=behaviour_path,
                     message=(
-                        f"Dependency entry '{field_name}[{index}]' "
-                        f"must be a string or object."
+                        f"Dependency entry '{field_name}[{index}]' must be a string or object."
                     ),
                     details={
                         "field": field_name,
@@ -3490,50 +3145,39 @@ class CarRepositoryValidator:
             return dependencies
 
         if isinstance(value, dict):
-
             direct_reference = self._reference_from_mapping(value)
 
             if direct_reference is not None:
-
                 dependencies.append(direct_reference)
                 return dependencies
 
             for key, item in value.items():
-
                 if isinstance(item, str):
                     dependencies.append(item)
 
                 elif isinstance(item, list):
-
-                    nested_dependencies = (
-                        self._extract_behaviour_dependencies(
-                            value=item,
-                            field_name=f"{field_name}.{key}",
-                            behaviour_path=behaviour_path,
-                            result=result,
-                        )
+                    nested_dependencies = self._extract_behaviour_dependencies(
+                        value=item,
+                        field_name=f"{field_name}.{key}",
+                        behaviour_path=behaviour_path,
+                        result=result,
                     )
 
                     dependencies.extend(nested_dependencies)
 
                 elif isinstance(item, dict):
-
                     reference = self._reference_from_mapping(item)
 
                     if reference is not None:
                         dependencies.append(reference)
 
                 elif item is not None:
-
                     self._add_asset_diagnostic(
                         result=result,
                         severity=ValidationSeverity.ERROR,
                         code=ValidationCode.INVALID_BEHAVIOUR,
                         path=behaviour_path,
-                        message=(
-                            f"Dependency value '{field_name}.{key}' "
-                            f"has an unsupported type."
-                        ),
+                        message=(f"Dependency value '{field_name}.{key}' has an unsupported type."),
                         details={
                             "field": f"{field_name}.{key}",
                             "actual_type": type(item).__name__,
@@ -3547,10 +3191,7 @@ class CarRepositoryValidator:
             severity=ValidationSeverity.ERROR,
             code=ValidationCode.INVALID_BEHAVIOUR,
             path=behaviour_path,
-            message=(
-                f"Behaviour dependency field '{field_name}' has "
-                f"an unsupported type."
-            ),
+            message=(f"Behaviour dependency field '{field_name}' has an unsupported type."),
             details={
                 "field": field_name,
                 "actual_type": type(value).__name__,
@@ -3574,9 +3215,7 @@ class CarRepositoryValidator:
         Replace this placeholder during Phase 12.1.1 Part 4B2.
         """
 
-        raise NotImplementedError(
-            "Implemented in Phase 12.1.1 Part 4B2."
-        )
+        raise NotImplementedError("Implemented in Phase 12.1.1 Part 4B2.")
 
     # -------------------------------------------------------------------------
 
@@ -3591,6 +3230,4 @@ class CarRepositoryValidator:
         Replace this placeholder during Phase 12.1.1 Part 4B2.
         """
 
-        raise NotImplementedError(
-            "Implemented in Phase 12.1.1 Part 4B2."
-        )        
+        raise NotImplementedError("Implemented in Phase 12.1.1 Part 4B2.")

@@ -90,14 +90,21 @@ class CanonicalImageEvaluationEngine:
         for y in range(0, image.height(), step_y):
             for x in range(0, image.width(), step_x):
                 colour = image.pixelColor(x, y)
-                values.append(round(0.2126 * colour.red() + 0.7152 * colour.green() + 0.0722 * colour.blue()))
+                values.append(
+                    round(0.2126 * colour.red() + 0.7152 * colour.green() + 0.0722 * colour.blue())
+                )
         return values
 
     @staticmethod
     def _resolution_metric(width: int, height: int) -> EvaluationMetric:
         pixels = width * height
         if width < 512 or height < 512:
-            return EvaluationMetric("Resolution", 25, f"Image is only {width}x{height}; minimum production review size is 512 pixels per side.", True)
+            return EvaluationMetric(
+                "Resolution",
+                25,
+                f"Image is only {width}x{height}; minimum production review size is 512 pixels per side.",
+                True,
+            )
         if pixels >= 3_000_000:
             score = 100
         elif pixels >= 1_500_000:
@@ -122,14 +129,21 @@ class CanonicalImageEvaluationEngine:
         variance = sum((value - mean) ** 2 for value in values) / len(values)
         deviation = variance**0.5
         score = max(0, min(100, round(deviation * 2.2)))
-        return EvaluationMetric("Contrast", score, f"Luminance standard deviation is {deviation:.1f}.")
+        return EvaluationMetric(
+            "Contrast", score, f"Luminance standard deviation is {deviation:.1f}."
+        )
 
     @staticmethod
     def _clipping_metric(values: list[int]) -> EvaluationMetric:
         clipped = sum(1 for value in values if value <= 3 or value >= 252) / len(values)
         score = max(0, round(100 - clipped * 250))
         blocking = clipped > 0.75
-        return EvaluationMetric("Highlight/shadow clipping", score, f"{clipped * 100:.1f}% of sampled pixels are near pure black or white.", blocking)
+        return EvaluationMetric(
+            "Highlight/shadow clipping",
+            score,
+            f"{clipped * 100:.1f}% of sampled pixels are near pure black or white.",
+            blocking,
+        )
 
     @staticmethod
     def _detail_metric(image: QImage) -> EvaluationMetric:
@@ -144,7 +158,9 @@ class CanonicalImageEvaluationEngine:
                 differences.append(abs(a.value() - b.value()) + abs(a.value() - c.value()))
         average = sum(differences) / len(differences) if differences else 0.0
         score = max(0, min(100, round(average * 2.8)))
-        return EvaluationMetric("Local detail", score, f"Average sampled edge variation is {average:.1f}.")
+        return EvaluationMetric(
+            "Local detail", score, f"Average sampled edge variation is {average:.1f}."
+        )
 
     @staticmethod
     def _aspect_metric(width: int, height: int) -> EvaluationMetric:

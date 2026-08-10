@@ -37,9 +37,7 @@ class BatchHistoryRecord:
     @classmethod
     def from_job(cls, job: BatchCompilationJob) -> BatchHistoryRecord:
         packages = job.packages
-        checksum_input = "\n".join(
-            sorted(cls._result_identity(result) for result in job.results)
-        )
+        checksum_input = "\n".join(sorted(cls._result_identity(result) for result in job.results))
         contexts = tuple(item.context for item in job.request.items)
         duration = max(
             (job.finished_at - job.started_at).total_seconds(),
@@ -56,24 +54,16 @@ class BatchHistoryRecord:
             skipped_items=len(job.skipped_results),
             failed_items=len(job.failed_results),
             cancelled_items=len(job.cancelled_results),
-            renderer_ids=tuple(
-                sorted({context.renderer.value for context in contexts})
-            ),
-            quality_levels=tuple(
-                sorted({context.quality_level.value for context in contexts})
-            ),
+            renderer_ids=tuple(sorted({context.renderer.value for context in contexts})),
+            quality_levels=tuple(sorted({context.quality_level.value for context in contexts})),
             renderer_profile_ids=tuple(
                 sorted({package.profile.profile_id for package in packages})
             ),
-            workflow_ids=tuple(
-                sorted({context.workflow_id for context in contexts})
-            ),
+            workflow_ids=tuple(sorted({context.workflow_id for context in contexts})),
             graph_versions=tuple(
                 sorted({package.source.provenance.graph_version for package in packages})
             ),
-            result_checksum=hashlib.sha256(
-                checksum_input.encode("utf-8")
-            ).hexdigest(),
+            result_checksum=hashlib.sha256(checksum_input.encode("utf-8")).hexdigest(),
         )
 
     @staticmethod
@@ -84,12 +74,7 @@ class BatchHistoryRecord:
 
     @property
     def processed_items(self) -> int:
-        return (
-            self.completed_items
-            + self.skipped_items
-            + self.failed_items
-            + self.cancelled_items
-        )
+        return self.completed_items + self.skipped_items + self.failed_items + self.cancelled_items
 
     @property
     def throughput_per_minute(self) -> float:
@@ -135,7 +120,5 @@ class BatchCompilationHistory:
 
     def failed(self) -> tuple[BatchHistoryRecord, ...]:
         return tuple(
-            record
-            for record in self.all()
-            if record.status is BatchCompilationStatus.FAILED
+            record for record in self.all() if record.status is BatchCompilationStatus.FAILED
         )

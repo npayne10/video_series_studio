@@ -80,25 +80,18 @@ class KnowledgeHelpPopup(QDialog):
             f"<h3>Description</h3><p>{escape(topic.description)}</p>",
         ]
         if topic.examples:
-            examples = "".join(
-                f"<li><code>{escape(value)}</code></li>"
-                for value in topic.examples
-            )
+            examples = "".join(f"<li><code>{escape(value)}</code></li>" for value in topic.examples)
             sections.append(f"<h3>Examples</h3><ul>{examples}</ul>")
         if topic.common_mistakes:
-            mistakes = "".join(
-                f"<li>{escape(value)}</li>" for value in topic.common_mistakes
-            )
+            mistakes = "".join(f"<li>{escape(value)}</li>" for value in topic.common_mistakes)
             sections.append(f"<h3>Common mistakes</h3><ul>{mistakes}</ul>")
         if topic.related_topics:
             related = "".join(
-                f"<li><code>{escape(value)}</code></li>"
-                for value in topic.related_topics
+                f"<li><code>{escape(value)}</code></li>" for value in topic.related_topics
             )
             sections.append(f"<h3>Related topics</h3><ul>{related}</ul>")
         if topic.documentation_page:
             sections.append(
-                "<h3>Documentation</h3>"
-                f"<p><code>{escape(topic.documentation_page)}</code></p>"
+                f"<h3>Documentation</h3><p><code>{escape(topic.documentation_page)}</code></p>"
             )
         return "".join(sections)

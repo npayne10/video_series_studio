@@ -168,9 +168,7 @@ class PromptGraph:
         known_nodes = set(node_ids)
         for edge in self.edges:
             if edge.source_id not in known_nodes or edge.target_id not in known_nodes:
-                raise ValueError(
-                    f"edge {edge.edge_id} references an unknown prompt node"
-                )
+                raise ValueError(f"edge {edge.edge_id} references an unknown prompt node")
         if self.root_node_id is not None and self.root_node_id not in known_nodes:
             raise ValueError("root_node_id must reference an existing node")
 
@@ -333,9 +331,7 @@ def _mapping(raw: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _mappings(raw: dict[str, Any], key: str) -> tuple[dict[str, Any], ...]:
     value = raw.get(key, ())
-    if not isinstance(value, list | tuple) or any(
-        not isinstance(item, dict) for item in value
-    ):
+    if not isinstance(value, list | tuple) or any(not isinstance(item, dict) for item in value):
         raise ValueError(f"{key} must be an array of objects")
     return tuple(value)
 

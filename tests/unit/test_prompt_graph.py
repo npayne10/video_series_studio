@@ -78,9 +78,7 @@ def test_prompt_graph_is_immutable_and_round_trips() -> None:
     restored = PromptGraph.from_dict(graph.to_dict())
 
     assert restored == graph
-    assert restored.require_node("SHIP").attribute("engine_count") == (
-        "4 rear engines"
-    )
+    assert restored.require_node("SHIP").attribute("engine_count") == ("4 rear engines")
     assert restored.nodes_of_kind(PromptNodeKind.SHIP)[0].mandatory
 
 

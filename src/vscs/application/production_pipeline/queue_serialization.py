@@ -31,15 +31,16 @@ class RenderQueueSerializer:
         """Serialize a valid queue to stable JSON."""
         result = self.validator.validate(queue)
         if not result.passed:
-            raise RenderQueueSerializationError(
-                "; ".join(issue.message for issue in result.issues)
+            raise RenderQueueSerializationError("; ".join(issue.message for issue in result.issues))
+        return (
+            json.dumps(
+                self.to_dict(queue),
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
             )
-        return json.dumps(
-            self.to_dict(queue),
-            indent=2,
-            sort_keys=True,
-            ensure_ascii=False,
-        ) + "\n"
+            + "\n"
+        )
 
     def loads(self, payload: str) -> RenderQueue:
         """Restore and validate a queue from JSON text."""
@@ -52,14 +53,10 @@ class RenderQueueSerializer:
         try:
             queue = self.from_dict(raw)
         except (KeyError, TypeError, ValueError) as exc:
-            raise RenderQueueSerializationError(
-                f"Invalid render queue payload: {exc}"
-            ) from exc
+            raise RenderQueueSerializationError(f"Invalid render queue payload: {exc}") from exc
         result = self.validator.validate(queue)
         if not result.passed:
-            raise RenderQueueSerializationError(
-                "; ".join(issue.message for issue in result.issues)
-            )
+            raise RenderQueueSerializationError("; ".join(issue.message for issue in result.issues))
         return queue
 
     def checksum(self, queue: RenderQueue) -> str:
@@ -117,9 +114,7 @@ class RenderQueueSerializer:
             queue_id=str(raw["queue_id"]),
             pipeline_id=str(raw["pipeline_id"]),
             schema_version=str(raw.get("schema_version", "1.0")),
-            metadata={
-                str(key): str(value) for key, value in raw.get("metadata", {}).items()
-            },
+            metadata={str(key): str(value) for key, value in raw.get("metadata", {}).items()},
             entries=tuple(
                 RenderQueueEntry(
                     entry_id=str(item["entry_id"]),
@@ -127,18 +122,14 @@ class RenderQueueSerializer:
                     clip_id=str(item["clip_id"]),
                     state=QueueState(str(item["state"])),
                     priority=QueuePriority(int(item["priority"])),
-                    dependencies=tuple(
-                        str(value) for value in item.get("dependencies", [])
-                    ),
+                    dependencies=tuple(str(value) for value in item.get("dependencies", [])),
                     maximum_attempts=int(item.get("maximum_attempts", 3)),
                     attempts=tuple(
                         QueueAttempt(
                             attempt_number=int(attempt["attempt_number"]),
                             worker_id=str(attempt["worker_id"]),
                             started_at=_parse_required_datetime(attempt["started_at"]),
-                            completed_at=_parse_optional_datetime(
-                                attempt.get("completed_at")
-                            ),
+                            completed_at=_parse_optional_datetime(attempt.get("completed_at")),
                             succeeded=attempt.get("succeeded"),
                             error_message=(
                                 None
@@ -155,8 +146,7 @@ class RenderQueueSerializer:
                     created_at=_parse_required_datetime(item["created_at"]),
                     updated_at=_parse_required_datetime(item["updated_at"]),
                     metadata=tuple(
-                        (str(pair[0]), str(pair[1]))
-                        for pair in item.get("metadata", [])
+                        (str(pair[0]), str(pair[1])) for pair in item.get("metadata", [])
                     ),
                 )
                 for item in raw.get("entries", [])

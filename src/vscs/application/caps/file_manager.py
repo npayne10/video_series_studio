@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import ClassVar
 
 from vscs.domain.caps import CanonicalReferenceType
 
@@ -40,14 +41,14 @@ class ManagedReferenceFile:
 class CanonicalReferenceFileManager:
     """Own canonical reference directories, imports, integrity data, and caches."""
 
-    TYPE_DIRECTORIES = {
+    TYPE_DIRECTORIES: ClassVar[dict[CanonicalReferenceType, str]] = {
         CanonicalReferenceType.IMAGE: "Images",
         CanonicalReferenceType.DOCUMENT: "Documents",
         CanonicalReferenceType.AUDIO: "Audio",
         CanonicalReferenceType.VIDEO: "Video",
         CanonicalReferenceType.MATERIAL: "Materials",
     }
-    EXTENSION_TYPES = {
+    EXTENSION_TYPES: ClassVar[dict[str, CanonicalReferenceType]] = {
         ".png": CanonicalReferenceType.IMAGE,
         ".jpg": CanonicalReferenceType.IMAGE,
         ".jpeg": CanonicalReferenceType.IMAGE,

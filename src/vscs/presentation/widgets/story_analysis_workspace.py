@@ -287,36 +287,20 @@ class StoryAnalysisWorkspaceDialog(QDialog):
         selected_filter = self.filter_combo.currentText()
         groups = (
             (
-                "Characters", 
-                [
-                    entity 
-                    for entity in self.analysis.entities 
-                    if entity.kind.value == "character"
-                ],
+                "Characters",
+                [entity for entity in self.analysis.entities if entity.kind.value == "character"],
             ),
             (
-                "Locations", 
-                [
-                    entity 
-                    for entity in self.analysis.entities 
-                    if entity.kind.value == "location"
-                ],
+                "Locations",
+                [entity for entity in self.analysis.entities if entity.kind.value == "location"],
             ),
             (
-                "Technology", 
-                [
-                    entity 
-                    for entity in self.analysis.entities 
-                    if entity.kind.value == "technology"
-                ],
+                "Technology",
+                [entity for entity in self.analysis.entities if entity.kind.value == "technology"],
             ),
             (
-                "Props", 
-                [
-                    entity 
-                    for entity in self.analysis.entities 
-                    if entity.kind.value == "prop"
-                ],
+                "Props",
+                [entity for entity in self.analysis.entities if entity.kind.value == "prop"],
             ),
             ("Dialogue", list(self.analysis.dialogues)),
             ("Actions", list(self.analysis.actions)),
@@ -407,9 +391,7 @@ class StoryAnalysisWorkspaceDialog(QDialog):
         unresolved_dialogue = sum(
             1 for dialogue in self.analysis.dialogues if dialogue.speaker_entity_id is None
         )
-        low_confidence = sum(
-            1 for node in self.graph.nodes if node.confidence < 0.6
-        )
+        low_confidence = sum(1 for node in self.graph.nodes if node.confidence < 0.6)
         message = (
             f"Graph integrity: valid\n"
             f"Unresolved dialogue speakers: {unresolved_dialogue}\n"

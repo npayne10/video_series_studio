@@ -70,9 +70,7 @@ def test_onboarding_surfaces_have_accessible_names(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "accessible-names.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "accessible-names.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 
@@ -89,9 +87,7 @@ def test_primary_controls_have_names_and_tooltips(
     qtbot: object,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "descriptions.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "descriptions.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
     controls = (
@@ -113,9 +109,7 @@ def test_certified_object_names_are_unique_and_stable(
     qtbot: object,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "object-names.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "object-names.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
     names = (
@@ -140,9 +134,7 @@ def test_onboarding_action_language_is_consistent(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "language.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "language.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 
@@ -167,9 +159,7 @@ def test_visible_overlays_assign_focus_to_an_action(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "focus.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "focus.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
 
@@ -230,9 +220,7 @@ def test_beginner_and_expert_modes_preserve_core_workspace(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "mode-consistency.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "mode-consistency.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show(dialog, qapp)
     dialog.welcome_overlay.skip_button.click()
@@ -261,9 +249,7 @@ def test_validation_status_is_textual_not_colour_only(
     qtbot: object,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "validation-text.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "validation-text.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
     assert "blocking issue" in dialog.validation_panel.title_label.text()

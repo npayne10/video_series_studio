@@ -151,9 +151,7 @@ def test_missing_continuity_blocks_reference_driven_graph() -> None:
         _inventory(),
     )
 
-    issue = next(
-        item for item in report.issues if item.code == "graph.continuity_missing"
-    )
+    issue = next(item for item in report.issues if item.code == "graph.continuity_missing")
     assert issue.severity is PromptGraphValidationSeverity.ERROR
     assert not report.passed
 
@@ -182,10 +180,7 @@ def test_dialogue_requires_spoken_content() -> None:
 
     report = PromptGraphValidator().validate(extended, _inventory())
 
-    assert any(
-        issue.code == "graph.dialogue_content_missing"
-        for issue in report.issues
-    )
+    assert any(issue.code == "graph.dialogue_content_missing" for issue in report.issues)
     assert not report.passed
 
 
@@ -198,9 +193,7 @@ def test_policy_can_make_continuity_warning_only() -> None:
     )
     report = validator.validate(_graph(include_continuity=False), _inventory())
 
-    issue = next(
-        item for item in report.issues if item.code == "graph.continuity_missing"
-    )
+    issue = next(item for item in report.issues if item.code == "graph.continuity_missing")
     assert issue.severity is PromptGraphValidationSeverity.WARNING
     assert report.passed
     assert not report.completeness.production_ready

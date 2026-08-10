@@ -156,10 +156,7 @@ class OnboardingController(QObject):
         self._emit_state()
 
     def _settings_key(self, name: str) -> str:
-        return (
-            f"{self._settings_prefix}/{self.sequence.guide_id}/"
-            f"v{self.sequence.version}/{name}"
-        )
+        return f"{self._settings_prefix}/{self.sequence.guide_id}/v{self.sequence.version}/{name}"
 
     def _stored_outcome(self) -> OnboardingOutcome | None:
         raw = self._settings.value(self._settings_key("outcome"), "", type=str)

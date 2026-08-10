@@ -45,9 +45,7 @@ def _show_at(
 def test_responsive_matrix_covers_every_approved_layout_area() -> None:
     assert responsive_layout_areas() == EXPECTED_AREAS
     assert len(RESPONSIVE_LAYOUT_MATRIX) == len(EXPECTED_AREAS)
-    assert len(responsive_layout_test_nodes()) == len(
-        set(responsive_layout_test_nodes())
-    )
+    assert len(responsive_layout_test_nodes()) == len(set(responsive_layout_test_nodes()))
 
 
 def test_responsive_matrix_references_existing_test_file() -> None:
@@ -65,9 +63,7 @@ def test_compact_layout_keeps_editor_scrollable_and_actions_visible(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "compact.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "compact.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 800, 640)
 
@@ -89,9 +85,7 @@ def test_standard_layout_prioritises_the_editor(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "standard.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "standard.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 1100, 760)
 
@@ -109,9 +103,7 @@ def test_large_layout_preserves_compact_support_panels(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "large.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "large.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 1600, 1000)
 
@@ -129,9 +121,7 @@ def test_live_resize_preserves_workspace_structure(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "resize.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "resize.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 1100, 760)
 
@@ -151,9 +141,7 @@ def test_welcome_overlay_tracks_dialog_geometry(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "welcome.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "welcome.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 900, 680)
 
@@ -174,9 +162,7 @@ def test_tour_overlay_and_card_fit_resized_dialog(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
-    dialog = GuidedFirstSceneEditorDialog(
-        settings=_settings(tmp_path, "tour.ini")
-    )
+    dialog = GuidedFirstSceneEditorDialog(settings=_settings(tmp_path, "tour.ini"))
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
     _show_at(dialog, qapp, 900, 680)
     dialog.welcome_overlay.start_button.click()

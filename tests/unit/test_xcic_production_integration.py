@@ -58,13 +58,7 @@ class SuccessfulClient(ComfyUIClient):
     def wait(self, prompt_id: str) -> dict[str, Any]:
         assert prompt_id == "prompt-xcic"
         return {
-            "outputs": {
-                "9": {
-                    "videos": [
-                        {"filename": "clip-001.mp4", "subfolder": "production"}
-                    ]
-                }
-            }
+            "outputs": {"9": {"videos": [{"filename": "clip-001.mp4", "subfolder": "production"}]}}
         }
 
 
@@ -167,9 +161,7 @@ def test_compiler_requires_resolver_for_reference_jobs(tmp_path: Path) -> None:
     compiler = XCICCoreWorkflowCompiler(_workflow(tmp_path))
 
     with pytest.raises(XCICWorkflowCompilationError, match="reference resolver"):
-        compiler.compile(
-            _job(references=(RenderInputReference("REF-JAMES", "canonical"),))
-        )
+        compiler.compile(_job(references=(RenderInputReference("REF-JAMES", "canonical"),)))
 
 
 def test_derived_seed_is_stable_and_random_seed_uses_sentinel(tmp_path: Path) -> None:
@@ -178,17 +170,13 @@ def test_derived_seed_is_stable_and_random_seed_uses_sentinel(tmp_path: Path) ->
     derived = _job(seed_policy=SeedPolicy.DERIVED, fixed_seed=None)
 
     compiler.compile(derived)
-    first = json.loads(workflow.queue_file_path.read_text(encoding="utf-8"))["jobs"][0][
-        "seed"
-    ]
+    first = json.loads(workflow.queue_file_path.read_text(encoding="utf-8"))["jobs"][0]["seed"]
     compiler.compile(derived)
-    second = json.loads(workflow.queue_file_path.read_text(encoding="utf-8"))["jobs"][0][
+    second = json.loads(workflow.queue_file_path.read_text(encoding="utf-8"))["jobs"][0]["seed"]
+    compiler.compile(_job(seed_policy=SeedPolicy.RANDOM, fixed_seed=None))
+    random_seed = json.loads(workflow.queue_file_path.read_text(encoding="utf-8"))["jobs"][0][
         "seed"
     ]
-    compiler.compile(_job(seed_policy=SeedPolicy.RANDOM, fixed_seed=None))
-    random_seed = json.loads(workflow.queue_file_path.read_text(encoding="utf-8"))[
-        "jobs"
-    ][0]["seed"]
 
     assert first == second
     assert first >= 0

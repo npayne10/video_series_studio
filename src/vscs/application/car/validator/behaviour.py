@@ -1,4 +1,5 @@
 """Behaviour asset validation mixin."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,9 +26,7 @@ else:
 
 
 class BehaviourValidationMixin(_BehaviourMixinBase):
-    def _validate_behaviour_asset(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_behaviour_asset(self, asset: Any, result: AssetValidationResult) -> None:
         self._validate_behaviour_required_structure(asset, result)
         self._validate_behaviour_definition(asset, result)
         self._validate_behaviour_prompts(asset, result)
@@ -60,9 +59,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
                     {"required_file": name},
                 )
 
-    def _validate_behaviour_definition(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_behaviour_definition(self, asset: Any, result: AssetValidationResult) -> None:
         path = Path(asset.path) / DEFAULT_BEHAVIOUR
         if not path.is_file():
             return
@@ -84,14 +81,10 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
                 {"actual_type": type(behaviour).__name__},
             )
             return
-        self._validate_declared_asset_id(
-            asset, result, behaviour, path, DEFAULT_BEHAVIOUR
-        )
+        self._validate_declared_asset_id(asset, result, behaviour, path, DEFAULT_BEHAVIOUR)
         self._validate_behaviour_identity(behaviour, path, result)
         self._validate_behaviour_version(behaviour, path, result)
-        self._validate_behaviour_entry_point(
-            behaviour, path, Path(asset.path), result
-        )
+        self._validate_behaviour_entry_point(behaviour, path, Path(asset.path), result)
         self._validate_behaviour_execution_settings(behaviour, path, result)
         self._validate_behaviour_dependencies(behaviour, path, result)
         result.metadata_count += 1
@@ -228,13 +221,9 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
             if (
                 "/" in value
                 or "\\" in value
-                or value.lower().endswith(
-                    (".py", ".ps1", ".js", ".ts", ".bat", ".cmd")
-                )
+                or value.lower().endswith((".py", ".ps1", ".js", ".ts", ".bat", ".cmd"))
             ):
-                self._validate_behaviour_relative_path(
-                    value, behaviour_path, asset_path, result
-                )
+                self._validate_behaviour_relative_path(value, behaviour_path, asset_path, result)
             elif ":" in value:
                 module, callable_name = value.rsplit(":", 1)
                 if not module.strip() or not callable_name.strip():
@@ -250,8 +239,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
             supported = {
                 key: item
                 for key, item in value.items()
-                if key
-                in {"module", "function", "callable", "handler", "path", "script"}
+                if key in {"module", "function", "callable", "handler", "path", "script"}
             }
             if not supported:
                 self._add_asset_diagnostic(
@@ -269,10 +257,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
                         ValidationSeverity.ERROR,
                         ValidationCode.INVALID_BEHAVIOUR,
                         behaviour_path,
-                        (
-                            f"Behaviour entry-point property '{key}' must be a "
-                            "non-empty string."
-                        ),
+                        (f"Behaviour entry-point property '{key}' must be a non-empty string."),
                     )
             declared_path = value.get("path") or value.get("script")
             if isinstance(declared_path, str) and declared_path.strip():
@@ -374,11 +359,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
             if field not in execution:
                 continue
             value = execution[field]
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or value < 0
-            ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
                 self._add_asset_diagnostic(
                     result,
                     ValidationSeverity.ERROR,
@@ -411,9 +392,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
         )
         if field is None:
             return
-        dependencies = self._extract_behaviour_dependencies(
-            behaviour[field], field, path, result
-        )
+        dependencies = self._extract_behaviour_dependencies(behaviour[field], field, path, result)
         known = self._get_scanned_asset_ids()
         seen: set[str] = set()
         for dependency in dependencies:
@@ -430,11 +409,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
                 )
                 continue
             seen.add(dependency_id)
-            if (
-                self._looks_like_asset_id(dependency_id)
-                and known
-                and dependency_id not in known
-            ):
+            if self._looks_like_asset_id(dependency_id) and known and dependency_id not in known:
                 self._add_asset_diagnostic(
                     result,
                     ValidationSeverity.WARNING,
@@ -477,10 +452,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
                         ValidationSeverity.ERROR,
                         ValidationCode.INVALID_BEHAVIOUR,
                         path,
-                        (
-                            f"Dependency entry '{field}[{index}]' must be a string "
-                            "or object."
-                        ),
+                        (f"Dependency entry '{field}[{index}]' must be a string or object."),
                     )
             return dependency_ids
         if isinstance(value, dict):
@@ -490,9 +462,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
             nested_dependency_ids: list[str] = []
             for key, item in value.items():
                 nested_dependency_ids.extend(
-                    self._extract_behaviour_dependencies(
-                        item, f"{field}.{key}", path, result
-                    )
+                    self._extract_behaviour_dependencies(item, f"{field}.{key}", path, result)
                 )
             return nested_dependency_ids
         self._add_asset_diagnostic(
@@ -504,9 +474,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
         )
         return []
 
-    def _validate_behaviour_prompts(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_behaviour_prompts(self, asset: Any, result: AssetValidationResult) -> None:
         """Discover and structurally validate behaviour prompt packages."""
         directory = Path(asset.path) / PROMPTS_FOLDER
         if not directory.is_dir():
@@ -599,14 +567,10 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
                 {"package": package.name},
             )
 
-    def _validate_behaviour_tests(
-        self, asset: Any, result: AssetValidationResult
-    ) -> None:
+    def _validate_behaviour_tests(self, asset: Any, result: AssetValidationResult) -> None:
         """Part 4B2 extension point: validate behaviour test content."""
         directory = Path(asset.path) / TESTS_FOLDER
-        if directory.is_dir() and not any(
-            path.is_file() for path in directory.rglob("*")
-        ):
+        if directory.is_dir() and not any(path.is_file() for path in directory.rglob("*")):
             self._add_asset_diagnostic(
                 result,
                 ValidationSeverity.WARNING,

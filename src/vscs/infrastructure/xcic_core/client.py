@@ -23,7 +23,9 @@ class XCICCoreClient:
     def object_info(self) -> dict[str, Any]:
         value = self._request("GET", "/object_info")
         if not value:
-            raise XCICCoreClientError("Could not read ComfyUI installed node types from /object_info")
+            raise XCICCoreClientError(
+                "Could not read ComfyUI installed node types from /object_info"
+            )
         return value
 
     def healthcheck(self) -> None:
@@ -37,15 +39,15 @@ class XCICCoreClient:
             if not isinstance(node, dict) or node.get("class_type") not in installed
         }
         if unknown:
-            details = ", ".join(f"#{node_id} {node_type}" for node_id, node_type in sorted(unknown.items()))
+            details = ", ".join(
+                f"#{node_id} {node_type}" for node_id, node_type in sorted(unknown.items())
+            )
             raise XCICCoreClientError(
                 "XCIC workflow contains node types not installed in ComfyUI: " + details
             )
 
     def submit(self, prompt: dict[str, Any]) -> str:
-        response = self._request(
-            "POST", "/prompt", {"prompt": prompt, "client_id": self.client_id}
-        )
+        response = self._request("POST", "/prompt", {"prompt": prompt, "client_id": self.client_id})
         prompt_id = response.get("prompt_id")
         if not isinstance(prompt_id, str) or not prompt_id:
             raise XCICCoreClientError(f"ComfyUI did not return a prompt_id: {response}")
@@ -60,9 +62,12 @@ class XCICCoreClient:
                 status = record.get("status", {})
                 if isinstance(status, dict) and status.get("status_str") in {"error", "failed"}:
                     raise XCICCoreClientError(
-                        "ComfyUI workflow failed: " + json.dumps(status.get("messages", status), ensure_ascii=False)
+                        "ComfyUI workflow failed: "
+                        + json.dumps(status.get("messages", status), ensure_ascii=False)
                     )
-                if (isinstance(status, dict) and status.get("completed")) or record.get("outputs") is not None:
+                if (isinstance(status, dict) and status.get("completed")) or record.get(
+                    "outputs"
+                ) is not None:
                     return record
             time.sleep(1.0)
         raise XCICCoreClientError(f"XCIC render timed out after {timeout_seconds:.0f} seconds")

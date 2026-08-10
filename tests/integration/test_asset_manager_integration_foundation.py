@@ -175,38 +175,34 @@ def test_asset_manager_foundation_resolves_enriches_and_propagates(
         propagation.track(ship_result)
         propagation.track(character_result)
 
-        graph = application.services.require(PromptGraphBuilder).build(
-            PromptGraphBuildContext(
-                graph_id="GRAPH-SHIP",
-                production_id="DEMO",
-                container_id="EP-001",
-                scene_id="EP-001-SCN-001",
-                shot_id="EP-001-SCN-001-SHT-001",
+        graph = (
+            application.services.require(PromptGraphBuilder)
+            .build(
+                PromptGraphBuildContext(
+                    graph_id="GRAPH-SHIP",
+                    production_id="DEMO",
+                    container_id="EP-001",
+                    scene_id="EP-001-SCN-001",
+                    shot_id="EP-001-SCN-001-SHT-001",
+                )
             )
-        ).graph
+            .graph
+        )
         ship_node = graph.require_node("asset:SHP-IRON-HORIZON")
         assert "145 metre Guild survey spacecraft" in ship_node.content
         assert "Four rear fusion engines" in ship_node.content
         assert "blue-white engine trails" in ship_node.content
         assert ship_node.reference_ids
-        assert index.affected_shots("SHP-IRON-HORIZON") == (
-            "EP-001-SCN-001-SHT-001",
-        )
+        assert index.affected_shots("SHP-IRON-HORIZON") == ("EP-001-SCN-001-SHT-001",)
 
         history = application.services.require(IncrementalCompilationHistory)
-        history.register(
-            _compiled_record("ITEM-SHIP", "EP-001-SCN-001-SHT-001")
-        )
-        history.register(
-            _compiled_record("ITEM-CHARACTER", "EP-001-SCN-001-SHT-002")
-        )
+        history.register(_compiled_record("ITEM-SHIP", "EP-001-SCN-001-SHT-001"))
+        history.register(_compiled_record("ITEM-CHARACTER", "EP-001-SCN-001-SHT-002"))
         application.services.require(CAPService).update(
             "SHP-IRON-HORIZON",
             CAPUpdate(
                 version="1.1",
-                production_notes=(
-                    "Controlled blue-white engine trails with no orange flame."
-                ),
+                production_notes=("Controlled blue-white engine trails with no orange flame."),
             ),
         )
 

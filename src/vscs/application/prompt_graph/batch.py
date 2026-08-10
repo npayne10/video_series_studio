@@ -46,9 +46,7 @@ class BatchCompilationItem:
 
     item_id: str
     context: PromptGraphBuildContext
-    inventory: PromptGraphResourceInventory = field(
-        default_factory=PromptGraphResourceInventory
-    )
+    inventory: PromptGraphResourceInventory = field(default_factory=PromptGraphResourceInventory)
     sequence: int = 0
     renderer_profile_id: str | None = None
     require_production_ready: bool = True
@@ -61,8 +59,7 @@ class BatchCompilationItem:
         if self.sequence < 0:
             raise ValueError("sequence cannot be negative")
         identities = tuple(
-            (dependency.kind, dependency.dependency_id)
-            for dependency in self.dependencies
+            (dependency.kind, dependency.dependency_id) for dependency in self.dependencies
         )
         if len(identities) != len(set(identities)):
             raise ValueError("batch item dependencies must be unique by kind and ID")
@@ -142,12 +139,7 @@ class BatchCompilationProgress:
 
     @property
     def processed_items(self) -> int:
-        return (
-            self.completed_items
-            + self.skipped_items
-            + self.failed_items
-            + self.cancelled_items
-        )
+        return self.completed_items + self.skipped_items + self.failed_items + self.cancelled_items
 
     @property
     def percentage(self) -> int:
@@ -185,11 +177,7 @@ class BatchCompilationJob:
     @property
     def packages(self) -> tuple[ProfiledPromptPackage, ...]:
         reusable = self.completed_results + self.skipped_results
-        return tuple(
-            result.package
-            for result in reusable
-            if result.package is not None
-        )
+        return tuple(result.package for result in reusable if result.package is not None)
 
     @property
     def progress(self) -> BatchCompilationProgress:

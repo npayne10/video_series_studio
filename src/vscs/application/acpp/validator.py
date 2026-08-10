@@ -35,9 +35,7 @@ class ACPPValidationResult:
     @property
     def passed(self) -> bool:
         """Return whether no error-level issues were found."""
-        return not any(
-            issue.severity is ACPPValidationSeverity.ERROR for issue in self.issues
-        )
+        return not any(issue.severity is ACPPValidationSeverity.ERROR for issue in self.issues)
 
 
 class ACPPValidator:

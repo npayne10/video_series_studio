@@ -55,8 +55,7 @@ def _sources(shot_id: str) -> tuple[PromptGraphSource, ...]:
             f"intent-{shot_id}",
             PromptNodeKind.VISUAL_INTENT,
             "Visual intent",
-            "The Iron Horizon approaches Xorix with controlled blue-white "
-            "engine trails.",
+            "The Iron Horizon approaches Xorix with controlled blue-white engine trails.",
             mandatory=True,
             sequence=1,
         ),
@@ -142,8 +141,7 @@ def test_batch_foundation_compiles_tracks_skips_and_rebuilds(tmp_path: Path) -> 
             "ITEM-002",
         )
         assert all(
-            result.status is BatchCompilationItemStatus.COMPLETED
-            for result in first.job.results
+            result.status is BatchCompilationItemStatus.COMPLETED for result in first.job.results
         )
         assert all(result.package is not None for result in first.job.results)
         assert all(
@@ -170,8 +168,7 @@ def test_batch_foundation_compiles_tracks_skips_and_rebuilds(tmp_path: Path) -> 
         assert second is not None
         assert second.job is not None
         assert all(
-            result.status is BatchCompilationItemStatus.SKIPPED
-            for result in second.job.results
+            result.status is BatchCompilationItemStatus.SKIPPED for result in second.job.results
         )
 
         incremental = application.services.require(IncrementalCompilationHistory)
@@ -195,8 +192,7 @@ def test_batch_foundation_compiles_tracks_skips_and_rebuilds(tmp_path: Path) -> 
         assert rebuilt is not None
         assert rebuilt.job is not None
         assert all(
-            result.status is BatchCompilationItemStatus.COMPLETED
-            for result in rebuilt.job.results
+            result.status is BatchCompilationItemStatus.COMPLETED for result in rebuilt.job.results
         )
 
         history = application.services.require(BatchCompilationHistory)

@@ -113,9 +113,7 @@ class GuidedTourOverlay(QWidget):
         if step is None:
             self.hide_tour()
             return
-        self.progress_label.setText(
-            f"Step {state.current_index + 1} of {state.total_steps}"
-        )
+        self.progress_label.setText(f"Step {state.current_index + 1} of {state.total_steps}")
         self.progress_bar.setValue(state.progress_percent)
         self.title_label.setText(step.title)
         self.description_label.setText(step.description)
@@ -193,9 +191,7 @@ class GuidedTourOverlay(QWidget):
         ):
             key_event = event
             if isinstance(key_event, QKeyEvent) and key_event.key() == Qt.Key.Key_Tab:
-                reverse = bool(
-                    key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier
-                )
+                reverse = bool(key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
                 self._cycle_focus(watched, reverse=reverse)
                 return True
         return super().eventFilter(watched, event)
@@ -210,9 +206,7 @@ class GuidedTourOverlay(QWidget):
 
     def _focusable_buttons(self) -> tuple[QPushButton, ...]:
         return tuple(
-            button
-            for button in self._tour_buttons()
-            if button.isVisible() and button.isEnabled()
+            button for button in self._tour_buttons() if button.isVisible() and button.isEnabled()
         )
 
     def _cycle_focus(self, current: QObject, *, reverse: bool) -> None:

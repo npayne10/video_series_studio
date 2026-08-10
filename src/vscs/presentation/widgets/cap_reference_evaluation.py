@@ -22,15 +22,14 @@ def _absolute_path(dialog: Any, relative_or_absolute: Path) -> Path:
 
 def _format_report(report: Any, report_path: Path) -> str:
     metrics = "\n".join(
-        f"• {metric.name}: {metric.score}/100 — {metric.summary}"
-        for metric in report.metrics
+        f"• {metric.name}: {metric.score}/100 — {metric.summary}" for metric in report.metrics
     )
     warnings = "\n".join(f"• {warning}" for warning in report.warnings) or "• None"
     checks = "\n".join(f"• {check}" for check in report.manual_checks)
     return (
         f"Decision: {report.decision.value.upper()}\n"
         f"Overall technical score: {report.overall_score}/100\n"
-        f"Image: {report.width} × {report.height}\n\n"
+        f"Image: {report.width} x {report.height}\n\n"
         f"Technical metrics\n{metrics}\n\n"
         f"Warnings\n{warnings}\n\n"
         f"Required visual review\n{checks}\n\n"
@@ -42,10 +41,14 @@ def _evaluate_selected(dialog: Any) -> None:
     gallery = getattr(dialog, "reference_gallery", None)
     reference = None if gallery is None else gallery.selected_reference()
     if reference is None:
-        QMessageBox.information(dialog, "Canonical Image Evaluation", "Select an image reference first.")
+        QMessageBox.information(
+            dialog, "Canonical Image Evaluation", "Select an image reference first."
+        )
         return
     if reference.reference_type is not CanonicalReferenceType.IMAGE:
-        QMessageBox.warning(dialog, "Canonical Image Evaluation", "CIEE v1.0 evaluates image references only.")
+        QMessageBox.warning(
+            dialog, "Canonical Image Evaluation", "CIEE v1.0 evaluates image references only."
+        )
         return
     if dialog.profile is None or dialog.project_directory is None:
         return
@@ -83,10 +86,7 @@ def _evaluate_selected(dialog: Any) -> None:
         if report.decision.value == "pass"
         else QMessageBox.Icon.Warning
     )
-    box.setText(
-        f"{reference.title}: {report.decision.value.upper()} "
-        f"({report.overall_score}/100)"
-    )
+    box.setText(f"{reference.title}: {report.decision.value.upper()} ({report.overall_score}/100)")
     box.setDetailedText(_format_report(report, report_path.relative_to(dialog.project_directory)))
     box.setInformativeText(
         "CIEE v1.0 completed deterministic local technical checks. "

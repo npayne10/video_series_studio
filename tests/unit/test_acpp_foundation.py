@@ -86,9 +86,7 @@ def _package() -> ClipProductionPackage:
 
 
 def test_build_clip_id_is_stable() -> None:
-    assert build_clip_id(" PROD:XORIX ", 2, 4) == (
-        "PROD-XORIX-SC002-SH004-CL001"
-    )
+    assert build_clip_id(" PROD:XORIX ", 2, 4) == ("PROD-XORIX-SC002-SH004-CL001")
 
 
 def test_validator_accepts_complete_package() -> None:
@@ -148,9 +146,7 @@ def test_checksum_is_deterministic_and_content_sensitive() -> None:
 
     first = serializer.checksum(package)
     second = serializer.checksum(package)
-    changed = serializer.checksum(
-        replace(package, metadata={"source": "manual"})
-    )
+    changed = serializer.checksum(replace(package, metadata={"source": "manual"}))
 
     assert first == second
     assert first != changed

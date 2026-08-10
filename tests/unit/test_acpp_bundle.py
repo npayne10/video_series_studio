@@ -207,9 +207,7 @@ def test_bundle_rejects_clip_identity_mismatch() -> None:
             render_job_checksum=job_checksum,
         )
 
-    assert any(
-        issue.code == "CLIP_ID_MISMATCH" for issue in error.value.result.issues
-    )
+    assert any(issue.code == "CLIP_ID_MISMATCH" for issue in error.value.result.issues)
 
 
 def test_bundle_rejects_dependency_mismatch() -> None:
@@ -224,9 +222,7 @@ def test_bundle_rejects_dependency_mismatch() -> None:
             render_job_checksum=job_checksum,
         )
 
-    assert any(
-        issue.code == "DEPENDENCY_MISMATCH" for issue in error.value.result.issues
-    )
+    assert any(issue.code == "DEPENDENCY_MISMATCH" for issue in error.value.result.issues)
 
 
 def test_bundle_report_summarizes_handoff_contract() -> None:

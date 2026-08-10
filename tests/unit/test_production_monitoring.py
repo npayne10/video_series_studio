@@ -145,12 +145,16 @@ def test_execution_metrics_include_duration_and_failure_codes() -> None:
         ),
     )
 
-    metrics = ProductionMonitor().snapshot(
-        _pipeline(),
-        _queue(),
-        results=results,
-        now=NOW,
-    ).metrics
+    metrics = (
+        ProductionMonitor()
+        .snapshot(
+            _pipeline(),
+            _queue(),
+            results=results,
+            now=NOW,
+        )
+        .metrics
+    )
 
     assert metrics.total_results == 2
     assert metrics.succeeded == 1

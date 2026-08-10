@@ -182,9 +182,7 @@ class EntityResolutionService:
             }
             character_names.discard("")
             title_matches = [
-                asset
-                for asset in compatible
-                if cls._character_core(asset.name) in character_names
+                asset for asset in compatible if cls._character_core(asset.name) in character_names
             ]
             if len(title_matches) == 1:
                 return ResolutionMatchKind.EXISTING, title_matches[0]

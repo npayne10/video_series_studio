@@ -52,9 +52,9 @@ def _profiled(*, truncated: bool = False) -> ProfiledPromptPackage:
             PromptGraphCompleteness(100, 100, 100, True),
         ),
     )
-    profile = RendererPromptProfileRegistry(
-        default_renderer_prompt_profiles()
-    ).resolve(RendererKind.COMFYUI, QualityLevel.PREVIEW)
+    profile = RendererPromptProfileRegistry(default_renderer_prompt_profiles()).resolve(
+        RendererKind.COMFYUI, QualityLevel.PREVIEW
+    )
     return ProfiledPromptPackage(
         package,
         profile,

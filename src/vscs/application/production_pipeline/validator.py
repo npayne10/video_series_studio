@@ -35,10 +35,7 @@ class PipelineValidationResult:
     @property
     def passed(self) -> bool:
         """Return whether no error-level findings were emitted."""
-        return not any(
-            issue.severity is PipelineValidationSeverity.ERROR
-            for issue in self.issues
-        )
+        return not any(issue.severity is PipelineValidationSeverity.ERROR for issue in self.issues)
 
 
 class ProductionPipelineValidator:
@@ -72,9 +69,7 @@ class ProductionPipelineValidator:
             return PipelineValidationResult(tuple(issues))
 
         node_ids = [node.node_id for node in pipeline.nodes]
-        duplicates = sorted(
-            node_id for node_id in set(node_ids) if node_ids.count(node_id) > 1
-        )
+        duplicates = sorted(node_id for node_id in set(node_ids) if node_ids.count(node_id) > 1)
         for node_id in duplicates:
             issues.append(
                 PipelineValidationIssue(

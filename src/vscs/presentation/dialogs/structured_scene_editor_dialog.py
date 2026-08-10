@@ -38,9 +38,7 @@ class StructuredSceneEditorDialog(SceneEditorDialog):
         super().__init__(scene, parent, **kwargs)
 
         legacy_lines = tuple(
-            line.strip()
-            for line in self.dialogue_edit.toPlainText().splitlines()
-            if line.strip()
+            line.strip() for line in self.dialogue_edit.toPlainText().splitlines() if line.strip()
         )
         self.dialogue_editor = DialogueEditorWidget(participant_assets, self)
         root_layout = self.layout()
@@ -93,12 +91,8 @@ class StructuredSceneEditorDialog(SceneEditorDialog):
         self.scroll_area.setObjectName("sceneEditorScrollArea")
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self.scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll_area.setWidget(self.scroll_content)
         self.scroll_area.setSizePolicy(
             QSizePolicy.Policy.Expanding,

@@ -249,8 +249,7 @@ class ProductionAuditService:
         validation = ProductionAuditValidator().validate(ledger)
         clips = {entry.provenance.clip_id for entry in ledger.entries}
         failures = sum(
-            entry.event_type is AuditEventType.EXECUTION_FAILED
-            for entry in ledger.entries
+            entry.event_type is AuditEventType.EXECUTION_FAILED for entry in ledger.entries
         )
         head = ledger.entries[-1].checksum if ledger.entries else "none"
         return "\n".join(
@@ -386,8 +385,7 @@ class ProductionAuditSerializer:
             ledger_id=str(raw["ledger_id"]),
             production_id=str(raw["production_id"]),
             entries=tuple(
-                ProductionAuditSerializer.entry_from_dict(item)
-                for item in raw.get("entries", [])
+                ProductionAuditSerializer.entry_from_dict(item) for item in raw.get("entries", [])
             ),
             schema_version=str(raw.get("schema_version", "1.0")),
             metadata={str(key): str(value) for key, value in raw.get("metadata", {}).items()},

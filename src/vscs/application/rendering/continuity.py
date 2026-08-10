@@ -43,11 +43,7 @@ class ContinuityFrameReference:
         if not self.reference_id.strip():
             raise ValueError("reference_id is required")
         normalized = self.relative_path.replace("\\", "/")
-        unsafe = (
-            not normalized
-            or normalized.startswith("/")
-            or ".." in normalized.split("/")
-        )
+        unsafe = not normalized or normalized.startswith("/") or ".." in normalized.split("/")
         if unsafe:
             raise ValueError("relative_path must remain project-relative")
         if self.frame_number is not None and self.frame_number < 0:
@@ -78,11 +74,7 @@ class EntityContinuityState:
     def value(self, key: str) -> str | None:
         """Return one named state value when present."""
         return next(
-            (
-                value
-                for name, value in self.state_values
-                if name == key
-            ),
+            (value for name, value in self.state_values if name == key),
             None,
         )
 
@@ -157,9 +149,7 @@ class ContinuityPackage:
         )
         for state, scope in expected:
             if state is not None and state.scope is not scope:
-                raise ValueError(
-                    f"{scope.value} continuity state has the wrong scope"
-                )
+                raise ValueError(f"{scope.value} continuity state has the wrong scope")
 
     @property
     def ordered_states(self) -> tuple[ScopedContinuityState, ...]:
@@ -179,9 +169,7 @@ class ContinuityPackage:
         """Resolve entities with narrower scopes overriding broader scopes."""
         resolved: dict[str, EntityContinuityState] = {}
         for state in self.ordered_states:
-            resolved.update(
-                {entity.entity_id: entity for entity in state.entities}
-            )
+            resolved.update({entity.entity_id: entity for entity in state.entities})
         return tuple(resolved.values())
 
 
@@ -207,11 +195,7 @@ class ContinuityStateRegistry:
         values = self._states.values()
         return tuple(
             sorted(
-                (
-                    state
-                    for state in values
-                    if scope is None or state.scope is scope
-                ),
+                (state for state in values if scope is None or state.scope is scope),
                 key=lambda state: state.state_id,
             )
         )

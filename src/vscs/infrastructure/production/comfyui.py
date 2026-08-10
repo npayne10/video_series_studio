@@ -102,8 +102,7 @@ class ComfyUIClient:
                     if status_value in {"error", "failed"}:
                         details = status.get("messages", status)
                         raise ComfyUIClientError(
-                            "ComfyUI workflow failed: "
-                            + json.dumps(details, ensure_ascii=False)
+                            "ComfyUI workflow failed: " + json.dumps(details, ensure_ascii=False)
                         )
                     if status.get("completed") is True:
                         return record
@@ -111,8 +110,7 @@ class ComfyUIClient:
                     return record
             self._sleep(self.config.poll_interval_seconds)
         raise ComfyUITimeoutError(
-            "ComfyUI execution timed out after "
-            f"{self.config.execution_timeout_seconds:.0f} seconds"
+            f"ComfyUI execution timed out after {self.config.execution_timeout_seconds:.0f} seconds"
         )
 
     @staticmethod
@@ -167,8 +165,7 @@ class ComfyUIClient:
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
             raise ComfyUIClientError(
-                f"ComfyUI rejected {method} {path} with HTTP {exc.code}: "
-                f"{detail[:8000]}"
+                f"ComfyUI rejected {method} {path} with HTTP {exc.code}: {detail[:8000]}"
             ) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise ComfyUIClientError(

@@ -125,6 +125,4 @@ def test_dialog_geometry_is_restored_between_sessions(
     assert second.size().width() == 910
     assert second.size().height() == 650
     assert second.summary_frame.parent() is second
-    assert second.scroll_area.verticalScrollBarPolicy() == (
-        Qt.ScrollBarPolicy.ScrollBarAsNeeded
-    )
+    assert second.scroll_area.verticalScrollBarPolicy() == (Qt.ScrollBarPolicy.ScrollBarAsNeeded)

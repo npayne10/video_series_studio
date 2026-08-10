@@ -85,9 +85,7 @@ class OnboardingWelcomeOverlay(QFrame):
         actions.addStretch(1)
         self.skip_button = QPushButton("Skip", card)
         self.skip_button.setObjectName("onboardingWelcomeSkip")
-        self.skip_button.setToolTip(
-            "Skip this tour and do not show it automatically again."
-        )
+        self.skip_button.setToolTip("Skip this tour and do not show it automatically again.")
         self.start_button = QPushButton("Start Guide", card)
         self.start_button.setObjectName("onboardingWelcomeStart")
         self.start_button.setDefault(True)
@@ -107,12 +105,8 @@ class OnboardingWelcomeOverlay(QFrame):
         layout.addLayout(centered)
         layout.addStretch(1)
 
-        self.start_button.clicked.connect(
-            lambda _checked=False: self.start_requested.emit()
-        )
-        self.skip_button.clicked.connect(
-            lambda _checked=False: self.skip_requested.emit()
-        )
+        self.start_button.clicked.connect(lambda _checked=False: self.start_requested.emit())
+        self.skip_button.clicked.connect(lambda _checked=False: self.skip_requested.emit())
         self.skip_button.installEventFilter(self)
         self.start_button.installEventFilter(self)
         parent.installEventFilter(self)
@@ -143,9 +137,7 @@ class OnboardingWelcomeOverlay(QFrame):
         ):
             key_event = event
             if isinstance(key_event, QKeyEvent) and key_event.key() == Qt.Key.Key_Tab:
-                reverse = bool(
-                    key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier
-                )
+                reverse = bool(key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
                 self._cycle_focus(watched, reverse=reverse)
                 return True
         return super().eventFilter(watched, event)
@@ -154,9 +146,7 @@ class OnboardingWelcomeOverlay(QFrame):
         buttons = (self.skip_button, self.start_button)
         index = buttons.index(current)
         step = -1 if reverse else 1
-        buttons[(index + step) % len(buttons)].setFocus(
-            Qt.FocusReason.TabFocusReason
-        )
+        buttons[(index + step) % len(buttons)].setFocus(Qt.FocusReason.TabFocusReason)
 
     def _fit_parent(self) -> None:
         parent = self.parentWidget()

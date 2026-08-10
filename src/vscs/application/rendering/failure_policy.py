@@ -39,9 +39,6 @@ class RetryPolicy:
         """Return the declared action for one failure."""
         if error_code in self.abort_error_codes:
             return FailureAction.ABORT
-        if (
-            error_code in self.retryable_error_codes
-            and retry_count < self.maximum_retries
-        ):
+        if error_code in self.retryable_error_codes and retry_count < self.maximum_retries:
             return FailureAction.RETRY
         return FailureAction.NOTIFY if self.notify_on_failure else FailureAction.ABORT

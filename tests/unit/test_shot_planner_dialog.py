@@ -140,9 +140,7 @@ def test_shot_planner_allocates_continuity_and_blocking(
     index = dialog.continuity_combo.findData(first.shot_id)
     assert index >= 0
     dialog.continuity_combo.setCurrentIndex(index)
-    dialog.continuity_notes_edit.setPlainText(
-        "Maintain James's screen-left eyeline."
-    )
+    dialog.continuity_notes_edit.setPlainText("Maintain James's screen-left eyeline.")
     dialog.blocking_edit.setPlainText(
         "James remains at the command rail and turns toward the main display."
     )

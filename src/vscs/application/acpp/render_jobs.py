@@ -182,9 +182,7 @@ class RenderJobCompiler:
                 "retry_on_timeout": job.retry_policy.retry_on_timeout,
                 "retry_on_provider_error": job.retry_policy.retry_on_provider_error,
             },
-            "required_capabilities": [
-                capability.value for capability in job.required_capabilities
-            ],
+            "required_capabilities": [capability.value for capability in job.required_capabilities],
             "package_checksum": job.package_checksum,
             "prompt_checksum": job.prompt_checksum,
             "metadata": list(job.metadata),
@@ -220,9 +218,7 @@ class RenderJobCompiler:
                 )
             )
         unique = {
-            (item.reference_id, item.role): item
-            for item in references
-            if item.reference_id.strip()
+            (item.reference_id, item.role): item for item in references if item.reference_id.strip()
         }
         return tuple(unique.values())
 

@@ -12,10 +12,7 @@ SCENE_EDITOR_ONBOARDING = OnboardingSequence(
         OnboardingStep(
             "welcome",
             "Welcome to the Scene Editor",
-            (
-                "Learn the scene-creation workflow and the assistance available "
-                "while you work."
-            ),
+            ("Learn the scene-creation workflow and the assistance available while you work."),
         ),
         OnboardingStep(
             "production_type",
@@ -44,10 +41,7 @@ SCENE_EDITOR_ONBOARDING = OnboardingSequence(
         OnboardingStep(
             "location",
             "Choose the primary location",
-            (
-                "Select the canonical Location or Environment asset where the "
-                "scene occurs."
-            ),
+            ("Select the canonical Location or Environment asset where the scene occurs."),
             topic_id="scene.location",
             target_id="location",
         ),

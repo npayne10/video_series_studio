@@ -84,8 +84,7 @@ class WorkflowNavigator(QObject):
         self._original_styles[target] = target.styleSheet()
         target.setProperty("workflowGuidedTarget", True)
         target.setStyleSheet(
-            target.styleSheet()
-            + "\n*[workflowGuidedTarget='true'] {"
+            target.styleSheet() + "\n*[workflowGuidedTarget='true'] {"
             "border: 2px solid palette(highlight);"
             "border-radius: 4px;"
             "background-color: palette(alternate-base);"

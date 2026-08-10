@@ -28,7 +28,7 @@ from vscs.domain.story_analysis import (
 )
 
 _SENTENCE_PATTERN = re.compile(r"[^.!?\n]+(?:[.!?]+|$)")
-_QUOTED_PATTERN = re.compile(r'[\"“](.+?)[\"”]', re.DOTALL)
+_QUOTED_PATTERN = re.compile(r"[\"“](.+?)[\"”]", re.DOTALL)
 _TITLE_NAME_PATTERN = re.compile(
     r"\b(?P<title>Commander|Captain|Major|Ambassador|Doctor|Dr\.|Admiral|General)\s+"
     r"(?P<name>[A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)?)"
@@ -134,9 +134,7 @@ class StoryStructureParser:
         sections: list[StorySection] = []
         for section_index, (title, _heading_start, heading_end) in enumerate(headings):
             section_end = (
-                headings[section_index + 1][1]
-                if section_index + 1 < len(headings)
-                else len(text)
+                headings[section_index + 1][1] if section_index + 1 < len(headings) else len(text)
             )
             body = text[heading_end:section_end].strip()
             body_start = heading_end
@@ -163,8 +161,7 @@ class StoryStructureParser:
             return False
         words = value.split()
         return 1 <= len(words) <= 8 and all(
-            word[:1].isupper() or word.lower() in {"of", "the", "and", "a", "an"}
-            for word in words
+            word[:1].isupper() or word.lower() in {"of", "the", "and", "a", "an"} for word in words
         )
 
 
@@ -240,9 +237,9 @@ class DeterministicStoryAnalyzer:
                 title = match.group("title")
                 name = match.group("name")
                 source = self._span(
-                    request, 
-                    sentence.start_offset + match.start(), 
-                    sentence.start_offset + match.end()
+                    request,
+                    sentence.start_offset + match.start(),
+                    sentence.start_offset + match.end(),
                 )
                 found.setdefault(name, (title, source))
 
@@ -251,9 +248,9 @@ class DeterministicStoryAnalyzer:
                 if name in found or len(name.split()) < 2:
                     continue
                 source = self._span(
-                    request, 
-                    sentence.start_offset + match.start("name"), 
-                    sentence.start_offset + match.end("name")
+                    request,
+                    sentence.start_offset + match.start("name"),
+                    sentence.start_offset + match.end("name"),
                 )
                 found[name] = ("", source)
 
@@ -296,7 +293,7 @@ class DeterministicStoryAnalyzer:
 
             for cue in (*_LOCATION_CUES, *_TECHNOLOGY_CUES, *_PROP_CUES):
                 for match in re.finditer(rf"\b(?:the\s+)?{re.escape(cue)}s?\b", lowered):
-                    phrase = sentence.text[match.start():match.end()].strip()
+                    phrase = sentence.text[match.start() : match.end()].strip()
                     name = re.sub(r"^(?:the\s+)", "", phrase, flags=re.IGNORECASE)
                     kind = self._kind_for_cue(cue)
                     candidates.setdefault(
@@ -350,7 +347,7 @@ class DeterministicStoryAnalyzer:
         index = 0
         for sentence in sentences:
             for match in _QUOTED_PATTERN.finditer(sentence.text):
-                speaker_match = _SPEAKER_AFTER_PATTERN.search(sentence.text[match.end():])
+                speaker_match = _SPEAKER_AFTER_PATTERN.search(sentence.text[match.end() :])
                 speaker_id: str | None = None
                 if speaker_match is not None:
                     speaker_id = by_name.get(speaker_match.group("name"))
@@ -447,7 +444,7 @@ class DeterministicStoryAnalyzer:
             if len(present) < 2:
                 continue
             for left_index, left in enumerate(present):
-                for right in present[left_index + 1:]:
+                for right in present[left_index + 1 :]:
                     key = tuple(sorted((left.entity_id, right.entity_id)))
                     pairs.setdefault(
                         key,
@@ -487,8 +484,7 @@ class DeterministicStoryAnalyzer:
                 (
                     entity.entity_id
                     for entity in entities
-                    if isinstance(entity, Location)
-                    and entity.name.lower() in section.body.lower()
+                    if isinstance(entity, Location) and entity.name.lower() in section.body.lower()
                 ),
                 None,
             )
@@ -501,8 +497,8 @@ class DeterministicStoryAnalyzer:
                     location_entity_id=location_id,
                     sources=(
                         self._span(
-                            request, 
-                            section.start_offset, 
+                            request,
+                            section.start_offset,
                             max(section.start_offset + 1, section.end_offset),
                         ),
                     ),

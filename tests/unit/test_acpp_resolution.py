@@ -168,12 +168,8 @@ def test_resolver_enriches_asset_and_behaviour_bindings() -> None:
         "REF-BRIDGE-PRIMARY",
         "REF-BRIDGE-SECONDARY",
     )
-    assert bindings["CHR-JAMES"].canonical_reference_ids == (
-        "REF-JAMES-PRIMARY",
-    )
-    assert bindings["CHR-JAMES"].behaviour_package_ids == (
-        "BHV-COMMAND-PRESENCE",
-    )
+    assert bindings["CHR-JAMES"].canonical_reference_ids == ("REF-JAMES-PRIMARY",)
+    assert bindings["CHR-JAMES"].behaviour_package_ids == ("BHV-COMMAND-PRESENCE",)
     assert "TECH-GUILD-UNIFORM" in result.package.dependencies
     assert result.package.metadata["resolution.status"] == "resolved"
 
@@ -197,8 +193,7 @@ def test_missing_required_asset_fails_resolution() -> None:
     assert result.passed is False
     assert result.package.metadata["resolution.status"] == "failed"
     assert any(
-        item.code == "ASSET_NOT_RESOLVED"
-        and item.severity is ResolutionSeverity.ERROR
+        item.code == "ASSET_NOT_RESOLVED" and item.severity is ResolutionSeverity.ERROR
         for item in result.diagnostics
     )
 
@@ -207,9 +202,7 @@ def test_missing_optional_asset_is_a_warning() -> None:
     result = _resolver().resolve(_package(optional_missing=True))
 
     assert result.passed is True
-    warning = next(
-        item for item in result.diagnostics if item.code == "ASSET_NOT_RESOLVED"
-    )
+    warning = next(item for item in result.diagnostics if item.code == "ASSET_NOT_RESOLVED")
     assert warning.severity is ResolutionSeverity.WARNING
 
 
@@ -230,15 +223,11 @@ def test_invalid_behaviour_is_reported_and_can_raise() -> None:
 
 
 def test_policy_can_select_only_primary_references() -> None:
-    resolver = _resolver(
-        config=ACPPResolverConfig(include_secondary_references=False)
-    )
+    resolver = _resolver(config=ACPPResolverConfig(include_secondary_references=False))
 
     result = resolver.resolve(_package())
     bridge = next(
-        binding
-        for binding in result.package.assets
-        if binding.asset_id == "LOC-MAURITANIA-BRIDGE"
+        binding for binding in result.package.assets if binding.asset_id == "LOC-MAURITANIA-BRIDGE"
     )
 
     assert bridge.canonical_reference_ids == ("REF-BRIDGE-PRIMARY",)

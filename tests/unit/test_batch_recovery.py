@@ -53,8 +53,7 @@ def _request(
     return BatchCompilationRequest.create(
         batch_id,
         tuple(
-            _item(f"ITEM-{index:03d}", shot_id)
-            for index, shot_id in enumerate(shot_ids, start=1)
+            _item(f"ITEM-{index:03d}", shot_id) for index, shot_id in enumerate(shot_ids, start=1)
         ),
     )
 

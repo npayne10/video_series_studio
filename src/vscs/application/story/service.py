@@ -197,12 +197,8 @@ class StoryService:
                 str(value) for value in raw.get("participant_asset_ids", [])
             ),
             dialogue=tuple(str(value) for value in raw.get("dialogue", [])),
-            required_asset_ids=tuple(
-                str(value) for value in raw.get("required_asset_ids", [])
-            ),
-            time_of_day=(
-                None if raw.get("time_of_day") is None else str(raw["time_of_day"])
-            ),
+            required_asset_ids=tuple(str(value) for value in raw.get("required_asset_ids", [])),
+            time_of_day=(None if raw.get("time_of_day") is None else str(raw["time_of_day"])),
             transition_in=SceneTransition(str(raw.get("transition_in", "cut"))),
             estimated_duration_seconds=(
                 None

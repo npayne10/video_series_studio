@@ -140,9 +140,7 @@ def test_comfyui_compiler_injects_manifest_bound_values(tmp_path: Path) -> None:
     prompt = compiled.payload["prompt"]
 
     assert isinstance(prompt, dict)
-    assert prompt["1"]["inputs"]["text"] == (
-        "The Iron Horizon enters Xorix orbit."
-    )
+    assert prompt["1"]["inputs"]["text"] == ("The Iron Horizon enters Xorix orbit.")
     assert prompt["2"]["inputs"]["width"] == 960
     assert prompt["3"]["inputs"]["seed"] == 42
     assert compiled.payload["extra_data"]["shot_id"] == "SHT-001"

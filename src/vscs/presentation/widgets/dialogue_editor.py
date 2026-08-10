@@ -65,9 +65,7 @@ class DialogueEditorWidget(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._participant_names = {
-            asset.asset_id: asset.name for asset in participant_assets
-        }
+        self._participant_names = {asset.asset_id: asset.name for asset in participant_assets}
         self._participant_ids: tuple[str, ...] = ()
         self._entries: list[DialogueEntry] = []
         self._editing_index: int | None = None
@@ -149,9 +147,7 @@ class DialogueEditorWidget(QWidget):
         self._participant_ids = tuple(dict.fromkeys(participant_ids))
         known_entry_speakers = tuple(
             dict.fromkeys(
-                entry.speaker_id
-                for entry in self._entries
-                if entry.speaker_id is not None
+                entry.speaker_id for entry in self._entries if entry.speaker_id is not None
             )
         )
         self.speaker_combo.clear()
@@ -161,18 +157,14 @@ class DialogueEditorWidget(QWidget):
             self.speaker_combo.addItem(f"{name}  —  {participant_id}", participant_id)
         for speaker_id in known_entry_speakers:
             if speaker_id not in self._participant_ids:
-                self.speaker_combo.addItem(
-                    f"Unavailable speaker  —  {speaker_id}", speaker_id
-                )
+                self.speaker_combo.addItem(f"Unavailable speaker  —  {speaker_id}", speaker_id)
         index = self.speaker_combo.findData(current)
         self.speaker_combo.setCurrentIndex(max(index, 0))
         self._update_controls()
 
     def load_lines(self, lines: Iterable[str]) -> None:
         """Load structured or legacy dialogue lines."""
-        self._entries = [
-            DialogueEntry.parse(line) for line in lines if line.strip()
-        ]
+        self._entries = [DialogueEntry.parse(line) for line in lines if line.strip()]
         self._editing_index = None
         self._refresh()
         self.set_participants(self._participant_ids)
@@ -196,9 +188,7 @@ class DialogueEditorWidget(QWidget):
             raise ValueError("Dialogue speakers must be selected scene participants")
         if not text.strip():
             raise ValueError("Dialogue text cannot be empty")
-        self._entries.append(
-            DialogueEntry(speaker_id, text.strip(), performance_note.strip())
-        )
+        self._entries.append(DialogueEntry(speaker_id, text.strip(), performance_note.strip()))
         self._refresh()
 
     def _commit_entry(self) -> None:
@@ -227,9 +217,7 @@ class DialogueEditorWidget(QWidget):
         if entry.speaker_id is None or entry.speaker_id not in self._participant_ids:
             return
         self._editing_index = row
-        self.speaker_combo.setCurrentIndex(
-            self.speaker_combo.findData(entry.speaker_id)
-        )
+        self.speaker_combo.setCurrentIndex(self.speaker_combo.findData(entry.speaker_id))
         self.text_edit.setPlainText(entry.text)
         self.performance_edit.setText(entry.performance_note)
         self.add_button.setText("Update Dialogue")
@@ -293,8 +281,7 @@ class DialogueEditorWidget(QWidget):
         has_text = bool(self.text_edit.toPlainText().strip())
         self.add_button.setEnabled(valid_speaker and has_text)
         self.edit_button.setEnabled(
-            has_selection
-            and self._entries[row].speaker_id in self._participant_ids
+            has_selection and self._entries[row].speaker_id in self._participant_ids
         )
         self.delete_button.setEnabled(has_selection)
         self.up_button.setEnabled(has_selection and row > 0)

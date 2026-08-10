@@ -42,27 +42,17 @@ class SmartExampleSceneEditorDialog(WorkflowSceneEditorDialog):
         return tuple(asset for asset in value if isinstance(asset, Asset))
 
     def _install_smart_examples(self) -> None:
-        self.scene_name_edit.setPlaceholderText(
-            self.example_provider.placeholder("scene.name")
-        )
-        self.heading_edit.setPlaceholderText(
-            self.example_provider.placeholder("scene.heading")
-        )
-        self.summary_edit.setPlaceholderText(
-            self.example_provider.placeholder("scene.summary")
-        )
+        self.scene_name_edit.setPlaceholderText(self.example_provider.placeholder("scene.name"))
+        self.heading_edit.setPlaceholderText(self.example_provider.placeholder("scene.heading"))
+        self.summary_edit.setPlaceholderText(self.example_provider.placeholder("scene.summary"))
         self.dialogue_editor.text_edit.setPlaceholderText(
             self.example_provider.placeholder("scene.dialogue")
         )
 
         if not self._participant_assets:
-            self.participant_help.setText(
-                self.example_provider.empty_state("scene.participants")
-            )
+            self.participant_help.setText(self.example_provider.empty_state("scene.participants"))
         if not self._required_assets:
-            self.asset_help.setText(
-                self.example_provider.empty_state("scene.required_assets")
-            )
+            self.asset_help.setText(self.example_provider.empty_state("scene.required_assets"))
         if not self.selected_participant_ids():
             self.dialogue_editor.help_label.setText(
                 self.example_provider.empty_state("scene.dialogue")
@@ -83,12 +73,8 @@ class SmartExampleSceneEditorDialog(WorkflowSceneEditorDialog):
 
         self.heading_completion_model = QStringListModel(self)
         self.heading_completer = QCompleter(self.heading_completion_model, self)
-        self.heading_completer.setCaseSensitivity(
-            Qt.CaseSensitivity.CaseInsensitive
-        )
-        self.heading_completer.setCompletionMode(
-            QCompleter.CompletionMode.PopupCompletion
-        )
+        self.heading_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.heading_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.heading_edit.setCompleter(self.heading_completer)
         self.heading_edit.textEdited.connect(self._update_heading_suggestions)
 

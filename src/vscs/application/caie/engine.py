@@ -70,7 +70,9 @@ class CanonicalAssetIntelligenceEngine:
                 f"Operating environment: {knowledge.environment_guidance}",
                 f"Reference composition: {knowledge.composition_guidance}",
                 self._section("Forbidden visible features", knowledge.forbidden_features),
-                self._section("Forbidden archetypes and interpretations", knowledge.forbidden_archetypes),
+                self._section(
+                    "Forbidden archetypes and interpretations", knowledge.forbidden_archetypes
+                ),
             )
         )
         if refinements:
@@ -138,7 +140,9 @@ class CanonicalAssetIntelligenceEngine:
     ) -> tuple[str, ...]:
         lower = prompt.casefold()
         warnings: list[str] = []
-        missing = [anchor for anchor in knowledge.required_anchors if anchor.casefold() not in lower]
+        missing = [
+            anchor for anchor in knowledge.required_anchors if anchor.casefold() not in lower
+        ]
         if missing:
             raise CAIEError(
                 f"CAIE knowledge '{knowledge.knowledge_id}' did not establish required prompt anchors: "
@@ -147,5 +151,7 @@ class CanonicalAssetIntelligenceEngine:
         if context.profile.asset_id.casefold() in lower:
             warnings.append("Asset identifier remains in source prose and may need CAP cleanup.")
         if len(prompt) > 8000:
-            warnings.append("Compiled prompt exceeds 8,000 characters and may be shortened by some providers.")
+            warnings.append(
+                "Compiled prompt exceeds 8,000 characters and may be shortened by some providers."
+            )
         return tuple(warnings)

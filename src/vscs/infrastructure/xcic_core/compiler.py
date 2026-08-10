@@ -11,8 +11,15 @@ UUID_TYPE_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 )
 EDITOR_ONLY_NODE_TYPES = {
-    "MarkdownNote", "Note", "Note Plus", "PrimitiveNode", "Reroute",
-    "GetNode", "SetNode", "Fast Groups Bypasser", "Fast Groups Muter",
+    "MarkdownNote",
+    "Note",
+    "Note Plus",
+    "PrimitiveNode",
+    "Reroute",
+    "GetNode",
+    "SetNode",
+    "Fast Groups Bypasser",
+    "Fast Groups Muter",
 }
 
 
@@ -28,13 +35,21 @@ def _is_editor_only(class_type: Any) -> bool:
         return True
     normalised = value.lower().replace("_", " ").replace("-", " ")
     return normalised in {
-        "markdownnote", "markdown note", "note", "note plus", "reroute",
-        "primitive node", "get node", "set node",
+        "markdownnote",
+        "markdown note",
+        "note",
+        "note plus",
+        "reroute",
+        "primitive node",
+        "get node",
+        "set node",
     }
 
 
 def is_api_workflow(data: dict[str, Any]) -> bool:
-    return bool(data) and all(isinstance(value, dict) and "class_type" in value for value in data.values())
+    return bool(data) and all(
+        isinstance(value, dict) and "class_type" in value for value in data.values()
+    )
 
 
 def sanitise_api_workflow(data: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:

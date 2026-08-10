@@ -57,9 +57,7 @@ def test_checklist_shows_live_progress_and_next_recommendation(
     assert "Name and identify" in (
         dialog.workflow_checklist.button_for_step("scene_identity").text()
     )
-    assert "Enter a short scene name" in (
-        dialog.workflow_checklist.next_step_label.text()
-    )
+    assert "Enter a short scene name" in (dialog.workflow_checklist.next_step_label.text())
 
     initial_value = dialog.workflow_checklist.progress_bar.value()
     dialog.scene_name_edit.setText("Arrival at Xorix")
@@ -67,9 +65,7 @@ def test_checklist_shows_live_progress_and_next_recommendation(
     qapp.processEvents()
 
     assert dialog.workflow_checklist.progress_bar.value() > initial_value
-    assert "Select the canonical location" in (
-        dialog.workflow_checklist.next_step_label.text()
-    )
+    assert "Select the canonical location" in (dialog.workflow_checklist.next_step_label.text())
 
 
 def test_completed_required_scene_reaches_full_progress(
@@ -89,12 +85,8 @@ def test_completed_required_scene_reaches_full_progress(
 
     assert dialog.save_button.isEnabled()
     assert dialog.workflow_checklist.progress_bar.value() == 100
-    assert dialog.workflow_checklist.next_step_label.text() == (
-        "Scene complete. Ready to save."
-    )
-    assert dialog.workflow_checklist.button_for_step("validation").text().startswith(
-        "✓"
-    )
+    assert dialog.workflow_checklist.next_step_label.text() == ("Scene complete. Ready to save.")
+    assert dialog.workflow_checklist.button_for_step("validation").text().startswith("✓")
 
 
 def test_clicking_checklist_step_routes_focus_and_live_help(

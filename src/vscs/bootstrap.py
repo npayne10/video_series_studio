@@ -17,6 +17,7 @@ from vscs.application.caps import (
     CAPReadinessService,
     CAPRepository,
     CAPService,
+    CAPStructuredKnowledgeService,
     ProductionProjectionService,
     ReferenceLibraryService,
 )
@@ -322,7 +323,11 @@ def build_application_context(
         ProductionProjectionService(caps, references, reference_library, readiness),
     )
     provider = _cap_provider(configuration, selected.mode)
-    services.register(CAPGeneratorService, CAPGeneratorService(assets, caps, provider))
+    cap_generator = services.register(
+        CAPGeneratorService,
+        CAPGeneratorService(assets, caps, provider),
+    )
+    services.register(CAPStructuredKnowledgeService, cap_generator.structured_knowledge)
 
     plugins = PluginManager(configuration, services, selected.plugin_root)
     services.register(PluginManager, plugins)

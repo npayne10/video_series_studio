@@ -46,9 +46,7 @@ def _context(
         renderer=RendererKind.COMFYUI,
         quality_level=quality,
         workflow_id=(
-            "ltx23_preview_v1"
-            if quality is QualityLevel.PREVIEW
-            else "ltx23_production_v1"
+            "ltx23_preview_v1" if quality is QualityLevel.PREVIEW else "ltx23_production_v1"
         ),
     )
 
@@ -125,10 +123,7 @@ def test_batch_compiles_in_deterministic_sequence_and_reports_progress() -> None
         "ITEM-001",
         "ITEM-002",
     )
-    assert all(
-        result.status is BatchCompilationItemStatus.COMPLETED
-        for result in job.results
-    )
+    assert all(result.status is BatchCompilationItemStatus.COMPLETED for result in job.results)
     assert len(job.packages) == 2
     assert progress[0].status is BatchCompilationStatus.RUNNING
     assert progress[-1].status is BatchCompilationStatus.COMPLETED

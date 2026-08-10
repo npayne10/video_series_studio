@@ -51,19 +51,23 @@ class CanonicalReferenceService:
 
     def create(self, asset_id: str, reference: CanonicalReferenceCreate) -> CanonicalReference:
         cap = self.caps.get(asset_id)
-        normalized = reference.model_copy(update={
-            "cap_id": cap.id,
-            "file_path": self._normalize_path(reference.file_path),
-            "approved_by": None,
-            "approved_at": None,
-            "locked": False,
-            "status": CanonicalReferenceStatus.IMPORTED,
-        })
+        normalized = reference.model_copy(
+            update={
+                "cap_id": cap.id,
+                "file_path": self._normalize_path(reference.file_path),
+                "approved_by": None,
+                "approved_at": None,
+                "locked": False,
+                "status": CanonicalReferenceStatus.IMPORTED,
+            }
+        )
         try:
             created = self.repository.create(normalized)
         except CanonicalReferenceRepositoryError as exc:
             raise CanonicalReferenceError(str(exc)) from exc
-        self._logger.info("Canonical reference created: CAP %s, reference %s", cap.asset_id, created.id)
+        self._logger.info(
+            "Canonical reference created: CAP %s, reference %s", cap.asset_id, created.id
+        )
         return created
 
     def get(self, reference_id: int) -> CanonicalReference:
@@ -76,17 +80,27 @@ class CanonicalReferenceService:
             raise CanonicalReferenceNotFoundError(f"Canonical reference not found: {reference_id}")
         return reference
 
-    def list_for_cap(self, asset_id: str, *, reference_type: CanonicalReferenceType | None = None, status: CanonicalReferenceStatus | None = None) -> tuple[CanonicalReference, ...]:
+    def list_for_cap(
+        self,
+        asset_id: str,
+        *,
+        reference_type: CanonicalReferenceType | None = None,
+        status: CanonicalReferenceStatus | None = None,
+    ) -> tuple[CanonicalReference, ...]:
         cap = self.caps.get(asset_id)
         try:
-            return self.repository.list_for_cap(cap.id, reference_type=reference_type, status=status)
+            return self.repository.list_for_cap(
+                cap.id, reference_type=reference_type, status=status
+            )
         except CanonicalReferenceRepositoryError as exc:
             raise CanonicalReferenceError(str(exc)) from exc
 
     def update(self, reference_id: int, changes: CanonicalReferenceUpdate) -> CanonicalReference:
         reference = self.get(reference_id)
         if reference.locked:
-            raise CanonicalReferenceLockedError("Approved canonical references are locked. Unlock the reference before editing it.")
+            raise CanonicalReferenceLockedError(
+                "Approved canonical references are locked. Unlock the reference before editing it."
+            )
         values = changes.model_dump(exclude_unset=True)
         values.pop("approved_by", None)
         values.pop("approved_at", None)
@@ -94,16 +108,29 @@ class CanonicalReferenceService:
         if "file_path" in values and changes.file_path is not None:
             values["file_path"] = self._normalize_path(changes.file_path)
         if values.get("status") is CanonicalReferenceStatus.APPROVED:
-            raise InvalidCanonicalReferenceTransitionError("Use approve() to approve a canonical reference")
-        return self._repository_update(reference_id, CanonicalReferenceUpdate.model_validate(values))
+            raise InvalidCanonicalReferenceTransitionError(
+                "Use approve() to approve a canonical reference"
+            )
+        return self._repository_update(
+            reference_id, CanonicalReferenceUpdate.model_validate(values)
+        )
 
     def mark_candidate(self, reference_id: int) -> CanonicalReference:
         reference = self.get(reference_id)
         if reference.locked:
-            raise CanonicalReferenceLockedError("Unlock an approved reference before returning it to review")
-        if reference.status not in {CanonicalReferenceStatus.IMPORTED, CanonicalReferenceStatus.CANDIDATE}:
-            raise InvalidCanonicalReferenceTransitionError(f"Cannot mark a {reference.status.value} reference as candidate")
-        return self._repository_update(reference_id, CanonicalReferenceUpdate(status=CanonicalReferenceStatus.CANDIDATE))
+            raise CanonicalReferenceLockedError(
+                "Unlock an approved reference before returning it to review"
+            )
+        if reference.status not in {
+            CanonicalReferenceStatus.IMPORTED,
+            CanonicalReferenceStatus.CANDIDATE,
+        }:
+            raise InvalidCanonicalReferenceTransitionError(
+                f"Cannot mark a {reference.status.value} reference as candidate"
+            )
+        return self._repository_update(
+            reference_id, CanonicalReferenceUpdate(status=CanonicalReferenceStatus.CANDIDATE)
+        )
 
     def approve(self, reference_id: int, approved_by: str) -> CanonicalReference:
         reference = self.get(reference_id)
@@ -111,48 +138,64 @@ class CanonicalReferenceService:
         if not approver:
             raise ValueError("Approved by is required")
         if reference.status is not CanonicalReferenceStatus.CANDIDATE:
-            raise InvalidCanonicalReferenceTransitionError("Only candidate references can be approved")
+            raise InvalidCanonicalReferenceTransitionError(
+                "Only candidate references can be approved"
+            )
         if reference.role is CanonicalReferenceRole.PRIMARY:
             self._demote_other_approved_primaries(reference)
-        return self._repository_update(reference_id, CanonicalReferenceUpdate(
-            status=CanonicalReferenceStatus.APPROVED,
-            approved_by=approver,
-            approved_at=datetime.now(UTC),
-            locked=True,
-        ))
+        return self._repository_update(
+            reference_id,
+            CanonicalReferenceUpdate(
+                status=CanonicalReferenceStatus.APPROVED,
+                approved_by=approver,
+                approved_at=datetime.now(UTC),
+                locked=True,
+            ),
+        )
 
     def reject(self, reference_id: int) -> CanonicalReference:
         reference = self.get(reference_id)
         if reference.status is not CanonicalReferenceStatus.APPROVED:
-            raise InvalidCanonicalReferenceTransitionError("Only approved references can be rejected")
-        return self._repository_update(reference_id, CanonicalReferenceUpdate(
-            status=CanonicalReferenceStatus.CANDIDATE,
-            approved_by=None,
-            approved_at=None,
-            locked=False,
-        ))
+            raise InvalidCanonicalReferenceTransitionError(
+                "Only approved references can be rejected"
+            )
+        return self._repository_update(
+            reference_id,
+            CanonicalReferenceUpdate(
+                status=CanonicalReferenceStatus.CANDIDATE,
+                approved_by=None,
+                approved_at=None,
+                locked=False,
+            ),
+        )
 
     def archive(self, reference_id: int) -> CanonicalReference:
         reference = self.get(reference_id)
         if reference.status is CanonicalReferenceStatus.ARCHIVED:
             return reference
-        return self._repository_update(reference_id, CanonicalReferenceUpdate(
-            status=CanonicalReferenceStatus.ARCHIVED,
-            approved_by=None,
-            approved_at=None,
-            locked=True,
-        ))
+        return self._repository_update(
+            reference_id,
+            CanonicalReferenceUpdate(
+                status=CanonicalReferenceStatus.ARCHIVED,
+                approved_by=None,
+                approved_at=None,
+                locked=True,
+            ),
+        )
 
     def unlock(self, reference_id: int) -> CanonicalReference:
         reference = self.get(reference_id)
         if not reference.locked:
             return reference
-        return self._repository_update(reference_id, CanonicalReferenceUpdate(
-            status=CanonicalReferenceStatus.CANDIDATE,
-            approved_by=None,
-            approved_at=None,
-            locked=False,
-        ))
+        return self._repository_update(
+            reference_id,
+            CanonicalReferenceUpdate(
+                status=CanonicalReferenceStatus.CANDIDATE,
+                approved_by=None,
+                approved_at=None,
+                locked=False,
+            ),
+        )
 
     def set_primary(self, reference_id: int) -> CanonicalReference:
         target = self.get(reference_id)
@@ -166,8 +209,12 @@ class CanonicalReferenceService:
             if reference.id != reference_id and reference.role is CanonicalReferenceRole.PRIMARY:
                 if reference.locked:
                     continue
-                self._repository_update(reference.id, CanonicalReferenceUpdate(role=CanonicalReferenceRole.SECONDARY))
-        return self._repository_update(reference_id, CanonicalReferenceUpdate(role=CanonicalReferenceRole.PRIMARY))
+                self._repository_update(
+                    reference.id, CanonicalReferenceUpdate(role=CanonicalReferenceRole.SECONDARY)
+                )
+        return self._repository_update(
+            reference_id, CanonicalReferenceUpdate(role=CanonicalReferenceRole.PRIMARY)
+        )
 
     def delete(self, reference_id: int) -> None:
         reference = self.get(reference_id)
@@ -187,10 +234,18 @@ class CanonicalReferenceService:
         except CanonicalReferenceRepositoryError as exc:
             raise CanonicalReferenceError(str(exc)) from exc
         for reference in references:
-            if reference.id != target.id and reference.role is CanonicalReferenceRole.PRIMARY and reference.status is CanonicalReferenceStatus.APPROVED:
-                self._repository_update(reference.id, CanonicalReferenceUpdate(role=CanonicalReferenceRole.SECONDARY))
+            if (
+                reference.id != target.id
+                and reference.role is CanonicalReferenceRole.PRIMARY
+                and reference.status is CanonicalReferenceStatus.APPROVED
+            ):
+                self._repository_update(
+                    reference.id, CanonicalReferenceUpdate(role=CanonicalReferenceRole.SECONDARY)
+                )
 
-    def _repository_update(self, reference_id: int, changes: CanonicalReferenceUpdate) -> CanonicalReference:
+    def _repository_update(
+        self, reference_id: int, changes: CanonicalReferenceUpdate
+    ) -> CanonicalReference:
         try:
             updated = self.repository.update(reference_id, changes)
         except CanonicalReferenceRepositoryError as exc:
@@ -203,13 +258,21 @@ class CanonicalReferenceService:
     def _require_project(self) -> Path:
         project_directory = self.caps.assets.projects.project_directory
         if not self.caps.assets.projects.is_project_open or project_directory is None:
-            raise CanonicalReferenceError("Open a VSCS project before managing canonical references")
+            raise CanonicalReferenceError(
+                "Open a VSCS project before managing canonical references"
+            )
         return project_directory
 
     def _normalize_path(self, path: Path) -> Path:
         root = self._require_project().resolve(strict=False)
-        resolved = path.expanduser().resolve(strict=False) if path.is_absolute() else (root / path).resolve(strict=False)
+        resolved = (
+            path.expanduser().resolve(strict=False)
+            if path.is_absolute()
+            else (root / path).resolve(strict=False)
+        )
         try:
             return resolved.relative_to(root)
         except ValueError as exc:
-            raise InvalidCanonicalReferencePathError(f"Canonical reference files must be inside the active project: {resolved}") from exc
+            raise InvalidCanonicalReferencePathError(
+                f"Canonical reference files must be inside the active project: {resolved}"
+            ) from exc

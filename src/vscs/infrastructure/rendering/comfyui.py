@@ -82,9 +82,7 @@ class ComfyUIWorkflowCompiler:
     def load_workflow(self, manifest: WorkflowManifest) -> dict[str, object]:
         """Load one ComfyUI API workflow declared by a manifest."""
         if manifest.workflow_file is None:
-            raise ComfyUIAdapterError(
-                "workflow manifest does not declare workflow_file"
-            )
+            raise ComfyUIAdapterError("workflow manifest does not declare workflow_file")
         path = (self.workflow_root / manifest.workflow_file).resolve(strict=False)
         root = self.workflow_root.resolve(strict=False)
         if path != root and root not in path.parents:
@@ -128,9 +126,7 @@ class ComfyUIWorkflowCompiler:
     ) -> str:
         if selector.node_id is not None:
             if selector.node_id not in workflow:
-                raise ComfyUIAdapterError(
-                    f"workflow node does not exist: {selector.node_id}"
-                )
+                raise ComfyUIAdapterError(f"workflow node does not exist: {selector.node_id}")
             return selector.node_id
 
         matches: list[str] = []
@@ -140,21 +136,16 @@ class ComfyUIWorkflowCompiler:
             node_title = metadata.get("title") if isinstance(metadata, dict) else None
             if selector.node_title is not None and node_title != selector.node_title:
                 continue
-            if (
-                selector.class_type is not None
-                and node.get("class_type") != selector.class_type
-            ):
+            if selector.class_type is not None and node.get("class_type") != selector.class_type:
                 continue
             matches.append(candidate_id)
         if not matches:
             raise ComfyUIAdapterError(
-                "workflow node selector did not match: "
-                f"{selector.logical_name}"
+                f"workflow node selector did not match: {selector.logical_name}"
             )
         if len(matches) > 1:
             raise ComfyUIAdapterError(
-                "workflow node selector is ambiguous: "
-                f"{selector.logical_name}"
+                f"workflow node selector is ambiguous: {selector.logical_name}"
             )
         return matches[0]
 
@@ -172,9 +163,7 @@ class ComfyUIWorkflowCompiler:
                 child = {}
                 current[part] = child
             if not isinstance(child, dict):
-                raise ComfyUIAdapterError(
-                    f"workflow field path is not writable: {field_path}"
-                )
+                raise ComfyUIAdapterError(f"workflow field path is not writable: {field_path}")
             current = child
         current[parts[-1]] = value
 
@@ -186,9 +175,7 @@ class ComfyUIAdapter(RenderAdapter):
     registry: WorkflowRegistry
     compatibility: WorkflowCompatibilityValidator
     compiler: ComfyUIWorkflowCompiler
-    resolver: ComfyUIInputResolver = field(
-        default_factory=MetadataComfyUIInputResolver
-    )
+    resolver: ComfyUIInputResolver = field(default_factory=MetadataComfyUIInputResolver)
     renderer: RendererKind = RendererKind.COMFYUI
 
     def capabilities(self, workflow_id: str) -> WorkflowCapabilities:

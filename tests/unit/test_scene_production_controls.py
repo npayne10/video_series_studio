@@ -94,8 +94,7 @@ def test_transition_selector_contains_all_supported_transitions(
     qtbot.addWidget(dialog)  # type: ignore[attr-defined]
 
     values = {
-        dialog.transition_combo.itemData(index)
-        for index in range(dialog.transition_combo.count())
+        dialog.transition_combo.itemData(index) for index in range(dialog.transition_combo.count())
     }
 
     assert values == set(SceneTransition)

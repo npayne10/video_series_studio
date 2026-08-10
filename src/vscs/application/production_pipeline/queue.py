@@ -155,9 +155,7 @@ class RenderQueueEngine:
         )
         retryable = len(attempts) < entry.maximum_attempts
         state = QueueState.RETRYING if retryable else QueueState.FAILED
-        available_at = (
-            current + timedelta(seconds=retry_delay_seconds) if retryable else None
-        )
+        available_at = current + timedelta(seconds=retry_delay_seconds) if retryable else None
         updated = replace(
             entry,
             state=state,
@@ -241,7 +239,6 @@ class RenderQueueEngine:
         return replace(
             queue,
             entries=tuple(
-                updated if entry.entry_id == updated.entry_id else entry
-                for entry in queue.entries
+                updated if entry.entry_id == updated.entry_id else entry for entry in queue.entries
             ),
         )

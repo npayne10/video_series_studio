@@ -56,8 +56,12 @@ class ConfigurationService:
         data: dict[str, Any] = self.settings.model_dump(mode="json")
         try:
             with NamedTemporaryFile(
-                "w", encoding="utf-8", dir=self.config_path.parent,
-                prefix="settings-", suffix=".tmp", delete=False,
+                "w",
+                encoding="utf-8",
+                dir=self.config_path.parent,
+                prefix="settings-",
+                suffix=".tmp",
+                delete=False,
             ) as temporary_file:
                 yaml.safe_dump(data, temporary_file, sort_keys=False, allow_unicode=True)
                 temporary_path = Path(temporary_file.name)
@@ -73,16 +77,20 @@ class ConfigurationService:
     def add_recent_project(self, project_path: Path) -> None:
         normalized = project_path.expanduser().resolve(strict=False)
         existing = [
-            path for path in self.settings.recent_projects
+            path
+            for path in self.settings.recent_projects
             if str(path.expanduser().resolve(strict=False)).casefold() != str(normalized).casefold()
         ]
-        self.settings.recent_projects = [normalized, *existing][: self.settings.maximum_recent_projects]
+        self.settings.recent_projects = [normalized, *existing][
+            : self.settings.maximum_recent_projects
+        ]
         self.save()
 
     def remove_recent_project(self, project_path: Path) -> None:
         target = str(project_path.expanduser().resolve(strict=False)).casefold()
         self.settings.recent_projects = [
-            path for path in self.settings.recent_projects
+            path
+            for path in self.settings.recent_projects
             if str(path.expanduser().resolve(strict=False)).casefold() != target
         ]
         self.save()

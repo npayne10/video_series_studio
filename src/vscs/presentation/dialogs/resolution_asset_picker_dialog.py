@@ -103,8 +103,7 @@ class ResolutionAssetPickerDialog(QDialog):
         self.detail_label.setWordWrap(True)
 
         self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
         self.select_button = self.buttons.button(QDialogButtonBox.StandardButton.Ok)
@@ -123,9 +122,7 @@ class ResolutionAssetPickerDialog(QDialog):
         self.approved_only.toggled.connect(self.refresh)
         self.ready_only.toggled.connect(self.refresh)
         self.asset_tree.currentItemChanged.connect(self._update_selection)
-        self.asset_tree.itemDoubleClicked.connect(
-            lambda _item, _column: self._accept_selected()
-        )
+        self.asset_tree.itemDoubleClicked.connect(lambda _item, _column: self._accept_selected())
         self.buttons.accepted.connect(self._accept_selected)
         self.buttons.rejected.connect(self.reject)
         self.refresh()
@@ -151,9 +148,7 @@ class ResolutionAssetPickerDialog(QDialog):
             else self.expected_categories
         )
         statuses = (
-            frozenset({AssetStatus.APPROVED})
-            if self.approved_only.isChecked()
-            else frozenset()
+            frozenset({AssetStatus.APPROVED}) if self.approved_only.isChecked() else frozenset()
         )
         resolution_statuses = (
             frozenset({AssetResolutionStatus.RESOLVED})
@@ -205,8 +200,7 @@ class ResolutionAssetPickerDialog(QDialog):
             if browser_item.asset_id == selected_id:
                 self.asset_tree.setCurrentItem(item)
         self.result_label.setText(
-            f"{len(result.items)} matching asset(s) from "
-            f"{result.total_assets} project asset(s)"
+            f"{len(result.items)} matching asset(s) from {result.total_assets} project asset(s)"
         )
         self._update_selection()
 
@@ -216,17 +210,11 @@ class ResolutionAssetPickerDialog(QDialog):
         if selected is None:
             self.detail_label.clear()
             return
-        messages = [
-            diagnostic.message for diagnostic in selected.resolution.diagnostics
-        ]
+        messages = [diagnostic.message for diagnostic in selected.resolution.diagnostics]
         if selected.canonical is not None:
-            messages.extend(
-                diagnostic.message for diagnostic in selected.canonical.diagnostics
-            )
+            messages.extend(diagnostic.message for diagnostic in selected.canonical.diagnostics)
         self.detail_label.setText(
-            " ".join(dict.fromkeys(messages))
-            if messages
-            else "Ready for selection."
+            " ".join(dict.fromkeys(messages)) if messages else "Ready for selection."
         )
 
     def _accept_selected(self) -> None:

@@ -152,9 +152,7 @@ class AdaptiveWorkspaceSceneEditorDialog(GuidedNavigationSceneEditorDialog):
             self._update_validation_panel_title()
 
     def _update_validation_panel_title(self) -> None:
-        errors = sum(
-            issue.severity.value == "error" for issue in self.validation_explanations
-        )
+        errors = sum(issue.severity.value == "error" for issue in self.validation_explanations)
         warnings = len(self.validation_explanations) - errors
         if errors:
             title = f"Validation · {errors} blocking issue{'s' if errors != 1 else ''}"

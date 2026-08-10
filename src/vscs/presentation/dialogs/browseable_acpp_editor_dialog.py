@@ -42,9 +42,7 @@ class BrowseableACPPEditorDialog(ACPPEditorDialog):
 
         self.asset_id_edit = QLineEdit()
         self.asset_id_edit.setObjectName("acppAssetId")
-        self.asset_id_edit.setPlaceholderText(
-            "Enter an Asset ID or browse the project catalog"
-        )
+        self.asset_id_edit.setPlaceholderText("Enter an Asset ID or browse the project catalog")
 
         self.browse_asset_button = QPushButton("Browse Assets…")
         self.browse_asset_button.setObjectName("browseACPPAssets")

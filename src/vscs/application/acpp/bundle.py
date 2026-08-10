@@ -38,10 +38,7 @@ class BundleValidationResult:
 
     @property
     def passed(self) -> bool:
-        return not any(
-            issue.severity is BundleValidationSeverity.ERROR
-            for issue in self.issues
-        )
+        return not any(issue.severity is BundleValidationSeverity.ERROR for issue in self.issues)
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,12 +147,8 @@ class ProductionBundleValidator:
         return BundleValidationResult(tuple(issues))
 
     @staticmethod
-    def _error(
-        issues: list[BundleValidationIssue], code: str, message: str
-    ) -> None:
-        issues.append(
-            BundleValidationIssue(BundleValidationSeverity.ERROR, code, message)
-        )
+    def _error(issues: list[BundleValidationIssue], code: str, message: str) -> None:
+        issues.append(BundleValidationIssue(BundleValidationSeverity.ERROR, code, message))
 
 
 class ProductionBundleSerializer:
@@ -197,9 +190,7 @@ class ProductionBundleSerializer:
 
     def dumps(self, bundle: ProductionBundle) -> str:
         self._require_valid(bundle)
-        return json.dumps(
-            self.to_dict(bundle), indent=2, sort_keys=True, ensure_ascii=False
-        ) + "\n"
+        return json.dumps(self.to_dict(bundle), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
     def loads(self, payload: str) -> ProductionBundle:
         try:
@@ -244,10 +235,7 @@ class ProductionBundleSerializer:
             render_job_checksum=str(checksums["render_job"]),
             aggregate_checksum=str(checksums["aggregate"]),
             schema_version=str(raw.get("schema_version", "1.0")),
-            metadata={
-                str(key): str(value)
-                for key, value in raw.get("metadata", {}).items()
-            },
+            metadata={str(key): str(value) for key, value in raw.get("metadata", {}).items()},
         )
 
     def report(self, bundle: ProductionBundle) -> str:
@@ -331,8 +319,7 @@ class ProductionBundleSerializer:
             "positive_prompt": prompt.positive_prompt,
             "negative_prompt": prompt.negative_prompt,
             "sections": [
-                {"name": section.name, "content": section.content}
-                for section in prompt.sections
+                {"name": section.name, "content": section.content} for section in prompt.sections
             ],
             "canonical_reference_ids": list(prompt.canonical_reference_ids),
             "prompt_package_ids": list(prompt.prompt_package_ids),
@@ -356,9 +343,7 @@ class ProductionBundleSerializer:
             canonical_reference_ids=tuple(
                 str(value) for value in raw.get("canonical_reference_ids", [])
             ),
-            prompt_package_ids=tuple(
-                str(value) for value in raw.get("prompt_package_ids", [])
-            ),
+            prompt_package_ids=tuple(str(value) for value in raw.get("prompt_package_ids", [])),
             start_reference_id=_optional_text(raw.get("start_reference_id")),
             end_reference_id=_optional_text(raw.get("end_reference_id")),
             provenance=_provenance_from_dict(raw.get("provenance", [])),
@@ -393,9 +378,7 @@ class ProductionBundleSerializer:
                 "retry_on_timeout": job.retry_policy.retry_on_timeout,
                 "retry_on_provider_error": job.retry_policy.retry_on_provider_error,
             },
-            "required_capabilities": [
-                item.value for item in job.required_capabilities
-            ],
+            "required_capabilities": [item.value for item in job.required_capabilities],
             "package_checksum": job.package_checksum,
             "prompt_checksum": job.prompt_checksum,
             "schema_version": job.schema_version,
@@ -414,9 +397,7 @@ class ProductionBundleSerializer:
             frame_count=int(raw["frame_count"]),
             quality_mode=RenderQualityMode(str(raw["quality_mode"])),
             seed_policy=SeedPolicy(str(raw["seed_policy"])),
-            fixed_seed=(
-                None if raw.get("fixed_seed") is None else int(raw["fixed_seed"])
-            ),
+            fixed_seed=(None if raw.get("fixed_seed") is None else int(raw["fixed_seed"])),
             positive_prompt=str(raw["positive_prompt"]),
             negative_prompt=str(raw["negative_prompt"]),
             input_references=tuple(
@@ -426,9 +407,7 @@ class ProductionBundleSerializer:
             start_reference_id=_optional_text(raw.get("start_reference_id")),
             end_reference_id=_optional_text(raw.get("end_reference_id")),
             output_path=str(raw["output_path"]),
-            dependencies=tuple(
-                str(value) for value in raw.get("dependencies", [])
-            ),
+            dependencies=tuple(str(value) for value in raw.get("dependencies", [])),
             retry_policy=RetryPolicy(
                 maximum_attempts=int(retry["maximum_attempts"]),
                 backoff_seconds=float(retry["backoff_seconds"]),
@@ -436,16 +415,12 @@ class ProductionBundleSerializer:
                 retry_on_provider_error=bool(retry["retry_on_provider_error"]),
             ),
             required_capabilities=tuple(
-                RenderCapability(str(value))
-                for value in raw.get("required_capabilities", [])
+                RenderCapability(str(value)) for value in raw.get("required_capabilities", [])
             ),
             package_checksum=str(raw["package_checksum"]),
             prompt_checksum=str(raw["prompt_checksum"]),
             schema_version=str(raw.get("schema_version", "1.0")),
-            metadata=tuple(
-                (str(item[0]), str(item[1]))
-                for item in raw.get("metadata", [])
-            ),
+            metadata=tuple((str(item[0]), str(item[1])) for item in raw.get("metadata", [])),
         )
 
 
@@ -474,12 +449,8 @@ def _provenance_from_dict(
             resource_type=str(item["resource_type"]),
             version=str(item["version"]),
             source=str(item["source"]),
-            checksum=(
-                None if item.get("checksum") is None else str(item["checksum"])
-            ),
-            related_ids=tuple(
-                str(value) for value in item.get("related_ids", [])
-            ),
+            checksum=(None if item.get("checksum") is None else str(item["checksum"])),
+            related_ids=tuple(str(value) for value in item.get("related_ids", [])),
         )
         for item in values
     )

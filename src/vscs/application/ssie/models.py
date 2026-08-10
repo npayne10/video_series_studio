@@ -1,4 +1,5 @@
 """Core models for the Scene and Shot Intelligence Engine."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

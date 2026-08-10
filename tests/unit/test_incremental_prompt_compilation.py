@@ -138,9 +138,7 @@ def test_graph_or_dependency_change_recompiles_item() -> None:
     service.compile(BatchCompilationRequest.create("BATCH-001", (_item(),)))
 
     resolver.register("SHT-001", _sources("Iron Horizon begins descent."))
-    graph_changed = service.compile(
-        BatchCompilationRequest.create("BATCH-002", (_item(),))
-    )
+    graph_changed = service.compile(BatchCompilationRequest.create("BATCH-002", (_item(),)))
     dependency_changed = service.compile(
         BatchCompilationRequest.create("BATCH-003", (_item(checksum="cap-v2"),))
     )
@@ -157,9 +155,7 @@ def test_explicit_item_and_dependency_invalidation_force_recompile() -> None:
     service.compile(request)
 
     assert history.invalidate_item("ITEM-001")
-    item_invalidated = service.compile(
-        BatchCompilationRequest.create("BATCH-002", (_item(),))
-    )
+    item_invalidated = service.compile(BatchCompilationRequest.create("BATCH-002", (_item(),)))
     affected = history.invalidate_dependency(
         CompilationDependencyKind.CANONICAL_ASSET,
         "CAP-SHP-IRON-HORIZON",
@@ -179,8 +175,6 @@ def test_force_recompile_bypasses_matching_fingerprint() -> None:
     service, _history = _service(resolver)
     service.compile(BatchCompilationRequest.create("BATCH-001", (_item(),)))
 
-    forced = service.compile(
-        BatchCompilationRequest.create("BATCH-002", (_item(force=True),))
-    )
+    forced = service.compile(BatchCompilationRequest.create("BATCH-002", (_item(force=True),)))
 
     assert forced.results[0].status is BatchCompilationItemStatus.COMPLETED

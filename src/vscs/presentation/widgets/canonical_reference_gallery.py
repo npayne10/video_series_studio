@@ -137,7 +137,9 @@ class CanonicalReferenceGallery(QWidget):
 
         heading = QLabel("Canonical Reference Gallery")
         heading.setStyleSheet("font-weight: 600; font-size: 14px;")
-        hint = QLabel("Double-click unlocked references to edit them. Approved references are production-locked.")
+        hint = QLabel(
+            "Double-click unlocked references to edit them. Approved references are production-locked."
+        )
         hint.setWordWrap(True)
 
         layout = QVBoxLayout(self)
@@ -146,13 +148,22 @@ class CanonicalReferenceGallery(QWidget):
         layout.addWidget(hint)
         layout.addWidget(splitter, 1)
 
-    def set_references(self, references: Iterable[CanonicalReference], project_directory: Path | None) -> None:
+    def set_references(
+        self, references: Iterable[CanonicalReference], project_directory: Path | None
+    ) -> None:
         selected_id = self.selected_reference_id()
         self._project_directory = project_directory
         values = tuple(references)
         self._references = {reference.id: reference for reference in values}
         self.gallery.clear()
-        ordered = sorted(values, key=lambda r: (0 if r.role is CanonicalReferenceRole.PRIMARY else 1, r.title.casefold(), r.id))
+        ordered = sorted(
+            values,
+            key=lambda r: (
+                0 if r.role is CanonicalReferenceRole.PRIMARY else 1,
+                r.title.casefold(),
+                r.id,
+            ),
+        )
         selected_item: QListWidgetItem | None = None
         for reference in ordered:
             item = QListWidgetItem(self._icon_for(reference), self._display_title(reference))
@@ -212,17 +223,31 @@ class CanonicalReferenceGallery(QWidget):
         if reference.reference_type is CanonicalReferenceType.IMAGE and path.is_file():
             pixmap = QPixmap(str(path))
             if not pixmap.isNull():
-                return QIcon(pixmap.scaled(self.gallery.iconSize(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                return QIcon(
+                    pixmap.scaled(
+                        self.gallery.iconSize(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
         icon_map = {
             CanonicalReferenceType.DOCUMENT: QStyle.StandardPixmap.SP_FileIcon,
             CanonicalReferenceType.AUDIO: QStyle.StandardPixmap.SP_MediaVolume,
             CanonicalReferenceType.VIDEO: QStyle.StandardPixmap.SP_MediaPlay,
             CanonicalReferenceType.MATERIAL: QStyle.StandardPixmap.SP_DirIcon,
         }
-        return self.style().standardIcon(icon_map.get(reference.reference_type, QStyle.StandardPixmap.SP_FileIcon))
+        return self.style().standardIcon(
+            icon_map.get(reference.reference_type, QStyle.StandardPixmap.SP_FileIcon)
+        )
 
-    def _selection_changed(self, current: QListWidgetItem | None, _previous: QListWidgetItem | None) -> None:
-        reference = None if current is None else self._references.get(int(current.data(self.REFERENCE_ID_ROLE)))
+    def _selection_changed(
+        self, current: QListWidgetItem | None, _previous: QListWidgetItem | None
+    ) -> None:
+        reference = (
+            None
+            if current is None
+            else self._references.get(int(current.data(self.REFERENCE_ID_ROLE)))
+        )
         self._show_reference(reference)
 
     def _show_reference(self, reference: CanonicalReference | None) -> None:
@@ -230,13 +255,24 @@ class CanonicalReferenceGallery(QWidget):
             self.preview.setPixmap(QPixmap())
             self.preview.setText("No reference selected")
             for label, text in (
-                (self.title_label, "—"), (self.type_label, "Type: —"), (self.role_label, "Role: —"),
-                (self.status_label, "Status: —"), (self.version_label, "Version: —"),
-                (self.approval_label, "Approval: —"), (self.path_label, "File: —"),
+                (self.title_label, "—"),
+                (self.type_label, "Type: —"),
+                (self.role_label, "Role: —"),
+                (self.status_label, "Status: —"),
+                (self.version_label, "Version: —"),
+                (self.approval_label, "Approval: —"),
+                (self.path_label, "File: —"),
             ):
                 label.setText(text)
             self.description_label.clear()
-            for button in (self.primary_button, self.candidate_button, self.approve_button, self.reject_button, self.archive_button, self.unlock_button):
+            for button in (
+                self.primary_button,
+                self.candidate_button,
+                self.approve_button,
+                self.reject_button,
+                self.archive_button,
+                self.unlock_button,
+            ):
                 button.setEnabled(False)
             return
 
@@ -245,7 +281,13 @@ class CanonicalReferenceGallery(QWidget):
             pixmap = QPixmap(str(path))
             if not pixmap.isNull():
                 self.preview.setText("")
-                self.preview.setPixmap(pixmap.scaled(self.preview.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                self.preview.setPixmap(
+                    pixmap.scaled(
+                        self.preview.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
             else:
                 self.preview.setPixmap(QPixmap())
                 self.preview.setText("Preview unavailable")
@@ -256,16 +298,30 @@ class CanonicalReferenceGallery(QWidget):
         self.title_label.setText(reference.title)
         self.type_label.setText(f"Type: {reference.reference_type.value.title()}")
         self.role_label.setText(f"Role: {reference.role.value.title()}")
-        self.status_label.setText(f"Status: {reference.status.value.title()}{' — Locked' if reference.locked else ''}")
+        self.status_label.setText(
+            f"Status: {reference.status.value.title()}{' — Locked' if reference.locked else ''}"
+        )
         self.version_label.setText(f"Version: {reference.version}")
-        approved_at = reference.approved_at.astimezone().strftime("%Y-%m-%d %H:%M") if reference.approved_at else "—"
-        self.approval_label.setText(f"Approved by: {reference.approved_by or '—'}\nApproved at: {approved_at}")
+        approved_at = (
+            reference.approved_at.astimezone().strftime("%Y-%m-%d %H:%M")
+            if reference.approved_at
+            else "—"
+        )
+        self.approval_label.setText(
+            f"Approved by: {reference.approved_by or '—'}\nApproved at: {approved_at}"
+        )
         self.path_label.setText(f"File: {reference.file_path}")
         self.description_label.setText(reference.description or reference.notes or "No description")
 
-        self.primary_button.setEnabled(not reference.locked and reference.role is not CanonicalReferenceRole.PRIMARY)
-        self.candidate_button.setEnabled(not reference.locked and reference.status is CanonicalReferenceStatus.IMPORTED)
-        self.approve_button.setEnabled(reference.status is CanonicalReferenceStatus.CANDIDATE and not reference.locked)
+        self.primary_button.setEnabled(
+            not reference.locked and reference.role is not CanonicalReferenceRole.PRIMARY
+        )
+        self.candidate_button.setEnabled(
+            not reference.locked and reference.status is CanonicalReferenceStatus.IMPORTED
+        )
+        self.approve_button.setEnabled(
+            reference.status is CanonicalReferenceStatus.CANDIDATE and not reference.locked
+        )
         self.reject_button.setEnabled(reference.status is CanonicalReferenceStatus.APPROVED)
         self.archive_button.setEnabled(reference.status is not CanonicalReferenceStatus.ARCHIVED)
         self.unlock_button.setEnabled(reference.locked)

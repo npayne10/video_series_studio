@@ -117,9 +117,7 @@ def test_missing_required_resource_fails_and_optional_resource_warns() -> None:
 
 
 def test_unresolved_continuity_is_warning_not_exception() -> None:
-    request = _request(
-        continuity=ContinuityPackageReference(package_id="CONT-001")
-    )
+    request = _request(continuity=ContinuityPackageReference(package_id="CONT-001"))
     report = WorkflowCompatibilityValidator().validate(
         request,
         _manifest(),
@@ -127,7 +125,4 @@ def test_unresolved_continuity_is_warning_not_exception() -> None:
     )
 
     assert report.passed
-    assert any(
-        item.code == "workflow.continuity_unresolved"
-        for item in report.warnings
-    )
+    assert any(item.code == "workflow.continuity_unresolved" for item in report.warnings)

@@ -91,14 +91,15 @@ class CanonicalAssetGeneratorService:
             raise CanonicalAssetGenerationError("The image provider returned no generated assets")
 
         image_root = project_directory / "Canonical Assets" / asset_id.upper() / "Images"
-        metadata_root = project_directory / "Canonical Assets" / asset_id.upper() / ".metadata" / "generation"
+        metadata_root = (
+            project_directory / "Canonical Assets" / asset_id.upper() / ".metadata" / "generation"
+        )
         image_root.mkdir(parents=True, exist_ok=True)
         metadata_root.mkdir(parents=True, exist_ok=True)
 
         existing = self.references.list_for_cap(asset_id)
         reserved_paths = {
-            self._path_key(project_directory / reference.file_path)
-            for reference in existing
+            self._path_key(project_directory / reference.file_path) for reference in existing
         }
         next_version = len(existing) + 1
         created_ids: list[int] = []

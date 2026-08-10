@@ -49,9 +49,7 @@ class OnboardingWelcomeSceneEditorDialog(BeginnerModeSceneEditorDialog):
 
         self.restart_tour_button = QPushButton("Start Scene Editor Tour…", self)
         self.restart_tour_button.setObjectName("sceneEditorRestartTour")
-        self.restart_tour_button.setToolTip(
-            "Replay the Scene Editor welcome and onboarding guide."
-        )
+        self.restart_tour_button.setToolTip("Replay the Scene Editor welcome and onboarding guide.")
         self.restart_tour_button.setAccessibleName("Start Scene Editor Tour")
         self.restart_tour_button.clicked.connect(self.restart_onboarding)
 

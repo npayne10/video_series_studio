@@ -95,7 +95,9 @@ class XCICWorkflowPatcher:
     ) -> None:
         node = workflow.get(node_id)
         if not isinstance(node, dict):
-            raise XCICWorkflowError(f"Mapping for '{key}' references missing workflow node {node_id}")
+            raise XCICWorkflowError(
+                f"Mapping for '{key}' references missing workflow node {node_id}"
+            )
         inputs = node.get("inputs")
         if not isinstance(inputs, dict):
             raise XCICWorkflowError(f"Workflow node {node_id} has no API-format inputs object")

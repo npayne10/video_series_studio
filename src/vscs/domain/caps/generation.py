@@ -55,6 +55,8 @@ class CAPSectionConfidence(BaseModel):
     production_notes: float = Field(default=0.0, ge=0.0, le=1.0)
     continuity_rules: float = Field(default=0.0, ge=0.0, le=1.0)
     prohibited_variations: float = Field(default=0.0, ge=0.0, le=1.0)
+    functional_capabilities: float = Field(default=0.0, ge=0.0, le=1.0)
+    classifications: float = Field(default=0.0, ge=0.0, le=1.0)
     overall: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
@@ -69,6 +71,11 @@ class GeneratedCAPDraft(BaseModel):
     production_notes: str = ""
     continuity_rules: tuple[str, ...] = ()
     prohibited_variations: tuple[str, ...] = ()
+    functional_capabilities: tuple[str, ...] = ()
+    semantic_tags: tuple[str, ...] = ()
+    production_classifications: tuple[str, ...] = ()
+    behaviour_references: tuple[str, ...] = ()
+    production_metadata: dict[str, str] = Field(default_factory=dict)
     unresolved_questions: tuple[str, ...] = ()
     source_summary: str = ""
     canonical_facts: tuple[ExtractedCanonicalFact, ...] = ()

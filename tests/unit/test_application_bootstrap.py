@@ -70,10 +70,7 @@ def test_bootstrap_registers_complete_frontend_dependency_graph(
         CAPGeneratorService,
         PluginManager,
     )
-    assert all(
-        context.services.contains(service_type)
-        for service_type in required
-    )
+    assert all(context.services.contains(service_type) for service_type in required)
     assert context.services.require(ProjectService).database is context.database
 
     context.shutdown()

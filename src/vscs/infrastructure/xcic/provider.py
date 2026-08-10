@@ -31,7 +31,9 @@ class XCICImageProvider:
         workflow = XCICCoreWorkflow(
             workflow_id="xcic.qwen.text-to-image",
             editable_path=config.text_workflow_path,
-            compiled_path=config.installation_root / "compiled" / "qwen_xcic_text_to_image_API.json",
+            compiled_path=config.installation_root
+            / "compiled"
+            / "qwen_xcic_text_to_image_API.json",
             loader_class="XCICQueueJobLoader",
             queue_file_path=config.installation_root / "queues" / "xcic_generation_queue.json",
             quality_mode="standard",

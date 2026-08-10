@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QByteArray, QSettings, Qt
+from PySide6.QtCore import QByteArray, QSettings, QSize, Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QDialogButtonBox,
@@ -23,6 +23,7 @@ class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
     """Present a fast, self-explanatory scene creation and editing workflow."""
 
     GEOMETRY_KEY = "scene_editor/geometry"
+    SIZE_KEY = "scene_editor/size"
 
     def __init__(
         self,
@@ -58,9 +59,7 @@ class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
         self.summary_label = QLabel(self.summary_frame)
         self.summary_label.setObjectName("sceneWorkflowSummaryText")
         self.summary_label.setWordWrap(True)
-        self.summary_label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse
-        )
+        self.summary_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         summary_layout.addWidget(self.summary_title)
         summary_layout.addWidget(self.summary_label)
 
@@ -170,8 +169,13 @@ class WorkflowSceneEditorDialog(ProductionSceneEditorDialog):
         if isinstance(geometry, QByteArray) and not geometry.isEmpty():
             self.restoreGeometry(geometry)
 
+        saved_size = self._workflow_settings.value(self.SIZE_KEY)
+        if isinstance(saved_size, QSize) and saved_size.isValid():
+            self.resize(saved_size)
+
     def _save_geometry(self) -> None:
         self._workflow_settings.setValue(self.GEOMETRY_KEY, self.saveGeometry())
+        self._workflow_settings.setValue(self.SIZE_KEY, self.size())
         self._workflow_settings.sync()
 
     def done(self, result: int) -> None:

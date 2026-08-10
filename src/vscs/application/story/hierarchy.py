@@ -161,9 +161,7 @@ def build_story_hierarchy(
                     scene.scene_name or scene.heading,
                     status,
                     scene_duration,
-                    1
-                    + len(scene.participant_asset_ids)
-                    + len(scene.required_asset_ids),
+                    1 + len(scene.participant_asset_ids) + len(scene.required_asset_ids),
                     scene_id=scene.scene_id,
                     children=tuple(shot_nodes),
                 )

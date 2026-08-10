@@ -1,4 +1,5 @@
 """Planning contracts for the Scene and Shot Intelligence Engine."""
+
 from __future__ import annotations
 
 from typing import Protocol

@@ -75,10 +75,7 @@ def test_workflow_manifest_is_immutable_and_queryable() -> None:
 
     assert manifest.workflow_id == "ltx23_video_v1"
     assert manifest.supports_quality(QualityLevel.PRODUCTION)
-    assert (
-        manifest.binding_for(WorkflowInputKind.FRAME_COUNT).field_path
-        == "inputs.frame_count"
-    )
+    assert manifest.binding_for(WorkflowInputKind.FRAME_COUNT).field_path == "inputs.frame_count"
     with pytest.raises(FrozenInstanceError):
         manifest.workflow_file = "changed.json"  # type: ignore[misc]
 

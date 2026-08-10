@@ -1,4 +1,5 @@
 """Shared state and helper operations for CAR validation."""
+
 from __future__ import annotations
 
 import hashlib

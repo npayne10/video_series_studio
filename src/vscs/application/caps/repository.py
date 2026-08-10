@@ -2,14 +2,28 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import Select, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
+from vscs.domain.caps.structured_knowledge import (
+    PersistedCanonicalConstraint,
+    PersistedCanonicalFact,
+    PersistedFunctionalCapability,
+)
 from vscs.infrastructure.database import DatabaseManager
 from vscs.infrastructure.database.models import CanonicalAssetProfileRecord
+
+_FACTS = TypeAdapter(tuple[PersistedCanonicalFact, ...])
+_CAPABILITIES = TypeAdapter(tuple[PersistedFunctionalCapability, ...])
+_CONSTRAINTS = TypeAdapter(tuple[PersistedCanonicalConstraint, ...])
+_STRINGS = TypeAdapter(tuple[str, ...])
+_METADATA = TypeAdapter(dict[str, str])
 
 
 class CAPRepositoryError(RuntimeError):
@@ -32,6 +46,16 @@ class CAPRepository:
             visual_identity=profile.visual_identity,
             production_notes=profile.production_notes,
             reference_paths=self._serialize_paths(profile.reference_paths),
+            structured_schema_version=profile.structured_schema_version,
+            facts_json=self._serialize_models(profile.facts),
+            functional_identity_json=self._serialize_models(profile.functional_identity),
+            constraints_json=self._serialize_models(profile.constraints),
+            semantic_tags_json=self._serialize_json(profile.semantic_tags),
+            production_classifications_json=self._serialize_json(
+                profile.production_classifications
+            ),
+            behaviour_references_json=self._serialize_json(profile.behaviour_references),
+            production_metadata_json=self._serialize_json(profile.production_metadata),
         )
         try:
             with self.database.session() as session:
@@ -66,6 +90,10 @@ class CAPRepository:
                     CanonicalAssetProfileRecord.title.ilike(pattern),
                     CanonicalAssetProfileRecord.canonical_description.ilike(pattern),
                     CanonicalAssetProfileRecord.visual_identity.ilike(pattern),
+                    CanonicalAssetProfileRecord.facts_json.ilike(pattern),
+                    CanonicalAssetProfileRecord.functional_identity_json.ilike(pattern),
+                    CanonicalAssetProfileRecord.constraints_json.ilike(pattern),
+                    CanonicalAssetProfileRecord.semantic_tags_json.ilike(pattern),
                 )
             )
         if status is not None:
@@ -88,11 +116,26 @@ class CAPRepository:
                 if record is None:
                     return None
                 for field_name, value in changes.model_dump(exclude_unset=True).items():
+                    target_name = field_name
                     if field_name == "status" and value is not None:
                         value = value.value
                     elif field_name == "reference_paths" and value is not None:
                         value = self._serialize_paths(value)
-                    setattr(record, field_name, value)
+                    elif field_name in {"facts", "functional_identity", "constraints"}:
+                        target_name = f"{field_name}_json"
+                        model_values = getattr(changes, field_name)
+                        value = self._serialize_models(model_values or ())
+                    elif field_name in {
+                        "semantic_tags",
+                        "production_classifications",
+                        "behaviour_references",
+                        "production_metadata",
+                    }:
+                        target_name = f"{field_name}_json"
+                        value = self._serialize_json(getattr(changes, field_name) or ())
+                        if field_name == "production_metadata":
+                            value = self._serialize_json(getattr(changes, field_name) or {})
+                    setattr(record, target_name, value)
                 session.flush()
                 session.refresh(record)
                 return self._to_domain(record)
@@ -120,7 +163,22 @@ class CAPRepository:
         return "\n".join(str(path) for path in paths)
 
     @staticmethod
-    def _to_domain(record: CanonicalAssetProfileRecord) -> CanonicalAssetProfile:
+    def _serialize_models(values: tuple[Any, ...]) -> str:
+        return json.dumps([value.model_dump(mode="json") for value in values], sort_keys=True)
+
+    @staticmethod
+    def _serialize_json(value: object) -> str:
+        return json.dumps(value, sort_keys=True)
+
+    @staticmethod
+    def _decode(raw: str, adapter: TypeAdapter[Any], default: Any) -> Any:
+        try:
+            return adapter.validate_python(json.loads(raw or "null"))
+        except (json.JSONDecodeError, ValidationError, TypeError):
+            return default
+
+    @classmethod
+    def _to_domain(cls, record: CanonicalAssetProfileRecord) -> CanonicalAssetProfile:
         return CanonicalAssetProfile(
             id=record.id,
             asset_id=record.asset_id,
@@ -133,6 +191,16 @@ class CAPRepository:
             reference_paths=tuple(
                 Path(path) for path in record.reference_paths.splitlines() if path
             ),
+            structured_schema_version=record.structured_schema_version,
+            facts=cls._decode(record.facts_json, _FACTS, ()),
+            functional_identity=cls._decode(record.functional_identity_json, _CAPABILITIES, ()),
+            constraints=cls._decode(record.constraints_json, _CONSTRAINTS, ()),
+            semantic_tags=cls._decode(record.semantic_tags_json, _STRINGS, ()),
+            production_classifications=cls._decode(
+                record.production_classifications_json, _STRINGS, ()
+            ),
+            behaviour_references=cls._decode(record.behaviour_references_json, _STRINGS, ()),
+            production_metadata=cls._decode(record.production_metadata_json, _METADATA, {}),
             created_at=record.created_at,
             updated_at=record.updated_at,
         )

@@ -22,18 +22,14 @@ class RenderJobStatus(StrEnum):
 
 
 _ALLOWED_TRANSITIONS: dict[RenderJobStatus, frozenset[RenderJobStatus]] = {
-    RenderJobStatus.QUEUED: frozenset(
-        {RenderJobStatus.PREPARING, RenderJobStatus.CANCELLED}
-    ),
+    RenderJobStatus.QUEUED: frozenset({RenderJobStatus.PREPARING, RenderJobStatus.CANCELLED}),
     RenderJobStatus.PREPARING: frozenset(
         {RenderJobStatus.RUNNING, RenderJobStatus.FAILED, RenderJobStatus.CANCELLED}
     ),
     RenderJobStatus.RUNNING: frozenset(
         {RenderJobStatus.COMPLETED, RenderJobStatus.FAILED, RenderJobStatus.CANCELLED}
     ),
-    RenderJobStatus.FAILED: frozenset(
-        {RenderJobStatus.RETRYING, RenderJobStatus.CANCELLED}
-    ),
+    RenderJobStatus.FAILED: frozenset({RenderJobStatus.RETRYING, RenderJobStatus.CANCELLED}),
     RenderJobStatus.RETRYING: frozenset(
         {RenderJobStatus.PREPARING, RenderJobStatus.FAILED, RenderJobStatus.CANCELLED}
     ),

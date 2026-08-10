@@ -61,15 +61,11 @@ SCENE_EXAMPLES = (
         topic_id="scene.dialogue",
         placeholder="Example: We're receiving an unexpected signal.",
         inline_tip="Select a participant as speaker, then add the spoken line.",
-        empty_state=(
-            "Select scene participants first. Dialogue speakers must be participants."
-        ),
+        empty_state=("Select scene participants first. Dialogue speakers must be participants."),
     ),
     ExampleTopic(
         topic_id="scene.required_assets",
-        inline_tip=(
-            "Select ships, props, technology, effects and other visible dependencies."
-        ),
+        inline_tip=("Select ships, props, technology, effects and other visible dependencies."),
         empty_state=(
             "No production assets are available. Add assets in Asset Manager before "
             "declaring scene dependencies."

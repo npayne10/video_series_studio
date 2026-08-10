@@ -88,7 +88,9 @@ class XCICModelResolver:
 
         requested_name = self._basename(requested)
         basename_matches = [
-            item for item in available if self._basename(item).casefold() == requested_name.casefold()
+            item
+            for item in available
+            if self._basename(item).casefold() == requested_name.casefold()
         ]
         if len(basename_matches) == 1:
             return basename_matches[0]

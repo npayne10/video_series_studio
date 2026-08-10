@@ -97,9 +97,7 @@ def test_bootstrapped_service_compiles_multiple_shots(tmp_path: Path) -> None:
             ),
         )
 
-        job = application.services.require(BatchPromptCompilationService).compile(
-            request
-        )
+        job = application.services.require(BatchPromptCompilationService).compile(request)
 
         assert job.status is BatchCompilationStatus.COMPLETED
         assert tuple(result.shot_id for result in job.results) == (

@@ -132,13 +132,9 @@ def _catalog() -> ContributionCatalog:
             "PRM-COMMAND-STANCE": PromptContribution(
                 package_id="PRM-COMMAND-STANCE",
                 version="1.2",
-                positive_fragments=(
-                    "Grounded hard-science-fiction performance.",
-                ),
+                positive_fragments=("Grounded hard-science-fiction performance.",),
                 negative_fragments=("No theatrical gesturing.",),
-                behaviour_fragments=(
-                    "Use economical movement and controlled posture.",
-                ),
+                behaviour_fragments=("Use economical movement and controlled posture.",),
                 source="assets/behaviours/command/prompts/stance",
                 checksum="prompt-checksum",
             )
@@ -161,9 +157,7 @@ def test_compiler_builds_ordered_provider_neutral_sections() -> None:
         "continuity",
         "negative_constraints",
     ]
-    assert compiled.positive_prompt.startswith(
-        "James holds position at the command console."
-    )
+    assert compiled.positive_prompt.startswith("James holds position at the command console.")
     assert "Medium close coverage" in compiled.positive_prompt
     assert "Grounded hard-science-fiction performance" in compiled.positive_prompt
 
@@ -178,9 +172,7 @@ def test_compiler_preserves_reference_and_frame_constraints() -> None:
     assert compiled.start_reference_id == "FRAME-SH003-END"
     assert compiled.end_reference_id == "FRAME-SH004-END"
     continuity = next(
-        section.content
-        for section in compiled.sections
-        if section.name == "continuity"
+        section.content for section in compiled.sections if section.name == "continuity"
     )
     assert "Use start reference FRAME-SH003-END" in continuity
     assert "Produce end reference FRAME-SH004-END" in continuity
@@ -190,9 +182,7 @@ def test_compiler_merges_and_deduplicates_negative_constraints() -> None:
     compiled = ACPPPromptCompiler(_catalog()).compile(_resolution())
 
     assert compiled.negative_prompt == (
-        "No exaggerated holographic glow.; "
-        "No unapproved costume changes.; "
-        "No theatrical gesturing."
+        "No exaggerated holographic glow.; No unapproved costume changes.; No theatrical gesturing."
     )
 
 

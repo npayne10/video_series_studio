@@ -1,4 +1,5 @@
 """Deterministic blocking planning for SSIE shots."""
+
 from __future__ import annotations
 
 from .models import (

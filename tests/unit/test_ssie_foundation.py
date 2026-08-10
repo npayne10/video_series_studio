@@ -1,4 +1,5 @@
 """Unit tests for Phase 12.1 SSIE foundation."""
+
 from __future__ import annotations
 
 import pytest
@@ -101,6 +102,4 @@ def test_builder_rejects_empty_production() -> None:
             scenes=(),
         )
 
-    assert any(
-        issue.code == "PRODUCTION_HAS_NO_SCENES" for issue in error.value.issues
-    )
+    assert any(issue.code == "PRODUCTION_HAS_NO_SCENES" for issue in error.value.issues)

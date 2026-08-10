@@ -20,6 +20,8 @@ from vscs.application.caps import (
     ReferenceLibraryService,
 )
 from vscs.domain.caps import ReadinessAssessment, ReadinessReport, ReadinessSeverity
+from vscs.presentation.widgets.cap_structured_knowledge import install_structured_cap_editor
+from vscs.presentation.widgets.cap_structured_migration import install_modernise_cap_action
 from vscs.presentation.widgets.cap_ui_refactoring import (
     install_cap_editor_contract_refactoring,
     install_cap_workspace_refactoring,
@@ -89,12 +91,7 @@ def install_cap_readiness(
     cap_manager: QWidget,
     projection_service: ProductionProjectionService | None = None,
 ) -> QPushButton | None:
-    """Attach readiness and the production-contract workspace to a CAP Manager.
-
-    When the composition root supplies the shared ProductionProjectionService, the UI
-    consumes that exact application service. The fallback construction is retained for
-    isolated widget tests and embedding contexts that do not own ApplicationServices.
-    """
+    """Attach readiness and the production-contract workspace to a CAP Manager."""
     references = getattr(cap_manager, "references", None)
     caps = getattr(cap_manager, "caps", None)
     if references is None or caps is None:
@@ -113,11 +110,10 @@ def install_cap_readiness(
         service = projection_service.readiness
 
     install_cap_editor_contract_refactoring()
+    install_structured_cap_editor()
     install_cap_workspace_refactoring(cap_manager, projection_service)
+    install_modernise_cap_action(cap_manager)
 
-    # CAPManagerWidget connected these controls to its original refresh method in
-    # __init__. Rebind them after the instance-level production workspace refresh
-    # is installed so search/filter/Refresh can never repopulate the legacy table.
     cap_manager.search_input.textChanged.disconnect()
     cap_manager.search_input.textChanged.connect(cap_manager.refresh)
     cap_manager.status_filter.currentIndexChanged.disconnect()

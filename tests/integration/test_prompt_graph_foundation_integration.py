@@ -77,17 +77,14 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
         else "Maintain James at the forward command rail and preserve bridge lighting."
     )
     dialogue = (
-        "James says, 'Take us down to the starport.'"
-        if revised
-        else "James says, 'Begin descent.'"
+        "James says, 'Take us down to the starport.'" if revised else "James says, 'Begin descent.'"
     )
     return (
         PromptGraphSource(
             "intent",
             PromptNodeKind.VISUAL_INTENT,
             "Visual intent",
-            "A disciplined orbital descent establishes Xorix as a real "
-            "inhabited world.",
+            "A disciplined orbital descent establishes Xorix as a real inhabited world.",
             mandatory=True,
             sequence=1,
         ),
@@ -95,8 +92,7 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "location",
             PromptNodeKind.LOCATION,
             "Iron Horizon bridge",
-            "A compact functional Guild bridge with restrained interfaces "
-            "and clear sightlines.",
+            "A compact functional Guild bridge with restrained interfaces and clear sightlines.",
             canonical_asset_id="CAP-LOC-IRON-HORIZON-BRIDGE",
             reference_ids=("REF-LOC-IRON-HORIZON-BRIDGE-01",),
             mandatory=True,
@@ -161,8 +157,7 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "renderer",
             PromptNodeKind.RENDERER,
             "Renderer",
-            "Renderer-neutral cinematic video intent for the selected "
-            "ComfyUI workflow.",
+            "Renderer-neutral cinematic video intent for the selected ComfyUI workflow.",
             mandatory=True,
             sequence=9,
         ),
@@ -170,8 +165,7 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "quality",
             PromptNodeKind.QUALITY,
             "Quality",
-            "Production quality at 24 fps with stable temporal detail and "
-            "consistent geometry.",
+            "Production quality at 24 fps with stable temporal detail and consistent geometry.",
             mandatory=True,
             sequence=10,
         ),
@@ -179,16 +173,14 @@ def _sources(*, revised: bool = False) -> tuple[PromptGraphSource, ...]:
             "restriction",
             PromptNodeKind.RESTRICTION,
             "Restrictions",
-            "No uniform changes, no altered hull geometry and no missing "
-            "engine trails.",
+            "No uniform changes, no altered hull geometry and no missing engine trails.",
             sequence=11,
         ),
         PromptGraphSource(
             "negative",
             PromptNodeKind.NEGATIVE,
             "Negative prompt",
-            "No fantasy glow, excessive holograms, visual clutter or "
-            "uncontrolled camera motion.",
+            "No fantasy glow, excessive holograms, visual clutter or uncontrolled camera motion.",
             sequence=12,
         ),
     )
@@ -263,8 +255,7 @@ def test_snapshot_and_prompt_diffs_expose_continuity_and_dialogue_changes(
             for change in graph_diff.changes
         )
         assert any(
-            change.area is PromptGraphChangeArea.NODE
-            and change.subject == "dialogue"
+            change.area is PromptGraphChangeArea.NODE and change.subject == "dialogue"
             for change in graph_diff.changes
         )
         assert any(
@@ -278,10 +269,7 @@ def test_snapshot_and_prompt_diffs_expose_continuity_and_dialogue_changes(
             and change.subject == PromptSectionKind.DIALOGUE.value
             for change in package_diff.changes
         )
-        assert (
-            first_package.provenance.graph_checksum
-            != second_package.provenance.graph_checksum
-        )
+        assert first_package.provenance.graph_checksum != second_package.provenance.graph_checksum
         assert snapshots.history(first_graph.metadata.graph_id) == (
             first_snapshot,
             second_snapshot,

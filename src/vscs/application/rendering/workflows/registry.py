@@ -68,14 +68,8 @@ class WorkflowRegistry:
                 (
                     manifest
                     for manifest in manifests
-                    if (
-                        renderer is None
-                        or manifest.metadata.renderer is renderer
-                    )
-                    and (
-                        quality_level is None
-                        or manifest.supports_quality(quality_level)
-                    )
+                    if (renderer is None or manifest.metadata.renderer is renderer)
+                    and (quality_level is None or manifest.supports_quality(quality_level))
                     and (tag is None or tag in manifest.tags)
                 ),
                 key=lambda manifest: manifest.workflow_id,

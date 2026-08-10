@@ -246,7 +246,9 @@ class ReferenceLibraryService:
     ) -> ReferenceLibraryEntry:
         entry = self.get(reference_record_id)
         if entry.lifecycle is not CanonicalReferenceLifecycle.CANDIDATE:
-            raise InvalidReferenceLifecycleTransitionError("Only candidate references can be approved")
+            raise InvalidReferenceLifecycleTransitionError(
+                "Only candidate references can be approved"
+            )
         approver = approved_by.strip()
         if not approver:
             raise ValueError("Approved by is required")
@@ -449,9 +451,9 @@ class ReferenceLibraryService:
     ) -> None:
         entries = (
             *(
-            existing
-            for existing in snapshot.entries
-            if existing.reference_record_id != entry.reference_record_id
+                existing
+                for existing in snapshot.entries
+                if existing.reference_record_id != entry.reference_record_id
             ),
             entry,
         )

@@ -60,9 +60,7 @@ def test_story_browser_enables_acpp_only_for_production_shot(
     production_shot = next(
         item
         for item in window.story_browser._walk_items()
-        if (
-            data := item.data(0, Qt.ItemDataRole.UserRole)
-        )
+        if (data := item.data(0, Qt.ItemDataRole.UserRole))
         and str(data[0]) == window.story_browser.SHOT_KIND
     )
     window.story_browser.tree.setCurrentItem(production_shot)

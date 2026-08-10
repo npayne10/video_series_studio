@@ -34,9 +34,7 @@ class QueueValidationResult:
     @property
     def passed(self) -> bool:
         """Return whether the queue has no error-level findings."""
-        return not any(
-            issue.severity is QueueValidationSeverity.ERROR for issue in self.issues
-        )
+        return not any(issue.severity is QueueValidationSeverity.ERROR for issue in self.issues)
 
 
 class RenderQueueValidator:

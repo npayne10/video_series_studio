@@ -100,7 +100,9 @@ class ComfyUIClient:
                 + (f":\n{detail}" if detail else "")
             ) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise ComfyUIError(f"Unable to communicate with ComfyUI at {self.base_url}: {exc}") from exc
+            raise ComfyUIError(
+                f"Unable to communicate with ComfyUI at {self.base_url}: {exc}"
+            ) from exc
         try:
             value = json.loads(raw)
         except json.JSONDecodeError as exc:

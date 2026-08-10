@@ -48,9 +48,7 @@ class StoryStatusService:
 
     FILE_NAME = "story_status_history.json"
     _RESERVED_TARGETS = frozenset({StoryStatus.APPROVED, StoryStatus.LOCKED})
-    _ALLOWED_TRANSITIONS: ClassVar[
-        dict[StoryStatus, tuple[StoryStatus, ...]]
-    ] = {
+    _ALLOWED_TRANSITIONS: ClassVar[dict[StoryStatus, tuple[StoryStatus, ...]]] = {
         StoryStatus.DRAFT: (StoryStatus.ANALYSED, StoryStatus.ARCHIVED),
         StoryStatus.IMPORTED: (
             StoryStatus.DRAFT,
@@ -182,9 +180,7 @@ class StoryStatusService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            transitions = tuple(
-                self._from_dict(item) for item in raw.get("transitions", [])
-            )
+            transitions = tuple(self._from_dict(item) for item in raw.get("transitions", []))
         except (
             OSError,
             json.JSONDecodeError,
@@ -192,13 +188,9 @@ class StoryStatusService:
             TypeError,
             ValueError,
         ) as exc:
-            raise StoryStatusError(
-                f"Unable to load Story status history: {exc}"
-            ) from exc
+            raise StoryStatusError(f"Unable to load Story status history: {exc}") from exc
         if story_id is not None:
-            transitions = tuple(
-                item for item in transitions if item.story_id == story_id
-            )
+            transitions = tuple(item for item in transitions if item.story_id == story_id)
         return transitions
 
     def _require_story(self, story_id: str) -> StoryRecord:
@@ -216,13 +208,10 @@ class StoryStatusService:
         new_status: StoryStatus,
     ) -> None:
         if previous_status is new_status:
-            raise StoryStatusError(
-                f"Story is already {new_status.label}"
-            )
+            raise StoryStatusError(f"Story is already {new_status.label}")
         if new_status not in self._ALLOWED_TRANSITIONS[previous_status]:
             raise StoryStatusError(
-                f"Cannot change Story status from {previous_status.label} "
-                f"to {new_status.label}"
+                f"Cannot change Story status from {previous_status.label} to {new_status.label}"
             )
 
     def _record(
@@ -266,9 +255,7 @@ class StoryStatusService:
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise StoryStatusError(
-                f"Unable to save Story status history: {exc}"
-            ) from exc
+            raise StoryStatusError(f"Unable to save Story status history: {exc}") from exc
 
     @staticmethod
     def _details(reason: str, changed_by: str) -> tuple[str, str]:

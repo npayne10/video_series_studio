@@ -79,18 +79,14 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
         shot_count = sum(
             1
             for item in self._walk_items()
-            if (
-                data := item.data(0, Qt.ItemDataRole.UserRole)
-            )
+            if (data := item.data(0, Qt.ItemDataRole.UserRole))
             and str(data[0]) in {"shot", self.SHOT_KIND}
         )
         self.dashboard_labels["shots"].setText(str(shot_count))
         self._update_shot_action_state()
 
     def _production_shot_item(self, shot: ProductionShot) -> QTreeWidgetItem:
-        asset_count = len(
-            {*shot.subject_asset_ids, *shot.required_asset_ids}
-        )
+        asset_count = len({*shot.subject_asset_ids, *shot.required_asset_ids})
         item = QTreeWidgetItem(
             (
                 f"{shot.sequence_number:03d} — {shot.title}",
@@ -187,6 +183,4 @@ class ShotPlanningStoryBrowserWidget(StoryBrowserV2Widget):
             self._update_shot_action_state()
 
     def _update_shot_action_state(self) -> None:
-        self.shot_planner_button.setEnabled(
-            self._selected_scene_id() is not None
-        )
+        self.shot_planner_button.setEnabled(self._selected_scene_id() is not None)

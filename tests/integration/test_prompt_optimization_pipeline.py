@@ -123,9 +123,9 @@ def test_graph_compiles_to_optimized_renderer_prompt(tmp_path: Path) -> None:
             graph,
             require_production_ready=False,
         )
-        profile = application.services.require(
-            RendererPromptProfileRegistry
-        ).resolve(RendererKind.COMFYUI, QualityLevel.PREVIEW)
+        profile = application.services.require(RendererPromptProfileRegistry).resolve(
+            RendererKind.COMFYUI, QualityLevel.PREVIEW
+        )
         optimized = application.services.require(PromptOptimizationService).optimize(
             package,
             profile,

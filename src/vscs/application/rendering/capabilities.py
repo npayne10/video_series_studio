@@ -25,8 +25,7 @@ class WorkflowCapabilities:
     def supports(self, required: WorkflowCapabilities) -> bool:
         """Return whether all requested capabilities are available."""
         return all(
-            not getattr(required, item.name) or getattr(self, item.name)
-            for item in fields(self)
+            not getattr(required, item.name) or getattr(self, item.name) for item in fields(self)
         )
 
     def missing(self, required: WorkflowCapabilities) -> tuple[str, ...]:

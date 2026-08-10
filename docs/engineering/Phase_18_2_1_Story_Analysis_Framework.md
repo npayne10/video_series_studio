@@ -37,8 +37,7 @@ class ChapterParsingStage:
     order = 100
     enabled = True
 
-    def analyze(self, context: AnalysisContext) -> StageResult:
-        ...
+    def analyze(self, context: AnalysisContext) -> StageResult: ...
 ```
 
 The stage is registered with `StoryAnalysisStageRegistry`. Consumers invoke only

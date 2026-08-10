@@ -53,7 +53,7 @@ def _remove_reference(dialog: Any) -> None:
         "the managed file and its generation manifest as well."
     )
     delete_all = box.addButton("Delete File and Reference", QMessageBox.ButtonRole.DestructiveRole)
-    reference_only = box.addButton("Remove Reference Only", QMessageBox.ButtonRole.AcceptRole)
+    box.addButton("Remove Reference Only", QMessageBox.ButtonRole.AcceptRole)
     cancel = box.addButton(QMessageBox.StandardButton.Cancel)
     box.setDefaultButton(cancel)
     box.exec()
@@ -85,7 +85,9 @@ def _remove_reference(dialog: Any) -> None:
         candidates = [absolute_file]
         if dialog.profile is not None:
             candidates.append(
-                _generation_manifest(dialog.project_directory, dialog.profile.asset_id, absolute_file)
+                _generation_manifest(
+                    dialog.project_directory, dialog.profile.asset_id, absolute_file
+                )
             )
         for path in candidates:
             try:

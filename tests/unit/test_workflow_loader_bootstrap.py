@@ -32,9 +32,7 @@ def test_bootstrap_registers_manifest_loader_and_discovery_result(
     result = context.services.require(ManifestDiscoveryResult)
 
     assert loader.root == (
-        context.configuration.settings.environment.config_root
-        / "workflows"
-        / "manifests"
+        context.configuration.settings.environment.config_root / "workflows" / "manifests"
     ).resolve(strict=False)
     assert len(registry) == 0
     assert result.discovered_files == 0

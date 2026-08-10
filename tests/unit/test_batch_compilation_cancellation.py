@@ -123,7 +123,6 @@ def test_cancellation_preserves_completed_item_and_cancels_remaining() -> None:
     assert len(job.completed_results) == 1
     assert len(job.cancelled_results) == 2
     assert all(
-        result.status is BatchCompilationItemStatus.CANCELLED
-        for result in job.cancelled_results
+        result.status is BatchCompilationItemStatus.CANCELLED for result in job.cancelled_results
     )
     assert job.progress.percentage == 100

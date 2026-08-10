@@ -171,9 +171,7 @@ class ProductionMonitor:
             self._worker_snapshot(observation, current) for observation in workers
         )
         diagnostics = self._diagnostics(queue, worker_snapshots, current)
-        ordered_events = tuple(
-            sorted(events, key=lambda item: (item.occurred_at, item.event_id))
-        )
+        ordered_events = tuple(sorted(events, key=lambda item: (item.occurred_at, item.event_id)))
         return ProductionMonitoringSnapshot(
             generated_at=current,
             queue=self._queue_progress(queue),
@@ -260,9 +258,7 @@ class ProductionMonitor:
         succeeded = sum(result.succeeded for result in results)
         failed = len(results) - succeeded
         failures = Counter(
-            result.error_code.value
-            for result in results
-            if result.error_code is not None
+            result.error_code.value for result in results if result.error_code is not None
         )
         total = len(results)
         return ExecutionMetrics(

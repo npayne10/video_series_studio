@@ -1,4 +1,5 @@
 """Foundation builder for assembling validated SSIE production plans."""
+
 from __future__ import annotations
 
 from dataclasses import replace

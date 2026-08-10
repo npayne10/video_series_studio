@@ -56,9 +56,7 @@ class ProductionShot:
     def ready(self) -> bool:
         """Return whether the minimum downstream production information exists."""
         return bool(
-            self.title.strip()
-            and self.description.strip()
-            and self.estimated_duration_seconds > 0
+            self.title.strip() and self.description.strip() and self.estimated_duration_seconds > 0
         )
 
 

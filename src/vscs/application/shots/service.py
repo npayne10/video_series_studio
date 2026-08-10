@@ -48,9 +48,7 @@ class ShotPlanningService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            shots = tuple(
-                self._from_dict(item) for item in raw.get("shots", [])
-            )
+            shots = tuple(self._from_dict(item) for item in raw.get("shots", []))
         except (
             OSError,
             json.JSONDecodeError,
@@ -58,13 +56,9 @@ class ShotPlanningService:
             TypeError,
             ValueError,
         ) as exc:
-            raise ShotPlanningError(
-                f"Unable to load shot plans: {exc}"
-            ) from exc
+            raise ShotPlanningError(f"Unable to load shot plans: {exc}") from exc
         if scene_id is not None:
-            shots = tuple(
-                shot for shot in shots if shot.scene_id == scene_id
-            )
+            shots = tuple(shot for shot in shots if shot.scene_id == scene_id)
         return tuple(
             sorted(
                 shots,
@@ -79,11 +73,7 @@ class ShotPlanningService:
     def shot(self, shot_id: str) -> ProductionShot | None:
         """Return one persistent shot by identity."""
         return next(
-            (
-                shot
-                for shot in self.list_shots()
-                if shot.shot_id == shot_id
-            ),
+            (shot for shot in self.list_shots() if shot.shot_id == shot_id),
             None,
         )
 
@@ -91,10 +81,7 @@ class ShotPlanningService:
         """Return the next available shot number inside a scene."""
         return (
             max(
-                (
-                    shot.sequence_number
-                    for shot in self.list_shots(scene_id)
-                ),
+                (shot.sequence_number for shot in self.list_shots(scene_id)),
                 default=0,
             )
             + 1
@@ -147,13 +134,8 @@ class ShotPlanningService:
         """Persist an explicit sequence order for every shot in a scene."""
         current = self.list_shots(scene_id)
         by_id = {shot.shot_id: shot for shot in current}
-        if (
-            len(ordered_shot_ids) != len(by_id)
-            or set(ordered_shot_ids) != set(by_id)
-        ):
-            raise ValueError(
-                "Reorder must include every shot in the scene exactly once"
-            )
+        if len(ordered_shot_ids) != len(by_id) or set(ordered_shot_ids) != set(by_id):
+            raise ValueError("Reorder must include every shot in the scene exactly once")
         replacements = {
             shot_id: replace(
                 by_id[shot_id],
@@ -164,10 +146,7 @@ class ShotPlanningService:
                 start=1,
             )
         }
-        all_shots = tuple(
-            replacements.get(shot.shot_id, shot)
-            for shot in self.list_shots()
-        )
+        all_shots = tuple(replacements.get(shot.shot_id, shot) for shot in self.list_shots())
         self._write(all_shots)
         return self.list_shots(scene_id)
 
@@ -201,9 +180,7 @@ class ShotPlanningService:
             temporary.replace(path)
         except OSError as exc:
             temporary.unlink(missing_ok=True)
-            raise ShotPlanningError(
-                f"Unable to save shot plans: {exc}"
-            ) from exc
+            raise ShotPlanningError(f"Unable to save shot plans: {exc}") from exc
 
     @staticmethod
     def _enum_value(value: StrEnum | str) -> str:
@@ -229,12 +206,8 @@ class ShotPlanningService:
             sequence_number=int(raw["sequence_number"]),
             title=str(raw["title"]),
             description=str(raw["description"]),
-            purpose=ShotPurpose(
-                str(raw.get("purpose", ShotPurpose.COVERAGE.value))
-            ),
-            shot_size=ShotSize(
-                str(raw.get("shot_size", ShotSize.MEDIUM.value))
-            ),
+            purpose=ShotPurpose(str(raw.get("purpose", ShotPurpose.COVERAGE.value))),
+            shot_size=ShotSize(str(raw.get("shot_size", ShotSize.MEDIUM.value))),
             camera_movement=CameraMovement(
                 str(
                     raw.get(
@@ -243,18 +216,12 @@ class ShotPlanningService:
                     )
                 )
             ),
-            lens_family=LensFamily(
-                str(raw.get("lens_family", LensFamily.NORMAL.value))
-            ),
+            lens_family=LensFamily(str(raw.get("lens_family", LensFamily.NORMAL.value))),
             camera_profile_id=(
-                None
-                if raw.get("camera_profile_id") is None
-                else str(raw["camera_profile_id"])
+                None if raw.get("camera_profile_id") is None else str(raw["camera_profile_id"])
             ),
             lighting_profile_id=(
-                None
-                if raw.get("lighting_profile_id") is None
-                else str(raw["lighting_profile_id"])
+                None if raw.get("lighting_profile_id") is None else str(raw["lighting_profile_id"])
             ),
             lighting_mood=LightingMood(
                 str(
@@ -264,9 +231,7 @@ class ShotPlanningService:
                     )
                 )
             ),
-            estimated_duration_seconds=float(
-                raw.get("estimated_duration_seconds", 5.0)
-            ),
+            estimated_duration_seconds=float(raw.get("estimated_duration_seconds", 5.0)),
             continuity_from_shot_id=(
                 None
                 if raw.get("continuity_from_shot_id") is None
@@ -274,21 +239,10 @@ class ShotPlanningService:
             ),
             continuity_notes=str(raw.get("continuity_notes", "")),
             blocking_notes=str(raw.get("blocking_notes", "")),
-            storyboard_reference=str(
-                raw.get("storyboard_reference", "")
-            ),
-            dialogue_lines=tuple(
-                str(value)
-                for value in raw.get("dialogue_lines", [])
-            ),
-            subject_asset_ids=tuple(
-                str(value)
-                for value in raw.get("subject_asset_ids", [])
-            ),
-            required_asset_ids=tuple(
-                str(value)
-                for value in raw.get("required_asset_ids", [])
-            ),
+            storyboard_reference=str(raw.get("storyboard_reference", "")),
+            dialogue_lines=tuple(str(value) for value in raw.get("dialogue_lines", [])),
+            subject_asset_ids=tuple(str(value) for value in raw.get("subject_asset_ids", [])),
+            required_asset_ids=tuple(str(value) for value in raw.get("required_asset_ids", [])),
             status=ShotPlanningStatus(
                 str(
                     raw.get(

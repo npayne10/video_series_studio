@@ -49,9 +49,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
         super().__init__(scene, parent, **kwargs)
         self.validation_label.setObjectName("sceneValidationExplanations")
         self.validation_label.setTextFormat(Qt.TextFormat.RichText)
-        self.validation_label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse
-        )
+        self.validation_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.validation_label.setAccessibleName("Scene validation explanations")
         self.participant_list.itemChanged.connect(self._validate)
         self.asset_list.itemChanged.connect(self._validate)
@@ -61,9 +59,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
         """Update save readiness and provide actionable validation explanations."""
         issues = self._collect_validation_explanations()
         self.validation_explanations = issues
-        blocking = tuple(
-            issue for issue in issues if issue.severity is ValidationSeverity.ERROR
-        )
+        blocking = tuple(issue for issue in issues if issue.severity is ValidationSeverity.ERROR)
         self.save_button.setEnabled(not blocking)
         self.validation_label.setText(self._validation_html(issues))
         self.validation_label.setStyleSheet(
@@ -77,10 +73,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
             bool(self.scene_name_edit.text().strip()),
             "Scene name",
             "Enter a short, recognisable scene name.",
-            (
-                "The Story Browser and production team use it to identify the scene "
-                "quickly."
-            ),
+            ("The Story Browser and production team use it to identify the scene quickly."),
             "scene.name",
             self.scene_name_edit,
         )
@@ -89,17 +82,12 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
             bool(self.episode_id_edit.text().strip()),
             "Container ID",
             "Enter the canonical production container ID.",
-            (
-                "Every scene must belong to an episode, trailer, teaser, promo, test "
-                "or special."
-            ),
+            ("Every scene must belong to an episode, trailer, teaser, promo, test or special."),
             "scene.container_id",
             self.episode_id_edit,
         )
         container_id = self.episode_id_edit.text().strip()
-        if container_id and not self._CONTAINER_PATTERN.fullmatch(
-            container_id.upper()
-        ):
+        if container_id and not self._CONTAINER_PATTERN.fullmatch(container_id.upper()):
             issues.append(
                 ValidationExplanation(
                     field_name="Container ID",
@@ -117,10 +105,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
             bool(self.heading_edit.text().strip()),
             "Heading",
             "Enter a screenplay-style scene heading.",
-            (
-                "SSIE uses the heading to understand setting, interior/exterior context "
-                "and time."
-            ),
+            ("SSIE uses the heading to understand setting, interior/exterior context and time."),
             "scene.heading",
             self.heading_edit,
         )
@@ -129,10 +114,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
             bool(self.selected_location_id()),
             "Primary location",
             "Select one canonical Location or Environment asset.",
-            (
-                "A primary location anchors continuity, staging, lighting and required "
-                "assets."
-            ),
+            ("A primary location anchors continuity, staging, lighting and required assets."),
             "scene.location",
             self.location_combo,
         )
@@ -195,10 +177,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
             warnings.append(
                 self._reference_warning(
                     "Required assets",
-                    (
-                        "One or more referenced production assets are missing from "
-                        "Asset Manager."
-                    ),
+                    ("One or more referenced production assets are missing from Asset Manager."),
                     "scene.required_assets",
                     self.asset_list,
                 )
@@ -208,8 +187,7 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
     @staticmethod
     def _contains_unavailable_item(widget: QListWidget) -> bool:
         return any(
-            widget.item(index).text().startswith("Unavailable")
-            for index in range(widget.count())
+            widget.item(index).text().startswith("Unavailable") for index in range(widget.count())
         )
 
     @staticmethod
@@ -238,22 +216,14 @@ class ValidationExplanationsSceneEditorDialog(ProductionContainerSceneEditorDial
                 "<b>Ready to save.</b> All required scene information is complete and "
                 "the production identity is valid."
             )
-        errors = sum(
-            issue.severity is ValidationSeverity.ERROR for issue in issues
-        )
+        errors = sum(issue.severity is ValidationSeverity.ERROR for issue in issues)
         heading = (
-            (
-                f"<b>{errors} issue{'s' if errors != 1 else ''} must be resolved "
-                "before saving.</b>"
-            )
+            (f"<b>{errors} issue{'s' if errors != 1 else ''} must be resolved before saving.</b>")
             if errors
             else "<b>Scene can be saved, but review these production warnings.</b>"
         )
         rows = "".join(
-            "<li>"
-            f"<b>{issue.field_name}:</b> {issue.message} "
-            f"<span>{issue.reason}</span>"
-            "</li>"
+            f"<li><b>{issue.field_name}:</b> {issue.message} <span>{issue.reason}</span></li>"
             for issue in issues
         )
         return f"{heading}<ul>{rows}</ul>"

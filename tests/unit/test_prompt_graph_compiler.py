@@ -192,9 +192,7 @@ def test_compiler_can_allow_valid_non_production_ready_preview() -> None:
     graph = _graph()
     preview_graph = PromptGraph(
         graph.metadata,
-        tuple(
-            node for node in graph.nodes if node.kind is not PromptNodeKind.CONTINUITY
-        ),
+        tuple(node for node in graph.nodes if node.kind is not PromptNodeKind.CONTINUITY),
         tuple(edge for edge in graph.edges if edge.target_id != "continuity"),
         graph.root_node_id,
     )

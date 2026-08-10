@@ -72,7 +72,11 @@ def _duplicate_resolution(parent: Any, destination: Path) -> DuplicateFileResolu
 
 
 def _import_sources(dialog: Any, sources: list[Path]) -> None:
-    if dialog.profile is None or dialog.reference_service is None or dialog.project_directory is None:
+    if (
+        dialog.profile is None
+        or dialog.reference_service is None
+        or dialog.project_directory is None
+    ):
         return
     manager = CanonicalReferenceFileManager(dialog.project_directory)
     for source in sources:
@@ -81,7 +85,9 @@ def _import_sources(dialog: Any, sources: list[Path]) -> None:
         reference_type = manager.detect_type(source)
         destination = manager.destination_for(dialog.profile.asset_id, source, reference_type)
         resolution = DuplicateFileResolution.KEEP_BOTH
-        if destination.exists() and source.resolve(strict=False) != destination.resolve(strict=False):
+        if destination.exists() and source.resolve(strict=False) != destination.resolve(
+            strict=False
+        ):
             resolution = _duplicate_resolution(dialog, destination)
             if resolution is DuplicateFileResolution.CANCEL:
                 continue
@@ -92,10 +98,14 @@ def _import_sources(dialog: Any, sources: list[Path]) -> None:
                 reference_type=reference_type,
                 duplicate_resolution=resolution,
             )
-            editor = cap_manager.CanonicalReferenceEditorDialog(dialog.project_directory, parent=dialog)
+            editor = cap_manager.CanonicalReferenceEditorDialog(
+                dialog.project_directory, parent=dialog
+            )
             editor.title.setText(source.stem.replace("_", " ").replace("-", " ").title())
             editor.file_path.setText(str(managed.relative_path))
-            editor.reference_type.setCurrentIndex(editor.reference_type.findData(managed.reference_type))
+            editor.reference_type.setCurrentIndex(
+                editor.reference_type.findData(managed.reference_type)
+            )
             editor.role.setCurrentIndex(editor.role.findData(CanonicalReferenceRole.SUPPLEMENTARY))
             editor.status.setCurrentIndex(editor.status.findData(CanonicalReferenceStatus.IMPORTED))
             editor.status.setEnabled(False)
@@ -117,7 +127,11 @@ def _import_sources(dialog: Any, sources: list[Path]) -> None:
 
 
 def _managed_add_reference(dialog: Any) -> None:
-    if dialog.profile is None or dialog.reference_service is None or dialog.project_directory is None:
+    if (
+        dialog.profile is None
+        or dialog.reference_service is None
+        or dialog.project_directory is None
+    ):
         return
     files, _ = QFileDialog.getOpenFileNames(
         dialog,
@@ -137,10 +151,12 @@ def _generate_references(dialog: Any) -> None:
     ):
         return
     default_prompt = "\n\n".join(
-        value for value in (
+        value
+        for value in (
             dialog.description.toPlainText().strip(),
             dialog.visual_identity.toPlainText().strip(),
-        ) if value
+        )
+        if value
     )
     editor = CanonicalAssetGenerationDialog(default_prompt, dialog)
     if not editor.exec():
@@ -191,39 +207,54 @@ def _approve(dialog: Any, reference_id: int) -> None:
     if dialog.reference_service is None:
         return
     reference = dialog.reference_service.get(reference_id)
-    if QMessageBox.question(
-        dialog,
-        "Approve Canonical Reference",
-        f"Approve '{reference.title}' for production?\n\nThe reference will become locked.",
-    ) is not QMessageBox.StandardButton.Yes:
+    if (
+        QMessageBox.question(
+            dialog,
+            "Approve Canonical Reference",
+            f"Approve '{reference.title}' for production?\n\nThe reference will become locked.",
+        )
+        is not QMessageBox.StandardButton.Yes
+    ):
         return
     _run_workflow(dialog, lambda: dialog.reference_service.approve(reference_id, getpass.getuser()))
 
 
 def _reject(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is not None and QMessageBox.question(
-        dialog,
-        "Return to Candidate",
-        "Remove production approval and return this reference to Candidate status?",
-    ) is QMessageBox.StandardButton.Yes:
+    if (
+        dialog.reference_service is not None
+        and QMessageBox.question(
+            dialog,
+            "Return to Candidate",
+            "Remove production approval and return this reference to Candidate status?",
+        )
+        is QMessageBox.StandardButton.Yes
+    ):
         _run_workflow(dialog, lambda: dialog.reference_service.reject(reference_id))
 
 
 def _archive(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is not None and QMessageBox.question(
-        dialog,
-        "Archive Canonical Reference",
-        "Archive this reference? Archived references remain in the project but cannot be edited or used for production.",
-    ) is QMessageBox.StandardButton.Yes:
+    if (
+        dialog.reference_service is not None
+        and QMessageBox.question(
+            dialog,
+            "Archive Canonical Reference",
+            "Archive this reference? Archived references remain in the project but cannot be edited or used for production.",
+        )
+        is QMessageBox.StandardButton.Yes
+    ):
         _run_workflow(dialog, lambda: dialog.reference_service.archive(reference_id))
 
 
 def _unlock(dialog: Any, reference_id: int) -> None:
-    if dialog.reference_service is not None and QMessageBox.question(
-        dialog,
-        "Unlock Canonical Reference",
-        "Unlocking removes production approval and returns the reference to Candidate status. Continue?",
-    ) is QMessageBox.StandardButton.Yes:
+    if (
+        dialog.reference_service is not None
+        and QMessageBox.question(
+            dialog,
+            "Unlock Canonical Reference",
+            "Unlocking removes production approval and returns the reference to Candidate status. Continue?",
+        )
+        is QMessageBox.StandardButton.Yes
+    ):
         _run_workflow(dialog, lambda: dialog.reference_service.unlock(reference_id))
 
 
@@ -248,17 +279,23 @@ def install_canonical_reference_file_management() -> None:
         original_init(self, *args, **kwargs)
         self.reference_gallery = CanonicalReferenceGallery(self)
         self.reference_gallery.reference_activated.connect(lambda _id: self._edit_reference())
-        self.reference_gallery.primary_requested.connect(lambda rid: _set_primary_reference(self, rid))
+        self.reference_gallery.primary_requested.connect(
+            lambda rid: _set_primary_reference(self, rid)
+        )
         self.reference_gallery.candidate_requested.connect(lambda rid: _mark_candidate(self, rid))
         self.reference_gallery.approve_requested.connect(lambda rid: _approve(self, rid))
         self.reference_gallery.reject_requested.connect(lambda rid: _reject(self, rid))
         self.reference_gallery.archive_requested.connect(lambda rid: _archive(self, rid))
         self.reference_gallery.unlock_requested.connect(lambda rid: _unlock(self, rid))
-        self.reference_gallery.gallery.currentItemChanged.connect(lambda *_: _update_edit_controls(self))
+        self.reference_gallery.gallery.currentItemChanged.connect(
+            lambda *_: _update_edit_controls(self)
+        )
 
         self.generate_reference_button = QPushButton("Generate Canonical Images…")
         self.generate_reference_button.setObjectName("generateCanonicalImagesButton")
-        self.generate_reference_button.setEnabled(self.profile is not None and self.reference_service is not None)
+        self.generate_reference_button.setEnabled(
+            self.profile is not None and self.reference_service is not None
+        )
         self.generate_reference_button.clicked.connect(lambda: _generate_references(self))
 
         self.references.hide()
@@ -268,9 +305,13 @@ def install_canonical_reference_file_management() -> None:
         self._canonical_reference_drop_filter = CanonicalReferenceDropFilter(self)
         self.reference_gallery.installEventFilter(self._canonical_reference_drop_filter)
         self.reference_gallery.gallery.installEventFilter(self._canonical_reference_drop_filter)
-        self.reference_gallery.setToolTip("Drop files here to copy them into managed Canonical Assets storage.")
+        self.reference_gallery.setToolTip(
+            "Drop files here to copy them into managed Canonical Assets storage."
+        )
         if self.profile is not None and self.project_directory is not None:
-            CanonicalReferenceFileManager(self.project_directory).ensure_asset_structure(self.profile.asset_id)
+            CanonicalReferenceFileManager(self.project_directory).ensure_asset_structure(
+                self.profile.asset_id
+            )
         self._refresh_references()
 
     def managed_refresh(self: Any) -> None:

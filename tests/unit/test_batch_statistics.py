@@ -33,13 +33,9 @@ def _record(history: BatchCompilationHistory, batch_id: str, failed: bool) -> No
     )
     started = datetime(2026, 8, 4, 12, 0, tzinfo=UTC)
     item_status = (
-        BatchCompilationItemStatus.FAILED
-        if failed
-        else BatchCompilationItemStatus.COMPLETED
+        BatchCompilationItemStatus.FAILED if failed else BatchCompilationItemStatus.COMPLETED
     )
-    job_status = (
-        BatchCompilationStatus.FAILED if failed else BatchCompilationStatus.COMPLETED
-    )
+    job_status = BatchCompilationStatus.FAILED if failed else BatchCompilationStatus.COMPLETED
     history.record(
         BatchCompilationJob(
             request,

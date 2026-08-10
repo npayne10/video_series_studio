@@ -122,9 +122,7 @@ def test_compiler_maps_reference_roles_and_capabilities() -> None:
     assert ("REF-JAMES-PRIMARY", "canonical") in references
     assert ("FRAME-SH003-END", "start_frame") in references
     assert ("FRAME-SH004-END", "end_frame") in references
-    assert RenderCapability.CANONICAL_REFERENCE_CONDITIONING in (
-        job.required_capabilities
-    )
+    assert RenderCapability.CANONICAL_REFERENCE_CONDITIONING in (job.required_capabilities)
     assert RenderCapability.START_FRAME_CONDITIONING in job.required_capabilities
     assert RenderCapability.END_FRAME_CONDITIONING in job.required_capabilities
     assert RenderCapability.NEGATIVE_PROMPT in job.required_capabilities

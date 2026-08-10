@@ -26,9 +26,7 @@ def test_default_pipeline_publishes_analysis_and_knowledge_graph() -> None:
     services = ApplicationServices()
     pipeline = register_story_analysis(services)
 
-    report = pipeline.analyze(
-        StoryAnalysisRequest(story_id="xorix-trailer", source_text=STORY)
-    )
+    report = pipeline.analyze(StoryAnalysisRequest(story_id="xorix-trailer", source_text=STORY))
 
     analysis = report.artifacts[ANALYSIS_RESULT_ARTIFACT]
     graph = report.artifacts[KNOWLEDGE_GRAPH_ARTIFACT]

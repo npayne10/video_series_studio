@@ -74,8 +74,7 @@ class RendererPromptProfileRegistry:
         )
         if not matches:
             raise KeyError(
-                "Renderer prompt profile not registered for "
-                f"{renderer.value}/{quality_level.value}"
+                f"Renderer prompt profile not registered for {renderer.value}/{quality_level.value}"
             )
         return sorted(matches, key=lambda item: item.profile_id)[0]
 
@@ -98,9 +97,7 @@ class ProfiledPromptPackage:
 class RendererPromptCompiler:
     """Apply a renderer profile without changing source production knowledge."""
 
-    _NEGATIVE_SECTIONS = frozenset(
-        {PromptSectionKind.RESTRICTIONS, PromptSectionKind.NEGATIVE}
-    )
+    _NEGATIVE_SECTIONS = frozenset({PromptSectionKind.RESTRICTIONS, PromptSectionKind.NEGATIVE})
 
     def compile(
         self,
