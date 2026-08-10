@@ -40,6 +40,9 @@ from vscs.presentation.widgets.browseable_story_workspace import (
     BrowseableStoryWorkspaceWidget,
 )
 from vscs.presentation.widgets.episode_planner import install_episode_planner
+from vscs.presentation.widgets.production_planning_workspace import (
+    install_production_planning_workspace,
+)
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -109,10 +112,21 @@ def install_story_browser() -> None:
         window.story_browser.analysis_engine = analysis_engine
         window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
+        episode_service = window.services.require(EpisodePlanningService)
+        scene_service = window.services.require(ScenePlanningService)
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
-            window.services.require(EpisodePlanningService),
-            window.services.require(ScenePlanningService),
+            episode_service,
+            scene_service,
+        )
+        window.episode_planner_button.setText("Production Planning…")
+        window.episode_planner_button.setToolTip(
+            "Open the authoritative Episode → Scene → Shot production-planning environment"
+        )
+        window.open_in_planner_button = install_production_planning_workspace(
+            window.story_browser,
+            episode_service,
+            scene_service,
         )
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(placeholder)
