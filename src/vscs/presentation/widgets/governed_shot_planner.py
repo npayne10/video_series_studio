@@ -359,9 +359,7 @@ class GovernedShotPlannerDialog(QDialog):
         governed = shot is not None
         self.up_button.setEnabled(governed and row > 0)
         self.down_button.setEnabled(
-            governed
-            and row >= 0
-            and row < len(self.service.list_plans(scene_id=self.scene_id)) - 1
+            governed and row >= 0 and row < len(self.service.list_plans(scene_id=self.scene_id)) - 1
         )
 
     def _new(self) -> None:
