@@ -34,5 +34,6 @@ Each ADR records:
 - [ADR-0016 — Episode Planner](ADR-0016-Episode-Planner.md)
 - [ADR-0017 — Scene Planner](ADR-0017-Scene-Planner.md)
 - [ADR-0018 — Authoritative Production Planning Workspace](ADR-0018-Authoritative-Production-Planning-Workspace.md)
+- [ADR-0019 — Governed Shot Planning Boundary](ADR-0019-Governed-Shot-Planning-Boundary.md)
 
 ADRs are immutable in intent once Accepted. Clarifications may be added, but a material architectural change should create a new ADR that explicitly supersedes the earlier decision.
