@@ -154,7 +154,9 @@ def _refresh_authoritative_overview(
         )
         workspace.tree.addTopLevelItem(episode_item)
 
-        for scene in sorted(by_episode.get(episode.episode_id, []), key=lambda item: item.sequence_number):
+        for scene in sorted(
+            by_episode.get(episode.episode_id, []), key=lambda item: item.sequence_number
+        ):
             status = scene.status.value.title()
             if not scenes.is_upstream_current(scene):
                 status = f"{status} / Stale"
