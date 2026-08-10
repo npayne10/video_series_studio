@@ -225,13 +225,6 @@ src/vscs/presentation/widgets/cap_reference_evaluation.py:137: error: "type[CAPE
 src/vscs/presentation/widgets/cap_reference_deletion.py:113: error: Cannot assign to a method  [method-assign]
 src/vscs/presentation/widgets/cap_reference_deletion.py:113: error: Incompatible types in assignment (expression has type "def _remove_reference(dialog: Any) -> None", variable has type "def _remove_reference(self: CAPEditorDialog) -> None")  [assignment]
 src/vscs/presentation/widgets/cap_reference_deletion.py:114: error: "type[CAPEditorDialog]" has no attribute "_managed_reference_deletion_installed"  [attr-defined]
-src/vscs/presentation/widgets/cap_structured_migration.py:18: error: Returning Any from function declared to return "QPushButton | None"  [no-any-return]
-src/vscs/presentation/widgets/cap_structured_migration.py:18: error: "QWidget" has no attribute "modernise_cap_button"  [attr-defined]
-src/vscs/presentation/widgets/cap_structured_migration.py:36: error: Returning Any from function declared to return "str | None"  [no-any-return]
-src/vscs/presentation/widgets/cap_structured_migration.py:128: error: Item "None" of "QLayoutItem | None" has no attribute "layout"  [union-attr]
-src/vscs/presentation/widgets/cap_structured_migration.py:131: error: Item "QLayout" of "QLayout | Any" has no attribute "insertWidget"  [union-attr]
-src/vscs/presentation/widgets/cap_structured_migration.py:133: error: "QWidget" has no attribute "modernise_cap_button"  [attr-defined]
-src/vscs/presentation/widgets/cap_structured_migration.py:134: error: "QWidget" has no attribute "structured_knowledge_service"  [attr-defined]
 src/vscs/presentation/widgets/cap_readiness_widget.py:117: error: "QWidget" has no attribute "search_input"  [attr-defined]
 src/vscs/presentation/widgets/cap_readiness_widget.py:118: error: "QWidget" has no attribute "search_input"  [attr-defined]
 src/vscs/presentation/widgets/cap_readiness_widget.py:118: error: "QWidget" has no attribute "refresh"  [attr-defined]
@@ -276,4 +269,4 @@ src/vscs/presentation/widgets/browseable_story_workspace.py:273: error: "StoryAn
 src/vscs/presentation/widgets/browseable_story_workspace.py:288: error: "StoryAnalysisWorkspaceDialog" has no attribute "acceptance_button"  [attr-defined]
 src/vscs/presentation/widgets/browseable_story_workspace.py:302: error: "StoryAnalysisWorkspaceDialog" has no attribute "reanalyse_story_button"; maybe "analyse_button"?  [attr-defined]
 src/vscs/main.py:34: error: Cannot assign to a type  [misc]
-Found 250 errors in 48 files (checked 349 source files)
+Found 243 errors in 47 files (checked 349 source files)
