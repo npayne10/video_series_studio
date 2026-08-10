@@ -116,9 +116,7 @@ class BehaviourProfileRepository:
         if asset_category is None:
             return profiles
         return tuple(
-            profile
-            for profile in profiles
-            if asset_category in profile.applicable_asset_categories
+            profile for profile in profiles if asset_category in profile.applicable_asset_categories
         )
 
     def list_versions(self, profile_id: str) -> tuple[BehaviourProfile, ...]:
