@@ -13,6 +13,7 @@ from .camera_planning import GovernedCameraPlanningService
 from .episode_planning import EpisodePlanningService
 from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
+from .lighting_planning import GovernedLightingPlanningService
 from .metadata import StoryMetadataService
 from .service import StoryService
 from .shot_planning import GovernedShotPlanningService
@@ -133,3 +134,21 @@ def register_governed_camera_planning(
         services.require(AssetBrowserService),
     )
     return services.register(GovernedCameraPlanningService, planner)
+
+
+def register_governed_lighting_planning(
+    services: ApplicationServices,
+) -> GovernedLightingPlanningService:
+    """Register authoritative Lighting Planning beneath governed Camera Planning."""
+    existing = services.get(GovernedLightingPlanningService)
+    if existing is not None:
+        return existing
+    planner = GovernedLightingPlanningService(
+        services.require(ProjectService),
+        register_governed_shot_planning(services),
+        register_governed_asset_resolution(services),
+        register_governed_camera_planning(services),
+        services.require(AssetResolutionService),
+        services.require(AssetBrowserService),
+    )
+    return services.register(GovernedLightingPlanningService, planner)

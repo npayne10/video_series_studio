@@ -35,6 +35,22 @@ from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus, A
 from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 
 
+def _current_asset_category(combo: QComboBox) -> AssetCategory:
+    """Return Qt combo data as a stable AssetCategory value."""
+    value = combo.currentData()
+    if isinstance(value, AssetCategory):
+        return value
+    return AssetCategory(str(value))
+
+
+def _current_asset_status(combo: QComboBox) -> AssetStatus:
+    """Return Qt combo data as a stable AssetStatus value."""
+    value = combo.currentData()
+    if isinstance(value, AssetStatus):
+        return value
+    return AssetStatus(str(value))
+
+
 class AssetEditorDialog(QDialog):
     """Collect metadata and the approved ChatGPT MASTER for a new canonical asset."""
 
@@ -48,10 +64,10 @@ class AssetEditorDialog(QDialog):
         self.name = QLineEdit()
         self.category = QComboBox()
         for category in AssetCategory:
-            self.category.addItem(category.value.replace("_", " ").title(), category)
+            self.category.addItem(category.value.replace("_", " ").title(), category.value)
         self.status = QComboBox()
         for status in AssetStatus:
-            self.status.addItem(status.value.title(), status)
+            self.status.addItem(status.value.title(), status.value)
         self.file_path = QLineEdit()
         self.file_path.setPlaceholderText("Select the approved ChatGPT master image")
         self.browse_button = QPushButton("Browse…")
@@ -99,8 +115,8 @@ class AssetEditorDialog(QDialog):
         return AssetCreate(
             asset_id=self.asset_id.text(),
             name=self.name.text(),
-            category=self.category.currentData(),
-            status=self.status.currentData(),
+            category=_current_asset_category(self.category),
+            status=_current_asset_status(self.status),
             file_path=self.master_reference_path(),
             tags=tuple(tag.strip() for tag in self.tags.text().split(",")),
             description=self.description.toPlainText(),
@@ -180,12 +196,12 @@ class AssetEditDialog(QDialog):
         self.name = QLineEdit(asset.name)
         self.category = QComboBox()
         for category in AssetCategory:
-            self.category.addItem(category.value.replace("_", " ").title(), category)
-        self.category.setCurrentIndex(max(0, self.category.findData(asset.category)))
+            self.category.addItem(category.value.replace("_", " ").title(), category.value)
+        self.category.setCurrentIndex(max(0, self.category.findData(asset.category.value)))
         self.status = QComboBox()
         for status in AssetStatus:
-            self.status.addItem(status.value.title(), status)
-        self.status.setCurrentIndex(max(0, self.status.findData(asset.status)))
+            self.status.addItem(status.value.title(), status.value)
+        self.status.setCurrentIndex(max(0, self.status.findData(asset.status.value)))
 
         self.master_reference = QLineEdit(self.original_master)
         self.master_reference.setReadOnly(True)
@@ -252,8 +268,8 @@ class AssetEditDialog(QDialog):
         """Return editable registry fields; MASTER changes use the canonical service."""
         return AssetUpdate(
             name=self.name.text(),
-            category=self.category.currentData(),
-            status=self.status.currentData(),
+            category=_current_asset_category(self.category),
+            status=_current_asset_status(self.status),
             tags=tuple(tag.strip() for tag in self.tags.text().split(",")),
             description=self.description.toPlainText(),
         )
@@ -341,7 +357,7 @@ class AssetManagerWidget(QWidget):
         self.category_filter = QComboBox()
         self.category_filter.addItem("All categories", None)
         for category in AssetCategory:
-            self.category_filter.addItem(category.value.replace("_", " ").title(), category)
+            self.category_filter.addItem(category.value.replace("_", " ").title(), category.value)
 
         self.add_button = QPushButton("Add Asset")
         self.edit_button = QPushButton("Edit Selected")
@@ -384,7 +400,8 @@ class AssetManagerWidget(QWidget):
 
     def refresh(self) -> None:
         """Reload the table from the active project database."""
-        category = self.category_filter.currentData()
+        category_value = self.category_filter.currentData()
+        category = AssetCategory(str(category_value)) if category_value is not None else None
         try:
             assets = self.assets.list(query=self.search_input.text(), category=category)
         except AssetError:
@@ -477,7 +494,7 @@ class AssetManagerWidget(QWidget):
         dialog.open_canonical_profile_requested.connect(self.open_canonical_profile_requested.emit)
         if not dialog.exec():
             return
-        if dialog.category.currentData() is not asset.category:
+        if _current_asset_category(dialog.category) != asset.category:
             answer = QMessageBox.warning(
                 self,
                 "Category Change",

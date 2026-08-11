@@ -120,8 +120,14 @@ class CanonicalAssetCreationService:
             if master is not None:
                 current = self.references.get(master.reference_record_id)
                 if current.file_path == master_reference:
+                    updated_asset = asset
+                    if asset.file_path != master_reference:
+                        updated_asset = self.assets.update(
+                            asset.asset_id,
+                            AssetUpdate(file_path=master_reference),
+                        )
                     return CanonicalAssetCreationResult(
-                        asset=asset,
+                        asset=updated_asset,
                         cap_asset_id=asset.asset_id,
                         reference_record_id=current.id,
                         production_reference_id=master.reference_id,
