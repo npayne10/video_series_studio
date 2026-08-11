@@ -91,6 +91,10 @@ class ProductionPackageWorkspace(QWidget):
         guidance.setWordWrap(True)
         action_layout.addWidget(guidance)
 
+        self.action_status = QLabel("", action_group)
+        self.action_status.setWordWrap(True)
+        action_layout.addWidget(self.action_status)
+
         form = QFormLayout()
         self.temporal_narrative = QTextEdit(action_group)
         self.temporal_narrative.setPlaceholderText(
@@ -116,10 +120,15 @@ class ProductionPackageWorkspace(QWidget):
 
         actions = QHBoxLayout()
         self.create_button = QPushButton("Create from Shot", action_group)
+        self.refresh_source_button = QPushButton("Refresh from Current Shot", action_group)
+        self.refresh_source_button.setToolTip(
+            "Rebase this Draft onto the current Production Package while preserving authored content"
+        )
         self.save_button = QPushButton("Save Draft", action_group)
         self.ready_button = QPushButton("Mark Ready & Compile", action_group)
         self.draft_button = QPushButton("Return to Draft", action_group)
         actions.addWidget(self.create_button)
+        actions.addWidget(self.refresh_source_button)
         actions.addWidget(self.save_button)
         actions.addWidget(self.ready_button)
         actions.addWidget(self.draft_button)
@@ -140,6 +149,7 @@ class ProductionPackageWorkspace(QWidget):
         self.refresh_button.clicked.connect(self.refresh)
         self.package_table.itemSelectionChanged.connect(self._selection_changed)
         self.create_button.clicked.connect(self._create)
+        self.refresh_source_button.clicked.connect(self._refresh_source)
         self.save_button.clicked.connect(self._save)
         self.ready_button.clicked.connect(self._mark_ready)
         self.draft_button.clicked.connect(self._return_to_draft)
@@ -189,6 +199,7 @@ class ProductionPackageWorkspace(QWidget):
                 "No current approved Integrated Planning Packages are available. "
                 "Complete Planning Review for a Shot first."
             )
+            self.action_status.clear()
             self._clear_editor()
             self._set_editor_enabled(False)
 
@@ -215,8 +226,12 @@ class ProductionPackageWorkspace(QWidget):
             return
         draft = self.action_performance.draft(self._selected_shot_id)
         if draft is None:
+            self.action_status.setText(
+                "No Action & Performance Draft exists yet. Create one from the current governed Shot."
+            )
             self._clear_editor()
             self.create_button.setEnabled(True)
+            self.refresh_source_button.setEnabled(False)
             self.save_button.setEnabled(False)
             self.ready_button.setEnabled(False)
             self.draft_button.setEnabled(False)
@@ -230,7 +245,22 @@ class ProductionPackageWorkspace(QWidget):
         self.timing_notes.setPlainText(draft.timing_notes)
         stale = not self.action_performance.is_current(draft)
         ready = draft.status is ActionPerformanceStatus.READY
+        if stale:
+            self.action_status.setText(
+                "Action & Performance is stale because its approved Planning source changed. "
+                "Refresh from Current Shot to preserve this authored content and review it against "
+                "the current Production Package before compiling."
+            )
+        elif ready:
+            self.action_status.setText(
+                "Action & Performance is Ready and compiled into the current Production Package."
+            )
+        else:
+            self.action_status.setText(
+                "Action & Performance Draft is current. Review, edit and mark it Ready when complete."
+            )
         self.create_button.setEnabled(False)
+        self.refresh_source_button.setEnabled(stale and not ready)
         self.save_button.setEnabled(not ready and not stale)
         self.ready_button.setEnabled(
             not ready and not stale and bool(draft.temporal_narrative.strip())
@@ -246,6 +276,12 @@ class ProductionPackageWorkspace(QWidget):
                 self._selected_shot_id or ""
             )
         )
+
+    def _refresh_source(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run(lambda: self.action_performance.rebase_to_current_package(shot_id))
 
     def _save(self) -> None:
         if self._selected_shot_id is None:
@@ -286,6 +322,7 @@ class ProductionPackageWorkspace(QWidget):
     def _set_editor_enabled(self, enabled: bool) -> None:
         for button in (
             self.create_button,
+            self.refresh_source_button,
             self.save_button,
             self.ready_button,
             self.draft_button,
