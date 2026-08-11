@@ -126,10 +126,8 @@ def test_planning_review_is_owned_by_shot_planner_and_openable_before_specialist
     )
 
     install_planning_review_navigation()
-    setattr(
-        shots,
-        "planning_review_service",
-        GovernedPlanningReviewService.__new__(GovernedPlanningReviewService),
+    shots.planning_review_service = GovernedPlanningReviewService.__new__(  # type: ignore[attr-defined]
+        GovernedPlanningReviewService
     )
     dialog = GovernedShotPlannerDialog(shots, scene)
     qtbot.addWidget(dialog)
