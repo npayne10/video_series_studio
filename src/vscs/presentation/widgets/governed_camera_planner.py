@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from enum import StrEnum
 
 from PySide6.QtWidgets import (
     QComboBox,
@@ -139,7 +140,7 @@ class CameraPlanEditorDialog(QDialog):
         root.addWidget(buttons)
 
     @staticmethod
-    def _enum_combo(enum_type: type, parent: QWidget) -> QComboBox:
+    def _enum_combo(enum_type: type[StrEnum], parent: QWidget) -> QComboBox:
         combo = QComboBox(parent)
         for value in enum_type:
             combo.addItem(str(value.value).replace("_", " ").title(), value.value)
@@ -188,7 +189,9 @@ class CameraPlanEditorDialog(QDialog):
             movement_notes=self.movement_notes_edit.toPlainText().strip(),
             continuity_notes=self.continuity_edit.toPlainText().strip(),
             camera_constraints=tuple(
-                line.strip() for line in self.constraints_edit.toPlainText().splitlines() if line.strip()
+                line.strip()
+                for line in self.constraints_edit.toPlainText().splitlines()
+                if line.strip()
             ),
             camera_profile_asset_id=str(self.profile_combo.currentData() or "").strip().upper(),
         )
@@ -282,7 +285,8 @@ class GovernedCameraPlannerDialog(QDialog):
             if plan.status is CameraPlanStatus.READY and not self.service.is_production_ready(plan):
                 governance += " / Stale"
             self.status_label.setText(
-                f"{plan.camera_plan_id} • {governance} • " + " • ".join(self.service.readiness_summary(self.shot_id))
+                f"{plan.camera_plan_id} • {governance} • "
+                + " • ".join(self.service.readiness_summary(self.shot_id))
             )
             self.details.setText(
                 f"Shot size: {plan.shot_size.value.replace('_', ' ').title()}\n"
@@ -301,7 +305,7 @@ class GovernedCameraPlannerDialog(QDialog):
         self.suggest_button.setEnabled(shot_ready and plan is None)
         self.new_button.setEnabled(shot_ready and plan is None)
         self.edit_button.setEnabled(shot_ready and draft)
-        self.ready_button.setEnabled(shot_ready and draft)
+        self.ready_button.setEnabled(shot_ready and assets_ready and draft)
         self.draft_button.setEnabled(ready)
         self.delete_button.setEnabled(draft)
 
@@ -325,7 +329,7 @@ class GovernedCameraPlannerDialog(QDialog):
             return
         values = dialog.values()
         try:
-            self.service.create(shot_id=self.shot_id, **values.__dict__)
+            self.service.create(shot_id=self.shot_id, **asdict(values))
         except (GovernedCameraPlanningError, TypeError) as exc:
             QMessageBox.warning(self, "Camera Planner", str(exc))
         self.refresh()
@@ -340,7 +344,7 @@ class GovernedCameraPlannerDialog(QDialog):
             return
         values = dialog.values()
         try:
-            self.service.update(self.shot_id, **values.__dict__)
+            self.service.update(self.shot_id, **asdict(values))
         except (GovernedCameraPlanningError, TypeError) as exc:
             QMessageBox.warning(self, "Camera Planner", str(exc))
         self.refresh()

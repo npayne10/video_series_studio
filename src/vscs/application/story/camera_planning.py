@@ -13,6 +13,7 @@ from vscs.application.asset_resolution import (
     AssetBrowserFilter,
     AssetBrowserService,
     AssetResolutionRequest,
+    AssetResolutionResult,
     AssetResolutionService,
     AssetResolutionStatus,
 )
@@ -190,13 +191,17 @@ class GovernedCameraPlanningService:
             focal_length = 85
             composition = "prioritise the reaction without distorting facial perspective"
             movement_notes = "use a slow physically motivated push-in without abrupt acceleration"
-        if any(term in text for term in ("run", "walk", "fly", "move", "cross", "approach", "action")):
+        if any(
+            term in text for term in ("run", "walk", "fly", "move", "cross", "approach", "action")
+        ):
             movement = CameraMovement.TRACK
             if shot_size in {ShotSize.MEDIUM, ShotSize.MEDIUM_CLOSE}:
                 shot_size = ShotSize.WIDE
                 lens_family = LensFamily.WIDE
                 focal_length = 35
-            movement_notes = "track at a stable speed matched to subject motion; avoid impossible acceleration"
+            movement_notes = (
+                "track at a stable speed matched to subject motion; avoid impossible acceleration"
+            )
 
         return CameraPlan(
             camera_plan_id=self._camera_plan_id(shot.shot_id),
@@ -288,7 +293,9 @@ class GovernedCameraPlanningService:
     ) -> CameraPlan:
         current = self._require_plan(shot_id)
         if current.status is not CameraPlanStatus.DRAFT:
-            raise GovernedCameraPlanningError("Ready Camera Plans must return to Draft before editing")
+            raise GovernedCameraPlanningError(
+                "Ready Camera Plans must return to Draft before editing"
+            )
         shot = self._require_ready_shot(current.shot_id)
         profile_id = camera_profile_asset_id.strip().upper()
         updated = replace(
@@ -354,7 +361,9 @@ class GovernedCameraPlanningService:
         if current is None:
             return False
         if current.status is not CameraPlanStatus.DRAFT:
-            raise GovernedCameraPlanningError("Ready Camera Plans must return to Draft before deletion")
+            raise GovernedCameraPlanningError(
+                "Ready Camera Plans must return to Draft before deletion"
+            )
         self._write(tuple(plan for plan in self.list_plans() if plan.shot_id != current.shot_id))
         return True
 
@@ -412,7 +421,9 @@ class GovernedCameraPlanningService:
         if shot is None:
             raise GovernedCameraPlanningError(f"Shot Plan not found: {shot_id}")
         if not self.shots.is_production_ready(shot):
-            raise GovernedCameraPlanningError("Camera Planning requires a current Ready governed Shot")
+            raise GovernedCameraPlanningError(
+                "Camera Planning requires a current Ready governed Shot"
+            )
         return shot
 
     def _require_plan(self, shot_id: str) -> CameraPlan:
@@ -423,7 +434,9 @@ class GovernedCameraPlanningService:
 
     def _replace(self, updated: CameraPlan) -> None:
         self._write(
-            tuple(updated if plan.shot_id == updated.shot_id else plan for plan in self.list_plans())
+            tuple(
+                updated if plan.shot_id == updated.shot_id else plan for plan in self.list_plans()
+            )
         )
 
     def _write(self, plans: tuple[CameraPlan, ...]) -> None:
@@ -431,7 +444,9 @@ class GovernedCameraPlanningService:
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema_version": self.SCHEMA_VERSION,
-            "camera_plans": [self._to_dict(plan) for plan in sorted(plans, key=lambda item: item.shot_id)],
+            "camera_plans": [
+                self._to_dict(plan) for plan in sorted(plans, key=lambda item: item.shot_id)
+            ],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
         try:
@@ -462,7 +477,7 @@ class GovernedCameraPlanningService:
         ]
         return self._checksum(payload)
 
-    def _profile_resolution(self, asset_id: str):
+    def _profile_resolution(self, asset_id: str) -> AssetResolutionResult:
         result = self.resolver.resolve(
             AssetResolutionRequest(
                 asset_id,
@@ -486,14 +501,18 @@ class GovernedCameraPlanningService:
             return
         result = self._profile_resolution(asset_id)
         if result.status is not AssetResolutionStatus.RESOLVED:
-            diagnostics = "; ".join(item.message for item in result.diagnostics) or result.status.value
+            diagnostics = (
+                "; ".join(item.message for item in result.diagnostics) or result.status.value
+            )
             raise GovernedCameraPlanningError(
                 f"Selected Camera Profile is not production-ready: {diagnostics}"
             )
 
     @staticmethod
     def _continuity_notes(shot: ShotPlan) -> str:
-        values = [value.strip() for value in (shot.continuity_in, shot.continuity_out) if value.strip()]
+        values = [
+            value.strip() for value in (shot.continuity_in, shot.continuity_out) if value.strip()
+        ]
         if not values:
             return "Preserve screen direction and visual geography established by the surrounding Shots."
         return " / ".join(values)
