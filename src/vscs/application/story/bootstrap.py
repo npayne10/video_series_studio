@@ -16,13 +16,13 @@ from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
 from .lighting_planning import GovernedLightingPlanningService
 from .metadata import StoryMetadataService
+from .planning_review import GovernedPlanningReviewService
 from .service import StoryService
 from .shot_planning import GovernedShotPlanningService
 from .status import StoryStatusService
 
 
 def register_story_lifecycle(services: ApplicationServices) -> StoryLifecycleService:
-    """Register the shared project-backed Story lifecycle service."""
     existing = services.get(StoryLifecycleService)
     if existing is not None:
         return existing
@@ -31,7 +31,6 @@ def register_story_lifecycle(services: ApplicationServices) -> StoryLifecycleSer
 
 
 def register_story_metadata(services: ApplicationServices) -> StoryMetadataService:
-    """Register Story metadata using the shared lifecycle dependency."""
     existing = services.get(StoryMetadataService)
     if existing is not None:
         return existing
@@ -41,7 +40,6 @@ def register_story_metadata(services: ApplicationServices) -> StoryMetadataServi
 
 
 def register_story_status(services: ApplicationServices) -> StoryStatusService:
-    """Register Story status using the shared lifecycle dependency."""
     existing = services.get(StoryStatusService)
     if existing is not None:
         return existing
@@ -51,7 +49,6 @@ def register_story_status(services: ApplicationServices) -> StoryStatusService:
 
 
 def register_story_approval(services: ApplicationServices) -> StoryApprovalService:
-    """Register approval governance using shared Story services."""
     existing = services.get(StoryApprovalService)
     if existing is not None:
         return existing
@@ -65,7 +62,6 @@ def register_story_approval(services: ApplicationServices) -> StoryApprovalServi
 
 
 def register_episode_planning(services: ApplicationServices) -> EpisodePlanningService:
-    """Register the project-backed Episode Planner service."""
     existing = services.get(EpisodePlanningService)
     if existing is not None:
         return existing
@@ -77,7 +73,6 @@ def register_episode_planning(services: ApplicationServices) -> EpisodePlanningS
 
 
 def register_scene_planning(services: ApplicationServices) -> IterativeScenePlanningService:
-    """Register iterative Scene Planning beneath authoritative Episode Planning."""
     existing = services.get(IterativeScenePlanningService)
     if existing is not None:
         return existing
@@ -89,10 +84,7 @@ def register_scene_planning(services: ApplicationServices) -> IterativeScenePlan
     return services.register(IterativeScenePlanningService, planner)
 
 
-def register_governed_shot_planning(
-    services: ApplicationServices,
-) -> GovernedShotPlanningService:
-    """Register authoritative Shot Planning beneath governed Scene Planning."""
+def register_governed_shot_planning(services: ApplicationServices) -> GovernedShotPlanningService:
     existing = services.get(GovernedShotPlanningService)
     if existing is not None:
         return existing
@@ -104,10 +96,7 @@ def register_governed_shot_planning(
     return services.register(GovernedShotPlanningService, planner)
 
 
-def register_governed_asset_resolution(
-    services: ApplicationServices,
-) -> GovernedAssetResolutionService:
-    """Register authoritative asset binding beneath governed Shot Planning."""
+def register_governed_asset_resolution(services: ApplicationServices) -> GovernedAssetResolutionService:
     existing = services.get(GovernedAssetResolutionService)
     if existing is not None:
         return existing
@@ -120,10 +109,7 @@ def register_governed_asset_resolution(
     return services.register(GovernedAssetResolutionService, resolver)
 
 
-def register_governed_camera_planning(
-    services: ApplicationServices,
-) -> GovernedCameraPlanningService:
-    """Register authoritative Camera Planning beneath governed Shot/Asset Planning."""
+def register_governed_camera_planning(services: ApplicationServices) -> GovernedCameraPlanningService:
     existing = services.get(GovernedCameraPlanningService)
     if existing is not None:
         return existing
@@ -137,10 +123,7 @@ def register_governed_camera_planning(
     return services.register(GovernedCameraPlanningService, planner)
 
 
-def register_governed_lighting_planning(
-    services: ApplicationServices,
-) -> GovernedLightingPlanningService:
-    """Register authoritative Lighting Planning beneath governed Camera Planning."""
+def register_governed_lighting_planning(services: ApplicationServices) -> GovernedLightingPlanningService:
     existing = services.get(GovernedLightingPlanningService)
     if existing is not None:
         return existing
@@ -158,7 +141,6 @@ def register_governed_lighting_planning(
 def register_governed_environment_planning(
     services: ApplicationServices,
 ) -> GovernedEnvironmentPlanningService:
-    """Register authoritative Environment Planning beneath governed Lighting Planning."""
     existing = services.get(GovernedEnvironmentPlanningService)
     if existing is not None:
         return existing
@@ -171,3 +153,21 @@ def register_governed_environment_planning(
         register_governed_lighting_planning(services),
     )
     return services.register(GovernedEnvironmentPlanningService, planner)
+
+
+def register_governed_planning_review(
+    services: ApplicationServices,
+) -> GovernedPlanningReviewService:
+    """Register the human review gate over the complete governed Shot plan."""
+    existing = services.get(GovernedPlanningReviewService)
+    if existing is not None:
+        return existing
+    review = GovernedPlanningReviewService(
+        services.require(ProjectService),
+        register_governed_shot_planning(services),
+        register_governed_asset_resolution(services),
+        register_governed_camera_planning(services),
+        register_governed_lighting_planning(services),
+        register_governed_environment_planning(services),
+    )
+    return services.register(GovernedPlanningReviewService, review)
