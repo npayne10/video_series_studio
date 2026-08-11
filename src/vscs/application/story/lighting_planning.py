@@ -168,10 +168,10 @@ class GovernedLightingPlanningService:
         temperature = 4300
         fill = 40
         exposure = ExposureIntent.BALANCED
-        source_strategy = (
-            "motivate illumination from sources justified by the governed Shot; avoid decorative glow"
+        source_strategy = "motivate illumination from sources justified by the governed Shot; avoid decorative glow"
+        shadow_strategy = (
+            "retain soft directional modelling without crushing useful production detail"
         )
-        shadow_strategy = "retain soft directional modelling without crushing useful production detail"
         readability = "keep the primary narrative subject readable without flattening the scene"
         separation = "use restrained tonal separation only where required for subject readability"
 
@@ -182,9 +182,7 @@ class GovernedLightingPlanningService:
             temperature = 5600
             fill = 18
             exposure = ExposureIntent.PROTECT_HIGHLIGHTS
-            source_strategy = (
-                "use one physically motivated dominant source with restrained indirect fill; do not invent ambient atmospheric glow"
-            )
+            source_strategy = "use one physically motivated dominant source with restrained indirect fill; do not invent ambient atmospheric glow"
             shadow_strategy = "preserve credible directional shadows while retaining essential subject information"
         if shot.dialogue_requirement.strip():
             intent = LightingIntent.PRACTICAL_MOTIVATED
@@ -193,7 +191,9 @@ class GovernedLightingPlanningService:
             temperature = 4300
             fill = 50
             exposure = ExposureIntent.BALANCED
-            readability = "maintain natural facial readability and eye detail without glamour lighting"
+            readability = (
+                "maintain natural facial readability and eye detail without glamour lighting"
+            )
             separation = "separate speakers subtly from the background while preserving environmental integration"
         if any(term in text for term in ("danger", "threat", "tension", "dark", "night", "horror")):
             intent = LightingIntent.LOW_KEY
@@ -216,7 +216,9 @@ class GovernedLightingPlanningService:
             quality = LightQuality.HARD
             fill = 8
             exposure = ExposureIntent.SILHOUETTE_BIASED
-            readability = "preserve intentional silhouette while keeping required story geometry legible"
+            readability = (
+                "preserve intentional silhouette while keeping required story geometry legible"
+            )
 
         return LightingPlan(
             lighting_plan_id=self._lighting_plan_id(shot.shot_id),
