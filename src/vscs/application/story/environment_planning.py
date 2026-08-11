@@ -800,4 +800,8 @@ class GovernedEnvironmentPlanningService:
 
     @staticmethod
     def _optional_float(value: object) -> float | None:
-        return None if value is None else float(value)
+        if value is None:
+            return None
+        if isinstance(value, (int, float, str)):
+            return float(value)
+        raise TypeError(f"Environment numeric value must be int, float, str or null, got {type(value).__name__}")
