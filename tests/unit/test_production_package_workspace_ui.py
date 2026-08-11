@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from vscs.application.action_performance import ActionPerformanceDraft, ActionPerformanceStatus
 from vscs.application.production_package import (
     ProductionPackage,
     ProductionPackageProvenance,
@@ -68,8 +69,21 @@ class _Packages:
 
 
 class _Actions:
+    def __init__(self, draft: ActionPerformanceDraft | None = None, *, current: bool = True) -> None:
+        self.value = draft
+        self.current = current
+        self.rebased = False
+
     def draft(self, _shot_id: str):
-        return None
+        return self.value
+
+    def is_current(self, _draft):
+        return self.current
+
+    def rebase_to_current_package(self, _shot_id: str):
+        self.current = True
+        self.rebased = True
+        return self.value
 
 
 def test_workspace_exposes_action_story_editor_without_provider_prompt_controls(qtbot) -> None:
@@ -85,3 +99,37 @@ def test_workspace_exposes_action_story_editor_without_provider_prompt_controls(
     assert widget.create_button.text() == "Create from Shot"
     assert widget.ready_button.text() == "Mark Ready & Compile"
     assert widget.temporal_narrative.placeholderText().startswith("Example: James descends")
+
+
+def test_stale_draft_exposes_refresh_recovery_and_preserves_content(qtbot) -> None:
+    draft = ActionPerformanceDraft(
+        shot_id="SHT-001",
+        source_package_id="PP-SHT-001-OLD",
+        source_fingerprint="old-source",
+        temporal_narrative="Mauritania emerges from hyperspace and Xorix becomes visible.",
+        spoken_content='"We have arrived at Xorix."',
+        performance_direction="Restrained sense of wonder.",
+        opening_state="First shot.",
+        closing_state="Xorix fills the viewport.",
+        timing_notes="Target runtime: 20 seconds",
+        status=ActionPerformanceStatus.DRAFT,
+    )
+    actions = _Actions(draft, current=False)
+    widget = ProductionPackageWorkspace(
+        _Projects(),  # type: ignore[arg-type]
+        _Packages(),  # type: ignore[arg-type]
+        actions,  # type: ignore[arg-type]
+    )
+    qtbot.addWidget(widget)
+
+    assert widget.package_table.item(0, 2).text() == "Draft / Stale"
+    assert widget.refresh_source_button.isEnabled()
+    assert widget.temporal_narrative.isReadOnly()
+    assert "preserve this authored content" in widget.action_status.text()
+
+    qtbot.mouseClick(widget.refresh_source_button, 1)
+
+    assert actions.rebased
+    assert not widget.temporal_narrative.isReadOnly()
+    assert widget.save_button.isEnabled()
+    assert widget.temporal_narrative.toPlainText() == draft.temporal_narrative
