@@ -44,7 +44,9 @@ from vscs.presentation.widgets.browseable_story_workspace import BrowseableStory
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
-from vscs.presentation.widgets.production_planning_workspace import install_production_planning_workspace
+from vscs.presentation.widgets.production_planning_workspace import (
+    install_production_planning_workspace,
+)
 from vscs.presentation.windows.main_window import MainWindow
 
 
