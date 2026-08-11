@@ -19,6 +19,7 @@ from .bootstrap import (
     register_governed_camera_planning,
     register_governed_environment_planning,
     register_governed_lighting_planning,
+    register_governed_planning_review,
     register_governed_shot_planning,
     register_scene_planning,
     register_story_approval,
@@ -92,6 +93,15 @@ from .metadata import (
     StoryMetadataError,
     StoryMetadataService,
 )
+from .planning_review import (
+    GovernedPlanningReviewService,
+    PlanningCheckStatus,
+    PlanningReview,
+    PlanningReviewCheck,
+    PlanningReviewError,
+    PlanningReviewSnapshot,
+    PlanningReviewStatus,
+)
 from .scene_planning import ScenePlan, ScenePlanningError, ScenePlanStatus
 from .service import StoryService, StoryServiceError
 from .shot_planning import (
@@ -132,6 +142,7 @@ __all__ = [
     "GovernedEnvironmentPlanningService",
     "GovernedLightingPlanningError",
     "GovernedLightingPlanningService",
+    "GovernedPlanningReviewService",
     "GovernedShotPlanningError",
     "GovernedShotPlanningService",
     "IterativeScenePlanningService",
@@ -141,6 +152,12 @@ __all__ = [
     "LightingIntent",
     "LightingPlan",
     "LightingPlanStatus",
+    "PlanningCheckStatus",
+    "PlanningReview",
+    "PlanningReviewCheck",
+    "PlanningReviewError",
+    "PlanningReviewSnapshot",
+    "PlanningReviewStatus",
     "ProductionContainerType",
     "ScenePlan",
     "ScenePlanStatus",
@@ -187,6 +204,7 @@ __all__ = [
     "register_governed_camera_planning",
     "register_governed_environment_planning",
     "register_governed_lighting_planning",
+    "register_governed_planning_review",
     "register_governed_shot_planning",
     "register_scene_planning",
     "register_story_approval",
