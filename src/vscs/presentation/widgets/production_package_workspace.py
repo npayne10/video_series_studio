@@ -191,8 +191,10 @@ class ProductionPackageWorkspace(QWidget):
                 selected_row = row
         if selected_row >= 0:
             self.package_table.selectRow(selected_row)
+            self._selection_changed()
         elif rows:
             self.package_table.selectRow(0)
+            self._selection_changed()
         else:
             self._selected_shot_id = None
             self.package_summary.setText(
