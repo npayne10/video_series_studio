@@ -96,7 +96,9 @@ def register_governed_shot_planning(services: ApplicationServices) -> GovernedSh
     return services.register(GovernedShotPlanningService, planner)
 
 
-def register_governed_asset_resolution(services: ApplicationServices) -> GovernedAssetResolutionService:
+def register_governed_asset_resolution(
+    services: ApplicationServices,
+) -> GovernedAssetResolutionService:
     existing = services.get(GovernedAssetResolutionService)
     if existing is not None:
         return existing
@@ -109,7 +111,9 @@ def register_governed_asset_resolution(services: ApplicationServices) -> Governe
     return services.register(GovernedAssetResolutionService, resolver)
 
 
-def register_governed_camera_planning(services: ApplicationServices) -> GovernedCameraPlanningService:
+def register_governed_camera_planning(
+    services: ApplicationServices,
+) -> GovernedCameraPlanningService:
     existing = services.get(GovernedCameraPlanningService)
     if existing is not None:
         return existing
@@ -123,7 +127,9 @@ def register_governed_camera_planning(services: ApplicationServices) -> Governed
     return services.register(GovernedCameraPlanningService, planner)
 
 
-def register_governed_lighting_planning(services: ApplicationServices) -> GovernedLightingPlanningService:
+def register_governed_lighting_planning(
+    services: ApplicationServices,
+) -> GovernedLightingPlanningService:
     existing = services.get(GovernedLightingPlanningService)
     if existing is not None:
         return existing
