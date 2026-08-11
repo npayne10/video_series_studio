@@ -186,8 +186,12 @@ class GovernedEnvironmentPlanningService:
             weather = WeatherState.NONE
             pressure = 0.0
             surface_state = "vacuum environment; no atmospheric surface condition applies"
-            motion = "motion is governed by spacecraft/orbital dynamics; no atmospheric wind or drag"
-            constraints.append("Do not add atmospheric haze, clouds, wind or aerodynamic effects in vacuum.")
+            motion = (
+                "motion is governed by spacecraft/orbital dynamics; no atmospheric wind or drag"
+            )
+            constraints.append(
+                "Do not add atmospheric haze, clouds, wind or aerodynamic effects in vacuum."
+            )
         elif any(term in text for term in ("deep space", "interstellar", "interplanetary")):
             context = EnvironmentContext.DEEP_SPACE
             time_context = TimeContext.NOT_APPLICABLE
@@ -195,8 +199,12 @@ class GovernedEnvironmentPlanningService:
             weather = WeatherState.NONE
             pressure = 0.0
             surface_state = "vacuum environment; no planetary surface condition applies"
-            motion = "no environmental motion except physically justified particulate or vehicle motion"
-            constraints.append("Preserve vacuum conditions and physically plausible relative motion.")
+            motion = (
+                "no environmental motion except physically justified particulate or vehicle motion"
+            )
+            constraints.append(
+                "Preserve vacuum conditions and physically plausible relative motion."
+            )
         elif any(term in text for term in ("descent", "atmosphere", "atmospheric", "cloud layer")):
             context = EnvironmentContext.ATMOSPHERIC
             time_context = self._time_context(text)
@@ -213,15 +221,24 @@ class GovernedEnvironmentPlanningService:
             atmosphere = AtmosphereState.SUBMERGED
             weather = WeatherState.NONE
             visibility = 20.0
-            surface_state = "submerged surfaces must reflect local depth, material and sediment conditions"
-            motion = "water, suspended particulate and buoyant motion must remain physically coherent"
-        elif any(term in text for term in ("cave", "cavern", "underground", "subterranean", "ruins below")):
+            surface_state = (
+                "submerged surfaces must reflect local depth, material and sediment conditions"
+            )
+            motion = (
+                "water, suspended particulate and buoyant motion must remain physically coherent"
+            )
+        elif any(
+            term in text
+            for term in ("cave", "cavern", "underground", "subterranean", "ruins below")
+        ):
             context = EnvironmentContext.SUBTERRANEAN
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.UNKNOWN
             weather = WeatherState.NONE
             surface_state = "subterranean floor/wall condition follows the governed location and established geology"
-            motion = "no weather motion; dust or particulate movement only when physically motivated"
+            motion = (
+                "no weather motion; dust or particulate movement only when physically motivated"
+            )
         elif any(
             term in text
             for term in (
@@ -283,9 +300,7 @@ class GovernedEnvironmentPlanningService:
 
     def create_suggested(self, shot_id: str) -> EnvironmentPlan:
         if self.plan(shot_id) is not None:
-            raise GovernedEnvironmentPlanningError(
-                f"Environment Plan already exists for {shot_id}"
-            )
+            raise GovernedEnvironmentPlanningError(f"Environment Plan already exists for {shot_id}")
         plan = self.suggested_plan(shot_id)
         self._write((*self.list_plans(), plan))
         return plan
@@ -322,14 +337,10 @@ class GovernedEnvironmentPlanningService:
             weather_state=weather_state,
             gravity_m_s2=self._optional_range(gravity_m_s2, 0.0, 100.0, "Gravity"),
             pressure_kpa=self._optional_range(pressure_kpa, 0.0, 10000.0, "Pressure"),
-            temperature_c=self._optional_range(
-                temperature_c, -273.15, 5000.0, "Temperature"
-            ),
+            temperature_c=self._optional_range(temperature_c, -273.15, 5000.0, "Temperature"),
             visibility_m=self._optional_range(visibility_m, 0.0, 1_000_000_000.0, "Visibility"),
             surface_state=self._required(surface_state, "Surface/environment state"),
-            environmental_motion=self._required(
-                environmental_motion, "Environmental motion"
-            ),
+            environmental_motion=self._required(environmental_motion, "Environmental motion"),
             hazard_notes=hazard_notes.strip(),
             continuity_notes=continuity_notes.strip(),
             environment_constraints=self._values(environment_constraints),
@@ -374,14 +385,10 @@ class GovernedEnvironmentPlanningService:
             weather_state=weather_state,
             gravity_m_s2=self._optional_range(gravity_m_s2, 0.0, 100.0, "Gravity"),
             pressure_kpa=self._optional_range(pressure_kpa, 0.0, 10000.0, "Pressure"),
-            temperature_c=self._optional_range(
-                temperature_c, -273.15, 5000.0, "Temperature"
-            ),
+            temperature_c=self._optional_range(temperature_c, -273.15, 5000.0, "Temperature"),
             visibility_m=self._optional_range(visibility_m, 0.0, 1_000_000_000.0, "Visibility"),
             surface_state=self._required(surface_state, "Surface/environment state"),
-            environmental_motion=self._required(
-                environmental_motion, "Environmental motion"
-            ),
+            environmental_motion=self._required(environmental_motion, "Environmental motion"),
             hazard_notes=hazard_notes.strip(),
             continuity_notes=continuity_notes.strip(),
             environment_constraints=self._values(environment_constraints),
@@ -545,8 +552,7 @@ class GovernedEnvironmentPlanningService:
     def _replace(self, updated: EnvironmentPlan) -> None:
         self._write(
             tuple(
-                updated if plan.shot_id == updated.shot_id else plan
-                for plan in self.list_plans()
+                updated if plan.shot_id == updated.shot_id else plan for plan in self.list_plans()
             )
         )
 
@@ -673,10 +679,14 @@ class GovernedEnvironmentPlanningService:
                 raise GovernedEnvironmentPlanningError(
                     "Vacuum environment cannot have atmospheric weather"
                 )
-        if plan.environment_context in {
-            EnvironmentContext.ORBITAL_SPACE,
-            EnvironmentContext.DEEP_SPACE,
-        } and plan.atmosphere_state is not AtmosphereState.VACUUM:
+        if (
+            plan.environment_context
+            in {
+                EnvironmentContext.ORBITAL_SPACE,
+                EnvironmentContext.DEEP_SPACE,
+            }
+            and plan.atmosphere_state is not AtmosphereState.VACUUM
+        ):
             raise GovernedEnvironmentPlanningError(
                 "Space environment context requires vacuum atmosphere state"
             )
@@ -780,9 +790,7 @@ class GovernedEnvironmentPlanningService:
             asset_context_hash=str(raw.get("asset_context_hash", "")),
             camera_context_hash=str(raw.get("camera_context_hash", "")),
             lighting_context_hash=str(raw.get("lighting_context_hash", "")),
-            status=EnvironmentPlanStatus(
-                str(raw.get("status", EnvironmentPlanStatus.DRAFT.value))
-            ),
+            status=EnvironmentPlanStatus(str(raw.get("status", EnvironmentPlanStatus.DRAFT.value))),
         )
 
     @staticmethod

@@ -190,9 +190,7 @@ class EnvironmentPlanEditorDialog(QDialog):
             )
             return
         if not self.motion_edit.toPlainText().strip():
-            QMessageBox.warning(
-                self, "Environment Planner", "Environmental motion is required."
-            )
+            QMessageBox.warning(self, "Environment Planner", "Environmental motion is required.")
             return
         try:
             self.values()
@@ -303,8 +301,8 @@ class GovernedEnvironmentPlannerDialog(QDialog):
         camera = self.service.camera.plan(self.shot_id) if shot_ready else None
         camera_ready = camera is not None and self.service.camera.is_production_ready(camera)
         lighting = self.service.lighting.plan(self.shot_id) if camera_ready else None
-        lighting_ready = (
-            lighting is not None and self.service.lighting.is_production_ready(lighting)
+        lighting_ready = lighting is not None and self.service.lighting.is_production_ready(
+            lighting
         )
         self.upstream_label.setText(
             f"Shot: {'Ready/current' if shot_ready else 'not production-ready'} • "
@@ -367,9 +365,7 @@ class GovernedEnvironmentPlannerDialog(QDialog):
         if shot is None:
             return
         suggested = self.service.suggested_plan(self.shot_id)
-        dialog = EnvironmentPlanEditorDialog(
-            self.service, shot, suggested=suggested, parent=self
-        )
+        dialog = EnvironmentPlanEditorDialog(self.service, shot, suggested=suggested, parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         values = dialog.values()

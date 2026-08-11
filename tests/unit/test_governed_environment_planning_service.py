@@ -255,9 +255,7 @@ def test_surface_suggestion_keeps_unknown_xorix_physics_unknown(tmp_path: Path) 
 
 def test_environment_planning_requires_current_ready_lighting(tmp_path: Path) -> None:
     service, _scenes, shots, _assets, _camera, lighting = _service(tmp_path)
-    lighting.lighting_plan = replace(
-        lighting.lighting_plan, status=LightingPlanStatus.DRAFT
-    )
+    lighting.lighting_plan = replace(lighting.lighting_plan, status=LightingPlanStatus.DRAFT)
 
     with pytest.raises(GovernedEnvironmentPlanningError, match="Ready governed Lighting Plan"):
         service.create_suggested(shots.shot.shot_id)
@@ -284,7 +282,9 @@ def test_changed_lighting_makes_ready_environment_plan_stale(tmp_path: Path) -> 
     assert not service.is_production_ready(ready)
 
 
-def test_ready_environment_is_immutable_and_rejects_impossible_vacuum_weather(tmp_path: Path) -> None:
+def test_ready_environment_is_immutable_and_rejects_impossible_vacuum_weather(
+    tmp_path: Path,
+) -> None:
     service, _scenes, shots, _assets, _camera, _lighting = _service(tmp_path)
     ready = service.mark_ready(service.create_suggested(shots.shot.shot_id).shot_id)
 
