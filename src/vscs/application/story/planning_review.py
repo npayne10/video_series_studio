@@ -130,11 +130,15 @@ class GovernedPlanningReviewService:
         payload: dict[str, Any] = {"shot_id": normalized}
 
         shot_ready = shot is not None and self.shots.is_production_ready(shot)
-        checks.append(self._check("Shot", shot_ready, "Ready and current", "Missing, Draft or stale"))
+        checks.append(
+            self._check("Shot", shot_ready, "Ready and current", "Missing, Draft or stale")
+        )
         payload["shot"] = asdict(shot) if shot is not None else None
 
         bindings = self.assets.list_bindings(shot_id=normalized)
-        assets_ready = bool(bindings) and all(self.assets.is_production_ready(item) for item in bindings)
+        assets_ready = bool(bindings) and all(
+            self.assets.is_production_ready(item) for item in bindings
+        )
         checks.append(
             self._check(
                 "Assets",
@@ -147,7 +151,9 @@ class GovernedPlanningReviewService:
 
         camera = self.camera.plan(normalized)
         camera_ready = camera is not None and self.camera.is_production_ready(camera)
-        checks.append(self._check("Camera", camera_ready, "Ready and current", "Missing, Draft or stale"))
+        checks.append(
+            self._check("Camera", camera_ready, "Ready and current", "Missing, Draft or stale")
+        )
         payload["camera"] = asdict(camera) if camera is not None else None
 
         lighting = self.lighting.plan(normalized)
@@ -158,7 +164,9 @@ class GovernedPlanningReviewService:
         payload["lighting"] = asdict(lighting) if lighting is not None else None
 
         environment = self.environment.plan(normalized)
-        environment_ready = environment is not None and self.environment.is_production_ready(environment)
+        environment_ready = environment is not None and self.environment.is_production_ready(
+            environment
+        )
         checks.append(
             self._check(
                 "Environment",
@@ -191,7 +199,9 @@ class GovernedPlanningReviewService:
     def update_notes(self, shot_id: str, reviewer_notes: str) -> PlanningReview:
         current = self._require_review(shot_id)
         if current.status is PlanningReviewStatus.APPROVED:
-            raise PlanningReviewError("Approved Planning Reviews must return to Draft before editing")
+            raise PlanningReviewError(
+                "Approved Planning Reviews must return to Draft before editing"
+            )
         snapshot = self.snapshot(current.shot_id)
         updated = replace(
             current,
