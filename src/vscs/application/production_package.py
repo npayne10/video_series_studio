@@ -24,6 +24,7 @@ class ProductionPackageStatus(StrEnum):
     """Lifecycle state of the canonical Phase 19.4 package."""
 
     FOUNDATION = "foundation"
+    COMPILING = "compiling"
     STALE = "stale"
 
 
@@ -143,6 +144,42 @@ class ProductionPackageService:
         current = self.current_package(package.shot_id)
         return current is not None and current.package_id == package.package_id
 
+    def derive_action_performance(
+        self,
+        shot_id: str,
+        compiled: dict[str, Any],
+    ) -> ProductionPackage:
+        """Append a deterministic package revision containing Action & Performance output."""
+        current = self.require_current_package(shot_id)
+        if current.action_performance == compiled:
+            return current
+        data = asdict(current)
+        data.pop("package_id", None)
+        data.pop("package_fingerprint", None)
+        data["action_performance"] = dict(compiled)
+        validation = dict(current.validation)
+        validation["action_performance_complete"] = True
+        data["validation"] = validation
+        data["status"] = ProductionPackageStatus.COMPILING.value
+        canonical = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
+        fingerprint = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        package_id = f"PP-{current.shot_id}-{fingerprint[:12].upper()}"
+        existing = next(
+            (
+                package
+                for package in reversed(self.list_packages(shot_id=current.shot_id))
+                if package.package_fingerprint == fingerprint
+            ),
+            None,
+        )
+        if existing is not None:
+            return existing
+        data["package_id"] = package_id
+        data["package_fingerprint"] = fingerprint
+        derived = self._from_dict(data)
+        self._write((*self.list_packages(), derived))
+        return derived
+
     def _build(self, integrated: IntegratedPlanningPackage) -> ProductionPackage:
         source = integrated.payload()
         shot = self._object(source, "shot")
@@ -151,8 +188,6 @@ class ProductionPackageService:
         lighting = self._object(source, "lighting")
         environment = self._object(source, "environment")
 
-        # Phase 19.4.1 deliberately reserves specialist compiler sections without
-        # inventing story action, continuity, style, dialogue, effects or provider text.
         foundation: dict[str, Any] = {
             "schema_version": self.SCHEMA_VERSION,
             "shot_id": integrated.shot_id,
