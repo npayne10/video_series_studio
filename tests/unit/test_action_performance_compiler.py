@@ -80,7 +80,9 @@ def test_suggested_draft_preserves_governed_shot_story_without_invention(tmp_pat
     assert draft.status is ActionPerformanceStatus.DRAFT
 
 
-def test_ready_action_performance_compiles_into_provider_neutral_package_section(tmp_path: Path) -> None:
+def test_ready_action_performance_compiles_into_provider_neutral_package_section(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
     service.create_from_current_package("SHT-001")
     service.save(
@@ -140,7 +142,9 @@ def test_ready_draft_is_immutable_until_returned_to_draft(tmp_path: Path) -> Non
 def test_upstream_production_package_change_makes_action_performance_stale(tmp_path: Path) -> None:
     service, packages = _service(tmp_path)
     draft = service.create_from_current_package("SHT-001")
-    packages.value = replace(packages.value, package_id="PP-SHT-001-BBBB", source_fingerprint="source-2")
+    packages.value = replace(
+        packages.value, package_id="PP-SHT-001-BBBB", source_fingerprint="source-2"
+    )
 
     assert not service.is_current(draft)
     with pytest.raises(ActionPerformanceError, match="stale"):
