@@ -9,6 +9,7 @@ from vscs.infrastructure.services import ApplicationServices
 
 from .approval import StoryApprovalService
 from .asset_resolver import GovernedAssetResolutionService
+from .camera_planning import GovernedCameraPlanningService
 from .episode_planning import EpisodePlanningService
 from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
@@ -33,10 +34,7 @@ def register_story_metadata(services: ApplicationServices) -> StoryMetadataServi
     if existing is not None:
         return existing
     lifecycle = register_story_lifecycle(services)
-    metadata = StoryMetadataService(
-        services.require(ProjectService),
-        lifecycle,
-    )
+    metadata = StoryMetadataService(services.require(ProjectService), lifecycle)
     return services.register(StoryMetadataService, metadata)
 
 
@@ -46,10 +44,7 @@ def register_story_status(services: ApplicationServices) -> StoryStatusService:
     if existing is not None:
         return existing
     lifecycle = register_story_lifecycle(services)
-    status = StoryStatusService(
-        services.require(ProjectService),
-        lifecycle,
-    )
+    status = StoryStatusService(services.require(ProjectService), lifecycle)
     return services.register(StoryStatusService, status)
 
 
@@ -58,14 +53,11 @@ def register_story_approval(services: ApplicationServices) -> StoryApprovalServi
     existing = services.get(StoryApprovalService)
     if existing is not None:
         return existing
-    lifecycle = register_story_lifecycle(services)
-    metadata = register_story_metadata(services)
-    status = register_story_status(services)
     approval = StoryApprovalService(
         services.require(ProjectService),
-        lifecycle,
-        metadata,
-        status,
+        register_story_lifecycle(services),
+        register_story_metadata(services),
+        register_story_status(services),
     )
     return services.register(StoryApprovalService, approval)
 
@@ -124,3 +116,20 @@ def register_governed_asset_resolution(
         services.require(AssetBrowserService),
     )
     return services.register(GovernedAssetResolutionService, resolver)
+
+
+def register_governed_camera_planning(
+    services: ApplicationServices,
+) -> GovernedCameraPlanningService:
+    """Register authoritative Camera Planning beneath governed Shot/Asset Planning."""
+    existing = services.get(GovernedCameraPlanningService)
+    if existing is not None:
+        return existing
+    planner = GovernedCameraPlanningService(
+        services.require(ProjectService),
+        register_governed_shot_planning(services),
+        register_governed_asset_resolution(services),
+        services.require(AssetResolutionService),
+        services.require(AssetBrowserService),
+    )
+    return services.register(GovernedCameraPlanningService, planner)
