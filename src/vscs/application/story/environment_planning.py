@@ -804,4 +804,6 @@ class GovernedEnvironmentPlanningService:
             return None
         if isinstance(value, (int, float, str)):
             return float(value)
-        raise TypeError(f"Environment numeric value must be int, float, str or null, got {type(value).__name__}")
+        raise TypeError(
+            f"Environment numeric value must be int, float, str or null, got {type(value).__name__}"
+        )
