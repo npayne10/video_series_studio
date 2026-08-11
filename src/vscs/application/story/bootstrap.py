@@ -10,6 +10,7 @@ from vscs.infrastructure.services import ApplicationServices
 from .approval import StoryApprovalService
 from .asset_resolver import GovernedAssetResolutionService
 from .camera_planning import GovernedCameraPlanningService
+from .environment_planning import GovernedEnvironmentPlanningService
 from .episode_planning import EpisodePlanningService
 from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
@@ -152,3 +153,21 @@ def register_governed_lighting_planning(
         services.require(AssetBrowserService),
     )
     return services.register(GovernedLightingPlanningService, planner)
+
+
+def register_governed_environment_planning(
+    services: ApplicationServices,
+) -> GovernedEnvironmentPlanningService:
+    """Register authoritative Environment Planning beneath governed Lighting Planning."""
+    existing = services.get(GovernedEnvironmentPlanningService)
+    if existing is not None:
+        return existing
+    planner = GovernedEnvironmentPlanningService(
+        services.require(ProjectService),
+        register_scene_planning(services),
+        register_governed_shot_planning(services),
+        register_governed_asset_resolution(services),
+        register_governed_camera_planning(services),
+        register_governed_lighting_planning(services),
+    )
+    return services.register(GovernedEnvironmentPlanningService, planner)
