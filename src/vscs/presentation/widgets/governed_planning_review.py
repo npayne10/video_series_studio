@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
 
 from vscs.application.story import (
@@ -32,7 +33,7 @@ class GovernedPlanningReviewDialog(QDialog):
         self,
         service: GovernedPlanningReviewService,
         shot: ShotPlan,
-        parent: object | None = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.service = service
