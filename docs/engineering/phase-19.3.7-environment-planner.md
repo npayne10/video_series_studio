@@ -114,3 +114,5 @@ Phase acceptance requires the untouched repository CI pipeline to pass:
 - configured coverage threshold
 
 No temporary formatting or validation workflow is part of the final phase branch. The final acceptance run must originate from a normal branch commit after all temporary maintenance workflows have been removed.
+
+The final validation commit exists only to exercise that standard repository CI gate against the cleaned Phase 19.3.7 branch.
