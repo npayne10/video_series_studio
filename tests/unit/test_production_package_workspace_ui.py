@@ -71,7 +71,9 @@ class _Packages:
 
 
 class _Actions:
-    def __init__(self, draft: ActionPerformanceDraft | None = None, *, current: bool = True) -> None:
+    def __init__(
+        self, draft: ActionPerformanceDraft | None = None, *, current: bool = True
+    ) -> None:
         self.value = draft
         self.current = current
         self.rebased = False
