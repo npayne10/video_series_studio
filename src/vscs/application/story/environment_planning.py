@@ -180,9 +180,7 @@ class GovernedEnvironmentPlanningService:
             "Do not invent environmental physics, weather or atmospheric properties not established by canon."
         ]
 
-        if any(
-            term in setting_text for term in ("orbit", "orbital", "vacuum", "space exterior")
-        ):
+        if any(term in setting_text for term in ("orbit", "orbital", "vacuum", "space exterior")):
             context = EnvironmentContext.ORBITAL_SPACE
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.VACUUM
@@ -195,9 +193,7 @@ class GovernedEnvironmentPlanningService:
             constraints.append(
                 "Do not add atmospheric haze, clouds, wind or aerodynamic effects in vacuum."
             )
-        elif any(
-            term in setting_text for term in ("deep space", "interstellar", "interplanetary")
-        ):
+        elif any(term in setting_text for term in ("deep space", "interstellar", "interplanetary")):
             context = EnvironmentContext.DEEP_SPACE
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.VACUUM
@@ -211,8 +207,7 @@ class GovernedEnvironmentPlanningService:
                 "Preserve vacuum conditions and physically plausible relative motion."
             )
         elif any(
-            term in setting_text
-            for term in ("descent", "atmosphere", "atmospheric", "cloud layer")
+            term in setting_text for term in ("descent", "atmosphere", "atmospheric", "cloud layer")
         ):
             context = EnvironmentContext.ATMOSPHERIC
             time_context = self._time_context(text)
