@@ -67,7 +67,9 @@ class ActionPerformanceCompilerService:
             raw = json.loads(path.read_text(encoding="utf-8"))
             drafts = tuple(self._from_dict(item) for item in raw.get("action_performance", []))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise ActionPerformanceError(f"Unable to load Action & Performance drafts: {exc}") from exc
+            raise ActionPerformanceError(
+                f"Unable to load Action & Performance drafts: {exc}"
+            ) from exc
         return tuple(sorted(drafts, key=lambda item: item.shot_id))
 
     def draft(self, shot_id: str) -> ActionPerformanceDraft | None:
@@ -109,7 +111,9 @@ class ActionPerformanceCompilerService:
     ) -> ActionPerformanceDraft:
         current = self._require_draft(shot_id)
         if current.status is ActionPerformanceStatus.READY:
-            raise ActionPerformanceError("Ready Action & Performance must return to Draft before editing")
+            raise ActionPerformanceError(
+                "Ready Action & Performance must return to Draft before editing"
+            )
         package = self.packages.require_current_package(current.shot_id)
         updated = replace(
             current,
@@ -128,9 +132,13 @@ class ActionPerformanceCompilerService:
     def mark_ready(self, shot_id: str) -> ActionPerformanceDraft:
         current = self._require_draft(shot_id)
         if not current.temporal_narrative.strip():
-            raise ActionPerformanceError("Temporal narrative is required before Action & Performance can be Ready")
+            raise ActionPerformanceError(
+                "Temporal narrative is required before Action & Performance can be Ready"
+            )
         if not self.is_current(current):
-            raise ActionPerformanceError("Action & Performance is stale against the current Production Package")
+            raise ActionPerformanceError(
+                "Action & Performance is stale against the current Production Package"
+            )
         ready = replace(current, status=ActionPerformanceStatus.READY)
         self._replace(ready)
         self.compile(ready.shot_id)
@@ -167,7 +175,9 @@ class ActionPerformanceCompilerService:
     def _require_draft(self, shot_id: str) -> ActionPerformanceDraft:
         draft = self.draft(shot_id)
         if draft is None:
-            raise ActionPerformanceError(f"No Action & Performance exists for {shot_id.strip().upper()}")
+            raise ActionPerformanceError(
+                f"No Action & Performance exists for {shot_id.strip().upper()}"
+            )
         return draft
 
     def _replace(self, updated: ActionPerformanceDraft) -> None:
