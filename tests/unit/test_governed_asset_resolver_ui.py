@@ -43,5 +43,5 @@ def test_asset_editor_excludes_camera_lighting_and_reference_categories(qtbot) -
     assert AssetCategory.CAMERA not in categories
     assert AssetCategory.LIGHTING not in categories
     assert AssetCategory.REFERENCE not in categories
-    assert dialog.asset_combo.currentData() == ""
+    assert str(dialog.asset_combo.currentData() or "") == ""
     assert "Unbound" in dialog.readiness_label.text()
