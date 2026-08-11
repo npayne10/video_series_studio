@@ -19,6 +19,7 @@ from .bootstrap import (
     register_governed_camera_planning,
     register_governed_environment_planning,
     register_governed_lighting_planning,
+    register_governed_planning_integration,
     register_governed_planning_review,
     register_governed_shot_planning,
     register_scene_planning,
@@ -93,6 +94,11 @@ from .metadata import (
     StoryMetadataError,
     StoryMetadataService,
 )
+from .planning_integration import (
+    GovernedPlanningIntegrationService,
+    IntegratedPlanningPackage,
+    PlanningIntegrationError,
+)
 from .planning_review import (
     GovernedPlanningReviewService,
     PlanningCheckStatus,
@@ -142,9 +148,11 @@ __all__ = [
     "GovernedEnvironmentPlanningService",
     "GovernedLightingPlanningError",
     "GovernedLightingPlanningService",
+    "GovernedPlanningIntegrationService",
     "GovernedPlanningReviewService",
     "GovernedShotPlanningError",
     "GovernedShotPlanningService",
+    "IntegratedPlanningPackage",
     "IterativeScenePlanningService",
     "KeyDirection",
     "LensFamily",
@@ -153,6 +161,7 @@ __all__ = [
     "LightingPlan",
     "LightingPlanStatus",
     "PlanningCheckStatus",
+    "PlanningIntegrationError",
     "PlanningReview",
     "PlanningReviewCheck",
     "PlanningReviewError",
@@ -204,6 +213,7 @@ __all__ = [
     "register_governed_camera_planning",
     "register_governed_environment_planning",
     "register_governed_lighting_planning",
+    "register_governed_planning_integration",
     "register_governed_planning_review",
     "register_governed_shot_planning",
     "register_scene_planning",

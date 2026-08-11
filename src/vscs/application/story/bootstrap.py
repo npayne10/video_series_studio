@@ -16,6 +16,7 @@ from .iterative_scene_planning import IterativeScenePlanningService
 from .lifecycle import StoryLifecycleService
 from .lighting_planning import GovernedLightingPlanningService
 from .metadata import StoryMetadataService
+from .planning_integration import GovernedPlanningIntegrationService
 from .planning_review import GovernedPlanningReviewService
 from .service import StoryService
 from .shot_planning import GovernedShotPlanningService
@@ -177,3 +178,17 @@ def register_governed_planning_review(
         register_governed_environment_planning(services),
     )
     return services.register(GovernedPlanningReviewService, review)
+
+
+def register_governed_planning_integration(
+    services: ApplicationServices,
+) -> GovernedPlanningIntegrationService:
+    """Register the immutable Phase 19.3 → Phase 19.4 planning handoff."""
+    existing = services.get(GovernedPlanningIntegrationService)
+    if existing is not None:
+        return existing
+    integration = GovernedPlanningIntegrationService(
+        services.require(ProjectService),
+        register_governed_planning_review(services),
+    )
+    return services.register(GovernedPlanningIntegrationService, integration)
