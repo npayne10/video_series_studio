@@ -123,7 +123,9 @@ class GovernedPlanningReviewDialog(QDialog):
         )
 
         integration = self._integration_service()
-        package = integration.current_package(self.shot.shot_id) if integration is not None else None
+        package = (
+            integration.current_package(self.shot.shot_id) if integration is not None else None
+        )
         if package is not None:
             self.integration_status.setText(
                 f"<b>Planning Integration:</b> CURRENT — {package.package_id}<br>"
