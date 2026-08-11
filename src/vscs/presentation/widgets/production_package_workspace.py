@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -62,7 +64,9 @@ class ProductionPackageWorkspace(QWidget):
         left_layout = QVBoxLayout(left)
         left_layout.addWidget(QLabel("Current approved Shots", left))
         self.package_table = QTableWidget(0, 4, left)
-        self.package_table.setHorizontalHeaderLabels(("Shot", "Production Package", "Action", "Source"))
+        self.package_table.setHorizontalHeaderLabels(
+            ("Shot", "Production Package", "Action", "Source")
+        )
         self.package_table.horizontalHeader().setStretchLastSection(True)
         self.package_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.package_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -156,7 +160,10 @@ class ProductionPackageWorkspace(QWidget):
             draft = self.action_performance.draft(package.shot_id)
             if draft is None:
                 action_state = "Not started"
-            elif draft.status is ActionPerformanceStatus.READY and self.action_performance.is_current(draft):
+            elif (
+                draft.status is ActionPerformanceStatus.READY
+                and self.action_performance.is_current(draft)
+            ):
                 action_state = "Ready / Compiled"
             elif not self.action_performance.is_current(draft):
                 action_state = f"{draft.status.value.title()} / Stale"
@@ -225,21 +232,28 @@ class ProductionPackageWorkspace(QWidget):
         ready = draft.status is ActionPerformanceStatus.READY
         self.create_button.setEnabled(False)
         self.save_button.setEnabled(not ready and not stale)
-        self.ready_button.setEnabled(not ready and not stale and bool(draft.temporal_narrative.strip()))
+        self.ready_button.setEnabled(
+            not ready and not stale and bool(draft.temporal_narrative.strip())
+        )
         self.draft_button.setEnabled(ready)
         self._fields_read_only(ready or stale)
 
     def _create(self) -> None:
         if self._selected_shot_id is None:
             return
-        self._run(lambda: self.action_performance.create_from_current_package(self._selected_shot_id))
+        self._run(
+            lambda: self.action_performance.create_from_current_package(
+                self._selected_shot_id or ""
+            )
+        )
 
     def _save(self) -> None:
         if self._selected_shot_id is None:
             return
+        shot_id = self._selected_shot_id
         self._run(
             lambda: self.action_performance.save(
-                self._selected_shot_id,
+                shot_id,
                 temporal_narrative=self.temporal_narrative.toPlainText(),
                 spoken_content=self.spoken_content.toPlainText(),
                 performance_direction=self.performance_direction.toPlainText(),
@@ -252,23 +266,30 @@ class ProductionPackageWorkspace(QWidget):
     def _mark_ready(self) -> None:
         if self._selected_shot_id is None:
             return
+        shot_id = self._selected_shot_id
         self._save()
-        self._run(lambda: self.action_performance.mark_ready(self._selected_shot_id))
+        self._run(lambda: self.action_performance.mark_ready(shot_id))
 
     def _return_to_draft(self) -> None:
         if self._selected_shot_id is None:
             return
-        self._run(lambda: self.action_performance.return_to_draft(self._selected_shot_id))
+        shot_id = self._selected_shot_id
+        self._run(lambda: self.action_performance.return_to_draft(shot_id))
 
-    def _run(self, action: object) -> None:
+    def _run(self, action: Callable[[], object]) -> None:
         try:
-            action()  # type: ignore[operator]
+            action()
         except ActionPerformanceError as exc:
             QMessageBox.warning(self, "Action & Performance", str(exc))
         self.refresh()
 
     def _set_editor_enabled(self, enabled: bool) -> None:
-        for button in (self.create_button, self.save_button, self.ready_button, self.draft_button):
+        for button in (
+            self.create_button,
+            self.save_button,
+            self.ready_button,
+            self.draft_button,
+        ):
             button.setEnabled(enabled)
         self._fields_read_only(not enabled)
 
