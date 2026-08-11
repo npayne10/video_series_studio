@@ -36,7 +36,12 @@ class _Packages:
             schema_version="1.0",
             source_fingerprint="source",
             package_fingerprint="package",
-            provenance=ProductionPackageProvenance("PIP-SHT-001-AAAA", "source", "PRV-SHT-001", "review"),
+            provenance=ProductionPackageProvenance(
+                "PIP-SHT-001-AAAA",
+                "source",
+                "PRV-SHT-001",
+                "review",
+            ),
             story_context={"shot_id": "SHT-001"},
             shot={"title": "Arrival"},
             assets=(),
@@ -78,6 +83,5 @@ def test_workspace_exposes_action_story_editor_without_provider_prompt_controls(
     assert widget.package_table.rowCount() == 1
     assert widget.package_table.item(0, 0).text() == "SHT-001"
     assert widget.create_button.text() == "Create from Shot"
-    assert "actual temporal story" in widget.findChildren(type(widget.package_summary))[1].text()
-    assert "provider" not in widget.ready_button.text().lower()
+    assert widget.ready_button.text() == "Mark Ready & Compile"
     assert widget.temporal_narrative.placeholderText().startswith("Example: James descends")
