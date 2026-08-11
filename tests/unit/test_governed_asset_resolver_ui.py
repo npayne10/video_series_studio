@@ -35,8 +35,7 @@ def test_asset_editor_excludes_camera_lighting_and_reference_categories(qtbot) -
     qtbot.addWidget(dialog)
 
     categories = {
-        dialog.category_combo.itemData(index)
-        for index in range(dialog.category_combo.count())
+        dialog.category_combo.itemData(index) for index in range(dialog.category_combo.count())
     }
 
     assert AssetCategory.CHARACTER in categories

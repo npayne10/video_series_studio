@@ -62,9 +62,7 @@ def _update_asset_action(dialog: Any) -> None:
     shot = dialog._selected()
     service = _asset_service(dialog)
     button.setEnabled(
-        service is not None
-        and shot is not None
-        and dialog.service.is_production_ready(shot)
+        service is not None and shot is not None and dialog.service.is_production_ready(shot)
     )
 
 

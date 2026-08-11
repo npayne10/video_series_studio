@@ -123,10 +123,7 @@ class GovernedAssetResolutionService:
         """Return the next requirement sequence number within one Shot."""
         return (
             max(
-                (
-                    binding.sequence_number
-                    for binding in self.list_bindings(shot_id=shot_id)
-                ),
+                (binding.sequence_number for binding in self.list_bindings(shot_id=shot_id)),
                 default=0,
             )
             + 1
@@ -261,13 +258,13 @@ class GovernedAssetResolutionService:
                 "Asset binding is stale because the Shot contract changed; edit and save it before marking Ready"
             )
         if not current.asset_id:
-            raise GovernedAssetResolutionError("A project asset must be selected before marking Ready")
+            raise GovernedAssetResolutionError(
+                "A project asset must be selected before marking Ready"
+            )
         resolution = self.resolution(current)
         if resolution is None or resolution.status is not AssetResolutionStatus.RESOLVED:
             message = self._resolution_message(resolution)
-            raise GovernedAssetResolutionError(
-                f"Selected asset is not production-ready: {message}"
-            )
+            raise GovernedAssetResolutionError(f"Selected asset is not production-ready: {message}")
         if resolution.fingerprint is None:
             raise GovernedAssetResolutionError(
                 "Selected asset has no dependency fingerprint and cannot be approved"
@@ -297,9 +294,7 @@ class GovernedAssetResolutionService:
                 "Ready asset bindings must return to Draft before deletion"
             )
         remaining = tuple(
-            binding
-            for binding in self.list_bindings()
-            if binding.binding_id != current.binding_id
+            binding for binding in self.list_bindings() if binding.binding_id != current.binding_id
         )
         self._write(remaining)
         return True
@@ -321,8 +316,7 @@ class GovernedAssetResolutionService:
             for index, binding_id in enumerate(ordered_binding_ids, start=1)
         }
         all_bindings = tuple(
-            replacements.get(binding.binding_id, binding)
-            for binding in self.list_bindings()
+            replacements.get(binding.binding_id, binding) for binding in self.list_bindings()
         )
         self._write(all_bindings)
         return self.list_bindings(shot_id=shot_id)
@@ -418,9 +412,7 @@ class GovernedAssetResolutionService:
             notes=str(raw.get("notes", "")),
             shot_contract_hash=str(raw.get("shot_contract_hash", "")),
             asset_dependency_hash=str(raw.get("asset_dependency_hash", "")),
-            status=AssetBindingStatus(
-                str(raw.get("status", AssetBindingStatus.DRAFT.value))
-            ),
+            status=AssetBindingStatus(str(raw.get("status", AssetBindingStatus.DRAFT.value))),
         )
 
     @classmethod
