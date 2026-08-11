@@ -124,9 +124,19 @@ class AssetBindingEditorDialog(QDialog):
         self.asset_combo.currentIndexChanged.connect(self._refresh_readiness)
         self._reload_assets(binding.asset_id if binding else "")
 
+    def _selected_category(self) -> AssetCategory | None:
+        """Return the current category regardless of Qt user-data coercion."""
+        raw = self.category_combo.currentData()
+        if raw is None:
+            return None
+        try:
+            return AssetCategory(str(raw))
+        except ValueError:
+            return None
+
     def _reload_assets(self, selected_asset_id: str = "") -> None:
-        category = self.category_combo.currentData()
-        if not isinstance(category, AssetCategory):
+        category = self._selected_category()
+        if category is None:
             return
         current_asset = selected_asset_id or str(self.asset_combo.currentData() or "")
         self.asset_combo.blockSignals(True)
@@ -145,8 +155,8 @@ class AssetBindingEditorDialog(QDialog):
 
     def _refresh_readiness(self) -> None:
         asset_id = str(self.asset_combo.currentData() or "")
-        category = self.category_combo.currentData()
-        if not asset_id or not isinstance(category, AssetCategory):
+        category = self._selected_category()
+        if not asset_id or category is None:
             self.readiness_label.setText("Unbound — requirement may be saved as Draft.")
             return
         result = self.service.resolver.resolve(
@@ -180,8 +190,8 @@ class AssetBindingEditorDialog(QDialog):
 
     def values(self) -> AssetBindingEditorValues:
         """Return normalized editor values."""
-        category = self.category_combo.currentData()
-        if not isinstance(category, AssetCategory):
+        category = self._selected_category()
+        if category is None:
             raise GovernedAssetResolutionError("A valid asset category is required")
         return AssetBindingEditorValues(
             sequence_number=self.sequence_spin.value(),
