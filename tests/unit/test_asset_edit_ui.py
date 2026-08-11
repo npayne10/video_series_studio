@@ -37,6 +37,18 @@ def test_asset_edit_dialog_protects_identity_and_governs_master(qtbot, tmp_path:
     assert dialog.open_cap_button.text() == "Open Canonical Profile"
 
 
+def test_asset_edit_dialog_preserves_category_and_status_through_qt(qtbot, tmp_path: Path) -> None:
+    dialog = AssetEditDialog(_asset(None), tmp_path)
+    qtbot.addWidget(dialog)
+
+    assert dialog.category.currentData() == AssetCategory.SHIP.value
+    assert dialog.status.currentData() == AssetStatus.APPROVED.value
+
+    value = dialog.value()
+    assert value.category is AssetCategory.SHIP
+    assert value.status is AssetStatus.APPROVED
+
+
 def test_asset_edit_dialog_marks_missing_master(qtbot, tmp_path: Path) -> None:
     dialog = AssetEditDialog(_asset(None), tmp_path)
     qtbot.addWidget(dialog)
