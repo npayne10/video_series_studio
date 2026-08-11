@@ -51,7 +51,7 @@ class _Planner:
 class _Assets:
     def __init__(self) -> None:
         self.binding = _Binding("BIND-001", "SHOT-001")
-        self.resolution = _Resolution(
+        self.resolved = _Resolution(
             "CAP-SHP-001",
             "CAP-SHP-001",
             "REF-MASTER-001",
@@ -62,9 +62,9 @@ class _Assets:
         assert shot_id == "SHOT-001"
         return (self.binding,)
 
-    def resolved_asset(self, binding: _Binding) -> _Resolution | None:
+    def resolution(self, binding: _Binding) -> _Resolution | None:
         assert binding == self.binding
-        return self.resolution
+        return self.resolved
 
 
 class _Reviews:
