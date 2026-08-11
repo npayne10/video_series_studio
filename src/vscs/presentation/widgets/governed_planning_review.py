@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -17,7 +19,6 @@ from PySide6.QtWidgets import (
 
 from vscs.application.story import (
     GovernedPlanningReviewService,
-    PlanningCheckStatus,
     PlanningReviewError,
     PlanningReviewStatus,
     ShotPlan,
@@ -94,7 +95,6 @@ class GovernedPlanningReviewDialog(QDialog):
 
         if review is None:
             state = "Not started"
-            current = False
             self.notes.clear()
         else:
             current = self.service.is_current(review)
@@ -118,7 +118,12 @@ class GovernedPlanningReviewDialog(QDialog):
         self.draft_button.setEnabled(approved)
 
     def _create(self) -> None:
-        self._run(lambda: self.service.create(self.shot.shot_id, reviewer_notes=self.notes.toPlainText()))
+        self._run(
+            lambda: self.service.create(
+                self.shot.shot_id,
+                reviewer_notes=self.notes.toPlainText(),
+            )
+        )
 
     def _save(self) -> None:
         self._run(lambda: self.service.update_notes(self.shot.shot_id, self.notes.toPlainText()))
@@ -129,9 +134,9 @@ class GovernedPlanningReviewDialog(QDialog):
     def _return_to_draft(self) -> None:
         self._run(lambda: self.service.return_to_draft(self.shot.shot_id))
 
-    def _run(self, action: object) -> None:
+    def _run(self, action: Callable[[], object]) -> None:
         try:
-            action()  # type: ignore[operator]
+            action()
         except PlanningReviewError as exc:
             QMessageBox.warning(self, "Planning Review", str(exc))
         self.refresh()
