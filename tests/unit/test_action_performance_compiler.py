@@ -149,3 +149,46 @@ def test_upstream_production_package_change_makes_action_performance_stale(tmp_p
     assert not service.is_current(draft)
     with pytest.raises(ActionPerformanceError, match="stale"):
         service.mark_ready("SHT-001")
+
+
+def test_stale_draft_can_rebase_without_losing_authored_content(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    service.create_from_current_package("SHT-001")
+    authored = service.save(
+        "SHT-001",
+        temporal_narrative="James crosses the bridge, pauses, then speaks to Cheryl.",
+        spoken_content='James: "Good morning."',
+        performance_direction="Quiet familiarity.",
+        opening_state="James enters from the stairs.",
+        closing_state="James and Cheryl stand together at the viewport.",
+        timing_notes="Complete naturally within 12 seconds.",
+    )
+    packages.value = replace(
+        packages.value, package_id="PP-SHT-001-BBBB", source_fingerprint="source-2"
+    )
+
+    assert not service.is_current(authored)
+    rebased = service.rebase_to_current_package("SHT-001")
+
+    assert service.is_current(rebased)
+    assert rebased.status is ActionPerformanceStatus.DRAFT
+    assert rebased.source_package_id == "PP-SHT-001-BBBB"
+    assert rebased.source_fingerprint == "source-2"
+    assert rebased.temporal_narrative == authored.temporal_narrative
+    assert rebased.spoken_content == authored.spoken_content
+    assert rebased.performance_direction == authored.performance_direction
+    assert rebased.opening_state == authored.opening_state
+    assert rebased.closing_state == authored.closing_state
+    assert rebased.timing_notes == authored.timing_notes
+
+
+def test_ready_stale_draft_must_return_to_draft_before_rebase(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    service.create_from_current_package("SHT-001")
+    service.mark_ready("SHT-001")
+    packages.value = replace(
+        packages.value, package_id="PP-SHT-001-BBBB", source_fingerprint="source-2"
+    )
+
+    with pytest.raises(ActionPerformanceError, match="return to Draft"):
+        service.rebase_to_current_package("SHT-001")
