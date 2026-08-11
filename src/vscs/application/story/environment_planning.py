@@ -153,6 +153,7 @@ class GovernedEnvironmentPlanningService:
     def suggested_plan(self, shot_id: str) -> EnvironmentPlan:
         """Return deterministic conservative environment defaults without persisting them."""
         shot, scene, camera, lighting = self._require_ready_context(shot_id)
+        setting_text = scene.setting_requirement.lower()
         text = " ".join(
             (
                 scene.setting_requirement,
@@ -179,7 +180,9 @@ class GovernedEnvironmentPlanningService:
             "Do not invent environmental physics, weather or atmospheric properties not established by canon."
         ]
 
-        if any(term in text for term in ("orbit", "orbital", "vacuum", "space exterior")):
+        if any(
+            term in setting_text for term in ("orbit", "orbital", "vacuum", "space exterior")
+        ):
             context = EnvironmentContext.ORBITAL_SPACE
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.VACUUM
@@ -192,7 +195,9 @@ class GovernedEnvironmentPlanningService:
             constraints.append(
                 "Do not add atmospheric haze, clouds, wind or aerodynamic effects in vacuum."
             )
-        elif any(term in text for term in ("deep space", "interstellar", "interplanetary")):
+        elif any(
+            term in setting_text for term in ("deep space", "interstellar", "interplanetary")
+        ):
             context = EnvironmentContext.DEEP_SPACE
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.VACUUM
@@ -205,7 +210,10 @@ class GovernedEnvironmentPlanningService:
             constraints.append(
                 "Preserve vacuum conditions and physically plausible relative motion."
             )
-        elif any(term in text for term in ("descent", "atmosphere", "atmospheric", "cloud layer")):
+        elif any(
+            term in setting_text
+            for term in ("descent", "atmosphere", "atmospheric", "cloud layer")
+        ):
             context = EnvironmentContext.ATMOSPHERIC
             time_context = self._time_context(text)
             atmosphere = AtmosphereState.UNKNOWN
@@ -215,7 +223,9 @@ class GovernedEnvironmentPlanningService:
             constraints.append(
                 "Atmospheric density/composition remain unspecified unless the governed story establishes them."
             )
-        elif any(term in text for term in ("underwater", "submerged", "ocean depth", "sea floor")):
+        elif any(
+            term in setting_text for term in ("underwater", "submerged", "ocean depth", "sea floor")
+        ):
             context = EnvironmentContext.UNDERWATER
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.SUBMERGED
@@ -228,7 +238,7 @@ class GovernedEnvironmentPlanningService:
                 "water, suspended particulate and buoyant motion must remain physically coherent"
             )
         elif any(
-            term in text
+            term in setting_text
             for term in ("cave", "cavern", "underground", "subterranean", "ruins below")
         ):
             context = EnvironmentContext.SUBTERRANEAN
@@ -240,7 +250,7 @@ class GovernedEnvironmentPlanningService:
                 "no weather motion; dust or particulate movement only when physically motivated"
             )
         elif any(
-            term in text
+            term in setting_text
             for term in (
                 "exterior",
                 "surface",
