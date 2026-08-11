@@ -178,7 +178,7 @@ class GovernedCameraPlanningService:
             lens_family = LensFamily.WIDE
             focal_length = 28
             composition = "prioritise readable spatial geography, scale and subject placement"
-            focus_strategy = "maintain readable depth across the environment and primary subject"
+            focus_strategy = "maintain readable, physically plausible depth across the environment and primary subject"
         if shot.dialogue_requirement.strip():
             shot_size = ShotSize.MEDIUM_CLOSE
             lens_family = LensFamily.NORMAL
