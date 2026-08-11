@@ -113,4 +113,4 @@ Phase acceptance requires the untouched repository CI pipeline to pass:
 - full pytest suite
 - configured coverage threshold
 
-No temporary formatting or validation workflow is part of the final phase branch.
+No temporary formatting or validation workflow is part of the final phase branch. The final acceptance run must originate from a normal branch commit after all temporary maintenance workflows have been removed.
