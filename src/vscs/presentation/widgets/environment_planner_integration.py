@@ -39,15 +39,9 @@ def install_environment_planner_navigation() -> None:
         original_refresh(self)
         _update_environment_action(self)
 
-    setattr(
-        GovernedLightingPlannerDialog, "__init__", init_with_environment_planner
-    )  # noqa: B010
-    setattr(
-        GovernedLightingPlannerDialog, "refresh", refresh_with_environment
-    )  # noqa: B010
-    setattr(
-        GovernedLightingPlannerDialog, "_environment_planner_installed", True
-    )  # noqa: B010
+    setattr(GovernedLightingPlannerDialog, "__init__", init_with_environment_planner)  # noqa: B010
+    setattr(GovernedLightingPlannerDialog, "refresh", refresh_with_environment)  # noqa: B010
+    setattr(GovernedLightingPlannerDialog, "_environment_planner_installed", True)  # noqa: B010
 
 
 def _environment_service(dialog: Any) -> GovernedEnvironmentPlanningService | None:
