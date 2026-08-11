@@ -272,6 +272,36 @@ def test_environment_plan_persists_and_becomes_ready_with_current_context(tmp_pa
     assert service.plan(plan.shot_id) == ready
 
 
+def test_changed_shot_makes_ready_environment_plan_stale(tmp_path: Path) -> None:
+    service, _scenes, shots, _assets, _camera, _lighting = _service(tmp_path)
+    ready = service.mark_ready(service.create_suggested(shots.shot.shot_id).shot_id)
+
+    shots.shot = replace(shots.shot, required_action="Mauritania rolls during orbital insertion")
+
+    assert not service.is_shot_context_current(ready)
+    assert not service.is_production_ready(ready)
+
+
+def test_changed_asset_binding_makes_ready_environment_plan_stale(tmp_path: Path) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(tmp_path)
+    ready = service.mark_ready(service.create_suggested(shots.shot.shot_id).shot_id)
+
+    assets.binding = replace(assets.binding, asset_dependency_hash="asset-v2")
+
+    assert not service.is_asset_context_current(ready)
+    assert not service.is_production_ready(ready)
+
+
+def test_changed_camera_makes_ready_environment_plan_stale(tmp_path: Path) -> None:
+    service, _scenes, shots, _assets, camera, _lighting = _service(tmp_path)
+    ready = service.mark_ready(service.create_suggested(shots.shot.shot_id).shot_id)
+
+    camera.camera_plan = replace(camera.camera_plan, focal_length_mm=35)
+
+    assert not service.is_camera_context_current(ready)
+    assert not service.is_production_ready(ready)
+
+
 def test_changed_lighting_makes_ready_environment_plan_stale(tmp_path: Path) -> None:
     service, _scenes, shots, _assets, _camera, lighting = _service(tmp_path)
     ready = service.mark_ready(service.create_suggested(shots.shot.shot_id).shot_id)
