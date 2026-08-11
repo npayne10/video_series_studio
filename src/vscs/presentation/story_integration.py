@@ -5,15 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from vscs.application.acpp import ACPPEditorService
-from vscs.application.asset_resolution import (
-    AssetBrowserService,
-    register_asset_resolution,
-)
+from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
     EpisodePlanningService,
     GovernedAssetResolutionService,
+    GovernedCameraPlanningService,
     GovernedShotPlanningService,
     ScenePlanningService,
     StoryApprovalService,
@@ -23,6 +21,7 @@ from vscs.application.story import (
     StoryStatusService,
     register_episode_planning,
     register_governed_asset_resolution,
+    register_governed_camera_planning,
     register_governed_shot_planning,
     register_scene_planning,
     register_story_approval,
@@ -36,23 +35,16 @@ from vscs.application.story_analysis import (
     StoryAnalysisEngine,
 )
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
-from vscs.presentation.dialogs.guided_first_scene_editor_dialog import (
-    GuidedFirstSceneEditorDialog,
-)
+from vscs.presentation.dialogs.guided_first_scene_editor_dialog import GuidedFirstSceneEditorDialog
 from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
 from vscs.presentation.widgets import story_browser as story_browser_module
-from vscs.presentation.widgets.asset_resolver_integration import (
-    install_asset_resolver_navigation,
-)
-from vscs.presentation.widgets.browseable_story_workspace import (
-    BrowseableStoryWorkspaceWidget,
-)
+from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
+from vscs.presentation.widgets.browseable_story_workspace import BrowseableStoryWorkspaceWidget
+from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
-from vscs.presentation.widgets.production_planning_workspace import (
-    install_production_planning_workspace,
-)
+from vscs.presentation.widgets.production_planning_workspace import install_production_planning_workspace
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -65,6 +57,7 @@ def install_story_browser() -> None:
     setattr(episode_planner_module, "ScenePlannerDialog", IterativeScenePlannerDialog)  # noqa: B010
     setattr(planning_workspace_module, "ScenePlannerDialog", IterativeScenePlannerDialog)  # noqa: B010
     install_asset_resolver_navigation()
+    install_camera_planner_navigation()
 
     original_create_content = MainWindow._create_content_area
     original_update_status = MainWindow._update_status_for_section
@@ -94,7 +87,10 @@ def install_story_browser() -> None:
             register_governed_shot_planning(window.services)
         if window.services.get(GovernedAssetResolutionService) is None:
             register_governed_asset_resolution(window.services)
+        if window.services.get(GovernedCameraPlanningService) is None:
+            register_governed_camera_planning(window.services)
         register_ai_story_analysis(window.services)
+
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
             intelligence = window.services.register(
@@ -111,6 +107,7 @@ def install_story_browser() -> None:
                     analysis_engine,
                 ),
             )
+
         window.story_browser = BrowseableStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
@@ -125,12 +122,16 @@ def install_story_browser() -> None:
         window.story_browser.analysis_engine = analysis_engine
         window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
+
         episode_service = window.services.require(EpisodePlanningService)
         scene_service = window.services.require(ScenePlanningService)
         shot_service = window.services.require(GovernedShotPlanningService)
         governed_assets = window.services.require(GovernedAssetResolutionService)
+        camera_service = window.services.require(GovernedCameraPlanningService)
         setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         setattr(shot_service, "asset_resolution_service", governed_assets)  # noqa: B010
+        setattr(shot_service, "camera_planning_service", camera_service)  # noqa: B010
+
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
             episode_service,
