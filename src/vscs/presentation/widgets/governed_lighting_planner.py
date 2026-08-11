@@ -289,7 +289,9 @@ class GovernedLightingPlannerDialog(QDialog):
             self.details.setText("Create a deterministic suggested Draft or a blank Draft.")
         else:
             governance = plan.status.value.title()
-            if plan.status is LightingPlanStatus.READY and not self.service.is_production_ready(plan):
+            if plan.status is LightingPlanStatus.READY and not self.service.is_production_ready(
+                plan
+            ):
                 governance += " / Stale"
             self.status_label.setText(
                 f"{plan.lighting_plan_id} • {governance} • "
