@@ -98,6 +98,27 @@ class ActionPerformanceCompilerService:
         self._write((*self.list_drafts(), draft))
         return draft
 
+    def rebase_to_current_package(self, shot_id: str) -> ActionPerformanceDraft:
+        """Rebase a stale Draft without replacing human-authored production intent."""
+        current = self._require_draft(shot_id)
+        if current.status is ActionPerformanceStatus.READY:
+            raise ActionPerformanceError(
+                "Ready Action & Performance must return to Draft before refreshing its source"
+            )
+        package = self.packages.require_current_package(current.shot_id)
+        if (
+            current.source_package_id == package.package_id
+            and current.source_fingerprint == package.source_fingerprint
+        ):
+            return current
+        updated = replace(
+            current,
+            source_package_id=package.package_id,
+            source_fingerprint=package.source_fingerprint,
+        )
+        self._replace(updated)
+        return updated
+
     def save(
         self,
         shot_id: str,
