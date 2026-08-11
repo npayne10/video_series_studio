@@ -19,7 +19,9 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.story import (
+    GovernedPlanningIntegrationService,
     GovernedPlanningReviewService,
+    PlanningIntegrationError,
     PlanningReviewError,
     PlanningReviewStatus,
     ShotPlan,
@@ -39,13 +41,17 @@ class GovernedPlanningReviewDialog(QDialog):
         self.service = service
         self.shot = shot
         self.setWindowTitle(f"Planning Review — {shot.shot_id}")
-        self.resize(860, 620)
-        self.setMinimumSize(720, 520)
+        self.resize(860, 650)
+        self.setMinimumSize(720, 540)
 
         root = QVBoxLayout(self)
         self.summary = QLabel(self)
         self.summary.setWordWrap(True)
         root.addWidget(self.summary)
+
+        self.integration_status = QLabel(self)
+        self.integration_status.setWordWrap(True)
+        root.addWidget(self.integration_status)
 
         self.checks = QTableWidget(0, 3, self)
         self.checks.setHorizontalHeaderLabels(("Planning Area", "Result", "Detail"))
@@ -85,6 +91,10 @@ class GovernedPlanningReviewDialog(QDialog):
         self.draft_button.clicked.connect(self._return_to_draft)
         self.refresh()
 
+    def _integration_service(self) -> GovernedPlanningIntegrationService | None:
+        service = getattr(self.service, "planning_integration_service", None)
+        return service if isinstance(service, GovernedPlanningIntegrationService) else None
+
     def refresh(self) -> None:
         snapshot = self.service.snapshot(self.shot.shot_id)
         review = self.service.review(self.shot.shot_id)
@@ -111,6 +121,25 @@ class GovernedPlanningReviewDialog(QDialog):
             "This gate reviews authoritative planning only; it does not edit Shot, Asset, "
             "Camera, Lighting or Environment contracts."
         )
+
+        integration = self._integration_service()
+        package = integration.current_package(self.shot.shot_id) if integration is not None else None
+        if package is not None:
+            self.integration_status.setText(
+                f"<b>Planning Integration:</b> CURRENT — {package.package_id}<br>"
+                "This immutable renderer-neutral package is the authoritative Phase 19.4 input."
+            )
+        elif review is not None and review.status is PlanningReviewStatus.APPROVED:
+            self.integration_status.setText(
+                "<b>Planning Integration:</b> NOT CURRENT — approval or upstream planning "
+                "requires review before compilation."
+            )
+        else:
+            self.integration_status.setText(
+                "<b>Planning Integration:</b> Pending — a current Approved Planning Review "
+                "is required."
+            )
+
         approved = review is not None and review.status is PlanningReviewStatus.APPROVED
         self.create_button.setEnabled(review is None)
         self.notes.setReadOnly(approved)
@@ -130,7 +159,14 @@ class GovernedPlanningReviewDialog(QDialog):
         self._run(lambda: self.service.update_notes(self.shot.shot_id, self.notes.toPlainText()))
 
     def _approve(self) -> None:
-        self._run(lambda: self.service.approve(self.shot.shot_id))
+        def approve_and_integrate() -> object:
+            review = self.service.approve(self.shot.shot_id)
+            integration = self._integration_service()
+            if integration is not None:
+                return integration.integrate(review.shot_id)
+            return review
+
+        self._run(approve_and_integrate)
 
     def _return_to_draft(self) -> None:
         self._run(lambda: self.service.return_to_draft(self.shot.shot_id))
@@ -138,6 +174,6 @@ class GovernedPlanningReviewDialog(QDialog):
     def _run(self, action: Callable[[], object]) -> None:
         try:
             action()
-        except PlanningReviewError as exc:
+        except (PlanningReviewError, PlanningIntegrationError) as exc:
             QMessageBox.warning(self, "Planning Review", str(exc))
         self.refresh()
