@@ -5,17 +5,12 @@ on:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,50 +23,6 @@ jobs:
 
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
-
-      - name: Normalize AssetCategory values returned by Qt
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("src/vscs/presentation/widgets/governed_asset_resolver.py")
-          text = path.read_text(encoding="utf-8")
-
-          anchor = '    def _reload_assets(self, selected_asset_id: str = "") -> None:\n'
-          helper = '''    def _selected_category(self) -> AssetCategory | None:\n        """Return the current category regardless of Qt user-data coercion."""\n        raw = self.category_combo.currentData()\n        if raw is None:\n            return None\n        try:\n            return AssetCategory(str(raw))\n        except ValueError:\n            return None\n\n'''
-          if helper not in text:
-              if anchor not in text:
-                  raise SystemExit("Asset Resolver category helper anchor not found")
-              text = text.replace(anchor, helper + anchor, 1)
-
-          old_reload = '''        category = self.category_combo.currentData()\n        if not isinstance(category, AssetCategory):\n            return\n'''
-          new_reload = '''        category = self._selected_category()\n        if category is None:\n            return\n'''
-          if old_reload not in text:
-              raise SystemExit("Asset Resolver reload category block not found")
-          text = text.replace(old_reload, new_reload, 1)
-
-          old_refresh = '''        category = self.category_combo.currentData()\n        if not asset_id or not isinstance(category, AssetCategory):\n'''
-          new_refresh = '''        category = self._selected_category()\n        if not asset_id or category is None:\n'''
-          if old_refresh not in text:
-              raise SystemExit("Asset Resolver readiness category block not found")
-          text = text.replace(old_refresh, new_refresh, 1)
-
-          old_values = '''        category = self.category_combo.currentData()\n        if not isinstance(category, AssetCategory):\n            raise GovernedAssetResolutionError("A valid asset category is required")\n'''
-          new_values = '''        category = self._selected_category()\n        if category is None:\n            raise GovernedAssetResolutionError("A valid asset category is required")\n'''
-          if old_values not in text:
-              raise SystemExit("Asset Resolver values category block not found")
-          text = text.replace(old_values, new_values, 1)
-
-          path.write_text(text, encoding="utf-8")
-          PY
-          ruff format src/vscs/presentation/widgets/governed_asset_resolver.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/vscs/presentation/widgets/governed_asset_resolver.py
-          if ! git diff --cached --quiet; then
-            git commit -m "Normalize Asset Resolver Qt category data"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
 
       - name: Lint
         run: ruff check .
