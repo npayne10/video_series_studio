@@ -14,7 +14,7 @@ The review consumes, but does not own:
 4. governed Lighting Plan; and
 5. governed Environment Plan.
 
-Every authority must be Ready and current. Environment physical-consistency rules remain owned by Environment Planning.
+Every authority must be Ready and current before approval. Environment physical-consistency rules remain owned by Environment Planning.
 
 ## Governance
 
@@ -28,7 +28,11 @@ Project-local reviews are stored in `planning/planning_reviews.json` with schema
 
 ## UI
 
-A `Planning Review…` action follows the Environment Planner and becomes available only when the Environment Plan is itself production-ready. The dialog presents PASS/BLOCKED results for every reviewed planning area, reviewer notes, Start Review, Save Notes, Approve Planning and Return to Draft actions.
+`Planning Review…` is owned by the governed Shot Planner and is available whenever a governed Shot is selected. The dialog is intentionally openable while planning is incomplete so it can present PASS/BLOCKED diagnostics for Shot, Assets, Camera, Lighting and Environment.
+
+The dialog provides reviewer notes plus Start Review, Save Notes, Approve Planning and Return to Draft actions. `Approve Planning` remains disabled until every reviewed authority is Ready and current.
+
+Planning Review is not owned by Environment Planner and does not require opening Environment Planner merely to inspect planning readiness.
 
 ## Explicit exclusions
 
@@ -36,10 +40,12 @@ Phase 19.3.8 does not own or alter Episode, Scene, Shot, Asset, Camera, Lighting
 
 ## Acceptance criteria
 
-- incomplete or stale upstream planning is visibly blocked;
+- a governed Shot exposes `Planning Review…` directly in Shot Planner;
+- the review can open while specialist planning is incomplete and visibly report blockers;
+- incomplete or stale upstream planning cannot be approved;
 - complete current planning can be reviewed and approved;
 - approved reviews are immutable until returned to Draft;
 - changes to any reviewed authority make approval stale;
 - persistence is deterministic and project-local;
-- UI exposes the review only after governed Environment readiness;
+- Environment Planner does not own the Planning Review navigation action;
 - standard Ruff, formatting, mypy, pytest and coverage gates pass.
