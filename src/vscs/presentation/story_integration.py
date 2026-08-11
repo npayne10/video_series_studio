@@ -12,6 +12,7 @@ from vscs.application.story import (
     EpisodePlanningService,
     GovernedAssetResolutionService,
     GovernedCameraPlanningService,
+    GovernedLightingPlanningService,
     GovernedShotPlanningService,
     ScenePlanningService,
     StoryApprovalService,
@@ -22,6 +23,7 @@ from vscs.application.story import (
     register_episode_planning,
     register_governed_asset_resolution,
     register_governed_camera_planning,
+    register_governed_lighting_planning,
     register_governed_shot_planning,
     register_scene_planning,
     register_story_approval,
@@ -44,6 +46,7 @@ from vscs.presentation.widgets.browseable_story_workspace import BrowseableStory
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
+from vscs.presentation.widgets.lighting_planner_integration import install_lighting_planner_navigation
 from vscs.presentation.widgets.production_planning_workspace import (
     install_production_planning_workspace,
 )
@@ -60,6 +63,7 @@ def install_story_browser() -> None:
     setattr(planning_workspace_module, "ScenePlannerDialog", IterativeScenePlannerDialog)  # noqa: B010
     install_asset_resolver_navigation()
     install_camera_planner_navigation()
+    install_lighting_planner_navigation()
 
     original_create_content = MainWindow._create_content_area
     original_update_status = MainWindow._update_status_for_section
@@ -91,6 +95,8 @@ def install_story_browser() -> None:
             register_governed_asset_resolution(window.services)
         if window.services.get(GovernedCameraPlanningService) is None:
             register_governed_camera_planning(window.services)
+        if window.services.get(GovernedLightingPlanningService) is None:
+            register_governed_lighting_planning(window.services)
         register_ai_story_analysis(window.services)
 
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
@@ -130,9 +136,11 @@ def install_story_browser() -> None:
         shot_service = window.services.require(GovernedShotPlanningService)
         governed_assets = window.services.require(GovernedAssetResolutionService)
         camera_service = window.services.require(GovernedCameraPlanningService)
+        lighting_service = window.services.require(GovernedLightingPlanningService)
         setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         setattr(shot_service, "asset_resolution_service", governed_assets)  # noqa: B010
         setattr(shot_service, "camera_planning_service", camera_service)  # noqa: B010
+        setattr(camera_service, "lighting_planning_service", lighting_service)  # noqa: B010
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
