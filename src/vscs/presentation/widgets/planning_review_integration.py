@@ -1,4 +1,4 @@
-"""Install Phase 19.3.8 Planning Review navigation after Environment Planning."""
+"""Install Phase 19.3.8 Planning Review navigation in the governed Shot Planner."""
 
 from __future__ import annotations
 
@@ -9,23 +9,26 @@ from PySide6.QtWidgets import QPushButton, QVBoxLayout
 
 from vscs.application.story import GovernedPlanningReviewService
 
-from .governed_environment_planner import GovernedEnvironmentPlannerDialog
 from .governed_planning_review import GovernedPlanningReviewDialog
+from .governed_shot_planner import GovernedShotPlannerDialog
 
 
 def install_planning_review_navigation() -> None:
-    """Add the authoritative Planning Review action exactly once."""
-    if getattr(GovernedEnvironmentPlannerDialog, "_planning_review_installed", False):
+    """Add the authoritative Planning Review action to Shot Planner exactly once."""
+    if getattr(GovernedShotPlannerDialog, "_planning_review_installed", False):
         return
 
-    original_init: Callable[..., None] = GovernedEnvironmentPlannerDialog.__init__
-    original_refresh: Callable[[Any], None] = GovernedEnvironmentPlannerDialog.refresh
+    original_init: Callable[..., None] = GovernedShotPlannerDialog.__init__
+    original_refresh: Callable[[Any], None] = GovernedShotPlannerDialog.refresh
+    original_update_actions: Callable[[Any], None] = GovernedShotPlannerDialog._update_actions
 
     def init_with_review(self: Any, *args: object, **kwargs: object) -> None:
         original_init(self, *args, **kwargs)
         button = QPushButton("Planning Review…", self)
         button.setObjectName("openGovernedPlanningReview")
-        button.setToolTip("Review and approve the complete governed Shot planning package")
+        button.setToolTip(
+            "Review Shot, Asset, Camera, Lighting and Environment planning; blockers remain visible"
+        )
         button.clicked.connect(lambda: _open_review(self))
         root = self.layout()
         if isinstance(root, QVBoxLayout):
@@ -37,9 +40,14 @@ def install_planning_review_navigation() -> None:
         original_refresh(self)
         _update_review_action(self)
 
-    setattr(GovernedEnvironmentPlannerDialog, "__init__", init_with_review)  # noqa: B010
-    setattr(GovernedEnvironmentPlannerDialog, "refresh", refresh_with_review)  # noqa: B010
-    setattr(GovernedEnvironmentPlannerDialog, "_planning_review_installed", True)  # noqa: B010
+    def update_actions_with_review(self: Any) -> None:
+        original_update_actions(self)
+        _update_review_action(self)
+
+    setattr(GovernedShotPlannerDialog, "__init__", init_with_review)  # noqa: B010
+    setattr(GovernedShotPlannerDialog, "refresh", refresh_with_review)  # noqa: B010
+    setattr(GovernedShotPlannerDialog, "_update_actions", update_actions_with_review)  # noqa: B010
+    setattr(GovernedShotPlannerDialog, "_planning_review_installed", True)  # noqa: B010
 
 
 def _review_service(dialog: Any) -> GovernedPlanningReviewService | None:
@@ -51,25 +59,14 @@ def _update_review_action(dialog: Any) -> None:
     button = getattr(dialog, "planning_review_button", None)
     if not isinstance(button, QPushButton):
         return
-    service = _review_service(dialog)
-    environment = dialog.service.plan(dialog.shot_id)
-    button.setEnabled(
-        service is not None
-        and environment is not None
-        and dialog.service.is_production_ready(environment)
-    )
+    shot = dialog._selected()
+    button.setEnabled(_review_service(dialog) is not None and shot is not None)
 
 
 def _open_review(dialog: Any) -> None:
     service = _review_service(dialog)
-    environment = dialog.service.plan(dialog.shot_id)
-    shot = dialog.service.shots.plan(dialog.shot_id)
-    if (
-        service is None
-        or shot is None
-        or environment is None
-        or not dialog.service.is_production_ready(environment)
-    ):
+    shot = dialog._selected()
+    if service is None or shot is None:
         return
     review = GovernedPlanningReviewDialog(service, shot, dialog)
     review.exec()
