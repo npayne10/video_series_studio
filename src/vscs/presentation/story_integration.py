@@ -14,6 +14,7 @@ from vscs.application.story import (
     GovernedCameraPlanningService,
     GovernedEnvironmentPlanningService,
     GovernedLightingPlanningService,
+    GovernedPlanningIntegrationService,
     GovernedPlanningReviewService,
     GovernedShotPlanningService,
     ScenePlanningService,
@@ -27,6 +28,7 @@ from vscs.application.story import (
     register_governed_camera_planning,
     register_governed_environment_planning,
     register_governed_lighting_planning,
+    register_governed_planning_integration,
     register_governed_planning_review,
     register_governed_shot_planning,
     register_scene_planning,
@@ -113,6 +115,8 @@ def install_story_browser() -> None:
             register_governed_environment_planning(window.services)
         if window.services.get(GovernedPlanningReviewService) is None:
             register_governed_planning_review(window.services)
+        if window.services.get(GovernedPlanningIntegrationService) is None:
+            register_governed_planning_integration(window.services)
         register_ai_story_analysis(window.services)
 
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
@@ -155,12 +159,14 @@ def install_story_browser() -> None:
         lighting_service = window.services.require(GovernedLightingPlanningService)
         environment_service = window.services.require(GovernedEnvironmentPlanningService)
         planning_review = window.services.require(GovernedPlanningReviewService)
+        planning_integration = window.services.require(GovernedPlanningIntegrationService)
         setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         setattr(shot_service, "asset_resolution_service", governed_assets)  # noqa: B010
         setattr(shot_service, "camera_planning_service", camera_service)  # noqa: B010
         setattr(shot_service, "planning_review_service", planning_review)  # noqa: B010
         setattr(camera_service, "lighting_planning_service", lighting_service)  # noqa: B010
         setattr(lighting_service, "environment_planning_service", environment_service)  # noqa: B010
+        setattr(planning_review, "planning_integration_service", planning_integration)  # noqa: B010
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
