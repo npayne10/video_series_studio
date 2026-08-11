@@ -16,12 +16,24 @@ from .asset_resolver import (
 from .bootstrap import (
     register_episode_planning,
     register_governed_asset_resolution,
+    register_governed_camera_planning,
     register_governed_shot_planning,
     register_scene_planning,
     register_story_approval,
     register_story_lifecycle,
     register_story_metadata,
     register_story_status,
+)
+from .camera_planning import (
+    CameraAngle,
+    CameraMovement,
+    CameraPlan,
+    CameraPlanStatus,
+    GovernedCameraPlanningError,
+    GovernedCameraPlanningService,
+    LensFamily,
+    ScreenDirection,
+    ShotSize,
 )
 from .containers import (
     ProductionContainerType,
@@ -58,11 +70,7 @@ from .metadata import (
     StoryMetadataError,
     StoryMetadataService,
 )
-from .scene_planning import (
-    ScenePlan,
-    ScenePlanningError,
-    ScenePlanStatus,
-)
+from .scene_planning import ScenePlan, ScenePlanningError, ScenePlanStatus
 from .service import StoryService, StoryServiceError
 from .shot_planning import (
     GovernedShotPlanningError,
@@ -81,23 +89,32 @@ ScenePlanningService = IterativeScenePlanningService
 
 __all__ = [
     "AssetBindingStatus",
+    "CameraAngle",
+    "CameraMovement",
+    "CameraPlan",
+    "CameraPlanStatus",
     "EpisodePlan",
     "EpisodePlanStatus",
     "EpisodePlanningError",
     "EpisodePlanningService",
     "GovernedAssetResolutionError",
     "GovernedAssetResolutionService",
+    "GovernedCameraPlanningError",
+    "GovernedCameraPlanningService",
     "GovernedShotPlanningError",
     "GovernedShotPlanningService",
     "IterativeScenePlanningService",
+    "LensFamily",
     "ProductionContainerType",
     "ScenePlan",
     "ScenePlanStatus",
     "ScenePlanningError",
     "ScenePlanningService",
+    "ScreenDirection",
     "ShotAssetBinding",
     "ShotPlan",
     "ShotPlanStatus",
+    "ShotSize",
     "StoryApprovalAction",
     "StoryApprovalError",
     "StoryApprovalRecord",
@@ -129,6 +146,7 @@ __all__ = [
     "normalize_container_id",
     "register_episode_planning",
     "register_governed_asset_resolution",
+    "register_governed_camera_planning",
     "register_governed_shot_planning",
     "register_scene_planning",
     "register_story_approval",
