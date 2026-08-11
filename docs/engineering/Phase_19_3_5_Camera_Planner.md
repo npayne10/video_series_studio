@@ -55,7 +55,7 @@ Authoritative data is stored atomically in `planning/camera_plans.json` using sc
 
 ## Automation
 
-`GovernedCameraPlanningService.suggested_plan()` provides deterministic conservative defaults from Shot intent. It handles establishing/environmental Shots, dialogue coverage, reactions and moving action while preserving physically plausible movement guidance.
+`GovernedCameraPlanningService.suggested_plan()` provides deterministic conservative defaults from Shot intent. It handles establishing/environmental Shots, dialogue coverage, reactions and moving action while preserving physically plausible movement guidance and physically plausible focus/depth guidance.
 
 Suggested values are Draft input only and never automatically become production authority.
 
