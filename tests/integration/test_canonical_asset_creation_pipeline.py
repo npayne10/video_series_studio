@@ -12,7 +12,7 @@ from vscs.application.assets.canonical_creation import (
 from vscs.application.caps import CanonicalReferenceService, CAPService, ReferenceLibraryService
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
-from vscs.domain.assets import AssetCategory, AssetCreate
+from vscs.domain.assets import AssetCategory, AssetCreate, AssetUpdate
 from vscs.domain.caps import (
     CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
@@ -132,6 +132,43 @@ def test_edit_can_attach_missing_master_and_seed_cap(tmp_path: Path) -> None:
     assert result.lifecycle is CanonicalReferenceLifecycle.LOCKED
     assert assets.get("CAP-SHP-902").file_path == Path("references/imported_master.png")
     assert context.services.require(CAPService).get("CAP-SHP-902").asset_id == "CAP-SHP-902"
+    context.shutdown()
+
+
+def test_edit_reuses_existing_master_and_repairs_missing_asset_path(tmp_path: Path) -> None:
+    context = build_application_context(_options(tmp_path))
+    projects = context.services.require(ProjectService)
+    project = tmp_path / "Production"
+    projects.create(project, name="Production")
+    references_dir = project / "references"
+    references_dir.mkdir(parents=True)
+    (references_dir / "existing_master.png").write_bytes(b"master")
+    service = _service(context)
+    assets = context.services.require(AssetService)
+
+    first = service.create(
+        AssetCreate(
+            asset_id="CAP-SHP-904",
+            name="Existing Master Tug",
+            category=AssetCategory.SHIP,
+        ),
+        Path("references/existing_master.png"),
+        confirmed_chatgpt_master=True,
+        actor="Neill",
+    )
+    assets.update("CAP-SHP-904", AssetUpdate(file_path=None))
+    assert assets.get("CAP-SHP-904").file_path is None
+
+    repaired = service.set_or_revise_master(
+        "CAP-SHP-904",
+        Path("references/existing_master.png"),
+        confirmed_chatgpt_master=True,
+        actor="Neill",
+    )
+
+    assert repaired.reference_record_id == first.reference_record_id
+    assert repaired.lifecycle is CanonicalReferenceLifecycle.LOCKED
+    assert assets.get("CAP-SHP-904").file_path == Path("references/existing_master.png")
     context.shutdown()
 
 
