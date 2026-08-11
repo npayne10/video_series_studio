@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from PySide6.QtCore import Qt
+
 from vscs.application.action_performance import ActionPerformanceDraft, ActionPerformanceStatus
 from vscs.application.production_package import (
     ProductionPackage,
@@ -127,7 +129,7 @@ def test_stale_draft_exposes_refresh_recovery_and_preserves_content(qtbot) -> No
     assert widget.temporal_narrative.isReadOnly()
     assert "preserve this authored content" in widget.action_status.text()
 
-    qtbot.mouseClick(widget.refresh_source_button, 1)
+    qtbot.mouseClick(widget.refresh_source_button, Qt.MouseButton.LeftButton)
 
     assert actions.rebased
     assert not widget.temporal_narrative.isReadOnly()
