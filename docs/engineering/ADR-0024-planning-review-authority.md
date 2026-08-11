@@ -9,7 +9,7 @@ Phase 19.3 now produces governed Shot, Asset, Camera, Lighting and Environment c
 
 ## Decision
 
-Planning Review is a downstream governance boundary, not another planner.
+Planning Review is a downstream governance boundary for the complete governed Shot plan, not another planner.
 
 For each governed Shot it:
 
@@ -20,8 +20,12 @@ For each governed Shot it:
 - treats an approved review as stale whenever any reviewed authority changes; and
 - exposes production readiness only when approval, current fingerprints and every upstream readiness rule all agree.
 
+The governed **Shot Planner is the authoritative navigation owner for Planning Review**. The `Planning Review…` action is available whenever a governed Shot is selected, even when specialist planning is incomplete, because the review surface must be able to explain blockers. `Approve Planning` remains disabled until Shot, Asset, Camera, Lighting and Environment authority are all Ready and current.
+
+Environment Planner remains an independent specialist planner and MUST NOT own or gate access to Planning Review.
+
 Planning Review MUST NOT edit, reinterpret or duplicate upstream planning authority. It MUST NOT compile prompts, select renderer implementation, create ACPP packages or perform render-time quality control.
 
 ## Consequences
 
-Phase 19.3 gains a single auditable completion gate per Shot. Downstream Phase 19.3.9 integration can consume one `is_production_ready()` decision without weakening the ownership boundaries established in Phases 19.3.3–19.3.7. Any upstream change invalidates approval deterministically rather than silently allowing stale production planning to proceed.
+Phase 19.3 gains a single auditable completion gate per Shot, reachable from the same authoritative Shot-level control point as the specialist planners. Downstream Phase 19.3.9 integration can consume one `is_production_ready()` decision without weakening the ownership boundaries established in Phases 19.3.3–19.3.7. Any upstream change invalidates approval deterministically rather than silently allowing stale production planning to proceed.
