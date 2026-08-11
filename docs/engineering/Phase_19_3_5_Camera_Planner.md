@@ -89,6 +89,8 @@ The Camera Planner provides:
 
 The editor is resizable and scrollable. It contains camera-only controls and clearly states that Lighting and Environment are owned by later specialist planners.
 
+The UI passes editor values through an explicit dataclass-to-mapping conversion, and Camera Plan approval is disabled until the governed Shot Asset Resolution context is current and Ready.
+
 ## Acceptance criteria
 
 - deterministic Camera Plan persistence and reload;
