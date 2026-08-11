@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtWidgets import QScrollArea
+from PySide6.QtWidgets import QLabel, QScrollArea
 
 from vscs.application.story import (
     CameraAngle,
@@ -62,12 +62,11 @@ def test_camera_editor_is_resizable_scrollable_and_specialist_scoped(qtbot) -> N
     )
     qtbot.addWidget(dialog)
 
-    assert dialog.findChild(QScrollArea) is not None
+    scroll = dialog.findChild(QScrollArea)
+    assert scroll is not None
     assert dialog.minimumWidth() <= 660
     assert dialog.minimumHeight() <= 520
-    labels = dialog.findChildren(type(dialog).mro()[1])
-    text = dialog.findChild(QScrollArea).widget().findChildren(object)  # type: ignore[union-attr]
-    rendered = " ".join(str(getattr(widget, "text", lambda: "")()) for widget in text if callable(getattr(widget, "text", None)))
+    rendered = " ".join(label.text() for label in dialog.findChildren(QLabel))
     assert "Lighting" not in rendered
     assert "Environment" not in rendered
 
