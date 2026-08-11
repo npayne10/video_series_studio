@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import suppress
 from typing import Any
 
@@ -18,8 +19,8 @@ def install_asset_resolver_navigation() -> None:
     if getattr(GovernedShotPlannerDialog, "_asset_resolver_installed", False):
         return
 
-    original_init = GovernedShotPlannerDialog.__init__
-    original_update_actions = GovernedShotPlannerDialog._update_actions
+    original_init: Callable[..., None] = GovernedShotPlannerDialog.__init__
+    original_update_actions: Callable[[Any], None] = GovernedShotPlannerDialog._update_actions
 
     def init_with_asset_resolver(self: Any, *args: object, **kwargs: object) -> None:
         original_init(self, *args, **kwargs)
