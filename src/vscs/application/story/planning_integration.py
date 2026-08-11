@@ -154,7 +154,7 @@ class GovernedPlanningIntegrationService:
 
         asset_payload: list[dict[str, Any]] = []
         for binding in bindings:
-            resolved = self.reviews.assets.resolved_asset(binding)
+            resolved = self.reviews.assets.resolution(binding)
             if resolved is None:
                 raise PlanningIntegrationError(
                     f"Approved asset binding {binding.binding_id} no longer resolves"
