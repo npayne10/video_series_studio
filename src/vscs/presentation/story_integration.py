@@ -158,9 +158,9 @@ def install_story_browser() -> None:
         setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         setattr(shot_service, "asset_resolution_service", governed_assets)  # noqa: B010
         setattr(shot_service, "camera_planning_service", camera_service)  # noqa: B010
+        setattr(shot_service, "planning_review_service", planning_review)  # noqa: B010
         setattr(camera_service, "lighting_planning_service", lighting_service)  # noqa: B010
         setattr(lighting_service, "environment_planning_service", environment_service)  # noqa: B010
-        setattr(environment_service, "planning_review_service", planning_review)  # noqa: B010
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
