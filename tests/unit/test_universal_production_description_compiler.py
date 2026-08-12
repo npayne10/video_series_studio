@@ -106,6 +106,7 @@ def test_create_assembles_all_governed_authority_without_provider_output(tmp_pat
     assert value["assets"][0]["asset_id"] == "CAP-SHP-001"
     assert value["camera"]["movement"] == "static"
     assert value["provider_neutral"] is True
+    assert value["consistency_findings"] == []
     assert "ACTION & PERFORMANCE" in value["universal_text"]
     assert "provider_outputs" not in value
 
@@ -131,6 +132,7 @@ def test_ready_compiles_immutable_universal_description_and_locks_notes(tmp_path
 
     assert ready.status is UniversalProductionDescriptionStatus.READY
     assert packages.value.validation["universal_description_complete"] is True
+    assert packages.value.validation["cross_authority_consistent"] is True
     assert packages.value.universal_description["production"]["provider_neutral"] is True
     with pytest.raises(UniversalProductionDescriptionCompilerError, match="return to Draft"):
         service.save_notes("SHT-001", "Changed")
@@ -163,3 +165,50 @@ def test_return_to_draft_allows_review_after_ready(tmp_path: Path) -> None:
     draft = service.return_to_draft("SHT-001")
 
     assert draft.status is UniversalProductionDescriptionStatus.DRAFT
+
+
+def test_cross_authority_inconsistencies_are_exposed_and_block_ready(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    packages.value = replace(
+        packages.value,
+        shot={
+            "title": "Arrive at Xorix",
+            "required_action": "Mauritania comes out of hyper flight.",
+            "dialogue_requirement": "We have arrived at Xorix.",
+        },
+        assets=(
+            {
+                "production": {
+                    "asset_id": "CAP-SHP-001",
+                    "category": "ship",
+                    "role": "Primary spacecraft",
+                }
+            },
+        ),
+        environment={
+            "environment_context": "orbital_space",
+            "atmosphere_state": "vacuum",
+            "pressure_kpa": 0,
+        },
+        action_performance={
+            "production": {
+                "temporal_narrative": "James descends the stairs from the upper bridge level and walks to Cheryl at the viewport.",
+                "spoken_content": 'James: "Hi Cheryl, good to see you here."',
+                "opening_state": "James is descending from the upper bridge level.",
+                "closing_state": "James stands beside Cheryl.",
+            }
+        },
+    )
+
+    draft = service.create_from_current_package("SHT-001")
+    findings = service.consistency_findings("SHT-001")
+
+    assert len(findings) == 5
+    assert any("vacuum/orbital space" in item for item in findings)
+    assert any("no character asset" in item for item in findings)
+    assert any("no environment/location asset" in item for item in findings)
+    assert any("dialogue requirement" in item for item in findings)
+    assert any("required action" in item for item in findings)
+    assert len(draft.description_value()["consistency_findings"]) == 5
+    with pytest.raises(UniversalProductionDescriptionCompilerError, match="cross-authority"):
+        service.mark_ready("SHT-001")
