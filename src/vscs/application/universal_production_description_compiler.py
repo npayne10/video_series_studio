@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from pathlib import Path
@@ -43,7 +44,7 @@ class UniversalProductionDescriptionCompilerService:
     """Compile all governed Shot authority into one provider-neutral production description."""
 
     FILE_NAME = "universal_production_description_compilation.json"
-    SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "1.1"
     REQUIRED_UPSTREAM = (
         ("action_performance_complete", "Action & Performance"),
         ("assets_complete", "Assets"),
@@ -51,6 +52,40 @@ class UniversalProductionDescriptionCompilerService:
         ("lighting_complete", "Lighting"),
         ("continuity_complete", "Continuity"),
         ("style_complete", "Style"),
+    )
+    _INTERIOR_TERMS = (
+        "bridge",
+        "corridor",
+        "cabin",
+        "room",
+        "interior",
+        "inside",
+        "viewport",
+        "deck",
+        "quarters",
+        "hangar",
+        "laboratory",
+        "lab",
+    )
+    _STOPWORDS = frozenset(
+        {
+            "a",
+            "an",
+            "and",
+            "at",
+            "be",
+            "comes",
+            "from",
+            "in",
+            "into",
+            "is",
+            "of",
+            "on",
+            "out",
+            "the",
+            "to",
+            "with",
+        }
     )
 
     def __init__(self, projects: ProjectService, packages: ProductionPackageService) -> None:
@@ -140,6 +175,7 @@ class UniversalProductionDescriptionCompilerService:
                 "Universal Production Description is stale against current production authority"
             )
         self._require_upstream_ready(current.shot_id)
+        self._require_consistent(current.description_value())
         self._validate(current.description_value())
         ready = replace(current, status=UniversalProductionDescriptionStatus.READY)
         self._replace(ready)
@@ -169,6 +205,15 @@ class UniversalProductionDescriptionCompilerService:
             if package.validation.get(key) is not True
         )
 
+    def consistency_findings(self, shot_id: str) -> tuple[str, ...]:
+        draft = self.draft(shot_id)
+        if draft is None:
+            package = self.packages.current_package(shot_id.strip().upper())
+            if package is None:
+                return ()
+            return self._consistency_findings(self._build_description(package))
+        return self._consistency_findings(draft.description_value())
+
     def compile(self, shot_id: str) -> ProductionPackage:
         draft = self._require_draft(shot_id)
         if draft.status is not UniversalProductionDescriptionStatus.READY:
@@ -181,6 +226,7 @@ class UniversalProductionDescriptionCompilerService:
             )
         self._require_upstream_ready(draft.shot_id)
         description = draft.description_value()
+        self._require_consistent(description)
         self._validate(description)
         return self._derive(
             draft.shot_id,
@@ -194,6 +240,14 @@ class UniversalProductionDescriptionCompilerService:
             raise UniversalProductionDescriptionCompilerError(
                 "Universal Production Description cannot be finalized until upstream authority is Ready: "
                 + ", ".join(missing)
+            )
+
+    def _require_consistent(self, description: dict[str, Any]) -> None:
+        findings = self._consistency_findings(description)
+        if findings:
+            raise UniversalProductionDescriptionCompilerError(
+                "Universal Production Description has unresolved cross-authority inconsistencies:\n- "
+                + "\n- ".join(findings)
             )
 
     def _derive(
@@ -211,6 +265,7 @@ class UniversalProductionDescriptionCompilerService:
         data["universal_description"] = dict(compiled)
         validation = dict(current.validation)
         validation["universal_description_complete"] = True
+        validation["cross_authority_consistent"] = True
         if production_notes.strip():
             validation["universal_description_review_notes"] = production_notes.strip()
         else:
@@ -246,6 +301,7 @@ class UniversalProductionDescriptionCompilerService:
             "source_policy": "approved-production-authority-only",
             "provider_neutral": True,
         }
+        description["consistency_findings"] = list(cls._consistency_findings(description))
         description["universal_text"] = cls._universal_text(description)
         return description
 
@@ -269,6 +325,7 @@ class UniversalProductionDescriptionCompilerService:
                 "dialogue": governed.get("dialogue", []),
                 "effects": governed.get("effects", []),
                 "canonical_references": governed.get("canonical_references", []),
+                "consistency_findings": governed.get("consistency_findings", []),
                 "source_policy": governed.get("source_policy", ""),
                 "provider_neutral": True,
             },
@@ -310,6 +367,100 @@ class UniversalProductionDescriptionCompilerService:
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @classmethod
+    def _consistency_findings(cls, description: dict[str, Any]) -> tuple[str, ...]:
+        findings: list[str] = []
+        shot = cls._dict_value(description.get("shot"))
+        action = cls._dict_value(description.get("action_performance"))
+        environment = cls._dict_value(description.get("environment"))
+        continuity = cls._dict_value(description.get("continuity"))
+        assets_raw = description.get("assets", [])
+        assets = [cls._dict_value(item) for item in assets_raw if isinstance(item, dict)]
+
+        action_text = " ".join(
+            str(action.get(key, ""))
+            for key in (
+                "temporal_narrative",
+                "spoken_content",
+                "performance_direction",
+                "opening_state",
+                "closing_state",
+            )
+        ).lower()
+        interior = any(term in action_text for term in cls._INTERIOR_TERMS)
+        environment_context = str(environment.get("environment_context", "")).lower()
+        atmosphere = str(environment.get("atmosphere_state", "")).lower()
+        pressure = environment.get("pressure_kpa")
+        vacuum_pressure = isinstance(pressure, int | float) and pressure <= 0
+        if interior and (
+            atmosphere == "vacuum" or vacuum_pressure or environment_context == "orbital_space"
+        ):
+            findings.append(
+                "Action & Performance places performers in an interior location, but Environment authority describes vacuum/orbital space."
+            )
+
+        categories = {str(item.get("category", "")).strip().lower() for item in assets}
+        spoken = str(action.get("spoken_content", ""))
+        speakers = tuple(
+            dict.fromkeys(
+                match.group(1).strip()
+                for match in re.finditer(r"(?:^|\n)\s*([A-Z][A-Za-z0-9 .'-]{0,50})\s*:", spoken)
+            )
+        )
+        if speakers and not categories.intersection({"character", "person", "performer"}):
+            findings.append(
+                "Spoken performers are present in Action & Performance but no character asset is governed for this Shot: "
+                + ", ".join(speakers)
+                + "."
+            )
+        if interior and not categories.intersection({"environment", "location", "set"}):
+            findings.append(
+                "Action & Performance requires an interior production location, but no environment/location asset is governed for this Shot."
+            )
+
+        continuity_ids = continuity.get("asset_ids") or continuity.get("current_asset_ids") or []
+        if isinstance(continuity_ids, str):
+            continuity_ids = [continuity_ids]
+        governed_ids = {str(item.get("asset_id", "")).strip() for item in assets}
+        if isinstance(continuity_ids, list | tuple):
+            missing_ids = [str(item) for item in continuity_ids if str(item) not in governed_ids]
+            if missing_ids:
+                findings.append(
+                    "Continuity references assets that are absent from current Asset authority: "
+                    + ", ".join(missing_ids)
+                    + "."
+                )
+
+        dialogue_requirement = str(shot.get("dialogue_requirement", "")).strip()
+        if dialogue_requirement and dialogue_requirement.lower() not in spoken.lower():
+            findings.append(
+                "Shot dialogue requirement is not represented in Action & Performance spoken content."
+            )
+
+        required_action = str(shot.get("required_action", "")).strip()
+        temporal = str(action.get("temporal_narrative", "")).strip()
+        if required_action and temporal:
+            required_tokens = cls._meaningful_tokens(required_action)
+            temporal_tokens = cls._meaningful_tokens(temporal)
+            if required_tokens and not required_tokens.intersection(temporal_tokens):
+                findings.append(
+                    "Shot required action is not represented in the Action & Performance temporal narrative."
+                )
+
+        return tuple(findings)
+
+    @classmethod
+    def _meaningful_tokens(cls, text: str) -> set[str]:
+        return {
+            token
+            for token in re.findall(r"[a-z0-9]+", text.lower())
+            if len(token) > 2 and token not in cls._STOPWORDS
+        }
+
+    @staticmethod
+    def _dict_value(value: Any) -> dict[str, Any]:
+        return dict(value) if isinstance(value, dict) else {}
+
+    @classmethod
     def _universal_text(cls, description: dict[str, Any]) -> str:
         sections: list[str] = []
         for label, key in (
@@ -324,6 +475,7 @@ class UniversalProductionDescriptionCompilerService:
             ("DIALOGUE", "dialogue"),
             ("EFFECTS", "effects"),
             ("CANONICAL REFERENCES", "canonical_references"),
+            ("CONSISTENCY FINDINGS", "consistency_findings"),
         ):
             value = description.get(key)
             if value in (None, "", {}, []):
