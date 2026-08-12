@@ -65,7 +65,7 @@ class XCICWorkflowPatcher:
         for container in (profile, profile.get("models", {}), profile.get("settings", {})):
             if isinstance(container, dict):
                 for key, value in container.items():
-                    if isinstance(value, (str, int, float, bool)):
+                    if isinstance(value, str | int | float | bool):
                         values.setdefault(str(key), value)
         return values
 
@@ -82,7 +82,7 @@ class XCICWorkflowPatcher:
                 input_name = candidate.get("input", candidate.get("field", candidate.get("name")))
                 if node is not None and input_name:
                     return str(node), str(input_name)
-            if isinstance(candidate, (list, tuple)) and len(candidate) >= 2:
+            if isinstance(candidate, list | tuple) and len(candidate) >= 2:
                 return str(candidate[0]), str(candidate[1])
             if isinstance(candidate, str) and "." in candidate:
                 node, input_name = candidate.split(".", 1)

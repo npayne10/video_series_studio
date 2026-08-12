@@ -2950,7 +2950,7 @@ class CarRepositoryValidator:
 
             value = execution[field_name]
 
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
+            if isinstance(value, bool) or not isinstance(value, int | float):
                 self._add_asset_diagnostic(
                     result=result,
                     severity=ValidationSeverity.ERROR,
@@ -2980,7 +2980,7 @@ class CarRepositoryValidator:
 
         if environment is not None and not isinstance(
             environment,
-            (str, dict),
+            str | dict,
         ):
             self._add_asset_diagnostic(
                 result=result,
