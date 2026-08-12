@@ -277,7 +277,9 @@ class ProductionPackageWorkspace(QWidget):
         draft = self.action_performance.draft(shot_id)
         if draft is None:
             return "Not started"
-        if draft.status is ActionPerformanceStatus.READY and self.action_performance.is_current(draft):
+        if draft.status is ActionPerformanceStatus.READY and self.action_performance.is_current(
+            draft
+        ):
             return "Ready / Compiled"
         if not self.action_performance.is_current(draft):
             return f"{draft.status.value.title()} / Stale"
