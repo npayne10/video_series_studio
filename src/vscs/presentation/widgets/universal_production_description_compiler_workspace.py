@@ -1,0 +1,275 @@
+"""Universal Production Description extension for Phase 19.4 Production Planning."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+from vscs.application.action_performance import ActionPerformanceCompilerService
+from vscs.application.asset_compiler import AssetCompilerService
+from vscs.application.camera_compiler import CameraCompilerService
+from vscs.application.continuity_compiler import ContinuityCompilerService
+from vscs.application.lighting_compiler import LightingCompilerService
+from vscs.application.production_package import ProductionPackageService
+from vscs.application.projects import ProjectService
+from vscs.application.style_compiler import StyleCompilerService
+from vscs.application.universal_production_description_compiler import (
+    UniversalProductionDescriptionCompilerError,
+    UniversalProductionDescriptionCompilerService,
+    UniversalProductionDescriptionStatus,
+)
+
+from .style_compiler_workspace import StyleCompilerWorkspace
+
+
+class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
+    """Extend Production Planning with the canonical provider-neutral Shot description."""
+
+    def __init__(
+        self,
+        projects: ProjectService,
+        packages: ProductionPackageService,
+        action_performance: ActionPerformanceCompilerService,
+        asset_compiler: AssetCompilerService,
+        camera_compiler: CameraCompilerService,
+        lighting_compiler: LightingCompilerService,
+        continuity_compiler: ContinuityCompilerService,
+        style_compiler: StyleCompilerService,
+        universal_compiler: UniversalProductionDescriptionCompilerService,
+        parent: QWidget | None = None,
+    ) -> None:
+        self.universal_compiler = universal_compiler
+        super().__init__(
+            projects,
+            packages,
+            action_performance,
+            asset_compiler,
+            camera_compiler,
+            lighting_compiler,
+            continuity_compiler,
+            style_compiler,
+            parent,
+        )
+        self.package_table.setColumnCount(10)
+        self.package_table.setHorizontalHeaderLabels(self._universal_headers())
+        self._build_universal_tab()
+        if hasattr(self, "footer_label"):
+            self.footer_label.setText(
+                "Later Phase 19.4 compilers will add Provider Output and Validation views to this same workspace."
+            )
+        self.refresh()
+
+    @staticmethod
+    def _universal_headers() -> tuple[str, ...]:
+        return (
+            "Shot",
+            "Production Package",
+            "Action",
+            "Assets",
+            "Camera",
+            "Lighting",
+            "Continuity",
+            "Style",
+            "Universal",
+            "Source",
+        )
+
+    def _build_universal_tab(self) -> None:
+        tab = QWidget(self.compiler_tabs)
+        layout = QVBoxLayout(tab)
+        group = QGroupBox("Universal Production Description Compiler", tab)
+        group_layout = QVBoxLayout(group)
+        guidance = QLabel(
+            "Assemble all approved Shot production authority into one canonical provider-neutral description. "
+            "This is the source for later provider-specific prompt/output compilation and does not add new creative intent.",
+            group,
+        )
+        guidance.setWordWrap(True)
+        group_layout.addWidget(guidance)
+
+        self.universal_status = QLabel("", group)
+        self.universal_status.setWordWrap(True)
+        group_layout.addWidget(self.universal_status)
+
+        group_layout.addWidget(QLabel("Universal production description", group))
+        self.universal_preview = QTextEdit(group)
+        self.universal_preview.setReadOnly(True)
+        group_layout.addWidget(self.universal_preview, 1)
+
+        group_layout.addWidget(QLabel("Production review notes", group))
+        self.universal_notes = QTextEdit(group)
+        self.universal_notes.setMaximumHeight(90)
+        self.universal_notes.setPlaceholderText(
+            "Optional user review notes. Final Universal Production Description approval remains with the user."
+        )
+        group_layout.addWidget(self.universal_notes)
+
+        actions = QHBoxLayout()
+        self.universal_create_button = QPushButton("Assemble from Governed Authority", group)
+        self.universal_refresh_button = QPushButton("Refresh from Current Package", group)
+        self.universal_save_button = QPushButton("Save Review Notes", group)
+        self.universal_ready_button = QPushButton("Mark Ready & Compile", group)
+        self.universal_draft_button = QPushButton("Return to Draft", group)
+        for button in (
+            self.universal_create_button,
+            self.universal_refresh_button,
+            self.universal_save_button,
+            self.universal_ready_button,
+            self.universal_draft_button,
+        ):
+            actions.addWidget(button)
+        actions.addStretch(1)
+        group_layout.addLayout(actions)
+        layout.addWidget(group, 1)
+        self.compiler_tabs.addTab(tab, "Universal Description")
+
+        self.universal_create_button.clicked.connect(self._universal_create)
+        self.universal_refresh_button.clicked.connect(self._universal_refresh)
+        self.universal_save_button.clicked.connect(self._universal_save)
+        self.universal_ready_button.clicked.connect(self._universal_ready)
+        self.universal_draft_button.clicked.connect(self._universal_return_to_draft)
+
+    def refresh(self) -> None:
+        super().refresh()
+        if not hasattr(self, "universal_preview"):
+            return
+        self.package_table.setColumnCount(10)
+        self.package_table.setHorizontalHeaderLabels(self._universal_headers())
+        for row in range(self.package_table.rowCount()):
+            shot = self.package_table.item(row, 0)
+            source = self.package_table.item(row, 8)
+            if source is not None:
+                self.package_table.setItem(row, 9, QTableWidgetItem(source.text()))
+            if shot is not None:
+                self.package_table.setItem(
+                    row, 8, QTableWidgetItem(self._universal_state(shot.text()))
+                )
+        self._load_universal_draft()
+
+    def _selection_changed(self) -> None:
+        super()._selection_changed()
+        if hasattr(self, "universal_preview"):
+            self._load_universal_draft()
+
+    def _universal_state(self, shot_id: str) -> str:
+        draft = self.universal_compiler.draft(shot_id)
+        if draft is None:
+            return "Not started"
+        if (
+            draft.status is UniversalProductionDescriptionStatus.READY
+            and self.universal_compiler.is_current(draft)
+        ):
+            return "Ready / Compiled"
+        if not self.universal_compiler.is_current(draft):
+            return f"{draft.status.value.title()} / Stale"
+        return draft.status.value.title()
+
+    def _load_universal_draft(self) -> None:
+        if not hasattr(self, "universal_preview") or self._selected_shot_id is None:
+            return
+        draft = self.universal_compiler.draft(self._selected_shot_id)
+        if draft is None:
+            self.universal_status.setText(
+                "No Universal Production Description Draft exists yet. Assemble one from current governed authority."
+            )
+            self.universal_preview.clear()
+            self.universal_notes.clear()
+            self.universal_create_button.setEnabled(True)
+            self.universal_refresh_button.setEnabled(False)
+            self.universal_save_button.setEnabled(False)
+            self.universal_ready_button.setEnabled(False)
+            self.universal_draft_button.setEnabled(False)
+            self.universal_notes.setReadOnly(True)
+            return
+
+        value = draft.description_value()
+        self.universal_preview.setPlainText(str(value.get("universal_text", "")))
+        self.universal_notes.setPlainText(draft.production_notes)
+        stale = not self.universal_compiler.is_current(draft)
+        ready = draft.status is UniversalProductionDescriptionStatus.READY
+        missing = self.universal_compiler.missing_prerequisites(draft.shot_id)
+        if stale:
+            self.universal_status.setText(
+                "Universal Production Description is stale because governed production authority changed. "
+                "Refresh it before final approval."
+            )
+        elif ready:
+            self.universal_status.setText(
+                "Universal Production Description authority is Ready and compiled into the current Production Package."
+            )
+        elif missing:
+            self.universal_status.setText(
+                "Universal Production Description Draft is current, but final approval is blocked until upstream authority is Ready: "
+                + ", ".join(missing)
+                + "."
+            )
+        else:
+            self.universal_status.setText(
+                "Universal Production Description Draft is current. Review the assembled provider-neutral description; final approval remains with the user."
+            )
+        self.universal_create_button.setEnabled(False)
+        self.universal_refresh_button.setEnabled(stale and not ready)
+        self.universal_save_button.setEnabled(not stale and not ready)
+        self.universal_ready_button.setEnabled(not stale and not ready and not missing)
+        self.universal_draft_button.setEnabled(ready)
+        self.universal_notes.setReadOnly(stale or ready)
+
+    def _universal_create(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run_universal(lambda: self.universal_compiler.create_from_current_package(shot_id))
+
+    def _universal_refresh(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run_universal(lambda: self.universal_compiler.rebase_to_current_package(shot_id))
+
+    def _universal_save(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run_universal(
+            lambda: self.universal_compiler.save_notes(
+                shot_id, self.universal_notes.toPlainText()
+            )
+        )
+
+    def _universal_ready(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        try:
+            self.universal_compiler.save_notes(shot_id, self.universal_notes.toPlainText())
+            self.universal_compiler.mark_ready(shot_id)
+        except UniversalProductionDescriptionCompilerError as exc:
+            from PySide6.QtWidgets import QMessageBox
+
+            QMessageBox.warning(self, "Universal Production Description Compiler", str(exc))
+        self.refresh()
+
+    def _universal_return_to_draft(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run_universal(lambda: self.universal_compiler.return_to_draft(shot_id))
+
+    def _run_universal(self, action: Any) -> None:
+        try:
+            action()
+        except UniversalProductionDescriptionCompilerError as exc:
+            from PySide6.QtWidgets import QMessageBox
+
+            QMessageBox.warning(self, "Universal Production Description Compiler", str(exc))
+        self.refresh()
