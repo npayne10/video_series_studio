@@ -61,7 +61,9 @@ class AssetCompilerService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            drafts = tuple(self._from_dict(item) for item in raw.get("asset_compilation", []))
+            drafts = tuple(
+                self._from_dict(item) for item in raw.get("asset_compilation", [])
+            )
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise AssetCompilerError(f"Unable to load Asset Compiler drafts: {exc}") from exc
         return tuple(sorted(drafts, key=lambda item: item.shot_id))
@@ -95,11 +97,7 @@ class AssetCompilerService:
                 "Ready Asset compilation must return to Draft before refreshing its source"
             )
         package = self.packages.require_current_package(current.shot_id)
-        if (
-            current.source_package_id == package.package_id
-            and current.source_fingerprint == package.source_fingerprint
-            and current.assets == package.assets
-        ):
+        if current.source_fingerprint == package.source_fingerprint:
             return current
         updated = replace(
             current,
@@ -141,9 +139,7 @@ class AssetCompilerService:
 
     def is_current(self, draft: AssetCompilationDraft) -> bool:
         package = self.packages.current_package(draft.shot_id)
-        if package is None or package.source_fingerprint != draft.source_fingerprint:
-            return False
-        return tuple(self._detached(item) for item in package.assets) == draft.assets
+        return package is not None and package.source_fingerprint == draft.source_fingerprint
 
     def compile(self, shot_id: str) -> ProductionPackage:
         draft = self._require_draft(shot_id)
@@ -187,7 +183,10 @@ class AssetCompilerService:
 
     @staticmethod
     def _detached(value: dict[str, Any]) -> dict[str, Any]:
-        return json.loads(json.dumps(value, sort_keys=True, default=str))
+        decoded = json.loads(json.dumps(value, sort_keys=True, default=str))
+        if not isinstance(decoded, dict):
+            raise AssetCompilerError("Asset Compiler value is not a JSON object")
+        return dict(decoded)
 
     def _require_draft(self, shot_id: str) -> AssetCompilationDraft:
         draft = self.draft(shot_id)
@@ -211,7 +210,10 @@ class AssetCompilerService:
             "asset_compilation": [self._to_dict(item) for item in drafts],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
-        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         temporary.replace(path)
 
     @staticmethod
@@ -223,7 +225,9 @@ class AssetCompilerService:
     @staticmethod
     def _from_dict(data: dict[str, Any]) -> AssetCompilationDraft:
         raw_assets = data.get("assets", [])
-        if not isinstance(raw_assets, list) or not all(isinstance(item, dict) for item in raw_assets):
+        if not isinstance(raw_assets, list) or not all(
+            isinstance(item, dict) for item in raw_assets
+        ):
             raise AssetCompilerError("Asset Compiler draft Assets are invalid")
         return AssetCompilationDraft(
             shot_id=str(data["shot_id"]),
