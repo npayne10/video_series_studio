@@ -106,7 +106,9 @@ def test_create_seeds_only_governed_package_assets(tmp_path: Path) -> None:
     assert draft.status is AssetCompilationStatus.DRAFT
 
 
-def test_ready_compilation_is_provider_neutral_and_preserves_governed_source(tmp_path: Path) -> None:
+def test_ready_compilation_is_provider_neutral_and_preserves_governed_source(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
     service.create_from_current_package("SHT-001")
     service.save_notes("SHT-001", "Keep canonical bridge uniform and rank insignia visible.")
@@ -137,7 +139,9 @@ def test_ready_is_immutable_until_returned_to_draft(tmp_path: Path) -> None:
     assert service.save_notes("SHT-001", "Changed").production_notes == "Changed"
 
 
-def test_upstream_change_makes_asset_draft_stale_and_refresh_preserves_notes(tmp_path: Path) -> None:
+def test_upstream_change_makes_asset_draft_stale_and_refresh_preserves_notes(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
     service.create_from_current_package("SHT-001")
     service.save_notes("SHT-001", "Preserve this human review note.")
