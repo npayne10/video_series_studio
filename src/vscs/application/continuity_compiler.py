@@ -177,7 +177,7 @@ class ContinuityCompilerService:
             validation.pop("continuity_review_notes", None)
         data["validation"] = validation
         data["status"] = ProductionPackageStatus.COMPILING.value
-        append_derived: Any = getattr(self.packages, "_append_derived")
+        append_derived: Any = self.packages._append_derived
         derived: ProductionPackage = append_derived(current, data)
         return derived
 
