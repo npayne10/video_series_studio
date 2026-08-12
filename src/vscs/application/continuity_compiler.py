@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from pathlib import Path
@@ -45,6 +46,22 @@ class ContinuityCompilerService:
 
     FILE_NAME = "continuity_compilation.json"
     SCHEMA_VERSION = "1.0"
+    _PRESERVATION_PHRASES = (
+        "same as previous shot",
+        "same as the previous shot",
+        "same as in previous shot",
+        "same as in the previous shot",
+        "continues from previous shot",
+        "continues from the previous shot",
+        "continue from previous shot",
+        "continue from the previous shot",
+        "unchanged from previous shot",
+        "unchanged from the previous shot",
+        "preserve previous",
+        "preserve the previous",
+        "as previous shot",
+        "as the previous shot",
+    )
 
     def __init__(self, projects: ProjectService, packages: ProductionPackageService) -> None:
         self.projects = projects
@@ -197,8 +214,27 @@ class ContinuityCompilerService:
             or str(package.shot.get("continuity_out", "")).strip()
         )
         previous_closing = cls._previous_closing(previous)
+        preservation_directive = cls._is_preservation_directive(opening)
+        if preservation_directive and previous_closing:
+            effective_opening = previous_closing
+            opening_resolution = "preserve-previous-directive"
+        elif opening:
+            effective_opening = opening
+            opening_resolution = "explicit-opening-state"
+        elif previous_closing:
+            effective_opening = previous_closing
+            opening_resolution = "inherited-previous-closing-state"
+        else:
+            effective_opening = ""
+            opening_resolution = "series-entry"
+
         conflicts: list[str] = []
-        if opening and previous_closing and opening != previous_closing:
+        if (
+            opening
+            and previous_closing
+            and not preservation_directive
+            and opening != previous_closing
+        ):
             conflicts.append(
                 "Current opening state differs from the previous Shot closing state; user review required."
             )
@@ -207,7 +243,8 @@ class ContinuityCompilerService:
             "previous_shot_id": previous.shot_id if previous else "",
             "previous_closing_state": previous_closing,
             "current_opening_state": opening,
-            "effective_opening_state": opening or previous_closing,
+            "effective_opening_state": effective_opening,
+            "opening_resolution": opening_resolution,
             "current_closing_state": closing,
             "previous_asset_ids": list(cls._asset_ids(previous)) if previous else [],
             "current_asset_ids": list(cls._asset_ids(package)),
@@ -234,6 +271,7 @@ class ContinuityCompilerService:
             "production": {
                 "previous_shot_id": governed.get("previous_shot_id", ""),
                 "opening_state": governed.get("effective_opening_state", ""),
+                "opening_resolution": governed.get("opening_resolution", ""),
                 "closing_state": governed.get("current_closing_state", ""),
                 "asset_ids": governed.get("current_asset_ids", []),
                 "previous_asset_ids": governed.get("previous_asset_ids", []),
@@ -304,6 +342,15 @@ class ContinuityCompilerService:
             cls._action_value(package, "closing_state")
             or str(package.shot.get("continuity_out", "")).strip()
         )
+
+    @classmethod
+    def _is_preservation_directive(cls, value: str) -> bool:
+        normalized = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+        if not normalized:
+            return False
+        if normalized in {"unchanged", "same", "preserve previous"}:
+            return True
+        return any(phrase in normalized for phrase in cls._PRESERVATION_PHRASES)
 
     @staticmethod
     def _section_value(section: dict[str, Any], key: str) -> str:
