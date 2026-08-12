@@ -359,7 +359,7 @@ class BehaviourValidationMixin(_BehaviourMixinBase):
             if field not in execution:
                 continue
             value = execution[field]
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+            if isinstance(value, bool) or not isinstance(value, int | float) or value < 0:
                 self._add_asset_diagnostic(
                     result,
                     ValidationSeverity.ERROR,

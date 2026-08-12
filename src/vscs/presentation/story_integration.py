@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from vscs.application.acpp import ACPPEditorService
+from vscs.application.action_performance import ActionPerformanceCompilerService
 from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
+from vscs.application.production_package import ProductionPackageService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
     EpisodePlanningService,
@@ -59,6 +61,7 @@ from vscs.presentation.widgets.lighting_planner_integration import (
     install_lighting_planner_navigation,
 )
 from vscs.presentation.widgets.planning_review_integration import install_planning_review_navigation
+from vscs.presentation.widgets.production_package_workspace import ProductionPackageWorkspace
 from vscs.presentation.widgets.production_planning_workspace import (
     install_production_planning_workspace,
 )
@@ -86,7 +89,8 @@ def install_story_browser() -> None:
 
     def create_content_area(window: Any) -> None:
         original_create_content(window)
-        placeholder = window.content_stack.widget(2)
+        story_placeholder = window.content_stack.widget(2)
+        production_placeholder = window.content_stack.widget(6)
         asset_browser = window.services.get(AssetBrowserService)
         if asset_browser is None:
             register_asset_resolution(window.services)
@@ -168,6 +172,19 @@ def install_story_browser() -> None:
         setattr(lighting_service, "environment_planning_service", environment_service)  # noqa: B010
         setattr(planning_review, "planning_integration_service", planning_integration)  # noqa: B010
 
+        package_service = window.services.get(ProductionPackageService)
+        if package_service is None:
+            package_service = window.services.register(
+                ProductionPackageService,
+                ProductionPackageService(window.projects, planning_integration),
+            )
+        action_service = window.services.get(ActionPerformanceCompilerService)
+        if action_service is None:
+            action_service = window.services.register(
+                ActionPerformanceCompilerService,
+                ActionPerformanceCompilerService(window.projects, package_service),
+            )
+
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
             episode_service,
@@ -184,22 +201,35 @@ def install_story_browser() -> None:
             shot_service,
         )
         window.story_workspace = window.story_browser
-        window.content_stack.removeWidget(placeholder)
-        placeholder.deleteLater()
+        window.content_stack.removeWidget(story_placeholder)
+        story_placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
+
+        window.production_package_workspace = ProductionPackageWorkspace(
+            window.projects,
+            package_service,
+            action_service,
+        )
+        window.content_stack.removeWidget(production_placeholder)
+        production_placeholder.deleteLater()
+        window.content_stack.insertWidget(6, window.production_package_workspace)
 
     def update_status(window: Any, section: str) -> None:
         original_update_status(window, section)
         if section == "Story":
             window.story_browser.refresh()
+        elif section == "Production Planning":
+            window.production_package_workspace.refresh()
 
     def update_state(window: Any) -> None:
         original_update_state(window)
         window.story_browser.refresh()
+        window.production_package_workspace.refresh()
 
     def close_project(window: Any) -> None:
         original_close_project(window)
         window.story_browser.refresh()
+        window.production_package_workspace.refresh()
 
     setattr(MainWindow, "_create_content_area", create_content_area)  # noqa: B010
     setattr(MainWindow, "_update_status_for_section", update_status)  # noqa: B010

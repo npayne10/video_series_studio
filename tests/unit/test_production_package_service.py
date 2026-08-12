@@ -92,6 +92,27 @@ def test_materialization_is_idempotent_and_persistent(tmp_path: Path) -> None:
     assert len(raw["production_packages"]) == 1
 
 
+def test_action_performance_derivation_preserves_foundation_and_history(tmp_path: Path) -> None:
+    service, _planning = _service(tmp_path)
+    foundation = service.materialize("SHT-001")
+    compiled = {
+        "temporal_narrative": "James approaches Cheryl and speaks.",
+        "provider_neutral": True,
+    }
+
+    derived = service.derive_action_performance("SHT-001", compiled)
+    repeated = service.derive_action_performance("SHT-001", compiled)
+
+    assert derived.package_id != foundation.package_id
+    assert derived.action_performance == compiled
+    assert derived.camera == foundation.camera
+    assert derived.provider_outputs == {}
+    assert derived.validation["action_performance_complete"] is True
+    assert service.current_package("SHT-001") == derived
+    assert repeated == derived
+    assert len(service.list_packages(shot_id="SHT-001")) == 2
+
+
 def test_new_integrated_planning_preserves_package_history(tmp_path: Path) -> None:
     service, planning = _service(tmp_path)
     first = service.materialize("SHT-001")

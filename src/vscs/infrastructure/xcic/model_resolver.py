@@ -60,10 +60,10 @@ class XCICModelResolver:
             if not isinstance(group, dict):
                 continue
             for input_name, spec in group.items():
-                if not isinstance(spec, (list, tuple)) or not spec:
+                if not isinstance(spec, list | tuple) or not spec:
                     continue
                 candidates = spec[0]
-                if isinstance(candidates, (list, tuple)) and all(
+                if isinstance(candidates, list | tuple) and all(
                     isinstance(item, str) for item in candidates
                 ):
                     result[str(input_name)] = tuple(candidates)
