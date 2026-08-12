@@ -121,7 +121,9 @@ class CameraCompilerWorkspace(ProductionPackageWorkspace):
             if source is not None:
                 self.package_table.setItem(row, 5, QTableWidgetItem(source.text()))
             if shot is not None:
-                self.package_table.setItem(row, 4, QTableWidgetItem(self._camera_state(shot.text())))
+                self.package_table.setItem(
+                    row, 4, QTableWidgetItem(self._camera_state(shot.text()))
+                )
         self._load_camera_draft()
 
     def _selection_changed(self) -> None:
