@@ -33,9 +33,15 @@ The compiled representation is provider-neutral and contains no model, renderer,
 
 The existing left navigation item `Production Planning` becomes the Phase 19.4 workspace. Current approved Shots and Production Packages are listed on the left; the Action & Performance editor is shown on the right. Later Phase 19.4 compilers extend this same workspace.
 
-## Staleness
+## Staleness and recovery
 
-If upstream approved planning changes, the Production Package source fingerprint changes. The existing Action & Performance record is then stale and cannot be edited/compiled as current authority until reviewed against the new package.
+If upstream approved planning changes, the Production Package source fingerprint changes. The existing Action & Performance record is then stale and cannot be edited or compiled as current authority until reviewed against the new package.
+
+A stale Draft exposes `Refresh from Current Shot`. This operation rebases only the draft's source Production Package identity/fingerprint while preserving all authored temporal narrative, dialogue, performance, opening/closing state and timing content. After refresh the Draft becomes current and editable again. A stale Ready record must first be returned to Draft, then refreshed against the current Shot before review and recompilation.
+
+## Acceptance corrections
+
+Phase 19.4.2 acceptance also normalizes legacy `isinstance()` union syntax required by the current Ruff UP038 rule. These syntax-only corrections do not change runtime validation behaviour and keep local development and CI quality gates aligned.
 
 ## Acceptance criteria
 
@@ -44,6 +50,7 @@ If upstream approved planning changes, the Production Package source fingerprint
 - Create from Shot does not invent story content;
 - temporal narrative is required for Ready;
 - Ready records are immutable until Return to Draft;
+- stale Drafts can be refreshed against current approved planning without losing authored content;
 - Ready compilation populates only `action_performance` and preserves other package sections;
 - provider-specific controls are absent;
 - persistence survives project reopen;
