@@ -161,6 +161,39 @@ class ProductionPackageService:
         validation["action_performance_complete"] = True
         data["validation"] = validation
         data["status"] = ProductionPackageStatus.COMPILING.value
+        return self._append_derived(current, data)
+
+    def derive_assets(
+        self,
+        shot_id: str,
+        compiled: tuple[dict[str, Any], ...],
+        *,
+        production_notes: str = "",
+    ) -> ProductionPackage:
+        """Append a deterministic package revision containing reviewed Asset authority."""
+        current = self.require_current_package(shot_id)
+        if current.assets == compiled and current.validation.get("assets_complete") is True:
+            return current
+        data = asdict(current)
+        data.pop("package_id", None)
+        data.pop("package_fingerprint", None)
+        data["assets"] = [dict(item) for item in compiled]
+        data["references"] = self._reference_index([dict(item) for item in compiled])
+        validation = dict(current.validation)
+        validation["assets_complete"] = True
+        if production_notes.strip():
+            validation["asset_review_notes"] = production_notes.strip()
+        else:
+            validation.pop("asset_review_notes", None)
+        data["validation"] = validation
+        data["status"] = ProductionPackageStatus.COMPILING.value
+        return self._append_derived(current, data)
+
+    def _append_derived(
+        self,
+        current: ProductionPackage,
+        data: dict[str, Any],
+    ) -> ProductionPackage:
         canonical = json.dumps(data, sort_keys=True, default=str, separators=(",", ":"))
         fingerprint = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         package_id = f"PP-{current.shot_id}-{fingerprint[:12].upper()}"

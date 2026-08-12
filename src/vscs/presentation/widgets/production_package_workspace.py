@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -24,6 +26,11 @@ from vscs.application.action_performance import (
     ActionPerformanceCompilerService,
     ActionPerformanceError,
     ActionPerformanceStatus,
+)
+from vscs.application.asset_compiler import (
+    AssetCompilationStatus,
+    AssetCompilerError,
+    AssetCompilerService,
 )
 from vscs.application.production_package import ProductionPackage, ProductionPackageService
 from vscs.application.projects import ProjectService
@@ -37,12 +44,14 @@ class ProductionPackageWorkspace(QWidget):
         projects: ProjectService,
         packages: ProductionPackageService,
         action_performance: ActionPerformanceCompilerService,
+        asset_compiler: AssetCompilerService,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.projects = projects
         self.packages = packages
         self.action_performance = action_performance
+        self.asset_compiler = asset_compiler
         self._selected_shot_id: str | None = None
 
         root = QVBoxLayout(self)
@@ -63,9 +72,9 @@ class ProductionPackageWorkspace(QWidget):
         left = QWidget(splitter)
         left_layout = QVBoxLayout(left)
         left_layout.addWidget(QLabel("Current approved Shots", left))
-        self.package_table = QTableWidget(0, 4, left)
+        self.package_table = QTableWidget(0, 5, left)
         self.package_table.setHorizontalHeaderLabels(
-            ("Shot", "Production Package", "Action", "Source")
+            ("Shot", "Production Package", "Action", "Assets", "Source")
         )
         self.package_table.horizontalHeader().setStretchLastSection(True)
         self.package_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -81,7 +90,41 @@ class ProductionPackageWorkspace(QWidget):
         self.package_summary.setWordWrap(True)
         right_layout.addWidget(self.package_summary)
 
-        action_group = QGroupBox("Action & Performance", right)
+        self.compiler_tabs = QTabWidget(right)
+        right_layout.addWidget(self.compiler_tabs, 1)
+        self._build_action_tab()
+        self._build_asset_tab()
+
+        future = QLabel(
+            "Later Phase 19.4 compilers will add Camera, Lighting, Continuity, Style, "
+            "Universal Description, Provider Output and Validation views to this same workspace.",
+            right,
+        )
+        future.setWordWrap(True)
+        right_layout.addWidget(future)
+        splitter.addWidget(right)
+        splitter.setSizes((500, 800))
+
+        self.refresh_button.clicked.connect(self.refresh)
+        self.package_table.itemSelectionChanged.connect(self._selection_changed)
+        self.create_button.clicked.connect(self._create)
+        self.refresh_source_button.clicked.connect(self._refresh_source)
+        self.save_button.clicked.connect(self._save)
+        self.ready_button.clicked.connect(self._mark_ready)
+        self.draft_button.clicked.connect(self._return_to_draft)
+        self.asset_create_button.clicked.connect(self._asset_create)
+        self.asset_refresh_button.clicked.connect(self._asset_refresh_source)
+        self.asset_save_button.clicked.connect(self._asset_save)
+        self.asset_ready_button.clicked.connect(self._asset_mark_ready)
+        self.asset_draft_button.clicked.connect(self._asset_return_to_draft)
+        self._set_editor_enabled(False)
+        self._set_asset_editor_enabled(False)
+        self.refresh()
+
+    def _build_action_tab(self) -> None:
+        tab = QWidget(self.compiler_tabs)
+        layout = QVBoxLayout(tab)
+        action_group = QGroupBox("Action & Performance", tab)
         action_layout = QVBoxLayout(action_group)
         guidance = QLabel(
             "Describe the actual temporal story of this Shot: who does what, in what order, "
@@ -134,27 +177,58 @@ class ProductionPackageWorkspace(QWidget):
         actions.addWidget(self.draft_button)
         actions.addStretch(1)
         action_layout.addLayout(actions)
-        right_layout.addWidget(action_group, 1)
+        layout.addWidget(action_group, 1)
+        self.compiler_tabs.addTab(tab, "Action & Performance")
 
-        future = QLabel(
-            "Later Phase 19.4 compilers will add Asset, Camera, Lighting, Continuity, Style, "
-            "Universal Description, Provider Output and Validation views to this same workspace.",
-            right,
+    def _build_asset_tab(self) -> None:
+        tab = QWidget(self.compiler_tabs)
+        layout = QVBoxLayout(tab)
+        asset_group = QGroupBox("Asset Compiler", tab)
+        asset_layout = QVBoxLayout(asset_group)
+        guidance = QLabel(
+            "Review the governed Shot asset bindings and canonical resolutions before compiling "
+            "them into production Asset authority. This compiler does not invent or substitute assets.",
+            asset_group,
         )
-        future.setWordWrap(True)
-        right_layout.addWidget(future)
-        splitter.addWidget(right)
-        splitter.setSizes((480, 820))
+        guidance.setWordWrap(True)
+        asset_layout.addWidget(guidance)
 
-        self.refresh_button.clicked.connect(self.refresh)
-        self.package_table.itemSelectionChanged.connect(self._selection_changed)
-        self.create_button.clicked.connect(self._create)
-        self.refresh_source_button.clicked.connect(self._refresh_source)
-        self.save_button.clicked.connect(self._save)
-        self.ready_button.clicked.connect(self._mark_ready)
-        self.draft_button.clicked.connect(self._return_to_draft)
-        self._set_editor_enabled(False)
-        self.refresh()
+        self.asset_status = QLabel("", asset_group)
+        self.asset_status.setWordWrap(True)
+        asset_layout.addWidget(self.asset_status)
+
+        self.asset_table = QTableWidget(0, 5, asset_group)
+        self.asset_table.setHorizontalHeaderLabels(
+            ("Binding", "Asset", "Role", "Requirement", "Canonical Reference")
+        )
+        self.asset_table.horizontalHeader().setStretchLastSection(True)
+        self.asset_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.asset_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        asset_layout.addWidget(self.asset_table, 1)
+
+        self.asset_notes = QTextEdit(asset_group)
+        self.asset_notes.setMaximumHeight(90)
+        self.asset_notes.setPlaceholderText(
+            "Optional human review notes for production use; no asset identity is invented here."
+        )
+        asset_layout.addWidget(QLabel("Production review notes", asset_group))
+        asset_layout.addWidget(self.asset_notes)
+
+        actions = QHBoxLayout()
+        self.asset_create_button = QPushButton("Create from Package", asset_group)
+        self.asset_refresh_button = QPushButton("Refresh from Current Package", asset_group)
+        self.asset_save_button = QPushButton("Save Review Notes", asset_group)
+        self.asset_ready_button = QPushButton("Mark Ready & Compile", asset_group)
+        self.asset_draft_button = QPushButton("Return to Draft", asset_group)
+        actions.addWidget(self.asset_create_button)
+        actions.addWidget(self.asset_refresh_button)
+        actions.addWidget(self.asset_save_button)
+        actions.addWidget(self.asset_ready_button)
+        actions.addWidget(self.asset_draft_button)
+        actions.addStretch(1)
+        asset_layout.addLayout(actions)
+        layout.addWidget(asset_group, 1)
+        self.compiler_tabs.addTab(tab, "Assets")
 
     def refresh(self) -> None:
         """Rebuild current Production Package rows from approved Phase 19.3 handoffs."""
@@ -167,22 +241,13 @@ class ProductionPackageWorkspace(QWidget):
         self.package_table.setRowCount(len(rows))
         selected_row = -1
         for row, package in enumerate(rows):
-            draft = self.action_performance.draft(package.shot_id)
-            if draft is None:
-                action_state = "Not started"
-            elif (
-                draft.status is ActionPerformanceStatus.READY
-                and self.action_performance.is_current(draft)
-            ):
-                action_state = "Ready / Compiled"
-            elif not self.action_performance.is_current(draft):
-                action_state = f"{draft.status.value.title()} / Stale"
-            else:
-                action_state = draft.status.value.title()
+            action_state = self._action_state(package.shot_id)
+            asset_state = self._asset_state(package.shot_id)
             values = (
                 package.shot_id,
                 package.package_id,
                 action_state,
+                asset_state,
                 package.provenance.integrated_package_id,
             )
             for column, value in enumerate(values):
@@ -202,8 +267,33 @@ class ProductionPackageWorkspace(QWidget):
                 "Complete Planning Review for a Shot first."
             )
             self.action_status.clear()
+            self.asset_status.clear()
             self._clear_editor()
+            self._clear_asset_editor()
             self._set_editor_enabled(False)
+            self._set_asset_editor_enabled(False)
+
+    def _action_state(self, shot_id: str) -> str:
+        draft = self.action_performance.draft(shot_id)
+        if draft is None:
+            return "Not started"
+        if draft.status is ActionPerformanceStatus.READY and self.action_performance.is_current(
+            draft
+        ):
+            return "Ready / Compiled"
+        if not self.action_performance.is_current(draft):
+            return f"{draft.status.value.title()} / Stale"
+        return draft.status.value.title()
+
+    def _asset_state(self, shot_id: str) -> str:
+        draft = self.asset_compiler.draft(shot_id)
+        if draft is None:
+            return "Not started"
+        if draft.status is AssetCompilationStatus.READY and self.asset_compiler.is_current(draft):
+            return "Ready / Compiled"
+        if not self.asset_compiler.is_current(draft):
+            return f"{draft.status.value.title()} / Stale"
+        return draft.status.value.title()
 
     def _selection_changed(self) -> None:
         row = self.package_table.currentRow()
@@ -222,6 +312,7 @@ class ProductionPackageWorkspace(QWidget):
             f"Planning source: {package.provenance.integrated_package_id}"
         )
         self._load_draft()
+        self._load_asset_draft()
 
     def _load_draft(self) -> None:
         if self._selected_shot_id is None:
@@ -270,20 +361,85 @@ class ProductionPackageWorkspace(QWidget):
         self.draft_button.setEnabled(ready)
         self._fields_read_only(ready or stale)
 
+    def _load_asset_draft(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        draft = self.asset_compiler.draft(self._selected_shot_id)
+        if draft is None:
+            self.asset_status.setText(
+                "No Asset Compiler Draft exists yet. Create one from the current Production Package."
+            )
+            self._clear_asset_editor()
+            self.asset_create_button.setEnabled(True)
+            self.asset_refresh_button.setEnabled(False)
+            self.asset_save_button.setEnabled(False)
+            self.asset_ready_button.setEnabled(False)
+            self.asset_draft_button.setEnabled(False)
+            self.asset_notes.setReadOnly(True)
+            return
+        self._populate_asset_table(draft.assets)
+        self.asset_notes.setPlainText(draft.production_notes)
+        stale = not self.asset_compiler.is_current(draft)
+        ready = draft.status is AssetCompilationStatus.READY
+        if stale:
+            self.asset_status.setText(
+                "Asset compilation is stale because governed Planning assets changed. Refresh from "
+                "Current Package to load the current bindings while preserving human review notes."
+            )
+        elif ready:
+            self.asset_status.setText(
+                "Asset authority is Ready and compiled into the current Production Package."
+            )
+        else:
+            count = len(draft.assets)
+            self.asset_status.setText(
+                f"Asset Compiler Draft is current with {count} governed asset binding(s). "
+                "Review the canonical resolutions and mark it Ready when complete."
+            )
+        self.asset_create_button.setEnabled(False)
+        self.asset_refresh_button.setEnabled(stale and not ready)
+        self.asset_save_button.setEnabled(not stale and not ready)
+        self.asset_ready_button.setEnabled(not stale and not ready)
+        self.asset_draft_button.setEnabled(ready)
+        self.asset_notes.setReadOnly(stale or ready)
+
+    def _populate_asset_table(self, assets: tuple[dict[str, Any], ...]) -> None:
+        self.asset_table.setRowCount(len(assets))
+        for row, item in enumerate(assets):
+            binding = item.get("binding", {})
+            resolution = item.get("resolution", {})
+            if not isinstance(binding, dict):
+                binding = {}
+            if not isinstance(resolution, dict):
+                resolution = {}
+            values = (
+                str(binding.get("binding_id", "")),
+                str(resolution.get("asset_id") or binding.get("asset_id") or ""),
+                str(binding.get("role", "")),
+                str(binding.get("requirement", "")),
+                str(resolution.get("canonical_reference") or ""),
+            )
+            for column, value in enumerate(values):
+                self.asset_table.setItem(row, column, QTableWidgetItem(value))
+
     def _create(self) -> None:
         if self._selected_shot_id is None:
             return
         self._run(
             lambda: self.action_performance.create_from_current_package(
                 self._selected_shot_id or ""
-            )
+            ),
+            "Action & Performance",
         )
 
     def _refresh_source(self) -> None:
         if self._selected_shot_id is None:
             return
         shot_id = self._selected_shot_id
-        self._run(lambda: self.action_performance.rebase_to_current_package(shot_id))
+        self._run(
+            lambda: self.action_performance.rebase_to_current_package(shot_id),
+            "Action & Performance",
+        )
 
     def _save(self) -> None:
         if self._selected_shot_id is None:
@@ -298,7 +454,8 @@ class ProductionPackageWorkspace(QWidget):
                 opening_state=self.opening_state.toPlainText(),
                 closing_state=self.closing_state.toPlainText(),
                 timing_notes=self.timing_notes.toPlainText(),
-            )
+            ),
+            "Action & Performance",
         )
 
     def _mark_ready(self) -> None:
@@ -306,19 +463,65 @@ class ProductionPackageWorkspace(QWidget):
             return
         shot_id = self._selected_shot_id
         self._save()
-        self._run(lambda: self.action_performance.mark_ready(shot_id))
+        self._run(
+            lambda: self.action_performance.mark_ready(shot_id),
+            "Action & Performance",
+        )
 
     def _return_to_draft(self) -> None:
         if self._selected_shot_id is None:
             return
         shot_id = self._selected_shot_id
-        self._run(lambda: self.action_performance.return_to_draft(shot_id))
+        self._run(
+            lambda: self.action_performance.return_to_draft(shot_id),
+            "Action & Performance",
+        )
 
-    def _run(self, action: Callable[[], object]) -> None:
+    def _asset_create(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run(
+            lambda: self.asset_compiler.create_from_current_package(shot_id),
+            "Asset Compiler",
+        )
+
+    def _asset_refresh_source(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run(
+            lambda: self.asset_compiler.rebase_to_current_package(shot_id),
+            "Asset Compiler",
+        )
+
+    def _asset_save(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run(
+            lambda: self.asset_compiler.save_notes(shot_id, self.asset_notes.toPlainText()),
+            "Asset Compiler",
+        )
+
+    def _asset_mark_ready(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._asset_save()
+        self._run(lambda: self.asset_compiler.mark_ready(shot_id), "Asset Compiler")
+
+    def _asset_return_to_draft(self) -> None:
+        if self._selected_shot_id is None:
+            return
+        shot_id = self._selected_shot_id
+        self._run(lambda: self.asset_compiler.return_to_draft(shot_id), "Asset Compiler")
+
+    def _run(self, action: Callable[[], object], title: str) -> None:
         try:
             action()
-        except ActionPerformanceError as exc:
-            QMessageBox.warning(self, "Action & Performance", str(exc))
+        except (ActionPerformanceError, AssetCompilerError) as exc:
+            QMessageBox.warning(self, title, str(exc))
         self.refresh()
 
     def _set_editor_enabled(self, enabled: bool) -> None:
@@ -331,6 +534,17 @@ class ProductionPackageWorkspace(QWidget):
         ):
             button.setEnabled(enabled)
         self._fields_read_only(not enabled)
+
+    def _set_asset_editor_enabled(self, enabled: bool) -> None:
+        for button in (
+            self.asset_create_button,
+            self.asset_refresh_button,
+            self.asset_save_button,
+            self.asset_ready_button,
+            self.asset_draft_button,
+        ):
+            button.setEnabled(enabled)
+        self.asset_notes.setReadOnly(not enabled)
 
     def _fields_read_only(self, value: bool) -> None:
         for field in (
@@ -353,3 +567,7 @@ class ProductionPackageWorkspace(QWidget):
             self.timing_notes,
         ):
             field.clear()
+
+    def _clear_asset_editor(self) -> None:
+        self.asset_table.setRowCount(0)
+        self.asset_notes.clear()

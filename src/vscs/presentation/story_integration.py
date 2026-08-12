@@ -6,6 +6,7 @@ from typing import Any
 
 from vscs.application.acpp import ACPPEditorService
 from vscs.application.action_performance import ActionPerformanceCompilerService
+from vscs.application.asset_compiler import AssetCompilerService
 from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
 from vscs.application.production_package import ProductionPackageService
@@ -184,6 +185,12 @@ def install_story_browser() -> None:
                 ActionPerformanceCompilerService,
                 ActionPerformanceCompilerService(window.projects, package_service),
             )
+        asset_compiler = window.services.get(AssetCompilerService)
+        if asset_compiler is None:
+            asset_compiler = window.services.register(
+                AssetCompilerService,
+                AssetCompilerService(window.projects, package_service),
+            )
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
@@ -209,6 +216,7 @@ def install_story_browser() -> None:
             window.projects,
             package_service,
             action_service,
+            asset_compiler,
         )
         window.content_stack.removeWidget(production_placeholder)
         production_placeholder.deleteLater()
