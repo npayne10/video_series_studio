@@ -359,7 +359,9 @@ class UniversalProductionDescriptionCompilerService:
 
     def _replace(self, updated: UniversalProductionDescriptionDraft) -> None:
         self._write(
-            tuple(updated if item.shot_id == updated.shot_id else item for item in self.list_drafts())
+            tuple(
+                updated if item.shot_id == updated.shot_id else item for item in self.list_drafts()
+            )
         )
 
     def _write(self, drafts: tuple[UniversalProductionDescriptionDraft, ...]) -> None:
