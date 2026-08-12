@@ -109,7 +109,9 @@ class LightingCompilerService:
     def save_notes(self, shot_id: str, production_notes: str) -> LightingCompilationDraft:
         current = self._require_draft(shot_id)
         if current.status is LightingCompilationStatus.READY:
-            raise LightingCompilerError("Ready Lighting compilation must return to Draft before editing")
+            raise LightingCompilerError(
+                "Ready Lighting compilation must return to Draft before editing"
+            )
         if not self.is_current(current):
             raise LightingCompilerError(
                 "Lighting compilation is stale against the current Production Package"
