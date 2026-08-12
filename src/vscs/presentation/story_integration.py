@@ -50,6 +50,9 @@ from vscs.application.story_analysis import (
 )
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
 from vscs.application.style_compiler import StyleCompilerService
+from vscs.application.universal_production_description_compiler import (
+    UniversalProductionDescriptionCompilerService,
+)
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import GuidedFirstSceneEditorDialog
 from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
@@ -57,19 +60,15 @@ from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
 from vscs.presentation.widgets.browseable_story_workspace import BrowseableStoryWorkspaceWidget
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
-from vscs.presentation.widgets.environment_planner_integration import (
-    install_environment_planner_navigation,
-)
+from vscs.presentation.widgets.environment_planner_integration import install_environment_planner_navigation
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
-from vscs.presentation.widgets.lighting_planner_integration import (
-    install_lighting_planner_navigation,
-)
+from vscs.presentation.widgets.lighting_planner_integration import install_lighting_planner_navigation
 from vscs.presentation.widgets.planning_review_integration import install_planning_review_navigation
-from vscs.presentation.widgets.production_planning_workspace import (
-    install_production_planning_workspace,
+from vscs.presentation.widgets.production_planning_workspace import install_production_planning_workspace
+from vscs.presentation.widgets.universal_production_description_compiler_workspace import (
+    UniversalProductionDescriptionCompilerWorkspace,
 )
-from vscs.presentation.widgets.style_compiler_workspace import StyleCompilerWorkspace
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -219,6 +218,12 @@ def install_story_browser() -> None:
                 StyleCompilerService,
                 StyleCompilerService(window.projects, package_service),
             )
+        universal_compiler = window.services.get(UniversalProductionDescriptionCompilerService)
+        if universal_compiler is None:
+            universal_compiler = window.services.register(
+                UniversalProductionDescriptionCompilerService,
+                UniversalProductionDescriptionCompilerService(window.projects, package_service),
+            )
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
@@ -240,7 +245,7 @@ def install_story_browser() -> None:
         story_placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
 
-        window.production_package_workspace = StyleCompilerWorkspace(
+        window.production_package_workspace = UniversalProductionDescriptionCompilerWorkspace(
             window.projects,
             package_service,
             action_service,
@@ -249,6 +254,7 @@ def install_story_browser() -> None:
             lighting_compiler,
             continuity_compiler,
             style_compiler,
+            universal_compiler,
         )
         window.content_stack.removeWidget(production_placeholder)
         production_placeholder.deleteLater()
