@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from PySide6.QtWidgets import (
@@ -63,10 +64,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         self.package_table.setColumnCount(10)
         self.package_table.setHorizontalHeaderLabels(self._universal_headers())
         self._build_universal_tab()
-        if hasattr(self, "footer_label"):
-            self.footer_label.setText(
-                "Later Phase 19.4 compilers will add Provider Output and Validation views to this same workspace."
-            )
+        self._update_future_footer()
         self.refresh()
 
     @staticmethod
@@ -84,14 +82,25 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             "Source",
         )
 
+    def _update_future_footer(self) -> None:
+        """Update the inherited Phase 19.4 footer without relying on a base-class attribute."""
+        for label in self.findChildren(QLabel):
+            if label.text().startswith("Later Phase 19.4 compilers will add"):
+                label.setText(
+                    "Later Phase 19.4 compilers will add Provider Output and Validation views "
+                    "to this same workspace."
+                )
+                label.setWordWrap(True)
+
     def _build_universal_tab(self) -> None:
         tab = QWidget(self.compiler_tabs)
         layout = QVBoxLayout(tab)
         group = QGroupBox("Universal Production Description Compiler", tab)
         group_layout = QVBoxLayout(group)
         guidance = QLabel(
-            "Assemble all approved Shot production authority into one canonical provider-neutral description. "
-            "This is the source for later provider-specific prompt/output compilation and does not add new creative intent.",
+            "Assemble all approved Shot production authority into one canonical provider-neutral "
+            "description. This is the source for later provider-specific prompt/output compilation "
+            "and does not add new creative intent.",
             group,
         )
         guidance.setWordWrap(True)
@@ -154,6 +163,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
                 self.package_table.setItem(
                     row, 8, QTableWidgetItem(self._universal_state(shot.text()))
                 )
+        self._update_future_footer()
         self._load_universal_draft()
 
     def _selection_changed(self) -> None:
@@ -193,7 +203,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             return
 
         value = draft.description_value()
-        self.universal_preview.setPlainText(str(value.get("universal_text", "")))
+        self.universal_preview.setPlainText(self._human_readable_description(value))
         self.universal_notes.setPlainText(draft.production_notes)
         stale = not self.universal_compiler.is_current(draft)
         ready = draft.status is UniversalProductionDescriptionStatus.READY
@@ -223,6 +233,75 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         self.universal_ready_button.setEnabled(not stale and not ready and not missing)
         self.universal_draft_button.setEnabled(ready)
         self.universal_notes.setReadOnly(stale or ready)
+
+    @classmethod
+    def _human_readable_description(cls, description: dict[str, Any]) -> str:
+        """Render governed authority for human approval without changing canonical data."""
+        sections: list[str] = []
+        section_keys = (
+            ("SHOT", "shot"),
+            ("ACTION & PERFORMANCE", "action_performance"),
+            ("ASSETS", "assets"),
+            ("CAMERA", "camera"),
+            ("LIGHTING", "lighting"),
+            ("ENVIRONMENT", "environment"),
+            ("CONTINUITY", "continuity"),
+            ("STYLE", "style"),
+            ("DIALOGUE", "dialogue"),
+            ("EFFECTS", "effects"),
+            ("CANONICAL REFERENCES", "canonical_references"),
+        )
+        for heading, key in section_keys:
+            value = description.get(key)
+            if value in (None, "", {}, []):
+                continue
+            sections.append(heading)
+            sections.extend(cls._render_value(value, indent=0))
+            sections.append("")
+        sections.append("PRODUCTION POLICY")
+        sections.append(
+            f"  Source Policy: {cls._display_scalar(description.get('source_policy', ''))}"
+        )
+        sections.append(
+            f"  Provider Neutral: {cls._display_scalar(description.get('provider_neutral', True))}"
+        )
+        return "\n".join(sections).rstrip()
+
+    @classmethod
+    def _render_value(cls, value: Any, *, indent: int) -> list[str]:
+        prefix = "  " * (indent + 1)
+        if isinstance(value, dict):
+            lines: list[str] = []
+            for key, item in value.items():
+                label = key.replace("_", " ").title()
+                if isinstance(item, dict | list | tuple):
+                    if item in ({}, [], ()):
+                        continue
+                    lines.append(f"{prefix}{label}:")
+                    lines.extend(cls._render_value(item, indent=indent + 1))
+                elif item not in (None, ""):
+                    lines.append(f"{prefix}{label}: {cls._display_scalar(item)}")
+            return lines
+        if isinstance(value, list | tuple):
+            lines = []
+            for index, item in enumerate(value, start=1):
+                if isinstance(item, dict):
+                    lines.append(f"{prefix}{index}.")
+                    lines.extend(cls._render_value(item, indent=indent + 1))
+                else:
+                    lines.append(f"{prefix}- {cls._display_scalar(item)}")
+            return lines
+        return [f"{prefix}{cls._display_scalar(value)}"]
+
+    @staticmethod
+    def _display_scalar(value: Any) -> str:
+        if isinstance(value, bool):
+            return "Yes" if value else "No"
+        if isinstance(value, float):
+            return f"{value:g}"
+        if isinstance(value, str):
+            return value.replace("\\n", "\n")
+        return str(value)
 
     def _universal_create(self) -> None:
         if self._selected_shot_id is None:
