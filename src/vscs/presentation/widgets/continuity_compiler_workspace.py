@@ -272,17 +272,13 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
         if self._selected_shot_id is None:
             return
         shot_id = self._selected_shot_id
-        self._run_continuity(
-            lambda: self.continuity_compiler.create_from_current_package(shot_id)
-        )
+        self._run_continuity(lambda: self.continuity_compiler.create_from_current_package(shot_id))
 
     def _continuity_refresh(self) -> None:
         if self._selected_shot_id is None:
             return
         shot_id = self._selected_shot_id
-        self._run_continuity(
-            lambda: self.continuity_compiler.rebase_to_current_package(shot_id)
-        )
+        self._run_continuity(lambda: self.continuity_compiler.rebase_to_current_package(shot_id))
 
     def _continuity_save(self) -> None:
         if self._selected_shot_id is None:
