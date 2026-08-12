@@ -145,9 +145,8 @@ class LightingCompilerWorkspace(CameraCompilerWorkspace):
         draft = self.lighting_compiler.draft(shot_id)
         if draft is None:
             return "Not started"
-        if (
-            draft.status is LightingCompilationStatus.READY
-            and self.lighting_compiler.is_current(draft)
+        if draft.status is LightingCompilationStatus.READY and self.lighting_compiler.is_current(
+            draft
         ):
             return "Ready / Compiled"
         if not self.lighting_compiler.is_current(draft):
@@ -222,9 +221,7 @@ class LightingCompilerWorkspace(CameraCompilerWorkspace):
                 text = "; ".join(str(item) for item in value)
             else:
                 text = str(value)
-            self.lighting_table.setItem(
-                row, 0, QTableWidgetItem(key.replace("_", " ").title())
-            )
+            self.lighting_table.setItem(row, 0, QTableWidgetItem(key.replace("_", " ").title()))
             self.lighting_table.setItem(row, 1, QTableWidgetItem(text))
 
     def _lighting_create(self) -> None:
