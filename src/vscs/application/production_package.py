@@ -189,6 +189,31 @@ class ProductionPackageService:
         data["status"] = ProductionPackageStatus.COMPILING.value
         return self._append_derived(current, data)
 
+    def derive_camera(
+        self,
+        shot_id: str,
+        compiled: dict[str, Any],
+        *,
+        production_notes: str = "",
+    ) -> ProductionPackage:
+        """Append a deterministic package revision containing reviewed Camera authority."""
+        current = self.require_current_package(shot_id)
+        if current.camera == compiled and current.validation.get("camera_complete") is True:
+            return current
+        data = asdict(current)
+        data.pop("package_id", None)
+        data.pop("package_fingerprint", None)
+        data["camera"] = dict(compiled)
+        validation = dict(current.validation)
+        validation["camera_complete"] = True
+        if production_notes.strip():
+            validation["camera_review_notes"] = production_notes.strip()
+        else:
+            validation.pop("camera_review_notes", None)
+        data["validation"] = validation
+        data["status"] = ProductionPackageStatus.COMPILING.value
+        return self._append_derived(current, data)
+
     def _append_derived(
         self,
         current: ProductionPackage,
