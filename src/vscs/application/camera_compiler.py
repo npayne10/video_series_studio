@@ -109,7 +109,9 @@ class CameraCompilerService:
     def save_notes(self, shot_id: str, production_notes: str) -> CameraCompilationDraft:
         current = self._require_draft(shot_id)
         if current.status is CameraCompilationStatus.READY:
-            raise CameraCompilerError("Ready Camera compilation must return to Draft before editing")
+            raise CameraCompilerError(
+                "Ready Camera compilation must return to Draft before editing"
+            )
         if not self.is_current(current):
             raise CameraCompilerError(
                 "Camera compilation is stale against the current Production Package"
@@ -206,9 +208,7 @@ class CameraCompilerService:
     def _require_draft(self, shot_id: str) -> CameraCompilationDraft:
         draft = self.draft(shot_id)
         if draft is None:
-            raise CameraCompilerError(
-                f"No Camera compilation exists for {shot_id.strip().upper()}"
-            )
+            raise CameraCompilerError(f"No Camera compilation exists for {shot_id.strip().upper()}")
         return draft
 
     def _replace(self, updated: CameraCompilationDraft) -> None:
