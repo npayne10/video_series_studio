@@ -182,6 +182,8 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             return "Ready / Compiled"
         if not self.universal_compiler.is_current(draft):
             return f"{draft.status.value.title()} / Stale"
+        if self.universal_compiler.consistency_findings(shot_id):
+            return "Draft / Blocked"
         return draft.status.value.title()
 
     def _load_universal_draft(self) -> None:
@@ -208,6 +210,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         stale = not self.universal_compiler.is_current(draft)
         ready = draft.status is UniversalProductionDescriptionStatus.READY
         missing = self.universal_compiler.missing_prerequisites(draft.shot_id)
+        findings = self.universal_compiler.consistency_findings(draft.shot_id)
         if stale:
             self.universal_status.setText(
                 "Universal Production Description is stale because governed production authority changed. "
@@ -223,6 +226,12 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
                 + ", ".join(missing)
                 + "."
             )
+        elif findings:
+            self.universal_status.setText(
+                "Universal Production Description Draft is current, but final approval is blocked by "
+                f"{len(findings)} cross-authority consistency finding(s). Correct the governed upstream "
+                "authority, then refresh this Draft."
+            )
         else:
             self.universal_status.setText(
                 "Universal Production Description Draft is current. Review the assembled provider-neutral description; final approval remains with the user."
@@ -230,7 +239,9 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         self.universal_create_button.setEnabled(False)
         self.universal_refresh_button.setEnabled(stale and not ready)
         self.universal_save_button.setEnabled(not stale and not ready)
-        self.universal_ready_button.setEnabled(not stale and not ready and not missing)
+        self.universal_ready_button.setEnabled(
+            not stale and not ready and not missing and not findings
+        )
         self.universal_draft_button.setEnabled(ready)
         self.universal_notes.setReadOnly(stale or ready)
 
@@ -250,6 +261,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             ("DIALOGUE", "dialogue"),
             ("EFFECTS", "effects"),
             ("CANONICAL REFERENCES", "canonical_references"),
+            ("CONSISTENCY FINDINGS", "consistency_findings"),
         )
         for heading, key in section_keys:
             value = description.get(key)
