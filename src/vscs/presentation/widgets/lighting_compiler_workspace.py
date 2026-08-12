@@ -57,10 +57,6 @@ class LightingCompilerWorkspace(CameraCompilerWorkspace):
             ("Shot", "Production Package", "Action", "Assets", "Camera", "Lighting", "Source")
         )
         self._build_lighting_tab()
-        self.footer_label.setText(
-            "Later Phase 19.4 compilers will add Continuity, Style, Universal Description, "
-            "Provider Output and Validation views to this same workspace."
-        )
         self.refresh()
 
     def _build_lighting_tab(self) -> None:
