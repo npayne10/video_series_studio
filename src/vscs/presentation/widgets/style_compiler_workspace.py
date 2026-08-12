@@ -193,6 +193,7 @@ class StyleCompilerWorkspace(ContinuityCompilerWorkspace):
         self.style_notes.setPlainText(draft.production_notes)
         stale = not self.style_compiler.is_current(draft)
         ready = draft.status is StyleCompilationStatus.READY
+        missing = self.style_compiler.missing_prerequisites(draft.shot_id)
         if stale:
             self.style_status.setText(
                 "Style compilation is stale because governed production authority changed. Refresh "
@@ -202,6 +203,11 @@ class StyleCompilerWorkspace(ContinuityCompilerWorkspace):
             self.style_status.setText(
                 "Style authority is Ready and compiled into the current Production Package."
             )
+        elif missing:
+            self.style_status.setText(
+                "Style Draft is current, but final approval is blocked until upstream authority is "
+                "Ready: " + ", ".join(missing) + "."
+            )
         else:
             self.style_status.setText(
                 "Style Draft is current. Review the assembled governed visual language; final "
@@ -210,7 +216,7 @@ class StyleCompilerWorkspace(ContinuityCompilerWorkspace):
         self.style_create_button.setEnabled(False)
         self.style_refresh_button.setEnabled(stale and not ready)
         self.style_save_button.setEnabled(not stale and not ready)
-        self.style_ready_button.setEnabled(not stale and not ready)
+        self.style_ready_button.setEnabled(not stale and not ready and not missing)
         self.style_draft_button.setEnabled(ready)
         self.style_notes.setReadOnly(stale or ready)
 
