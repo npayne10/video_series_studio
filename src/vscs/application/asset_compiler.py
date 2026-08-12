@@ -61,9 +61,7 @@ class AssetCompilerService:
             return ()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            drafts = tuple(
-                self._from_dict(item) for item in raw.get("asset_compilation", [])
-            )
+            drafts = tuple(self._from_dict(item) for item in raw.get("asset_compilation", []))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise AssetCompilerError(f"Unable to load Asset Compiler drafts: {exc}") from exc
         return tuple(sorted(drafts, key=lambda item: item.shot_id))
@@ -191,9 +189,7 @@ class AssetCompilerService:
     def _require_draft(self, shot_id: str) -> AssetCompilationDraft:
         draft = self.draft(shot_id)
         if draft is None:
-            raise AssetCompilerError(
-                f"No Asset compilation exists for {shot_id.strip().upper()}"
-            )
+            raise AssetCompilerError(f"No Asset compilation exists for {shot_id.strip().upper()}")
         return draft
 
     def _replace(self, updated: AssetCompilationDraft) -> None:
