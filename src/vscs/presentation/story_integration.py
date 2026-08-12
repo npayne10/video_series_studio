@@ -49,6 +49,7 @@ from vscs.application.story_analysis import (
     StoryAnalysisEngine,
 )
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
+from vscs.application.style_compiler import StyleCompilerService
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import GuidedFirstSceneEditorDialog
 from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
@@ -56,7 +57,6 @@ from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
 from vscs.presentation.widgets.browseable_story_workspace import BrowseableStoryWorkspaceWidget
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
-from vscs.presentation.widgets.continuity_compiler_workspace import ContinuityCompilerWorkspace
 from vscs.presentation.widgets.environment_planner_integration import (
     install_environment_planner_navigation,
 )
@@ -69,6 +69,7 @@ from vscs.presentation.widgets.planning_review_integration import install_planni
 from vscs.presentation.widgets.production_planning_workspace import (
     install_production_planning_workspace,
 )
+from vscs.presentation.widgets.style_compiler_workspace import StyleCompilerWorkspace
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -212,6 +213,12 @@ def install_story_browser() -> None:
                 ContinuityCompilerService,
                 ContinuityCompilerService(window.projects, package_service),
             )
+        style_compiler = window.services.get(StyleCompilerService)
+        if style_compiler is None:
+            style_compiler = window.services.register(
+                StyleCompilerService,
+                StyleCompilerService(window.projects, package_service),
+            )
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
@@ -233,7 +240,7 @@ def install_story_browser() -> None:
         story_placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
 
-        window.production_package_workspace = ContinuityCompilerWorkspace(
+        window.production_package_workspace = StyleCompilerWorkspace(
             window.projects,
             package_service,
             action_service,
@@ -241,6 +248,7 @@ def install_story_browser() -> None:
             camera_compiler,
             lighting_compiler,
             continuity_compiler,
+            style_compiler,
         )
         window.content_stack.removeWidget(production_placeholder)
         production_placeholder.deleteLater()
