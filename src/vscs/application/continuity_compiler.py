@@ -1,4 +1,5 @@
 """Provider-neutral Continuity compilation for Phase 19.4.6."""
+
 from __future__ import annotations
 
 import hashlib
@@ -62,7 +63,9 @@ class ContinuityCompilerService:
             raw = json.loads(self.draft_file.read_text(encoding="utf-8"))
             drafts = tuple(self._from_dict(item) for item in raw.get("continuity_compilation", []))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise ContinuityCompilerError(f"Unable to load Continuity Compiler drafts: {exc}") from exc
+            raise ContinuityCompilerError(
+                f"Unable to load Continuity Compiler drafts: {exc}"
+            ) from exc
         return tuple(sorted(drafts, key=lambda item: item.shot_id))
 
     def draft(self, shot_id: str) -> ContinuityCompilationDraft | None:
@@ -185,12 +188,14 @@ class ContinuityCompilerService:
     def _build_continuity(
         cls, package: ProductionPackage, previous: ProductionPackage | None
     ) -> dict[str, Any]:
-        opening = cls._action_value(package, "opening_state") or str(
-            package.shot.get("continuity_in", "")
-        ).strip()
-        closing = cls._action_value(package, "closing_state") or str(
-            package.shot.get("continuity_out", "")
-        ).strip()
+        opening = (
+            cls._action_value(package, "opening_state")
+            or str(package.shot.get("continuity_in", "")).strip()
+        )
+        closing = (
+            cls._action_value(package, "closing_state")
+            or str(package.shot.get("continuity_out", "")).strip()
+        )
         previous_closing = cls._previous_closing(previous)
         conflicts: list[str] = []
         if opening and previous_closing and opening != previous_closing:
@@ -210,12 +215,12 @@ class ContinuityCompilerService:
             if previous
             else "",
             "current_screen_direction": cls._section_value(package.camera, "screen_direction"),
-            "previous_lighting_continuity": cls._section_value(previous.lighting, "continuity_notes")
+            "previous_lighting_continuity": cls._section_value(
+                previous.lighting, "continuity_notes"
+            )
             if previous
             else "",
-            "current_lighting_continuity": cls._section_value(
-                package.lighting, "continuity_notes"
-            ),
+            "current_lighting_continuity": cls._section_value(package.lighting, "continuity_notes"),
             "environment": cls._detached(package.environment),
             "continuity_conflicts": conflicts,
             "inheritance_mode": "previous-shot-closing-state" if previous else "series-entry",
@@ -235,9 +240,7 @@ class ContinuityCompilerService:
                 "screen_direction": governed.get("current_screen_direction", ""),
                 "previous_screen_direction": governed.get("previous_screen_direction", ""),
                 "lighting_continuity": governed.get("current_lighting_continuity", ""),
-                "previous_lighting_continuity": governed.get(
-                    "previous_lighting_continuity", ""
-                ),
+                "previous_lighting_continuity": governed.get("previous_lighting_continuity", ""),
                 "environment": governed.get("environment", {}),
                 "conflicts": governed.get("continuity_conflicts", []),
                 "inheritance_mode": governed.get("inheritance_mode", ""),
@@ -248,7 +251,9 @@ class ContinuityCompilerService:
     @staticmethod
     def _validate(value: dict[str, Any]) -> None:
         if not str(value.get("current_shot_id", "")).strip():
-            raise ContinuityCompilerError("Continuity authority is missing the current Shot identity")
+            raise ContinuityCompilerError(
+                "Continuity authority is missing the current Shot identity"
+            )
         if "effective_opening_state" not in value or "current_closing_state" not in value:
             raise ContinuityCompilerError("Continuity authority is incomplete")
 
@@ -295,9 +300,10 @@ class ContinuityCompilerService:
             value = str(production.get("closing_state", "")).strip()
             if value:
                 return value
-        return cls._action_value(package, "closing_state") or str(
-            package.shot.get("continuity_out", "")
-        ).strip()
+        return (
+            cls._action_value(package, "closing_state")
+            or str(package.shot.get("continuity_out", "")).strip()
+        )
 
     @staticmethod
     def _section_value(section: dict[str, Any], key: str) -> str:
@@ -350,7 +356,9 @@ class ContinuityCompilerService:
 
     def _replace(self, updated: ContinuityCompilationDraft) -> None:
         self._write(
-            tuple(updated if item.shot_id == updated.shot_id else item for item in self.list_drafts())
+            tuple(
+                updated if item.shot_id == updated.shot_id else item for item in self.list_drafts()
+            )
         )
 
     def _write(self, drafts: tuple[ContinuityCompilationDraft, ...]) -> None:
@@ -360,9 +368,7 @@ class ContinuityCompilerService:
             "continuity_compilation": [self._to_dict(item) for item in drafts],
         }
         temporary = self.draft_file.with_suffix(self.draft_file.suffix + ".tmp")
-        temporary.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         temporary.replace(self.draft_file)
 
     @staticmethod
