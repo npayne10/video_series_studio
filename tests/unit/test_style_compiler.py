@@ -147,7 +147,10 @@ def test_ready_compiles_style_and_locks_notes(tmp_path: Path) -> None:
     assert ready.status is StyleCompilationStatus.READY
     assert packages.value.style["production"]["provider_neutral"] is True
     assert packages.value.validation["style_complete"] is True
-    assert packages.value.validation["style_review_notes"] == "User approves governed production style."
+    assert (
+        packages.value.validation["style_review_notes"]
+        == "User approves governed production style."
+    )
     with pytest.raises(StyleCompilerError, match="return to Draft"):
         service.save_notes("SHT-001", "Changed")
 
