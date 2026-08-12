@@ -10,6 +10,7 @@ from vscs.application.asset_compiler import AssetCompilerService
 from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
 from vscs.application.camera_compiler import CameraCompilerService
+from vscs.application.lighting_compiler import LightingCompilerService
 from vscs.application.production_package import ProductionPackageService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
@@ -53,13 +54,13 @@ from vscs.presentation.widgets import production_planning_workspace as planning_
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
 from vscs.presentation.widgets.browseable_story_workspace import BrowseableStoryWorkspaceWidget
-from vscs.presentation.widgets.camera_compiler_workspace import CameraCompilerWorkspace
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
 from vscs.presentation.widgets.environment_planner_integration import (
     install_environment_planner_navigation,
 )
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
+from vscs.presentation.widgets.lighting_compiler_workspace import LightingCompilerWorkspace
 from vscs.presentation.widgets.lighting_planner_integration import (
     install_lighting_planner_navigation,
 )
@@ -198,6 +199,12 @@ def install_story_browser() -> None:
                 CameraCompilerService,
                 CameraCompilerService(window.projects, package_service),
             )
+        lighting_compiler = window.services.get(LightingCompilerService)
+        if lighting_compiler is None:
+            lighting_compiler = window.services.register(
+                LightingCompilerService,
+                LightingCompilerService(window.projects, package_service),
+            )
 
         window.episode_planner_button = install_episode_planner(
             window.story_browser,
@@ -219,12 +226,13 @@ def install_story_browser() -> None:
         story_placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
 
-        window.production_package_workspace = CameraCompilerWorkspace(
+        window.production_package_workspace = LightingCompilerWorkspace(
             window.projects,
             package_service,
             action_service,
             asset_compiler,
             camera_compiler,
+            lighting_compiler,
         )
         window.content_stack.removeWidget(production_placeholder)
         production_placeholder.deleteLater()
