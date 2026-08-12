@@ -147,6 +147,37 @@ def test_first_shot_uses_series_entry_without_fake_previous_state(tmp_path: Path
     assert draft.continuity_value()["inheritance_mode"] == "series-entry"
 
 
+@pytest.mark.parametrize(
+    "directive",
+    (
+        "Ship and crew are the same as in the previous shot",
+        "Same as previous shot.",
+        "Continues from the previous shot.",
+        "Unchanged from previous shot.",
+        "preserve_previous",
+    ),
+)
+def test_preservation_directive_inherits_previous_state_without_false_conflict(
+    tmp_path: Path, directive: str
+) -> None:
+    service, packages = _service(tmp_path)
+    packages.values["SHT-002"] = replace(
+        packages.values["SHT-002"],
+        action_performance={
+            "opening_state": directive,
+            "closing_state": "Current closes at console.",
+        },
+    )
+
+    draft = service.create_from_current_package("SHT-002")
+    continuity = draft.continuity_value()
+
+    assert continuity["current_opening_state"] == directive
+    assert continuity["effective_opening_state"] == "Previous closes beside viewport."
+    assert continuity["opening_resolution"] == "preserve-previous-directive"
+    assert continuity["continuity_conflicts"] == []
+
+
 def test_conflict_is_exposed_for_user_review_not_silently_rewritten(tmp_path: Path) -> None:
     service, packages = _service(tmp_path)
     packages.values["SHT-002"] = replace(
@@ -159,6 +190,7 @@ def test_conflict_is_exposed_for_user_review_not_silently_rewritten(tmp_path: Pa
     draft = service.create_from_current_package("SHT-002")
 
     assert draft.continuity_value()["effective_opening_state"] == "Different opening state."
+    assert draft.continuity_value()["opening_resolution"] == "explicit-opening-state"
     assert len(draft.continuity_value()["continuity_conflicts"]) == 1
 
 
