@@ -118,7 +118,10 @@ def _widget(qtbot, universal: _Universal):
 def _description() -> dict:
     return {
         "current_shot_id": "SHT-001",
+        "shot": {"title": "Bridge Dialogue", "target_runtime_seconds": 20},
+        "camera": {"shot_size": "medium_close", "movement": "static"},
         "universal_text": "SHOT: Bridge Dialogue\nCAMERA: static medium close",
+        "source_policy": "approved-production-authority-only",
         "provider_neutral": True,
     }
 
@@ -132,12 +135,24 @@ def test_universal_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     )
     widget = _widget(qtbot, _Universal(draft))
 
+    preview = widget.universal_preview.toPlainText()
     assert widget.package_table.columnCount() == 10
     assert widget.package_table.horizontalHeaderItem(8).text() == "Universal"
     assert widget.package_table.item(0, 8).text() == "Draft"
     assert widget.compiler_tabs.tabText(6) == "Universal Description"
-    assert "CAMERA" in widget.universal_preview.toPlainText()
+    assert "SHOT\n" in preview
+    assert "Title: Bridge Dialogue" in preview
+    assert "CAMERA\n" in preview
+    assert "Movement: static" in preview
+    assert not preview.startswith("SHOT: {")
     assert widget.universal_ready_button.isEnabled()
+
+    footer_texts = [label.text() for label in widget.findChildren(type(widget.universal_status))]
+    assert any(
+        text
+        == "Later Phase 19.4 compilers will add Provider Output and Validation views to this same workspace."
+        for text in footer_texts
+    )
 
 
 def test_universal_final_approval_is_blocked_until_upstream_ready(qtbot) -> None:
