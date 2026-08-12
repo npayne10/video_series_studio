@@ -83,10 +83,12 @@ class _Universal:
         *,
         current: bool = True,
         missing: tuple[str, ...] = (),
+        findings: tuple[str, ...] = (),
     ) -> None:
         self.value = draft
         self.current = current
         self.missing = missing
+        self.findings = findings
 
     def draft(self, _shot_id: str):
         return self.value
@@ -96,6 +98,9 @@ class _Universal:
 
     def missing_prerequisites(self, _shot_id: str):
         return self.missing
+
+    def consistency_findings(self, _shot_id: str):
+        return self.findings
 
 
 def _widget(qtbot, universal: _Universal):
@@ -168,3 +173,27 @@ def test_universal_final_approval_is_blocked_until_upstream_ready(qtbot) -> None
     assert not widget.universal_ready_button.isEnabled()
     assert "continuity, style" in widget.universal_status.text().lower()
     assert widget.universal_save_button.isEnabled()
+
+
+def test_universal_final_approval_is_blocked_by_consistency_findings(qtbot) -> None:
+    description = {
+        **_description(),
+        "consistency_findings": [
+            "Action & Performance places performers in an interior location, but Environment authority describes vacuum/orbital space."
+        ],
+    }
+    draft = UniversalProductionDescriptionDraft(
+        shot_id="SHT-001",
+        source_package_id="PP-SHT-001-A",
+        dependency_fingerprint="dependency",
+        description=description,
+    )
+    widget = _widget(
+        qtbot,
+        _Universal(draft, findings=(description["consistency_findings"][0],)),
+    )
+
+    assert widget.package_table.item(0, 8).text() == "Draft / Blocked"
+    assert not widget.universal_ready_button.isEnabled()
+    assert "consistency finding" in widget.universal_status.text().lower()
+    assert "CONSISTENCY FINDINGS\n" in widget.universal_preview.toPlainText()
