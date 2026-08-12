@@ -105,9 +105,7 @@ class _Actions:
 
 
 class _Assets:
-    def __init__(
-        self, draft: AssetCompilationDraft | None = None, *, current: bool = True
-    ) -> None:
+    def __init__(self, draft: AssetCompilationDraft | None = None, *, current: bool = True) -> None:
         self.value = draft
         self.current = current
         self.rebased = False
