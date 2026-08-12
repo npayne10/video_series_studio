@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from vscs.application.production_package import ProductionPackageService
-from vscs.application.projects import ProjectService
 from vscs.application.story.planning_integration import IntegratedPlanningPackage
 
 
@@ -31,13 +30,13 @@ class _Planning:
         return self.package
 
 
-class _Projects(ProjectService):
-    pass
+class _Projects:
+    def __init__(self, root: Path) -> None:
+        self.project_directory = root
 
 
 def test_camera_derivation_preserves_other_compiled_sections(tmp_path: Path) -> None:
-    projects = _Projects()
-    projects.project_directory = tmp_path
+    projects = _Projects(tmp_path)
     planning = _Planning()
     service = ProductionPackageService(projects, planning)  # type: ignore[arg-type]
     foundation = service.materialize("SHT-001")
