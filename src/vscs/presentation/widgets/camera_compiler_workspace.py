@@ -204,7 +204,7 @@ class CameraCompilerWorkspace(ProductionPackageWorkspace):
         self.camera_table.setRowCount(len(fields))
         for row, key in enumerate(fields):
             value = camera.get(key, "")
-            if isinstance(value, (list, tuple)):
+            if isinstance(value, list | tuple):
                 text = "; ".join(str(item) for item in value)
             else:
                 text = str(value)
