@@ -14,7 +14,6 @@ from vscs.application.continuity_compiler import ContinuityCompilerService
 from vscs.application.lighting_compiler import LightingCompilerService
 from vscs.application.production_package import ProductionPackageService
 from vscs.application.shots import ShotPlanningService
-from vscs.application.style_compiler import StyleCompilerService
 from vscs.application.story import (
     EpisodePlanningService,
     GovernedAssetResolutionService,
@@ -50,6 +49,7 @@ from vscs.application.story_analysis import (
     StoryAnalysisEngine,
 )
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
+from vscs.application.style_compiler import StyleCompilerService
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import GuidedFirstSceneEditorDialog
 from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
