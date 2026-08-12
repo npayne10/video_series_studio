@@ -44,6 +44,12 @@ class StyleCompilerService:
 
     FILE_NAME = "style_compilation.json"
     SCHEMA_VERSION = "1.0"
+    REQUIRED_UPSTREAM = (
+        ("assets_complete", "Assets"),
+        ("camera_complete", "Camera"),
+        ("lighting_complete", "Lighting"),
+        ("continuity_complete", "Continuity"),
+    )
 
     def __init__(self, projects: ProjectService, packages: ProductionPackageService) -> None:
         self.projects = projects
@@ -120,6 +126,7 @@ class StyleCompilerService:
             raise StyleCompilerError(
                 "Style compilation is stale against current production authority"
             )
+        self._require_upstream_ready(current.shot_id)
         self._validate(current.style_value())
         ready = replace(current, status=StyleCompilationStatus.READY)
         self._replace(ready)
@@ -137,12 +144,23 @@ class StyleCompilerService:
             package
         )
 
+    def missing_prerequisites(self, shot_id: str) -> tuple[str, ...]:
+        package = self.packages.current_package(shot_id.strip().upper())
+        if package is None:
+            return tuple(label for _key, label in self.REQUIRED_UPSTREAM)
+        return tuple(
+            label
+            for key, label in self.REQUIRED_UPSTREAM
+            if package.validation.get(key) is not True
+        )
+
     def compile(self, shot_id: str) -> ProductionPackage:
         draft = self._require_draft(shot_id)
         if draft.status is not StyleCompilationStatus.READY:
             raise StyleCompilerError("Only Ready Style compilation may be compiled")
         if not self.is_current(draft):
             raise StyleCompilerError("Style compilation is stale and cannot be compiled")
+        self._require_upstream_ready(draft.shot_id)
         style = draft.style_value()
         self._validate(style)
         return self._derive(
@@ -150,6 +168,14 @@ class StyleCompilerService:
             self._compile_style(style),
             production_notes=draft.production_notes,
         )
+
+    def _require_upstream_ready(self, shot_id: str) -> None:
+        missing = self.missing_prerequisites(shot_id)
+        if missing:
+            raise StyleCompilerError(
+                "Style cannot be finalized until upstream compiler authority is Ready: "
+                + ", ".join(missing)
+            )
 
     def _derive(
         self, shot_id: str, compiled: dict[str, Any], *, production_notes: str = ""
