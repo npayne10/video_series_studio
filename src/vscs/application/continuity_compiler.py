@@ -1,5 +1,4 @@
 """Provider-neutral Continuity compilation for Phase 19.4.6."""
-
 from __future__ import annotations
 
 import hashlib
@@ -9,7 +8,11 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from vscs.application.production_package import ProductionPackage, ProductionPackageService
+from vscs.application.production_package import (
+    ProductionPackage,
+    ProductionPackageService,
+    ProductionPackageStatus,
+)
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 
 
@@ -18,16 +21,12 @@ class ContinuityCompilerError(RuntimeError):
 
 
 class ContinuityCompilationStatus(StrEnum):
-    """Governance state for reviewed production Continuity authority."""
-
     DRAFT = "draft"
     READY = "ready"
 
 
 @dataclass(frozen=True, slots=True)
 class ContinuityCompilationDraft:
-    """Reviewed provider-neutral Continuity authority for one Production Package."""
-
     shot_id: str
     source_package_id: str
     dependency_fingerprint: str
@@ -37,12 +36,11 @@ class ContinuityCompilationDraft:
     status: ContinuityCompilationStatus = ContinuityCompilationStatus.DRAFT
 
     def continuity_value(self) -> dict[str, Any]:
-        """Return the detached continuity payload."""
         return dict(self.continuity or {})
 
 
 class ContinuityCompilerService:
-    """Compile inherited Shot state into canonical production Continuity authority."""
+    """Resolve inherited Shot state and compile canonical Continuity authority."""
 
     FILE_NAME = "continuity_compilation.json"
     SCHEMA_VERSION = "1.0"
@@ -58,11 +56,10 @@ class ContinuityCompilerService:
         return self.projects.project_directory / "production" / self.FILE_NAME
 
     def list_drafts(self) -> tuple[ContinuityCompilationDraft, ...]:
-        path = self.draft_file
-        if not path.is_file():
+        if not self.draft_file.is_file():
             return ()
         try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
+            raw = json.loads(self.draft_file.read_text(encoding="utf-8"))
             drafts = tuple(self._from_dict(item) for item in raw.get("continuity_compilation", []))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise ContinuityCompilerError(f"Unable to load Continuity Compiler drafts: {exc}") from exc
@@ -73,26 +70,22 @@ class ContinuityCompilerService:
         return next((item for item in self.list_drafts() if item.shot_id == normalized), None)
 
     def create_from_current_package(self, shot_id: str) -> ContinuityCompilationDraft:
-        """Derive continuity from governed current and previous Shot state without invention."""
         normalized = shot_id.strip().upper()
         if self.draft(normalized) is not None:
             raise ContinuityCompilerError(f"Continuity compilation already exists for {normalized}")
-        package = self.packages.current_package(normalized)
-        if package is None:
-            package = self.packages.materialize(normalized)
+        package = self.packages.current_package(normalized) or self.packages.materialize(normalized)
         previous = self._previous_package(normalized)
         draft = ContinuityCompilationDraft(
             shot_id=normalized,
             source_package_id=package.package_id,
             dependency_fingerprint=self._dependency_fingerprint(package, previous),
-            previous_shot_id=previous.shot_id if previous is not None else "",
+            previous_shot_id=previous.shot_id if previous else "",
             continuity=self._build_continuity(package, previous),
         )
         self._write((*self.list_drafts(), draft))
         return draft
 
     def rebase_to_current_package(self, shot_id: str) -> ContinuityCompilationDraft:
-        """Refresh inherited state while preserving explicit human review notes."""
         current = self._require_draft(shot_id)
         if current.status is ContinuityCompilationStatus.READY:
             raise ContinuityCompilerError(
@@ -100,14 +93,14 @@ class ContinuityCompilerService:
             )
         package = self.packages.require_current_package(current.shot_id)
         previous = self._previous_package(current.shot_id)
-        dependency = self._dependency_fingerprint(package, previous)
-        if current.dependency_fingerprint == dependency:
+        fingerprint = self._dependency_fingerprint(package, previous)
+        if fingerprint == current.dependency_fingerprint:
             return current
         updated = replace(
             current,
             source_package_id=package.package_id,
-            dependency_fingerprint=dependency,
-            previous_shot_id=previous.shot_id if previous is not None else "",
+            dependency_fingerprint=fingerprint,
+            previous_shot_id=previous.shot_id if previous else "",
             continuity=self._build_continuity(package, previous),
         )
         self._replace(updated)
@@ -133,16 +126,14 @@ class ContinuityCompilerService:
             raise ContinuityCompilerError(
                 "Continuity compilation is stale against current inherited production state"
             )
-        continuity = current.continuity_value()
-        self._validate_continuity(continuity)
+        self._validate(current.continuity_value())
         ready = replace(current, status=ContinuityCompilationStatus.READY)
         self._replace(ready)
         self.compile(ready.shot_id)
         return ready
 
     def return_to_draft(self, shot_id: str) -> ContinuityCompilationDraft:
-        current = self._require_draft(shot_id)
-        draft = replace(current, status=ContinuityCompilationStatus.DRAFT)
+        draft = replace(self._require_draft(shot_id), status=ContinuityCompilationStatus.DRAFT)
         self._replace(draft)
         return draft
 
@@ -150,8 +141,9 @@ class ContinuityCompilerService:
         package = self.packages.current_package(draft.shot_id)
         if package is None:
             return False
-        previous = self._previous_package(draft.shot_id)
-        return draft.dependency_fingerprint == self._dependency_fingerprint(package, previous)
+        return draft.dependency_fingerprint == self._dependency_fingerprint(
+            package, self._previous_package(draft.shot_id)
+        )
 
     def compile(self, shot_id: str) -> ProductionPackage:
         draft = self._require_draft(shot_id)
@@ -160,61 +152,73 @@ class ContinuityCompilerService:
         if not self.is_current(draft):
             raise ContinuityCompilerError("Continuity compilation is stale and cannot be compiled")
         continuity = draft.continuity_value()
-        self._validate_continuity(continuity)
-        compiled = self._compile_continuity(continuity)
-        return self.packages.derive_continuity(
+        self._validate(continuity)
+        return self._derive(
             draft.shot_id,
-            compiled,
+            self._compile_continuity(continuity),
             production_notes=draft.production_notes,
         )
 
+    def _derive(
+        self, shot_id: str, compiled: dict[str, Any], *, production_notes: str = ""
+    ) -> ProductionPackage:
+        current = self.packages.require_current_package(shot_id)
+        if current.continuity == compiled and current.validation.get("continuity_complete") is True:
+            return current
+        data = asdict(current)
+        data.pop("package_id", None)
+        data.pop("package_fingerprint", None)
+        data["continuity"] = dict(compiled)
+        validation = dict(current.validation)
+        validation["continuity_complete"] = True
+        if production_notes.strip():
+            validation["continuity_review_notes"] = production_notes.strip()
+        else:
+            validation.pop("continuity_review_notes", None)
+        data["validation"] = validation
+        data["status"] = ProductionPackageStatus.COMPILING.value
+        append_derived: Any = getattr(self.packages, "_append_derived")
+        derived: ProductionPackage = append_derived(current, data)
+        return derived
+
     @classmethod
     def _build_continuity(
-        cls,
-        package: ProductionPackage,
-        previous: ProductionPackage | None,
+        cls, package: ProductionPackage, previous: ProductionPackage | None
     ) -> dict[str, Any]:
-        current_opening = cls._action_value(package, "opening_state") or str(
+        opening = cls._action_value(package, "opening_state") or str(
             package.shot.get("continuity_in", "")
         ).strip()
-        current_closing = cls._action_value(package, "closing_state") or str(
+        closing = cls._action_value(package, "closing_state") or str(
             package.shot.get("continuity_out", "")
         ).strip()
         previous_closing = cls._previous_closing(previous)
-        effective_opening = current_opening or previous_closing
         conflicts: list[str] = []
-        if current_opening and previous_closing and current_opening != previous_closing:
+        if opening and previous_closing and opening != previous_closing:
             conflicts.append(
                 "Current opening state differs from the previous Shot closing state; user review required."
             )
-
-        current_assets = cls._asset_ids(package)
-        previous_assets = cls._asset_ids(previous) if previous is not None else ()
-        current_screen_direction = cls._section_value(package.camera, "screen_direction")
-        previous_screen_direction = (
-            cls._section_value(previous.camera, "screen_direction") if previous is not None else ""
-        )
-        current_lighting_notes = cls._section_value(package.lighting, "continuity_notes")
-        previous_lighting_notes = (
-            cls._section_value(previous.lighting, "continuity_notes") if previous is not None else ""
-        )
-
         return {
             "current_shot_id": package.shot_id,
-            "previous_shot_id": previous.shot_id if previous is not None else "",
-            "current_opening_state": current_opening,
+            "previous_shot_id": previous.shot_id if previous else "",
             "previous_closing_state": previous_closing,
-            "effective_opening_state": effective_opening,
-            "current_closing_state": current_closing,
-            "current_asset_ids": list(current_assets),
-            "previous_asset_ids": list(previous_assets),
-            "current_screen_direction": current_screen_direction,
-            "previous_screen_direction": previous_screen_direction,
-            "current_lighting_continuity": current_lighting_notes,
-            "previous_lighting_continuity": previous_lighting_notes,
+            "current_opening_state": opening,
+            "effective_opening_state": opening or previous_closing,
+            "current_closing_state": closing,
+            "previous_asset_ids": list(cls._asset_ids(previous)) if previous else [],
+            "current_asset_ids": list(cls._asset_ids(package)),
+            "previous_screen_direction": cls._section_value(previous.camera, "screen_direction")
+            if previous
+            else "",
+            "current_screen_direction": cls._section_value(package.camera, "screen_direction"),
+            "previous_lighting_continuity": cls._section_value(previous.lighting, "continuity_notes")
+            if previous
+            else "",
+            "current_lighting_continuity": cls._section_value(
+                package.lighting, "continuity_notes"
+            ),
             "environment": cls._detached(package.environment),
             "continuity_conflicts": conflicts,
-            "inheritance_mode": "previous-shot-closing-state" if previous is not None else "series-entry",
+            "inheritance_mode": "previous-shot-closing-state" if previous else "series-entry",
         }
 
     @classmethod
@@ -242,38 +246,30 @@ class ContinuityCompilerService:
         }
 
     @staticmethod
-    def _validate_continuity(continuity: dict[str, Any]) -> None:
-        if not str(continuity.get("current_shot_id", "")).strip():
+    def _validate(value: dict[str, Any]) -> None:
+        if not str(value.get("current_shot_id", "")).strip():
             raise ContinuityCompilerError("Continuity authority is missing the current Shot identity")
-        if "effective_opening_state" not in continuity or "current_closing_state" not in continuity:
+        if "effective_opening_state" not in value or "current_closing_state" not in value:
             raise ContinuityCompilerError("Continuity authority is incomplete")
 
     def _previous_package(self, shot_id: str) -> ProductionPackage | None:
         planning = self.packages.planning
         current_ids = sorted(
-            {
-                item.shot_id
-                for item in planning.list_packages()
-                if planning.is_current(item)
-            }
+            {item.shot_id for item in planning.list_packages() if planning.is_current(item)}
         )
         normalized = shot_id.strip().upper()
         if normalized not in current_ids:
             return None
         index = current_ids.index(normalized)
-        if index == 0:
-            return None
-        return self.packages.current_package(current_ids[index - 1])
+        return self.packages.current_package(current_ids[index - 1]) if index else None
 
     @classmethod
     def _dependency_fingerprint(
-        cls,
-        package: ProductionPackage,
-        previous: ProductionPackage | None,
+        cls, package: ProductionPackage, previous: ProductionPackage | None
     ) -> str:
-        payload: dict[str, Any] = {
+        payload = {
             "current": cls._dependency_payload(package),
-            "previous": cls._dependency_payload(previous) if previous is not None else None,
+            "previous": cls._dependency_payload(previous) if previous else None,
         }
         canonical = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -305,12 +301,10 @@ class ContinuityCompilerService:
 
     @staticmethod
     def _section_value(section: dict[str, Any], key: str) -> str:
-        production = section.get("production")
-        if isinstance(production, dict) and production.get(key) not in (None, ""):
-            return str(production.get(key, "")).strip()
-        governed = section.get("governed")
-        if isinstance(governed, dict) and governed.get(key) not in (None, ""):
-            return str(governed.get(key, "")).strip()
+        for name in ("production", "governed"):
+            nested = section.get(name)
+            if isinstance(nested, dict) and nested.get(key) not in (None, ""):
+                return str(nested.get(key, "")).strip()
         return str(section.get(key, "")).strip()
 
     @staticmethod
@@ -322,15 +316,12 @@ class ContinuityCompilerService:
         values: list[str] = []
         for item in package.assets:
             asset_id = ""
-            production = item.get("production")
-            resolution = item.get("resolution")
-            binding = item.get("binding")
-            if isinstance(production, dict):
-                asset_id = str(production.get("asset_id", "")).strip()
-            if not asset_id and isinstance(resolution, dict):
-                asset_id = str(resolution.get("asset_id", "")).strip()
-            if not asset_id and isinstance(binding, dict):
-                asset_id = str(binding.get("asset_id", "")).strip()
+            for name in ("production", "resolution", "binding"):
+                nested = item.get(name)
+                if isinstance(nested, dict):
+                    asset_id = str(nested.get("asset_id", "")).strip()
+                    if asset_id:
+                        break
             if asset_id and asset_id not in values:
                 values.append(asset_id)
         return tuple(values)
@@ -358,24 +349,21 @@ class ContinuityCompilerService:
         return draft
 
     def _replace(self, updated: ContinuityCompilationDraft) -> None:
-        drafts = tuple(
-            updated if item.shot_id == updated.shot_id else item for item in self.list_drafts()
+        self._write(
+            tuple(updated if item.shot_id == updated.shot_id else item for item in self.list_drafts())
         )
-        self._write(drafts)
 
     def _write(self, drafts: tuple[ContinuityCompilationDraft, ...]) -> None:
-        path = self.draft_file
-        path.parent.mkdir(parents=True, exist_ok=True)
+        self.draft_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema_version": self.SCHEMA_VERSION,
             "continuity_compilation": [self._to_dict(item) for item in drafts],
         }
-        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary = self.draft_file.with_suffix(self.draft_file.suffix + ".tmp")
         temporary.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-        temporary.replace(path)
+        temporary.replace(self.draft_file)
 
     @staticmethod
     def _to_dict(draft: ContinuityCompilationDraft) -> dict[str, Any]:
