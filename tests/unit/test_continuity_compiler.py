@@ -1,4 +1,5 @@
 """Phase 19.4.6 Continuity Compiler tests."""
+
 from __future__ import annotations
 
 from dataclasses import replace
