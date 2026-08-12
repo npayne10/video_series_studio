@@ -45,7 +45,7 @@ class ContinuityCompilerService:
     """Resolve inherited Shot state and compile canonical Continuity authority."""
 
     FILE_NAME = "continuity_compilation.json"
-    SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "1.1"
     _PRESERVATION_PHRASES = (
         "same as previous shot",
         "same as the previous shot",
@@ -311,6 +311,7 @@ class ContinuityCompilerService:
         cls, package: ProductionPackage, previous: ProductionPackage | None
     ) -> str:
         payload = {
+            "compiler_schema_version": cls.SCHEMA_VERSION,
             "current": cls._dependency_payload(package),
             "previous": cls._dependency_payload(previous) if previous else None,
         }
