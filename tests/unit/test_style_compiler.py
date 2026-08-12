@@ -78,7 +78,12 @@ class _Packages:
             ),
             universal_description={},
             provider_outputs={},
-            validation={"continuity_complete": True},
+            validation={
+                "assets_complete": True,
+                "camera_complete": True,
+                "lighting_complete": True,
+                "continuity_complete": True,
+            },
             status=ProductionPackageStatus.COMPILING,
         )
         self.history: list[ProductionPackage] = []
@@ -153,6 +158,19 @@ def test_ready_compiles_style_and_locks_notes(tmp_path: Path) -> None:
     )
     with pytest.raises(StyleCompilerError, match="return to Draft"):
         service.save_notes("SHT-001", "Changed")
+
+
+def test_style_finalization_requires_upstream_compilers_ready(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    packages.value = replace(
+        packages.value,
+        validation={"lighting_complete": True},
+    )
+    service.create_from_current_package("SHT-001")
+
+    assert service.missing_prerequisites("SHT-001") == ("Assets", "Camera", "Continuity")
+    with pytest.raises(StyleCompilerError, match="Assets, Camera, Continuity"):
+        service.mark_ready("SHT-001")
 
 
 def test_upstream_camera_change_makes_draft_stale_and_refresh_preserves_notes(
