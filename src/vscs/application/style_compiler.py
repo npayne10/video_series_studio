@@ -107,7 +107,9 @@ class StyleCompilerService:
         if current.status is StyleCompilationStatus.READY:
             raise StyleCompilerError("Ready Style compilation must return to Draft before editing")
         if not self.is_current(current):
-            raise StyleCompilerError("Style compilation is stale against current production authority")
+            raise StyleCompilerError(
+                "Style compilation is stale against current production authority"
+            )
         updated = replace(current, production_notes=production_notes.strip())
         self._replace(updated)
         return updated
@@ -115,7 +117,9 @@ class StyleCompilerService:
     def mark_ready(self, shot_id: str) -> StyleCompilationDraft:
         current = self._require_draft(shot_id)
         if not self.is_current(current):
-            raise StyleCompilerError("Style compilation is stale against current production authority")
+            raise StyleCompilerError(
+                "Style compilation is stale against current production authority"
+            )
         self._validate(current.style_value())
         ready = replace(current, status=StyleCompilationStatus.READY)
         self._replace(ready)
@@ -320,7 +324,9 @@ class StyleCompilerService:
 
     def _replace(self, updated: StyleCompilationDraft) -> None:
         self._write(
-            tuple(updated if item.shot_id == updated.shot_id else item for item in self.list_drafts())
+            tuple(
+                updated if item.shot_id == updated.shot_id else item for item in self.list_drafts()
+            )
         )
 
     def _write(self, drafts: tuple[StyleCompilationDraft, ...]) -> None:
