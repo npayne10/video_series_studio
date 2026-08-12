@@ -76,9 +76,16 @@ class _EmptyCompiler:
 
 
 class _Style:
-    def __init__(self, draft: StyleCompilationDraft | None = None, *, current: bool = True) -> None:
+    def __init__(
+        self,
+        draft: StyleCompilationDraft | None = None,
+        *,
+        current: bool = True,
+        missing: tuple[str, ...] = (),
+    ) -> None:
         self.value = draft
         self.current = current
+        self.missing = missing
         self.rebased = False
 
     def draft(self, _shot_id: str):
@@ -86,6 +93,9 @@ class _Style:
 
     def is_current(self, _draft):
         return self.current
+
+    def missing_prerequisites(self, _shot_id: str):
+        return self.missing
 
     def rebase_to_current_package(self, _shot_id: str):
         self.current = True
@@ -141,6 +151,20 @@ def test_style_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     assert widget.style_table.item(0, 1).text() == "grounded hard science-fiction realism"
     assert widget.style_ready_button.isEnabled()
     assert "final approval" in widget.style_status.text().lower()
+
+
+def test_style_final_approval_is_blocked_while_upstream_authority_is_draft(qtbot) -> None:
+    draft = StyleCompilationDraft(
+        shot_id="SHT-001",
+        source_package_id="PP-SHT-001-AAAA",
+        dependency_fingerprint="dependency",
+        style=_style_payload(),
+    )
+    widget = _widget(qtbot, _Style(draft, missing=("Assets", "Camera", "Continuity")))
+
+    assert not widget.style_ready_button.isEnabled()
+    assert "assets, camera, continuity" in widget.style_status.text().lower()
+    assert widget.style_save_button.isEnabled()
 
 
 def test_stale_style_exposes_refresh_and_preserves_notes(qtbot) -> None:
