@@ -241,9 +241,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             return
         shot_id = self._selected_shot_id
         self._run_universal(
-            lambda: self.universal_compiler.save_notes(
-                shot_id, self.universal_notes.toPlainText()
-            )
+            lambda: self.universal_compiler.save_notes(shot_id, self.universal_notes.toPlainText())
         )
 
     def _universal_ready(self) -> None:
