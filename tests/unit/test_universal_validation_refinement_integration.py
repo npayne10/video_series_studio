@@ -1,4 +1,6 @@
-from vscs.application.universal_production_description_compiler import UniversalProductionDescriptionCompilerService
+from vscs.application.universal_production_description_compiler import (
+    UniversalProductionDescriptionCompilerService,
+)
 from vscs.application.universal_validation_refinement import install_universal_validation_refinement
 
 
