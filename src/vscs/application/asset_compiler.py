@@ -39,7 +39,7 @@ class AssetCompilerService:
     """Compile governed Shot Asset bindings into canonical production Asset intent."""
 
     FILE_NAME = "asset_compilation.json"
-    SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "1.1"
 
     def __init__(
         self,
@@ -159,17 +159,18 @@ class AssetCompilerService:
         if not isinstance(binding_raw, dict) or not isinstance(resolution_raw, dict):
             raise AssetCompilerError("Governed Asset input is malformed")
         binding = cls._detached(binding_raw)
-        resolution = cls._detached(resolution_raw)
+        resolution = cls._normalize_resolution(cls._detached(resolution_raw), binding)
         fingerprint = resolution.get("fingerprint", {})
         if not isinstance(fingerprint, dict):
             fingerprint = {}
         production = {
-            "asset_id": str(resolution.get("asset_id") or binding.get("asset_id") or ""),
+            "asset_id": cls._asset_id(resolution, binding),
             "binding_id": str(binding.get("binding_id", "")),
             "role": str(binding.get("role", "")),
             "requirement": str(binding.get("requirement", "")),
             "category": str(binding.get("expected_category", "")),
             "canonical_reference": resolution.get("canonical_reference"),
+            "canonical_references": list(cls._canonical_references(resolution)),
             "dependency_checksum": fingerprint.get("checksum"),
             "provider_neutral": True,
         }
@@ -178,6 +179,107 @@ class AssetCompilerService:
             "resolution": resolution,
             "production": production,
         }
+
+    @classmethod
+    def _normalize_resolution(
+        cls, resolution: dict[str, Any], binding: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Normalize Phase 19.3 resolution contracts for Phase 19.4 consumers.
+
+        Planning Integration serializes ``AssetResolutionResult`` with nested
+        ``asset`` and ``references`` members. Earlier Phase 19.4 code expected the
+        legacy flat ``asset_id`` and ``canonical_reference`` fields. Preserve the
+        authoritative nested resolution while exposing deterministic compatibility
+        fields so Production Package reference indexing and provider compilation can
+        carry approved canonical imagery forward.
+        """
+        normalized = dict(resolution)
+        asset_id = cls._asset_id(normalized, binding)
+        if asset_id:
+            normalized["asset_id"] = asset_id
+
+        references = cls._canonical_references(normalized)
+        if references:
+            normalized["canonical_references"] = list(references)
+            primary = cls._primary_reference(references)
+            if primary:
+                normalized["canonical_reference"] = primary
+
+        fingerprint = normalized.get("fingerprint")
+        if not isinstance(fingerprint, dict):
+            fingerprint = {}
+        dependency_checksum = str(binding.get("asset_dependency_hash", "")).strip()
+        if dependency_checksum and not str(fingerprint.get("checksum", "")).strip():
+            normalized["fingerprint"] = {**fingerprint, "checksum": dependency_checksum}
+        return normalized
+
+    @staticmethod
+    def _asset_id(resolution: dict[str, Any], binding: dict[str, Any]) -> str:
+        direct = str(resolution.get("asset_id", "")).strip()
+        if direct:
+            return direct
+        asset = resolution.get("asset")
+        if isinstance(asset, dict):
+            value = str(asset.get("asset_id", "")).strip()
+            if value:
+                return value
+        request = resolution.get("request")
+        if isinstance(request, dict):
+            value = str(request.get("asset_id", "")).strip()
+            if value:
+                return value
+        return str(binding.get("asset_id", "")).strip()
+
+    @staticmethod
+    def _canonical_references(resolution: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+        values = resolution.get("canonical_references")
+        if not isinstance(values, list | tuple):
+            values = resolution.get("references")
+        references: list[dict[str, Any]] = []
+        if isinstance(values, list | tuple):
+            for item in values:
+                if not isinstance(item, dict):
+                    continue
+                file_path = str(
+                    item.get("file_path") or item.get("canonical_reference") or ""
+                ).strip()
+                if not file_path:
+                    continue
+                references.append(
+                    {
+                        "reference_id": str(item.get("reference_id", "")),
+                        "file_path": file_path,
+                        "reference_type": str(item.get("reference_type", "")),
+                        "role": str(item.get("role", "")),
+                        "checksum": str(item.get("checksum", "")),
+                    }
+                )
+        if references:
+            return tuple(references)
+        legacy = str(resolution.get("canonical_reference") or "").strip()
+        if legacy:
+            return (
+                {
+                    "reference_id": "",
+                    "file_path": legacy,
+                    "reference_type": "",
+                    "role": "primary",
+                    "checksum": "",
+                },
+            )
+        return ()
+
+    @staticmethod
+    def _primary_reference(references: tuple[dict[str, Any], ...]) -> str:
+        primary = next(
+            (
+                item
+                for item in references
+                if str(item.get("role", "")).strip().lower() == "primary"
+            ),
+            references[0] if references else None,
+        )
+        return str(primary.get("file_path", "")).strip() if primary is not None else ""
 
     @staticmethod
     def _detached(value: dict[str, Any]) -> dict[str, Any]:
