@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from vscs.application.production_package import (
     ProductionPackage,
@@ -31,7 +32,7 @@ class _Planning:
 
 class _Projects:
     is_project_open = True
-    project_directory = None
+    project_directory = Path(".")
 
 
 class _Packages:
