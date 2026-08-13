@@ -128,7 +128,9 @@ class AssetResolutionService:
         reference_bindings: tuple[ResolvedReferenceBinding, ...] = ()
         if cap_found:
             if self.production_projections is not None:
-                production_references = self.production_projections.project(asset.asset_id).references
+                production_references = self.production_projections.project(
+                    asset.asset_id
+                ).references
                 reference_bindings = tuple(
                     ResolvedReferenceBinding(
                         reference.reference_id,
