@@ -43,6 +43,9 @@ def test_register_asset_resolution_uses_shared_dependencies() -> None:
     assert resolver.assets is assets
     assert resolver.caps is caps
     assert resolver.references is references
+    assert resolver.production_projections is not None
+    assert resolver.production_projections.caps is caps
+    assert resolver.production_projections.references is references
     assert canonical.caps is caps
     assert canonical.references is references
     assert browser.assets is assets
