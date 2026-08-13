@@ -173,9 +173,10 @@ def test_integrated_resolution_propagates_approved_canonical_reference(tmp_path:
     assert compiled["resolution"]["canonical_reference"] == "references/james-primary.png"
     assert compiled["production"]["canonical_reference"] == "references/james-primary.png"
     assert compiled["production"]["dependency_checksum"] == "dependency-checksum"
-    assert [
-        item["file_path"] for item in compiled["production"]["canonical_references"]
-    ] == ["references/james-secondary.png", "references/james-primary.png"]
+    assert [item["file_path"] for item in compiled["production"]["canonical_references"]] == [
+        "references/james-secondary.png",
+        "references/james-primary.png",
+    ]
 
 
 def test_ready_is_immutable_until_returned_to_draft(tmp_path: Path) -> None:

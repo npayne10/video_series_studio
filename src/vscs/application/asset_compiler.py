@@ -272,11 +272,7 @@ class AssetCompilerService:
     @staticmethod
     def _primary_reference(references: tuple[dict[str, Any], ...]) -> str:
         primary = next(
-            (
-                item
-                for item in references
-                if str(item.get("role", "")).strip().lower() == "primary"
-            ),
+            (item for item in references if str(item.get("role", "")).strip().lower() == "primary"),
             references[0] if references else None,
         )
         return str(primary.get("file_path", "")).strip() if primary is not None else ""
