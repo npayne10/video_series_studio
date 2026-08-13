@@ -9,9 +9,14 @@ from vscs.application.caps import (
     CanonicalReferenceService,
     CAPNotFoundError,
     CAPService,
+    ProductionProjectionService,
 )
 from vscs.domain.assets import AssetStatus
-from vscs.domain.caps import CanonicalReferenceStatus, CAPStatus
+from vscs.domain.caps import (
+    CanonicalReferenceFamily,
+    CanonicalReferenceStatus,
+    CAPStatus,
+)
 
 from .models import (
     AssetResolutionDiagnostic,
@@ -121,20 +126,48 @@ class AssetResolutionService:
 
         reference_bindings: tuple[ResolvedReferenceBinding, ...] = ()
         if cap_found:
-            approved = self.references.list_for_cap(
-                asset.asset_id,
-                status=CanonicalReferenceStatus.APPROVED,
-            )
-            reference_bindings = tuple(
-                ResolvedReferenceBinding(
-                    str(reference.id),
-                    str(reference.file_path),
-                    reference.reference_type.value,
-                    reference.role.value,
-                    stable_model_checksum(reference),
+            # Resolve through CAP's production projection first. This is the
+            # authoritative Asset -> CAP -> Reference Library boundary and also
+            # reconciles legacy Asset MASTER paths into governed production
+            # references before Shot planning consumes them.
+            production_references = ProductionProjectionService(
+                self.caps,
+                self.references,
+            ).project(asset.asset_id).references
+            if production_references:
+                reference_bindings = tuple(
+                    ResolvedReferenceBinding(
+                        reference.reference_id,
+                        reference.file_path,
+                        "image",
+                        (
+                            "primary"
+                            if reference.family is CanonicalReferenceFamily.MASTER
+                            else reference.family.value
+                        ),
+                        stable_model_checksum(reference),
+                    )
+                    for reference in production_references
                 )
-                for reference in sorted(approved, key=lambda item: item.id)
-            )
+            else:
+                # Preserve compatibility for projects that have approved legacy
+                # CAP references but have not yet published a production-library
+                # entry. New/modern projects should normally use the projection
+                # path above.
+                approved = self.references.list_for_cap(
+                    asset.asset_id,
+                    status=CanonicalReferenceStatus.APPROVED,
+                )
+                reference_bindings = tuple(
+                    ResolvedReferenceBinding(
+                        str(reference.id),
+                        str(reference.file_path),
+                        reference.reference_type.value,
+                        reference.role.value,
+                        stable_model_checksum(reference),
+                    )
+                    for reference in sorted(approved, key=lambda item: item.id)
+                )
             if request.require_approved_references and not reference_bindings:
                 diagnostics.append(
                     AssetResolutionDiagnostic(
