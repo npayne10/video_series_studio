@@ -212,3 +212,62 @@ def test_cross_authority_inconsistencies_are_exposed_and_block_ready(tmp_path: P
     assert len(draft.description_value()["consistency_findings"]) == 5
     with pytest.raises(UniversalProductionDescriptionCompilerError, match="cross-authority"):
         service.mark_ready("SHT-001")
+
+
+def test_controlled_interior_reports_specific_pressure_and_constraint_findings(
+    tmp_path: Path,
+) -> None:
+    service, packages = _service(tmp_path)
+    packages.value = replace(
+        packages.value,
+        assets=(
+            {"production": {"asset_id": "CAP-CHR-001", "category": "character"}},
+            {"production": {"asset_id": "CAP-LOC-001", "category": "location"}},
+        ),
+        environment={
+            "environment_context": "interior",
+            "atmosphere_state": "controlled",
+            "surface_state": "Mauritania Bridge interior environment",
+            "pressure_kpa": 0,
+            "environment_constraints": [
+                "Do not invent environmental physics not established by canon.",
+                "Do not add atmospheric haze, clouds, wind or aerodynamic effects in vacuum.",
+            ],
+        },
+        action_performance={
+            "production": {
+                "temporal_narrative": "James walks across the Mauritania bridge toward Cheryl.",
+                "spoken_content": 'James: "Good morning, Cheryl."',
+                "opening_state": "James is on the upper bridge level.",
+                "closing_state": "James stands beside Cheryl.",
+            }
+        },
+    )
+
+    service.create_from_current_package("SHT-001")
+    findings = service.consistency_findings("SHT-001")
+
+    assert len(findings) == 2
+    assert not any("vacuum/orbital space" in item for item in findings)
+    assert any("Pressure Kpa is 0 or below" in item for item in findings)
+    assert any("vacuum-specific instructions" in item for item in findings)
+
+
+def test_continuity_asset_ids_resolve_across_governed_asset_shapes(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    packages.value = replace(
+        packages.value,
+        assets=(
+            {
+                "binding": {"asset_id": "CAP-SHP-001"},
+                "resolution": {"asset_id": "CAP-SHP-001"},
+                "production": {"asset_id": "CAP-SHP-001", "category": "ship"},
+            },
+        ),
+        continuity={"production": {"asset_ids": ["cap-shp-001"]}},
+    )
+
+    service.create_from_current_package("SHT-001")
+    findings = service.consistency_findings("SHT-001")
+
+    assert not any("Continuity references assets" in item for item in findings)
