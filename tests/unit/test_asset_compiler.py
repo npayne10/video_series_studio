@@ -126,6 +126,58 @@ def test_ready_compilation_is_provider_neutral_and_preserves_governed_source(
     assert packages.notes.startswith("Keep canonical bridge uniform")
 
 
+def test_integrated_resolution_propagates_approved_canonical_reference(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    packages.value = replace(
+        packages.value,
+        assets=(
+            {
+                "binding": {
+                    "binding_id": "AB-SHT-001-001",
+                    "asset_id": "CAP-CHR-001",
+                    "role": "Commander",
+                    "requirement": "James is visible in the Shot",
+                    "expected_category": "character",
+                    "asset_dependency_hash": "dependency-checksum",
+                },
+                "resolution": {
+                    "request": {"asset_id": "CAP-CHR-001"},
+                    "status": "resolved",
+                    "asset": {"asset_id": "CAP-CHR-001", "name": "James Spence"},
+                    "references": [
+                        {
+                            "reference_id": "22",
+                            "file_path": "references/james-secondary.png",
+                            "reference_type": "image",
+                            "role": "secondary",
+                            "checksum": "secondary-checksum",
+                        },
+                        {
+                            "reference_id": "21",
+                            "file_path": "references/james-primary.png",
+                            "reference_type": "image",
+                            "role": "primary",
+                            "checksum": "primary-checksum",
+                        },
+                    ],
+                },
+            },
+        ),
+    )
+    service.create_from_current_package("SHT-001")
+    service.mark_ready("SHT-001")
+
+    assert packages.derived is not None
+    compiled = packages.derived[0]
+    assert compiled["resolution"]["asset_id"] == "CAP-CHR-001"
+    assert compiled["resolution"]["canonical_reference"] == "references/james-primary.png"
+    assert compiled["production"]["canonical_reference"] == "references/james-primary.png"
+    assert compiled["production"]["dependency_checksum"] == "dependency-checksum"
+    assert [
+        item["file_path"] for item in compiled["production"]["canonical_references"]
+    ] == ["references/james-secondary.png", "references/james-primary.png"]
+
+
 def test_ready_is_immutable_until_returned_to_draft(tmp_path: Path) -> None:
     service, _packages = _service(tmp_path)
     service.create_from_current_package("SHT-001")
