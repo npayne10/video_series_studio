@@ -12,6 +12,7 @@ from vscs.application.universal_validation_refinement import install_universal_v
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.infrastructure.configuration import ConfigurationError
 from vscs.presentation.widgets import cap_manager as cap_manager_module
+from vscs.presentation.widgets.cap_asset_reference_sync import install_cap_asset_reference_sync
 from vscs.presentation.widgets.cap_reference_deletion import (
     install_canonical_reference_deletion,
 )
@@ -33,6 +34,7 @@ from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
 )
 
 cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
+install_cap_asset_reference_sync()
 install_canonical_reference_file_management()
 install_canonical_reference_deletion()
 install_canonical_image_evaluation()
