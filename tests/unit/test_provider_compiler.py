@@ -38,7 +38,9 @@ class _Packages:
                 "environment": {"environment_context": "ship_interior"},
                 "continuity": {"opening_state": "James enters the bridge."},
                 "style": {"provider_neutral": True},
-                "canonical_references": [{"asset_id": "CAP-CHR-001", "canonical_reference": "james.png"}],
+                "canonical_references": [
+                    {"asset_id": "CAP-CHR-001", "canonical_reference": "james.png"}
+                ],
                 "consistency_findings": [],
             }
         }
@@ -108,7 +110,9 @@ def test_registry_exposes_comfyui_provider_by_default(tmp_path: Path) -> None:
     assert providers[0].display_name == "ComfyUI"
 
 
-def test_comfyui_provider_compiles_approved_universal_authority_without_execution(tmp_path: Path) -> None:
+def test_comfyui_provider_compiles_approved_universal_authority_without_execution(
+    tmp_path: Path,
+) -> None:
     service, _packages = _service(tmp_path)
     draft = service.create_from_current_package("SHT-001", "comfyui")
     output = draft.output_value()
@@ -120,7 +124,9 @@ def test_comfyui_provider_compiles_approved_universal_authority_without_executio
     assert output["canonical_references"][0]["asset_id"] == "CAP-CHR-001"
 
 
-def test_provider_compilation_is_blocked_until_universal_description_is_approved(tmp_path: Path) -> None:
+def test_provider_compilation_is_blocked_until_universal_description_is_approved(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
     packages.value = replace(
         packages.value,
@@ -130,7 +136,9 @@ def test_provider_compilation_is_blocked_until_universal_description_is_approved
         service.create_from_current_package("SHT-001", "comfyui")
 
 
-def test_ready_compiles_provider_output_into_new_production_package_revision(tmp_path: Path) -> None:
+def test_ready_compiles_provider_output_into_new_production_package_revision(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
     service.create_from_current_package("SHT-001", "comfyui")
     service.save_notes("SHT-001", "comfyui", "Reviewed provider contract.")
@@ -141,7 +149,9 @@ def test_ready_compiles_provider_output_into_new_production_package_revision(tmp
     assert packages.value.validation["provider_comfyui_complete"] is True
 
 
-def test_universal_change_makes_provider_draft_stale_and_refresh_preserves_notes(tmp_path: Path) -> None:
+def test_universal_change_makes_provider_draft_stale_and_refresh_preserves_notes(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
     service.create_from_current_package("SHT-001", "comfyui")
     service.save_notes("SHT-001", "comfyui", "Keep this note.")

@@ -221,8 +221,12 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             if source is not None:
                 self.package_table.setItem(row, 10, QTableWidgetItem(source.text()))
             if shot is not None:
-                self.package_table.setItem(row, 8, QTableWidgetItem(self._universal_state(shot.text())))
-                self.package_table.setItem(row, 9, QTableWidgetItem(self._provider_state(shot.text())))
+                self.package_table.setItem(
+                    row, 8, QTableWidgetItem(self._universal_state(shot.text()))
+                )
+                self.package_table.setItem(
+                    row, 9, QTableWidgetItem(self._provider_state(shot.text()))
+                )
         self._update_future_footer()
         self._load_universal_draft()
         if hasattr(self, "provider_preview"):
@@ -239,7 +243,10 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         draft = self.universal_compiler.draft(shot_id)
         if draft is None:
             return "Not started"
-        if draft.status is UniversalProductionDescriptionStatus.READY and self.universal_compiler.is_current(draft):
+        if (
+            draft.status is UniversalProductionDescriptionStatus.READY
+            and self.universal_compiler.is_current(draft)
+        ):
             return "Ready / Compiled"
         if not self.universal_compiler.is_current(draft):
             return f"{draft.status.value.title()} / Stale"
@@ -256,7 +263,9 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         draft = self.provider_compiler.draft(shot_id, provider_id)
         if draft is None:
             return "Not started"
-        if draft.status is ProviderCompilationStatus.READY and self.provider_compiler.is_current(draft):
+        if draft.status is ProviderCompilationStatus.READY and self.provider_compiler.is_current(
+            draft
+        ):
             return "Ready / Compiled"
         if not self.provider_compiler.is_current(draft):
             return f"{draft.status.value.title()} / Stale"
@@ -297,7 +306,8 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         elif missing:
             self.universal_status.setText(
                 "Universal Production Description Draft is current, but final approval is blocked until upstream authority is Ready: "
-                + ", ".join(missing) + "."
+                + ", ".join(missing)
+                + "."
             )
         elif findings:
             self.universal_status.setText(
@@ -311,7 +321,9 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         self.universal_create_button.setEnabled(False)
         self.universal_refresh_button.setEnabled(stale and not ready)
         self.universal_save_button.setEnabled(not stale and not ready)
-        self.universal_ready_button.setEnabled(not stale and not ready and not missing and not findings)
+        self.universal_ready_button.setEnabled(
+            not stale and not ready and not missing and not findings
+        )
         self.universal_draft_button.setEnabled(ready)
         self.universal_notes.setReadOnly(stale or ready)
 
@@ -344,7 +356,9 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             self.provider_draft_button.setEnabled(False)
             self.provider_notes.setReadOnly(True)
             return
-        self.provider_preview.setPlainText(json.dumps(draft.output_value(), indent=2, sort_keys=True, ensure_ascii=False))
+        self.provider_preview.setPlainText(
+            json.dumps(draft.output_value(), indent=2, sort_keys=True, ensure_ascii=False)
+        )
         self.provider_notes.setPlainText(draft.production_notes)
         stale = not self.provider_compiler.is_current(draft)
         ready = draft.status is ProviderCompilationStatus.READY
@@ -392,8 +406,12 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             sections.extend(cls._render_value(value, indent=0))
             sections.append("")
         sections.append("PRODUCTION POLICY")
-        sections.append(f"  Source Policy: {cls._display_scalar(description.get('source_policy', ''))}")
-        sections.append(f"  Provider Neutral: {cls._display_scalar(description.get('provider_neutral', True))}")
+        sections.append(
+            f"  Source Policy: {cls._display_scalar(description.get('source_policy', ''))}"
+        )
+        sections.append(
+            f"  Provider Neutral: {cls._display_scalar(description.get('provider_neutral', True))}"
+        )
         return "\n".join(sections).rstrip()
 
     @classmethod
@@ -435,7 +453,9 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
     def _universal_create(self) -> None:
         if self._selected_shot_id is not None:
             shot_id = self._selected_shot_id
-            self._run_universal(lambda: self.universal_compiler.create_from_current_package(shot_id))
+            self._run_universal(
+                lambda: self.universal_compiler.create_from_current_package(shot_id)
+            )
 
     def _universal_refresh(self) -> None:
         if self._selected_shot_id is not None:
@@ -445,7 +465,11 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
     def _universal_save(self) -> None:
         if self._selected_shot_id is not None:
             shot_id = self._selected_shot_id
-            self._run_universal(lambda: self.universal_compiler.save_notes(shot_id, self.universal_notes.toPlainText()))
+            self._run_universal(
+                lambda: self.universal_compiler.save_notes(
+                    shot_id, self.universal_notes.toPlainText()
+                )
+            )
 
     def _universal_ready(self) -> None:
         if self._selected_shot_id is None:
@@ -456,6 +480,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             self.universal_compiler.mark_ready(shot_id)
         except UniversalProductionDescriptionCompilerError as exc:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(self, "Universal Production Description Compiler", str(exc))
         self.refresh()
 
@@ -469,6 +494,7 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             action()
         except UniversalProductionDescriptionCompilerError as exc:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(self, "Universal Production Description Compiler", str(exc))
         self.refresh()
 
@@ -476,19 +502,27 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         if self._selected_shot_id is not None:
             shot_id = self._selected_shot_id
             provider_id = self._selected_provider()
-            self._run_provider(lambda: self.provider_compiler.create_from_current_package(shot_id, provider_id))
+            self._run_provider(
+                lambda: self.provider_compiler.create_from_current_package(shot_id, provider_id)
+            )
 
     def _provider_refresh(self) -> None:
         if self._selected_shot_id is not None:
             shot_id = self._selected_shot_id
             provider_id = self._selected_provider()
-            self._run_provider(lambda: self.provider_compiler.rebase_to_current_package(shot_id, provider_id))
+            self._run_provider(
+                lambda: self.provider_compiler.rebase_to_current_package(shot_id, provider_id)
+            )
 
     def _provider_save(self) -> None:
         if self._selected_shot_id is not None:
             shot_id = self._selected_shot_id
             provider_id = self._selected_provider()
-            self._run_provider(lambda: self.provider_compiler.save_notes(shot_id, provider_id, self.provider_notes.toPlainText()))
+            self._run_provider(
+                lambda: self.provider_compiler.save_notes(
+                    shot_id, provider_id, self.provider_notes.toPlainText()
+                )
+            )
 
     def _provider_ready(self) -> None:
         if self._selected_shot_id is None:
@@ -496,10 +530,13 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
         shot_id = self._selected_shot_id
         provider_id = self._selected_provider()
         try:
-            self.provider_compiler.save_notes(shot_id, provider_id, self.provider_notes.toPlainText())
+            self.provider_compiler.save_notes(
+                shot_id, provider_id, self.provider_notes.toPlainText()
+            )
             self.provider_compiler.mark_ready(shot_id, provider_id)
         except ProviderCompilerError as exc:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(self, "Provider Compiler Framework", str(exc))
         self.refresh()
 
@@ -514,5 +551,6 @@ class UniversalProductionDescriptionCompilerWorkspace(StyleCompilerWorkspace):
             action()
         except ProviderCompilerError as exc:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(self, "Provider Compiler Framework", str(exc))
         self.refresh()

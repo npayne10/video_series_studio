@@ -170,11 +170,11 @@ class ProviderCompilerFrameworkService:
             return ()
         try:
             raw = json.loads(self.draft_file.read_text(encoding="utf-8"))
-            drafts = tuple(
-                self._from_dict(item) for item in raw.get("provider_compilation", [])
-            )
+            drafts = tuple(self._from_dict(item) for item in raw.get("provider_compilation", []))
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise ProviderCompilerError(f"Unable to load Provider compilation drafts: {exc}") from exc
+            raise ProviderCompilerError(
+                f"Unable to load Provider compilation drafts: {exc}"
+            ) from exc
         return tuple(sorted(drafts, key=lambda item: (item.shot_id, item.provider_id)))
 
     def draft(self, shot_id: str, provider_id: str) -> ProviderCompilationDraft | None:
@@ -195,7 +195,9 @@ class ProviderCompilerFrameworkService:
         shot = shot_id.strip().upper()
         provider = provider_id.strip().lower()
         if self.draft(shot, provider) is not None:
-            raise ProviderCompilerError(f"Provider compilation already exists for {shot} / {provider}")
+            raise ProviderCompilerError(
+                f"Provider compilation already exists for {shot} / {provider}"
+            )
         package = self.packages.require_current_package(shot)
         self._require_universal_ready(package)
         compiler = self.registry.require(provider)
@@ -209,12 +211,12 @@ class ProviderCompilerFrameworkService:
         self._write((*self.list_drafts(), draft))
         return draft
 
-    def rebase_to_current_package(
-        self, shot_id: str, provider_id: str
-    ) -> ProviderCompilationDraft:
+    def rebase_to_current_package(self, shot_id: str, provider_id: str) -> ProviderCompilationDraft:
         current = self._require_draft(shot_id, provider_id)
         if current.status is ProviderCompilationStatus.READY:
-            raise ProviderCompilerError("Ready Provider output must return to Draft before refreshing")
+            raise ProviderCompilerError(
+                "Ready Provider output must return to Draft before refreshing"
+            )
         package = self.packages.require_current_package(current.shot_id)
         self._require_universal_ready(package)
         compiler = self.registry.require(current.provider_id)
@@ -235,7 +237,9 @@ class ProviderCompilerFrameworkService:
         if current.status is ProviderCompilationStatus.READY:
             raise ProviderCompilerError("Ready Provider output must return to Draft before editing")
         if not self.is_current(current):
-            raise ProviderCompilerError("Provider output is stale against current universal authority")
+            raise ProviderCompilerError(
+                "Provider output is stale against current universal authority"
+            )
         updated = replace(current, production_notes=notes.strip())
         self._replace(updated)
         return updated
@@ -243,7 +247,9 @@ class ProviderCompilerFrameworkService:
     def mark_ready(self, shot_id: str, provider_id: str) -> ProviderCompilationDraft:
         current = self._require_draft(shot_id, provider_id)
         if not self.is_current(current):
-            raise ProviderCompilerError("Provider output is stale against current universal authority")
+            raise ProviderCompilerError(
+                "Provider output is stale against current universal authority"
+            )
         package = self.packages.require_current_package(current.shot_id)
         self._require_universal_ready(package)
         self._validate_output(current.output_value(), current.provider_id)
@@ -311,9 +317,7 @@ class ProviderCompilerFrameworkService:
             )
 
     @classmethod
-    def _dependency_fingerprint(
-        cls, package: ProductionPackage, compiler: ProviderCompiler
-    ) -> str:
+    def _dependency_fingerprint(cls, package: ProductionPackage, compiler: ProviderCompiler) -> str:
         payload = {
             "schema_version": cls.SCHEMA_VERSION,
             "provider_id": compiler.provider_id,
