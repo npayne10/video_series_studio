@@ -35,10 +35,11 @@ def _profiled_refresh(workspace: Any) -> None:
     selected = workspace._selected_shot_id
 
     if workspace.projects.is_project_open:
-        snapshot = _timed(
-            "snapshot.capture",
-            lambda: ProductionPlanningSnapshot.capture(workspace),
-        )
+
+        def capture_snapshot() -> ProductionPlanningSnapshot:
+            return ProductionPlanningSnapshot.capture(workspace)
+
+        snapshot = _timed("snapshot.capture", capture_snapshot)
     else:
         snapshot = ProductionPlanningSnapshot((), (), {}, {})
     rows = snapshot.rows
