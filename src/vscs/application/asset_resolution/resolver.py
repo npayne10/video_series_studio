@@ -38,6 +38,7 @@ class AssetResolutionService:
     assets: AssetService
     caps: CAPService
     references: CanonicalReferenceService
+    production_projections: ProductionProjectionService | None = None
 
     def resolve(self, request: AssetResolutionRequest) -> AssetResolutionResult:
         diagnostics: list[AssetResolutionDiagnostic] = []
@@ -126,15 +127,8 @@ class AssetResolutionService:
 
         reference_bindings: tuple[ResolvedReferenceBinding, ...] = ()
         if cap_found:
-            # Resolve through CAP's production projection first. This is the
-            # authoritative Asset -> CAP -> Reference Library boundary and also
-            # reconciles legacy Asset MASTER paths into governed production
-            # references before Shot planning consumes them.
-            production_references = ProductionProjectionService(
-                self.caps,
-                self.references,
-            ).project(asset.asset_id).references
-            if production_references:
+            if self.production_projections is not None:
+                production_references = self.production_projections.project(asset.asset_id).references
                 reference_bindings = tuple(
                     ResolvedReferenceBinding(
                         reference.reference_id,
@@ -149,11 +143,10 @@ class AssetResolutionService:
                     )
                     for reference in production_references
                 )
-            else:
-                # Preserve compatibility for projects that have approved legacy
-                # CAP references but have not yet published a production-library
-                # entry. New/modern projects should normally use the projection
-                # path above.
+
+            if not reference_bindings:
+                # Backward-compatible fallback for legacy/test callers that do
+                # not yet inject the governed production-projection service.
                 approved = self.references.list_for_cap(
                     asset.asset_id,
                     status=CanonicalReferenceStatus.APPROVED,
@@ -168,6 +161,7 @@ class AssetResolutionService:
                     )
                     for reference in sorted(approved, key=lambda item: item.id)
                 )
+
             if request.require_approved_references and not reference_bindings:
                 diagnostics.append(
                     AssetResolutionDiagnostic(
