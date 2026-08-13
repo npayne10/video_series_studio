@@ -1,8 +1,8 @@
 """Performance refinement for the full Phase 19.4 Production Planning workspace.
 
-The compiler workspace was built incrementally through inheritance.  Calling every
+The compiler workspace was built incrementally through inheritance. Calling every
 intermediate ``refresh()`` rebuilt the same table repeatedly and caused Qt selection
-signals to reload all compiler tabs several times per user action.  The installed
+signals to reload all compiler tabs several times per user action. The installed
 refresh below treats the current Production Package set as one snapshot, rebuilds
 the final table once, suppresses intermediate selection signals, and loads each
 selected compiler view once.
@@ -120,4 +120,5 @@ def install_production_planning_performance() -> None:
         UniversalProductionDescriptionCompilerWorkspace,
     )
 
-    UniversalProductionDescriptionCompilerWorkspace.refresh = _optimized_refresh
+    workspace_type: Any = UniversalProductionDescriptionCompilerWorkspace
+    workspace_type.refresh = _optimized_refresh
