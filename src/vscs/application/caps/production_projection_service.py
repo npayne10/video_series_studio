@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from vscs.application.caps.asset_reference_bridge import ensure_asset_image_reference
 from vscs.application.caps.readiness_service import CAPReadinessService
-from vscs.application.caps.reference_library import ReferenceLibraryService
+from vscs.application.caps.reference_library import (
+    ReferenceLibraryConflictError,
+    ReferenceLibraryNotFoundError,
+    ReferenceLibraryService,
+)
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.service import CAPService
 from vscs.domain.caps.production_contract import (
@@ -45,6 +50,7 @@ class ProductionProjectionService:
 
     def project(self, asset_id: str) -> ProductionProjection:
         """Return a stable projection including readiness diagnostics when blocked."""
+        self._synchronize_asset_master(asset_id)
         cap = self.caps.get(asset_id)
         asset = self.caps.assets.get(asset_id)
         readiness = self.readiness.evaluate(asset_id)
@@ -114,3 +120,37 @@ class ProductionProjectionService:
     def checksum(self, asset_id: str) -> str:
         """Return the deterministic projection fingerprint for invalidation/caching."""
         return self.project(asset_id).checksum()
+
+    def _synchronize_asset_master(self, asset_id: str) -> None:
+        """Repair legacy Asset→CAP MASTER linkage before publishing a projection."""
+        reference = ensure_asset_image_reference(self.references, asset_id)
+        if reference is None:
+            return
+
+        try:
+            entry = self.library.get(reference.id)
+        except ReferenceLibraryNotFoundError:
+            try:
+                entry = self.library.register_master(
+                    asset_id,
+                    reference.id,
+                    actor="VSCS Asset/CAP Reconciliation",
+                    note="Existing Asset MASTER restored to CAP production governance.",
+                )
+            except ReferenceLibraryConflictError:
+                # A different governed MASTER already exists. Preserve that explicit
+                # production authority rather than silently replacing it.
+                return
+
+        if entry.lifecycle is CanonicalReferenceLifecycle.CANDIDATE:
+            entry = self.library.approve(
+                reference.id,
+                "VSCS Asset/CAP Reconciliation",
+                note="Existing Asset MASTER published for production use.",
+            )
+        if entry.lifecycle is CanonicalReferenceLifecycle.APPROVED:
+            self.library.lock(
+                reference.id,
+                actor="VSCS Asset/CAP Reconciliation",
+                note="Restored Asset MASTER locked as canonical production authority.",
+            )

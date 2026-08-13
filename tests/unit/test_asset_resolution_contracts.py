@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from vscs.application.asset_resolution import (
     AssetResolutionRequest,
@@ -14,10 +15,15 @@ from vscs.domain.assets import Asset, AssetCategory, AssetStatus
 from vscs.domain.caps import (
     CanonicalAssetProfile,
     CanonicalReference,
+    CanonicalReferenceFamily,
+    CanonicalReferenceLifecycle,
+    CanonicalReferenceOrigin,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
     CanonicalReferenceType,
+    CanonicalReferenceView,
     CAPStatus,
+    ProductionReference,
 )
 
 
@@ -47,6 +53,14 @@ class _References:
 
     def list_for_cap(self, asset_id: str, **_kwargs: object) -> tuple[CanonicalReference, ...]:
         return self.references
+
+
+class _ProductionProjections:
+    def __init__(self, references: tuple[ProductionReference, ...]) -> None:
+        self.references = references
+
+    def project(self, asset_id: str) -> SimpleNamespace:
+        return SimpleNamespace(references=self.references)
 
 
 def _asset() -> Asset:
@@ -103,11 +117,24 @@ def _reference() -> CanonicalReference:
     )
 
 
+def _production_reference() -> ProductionReference:
+    return ProductionReference(
+        reference_id="MASTER-7",
+        family=CanonicalReferenceFamily.MASTER,
+        view=CanonicalReferenceView.MASTER,
+        origin=CanonicalReferenceOrigin.CHATGPT_MASTER,
+        lifecycle=CanonicalReferenceLifecycle.LOCKED,
+        file_path="references/iron_horizon.png",
+        approved_by="Neill",
+    )
+
+
 def test_complete_asset_resolution_produces_stable_fingerprint() -> None:
     resolver = AssetResolutionService(
         _Assets(_asset()),  # type: ignore[arg-type]
         _Caps(_cap()),  # type: ignore[arg-type]
         _References((_reference(),)),  # type: ignore[arg-type]
+        _ProductionProjections((_production_reference(),)),  # type: ignore[arg-type]
     )
 
     first = resolver.resolve(
@@ -121,7 +148,9 @@ def test_complete_asset_resolution_produces_stable_fingerprint() -> None:
     assert first.status is AssetResolutionStatus.RESOLVED
     assert first.asset is not None
     assert first.cap is not None
-    assert first.references[0].reference_id == "7"
+    assert first.references[0].reference_id == "MASTER-7"
+    assert first.references[0].role == "primary"
+    assert first.references[0].file_path == "references/iron_horizon.png"
     assert first.fingerprint is not None
     assert second.fingerprint is not None
     assert first.fingerprint.checksum == second.fingerprint.checksum

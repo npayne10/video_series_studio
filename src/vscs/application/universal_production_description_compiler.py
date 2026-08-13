@@ -44,7 +44,7 @@ class UniversalProductionDescriptionCompilerService:
     """Compile all governed Shot authority into one provider-neutral production description."""
 
     FILE_NAME = "universal_production_description_compilation.json"
-    SCHEMA_VERSION = "1.1"
+    SCHEMA_VERSION = "1.2"
     REQUIRED_UPSTREAM = (
         ("action_performance_complete", "Action & Performance"),
         ("assets_complete", "Assets"),
@@ -67,6 +67,7 @@ class UniversalProductionDescriptionCompilerService:
         "laboratory",
         "lab",
     )
+    _INTERIOR_ATMOSPHERES = frozenset({"controlled", "pressurized", "pressurised"})
     _STOPWORDS = frozenset(
         {
             "a",
@@ -387,15 +388,38 @@ class UniversalProductionDescriptionCompilerService:
             )
         ).lower()
         interior = any(term in action_text for term in cls._INTERIOR_TERMS)
-        environment_context = str(environment.get("environment_context", "")).lower()
-        atmosphere = str(environment.get("atmosphere_state", "")).lower()
+        environment_context = str(environment.get("environment_context", "")).strip().lower()
+        atmosphere = str(environment.get("atmosphere_state", "")).strip().lower()
+        surface_state = str(environment.get("surface_state", "")).strip().lower()
         pressure = environment.get("pressure_kpa")
-        vacuum_pressure = isinstance(pressure, int | float) and pressure <= 0
-        if interior and (
-            atmosphere == "vacuum" or vacuum_pressure or environment_context == "orbital_space"
-        ):
+        zero_or_negative_pressure = isinstance(pressure, int | float) and pressure <= 0
+        declared_interior = (
+            environment_context == "interior"
+            or "interior" in surface_state
+            or atmosphere in cls._INTERIOR_ATMOSPHERES
+        )
+        explicit_vacuum = atmosphere == "vacuum" or environment_context == "orbital_space"
+
+        if interior and explicit_vacuum:
             findings.append(
-                "Action & Performance places performers in an interior location, but Environment authority describes vacuum/orbital space."
+                "Action & Performance places performers in an interior location, but Environment authority explicitly describes vacuum/orbital space."
+            )
+        if declared_interior and zero_or_negative_pressure:
+            findings.append(
+                "Environment authority declares a controlled/interior space, but Pressure Kpa is 0 or below."
+            )
+
+        constraints_raw = environment.get("environment_constraints", [])
+        constraints: tuple[str, ...]
+        if isinstance(constraints_raw, str):
+            constraints = (constraints_raw,)
+        elif isinstance(constraints_raw, list | tuple):
+            constraints = tuple(str(item) for item in constraints_raw)
+        else:
+            constraints = ()
+        if declared_interior and any("vacuum" in item.lower() for item in constraints):
+            findings.append(
+                "Environment authority declares a controlled/interior space, but Environment Constraints still contain vacuum-specific instructions."
             )
 
         categories = {str(item.get("category", "")).strip().lower() for item in assets}
@@ -420,9 +444,13 @@ class UniversalProductionDescriptionCompilerService:
         continuity_ids = continuity.get("asset_ids") or continuity.get("current_asset_ids") or []
         if isinstance(continuity_ids, str):
             continuity_ids = [continuity_ids]
-        governed_ids = {str(item.get("asset_id", "")).strip() for item in assets}
+        governed_ids = cls._governed_asset_ids(assets)
         if isinstance(continuity_ids, list | tuple):
-            missing_ids = [str(item) for item in continuity_ids if str(item) not in governed_ids]
+            missing_ids = [
+                str(item).strip()
+                for item in continuity_ids
+                if str(item).strip() and str(item).strip().upper() not in governed_ids
+            ]
             if missing_ids:
                 findings.append(
                     "Continuity references assets that are absent from current Asset authority: "
@@ -447,6 +475,21 @@ class UniversalProductionDescriptionCompilerService:
                 )
 
         return tuple(findings)
+
+    @classmethod
+    def _governed_asset_ids(cls, assets: list[dict[str, Any]]) -> set[str]:
+        governed_ids: set[str] = set()
+        for item in assets:
+            candidates: list[Any] = [item.get("asset_id")]
+            for section_name in ("production", "resolution", "binding", "governed"):
+                section = item.get(section_name)
+                if isinstance(section, dict):
+                    candidates.append(section.get("asset_id"))
+            for candidate in candidates:
+                value = str(candidate or "").strip().upper()
+                if value:
+                    governed_ids.add(value)
+        return governed_ids
 
     @classmethod
     def _meaningful_tokens(cls, text: str) -> set[str]:
@@ -525,7 +568,10 @@ class UniversalProductionDescriptionCompilerService:
             ],
         }
         temporary = self.draft_file.with_suffix(self.draft_file.suffix + ".tmp")
-        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         temporary.replace(self.draft_file)
 
     @staticmethod

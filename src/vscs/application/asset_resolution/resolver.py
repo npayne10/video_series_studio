@@ -9,9 +9,14 @@ from vscs.application.caps import (
     CanonicalReferenceService,
     CAPNotFoundError,
     CAPService,
+    ProductionProjectionService,
 )
 from vscs.domain.assets import AssetStatus
-from vscs.domain.caps import CanonicalReferenceStatus, CAPStatus
+from vscs.domain.caps import (
+    CanonicalReferenceFamily,
+    CanonicalReferenceStatus,
+    CAPStatus,
+)
 
 from .models import (
     AssetResolutionDiagnostic,
@@ -33,6 +38,7 @@ class AssetResolutionService:
     assets: AssetService
     caps: CAPService
     references: CanonicalReferenceService
+    production_projections: ProductionProjectionService | None = None
 
     def resolve(self, request: AssetResolutionRequest) -> AssetResolutionResult:
         diagnostics: list[AssetResolutionDiagnostic] = []
@@ -121,20 +127,43 @@ class AssetResolutionService:
 
         reference_bindings: tuple[ResolvedReferenceBinding, ...] = ()
         if cap_found:
-            approved = self.references.list_for_cap(
-                asset.asset_id,
-                status=CanonicalReferenceStatus.APPROVED,
-            )
-            reference_bindings = tuple(
-                ResolvedReferenceBinding(
-                    str(reference.id),
-                    str(reference.file_path),
-                    reference.reference_type.value,
-                    reference.role.value,
-                    stable_model_checksum(reference),
+            if self.production_projections is not None:
+                production_references = self.production_projections.project(
+                    asset.asset_id
+                ).references
+                reference_bindings = tuple(
+                    ResolvedReferenceBinding(
+                        reference.reference_id,
+                        reference.file_path,
+                        "image",
+                        (
+                            "primary"
+                            if reference.family is CanonicalReferenceFamily.MASTER
+                            else reference.family.value
+                        ),
+                        stable_model_checksum(reference),
+                    )
+                    for reference in production_references
                 )
-                for reference in sorted(approved, key=lambda item: item.id)
-            )
+
+            if not reference_bindings:
+                # Backward-compatible fallback for legacy/test callers that do
+                # not yet inject the governed production-projection service.
+                approved = self.references.list_for_cap(
+                    asset.asset_id,
+                    status=CanonicalReferenceStatus.APPROVED,
+                )
+                reference_bindings = tuple(
+                    ResolvedReferenceBinding(
+                        str(reference.id),
+                        str(reference.file_path),
+                        reference.reference_type.value,
+                        reference.role.value,
+                        stable_model_checksum(reference),
+                    )
+                    for reference in sorted(approved, key=lambda item: item.id)
+                )
+
             if request.require_approved_references and not reference_bindings:
                 diagnostics.append(
                     AssetResolutionDiagnostic(

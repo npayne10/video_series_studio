@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from vscs.application.production_package import (
     ProductionPackage,
@@ -31,6 +32,7 @@ class _Planning:
 
 class _Projects:
     is_project_open = True
+    project_directory = Path(".")
 
 
 class _Packages:
@@ -141,10 +143,12 @@ def test_universal_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     widget = _widget(qtbot, _Universal(draft))
 
     preview = widget.universal_preview.toPlainText()
-    assert widget.package_table.columnCount() == 10
+    assert widget.package_table.columnCount() == 11
     assert widget.package_table.horizontalHeaderItem(8).text() == "Universal"
+    assert widget.package_table.horizontalHeaderItem(9).text() == "Provider"
     assert widget.package_table.item(0, 8).text() == "Draft"
     assert widget.compiler_tabs.tabText(6) == "Universal Description"
+    assert widget.compiler_tabs.tabText(7) == "Provider Output"
     assert "SHOT\n" in preview
     assert "Title: Bridge Dialogue" in preview
     assert "CAMERA\n" in preview
@@ -155,7 +159,7 @@ def test_universal_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     footer_texts = [label.text() for label in widget.findChildren(type(widget.universal_status))]
     assert any(
         text
-        == "Later Phase 19.4 compilers will add Provider Output and Validation views to this same workspace."
+        == "Later Phase 19.4 work will add final Production Package Validation to this same workspace."
         for text in footer_texts
     )
 
@@ -197,3 +201,10 @@ def test_universal_final_approval_is_blocked_by_consistency_findings(qtbot) -> N
     assert not widget.universal_ready_button.isEnabled()
     assert "consistency finding" in widget.universal_status.text().lower()
     assert "CONSISTENCY FINDINGS\n" in widget.universal_preview.toPlainText()
+
+
+def test_provider_output_is_blocked_until_universal_authority_is_ready(qtbot) -> None:
+    widget = _widget(qtbot, _Universal())
+    assert widget.provider_selector.currentData() == "comfyui"
+    assert not widget.provider_create_button.isEnabled()
+    assert "blocked until the universal" in widget.provider_status.text().lower()

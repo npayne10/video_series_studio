@@ -8,9 +8,11 @@ from types import TracebackType
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from vscs.application.universal_validation_refinement import install_universal_validation_refinement
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.infrastructure.configuration import ConfigurationError
 from vscs.presentation.widgets import cap_manager as cap_manager_module
+from vscs.presentation.widgets.cap_asset_reference_sync import install_cap_asset_reference_sync
 from vscs.presentation.widgets.cap_reference_deletion import (
     install_canonical_reference_deletion,
 )
@@ -32,12 +34,14 @@ from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
 )
 
 cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
+install_cap_asset_reference_sync()
 install_canonical_reference_file_management()
 install_canonical_reference_deletion()
 install_canonical_image_evaluation()
 install_semantic_image_evaluation()
 install_production_readiness_evaluation()
 install_feedback_regeneration()
+install_universal_validation_refinement()
 
 
 def _install_exception_hook(logger: logging.Logger) -> None:
