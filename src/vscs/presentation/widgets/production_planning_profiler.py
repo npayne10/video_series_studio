@@ -1,10 +1,9 @@
 """Diagnostic timing profiler for Phase 19.4 Production Planning.
 
-This module intentionally changes no compiler or persistence semantics. It wraps the
-existing optimized workspace refresh and records wall-clock timings for the package
-snapshot, compiler state lookups, and selected-tab draft loads. The output is sent
-through the normal ``vscs.performance.production_planning`` logger so it appears in
-both the configured VSCS log and the console when console logging is enabled.
+The profiler runs the same snapshot-cached refresh path as production and records
+wall-clock timings for snapshot capture, compiler state lookups, selected-tab draft
+loads and the total refresh. It intentionally changes no compiler persistence or
+production authority semantics.
 """
 
 from __future__ import annotations
@@ -15,6 +14,8 @@ from time import perf_counter
 from typing import Any
 
 from PySide6.QtWidgets import QTableWidgetItem
+
+from .production_planning_performance import ProductionPlanningSnapshot
 
 _LOGGER = logging.getLogger("vscs.performance.production_planning")
 
@@ -29,121 +30,89 @@ def _timed[T](label: str, callback: Callable[[], T]) -> T:
 
 
 def _profiled_refresh(workspace: Any) -> None:
-    """Run the optimized refresh while logging every expensive boundary."""
+    """Run the snapshot-cached refresh while logging expensive boundaries."""
     total_started = perf_counter()
     selected = workspace._selected_shot_id
-    rows: list[Any] = []
 
     if workspace.projects.is_project_open:
-        integrated_packages = _timed(
-            "planning.list_packages",
-            workspace.packages.planning.list_packages,
+        snapshot = _timed(
+            "snapshot.capture",
+            lambda: ProductionPlanningSnapshot.capture(workspace),
         )
-        for integrated in integrated_packages:
-            shot_id = integrated.shot_id
-
-            def check_current(integrated: Any = integrated) -> bool:
-                return bool(workspace.packages.planning.is_current(integrated))
-
-            current = _timed(
-                f"planning.is_current[{shot_id}]",
-                check_current,
-            )
-
-            if not current:
-                continue
-
-            def get_current_package(shot_id: str = shot_id) -> Any:
-                return workspace.packages.current_package(shot_id)
-
-            package = _timed(
-                f"packages.current_package[{shot_id}]",
-                get_current_package,
-            )
-
-            def materialize_package(shot_id: str = shot_id) -> Any:
-                return workspace.packages.materialize(shot_id)
-
-            if package is None:
-                package = _timed(
-                    f"packages.materialize[{shot_id}]",
-                    materialize_package,
-                )
-            rows.append(package)
-
-    previous_signal_state = workspace.package_table.blockSignals(True)
-    workspace.package_table.setUpdatesEnabled(False)
-    selected_row = -1
-    try:
-        workspace.package_table.setColumnCount(11)
-        workspace.package_table.setHorizontalHeaderLabels(workspace._headers())
-        workspace.package_table.setRowCount(len(rows))
-        state_methods = (
-            ("action", workspace._action_state),
-            ("asset", workspace._asset_state),
-            ("camera", workspace._camera_state),
-            ("lighting", workspace._lighting_state),
-            ("continuity", workspace._continuity_state),
-            ("style", workspace._style_state),
-            ("universal", workspace._universal_state),
-            ("provider", workspace._provider_state),
-        )
-        for row, package in enumerate(rows):
-            shot_id = package.shot_id
-
-            states_list: list[Any] = []
-
-            for name, method in state_methods:
-
-                def get_state(
-                    method: Callable[[str], Any] = method,
-                    shot_id: str = shot_id,
-                ) -> Any:
-                    return method(shot_id)
-
-                states_list.append(
-                    _timed(
-                        f"state.{name}[{shot_id}]",
-                        get_state,
-                    )
-                )
-
-            states = tuple(states_list)
-
-            values = (
-                shot_id,
-                package.package_id,
-                *states,
-                package.provenance.integrated_package_id,
-            )
-            for column, value in enumerate(values):
-                workspace.package_table.setItem(row, column, QTableWidgetItem(str(value)))
-            if shot_id == selected:
-                selected_row = row
-
-        if selected_row < 0 and rows:
-            selected_row = 0
-        if selected_row >= 0:
-            workspace.package_table.selectRow(selected_row)
-    finally:
-        workspace.package_table.setUpdatesEnabled(True)
-        workspace.package_table.blockSignals(previous_signal_state)
-
-    _timed("workspace.update_future_footer", workspace._update_future_footer)
-    if selected_row >= 0:
-        _profiled_load_selected_snapshot(workspace)
     else:
-        workspace._selected_shot_id = None
-        workspace.package_summary.setText(
-            "No current approved Integrated Planning Packages are available. "
-            "Complete Planning Review for a Shot first."
-        )
-        workspace.action_status.clear()
-        workspace.asset_status.clear()
-        workspace._clear_editor()
-        workspace._clear_asset_editor()
-        workspace._set_editor_enabled(False)
-        workspace._set_asset_editor_enabled(False)
+        snapshot = ProductionPlanningSnapshot((), (), {}, {})
+    rows = snapshot.rows
+
+    with snapshot.activate(workspace):
+        previous_signal_state = workspace.package_table.blockSignals(True)
+        workspace.package_table.setUpdatesEnabled(False)
+        selected_row = -1
+        try:
+            workspace.package_table.setColumnCount(11)
+            workspace.package_table.setHorizontalHeaderLabels(workspace._headers())
+            workspace.package_table.setRowCount(len(rows))
+            state_methods = (
+                ("action", workspace._action_state),
+                ("asset", workspace._asset_state),
+                ("camera", workspace._camera_state),
+                ("lighting", workspace._lighting_state),
+                ("continuity", workspace._continuity_state),
+                ("style", workspace._style_state),
+                ("universal", workspace._universal_state),
+                ("provider", workspace._provider_state),
+            )
+            for row, package in enumerate(rows):
+                shot_id = package.shot_id
+                states_list: list[Any] = []
+                for name, method in state_methods:
+
+                    def get_state(
+                        method: Callable[[str], Any] = method,
+                        shot_id: str = shot_id,
+                    ) -> Any:
+                        return method(shot_id)
+
+                    states_list.append(
+                        _timed(
+                            f"state.{name}[{shot_id}]",
+                            get_state,
+                        )
+                    )
+
+                values = (
+                    shot_id,
+                    package.package_id,
+                    *tuple(states_list),
+                    package.provenance.integrated_package_id,
+                )
+                for column, value in enumerate(values):
+                    workspace.package_table.setItem(row, column, QTableWidgetItem(str(value)))
+                if shot_id == selected:
+                    selected_row = row
+
+            if selected_row < 0 and rows:
+                selected_row = 0
+            if selected_row >= 0:
+                workspace.package_table.selectRow(selected_row)
+        finally:
+            workspace.package_table.setUpdatesEnabled(True)
+            workspace.package_table.blockSignals(previous_signal_state)
+
+        _timed("workspace.update_future_footer", workspace._update_future_footer)
+        if selected_row >= 0:
+            _profiled_load_selected_snapshot(workspace)
+        else:
+            workspace._selected_shot_id = None
+            workspace.package_summary.setText(
+                "No current approved Integrated Planning Packages are available. "
+                "Complete Planning Review for a Shot first."
+            )
+            workspace.action_status.clear()
+            workspace.asset_status.clear()
+            workspace._clear_editor()
+            workspace._clear_asset_editor()
+            workspace._set_editor_enabled(False)
+            workspace._set_asset_editor_enabled(False)
 
     _LOGGER.info("PPROF %-38s %9.3f s", "REFRESH TOTAL", perf_counter() - total_started)
 
@@ -157,9 +126,13 @@ def _profiled_load_selected_snapshot(workspace: Any) -> None:
         return
     workspace._selected_shot_id = item.text()
     shot_id = workspace._selected_shot_id
+
+    def get_selected_package() -> Any:
+        return workspace.packages.current_package(shot_id)
+
     package = _timed(
         f"selected.current_package[{shot_id}]",
-        lambda: workspace.packages.current_package(shot_id),
+        get_selected_package,
     )
     if package is None:
         return
