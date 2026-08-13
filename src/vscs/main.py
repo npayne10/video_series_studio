@@ -8,6 +8,7 @@ from types import TracebackType
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from vscs.application.universal_validation_refinement import install_universal_validation_refinement
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.infrastructure.configuration import ConfigurationError
 from vscs.presentation.widgets import cap_manager as cap_manager_module
@@ -38,6 +39,7 @@ install_canonical_image_evaluation()
 install_semantic_image_evaluation()
 install_production_readiness_evaluation()
 install_feedback_regeneration()
+install_universal_validation_refinement()
 
 
 def _install_exception_hook(logger: logging.Logger) -> None:
