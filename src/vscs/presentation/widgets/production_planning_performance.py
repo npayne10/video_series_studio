@@ -120,4 +120,4 @@ def install_production_planning_performance() -> None:
         UniversalProductionDescriptionCompilerWorkspace,
     )
 
-    setattr(UniversalProductionDescriptionCompilerWorkspace, "refresh", _optimized_refresh)
+    UniversalProductionDescriptionCompilerWorkspace.refresh = _optimized_refresh
