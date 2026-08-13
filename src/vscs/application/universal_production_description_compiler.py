@@ -410,6 +410,7 @@ class UniversalProductionDescriptionCompilerService:
             )
 
         constraints_raw = environment.get("environment_constraints", [])
+        constraints: tuple[str, ...]
         if isinstance(constraints_raw, str):
             constraints = (constraints_raw,)
         elif isinstance(constraints_raw, list | tuple):
