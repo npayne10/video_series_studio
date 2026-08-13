@@ -10,16 +10,16 @@ both the configured VSCS log and the console when console logging is enabled.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from time import perf_counter
-from typing import Any, Callable, TypeVar
+from typing import Any
 
 from PySide6.QtWidgets import QTableWidgetItem
 
-_T = TypeVar("_T")
 _LOGGER = logging.getLogger("vscs.performance.production_planning")
 
 
-def _timed(label: str, callback: Callable[[], _T]) -> _T:
+def _timed[T](label: str, callback: Callable[[], T]) -> T:
     started = perf_counter()
     try:
         return callback()
@@ -41,22 +41,33 @@ def _profiled_refresh(workspace: Any) -> None:
         )
         for integrated in integrated_packages:
             shot_id = integrated.shot_id
+
+            def check_current(integrated: Any = integrated) -> bool:
+                return bool(workspace.packages.planning.is_current(integrated))
+
             current = _timed(
                 f"planning.is_current[{shot_id}]",
-                lambda integrated=integrated: workspace.packages.planning.is_current(
-                    integrated
-                ),
+                check_current,
             )
+
             if not current:
                 continue
+
+            def get_current_package(shot_id: str = shot_id) -> Any:
+                return workspace.packages.current_package(shot_id)
+
             package = _timed(
                 f"packages.current_package[{shot_id}]",
-                lambda shot_id=shot_id: workspace.packages.current_package(shot_id),
+                get_current_package,
             )
+
+            def materialize_package(shot_id: str = shot_id) -> Any:
+                return workspace.packages.materialize(shot_id)
+
             if package is None:
                 package = _timed(
                     f"packages.materialize[{shot_id}]",
-                    lambda shot_id=shot_id: workspace.packages.materialize(shot_id),
+                    materialize_package,
                 )
             rows.append(package)
 
@@ -79,13 +90,26 @@ def _profiled_refresh(workspace: Any) -> None:
         )
         for row, package in enumerate(rows):
             shot_id = package.shot_id
-            states = tuple(
-                _timed(
-                    f"state.{name}[{shot_id}]",
-                    lambda method=method, shot_id=shot_id: method(shot_id),
+
+            states_list: list[Any] = []
+
+            for name, method in state_methods:
+
+                def get_state(
+                    method: Callable[[str], Any] = method,
+                    shot_id: str = shot_id,
+                ) -> Any:
+                    return method(shot_id)
+
+                states_list.append(
+                    _timed(
+                        f"state.{name}[{shot_id}]",
+                        get_state,
+                    )
                 )
-                for name, method in state_methods
-            )
+
+            states = tuple(states_list)
+
             values = (
                 shot_id,
                 package.package_id,
