@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from vscs.application.caps.asset_reference_bridge import ensure_asset_image_reference
+from vscs.application.caps.reference_service import CanonicalReferenceError
 from vscs.presentation.widgets import cap_manager
 
 
@@ -18,7 +19,10 @@ def install_cap_asset_reference_sync() -> None:
         references = widget.references
         if references is not None:
             for profile in widget.caps.list():
-                ensure_asset_image_reference(references, profile.asset_id)
+                try:
+                    ensure_asset_image_reference(references, profile.asset_id)
+                except (CanonicalReferenceError, OSError, ValueError):
+                    continue
         original_refresh(widget)
 
     widget_type: Any = cap_manager.CAPManagerWidget
