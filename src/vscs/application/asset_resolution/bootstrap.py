@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from vscs.application.assets import AssetService
-from vscs.application.caps import CanonicalReferenceService, CAPService
+from vscs.application.caps import (
+    CanonicalReferenceService,
+    CAPService,
+    ProductionProjectionService,
+)
 from vscs.application.prompt_graph import (
     IncrementalCompilationHistory,
     PromptGraphResolver,
@@ -22,13 +26,14 @@ def register_asset_resolution(services: ApplicationServices) -> AssetResolutionS
     assets = services.require(AssetService)
     caps = services.require(CAPService)
     references = services.require(CanonicalReferenceService)
+    production_projections = ProductionProjectionService(caps, references)
     canonical = services.register(
         CanonicalResolutionService,
         CanonicalResolutionService(caps, references),
     )
     resolver = services.register(
         AssetResolutionService,
-        AssetResolutionService(assets, caps, references),
+        AssetResolutionService(assets, caps, references, production_projections),
     )
     services.register(
         AssetBrowserService,
