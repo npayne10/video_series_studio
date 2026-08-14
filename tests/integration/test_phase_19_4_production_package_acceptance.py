@@ -155,6 +155,10 @@ def test_human_approval_completes_phase_19_4_acceptance(tmp_path: Path) -> None:
     assert before.status is AcceptanceStatus.NOT_READY
     assert not review.execution_authorized("SHT-001")
 
+    validation = review.validate("SHT-001")
+    assert validation.validation_passed
+    assert review.validation_confirmed("SHT-001")
+
     approved = review.approve(
         "SHT-001",
         reviewed_by="Acceptance Tester",
@@ -171,6 +175,7 @@ def test_upstream_package_change_invalidates_previous_phase_19_4_acceptance(
     tmp_path: Path,
 ) -> None:
     packages, review, acceptance = _pipeline(tmp_path)
+    review.validate("SHT-001")
     review.approve("SHT-001", reviewed_by="Acceptance Tester")
     assert acceptance.assess("SHT-001").accepted
 
@@ -185,3 +190,4 @@ def test_upstream_package_change_invalidates_previous_phase_19_4_acceptance(
     assert persisted.status is ReviewStatus.STALE
     assert acceptance.assess("SHT-001").status is AcceptanceStatus.NOT_READY
     assert not review.execution_authorized("SHT-001")
+    assert not review.validation_confirmed("SHT-001")
