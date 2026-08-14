@@ -50,6 +50,7 @@ class SemanticStoryInterpretationService:
         source_text: str,
         source_revision: str,
         baseline: AnalysisResult,
+        entity_resolution: EntityResolutionResult | None = None,
         persist: bool = True,
     ) -> SemanticStoryInterpretation:
         normalized_story_id = story_id.strip().upper()
@@ -65,11 +66,18 @@ class SemanticStoryInterpretationService:
         if baseline.source_revision and baseline.source_revision != normalized_revision:
             raise ValueError("Semantic interpretation baseline is stale for this Story revision")
 
-        resolution = self._entity_resolution.analyze(
-            story_id=normalized_story_id,
-            source_text=source_text,
-            baseline=baseline,
-        )
+        resolution = entity_resolution
+        if resolution is not None:
+            if resolution.story_id.strip().upper() != normalized_story_id:
+                raise ValueError("Cached entity resolution belongs to another Story")
+            if resolution.source_revision and resolution.source_revision != normalized_revision:
+                raise ValueError("Cached entity resolution is stale for this Story revision")
+        else:
+            resolution = self._entity_resolution.analyze(
+                story_id=normalized_story_id,
+                source_text=source_text,
+                baseline=baseline,
+            )
         proposal = self._proposal(
             story_id=normalized_story_id,
             source_revision=normalized_revision,
