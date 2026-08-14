@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout
 
 from vscs.application.automation import (
+    AutomationProposalService,
     EpisodeSceneProposalAutomationService,
     SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
@@ -22,6 +23,9 @@ from vscs.application.story_analysis.stages import (
 )
 from vscs.domain.story_analysis import AnalysisResult, EntityResolutionResult
 from vscs.infrastructure.ai import AIProviderError
+from vscs.presentation.dialogs.automation_proposal_review_dialog import (
+    AutomationProposalReviewDialog,
+)
 
 from .browseable_story_workspace import BrowseableStoryWorkspaceWidget
 
@@ -32,6 +36,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
     semantic_interpretation_service: SemanticStoryInterpretationService | None = None
     episode_scene_automation_service: EpisodeSceneProposalAutomationService | None = None
     scene_shot_automation_service: SceneShotProposalAutomationService | None = None
+    automation_proposal_service: AutomationProposalService | None = None
 
     def _install_story_panel(self) -> None:
         super()._install_story_panel()
@@ -58,11 +63,20 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         self.shot_proposals_button.clicked.connect(self._generate_shot_proposals)
         toolbar.insertWidget(5, self.shot_proposals_button)
 
+        self.review_proposals_button = QPushButton("Review Proposals…", panel)
+        self.review_proposals_button.setObjectName("reviewAutomationProposals")
+        self.review_proposals_button.setToolTip(
+            "Inspect the current Story automation proposals without rerunning automation."
+        )
+        self.review_proposals_button.clicked.connect(self._review_proposals)
+        toolbar.insertWidget(6, self.review_proposals_button)
+
     def _set_story_actions(self, story: StoryRecord | None) -> None:
         super()._set_story_actions(story)
         enabled = story is not None and not story.archived
         self.planning_proposals_button.setEnabled(enabled)
         self.shot_proposals_button.setEnabled(enabled)
+        self.review_proposals_button.setEnabled(enabled)
 
     def _current_analysis(self, story: StoryRecord) -> tuple[str, str, AnalysisResult] | None:
         if self.analysis_cache is None:
@@ -168,3 +182,36 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             "These are reviewable automation proposals only. No Shot Plan has been created, "
             "marked Ready, or approved in Production Planning.",
         )
+
+    def _review_proposals(self) -> None:
+        """Open a read-only proposal hierarchy without invoking any automation provider."""
+        story = self._selected_story()
+        if story is None:
+            return
+        if self.automation_proposal_service is None:
+            self._error("Automation Proposal service is not registered.")
+            return
+        current = self._current_analysis(story)
+        if current is None:
+            return
+        _source_text, revision, _baseline = current
+        proposals = tuple(
+            proposal
+            for proposal in self.automation_proposal_service.list_proposals()
+            if proposal.provenance.source_story_id == story.story_id.strip().upper()
+            and proposal.provenance.source_revision == revision
+        )
+        if not proposals:
+            QMessageBox.information(
+                self,
+                "No Automation Proposals",
+                "No automation proposals exist for the current Story revision.",
+            )
+            return
+        dialog = AutomationProposalReviewDialog(
+            self.automation_proposal_service,
+            story_id=story.story_id,
+            source_revision=revision,
+            parent=self,
+        )
+        dialog.exec()
