@@ -10,6 +10,7 @@ from vscs.application.asset_compiler import AssetCompilerService
 from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
 from vscs.application.automation import (
+    ActionPerformanceProposalAutomationService,
     EpisodeSceneProposalAutomationService,
     SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
@@ -20,44 +21,20 @@ from vscs.application.lighting_compiler import LightingCompilerService
 from vscs.application.production_package import ProductionPackageService
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
-    EpisodePlanningService,
-    GovernedAssetResolutionService,
-    GovernedCameraPlanningService,
-    GovernedEnvironmentPlanningService,
-    GovernedLightingPlanningService,
-    GovernedPlanningIntegrationService,
-    GovernedPlanningReviewService,
-    GovernedShotPlanningService,
-    ScenePlanningService,
-    StoryApprovalService,
-    StoryLifecycleService,
-    StoryMetadataService,
-    StoryService,
-    StoryStatusService,
-    register_episode_planning,
-    register_governed_asset_resolution,
-    register_governed_camera_planning,
-    register_governed_environment_planning,
-    register_governed_lighting_planning,
-    register_governed_planning_integration,
-    register_governed_planning_review,
-    register_governed_shot_planning,
-    register_scene_planning,
-    register_story_approval,
-    register_story_lifecycle,
-    register_story_metadata,
-    register_story_status,
+    EpisodePlanningService, GovernedAssetResolutionService, GovernedCameraPlanningService,
+    GovernedEnvironmentPlanningService, GovernedLightingPlanningService,
+    GovernedPlanningIntegrationService, GovernedPlanningReviewService, GovernedShotPlanningService,
+    ScenePlanningService, StoryApprovalService, StoryLifecycleService, StoryMetadataService,
+    StoryService, StoryStatusService, register_episode_planning, register_governed_asset_resolution,
+    register_governed_camera_planning, register_governed_environment_planning,
+    register_governed_lighting_planning, register_governed_planning_integration,
+    register_governed_planning_review, register_governed_shot_planning, register_scene_planning,
+    register_story_approval, register_story_lifecycle, register_story_metadata, register_story_status,
 )
-from vscs.application.story_analysis import (
-    ApprovedStoryIntelligenceService,
-    StoryAnalysisCacheService,
-    StoryAnalysisEngine,
-)
+from vscs.application.story_analysis import ApprovedStoryIntelligenceService, StoryAnalysisCacheService, StoryAnalysisEngine
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
 from vscs.application.style_compiler import StyleCompilerService
-from vscs.application.universal_production_description_compiler import (
-    UniversalProductionDescriptionCompilerService,
-)
+from vscs.application.universal_production_description_compiler import UniversalProductionDescriptionCompilerService
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import GuidedFirstSceneEditorDialog
 from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
@@ -65,38 +42,22 @@ from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
 from vscs.presentation.widgets.automation_story_workspace import AutomationStoryWorkspaceWidget
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
-from vscs.presentation.widgets.environment_planner_integration import (
-    install_environment_planner_navigation,
-)
+from vscs.presentation.widgets.environment_planner_integration import install_environment_planner_navigation
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
-from vscs.presentation.widgets.lighting_planner_integration import (
-    install_lighting_planner_navigation,
-)
+from vscs.presentation.widgets.lighting_planner_integration import install_lighting_planner_navigation
 from vscs.presentation.widgets.planning_review_integration import install_planning_review_navigation
-from vscs.presentation.widgets.production_planning_workspace import (
-    install_production_planning_workspace,
-)
-from vscs.presentation.widgets.universal_production_description_compiler_workspace import (
-    UniversalProductionDescriptionCompilerWorkspace,
-)
+from vscs.presentation.widgets.production_planning_workspace import install_production_planning_workspace
+from vscs.presentation.widgets.universal_production_description_compiler_workspace import UniversalProductionDescriptionCompilerWorkspace
 from vscs.presentation.windows.main_window import MainWindow
 
 
 def install_story_browser() -> None:
-    """Install the project-aware Story workspace exactly once."""
-    if getattr(MainWindow, "_story_browser_installed", False):
-        return
-
+    if getattr(MainWindow, "_story_browser_installed", False): return
     setattr(story_browser_module, "SceneEditorDialog", GuidedFirstSceneEditorDialog)  # noqa: B010
     setattr(episode_planner_module, "ScenePlannerDialog", IterativeScenePlannerDialog)  # noqa: B010
     setattr(planning_workspace_module, "ScenePlannerDialog", IterativeScenePlannerDialog)  # noqa: B010
-    install_asset_resolver_navigation()
-    install_camera_planner_navigation()
-    install_lighting_planner_navigation()
-    install_environment_planner_navigation()
-    install_planning_review_navigation()
-
+    install_asset_resolver_navigation(); install_camera_planner_navigation(); install_lighting_planner_navigation(); install_environment_planner_navigation(); install_planning_review_navigation()
     original_create_content = MainWindow._create_content_area
     original_update_status = MainWindow._update_status_for_section
     original_update_state = MainWindow._update_project_state
@@ -104,90 +65,34 @@ def install_story_browser() -> None:
 
     def create_content_area(window: Any) -> None:
         original_create_content(window)
-        story_placeholder = window.content_stack.widget(2)
-        production_placeholder = window.content_stack.widget(6)
+        story_placeholder = window.content_stack.widget(2); production_placeholder = window.content_stack.widget(6)
         asset_browser = window.services.get(AssetBrowserService)
-        if asset_browser is None:
-            register_asset_resolution(window.services)
-            asset_browser = window.services.require(AssetBrowserService)
-        if window.services.get(StoryLifecycleService) is None:
-            register_story_lifecycle(window.services)
-        if window.services.get(StoryMetadataService) is None:
-            register_story_metadata(window.services)
-        if window.services.get(StoryStatusService) is None:
-            register_story_status(window.services)
-        if window.services.get(StoryApprovalService) is None:
-            register_story_approval(window.services)
-        if window.services.get(EpisodePlanningService) is None:
-            register_episode_planning(window.services)
-        if window.services.get(ScenePlanningService) is None:
-            register_scene_planning(window.services)
-        if window.services.get(GovernedShotPlanningService) is None:
-            register_governed_shot_planning(window.services)
-        if window.services.get(GovernedAssetResolutionService) is None:
-            register_governed_asset_resolution(window.services)
-        if window.services.get(GovernedCameraPlanningService) is None:
-            register_governed_camera_planning(window.services)
-        if window.services.get(GovernedLightingPlanningService) is None:
-            register_governed_lighting_planning(window.services)
-        if window.services.get(GovernedEnvironmentPlanningService) is None:
-            register_governed_environment_planning(window.services)
-        if window.services.get(GovernedPlanningReviewService) is None:
-            register_governed_planning_review(window.services)
-        if window.services.get(GovernedPlanningIntegrationService) is None:
-            register_governed_planning_integration(window.services)
+        if asset_browser is None: register_asset_resolution(window.services); asset_browser = window.services.require(AssetBrowserService)
+        registrations = (
+            (StoryLifecycleService, register_story_lifecycle), (StoryMetadataService, register_story_metadata),
+            (StoryStatusService, register_story_status), (StoryApprovalService, register_story_approval),
+            (EpisodePlanningService, register_episode_planning), (ScenePlanningService, register_scene_planning),
+            (GovernedShotPlanningService, register_governed_shot_planning), (GovernedAssetResolutionService, register_governed_asset_resolution),
+            (GovernedCameraPlanningService, register_governed_camera_planning), (GovernedLightingPlanningService, register_governed_lighting_planning),
+            (GovernedEnvironmentPlanningService, register_governed_environment_planning), (GovernedPlanningReviewService, register_governed_planning_review),
+            (GovernedPlanningIntegrationService, register_governed_planning_integration),
+        )
+        for service_type, register in registrations:
+            if window.services.get(service_type) is None: register(window.services)
         register_ai_story_analysis(window.services)
-
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
-        if intelligence is None:
-            intelligence = window.services.register(
-                ApprovedStoryIntelligenceService,
-                ApprovedStoryIntelligenceService(window.services.require(AssetService)),
-            )
+        if intelligence is None: intelligence = window.services.register(ApprovedStoryIntelligenceService, ApprovedStoryIntelligenceService(window.services.require(AssetService)))
         analysis_engine = window.services.require(StoryAnalysisEngine)
         analysis_cache = window.services.get(StoryAnalysisCacheService)
-        if analysis_cache is None:
-            analysis_cache = window.services.register(
-                StoryAnalysisCacheService,
-                StoryAnalysisCacheService(
-                    window.services.require(AssetService),
-                    analysis_engine,
-                ),
-            )
-
-        window.story_browser = AutomationStoryWorkspaceWidget(
-            window.services.require(StoryService),
-            window.services.require(AssetService),
-            window.services.require(ShotPlanningService),
-            window.services.require(ACPPEditorService),
-            asset_browser,
-            window.services.require(StoryLifecycleService),
-            window.services.require(StoryMetadataService),
-            window.services.require(StoryStatusService),
-            window.services.require(StoryApprovalService),
-        )
-        window.story_browser.analysis_engine = analysis_engine
-        window.story_browser.analysis_cache = analysis_cache
-        window.story_browser.intelligence_service = intelligence
-        window.story_browser.semantic_interpretation_service = window.services.require(
-            SemanticStoryInterpretationService
-        )
-        window.story_browser.episode_scene_automation_service = window.services.require(
-            EpisodeSceneProposalAutomationService
-        )
-        window.story_browser.scene_shot_automation_service = window.services.require(
-            SceneShotProposalAutomationService
-        )
-
-        episode_service = window.services.require(EpisodePlanningService)
-        scene_service = window.services.require(ScenePlanningService)
-        shot_service = window.services.require(GovernedShotPlanningService)
-        governed_assets = window.services.require(GovernedAssetResolutionService)
-        camera_service = window.services.require(GovernedCameraPlanningService)
-        lighting_service = window.services.require(GovernedLightingPlanningService)
-        environment_service = window.services.require(GovernedEnvironmentPlanningService)
-        planning_review = window.services.require(GovernedPlanningReviewService)
-        planning_integration = window.services.require(GovernedPlanningIntegrationService)
+        if analysis_cache is None: analysis_cache = window.services.register(StoryAnalysisCacheService, StoryAnalysisCacheService(window.services.require(AssetService), analysis_engine))
+        window.story_browser = AutomationStoryWorkspaceWidget(window.services.require(StoryService), window.services.require(AssetService), window.services.require(ShotPlanningService), window.services.require(ACPPEditorService), asset_browser, window.services.require(StoryLifecycleService), window.services.require(StoryMetadataService), window.services.require(StoryStatusService), window.services.require(StoryApprovalService))
+        window.story_browser.analysis_engine = analysis_engine; window.story_browser.analysis_cache = analysis_cache; window.story_browser.intelligence_service = intelligence
+        window.story_browser.semantic_interpretation_service = window.services.require(SemanticStoryInterpretationService)
+        window.story_browser.episode_scene_automation_service = window.services.require(EpisodeSceneProposalAutomationService)
+        window.story_browser.scene_shot_automation_service = window.services.require(SceneShotProposalAutomationService)
+        window.story_browser.action_performance_automation_service = window.services.require(ActionPerformanceProposalAutomationService)
+        episode_service = window.services.require(EpisodePlanningService); scene_service = window.services.require(ScenePlanningService); shot_service = window.services.require(GovernedShotPlanningService)
+        governed_assets = window.services.require(GovernedAssetResolutionService); camera_service = window.services.require(GovernedCameraPlanningService); lighting_service = window.services.require(GovernedLightingPlanningService); environment_service = window.services.require(GovernedEnvironmentPlanningService); planning_review = window.services.require(GovernedPlanningReviewService); planning_integration = window.services.require(GovernedPlanningIntegrationService)
         setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         setattr(shot_service, "asset_resolution_service", governed_assets)  # noqa: B010
         setattr(shot_service, "camera_planning_service", camera_service)  # noqa: B010
@@ -195,108 +100,28 @@ def install_story_browser() -> None:
         setattr(camera_service, "lighting_planning_service", lighting_service)  # noqa: B010
         setattr(lighting_service, "environment_planning_service", environment_service)  # noqa: B010
         setattr(planning_review, "planning_integration_service", planning_integration)  # noqa: B010
-
         package_service = window.services.get(ProductionPackageService)
-        if package_service is None:
-            package_service = window.services.register(
-                ProductionPackageService,
-                ProductionPackageService(window.projects, planning_integration),
-            )
+        if package_service is None: package_service = window.services.register(ProductionPackageService, ProductionPackageService(window.projects, planning_integration))
+        compilers = []
         action_service = window.services.get(ActionPerformanceCompilerService)
-        if action_service is None:
-            action_service = window.services.register(
-                ActionPerformanceCompilerService,
-                ActionPerformanceCompilerService(window.projects, package_service),
-            )
-        asset_compiler = window.services.get(AssetCompilerService)
-        if asset_compiler is None:
-            asset_compiler = window.services.register(
-                AssetCompilerService,
-                AssetCompilerService(window.projects, package_service),
-            )
-        camera_compiler = window.services.get(CameraCompilerService)
-        if camera_compiler is None:
-            camera_compiler = window.services.register(
-                CameraCompilerService,
-                CameraCompilerService(window.projects, package_service),
-            )
-        lighting_compiler = window.services.get(LightingCompilerService)
-        if lighting_compiler is None:
-            lighting_compiler = window.services.register(
-                LightingCompilerService,
-                LightingCompilerService(window.projects, package_service),
-            )
-        continuity_compiler = window.services.get(ContinuityCompilerService)
-        if continuity_compiler is None:
-            continuity_compiler = window.services.register(
-                ContinuityCompilerService,
-                ContinuityCompilerService(window.projects, package_service),
-            )
-        style_compiler = window.services.get(StyleCompilerService)
-        if style_compiler is None:
-            style_compiler = window.services.register(
-                StyleCompilerService,
-                StyleCompilerService(window.projects, package_service),
-            )
-        universal_compiler = window.services.get(UniversalProductionDescriptionCompilerService)
-        if universal_compiler is None:
-            universal_compiler = window.services.register(
-                UniversalProductionDescriptionCompilerService,
-                UniversalProductionDescriptionCompilerService(window.projects, package_service),
-            )
-
-        window.episode_planner_button = install_episode_planner(
-            window.story_browser,
-            episode_service,
-            scene_service,
-        )
-        window.episode_planner_button.setText("Production Planning…")
-        window.episode_planner_button.setToolTip(
-            "Open the authoritative Episode → Scene → Shot production-planning environment"
-        )
-        window.open_in_planner_button = install_production_planning_workspace(
-            window.story_browser,
-            episode_service,
-            scene_service,
-            shot_service,
-        )
-        window.story_workspace = window.story_browser
-        window.content_stack.removeWidget(story_placeholder)
-        story_placeholder.deleteLater()
-        window.content_stack.insertWidget(2, window.story_browser)
-
-        window.production_package_workspace = UniversalProductionDescriptionCompilerWorkspace(
-            window.projects,
-            package_service,
-            action_service,
-            asset_compiler,
-            camera_compiler,
-            lighting_compiler,
-            continuity_compiler,
-            style_compiler,
-            universal_compiler,
-        )
-        window.content_stack.removeWidget(production_placeholder)
-        production_placeholder.deleteLater()
-        window.content_stack.insertWidget(6, window.production_package_workspace)
+        if action_service is None: action_service = window.services.register(ActionPerformanceCompilerService, ActionPerformanceCompilerService(window.projects, package_service))
+        for service_type, factory in ((AssetCompilerService, AssetCompilerService), (CameraCompilerService, CameraCompilerService), (LightingCompilerService, LightingCompilerService), (ContinuityCompilerService, ContinuityCompilerService), (StyleCompilerService, StyleCompilerService), (UniversalProductionDescriptionCompilerService, UniversalProductionDescriptionCompilerService)):
+            service = window.services.get(service_type)
+            if service is None: service = window.services.register(service_type, factory(window.projects, package_service))
+            compilers.append(service)
+        asset_compiler, camera_compiler, lighting_compiler, continuity_compiler, style_compiler, universal_compiler = compilers
+        window.episode_planner_button = install_episode_planner(window.story_browser, episode_service, scene_service); window.episode_planner_button.setText("Production Planning…")
+        window.open_in_planner_button = install_production_planning_workspace(window.story_browser, episode_service, scene_service, shot_service)
+        window.story_workspace = window.story_browser; window.content_stack.removeWidget(story_placeholder); story_placeholder.deleteLater(); window.content_stack.insertWidget(2, window.story_browser)
+        window.production_package_workspace = UniversalProductionDescriptionCompilerWorkspace(window.projects, package_service, action_service, asset_compiler, camera_compiler, lighting_compiler, continuity_compiler, style_compiler, universal_compiler)
+        window.content_stack.removeWidget(production_placeholder); production_placeholder.deleteLater(); window.content_stack.insertWidget(6, window.production_package_workspace)
 
     def update_status(window: Any, section: str) -> None:
         original_update_status(window, section)
-        if section == "Story":
-            window.story_browser.refresh()
-        elif section == "Production Planning":
-            window.production_package_workspace.refresh()
-
-    def update_state(window: Any) -> None:
-        original_update_state(window)
-        window.story_browser.refresh()
-        window.production_package_workspace.refresh()
-
-    def close_project(window: Any) -> None:
-        original_close_project(window)
-        window.story_browser.refresh()
-        window.production_package_workspace.refresh()
-
+        if section == "Story": window.story_browser.refresh()
+        elif section == "Production Planning": window.production_package_workspace.refresh()
+    def update_state(window: Any) -> None: original_update_state(window); window.story_browser.refresh(); window.production_package_workspace.refresh()
+    def close_project(window: Any) -> None: original_close_project(window); window.story_browser.refresh(); window.production_package_workspace.refresh()
     setattr(MainWindow, "_create_content_area", create_content_area)  # noqa: B010
     setattr(MainWindow, "_update_status_for_section", update_status)  # noqa: B010
     setattr(MainWindow, "_update_project_state", update_state)  # noqa: B010
