@@ -16,6 +16,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.production_package_acceptance import (
+    ProductionPackageAcceptanceService,
+)
 from vscs.application.production_package_review import (
     ProductionPackageReview,
     ProductionPackageReviewService,
@@ -67,6 +70,22 @@ def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) ->
     else:
         status = "VALIDATION FAILED — resolve blocking findings before approval."
     workspace.production_review_status.setText(status)
+
+    acceptance = workspace.production_acceptance_service.assess(
+        review.shot_id,
+        review.provider_id,
+    )
+    if acceptance.accepted:
+        acceptance_text = (
+            "PHASE 19.4 ACCEPTED — this current Production Package has passed final "
+            "integration checks and is authorized for later provider execution."
+        )
+    else:
+        failed = [check.message for check in acceptance.checks if not check.passed]
+        detail = failed[0] if failed else "Final integration requirements are incomplete."
+        acceptance_text = f"PHASE 19.4 NOT READY — {detail}"
+    workspace.production_acceptance_status.setText(acceptance_text)
+
     workspace.production_review_approve_button.setEnabled(
         review.validation_passed and review.status is not ReviewStatus.APPROVED
     )
@@ -81,6 +100,7 @@ def _load(workspace: Any) -> None:
     shot_id = workspace._selected_shot_id
     if shot_id is None:
         workspace.production_review_status.setText("No Shot is selected.")
+        workspace.production_acceptance_status.setText("PHASE 19.4 NOT READY — no Shot is selected.")
         workspace.production_review_summary.clear()
         workspace.production_review_approve_button.setEnabled(False)
         workspace.production_review_changes_button.setEnabled(False)
@@ -151,6 +171,9 @@ def _build_tab(workspace: Any) -> None:
     workspace.production_review_status = QLabel("", group)
     workspace.production_review_status.setWordWrap(True)
     group_layout.addWidget(workspace.production_review_status)
+    workspace.production_acceptance_status = QLabel("", group)
+    workspace.production_acceptance_status.setWordWrap(True)
+    group_layout.addWidget(workspace.production_acceptance_status)
     workspace.production_review_summary = QTextEdit(group)
     workspace.production_review_summary.setReadOnly(True)
     group_layout.addWidget(workspace.production_review_summary, 1)
@@ -204,6 +227,10 @@ def install_production_package_review_workspace() -> None:
             workspace.packages,
             workspace.universal_compiler,
             workspace.provider_compiler,
+        )
+        workspace.production_acceptance_service = ProductionPackageAcceptanceService(
+            workspace.packages,
+            workspace.production_review_service,
         )
         _build_tab(workspace)
         _load(workspace)
