@@ -202,7 +202,7 @@ def _optimized_refresh(workspace: Any) -> None:
 
 
 def _load_selected_snapshot(workspace: Any) -> None:
-    """Load each selected compiler view exactly once after a snapshot refresh."""
+    """Load each selected compiler/review view once after a snapshot refresh."""
     row = workspace.package_table.currentRow()
     if row < 0:
         return
@@ -229,6 +229,7 @@ def _load_selected_snapshot(workspace: Any) -> None:
         "_load_style_draft",
         "_load_universal_draft",
         "_load_provider_draft",
+        "_load_production_review",
     )
     for name in loaders:
         loader = getattr(workspace, name, None)
