@@ -102,10 +102,7 @@ class CanonicalEntityAssetResolutionAutomationService:
         expected_category = self._asset_category(candidate.category)
         dependency_fingerprint = ""
 
-        if (
-            candidate.match_kind is ResolutionMatchKind.EXISTING
-            and candidate.matched_asset_id
-        ):
+        if candidate.match_kind is ResolutionMatchKind.EXISTING and candidate.matched_asset_id:
             result = self._resolver.resolve(
                 AssetResolutionRequest(
                     candidate.matched_asset_id,
@@ -265,7 +262,5 @@ class CanonicalEntityAssetResolutionAutomationService:
 
     @staticmethod
     def _proposal_id(story_id: str, revision: str, candidate_id: str) -> str:
-        digest = sha256(
-            f"{story_id}|{revision}|asset|{candidate_id}".encode("utf-8")
-        ).hexdigest()
+        digest = sha256(f"{story_id}|{revision}|asset|{candidate_id}".encode()).hexdigest()
         return f"AUT-ASSET-{digest[:12].upper()}"

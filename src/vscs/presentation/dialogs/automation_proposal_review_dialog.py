@@ -108,9 +108,7 @@ class AutomationProposalReviewDialog(QDialog):
             for proposal in sorted(assets, key=self._asset_sort):
                 name = str(proposal.payload.get("name", proposal.target_id)).strip()
                 category = str(proposal.payload.get("expected_asset_category", "asset")).strip()
-                asset_root.addChild(
-                    self._item(proposal, prefix=f"{category.title()} — {name}")
-                )
+                asset_root.addChild(self._item(proposal, prefix=f"{category.title()} — {name}"))
             self.tree.addTopLevelItem(asset_root)
 
         scene_items: dict[str, QTreeWidgetItem] = {}
