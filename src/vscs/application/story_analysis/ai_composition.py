@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from vscs.application.assets import AssetService
+from vscs.application.automation import (
+    AutomationProposalService,
+    SemanticStoryInterpretationService,
+)
 from vscs.application.story_analysis.ai_analysis import (
     AssetServiceStoryEntityCatalog,
     EntityResolutionService,
@@ -37,6 +41,13 @@ def register_ai_story_analysis(services: ApplicationServices) -> EntityResolutio
     catalog = AssetServiceStoryEntityCatalog(services.require(AssetService))
     resolution = EntityResolutionService(provider, catalog)
     services.register(EntityResolutionService, resolution)
+    services.register(
+        SemanticStoryInterpretationService,
+        SemanticStoryInterpretationService(
+            resolution,
+            services.require(AutomationProposalService),
+        ),
+    )
     registry = services.require(StoryAnalysisStageRegistry)
     if not registry.contains(AIStoryAnalysisStage.stage_id):
         registry.register(AIStoryAnalysisStage(resolution))
