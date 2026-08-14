@@ -60,9 +60,7 @@ class OpenAIActionPerformanceProposalProvider:
             "choose camera, lens, lighting, assets, renderer prompts, voices or provider settings. "
             "Return proposals only and never claim Ready, approval or production authority."
         )
-        input_text = (
-            f"Story ID: {story_id}\n\nShot proposal:\n{shot_payload}\n\nStory source:\n{source_text}"
-        )
+        input_text = f"Story ID: {story_id}\n\nShot proposal:\n{shot_payload}\n\nStory source:\n{source_text}"
         try:
             response = self._client.responses.parse(
                 model=self.model_name,
@@ -72,9 +70,13 @@ class OpenAIActionPerformanceProposalProvider:
             )
             parsed = response.output_parsed
         except Exception as exc:
-            raise AIProviderError(f"OpenAI Action/Performance proposal generation failed: {exc}") from exc
+            raise AIProviderError(
+                f"OpenAI Action/Performance proposal generation failed: {exc}"
+            ) from exc
         if parsed is None:
-            raise AIProviderError("OpenAI Action/Performance proposal generation returned no result")
+            raise AIProviderError(
+                "OpenAI Action/Performance proposal generation returned no result"
+            )
         if not isinstance(parsed, _OpenAIActionPerformanceResponse):
             parsed = _OpenAIActionPerformanceResponse.model_validate(parsed)
         return ActionPerformanceProposalDraft(

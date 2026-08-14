@@ -6,7 +6,9 @@ from vscs.application.asset_resolution import AssetResolutionService, register_a
 from vscs.application.assets import AssetService
 from vscs.application.story_analysis.ai_analysis import AssetServiceStoryEntityCatalog
 from vscs.infrastructure.ai import AICredentialStore
-from vscs.infrastructure.ai.action_performance_provider import OpenAIActionPerformanceProposalProvider
+from vscs.infrastructure.ai.action_performance_provider import (
+    OpenAIActionPerformanceProposalProvider,
+)
 from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.ai.scene_shot_provider import OpenAISceneShotProposalProvider
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService
@@ -18,12 +20,22 @@ from .action_performance import (
     TemplateActionPerformanceProposalProvider,
 )
 from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
-from .episode_scene import EpisodeSceneProposalAutomationService, EpisodeSceneProposalProvider, TemplateEpisodeSceneProposalProvider
-from .scene_shot import SceneShotProposalAutomationService, SceneShotProposalProvider, TemplateSceneShotProposalProvider
+from .episode_scene import (
+    EpisodeSceneProposalAutomationService,
+    EpisodeSceneProposalProvider,
+    TemplateEpisodeSceneProposalProvider,
+)
+from .scene_shot import (
+    SceneShotProposalAutomationService,
+    SceneShotProposalProvider,
+    TemplateSceneShotProposalProvider,
+)
 from .service import AutomationProposalService
 
 
-def register_episode_scene_automation(services: ApplicationServices) -> EpisodeSceneProposalAutomationService:
+def register_episode_scene_automation(
+    services: ApplicationServices,
+) -> EpisodeSceneProposalAutomationService:
     existing = services.get(EpisodeSceneProposalAutomationService)
     if existing is not None:
         register_scene_shot_automation(services)
@@ -32,15 +44,25 @@ def register_episode_scene_automation(services: ApplicationServices) -> EpisodeS
     provider: EpisodeSceneProposalProvider = TemplateEpisodeSceneProposalProvider()
     if configuration.settings.ai.provider is AIProvider.OPENAI:
         try:
-            provider = OpenAIEpisodeSceneProposalProvider(api_key=AICredentialStore().get_openai_api_key(), model=configuration.settings.ai.openai_model)
+            provider = OpenAIEpisodeSceneProposalProvider(
+                api_key=AICredentialStore().get_openai_api_key(),
+                model=configuration.settings.ai.openai_model,
+            )
         except (RuntimeError, ValueError):
             provider = TemplateEpisodeSceneProposalProvider()
-    registered = services.register(EpisodeSceneProposalAutomationService, EpisodeSceneProposalAutomationService(provider, services.require(AutomationProposalService)))
+    registered = services.register(
+        EpisodeSceneProposalAutomationService,
+        EpisodeSceneProposalAutomationService(
+            provider, services.require(AutomationProposalService)
+        ),
+    )
     register_scene_shot_automation(services)
     return registered
 
 
-def register_scene_shot_automation(services: ApplicationServices) -> SceneShotProposalAutomationService:
+def register_scene_shot_automation(
+    services: ApplicationServices,
+) -> SceneShotProposalAutomationService:
     existing = services.get(SceneShotProposalAutomationService)
     if existing is not None:
         register_canonical_entity_asset_automation(services)
@@ -49,15 +71,23 @@ def register_scene_shot_automation(services: ApplicationServices) -> SceneShotPr
     provider: SceneShotProposalProvider = TemplateSceneShotProposalProvider()
     if configuration.settings.ai.provider is AIProvider.OPENAI:
         try:
-            provider = OpenAISceneShotProposalProvider(api_key=AICredentialStore().get_openai_api_key(), model=configuration.settings.ai.openai_model)
+            provider = OpenAISceneShotProposalProvider(
+                api_key=AICredentialStore().get_openai_api_key(),
+                model=configuration.settings.ai.openai_model,
+            )
         except (RuntimeError, ValueError):
             provider = TemplateSceneShotProposalProvider()
-    registered = services.register(SceneShotProposalAutomationService, SceneShotProposalAutomationService(provider, services.require(AutomationProposalService)))
+    registered = services.register(
+        SceneShotProposalAutomationService,
+        SceneShotProposalAutomationService(provider, services.require(AutomationProposalService)),
+    )
     register_canonical_entity_asset_automation(services)
     return registered
 
 
-def register_canonical_entity_asset_automation(services: ApplicationServices) -> CanonicalEntityAssetResolutionAutomationService:
+def register_canonical_entity_asset_automation(
+    services: ApplicationServices,
+) -> CanonicalEntityAssetResolutionAutomationService:
     existing = services.get(CanonicalEntityAssetResolutionAutomationService)
     if existing is not None:
         register_action_performance_automation(services)
@@ -65,13 +95,19 @@ def register_canonical_entity_asset_automation(services: ApplicationServices) ->
     resolver = services.get(AssetResolutionService)
     if resolver is None:
         resolver = register_asset_resolution(services)
-    service = CanonicalEntityAssetResolutionAutomationService(resolver, services.require(AutomationProposalService), AssetServiceStoryEntityCatalog(services.require(AssetService)))
+    service = CanonicalEntityAssetResolutionAutomationService(
+        resolver,
+        services.require(AutomationProposalService),
+        AssetServiceStoryEntityCatalog(services.require(AssetService)),
+    )
     registered = services.register(CanonicalEntityAssetResolutionAutomationService, service)
     register_action_performance_automation(services)
     return registered
 
 
-def register_action_performance_automation(services: ApplicationServices) -> ActionPerformanceProposalAutomationService:
+def register_action_performance_automation(
+    services: ApplicationServices,
+) -> ActionPerformanceProposalAutomationService:
     """Register proposal-only Phase 19.5.6 automation exactly once."""
     existing = services.get(ActionPerformanceProposalAutomationService)
     if existing is not None:
@@ -80,7 +116,15 @@ def register_action_performance_automation(services: ApplicationServices) -> Act
     provider: ActionPerformanceProposalProvider = TemplateActionPerformanceProposalProvider()
     if configuration.settings.ai.provider is AIProvider.OPENAI:
         try:
-            provider = OpenAIActionPerformanceProposalProvider(api_key=AICredentialStore().get_openai_api_key(), model=configuration.settings.ai.openai_model)
+            provider = OpenAIActionPerformanceProposalProvider(
+                api_key=AICredentialStore().get_openai_api_key(),
+                model=configuration.settings.ai.openai_model,
+            )
         except (RuntimeError, ValueError):
             provider = TemplateActionPerformanceProposalProvider()
-    return services.register(ActionPerformanceProposalAutomationService, ActionPerformanceProposalAutomationService(provider, services.require(AutomationProposalService)))
+    return services.register(
+        ActionPerformanceProposalAutomationService,
+        ActionPerformanceProposalAutomationService(
+            provider, services.require(AutomationProposalService)
+        ),
+    )

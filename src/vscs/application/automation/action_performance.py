@@ -106,7 +106,9 @@ class ActionPerformanceProposalAutomationService:
                 shot_payload=shot.payload,
             )
             if not draft.temporal_narrative.strip():
-                raise ValueError(f"Performance proposal for {shot.target_id} has no temporal narrative")
+                raise ValueError(
+                    f"Performance proposal for {shot.target_id} has no temporal narrative"
+                )
             generated.append(
                 self._proposals.save(
                     self._proposal(
