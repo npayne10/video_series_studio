@@ -6,6 +6,8 @@ from vscs.application.asset_resolution import (
     AssetResolutionService,
     register_asset_resolution,
 )
+from vscs.application.assets import AssetService
+from vscs.application.story_analysis.ai_analysis import AssetServiceStoryEntityCatalog
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.ai.scene_shot_provider import OpenAISceneShotProposalProvider
@@ -97,5 +99,6 @@ def register_canonical_entity_asset_automation(
     service = CanonicalEntityAssetResolutionAutomationService(
         resolver,
         services.require(AutomationProposalService),
+        AssetServiceStoryEntityCatalog(services.require(AssetService)),
     )
     return services.register(CanonicalEntityAssetResolutionAutomationService, service)
