@@ -357,7 +357,9 @@ class SceneShotProposalAutomationService:
     @staticmethod
     def _scene_runtime(scene: AutomationProposal) -> int:
         raw_runtime = scene.payload.get("target_runtime_seconds")
-        return raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
+        return (
+            raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
+        )
 
     @staticmethod
     def _proposal_id(story_id: str, revision: str, scene_id: str, target_id: str) -> str:
