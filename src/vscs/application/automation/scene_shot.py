@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Protocol
@@ -74,13 +75,15 @@ class TemplateSceneShotProposalProvider:
         scene_payload: dict[str, object],
     ) -> SceneShotProposalDraft:
         del story_id, source_text, baseline
-        scene_runtime = max(1, int(scene_payload.get("target_runtime_seconds", 60)))
-        raw_events = scene_payload.get("required_events", [])
-        events = tuple(str(value).strip() for value in raw_events if str(value).strip())
+        scene_runtime = max(1, self._integer(scene_payload.get("target_runtime_seconds"), 60))
+        events = self._strings(scene_payload.get("required_events"))
         if not events:
             fallback = str(scene_payload.get("story_scope", "")).strip() or "Present the Scene intent"
             events = (fallback,)
+        if scene_runtime < len(events):
+            events = events[:scene_runtime]
 
+        constraints = self._strings(scene_payload.get("scene_constraints"))
         count = len(events)
         base_runtime = max(1, scene_runtime // count)
         remaining = scene_runtime
@@ -97,22 +100,48 @@ class TemplateSceneShotProposalProvider:
                     target_runtime_seconds=max(1, runtime),
                     required_action=event,
                     continuity_in=(
-                        "Continue from the preceding Shot state" if index > 1 else str(scene_payload.get("continuity_in", ""))
+                        "Continue from the preceding Shot state"
+                        if index > 1
+                        else str(scene_payload.get("continuity_in", "")).strip()
                     ),
                     continuity_out=(
-                        str(scene_payload.get("continuity_out", ""))
+                        str(scene_payload.get("continuity_out", "")).strip()
                         if index == count
                         else "Carry visual and narrative state into the next Shot"
                     ),
-                    shot_constraints=tuple(
-                        str(value) for value in scene_payload.get("scene_constraints", []) if str(value).strip()
-                    ),
+                    shot_constraints=constraints,
                     confidence=0.6,
                 )
             )
         return SceneShotProposalDraft(
             shots=tuple(shots),
             diagnostics=("Deterministic Scene/Shot proposal provider used",),
+        )
+
+    @staticmethod
+    def _integer(value: object, default: int) -> int:
+        if isinstance(value, bool):
+            return default
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                return default
+        return default
+
+    @staticmethod
+    def _strings(value: object) -> tuple[str, ...]:
+        if isinstance(value, str):
+            normalized = value.strip()
+            return (normalized,) if normalized else ()
+        if not isinstance(value, Iterable):
+            return ()
+        return tuple(
+            normalized
+            for item in value
+            if (normalized := str(item).strip())
         )
 
 
@@ -254,7 +283,8 @@ class SceneShotProposalAutomationService:
         scene: AutomationProposal,
         draft: SceneShotProposalDraft,
     ) -> None:
-        scene_runtime = int(scene.payload.get("target_runtime_seconds", 0))
+        raw_runtime = scene.payload.get("target_runtime_seconds")
+        scene_runtime = raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
         if scene_runtime <= 0:
             raise ValueError(f"Scene proposal {scene.target_id} has no valid runtime budget")
         total = sum(shot.target_runtime_seconds for shot in draft.shots)
