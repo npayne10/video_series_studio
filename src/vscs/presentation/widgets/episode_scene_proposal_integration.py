@@ -63,9 +63,7 @@ def install_episode_scene_proposal_action(services: ApplicationServices) -> None
 
     def set_story_actions(self: Any, story: Any) -> None:
         original_set_actions(self, story)
-        self.planning_proposals_button.setEnabled(
-            story is not None and not story.archived and self.analysis_cache is not None
-        )
+        self.planning_proposals_button.setEnabled(story is not None and not story.archived)
 
     def generate_planning_proposals(self: Any) -> None:
         story = self._selected_story()
