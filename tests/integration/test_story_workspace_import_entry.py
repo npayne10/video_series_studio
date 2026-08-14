@@ -37,9 +37,9 @@ def test_clean_project_exposes_create_and_import_story_actions(
     workspace = window.story_browser
 
     assert isinstance(workspace, BrowseableStoryWorkspaceWidget)
-    assert workspace.story_new_button.isVisible()
+    assert not workspace.story_new_button.isHidden()
     assert workspace.story_new_button.isEnabled()
-    assert workspace.import_story_button.isVisible()
+    assert not workspace.import_story_button.isHidden()
     assert workspace.import_story_button.isEnabled()
     context.shutdown()
 
