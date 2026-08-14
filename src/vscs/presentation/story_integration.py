@@ -11,6 +11,7 @@ from vscs.application.asset_resolution import AssetBrowserService, register_asse
 from vscs.application.assets import AssetService
 from vscs.application.automation import (
     ActionPerformanceProposalAutomationService,
+    EnvironmentProposalAutomationService,
     EpisodeSceneProposalAutomationService,
     SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
@@ -165,6 +166,9 @@ def install_story_browser() -> None:
         )
         window.story_browser.action_performance_automation_service = window.services.require(
             ActionPerformanceProposalAutomationService
+        )
+        window.story_browser.environment_automation_service = window.services.require(
+            EnvironmentProposalAutomationService
         )
         episode_service = window.services.require(EpisodePlanningService)
         scene_service = window.services.require(ScenePlanningService)
