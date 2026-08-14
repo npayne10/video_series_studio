@@ -17,6 +17,13 @@ from .episode_scene import (
     SceneProposalDraft,
     TemplateEpisodeSceneProposalProvider,
 )
+from .scene_shot import (
+    SceneShotProposalAutomationService,
+    SceneShotProposalDraft,
+    SceneShotProposalProvider,
+    ShotProposalDraft,
+    TemplateSceneShotProposalProvider,
+)
 from .semantic_interpretation import (
     SemanticStoryInterpretation,
     SemanticStoryInterpretationService,
@@ -36,9 +43,14 @@ __all__ = [
     "EpisodeSceneProposalDraft",
     "EpisodeSceneProposalProvider",
     "SceneProposalDraft",
+    "SceneShotProposalAutomationService",
+    "SceneShotProposalDraft",
+    "SceneShotProposalProvider",
     "SemanticProductionProvider",
     "SemanticStoryInterpretation",
     "SemanticStoryInterpretationService",
+    "ShotProposalDraft",
     "TemplateEpisodeSceneProposalProvider",
+    "TemplateSceneShotProposalProvider",
     "TemplateSemanticProductionProvider",
 ]
