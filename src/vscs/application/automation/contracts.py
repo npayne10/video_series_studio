@@ -19,6 +19,7 @@ class AutomationSourceKind(StrEnum):
 class AutomationProposalType(StrEnum):
     """Authoritative planning boundary targeted by a proposal."""
 
+    STORY_INTERPRETATION = "story_interpretation"
     EPISODE = "episode"
     SCENE = "scene"
     SHOT = "shot"
