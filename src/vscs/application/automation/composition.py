@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from vscs.infrastructure.ai import AICredentialStore, OpenAIEpisodeSceneProposalProvider
+from vscs.infrastructure.ai import AICredentialStore
+from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService
 from vscs.infrastructure.services import ApplicationServices
 
