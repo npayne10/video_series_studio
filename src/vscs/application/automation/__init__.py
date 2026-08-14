@@ -1,5 +1,6 @@
 """Public contracts for governed VSCS production automation."""
 
+from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
 from .contracts import (
     AutomationProposal,
     AutomationProposalStatus,
@@ -38,6 +39,7 @@ __all__ = [
     "AutomationProposalType",
     "AutomationProvenance",
     "AutomationSourceKind",
+    "CanonicalEntityAssetResolutionAutomationService",
     "EpisodeProposalDraft",
     "EpisodeSceneProposalAutomationService",
     "EpisodeSceneProposalDraft",
