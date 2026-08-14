@@ -1,5 +1,11 @@
 """Public contracts for governed VSCS production automation."""
 
+from .action_performance import (
+    ActionPerformanceProposalAutomationService,
+    ActionPerformanceProposalDraft,
+    ActionPerformanceProposalProvider,
+    TemplateActionPerformanceProposalProvider,
+)
 from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
 from .contracts import (
     AutomationProposal,
@@ -32,6 +38,9 @@ from .semantic_interpretation import (
 from .service import AutomationProposalError, AutomationProposalService
 
 __all__ = [
+    "ActionPerformanceProposalAutomationService",
+    "ActionPerformanceProposalDraft",
+    "ActionPerformanceProposalProvider",
     "AutomationProposal",
     "AutomationProposalError",
     "AutomationProposalService",
@@ -52,6 +61,7 @@ __all__ = [
     "SemanticStoryInterpretation",
     "SemanticStoryInterpretationService",
     "ShotProposalDraft",
+    "TemplateActionPerformanceProposalProvider",
     "TemplateEpisodeSceneProposalProvider",
     "TemplateSceneShotProposalProvider",
     "TemplateSemanticProductionProvider",
