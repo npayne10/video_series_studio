@@ -9,6 +9,14 @@ from .contracts import (
     SemanticProductionProvider,
     TemplateSemanticProductionProvider,
 )
+from .episode_scene import (
+    EpisodeProposalDraft,
+    EpisodeSceneProposalAutomationService,
+    EpisodeSceneProposalDraft,
+    EpisodeSceneProposalProvider,
+    SceneProposalDraft,
+    TemplateEpisodeSceneProposalProvider,
+)
 from .semantic_interpretation import (
     SemanticStoryInterpretation,
     SemanticStoryInterpretationService,
@@ -23,8 +31,14 @@ __all__ = [
     "AutomationProposalType",
     "AutomationProvenance",
     "AutomationSourceKind",
+    "EpisodeProposalDraft",
+    "EpisodeSceneProposalAutomationService",
+    "EpisodeSceneProposalDraft",
+    "EpisodeSceneProposalProvider",
+    "SceneProposalDraft",
     "SemanticProductionProvider",
     "SemanticStoryInterpretation",
     "SemanticStoryInterpretationService",
+    "TemplateEpisodeSceneProposalProvider",
     "TemplateSemanticProductionProvider",
 ]
