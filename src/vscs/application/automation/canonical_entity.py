@@ -78,7 +78,7 @@ class CanonicalEntityAssetResolutionAutomationService:
         """Refresh only deterministic XPD identity matching; never rerun semantic AI."""
         if self._catalog is None:
             return candidate
-        match_kind, asset = EntityResolutionService._match(  # noqa: SLF001
+        match_kind, asset = EntityResolutionService._match(
             candidate.name,
             candidate.aliases,
             candidate.category,
