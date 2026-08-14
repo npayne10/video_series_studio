@@ -7,6 +7,7 @@ from vscs.application.automation import (
     AutomationProposalService,
     SemanticStoryInterpretationService,
 )
+from vscs.application.automation.composition import register_episode_scene_automation
 from vscs.application.story_analysis.ai_analysis import (
     AssetServiceStoryEntityCatalog,
     EntityResolutionService,
@@ -27,6 +28,7 @@ def register_ai_story_analysis(services: ApplicationServices) -> EntityResolutio
 
     existing = services.get(EntityResolutionService)
     if existing is not None:
+        register_episode_scene_automation(services)
         return existing
     configuration = services.require(ConfigurationService)
     provider = TemplateStoryAIAnalysisProvider()
@@ -48,6 +50,7 @@ def register_ai_story_analysis(services: ApplicationServices) -> EntityResolutio
             services.require(AutomationProposalService),
         ),
     )
+    register_episode_scene_automation(services)
     registry = services.require(StoryAnalysisStageRegistry)
     if not registry.contains(AIStoryAnalysisStage.stage_id):
         registry.register(AIStoryAnalysisStage(resolution))
