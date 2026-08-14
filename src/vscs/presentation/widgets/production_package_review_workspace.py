@@ -28,11 +28,7 @@ from vscs.application.production_package_review import (
 
 def _provider_id(workspace: Any) -> str:
     selector = getattr(workspace, "provider_selector", None)
-    return (
-        str(selector.currentData() or "comfyui")
-        if selector is not None
-        else "comfyui"
-    )
+    return str(selector.currentData() or "comfyui") if selector is not None else "comfyui"
 
 
 def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) -> None:
@@ -48,9 +44,7 @@ def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) ->
         "",
         "Findings:",
     ]
-    lines.extend(
-        f"- [{item.severity.upper()}] {item.message}" for item in review.findings
-    )
+    lines.extend(f"- [{item.severity.upper()}] {item.message}" for item in review.findings)
     if not review.findings:
         lines.append("- No blocking validation findings.")
     if persisted:
@@ -73,20 +67,13 @@ def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) ->
     if review.status is ReviewStatus.APPROVED:
         status = "APPROVED FOR PRODUCTION — final human approval is current."
     elif review.status is ReviewStatus.STALE:
-        status = (
-            "STALE — governed authority changed after review. "
-            "Revalidate and approve again."
-        )
+        status = "STALE — governed authority changed after review. Revalidate and approve again."
     elif review.status is ReviewStatus.CHANGES_REQUIRED:
-        status = (
-            "CHANGES REQUIRED — correct upstream authority, recompile, then revalidate."
-        )
+        status = "CHANGES REQUIRED — correct upstream authority, recompile, then revalidate."
     elif review.validation_passed and validation_confirmed:
         status = "VALIDATION PASS — ready for final human review and approval."
     elif review.validation_passed:
-        status = (
-            "READY FOR VALIDATION — click Validate Package before final human approval."
-        )
+        status = "READY FOR VALIDATION — click Validate Package before final human approval."
     else:
         status = "VALIDATION FAILED — resolve blocking findings before approval."
     workspace.production_review_status.setText(status)
@@ -102,11 +89,7 @@ def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) ->
         )
     else:
         failed = [check.message for check in acceptance.checks if not check.passed]
-        detail = (
-            failed[0]
-            if failed
-            else "Final integration requirements are incomplete."
-        )
+        detail = failed[0] if failed else "Final integration requirements are incomplete."
         acceptance_text = f"PHASE 19.4 NOT READY — {detail}"
     workspace.production_acceptance_status.setText(acceptance_text)
 
@@ -218,9 +201,7 @@ def _build_tab(workspace: Any) -> None:
     reviewer_row = QHBoxLayout()
     reviewer_row.addWidget(QLabel("Reviewer", group))
     workspace.production_review_reviewer = QLineEdit(group)
-    workspace.production_review_reviewer.setPlaceholderText(
-        "Required for a human decision"
-    )
+    workspace.production_review_reviewer.setPlaceholderText("Required for a human decision")
     reviewer_row.addWidget(workspace.production_review_reviewer, 1)
     group_layout.addLayout(reviewer_row)
     group_layout.addWidget(QLabel("Review notes", group))
@@ -250,15 +231,9 @@ def _build_tab(workspace: Any) -> None:
     group_layout.addLayout(actions)
     layout.addWidget(group, 1)
     review_index = workspace.compiler_tabs.addTab(tab, "Production Review")
-    workspace.production_review_validate_button.clicked.connect(
-        lambda: _validate(workspace)
-    )
-    workspace.production_review_approve_button.clicked.connect(
-        lambda: _approve(workspace)
-    )
-    workspace.production_review_changes_button.clicked.connect(
-        lambda: _request_changes(workspace)
-    )
+    workspace.production_review_validate_button.clicked.connect(lambda: _validate(workspace))
+    workspace.production_review_approve_button.clicked.connect(lambda: _approve(workspace))
+    workspace.production_review_changes_button.clicked.connect(lambda: _request_changes(workspace))
     workspace.compiler_tabs.currentChanged.connect(
         lambda index: _load(workspace) if index == review_index else None
     )
