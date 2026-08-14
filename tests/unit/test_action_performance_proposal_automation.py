@@ -12,13 +12,16 @@ from vscs.application.automation import (
     TemplateActionPerformanceProposalProvider,
 )
 from vscs.application.projects import ProjectService
+from vscs.infrastructure.configuration import ConfigurationService
 
 
 def _service(
     tmp_path: Path,
 ) -> tuple[ActionPerformanceProposalAutomationService, AutomationProposalService]:
-    projects = ProjectService(tmp_path)
-    projects._project_directory = tmp_path
+    configuration = ConfigurationService(tmp_path / "settings.yaml")
+    configuration.load()
+    projects = ProjectService(configuration)
+    projects.create(tmp_path / "project", name="Phase 19.5.6 Test")
     store = AutomationProposalService(projects)
     store.save(
         AutomationProposal(
