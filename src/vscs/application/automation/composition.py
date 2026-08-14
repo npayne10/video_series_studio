@@ -9,6 +9,7 @@ from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.action_performance_provider import (
     OpenAIActionPerformanceProposalProvider,
 )
+from vscs.infrastructure.ai.environment_provider import OpenAIEnvironmentProposalProvider
 from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.ai.scene_shot_provider import OpenAISceneShotProposalProvider
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService
@@ -20,6 +21,11 @@ from .action_performance import (
     TemplateActionPerformanceProposalProvider,
 )
 from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
+from .environment import (
+    EnvironmentProposalAutomationService,
+    EnvironmentProposalProvider,
+    TemplateEnvironmentProposalProvider,
+)
 from .episode_scene import (
     EpisodeSceneProposalAutomationService,
     EpisodeSceneProposalProvider,
@@ -111,6 +117,7 @@ def register_action_performance_automation(
     """Register proposal-only Phase 19.5.6 automation exactly once."""
     existing = services.get(ActionPerformanceProposalAutomationService)
     if existing is not None:
+        register_environment_automation(services)
         return existing
     configuration = services.require(ConfigurationService)
     provider: ActionPerformanceProposalProvider = TemplateActionPerformanceProposalProvider()
@@ -122,9 +129,36 @@ def register_action_performance_automation(
             )
         except (RuntimeError, ValueError):
             provider = TemplateActionPerformanceProposalProvider()
-    return services.register(
+    registered = services.register(
         ActionPerformanceProposalAutomationService,
         ActionPerformanceProposalAutomationService(
+            provider, services.require(AutomationProposalService)
+        ),
+    )
+    register_environment_automation(services)
+    return registered
+
+
+def register_environment_automation(
+    services: ApplicationServices,
+) -> EnvironmentProposalAutomationService:
+    """Register proposal-only Phase 19.5.7 Environment automation exactly once."""
+    existing = services.get(EnvironmentProposalAutomationService)
+    if existing is not None:
+        return existing
+    configuration = services.require(ConfigurationService)
+    provider: EnvironmentProposalProvider = TemplateEnvironmentProposalProvider()
+    if configuration.settings.ai.provider is AIProvider.OPENAI:
+        try:
+            provider = OpenAIEnvironmentProposalProvider(
+                api_key=AICredentialStore().get_openai_api_key(),
+                model=configuration.settings.ai.openai_model,
+            )
+        except (RuntimeError, ValueError):
+            provider = TemplateEnvironmentProposalProvider()
+    return services.register(
+        EnvironmentProposalAutomationService,
+        EnvironmentProposalAutomationService(
             provider, services.require(AutomationProposalService)
         ),
     )
