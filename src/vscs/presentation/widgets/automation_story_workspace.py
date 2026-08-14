@@ -1,4 +1,4 @@
-"""Typed Story Workspace extension for Phase 19.5.3 planning proposals."""
+"""Typed Story Workspace extension for governed Phase 19.5 planning proposals."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout
 
 from vscs.application.automation import (
     EpisodeSceneProposalAutomationService,
+    SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
 )
 from vscs.application.story import StoryRecord
@@ -30,6 +31,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
 
     semantic_interpretation_service: SemanticStoryInterpretationService | None = None
     episode_scene_automation_service: EpisodeSceneProposalAutomationService | None = None
+    scene_shot_automation_service: SceneShotProposalAutomationService | None = None
 
     def _install_story_panel(self) -> None:
         super()._install_story_panel()
@@ -48,16 +50,47 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         self.planning_proposals_button.clicked.connect(self._generate_planning_proposals)
         toolbar.insertWidget(4, self.planning_proposals_button)
 
+        self.shot_proposals_button = QPushButton("Shot Proposals…", panel)
+        self.shot_proposals_button.setObjectName("generateShotProposals")
+        self.shot_proposals_button.setToolTip(
+            "Generate reviewable Shot proposals from the current Scene proposals."
+        )
+        self.shot_proposals_button.clicked.connect(self._generate_shot_proposals)
+        toolbar.insertWidget(5, self.shot_proposals_button)
+
     def _set_story_actions(self, story: StoryRecord | None) -> None:
         super()._set_story_actions(story)
-        self.planning_proposals_button.setEnabled(story is not None and not story.archived)
+        enabled = story is not None and not story.archived
+        self.planning_proposals_button.setEnabled(enabled)
+        self.shot_proposals_button.setEnabled(enabled)
+
+    def _current_analysis(self, story: StoryRecord) -> tuple[str, str, AnalysisResult] | None:
+        if self.analysis_cache is None:
+            self._error("Story Analysis Cache is not registered.")
+            return None
+        try:
+            source_text = StorySourceReader().read(story)
+            status = self.analysis_cache.status(story, source_text)
+            if status.state is StoryAnalysisCacheState.MISSING:
+                self._error("Analyse Story before generating automation proposals.")
+                return None
+            if status.state is StoryAnalysisCacheState.STALE:
+                self._error("Story Analysis is out of date. Reanalyse Story first.")
+                return None
+            report = self.analysis_cache.load(story, source_text, allow_stale=False)
+        except (StoryAnalysisCacheError, StorySourceReadError) as exc:
+            self._error(str(exc))
+            return None
+
+        baseline = report.artifacts.get(ANALYSIS_RESULT_ARTIFACT)
+        if not isinstance(baseline, AnalysisResult):
+            self._error("Cached Story Analysis does not contain the structured Story model.")
+            return None
+        return source_text, status.current_revision, baseline
 
     def _generate_planning_proposals(self) -> None:
         story = self._selected_story()
         if story is None:
-            return
-        if self.analysis_cache is None:
-            self._error("Story Analysis Cache is not registered.")
             return
         if self.semantic_interpretation_service is None:
             self._error("Semantic Story Interpretation service is not registered.")
@@ -65,47 +98,32 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         if self.episode_scene_automation_service is None:
             self._error("Episode/Scene automation service is not registered.")
             return
+        current = self._current_analysis(story)
+        if current is None or self.analysis_cache is None:
+            return
+        source_text, revision, baseline = current
 
         try:
-            source_text = StorySourceReader().read(story)
-            status = self.analysis_cache.status(story, source_text)
-            if status.state is StoryAnalysisCacheState.MISSING:
-                self._error("Analyse Story before generating planning proposals.")
-                return
-            if status.state is StoryAnalysisCacheState.STALE:
-                self._error("Story Analysis is out of date. Reanalyse Story first.")
-                return
-
             report = self.analysis_cache.load(story, source_text, allow_stale=False)
-            baseline = report.artifacts.get(ANALYSIS_RESULT_ARTIFACT)
             resolution = report.artifacts.get(AI_ENTITY_RESOLUTION_ARTIFACT)
-            if not isinstance(baseline, AnalysisResult):
-                self._error("Cached Story Analysis does not contain the structured Story model.")
-                return
             if not isinstance(resolution, EntityResolutionResult):
                 self._error("Cached Story Analysis does not contain semantic entity resolution.")
                 return
-
             semantic = self.semantic_interpretation_service.interpret(
                 story_id=story.story_id,
                 source_text=source_text,
-                source_revision=status.current_revision,
+                source_revision=revision,
                 baseline=baseline,
                 entity_resolution=resolution,
             )
             proposals = self.episode_scene_automation_service.generate(
                 story_id=story.story_id,
                 source_text=source_text,
-                source_revision=status.current_revision,
+                source_revision=revision,
                 baseline=baseline,
                 semantic=semantic,
             )
-        except (
-            StoryAnalysisCacheError,
-            StorySourceReadError,
-            AIProviderError,
-            ValueError,
-        ) as exc:
+        except (StoryAnalysisCacheError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
 
@@ -117,4 +135,36 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             f"Generated {episodes} Episode proposal(s) and {scenes} Scene proposal(s).\n\n"
             "These are reviewable automation proposals only. No Episode or Scene has been "
             "created, marked Ready, or approved in Production Planning.",
+        )
+
+    def _generate_shot_proposals(self) -> None:
+        story = self._selected_story()
+        if story is None:
+            return
+        if self.scene_shot_automation_service is None:
+            self._error("Scene/Shot automation service is not registered.")
+            return
+        current = self._current_analysis(story)
+        if current is None:
+            return
+        source_text, revision, baseline = current
+
+        try:
+            proposals = self.scene_shot_automation_service.generate(
+                story_id=story.story_id,
+                source_text=source_text,
+                source_revision=revision,
+                baseline=baseline,
+            )
+        except (AIProviderError, ValueError) as exc:
+            self._error(str(exc))
+            return
+
+        scenes = len({item.payload.get("scene_id", "") for item in proposals})
+        QMessageBox.information(
+            self,
+            "Shot Proposals Generated",
+            f"Generated {len(proposals)} Shot proposal(s) across {scenes} Scene proposal(s).\n\n"
+            "These are reviewable automation proposals only. No Shot Plan has been created, "
+            "marked Ready, or approved in Production Planning.",
         )
