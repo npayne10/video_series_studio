@@ -66,7 +66,9 @@ class AutomationProposalReviewDialog(QDialog):
         self.details = QPlainTextEdit(splitter)
         self.details.setObjectName("automationProposalDetails")
         self.details.setReadOnly(True)
-        self.details.setPlaceholderText("Select an Episode, Scene or Shot proposal to inspect it.")
+        self.details.setPlaceholderText(
+            "Select a Story, Asset, Episode, Scene or Shot proposal to inspect it."
+        )
         splitter.addWidget(self.tree)
         splitter.addWidget(self.details)
         splitter.setStretchFactor(0, 1)
@@ -93,12 +95,23 @@ class AutomationProposalReviewDialog(QDialog):
         self._proposal_by_id = {proposal.proposal_id: proposal for proposal in selected}
 
         interpretations = self._of_type(selected, AutomationProposalType.STORY_INTERPRETATION)
+        assets = self._of_type(selected, AutomationProposalType.ASSET)
         episodes = self._of_type(selected, AutomationProposalType.EPISODE)
         scenes = self._of_type(selected, AutomationProposalType.SCENE)
         shots = self._of_type(selected, AutomationProposalType.SHOT)
 
         for proposal in interpretations:
             self.tree.addTopLevelItem(self._item(proposal, prefix="Story Interpretation"))
+
+        if assets:
+            asset_root = QTreeWidgetItem(["Canonical Entity & Asset Resolution", "", ""])
+            for proposal in sorted(assets, key=self._asset_sort):
+                name = str(proposal.payload.get("name", proposal.target_id)).strip()
+                category = str(proposal.payload.get("expected_asset_category", "asset")).strip()
+                asset_root.addChild(
+                    self._item(proposal, prefix=f"{category.title()} — {name}")
+                )
+            self.tree.addTopLevelItem(asset_root)
 
         scene_items: dict[str, QTreeWidgetItem] = {}
         for episode in sorted(episodes, key=self._sequence_sort):
@@ -201,6 +214,12 @@ class AutomationProposalReviewDialog(QDialog):
         value = proposal.payload.get("sequence_number", 0)
         sequence = value if isinstance(value, int) and not isinstance(value, bool) else 0
         return sequence, proposal.target_id
+
+    @staticmethod
+    def _asset_sort(proposal: AutomationProposal) -> tuple[str, str, str]:
+        category = str(proposal.payload.get("expected_asset_category", ""))
+        name = str(proposal.payload.get("name", ""))
+        return category, name.casefold(), proposal.target_id
 
     @staticmethod
     def _shot_sort(proposal: AutomationProposal) -> tuple[str, int, str]:
