@@ -98,9 +98,7 @@ class AutomationProposal:
     @property
     def consumable(self) -> bool:
         """Return whether a governed planner may explicitly consume the proposal."""
-        return self.status is AutomationProposalStatus.ACCEPTED and bool(
-            self.accepted_by.strip()
-        )
+        return self.status is AutomationProposalStatus.ACCEPTED and bool(self.accepted_by.strip())
 
 
 class SemanticProductionProvider(Protocol):
@@ -142,7 +140,9 @@ class TemplateSemanticProductionProvider:
         import hashlib
 
         normalized_target = target_id.strip().upper()
-        seed = f"{story_id}|{source_revision}|{proposal_type.value}|{normalized_target}|{source_text}"
+        seed = (
+            f"{story_id}|{source_revision}|{proposal_type.value}|{normalized_target}|{source_text}"
+        )
         digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
         return AutomationProposal(
             proposal_id=f"AUT-{proposal_type.value.upper()}-{digest[:12].upper()}",

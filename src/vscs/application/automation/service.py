@@ -64,7 +64,9 @@ class AutomationProposalService:
         if not proposal.target_id.strip():
             raise ValueError("Automation proposal target ID is required")
         proposals = {item.proposal_id: item for item in self.list_proposals()}
-        stored = replace(proposal, proposal_id=normalized, target_id=proposal.target_id.strip().upper())
+        stored = replace(
+            proposal, proposal_id=normalized, target_id=proposal.target_id.strip().upper()
+        )
         proposals[stored.proposal_id] = stored
         self._write(tuple(proposals.values()))
         return stored
@@ -145,12 +147,15 @@ class AutomationProposalService:
         payload = {
             "schema_version": self.SCHEMA_VERSION,
             "written_at": datetime.now(UTC).isoformat(),
-            "proposals": [self._to_dict(item) for item in sorted(proposals, key=lambda p: p.proposal_id)],
+            "proposals": [
+                self._to_dict(item) for item in sorted(proposals, key=lambda p: p.proposal_id)
+            ],
         }
         temporary = path.with_suffix(path.suffix + ".tmp")
         try:
             temporary.write_text(
-                json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False, default=str) + "\n",
+                json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False, default=str)
+                + "\n",
                 encoding="utf-8",
             )
             temporary.replace(path)
