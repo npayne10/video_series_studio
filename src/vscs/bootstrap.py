@@ -380,10 +380,9 @@ def _cap_provider(
     settings = configuration.settings.ai
     if settings.provider is AIProvider.OPENAI:
         try:
-            credentials = AICredentialStore(configuration).load()
-            api_key = credentials.api_key
+            api_key = AICredentialStore().get_openai_api_key()
         except Exception:
             api_key = ""
-        if api_key.strip():
-            return OpenAICAPGenerationProvider(api_key=api_key, model=settings.model)
+        if api_key:
+            return OpenAICAPGenerationProvider(api_key=api_key, model=settings.openai_model)
     return TemplateCAPGenerationProvider()
