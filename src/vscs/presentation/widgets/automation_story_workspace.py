@@ -8,6 +8,7 @@ from vscs.application.automation import (
     ActionPerformanceProposalAutomationService,
     AutomationProposalService,
     CanonicalEntityAssetResolutionAutomationService,
+    EnvironmentProposalAutomationService,
     EpisodeSceneProposalAutomationService,
     SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
@@ -41,6 +42,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         CanonicalEntityAssetResolutionAutomationService | None
     ) = None
     action_performance_automation_service: ActionPerformanceProposalAutomationService | None = None
+    environment_automation_service: EnvironmentProposalAutomationService | None = None
 
     def _install_story_panel(self) -> None:
         super()._install_story_panel()
@@ -59,6 +61,11 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
                 "generatePerformanceProposals",
                 self._generate_performance_proposals,
             ),
+            (
+                "Environment Proposals…",
+                "generateEnvironmentProposals",
+                self._generate_environment_proposals,
+            ),
             ("Review Proposals…", "reviewAutomationProposals", self._review_proposals),
         )
         buttons: list[QPushButton] = []
@@ -73,6 +80,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             self.shot_proposals_button,
             self.resolve_assets_button,
             self.performance_proposals_button,
+            self.environment_proposals_button,
             self.review_proposals_button,
         ) = buttons
 
@@ -84,6 +92,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             self.shot_proposals_button,
             self.resolve_assets_button,
             self.performance_proposals_button,
+            self.environment_proposals_button,
             self.review_proposals_button,
         ):
             button.setEnabled(enabled)
@@ -260,6 +269,41 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             f"Proposals containing supported spoken content: {dialogue}.\n\n"
             "These are reviewable proposals only. No Phase 19.4.2 Action & Performance Draft "
             "was created, marked Ready, compiled, or approved.",
+        )
+
+    def _generate_environment_proposals(self) -> None:
+        story = self._selected_story()
+        if story is None:
+            return
+        if self.environment_automation_service is None:
+            self._error("Environment automation service is not registered.")
+            return
+        current = self._current_analysis(story)
+        if current is None:
+            return
+        source_text, revision, _baseline = current
+        try:
+            proposals = self.environment_automation_service.generate(
+                story_id=story.story_id,
+                source_text=source_text,
+                source_revision=revision,
+            )
+        except (AIProviderError, ValueError) as exc:
+            self._error(str(exc))
+            return
+        unknown_physics = sum(
+            item.payload.get("gravity_m_s2") is None
+            and item.payload.get("pressure_kpa") is None
+            and item.payload.get("temperature_c") is None
+            for item in proposals
+        )
+        QMessageBox.information(
+            self,
+            "Environment Production Proposals Generated",
+            f"Generated {len(proposals)} Environment proposal(s).\n"
+            f"Proposals preserving unspecified core physical values as unknown: {unknown_physics}.\n\n"
+            "These are reviewable proposals only. No governed Environment Plan was created, "
+            "marked Ready, or approved.",
         )
 
     def _review_proposals(self) -> None:
