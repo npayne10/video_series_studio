@@ -9,6 +9,10 @@ from vscs.application.action_performance import ActionPerformanceCompilerService
 from vscs.application.asset_compiler import AssetCompilerService
 from vscs.application.asset_resolution import AssetBrowserService, register_asset_resolution
 from vscs.application.assets import AssetService
+from vscs.application.automation import (
+    EpisodeSceneProposalAutomationService,
+    SemanticStoryInterpretationService,
+)
 from vscs.application.camera_compiler import CameraCompilerService
 from vscs.application.continuity_compiler import ContinuityCompilerService
 from vscs.application.lighting_compiler import LightingCompilerService
@@ -58,15 +62,12 @@ from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
 from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
-from vscs.presentation.widgets.browseable_story_workspace import BrowseableStoryWorkspaceWidget
+from vscs.presentation.widgets.automation_story_workspace import AutomationStoryWorkspaceWidget
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
 from vscs.presentation.widgets.environment_planner_integration import (
     install_environment_planner_navigation,
 )
 from vscs.presentation.widgets.episode_planner import install_episode_planner
-from vscs.presentation.widgets.episode_scene_proposal_integration import (
-    install_episode_scene_proposal_action,
-)
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
 from vscs.presentation.widgets.lighting_planner_integration import (
     install_lighting_planner_navigation,
@@ -135,7 +136,6 @@ def install_story_browser() -> None:
         if window.services.get(GovernedPlanningIntegrationService) is None:
             register_governed_planning_integration(window.services)
         register_ai_story_analysis(window.services)
-        install_episode_scene_proposal_action(window.services)
 
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
@@ -154,7 +154,7 @@ def install_story_browser() -> None:
                 ),
             )
 
-        window.story_browser = BrowseableStoryWorkspaceWidget(
+        window.story_browser = AutomationStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
             window.services.require(ShotPlanningService),
@@ -168,6 +168,12 @@ def install_story_browser() -> None:
         window.story_browser.analysis_engine = analysis_engine
         window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
+        window.story_browser.semantic_interpretation_service = window.services.require(
+            SemanticStoryInterpretationService
+        )
+        window.story_browser.episode_scene_automation_service = window.services.require(
+            EpisodeSceneProposalAutomationService
+        )
 
         episode_service = window.services.require(EpisodePlanningService)
         scene_service = window.services.require(ScenePlanningService)
