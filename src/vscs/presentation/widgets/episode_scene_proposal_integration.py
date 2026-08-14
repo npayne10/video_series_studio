@@ -29,11 +29,15 @@ from .browseable_story_workspace import BrowseableStoryWorkspaceWidget
 
 def install_episode_scene_proposal_action(services: ApplicationServices) -> None:
     """Add one explicit, non-authoritative proposal action to Story Workspace."""
-    BrowseableStoryWorkspaceWidget.semantic_interpretation_service = services.require(
-        SemanticStoryInterpretationService
+    setattr(
+        BrowseableStoryWorkspaceWidget,
+        "semantic_interpretation_service",
+        services.require(SemanticStoryInterpretationService),
     )
-    BrowseableStoryWorkspaceWidget.episode_scene_automation_service = services.require(
-        EpisodeSceneProposalAutomationService
+    setattr(
+        BrowseableStoryWorkspaceWidget,
+        "episode_scene_automation_service",
+        services.require(EpisodeSceneProposalAutomationService),
     )
     if getattr(BrowseableStoryWorkspaceWidget, "_episode_scene_proposal_installed", False):
         return
@@ -124,7 +128,11 @@ def install_episode_scene_proposal_action(services: ApplicationServices) -> None
             "created, marked Ready, or approved in Production Planning.",
         )
 
-    BrowseableStoryWorkspaceWidget._install_story_panel = install_story_panel
-    BrowseableStoryWorkspaceWidget._set_story_actions = set_story_actions
-    BrowseableStoryWorkspaceWidget._generate_planning_proposals = generate_planning_proposals
-    BrowseableStoryWorkspaceWidget._episode_scene_proposal_installed = True
+    setattr(BrowseableStoryWorkspaceWidget, "_install_story_panel", install_story_panel)
+    setattr(BrowseableStoryWorkspaceWidget, "_set_story_actions", set_story_actions)
+    setattr(
+        BrowseableStoryWorkspaceWidget,
+        "_generate_planning_proposals",
+        generate_planning_proposals,
+    )
+    setattr(BrowseableStoryWorkspaceWidget, "_episode_scene_proposal_installed", True)
