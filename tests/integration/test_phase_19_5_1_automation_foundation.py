@@ -32,7 +32,7 @@ def test_automation_service_is_registered(tmp_path: Path) -> None:
 def test_automation_proposal_requires_human_review_before_consumption(tmp_path: Path) -> None:
     with build_application_context(_options(tmp_path)) as application:
         projects = application.services.get(ProjectService)
-        projects._project_directory = tmp_path / "project"
+        projects.create(tmp_path / "project", name="Automation Test Project")
         service = application.services.get(AutomationProposalService)
         proposal = TemplateSemanticProductionProvider().propose(
             story_id="STORY-001",
