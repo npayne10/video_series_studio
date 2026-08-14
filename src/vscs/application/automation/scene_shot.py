@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from typing import Protocol
 
@@ -195,6 +195,7 @@ class SceneShotProposalAutomationService:
             )
             if not draft.shots:
                 raise ValueError(f"Scene/Shot provider returned no Shots for {scene.target_id}")
+            draft = self._fit_runtime_budget(scene, draft)
             self._validate_runtime_budget(scene, draft)
             for shot in draft.shots:
                 generated.append(
@@ -280,15 +281,65 @@ class SceneShotProposalAutomationService:
             resolution_method="semantic Scene decomposition using existing Story Analysis context",
         )
 
-    @staticmethod
+    @classmethod
+    def _fit_runtime_budget(
+        cls,
+        scene: AutomationProposal,
+        draft: SceneShotProposalDraft,
+    ) -> SceneShotProposalDraft:
+        """Scale positive provider runtimes into the Scene budget without changing Shot intent."""
+        scene_runtime = cls._scene_runtime(scene)
+        if scene_runtime <= 0:
+            raise ValueError(f"Scene proposal {scene.target_id} has no valid runtime budget")
+        if scene_runtime < len(draft.shots):
+            raise ValueError(
+                f"Scene proposal {scene.target_id} runtime is too short for "
+                f"{len(draft.shots)} positive-runtime Shot proposals"
+            )
+
+        runtimes = tuple(shot.target_runtime_seconds for shot in draft.shots)
+        if any(runtime <= 0 for runtime in runtimes):
+            raise ValueError(f"Shot proposals for {scene.target_id} require positive runtimes")
+        total = sum(runtimes)
+        if total <= scene_runtime:
+            return draft
+
+        # Runtime is an estimate at proposal stage. Preserve the provider's relative pacing while
+        # fitting it to the authoritative parent proposal budget. Largest-remainder allocation gives
+        # every Shot at least one second and produces a deterministic exact Scene total.
+        distributable = scene_runtime - len(runtimes)
+        weights = tuple(runtime / total for runtime in runtimes)
+        raw_extra = tuple(weight * distributable for weight in weights)
+        extras = [int(value) for value in raw_extra]
+        remainder = distributable - sum(extras)
+        order = sorted(
+            range(len(extras)),
+            key=lambda index: (raw_extra[index] - extras[index], -index),
+            reverse=True,
+        )
+        for index in order[:remainder]:
+            extras[index] += 1
+
+        fitted = tuple(
+            replace(shot, target_runtime_seconds=1 + extras[index])
+            for index, shot in enumerate(draft.shots)
+        )
+        diagnostic = (
+            f"Provider Shot runtimes totalled {total}s and were proportionally fitted to the "
+            f"{scene_runtime}s Scene proposal budget."
+        )
+        return SceneShotProposalDraft(
+            shots=fitted,
+            diagnostics=(*draft.diagnostics, diagnostic),
+        )
+
+    @classmethod
     def _validate_runtime_budget(
+        cls,
         scene: AutomationProposal,
         draft: SceneShotProposalDraft,
     ) -> None:
-        raw_runtime = scene.payload.get("target_runtime_seconds")
-        scene_runtime = (
-            raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
-        )
+        scene_runtime = cls._scene_runtime(scene)
         if scene_runtime <= 0:
             raise ValueError(f"Scene proposal {scene.target_id} has no valid runtime budget")
         total = sum(shot.target_runtime_seconds for shot in draft.shots)
@@ -302,6 +353,11 @@ class SceneShotProposalAutomationService:
             raise ValueError(
                 f"Shot proposals for {scene.target_id} must use contiguous sequence numbers"
             )
+
+    @staticmethod
+    def _scene_runtime(scene: AutomationProposal) -> int:
+        raw_runtime = scene.payload.get("target_runtime_seconds")
+        return raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
 
     @staticmethod
     def _proposal_id(story_id: str, revision: str, scene_id: str, target_id: str) -> str:
