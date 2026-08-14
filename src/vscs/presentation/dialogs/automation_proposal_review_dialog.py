@@ -131,7 +131,9 @@ class AutomationProposalReviewDialog(QDialog):
 
         self.tree.expandAll()
         if self.tree.topLevelItemCount():
-            self.tree.setCurrentItem(self.tree.topLevelItem(0))
+            first_item = self.tree.topLevelItem(0)
+            if first_item is not None:
+                self.tree.setCurrentItem(first_item)
 
     @staticmethod
     def _of_type(
