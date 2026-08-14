@@ -136,7 +136,12 @@ class EntityResolutionService:
         )
 
     def _resolve_candidate(self, story_id, source_text, proposal, assets):
-        match_kind, asset = self._match(proposal.name, proposal.aliases, proposal.category, assets)
+        match_kind, asset = self.match_existing_asset(
+            proposal.name,
+            proposal.aliases,
+            proposal.category,
+            assets,
+        )
         evidence = tuple(
             span
             for text in proposal.evidence_text
@@ -155,6 +160,17 @@ class EntityResolutionService:
             matched_asset_id=asset.asset_id if asset else None,
             matched_asset_name=asset.name if asset else None,
         )
+
+    @classmethod
+    def match_existing_asset(
+        cls,
+        name: str,
+        aliases: tuple[str, ...],
+        category: EntityResolutionCategory,
+        assets: tuple[ExistingAssetReference, ...],
+    ) -> tuple[ResolutionMatchKind, ExistingAssetReference | None]:
+        """Deterministically match one semantic entity against the current XPD catalogue."""
+        return cls._match(name, aliases, category, assets)
 
     @classmethod
     def _match(cls, name, aliases, category, assets):
