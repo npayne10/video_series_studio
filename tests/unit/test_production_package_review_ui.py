@@ -37,7 +37,6 @@ def test_production_review_tab_exposes_final_human_gate(qtbot) -> None:
     assert workspace.production_review_changes_button.text() == "Request Changes"
 
 
-
 def test_review_render_enables_approval_only_after_validation_pass(qtbot) -> None:
     parent = QWidget()
     qtbot.addWidget(parent)

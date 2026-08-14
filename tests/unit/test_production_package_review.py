@@ -12,7 +12,7 @@ from vscs.application.production_package import (
     ProductionPackage,
     ProductionPackageProvenance,
     ProductionPackageStatus,
-}
+)
 from vscs.application.production_package_review import (
     ProductionPackageReviewService,
     ReviewStatus,
@@ -121,7 +121,6 @@ class _Provider:
 
     def is_current(self, _draft) -> bool:
         return True
-
 
 
 def _service(tmp_path: Path):

@@ -45,7 +45,14 @@ def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) ->
     if not review.findings:
         lines.append("- No blocking validation findings.")
     if persisted:
-        lines.extend(("", f"Reviewed by: {review.reviewed_by or 'not recorded'}", f"Reviewed at: {review.reviewed_at}", f"Review notes: {review.review_notes or 'none'}"))
+        lines.extend(
+            (
+                "",
+                f"Reviewed by: {review.reviewed_by or 'not recorded'}",
+                f"Reviewed at: {review.reviewed_at}",
+                f"Review notes: {review.review_notes or 'none'}",
+            )
+        )
     workspace.production_review_summary.setPlainText("\n".join(lines))
     workspace.production_review_reviewer.setText(review.reviewed_by)
     workspace.production_review_notes.setPlainText(review.review_notes)
@@ -60,8 +67,12 @@ def _render(workspace: Any, review: ProductionPackageReview, persisted: bool) ->
     else:
         status = "VALIDATION FAILED — resolve blocking findings before approval."
     workspace.production_review_status.setText(status)
-    workspace.production_review_approve_button.setEnabled(review.validation_passed and review.status is not ReviewStatus.APPROVED)
-    workspace.production_review_changes_button.setEnabled(review.status is not ReviewStatus.APPROVED)
+    workspace.production_review_approve_button.setEnabled(
+        review.validation_passed and review.status is not ReviewStatus.APPROVED
+    )
+    workspace.production_review_changes_button.setEnabled(
+        review.status is not ReviewStatus.APPROVED
+    )
 
 
 def _load(workspace: Any) -> None:
@@ -84,7 +95,11 @@ def _validate(workspace: Any) -> None:
     shot_id = workspace._selected_shot_id
     if shot_id is None:
         return
-    _render(workspace, workspace.production_review_service.validate(shot_id, _provider_id(workspace)), False)
+    _render(
+        workspace,
+        workspace.production_review_service.validate(shot_id, _provider_id(workspace)),
+        False,
+    )
 
 
 def _approve(workspace: Any) -> None:
@@ -92,7 +107,12 @@ def _approve(workspace: Any) -> None:
     if shot_id is None:
         return
     try:
-        review = workspace.production_review_service.approve(shot_id, provider_id=_provider_id(workspace), reviewed_by=workspace.production_review_reviewer.text(), notes=workspace.production_review_notes.toPlainText())
+        review = workspace.production_review_service.approve(
+            shot_id,
+            provider_id=_provider_id(workspace),
+            reviewed_by=workspace.production_review_reviewer.text(),
+            notes=workspace.production_review_notes.toPlainText(),
+        )
     except ValueError as exc:
         QMessageBox.warning(workspace, "Production Review", str(exc))
         _load(workspace)
@@ -105,7 +125,12 @@ def _request_changes(workspace: Any) -> None:
     if shot_id is None:
         return
     try:
-        review = workspace.production_review_service.require_changes(shot_id, provider_id=_provider_id(workspace), reviewed_by=workspace.production_review_reviewer.text(), notes=workspace.production_review_notes.toPlainText())
+        review = workspace.production_review_service.require_changes(
+            shot_id,
+            provider_id=_provider_id(workspace),
+            reviewed_by=workspace.production_review_reviewer.text(),
+            notes=workspace.production_review_notes.toPlainText(),
+        )
     except ValueError as exc:
         QMessageBox.warning(workspace, "Production Review", str(exc))
         return
@@ -117,7 +142,10 @@ def _build_tab(workspace: Any) -> None:
     layout = QVBoxLayout(tab)
     group = QGroupBox("Production Package Review & Validation", tab)
     group_layout = QVBoxLayout(group)
-    guidance = QLabel("Final automated readiness validation and explicit human approval gate. This phase does not submit provider jobs.", group)
+    guidance = QLabel(
+        "Final automated readiness validation and explicit human approval gate. This phase does not submit provider jobs.",
+        group,
+    )
     guidance.setWordWrap(True)
     group_layout.addWidget(guidance)
     workspace.production_review_status = QLabel("", group)
@@ -140,7 +168,11 @@ def _build_tab(workspace: Any) -> None:
     workspace.production_review_validate_button = QPushButton("Validate Package", group)
     workspace.production_review_approve_button = QPushButton("Approve for Production", group)
     workspace.production_review_changes_button = QPushButton("Request Changes", group)
-    for button in (workspace.production_review_validate_button, workspace.production_review_approve_button, workspace.production_review_changes_button):
+    for button in (
+        workspace.production_review_validate_button,
+        workspace.production_review_approve_button,
+        workspace.production_review_changes_button,
+    ):
         actions.addWidget(button)
     actions.addStretch(1)
     group_layout.addLayout(actions)
@@ -149,12 +181,17 @@ def _build_tab(workspace: Any) -> None:
     workspace.production_review_validate_button.clicked.connect(lambda: _validate(workspace))
     workspace.production_review_approve_button.clicked.connect(lambda: _approve(workspace))
     workspace.production_review_changes_button.clicked.connect(lambda: _request_changes(workspace))
-    workspace.compiler_tabs.currentChanged.connect(lambda index: _load(workspace) if index == review_index else None)
+    workspace.compiler_tabs.currentChanged.connect(
+        lambda index: _load(workspace) if index == review_index else None
+    )
 
 
 def install_production_package_review_workspace() -> None:
     """Install the final Phase 19.4 review tab on Production Planning."""
-    from .universal_production_description_compiler_workspace import UniversalProductionDescriptionCompilerWorkspace
+    from .universal_production_description_compiler_workspace import (
+        UniversalProductionDescriptionCompilerWorkspace,
+    )
+
     workspace_type: Any = UniversalProductionDescriptionCompilerWorkspace
     original_init = workspace_type.__init__
     original_selection = workspace_type._selection_changed
@@ -162,7 +199,12 @@ def install_production_package_review_workspace() -> None:
 
     def reviewed_init(workspace: Any, *args: Any, **kwargs: Any) -> None:
         original_init(workspace, *args, **kwargs)
-        workspace.production_review_service = ProductionPackageReviewService(workspace.projects, workspace.packages, workspace.universal_compiler, workspace.provider_compiler)
+        workspace.production_review_service = ProductionPackageReviewService(
+            workspace.projects,
+            workspace.packages,
+            workspace.universal_compiler,
+            workspace.provider_compiler,
+        )
         _build_tab(workspace)
         _load(workspace)
 
@@ -174,7 +216,9 @@ def install_production_package_review_workspace() -> None:
         original_footer(workspace)
         for label in workspace.findChildren(QLabel):
             if "final Production Package Validation" in label.text():
-                label.setText("Phase 19.4 compilation is complete. Production Review is the final validation and human approval gate before later provider execution.")
+                label.setText(
+                    "Phase 19.4 compilation is complete. Production Review is the final validation and human approval gate before later provider execution."
+                )
                 label.setWordWrap(True)
 
     workspace_type.__init__ = reviewed_init
