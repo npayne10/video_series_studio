@@ -57,7 +57,12 @@ class _Packages:
             schema_version="1.0",
             source_fingerprint="source",
             package_fingerprint="package-v1",
-            provenance=ProductionPackageProvenance("PIP", "source", "PRV", "review"),
+            provenance=ProductionPackageProvenance(
+                "PIP",
+                "source",
+                "PRV",
+                "review",
+            ),
             story_context={},
             shot={},
             assets=(),
@@ -140,6 +145,7 @@ def test_clean_package_requires_final_human_review(tmp_path: Path) -> None:
     assert review.validation_passed
     assert review.status is ReviewStatus.REVIEW_REQUIRED
     assert review.canonical_reference_count == 1
+    assert service.validation_confirmed("SHT-001")
 
 
 def test_incomplete_continuity_blocks_validation(tmp_path: Path) -> None:
@@ -149,11 +155,26 @@ def test_incomplete_continuity_blocks_validation(tmp_path: Path) -> None:
     packages.value = replace(packages.value, validation=validation)
     review = service.validate("SHT-001")
     assert not review.validation_passed
+    assert not service.validation_confirmed("SHT-001")
     assert any("Continuity" in item.message for item in review.findings)
+
+
+def test_approval_is_blocked_until_explicit_validation(tmp_path: Path) -> None:
+    service, _packages = _service(tmp_path)
+    inspected = service.inspect("SHT-001")
+    assert inspected.validation_passed
+    assert not service.validation_confirmed("SHT-001")
+
+    with pytest.raises(ValueError, match="Validate Package"):
+        service.approve("SHT-001", reviewed_by="Neill")
+
+    service.validate("SHT-001")
+    assert service.validation_confirmed("SHT-001")
 
 
 def test_approval_requires_reviewer_and_is_persisted(tmp_path: Path) -> None:
     service, _packages = _service(tmp_path)
+    service.validate("SHT-001")
     with pytest.raises(ValueError, match="reviewer identity"):
         service.approve("SHT-001", reviewed_by="")
     approved = service.approve("SHT-001", reviewed_by="Neill")
@@ -161,13 +182,17 @@ def test_approval_requires_reviewer_and_is_persisted(tmp_path: Path) -> None:
     assert service.current_review("SHT-001") == approved
 
 
-def test_authority_change_marks_review_stale(tmp_path: Path) -> None:
+def test_authority_change_marks_review_stale_and_requires_revalidation(
+    tmp_path: Path,
+) -> None:
     service, packages = _service(tmp_path)
+    service.validate("SHT-001")
     service.approve("SHT-001", reviewed_by="Neill")
     packages.value = replace(packages.value, package_fingerprint="package-v2")
     review = service.current_review("SHT-001")
     assert review is not None
     assert review.status is ReviewStatus.STALE
+    assert not service.validation_confirmed("SHT-001")
 
 
 def test_request_changes_requires_notes(tmp_path: Path) -> None:
