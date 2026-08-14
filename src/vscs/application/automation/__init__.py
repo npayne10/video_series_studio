@@ -9,6 +9,10 @@ from .contracts import (
     SemanticProductionProvider,
     TemplateSemanticProductionProvider,
 )
+from .semantic_interpretation import (
+    SemanticStoryInterpretation,
+    SemanticStoryInterpretationService,
+)
 from .service import AutomationProposalError, AutomationProposalService
 
 __all__ = [
@@ -20,5 +24,7 @@ __all__ = [
     "AutomationProvenance",
     "AutomationSourceKind",
     "SemanticProductionProvider",
+    "SemanticStoryInterpretation",
+    "SemanticStoryInterpretationService",
     "TemplateSemanticProductionProvider",
 ]
