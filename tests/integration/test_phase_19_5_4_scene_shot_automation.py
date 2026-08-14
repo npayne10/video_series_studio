@@ -42,6 +42,8 @@ def test_scene_shot_automation_is_registered_with_story_workspace(tmp_path: Path
         assert isinstance(service, SceneShotProposalAutomationService)
         assert not workspace.shot_proposals_button.isHidden()
         assert workspace.shot_proposals_button.text() == "Shot Proposals…"
+        assert not workspace.review_proposals_button.isHidden()
+        assert workspace.review_proposals_button.text() == "Review Proposals…"
 
 
 def test_story_workspace_generates_shot_proposals_without_creating_shot_authority(
