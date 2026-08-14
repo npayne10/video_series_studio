@@ -25,5 +25,8 @@ def test_episode_scene_automation_is_registered_with_story_workspace(tmp_path: P
         qtbot.addWidget(window)
 
         service = application.services.get(EpisodeSceneProposalAutomationService)
+        workspace = window.story_browser
 
         assert isinstance(service, EpisodeSceneProposalAutomationService)
+        assert not workspace.planning_proposals_button.isHidden()
+        assert workspace.planning_proposals_button.text() == "Planning Proposals…"
