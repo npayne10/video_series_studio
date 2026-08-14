@@ -116,7 +116,7 @@ def test_scene_shot_automation_rejects_stale_scene_proposals() -> None:
         )
 
 
-def test_scene_shot_automation_rejects_runtime_overflow() -> None:
+def test_scene_shot_automation_normalizes_runtime_overflow() -> None:
     class _OverflowProvider:
         provider_name = "test"
         model_name = "overflow"
@@ -146,10 +146,23 @@ def test_scene_shot_automation_rejects_runtime_overflow() -> None:
     service, _store = _service(_OverflowProvider())
     baseline = AnalysisResult(story_id="STORY-001", source_revision="rev-1")
 
-    with pytest.raises(ValueError, match="exceed the Scene runtime budget"):
-        service.generate(
-            story_id="STORY-001",
-            source_text="Story source.",
-            source_revision="rev-1",
-            baseline=baseline,
-        )
+    proposals = service.generate(
+        story_id="STORY-001",
+        source_text="Story source.",
+        source_revision="rev-1",
+        baseline=baseline,
+    )
+
+    assert len(proposals) == 2
+    assert [item.target_id for item in proposals] == [
+        "EP-001-SC-001-SHT-001",
+        "EP-001-SC-001-SHT-002",
+    ]
+    runtimes = [int(item.payload["target_runtime_seconds"]) for item in proposals]
+    assert sum(runtimes) == 60
+    assert runtimes[0] > runtimes[1]
+    assert [item.payload["required_action"] for item in proposals] == ["Event one", "Event two"]
+    assert all(
+        any("proportionally fitted" in diagnostic for diagnostic in item.payload["diagnostics"])
+        for item in proposals
+    )
