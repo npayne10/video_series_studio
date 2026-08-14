@@ -16,6 +16,12 @@ from .contracts import (
     SemanticProductionProvider,
     TemplateSemanticProductionProvider,
 )
+from .environment import (
+    EnvironmentProposalAutomationService,
+    EnvironmentProposalDraft,
+    EnvironmentProposalProvider,
+    TemplateEnvironmentProposalProvider,
+)
 from .episode_scene import (
     EpisodeProposalDraft,
     EpisodeSceneProposalAutomationService,
@@ -49,6 +55,9 @@ __all__ = [
     "AutomationProvenance",
     "AutomationSourceKind",
     "CanonicalEntityAssetResolutionAutomationService",
+    "EnvironmentProposalAutomationService",
+    "EnvironmentProposalDraft",
+    "EnvironmentProposalProvider",
     "EpisodeProposalDraft",
     "EpisodeSceneProposalAutomationService",
     "EpisodeSceneProposalDraft",
@@ -62,6 +71,7 @@ __all__ = [
     "SemanticStoryInterpretationService",
     "ShotProposalDraft",
     "TemplateActionPerformanceProposalProvider",
+    "TemplateEnvironmentProposalProvider",
     "TemplateEpisodeSceneProposalProvider",
     "TemplateSceneShotProposalProvider",
     "TemplateSemanticProductionProvider",
