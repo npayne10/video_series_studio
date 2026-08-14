@@ -217,9 +217,6 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         story = self._selected_story()
         if story is None:
             return
-        if self.canonical_entity_asset_automation_service is None:
-            self._error("Canonical Entity/Asset automation service is not registered.")
-            return
         current = self._current_analysis(story)
         if current is None:
             return
@@ -227,8 +224,16 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         resolution = self._current_entity_resolution(story, source_text)
         if resolution is None:
             return
+
+        service = self.canonical_entity_asset_automation_service
+        if service is None:
+            service = CanonicalEntityAssetResolutionAutomationService(
+                self.asset_browser.resolver,
+                AutomationProposalService(self.stories.projects),
+            )
+            self.canonical_entity_asset_automation_service = service
         try:
-            proposals = self.canonical_entity_asset_automation_service.generate(
+            proposals = service.generate(
                 story_id=story.story_id,
                 source_revision=revision,
                 entity_resolution=resolution,
