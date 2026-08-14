@@ -143,7 +143,9 @@ class OpenAIEpisodeSceneProposalProvider:
             )
             parsed = response.output_parsed
         except Exception as exc:
-            raise AIProviderError(f"OpenAI Episode/Scene proposal generation failed: {exc}") from exc
+            raise AIProviderError(
+                f"OpenAI Episode/Scene proposal generation failed: {exc}"
+            ) from exc
         if parsed is None:
             raise AIProviderError("OpenAI Episode/Scene proposal generation returned no result")
         if not isinstance(parsed, _OpenAIEpisodeSceneResponse):
