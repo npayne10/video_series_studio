@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from vscs.application.asset_resolution import AssetResolutionService
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.ai.scene_shot_provider import OpenAISceneShotProposalProvider
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService
 from vscs.infrastructure.services import ApplicationServices
 
+from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
 from .episode_scene import (
     EpisodeSceneProposalAutomationService,
     EpisodeSceneProposalProvider,
@@ -56,6 +58,7 @@ def register_scene_shot_automation(
     """Register the configured Scene/Shot proposal service exactly once."""
     existing = services.get(SceneShotProposalAutomationService)
     if existing is not None:
+        register_canonical_entity_asset_automation(services)
         return existing
 
     configuration = services.require(ConfigurationService)
@@ -73,4 +76,20 @@ def register_scene_shot_automation(
         provider,
         services.require(AutomationProposalService),
     )
-    return services.register(SceneShotProposalAutomationService, service)
+    registered = services.register(SceneShotProposalAutomationService, service)
+    register_canonical_entity_asset_automation(services)
+    return registered
+
+
+def register_canonical_entity_asset_automation(
+    services: ApplicationServices,
+) -> CanonicalEntityAssetResolutionAutomationService:
+    """Register deterministic entity/XPD/CAP proposal resolution exactly once."""
+    existing = services.get(CanonicalEntityAssetResolutionAutomationService)
+    if existing is not None:
+        return existing
+    service = CanonicalEntityAssetResolutionAutomationService(
+        services.require(AssetResolutionService),
+        services.require(AutomationProposalService),
+    )
+    return services.register(CanonicalEntityAssetResolutionAutomationService, service)
