@@ -28,11 +28,15 @@ class _Acceptance:
         self.accepted = accepted
 
     def assess(self, _shot_id: str, _provider_id: str):
-        failed = () if self.accepted else (
-            SimpleNamespace(
-                passed=False,
-                message="Final human approval is not recorded.",
-            ),
+        failed = (
+            ()
+            if self.accepted
+            else (
+                SimpleNamespace(
+                    passed=False,
+                    message="Final human approval is not recorded.",
+                ),
+            )
         )
         return SimpleNamespace(accepted=self.accepted, checks=failed)
 

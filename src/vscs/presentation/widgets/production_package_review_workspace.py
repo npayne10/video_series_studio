@@ -100,7 +100,9 @@ def _load(workspace: Any) -> None:
     shot_id = workspace._selected_shot_id
     if shot_id is None:
         workspace.production_review_status.setText("No Shot is selected.")
-        workspace.production_acceptance_status.setText("PHASE 19.4 NOT READY — no Shot is selected.")
+        workspace.production_acceptance_status.setText(
+            "PHASE 19.4 NOT READY — no Shot is selected."
+        )
         workspace.production_review_summary.clear()
         workspace.production_review_approve_button.setEnabled(False)
         workspace.production_review_changes_button.setEnabled(False)

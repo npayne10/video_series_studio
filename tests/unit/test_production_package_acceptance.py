@@ -55,9 +55,7 @@ class _Packages:
             dialogue=(),
             effects=(),
             references=(),
-            universal_description={
-                "production": {"canonical_references": [reference]}
-            },
+            universal_description={"production": {"canonical_references": [reference]}},
             provider_outputs={
                 "comfyui": {
                     "status": "ready",
@@ -114,7 +112,10 @@ def test_missing_compiler_authority_blocks_acceptance() -> None:
     packages.value = replace(packages.value, validation=validation)
     report = service.assess("SHT-001")
     assert not report.accepted
-    assert any(check.code == "authority.continuity_complete" and not check.passed for check in report.checks)
+    assert any(
+        check.code == "authority.continuity_complete" and not check.passed
+        for check in report.checks
+    )
 
 
 def test_provider_must_remain_not_submitted_at_acceptance_boundary() -> None:
@@ -128,7 +129,9 @@ def test_provider_must_remain_not_submitted_at_acceptance_boundary() -> None:
     packages.value = replace(packages.value, provider_outputs=outputs)
     report = service.assess("SHT-001")
     assert not report.accepted
-    assert any(check.code == "provider.not_submitted" and not check.passed for check in report.checks)
+    assert any(
+        check.code == "provider.not_submitted" and not check.passed for check in report.checks
+    )
 
 
 def test_provider_must_cover_all_universal_canonical_references() -> None:
@@ -143,8 +146,7 @@ def test_provider_must_cover_all_universal_canonical_references() -> None:
     report = service.assess("SHT-001")
     assert not report.accepted
     assert any(
-        check.code == "canonical.provider_coverage" and not check.passed
-        for check in report.checks
+        check.code == "canonical.provider_coverage" and not check.passed for check in report.checks
     )
 
 

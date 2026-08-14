@@ -168,9 +168,7 @@ class ProductionPackageAcceptanceService:
         )
 
         universal_refs = self._reference_keys(
-            self._production_view(package.universal_description).get(
-                "canonical_references", []
-            )
+            self._production_view(package.universal_description).get("canonical_references", [])
         )
         provider_refs = self._reference_keys(governed.get("canonical_references", []))
         references_match = universal_refs <= provider_refs
