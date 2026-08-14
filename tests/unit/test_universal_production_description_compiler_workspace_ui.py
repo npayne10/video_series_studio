@@ -155,13 +155,7 @@ def test_universal_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     assert "Movement: static" in preview
     assert not preview.startswith("SHOT: {")
     assert widget.universal_ready_button.isEnabled()
-
-    footer_texts = [label.text() for label in widget.findChildren(type(widget.universal_status))]
-    assert any(
-        text
-        == "Later Phase 19.4 work will add final Production Package Validation to this same workspace."
-        for text in footer_texts
-    )
+    assert widget.compiler_tabs.tabText(8) == "Production Review"
 
 
 def test_universal_final_approval_is_blocked_until_upstream_ready(qtbot) -> None:
