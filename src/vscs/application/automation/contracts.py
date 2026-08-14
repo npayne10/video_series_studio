@@ -70,9 +70,10 @@ class AutomationProvenance:
             raise ValueError("Automation provenance confidence must be between 0 and 1")
         if self.proposal_version < 1:
             raise ValueError("Automation proposal version must be at least 1")
-        if self.source_kind is AutomationSourceKind.AI_INFERENCE:
-            if not self.provider.strip() or not self.model.strip():
-                raise ValueError("AI provenance requires provider and model identity")
+        if self.source_kind is AutomationSourceKind.AI_INFERENCE and (
+            not self.provider.strip() or not self.model.strip()
+        ):
+            raise ValueError("AI provenance requires provider and model identity")
 
 
 @dataclass(frozen=True, slots=True)
