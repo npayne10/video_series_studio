@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from vscs.application.asset_resolution import AssetResolutionService
+from vscs.application.asset_resolution import (
+    AssetResolutionService,
+    register_asset_resolution,
+)
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.ai.scene_shot_provider import OpenAISceneShotProposalProvider
@@ -88,8 +91,11 @@ def register_canonical_entity_asset_automation(
     existing = services.get(CanonicalEntityAssetResolutionAutomationService)
     if existing is not None:
         return existing
+    resolver = services.get(AssetResolutionService)
+    if resolver is None:
+        resolver = register_asset_resolution(services)
     service = CanonicalEntityAssetResolutionAutomationService(
-        services.require(AssetResolutionService),
+        resolver,
         services.require(AutomationProposalService),
     )
     return services.register(CanonicalEntityAssetResolutionAutomationService, service)
