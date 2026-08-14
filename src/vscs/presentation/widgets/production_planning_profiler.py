@@ -153,6 +153,7 @@ def _profiled_load_selected_snapshot(workspace: Any) -> None:
         "_load_style_draft",
         "_load_universal_draft",
         "_load_provider_draft",
+        "_load_production_review",
     )
     for name in loaders:
         loader = getattr(workspace, name, None)
