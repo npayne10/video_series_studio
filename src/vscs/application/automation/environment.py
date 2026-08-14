@@ -131,9 +131,7 @@ class EnvironmentProposalAutomationService:
             if item.provenance.source_story_id == normalized_story
             and item.provenance.source_revision == revision
         )
-        shots = tuple(
-            item for item in current if item.proposal_type is AutomationProposalType.SHOT
-        )
+        shots = tuple(item for item in current if item.proposal_type is AutomationProposalType.SHOT)
         performances = {
             item.target_id: item
             for item in current

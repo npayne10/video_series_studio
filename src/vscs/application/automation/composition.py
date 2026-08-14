@@ -158,7 +158,5 @@ def register_environment_automation(
             provider = TemplateEnvironmentProposalProvider()
     return services.register(
         EnvironmentProposalAutomationService,
-        EnvironmentProposalAutomationService(
-            provider, services.require(AutomationProposalService)
-        ),
+        EnvironmentProposalAutomationService(provider, services.require(AutomationProposalService)),
     )

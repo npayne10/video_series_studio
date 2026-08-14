@@ -110,7 +110,9 @@ class AutomationProposalReviewDialog(QDialog):
             episode_item = self._item(episode)
             self.tree.addTopLevelItem(episode_item)
             episode_scenes = (
-                item for item in scenes if str(item.payload.get("episode_id", "")) == episode.target_id
+                item
+                for item in scenes
+                if str(item.payload.get("episode_id", "")) == episode.target_id
             )
             for scene in sorted(episode_scenes, key=self._sequence_sort):
                 scene_item = self._item(scene)
