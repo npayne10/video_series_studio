@@ -10,6 +10,10 @@ from vscs.application.asset_resolution import (
     ResolvedAssetBinding,
     ResolvedCAPBinding,
 )
+from vscs.application.story_analysis.ai_analysis import (
+    EntityResolutionService,
+    StoryEntityCatalog,
+)
 from vscs.domain.assets import AssetCategory
 from vscs.domain.story_analysis import (
     EntityCandidate,
@@ -34,9 +38,11 @@ class CanonicalEntityAssetResolutionAutomationService:
         self,
         resolver: AssetResolutionService,
         proposals: AutomationProposalService,
+        catalog: StoryEntityCatalog | None = None,
     ) -> None:
         self._resolver = resolver
         self._proposals = proposals
+        self._catalog = catalog
 
     def generate(
         self,
@@ -59,7 +65,7 @@ class CanonicalEntityAssetResolutionAutomationService:
                 self._proposal(
                     story_id=normalized_story,
                     revision=revision,
-                    candidate=candidate,
+                    candidate=self._rematch_current_xpd(candidate),
                 )
             )
             for candidate in entity_resolution.candidates
@@ -67,6 +73,24 @@ class CanonicalEntityAssetResolutionAutomationService:
         if not generated:
             raise ValueError("Story Analysis contains no production entities to resolve")
         return generated
+
+    def _rematch_current_xpd(self, candidate: EntityCandidate) -> EntityCandidate:
+        """Refresh only deterministic XPD identity matching; never rerun semantic AI."""
+        if self._catalog is None:
+            return candidate
+        match_kind, asset = EntityResolutionService._match(  # noqa: SLF001
+            candidate.name,
+            candidate.aliases,
+            candidate.category,
+            self._catalog.assets(),
+        )
+        return candidate.model_copy(
+            update={
+                "match_kind": match_kind,
+                "matched_asset_id": asset.asset_id if asset is not None else None,
+                "matched_asset_name": asset.name if asset is not None else None,
+            }
+        )
 
     def _proposal(
         self,
@@ -171,7 +195,7 @@ class CanonicalEntityAssetResolutionAutomationService:
                     "truth. Unmatched or ambiguous entities remain proposals requiring human review."
                 ),
                 resolution_method=(
-                    "Story entity match plus authoritative Asset/CAP/reference resolution"
+                    "current XPD entity rematch plus authoritative Asset/CAP/reference resolution"
                 ),
             ),
             metadata={
