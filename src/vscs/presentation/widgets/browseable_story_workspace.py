@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
     QPushButton,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -137,6 +138,32 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
     analysis_cache: StoryAnalysisCacheService | None = None
     intelligence_service: ApprovedStoryIntelligenceService | None = None
 
+    def _install_story_panel(self) -> None:
+        """Install Story governance without shadowing inherited Scene controls."""
+        scene_new_button = self.new_button
+        scene_edit_button = self.edit_button
+        super()._install_story_panel()
+
+        self.story_new_button = self.new_button
+        self.story_edit_button = self.edit_button
+        self.new_button = scene_new_button
+        self.edit_button = scene_edit_button
+
+        panel = self.story_new_button.parentWidget()
+        panel_layout = panel.layout() if panel is not None else None
+        toolbar_item = panel_layout.itemAt(1) if isinstance(panel_layout, QVBoxLayout) else None
+        toolbar = toolbar_item.layout() if toolbar_item is not None else None
+        if not isinstance(toolbar, QHBoxLayout):
+            raise RuntimeError("Story Workspace toolbar is unavailable.")
+
+        self.import_story_button = QPushButton("Import Story…", panel)
+        self.import_story_button.setObjectName("importStory")
+        self.import_story_button.setToolTip(
+            "Import a manuscript, screenplay, Markdown, PDF, or text file into this project."
+        )
+        self.import_story_button.clicked.connect(self._import_story)
+        toolbar.insertWidget(1, self.import_story_button)
+
     def _new_story(self) -> None:
         dialog = BrowseableStoryEditorDialog(parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -147,6 +174,40 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         except (ValueError, StoryLifecycleError, StoryMetadataError) as exc:
             self._error(str(exc))
         self.refresh()
+
+    def _import_story(self) -> None:
+        selected_path, _selected_filter = QFileDialog.getOpenFileName(
+            self,
+            "Import Story",
+            "",
+            BrowseableStoryEditorDialog.FILE_FILTER,
+        )
+        if not selected_path:
+            return
+
+        path = Path(selected_path)
+        source_type = BrowseableStoryEditorDialog._SOURCE_TYPES.get(
+            path.suffix.casefold(),
+            StorySourceType.OTHER,
+        )
+        try:
+            story = self.lifecycle.create_story(
+                title=path.stem,
+                source_type=source_type,
+                source_path=str(path),
+            )
+        except (ValueError, StoryLifecycleError) as exc:
+            self._error(str(exc))
+            return
+        self.refresh()
+        self._select_story(story.story_id)
+
+    def _select_story(self, story_id: str) -> None:
+        for row in range(self.story_list.count()):
+            item = self.story_list.item(row)
+            if str(item.data(0x0100)) == story_id:
+                self.story_list.setCurrentRow(row)
+                return
 
     def _edit_story(self) -> None:
         story = self._selected_story()
@@ -167,9 +228,21 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         self.refresh()
 
     def _set_story_actions(self, story: StoryRecord | None) -> None:
-        super()._set_story_actions(story)
+        can_edit = story is not None and not story.archived and not story.locked
+        project_open = self.lifecycle.projects.project_directory is not None
+        self.story_new_button.setEnabled(project_open)
+        self.import_story_button.setEnabled(project_open)
+        self.story_edit_button.setEnabled(can_edit)
+        self.duplicate_button.setEnabled(story is not None)
         self.analyse_button.setText("Analyse Story")
         self.analyse_button.setEnabled(story is not None and not story.archived)
+        snapshot = self.approvals.snapshot(story.story_id) if story else None
+        self.approve_button.setEnabled(bool(snapshot and snapshot.can_approve))
+        self.lock_button.setEnabled(bool(snapshot and snapshot.can_lock))
+        self.unlock_button.setEnabled(bool(snapshot and snapshot.can_unlock))
+        self.reopen_button.setEnabled(bool(snapshot and snapshot.can_reopen))
+        self.archive_button.setEnabled(story is not None)
+        self.archive_button.setText("Restore" if story and story.archived else "Archive")
 
     def _mark_analysed(self) -> None:
         story = self._selected_story()
