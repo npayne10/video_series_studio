@@ -117,7 +117,11 @@ class SemanticStoryInterpretationService:
             else AutomationSourceKind.DETERMINISTIC_RESOLUTION
         )
         provider = "openai" if provider_kind is AutomationSourceKind.AI_INFERENCE else "vscs"
-        model = "configured-story-analysis-model" if provider_kind is AutomationSourceKind.AI_INFERENCE else "deterministic"
+        model = (
+            "configured-story-analysis-model"
+            if provider_kind is AutomationSourceKind.AI_INFERENCE
+            else "deterministic"
+        )
         confidence_values = [item.confidence for item in resolution.candidates]
         confidence = (
             sum(confidence_values) / len(confidence_values)
