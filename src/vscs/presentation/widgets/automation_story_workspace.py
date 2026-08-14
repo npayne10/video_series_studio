@@ -36,7 +36,6 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
     semantic_interpretation_service: SemanticStoryInterpretationService | None = None
     episode_scene_automation_service: EpisodeSceneProposalAutomationService | None = None
     scene_shot_automation_service: SceneShotProposalAutomationService | None = None
-    automation_proposal_service: AutomationProposalService | None = None
 
     def _install_story_panel(self) -> None:
         super()._install_story_panel()
@@ -66,7 +65,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         self.review_proposals_button = QPushButton("Review Proposals…", panel)
         self.review_proposals_button.setObjectName("reviewAutomationProposals")
         self.review_proposals_button.setToolTip(
-            "Inspect the current Story automation proposals without rerunning automation."
+            "Inspect current Story automation proposals without rerunning automation."
         )
         self.review_proposals_button.clicked.connect(self._review_proposals)
         toolbar.insertWidget(6, self.review_proposals_button)
@@ -188,16 +187,14 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         story = self._selected_story()
         if story is None:
             return
-        if self.automation_proposal_service is None:
-            self._error("Automation Proposal service is not registered.")
-            return
         current = self._current_analysis(story)
         if current is None:
             return
         _source_text, revision, _baseline = current
+        proposal_service = AutomationProposalService(self.story_service.projects)
         proposals = tuple(
             proposal
-            for proposal in self.automation_proposal_service.list_proposals()
+            for proposal in proposal_service.list_proposals()
             if proposal.provenance.source_story_id == story.story_id.strip().upper()
             and proposal.provenance.source_revision == revision
         )
@@ -209,7 +206,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             )
             return
         dialog = AutomationProposalReviewDialog(
-            self.automation_proposal_service,
+            proposal_service,
             story_id=story.story_id,
             source_revision=revision,
             parent=self,
