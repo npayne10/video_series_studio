@@ -191,7 +191,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         if current is None:
             return
         _source_text, revision, _baseline = current
-        proposal_service = AutomationProposalService(self.story_service.projects)
+        proposal_service = AutomationProposalService(self.stories.projects)
         proposals = tuple(
             proposal
             for proposal in proposal_service.list_proposals()
