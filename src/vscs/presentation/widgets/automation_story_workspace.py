@@ -13,6 +13,7 @@ from vscs.application.automation import (
 )
 from vscs.application.story import StoryRecord
 from vscs.application.story_analysis import (
+    AssetServiceStoryEntityCatalog,
     StoryAnalysisCacheState,
     StorySourceReader,
     StorySourceReadError,
@@ -230,6 +231,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             service = CanonicalEntityAssetResolutionAutomationService(
                 self.asset_browser.resolver,
                 AutomationProposalService(self.stories.projects),
+                AssetServiceStoryEntityCatalog(self.asset_browser.assets),
             )
             self.canonical_entity_asset_automation_service = service
         try:
