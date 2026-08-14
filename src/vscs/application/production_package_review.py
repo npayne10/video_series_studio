@@ -85,9 +85,10 @@ class ProductionPackageReviewService:
         self.packages = packages
         self.universal = universal
         self.provider = provider
+        self._validated_fingerprints: dict[tuple[str, str], str] = {}
 
-    def validate(self, shot_id: str, provider_id: str = "comfyui") -> ProductionPackageReview:
-        """Return a fresh final validation snapshot without approving execution."""
+    def inspect(self, shot_id: str, provider_id: str = "comfyui") -> ProductionPackageReview:
+        """Inspect current readiness without recording an explicit validation action."""
         shot = shot_id.strip().upper()
         selected_provider = provider_id.strip().lower()
         findings: list[ValidationFinding] = []
@@ -150,7 +151,8 @@ class ProductionPackageReviewService:
 
         consistency = self.universal.consistency_findings(shot)
         findings.extend(
-            ValidationFinding("universal.consistency", "error", message) for message in consistency
+            ValidationFinding("universal.consistency", "error", message)
+            for message in consistency
         )
 
         output: dict[str, Any] = {}
@@ -208,8 +210,12 @@ class ProductionPackageReviewService:
         production = self._production_view(
             package.universal_description if package is not None else {}
         )
-        universal_references = self._reference_keys(production.get("canonical_references", []))
-        provider_references = self._reference_keys(output.get("canonical_references", []))
+        universal_references = self._reference_keys(
+            production.get("canonical_references", [])
+        )
+        provider_references = self._reference_keys(
+            output.get("canonical_references", [])
+        )
         missing_references = sorted(universal_references - provider_references)
         if missing_references:
             findings.append(
@@ -228,7 +234,11 @@ class ProductionPackageReviewService:
         return ProductionPackageReview(
             shot_id=shot,
             provider_id=selected_provider,
-            status=(ReviewStatus.REVIEW_REQUIRED if passed else ReviewStatus.VALIDATION_FAILED),
+            status=(
+                ReviewStatus.REVIEW_REQUIRED
+                if passed
+                else ReviewStatus.VALIDATION_FAILED
+            ),
             validation_passed=passed,
             findings=tuple(findings),
             dependency_fingerprint=fingerprint,
@@ -239,6 +249,29 @@ class ProductionPackageReviewService:
             reviewed_at=datetime.now(UTC).isoformat(),
         )
 
+    def validate(
+        self, shot_id: str, provider_id: str = "comfyui"
+    ) -> ProductionPackageReview:
+        """Explicitly validate current authority and record the validated fingerprint."""
+        review = self.inspect(shot_id, provider_id)
+        key = (review.shot_id, review.provider_id)
+        if review.validation_passed:
+            self._validated_fingerprints[key] = review.dependency_fingerprint
+        else:
+            self._validated_fingerprints.pop(key, None)
+        return review
+
+    def validation_confirmed(
+        self, shot_id: str, provider_id: str = "comfyui"
+    ) -> bool:
+        """Return whether this exact current dependency set was explicitly validated."""
+        review = self.inspect(shot_id, provider_id)
+        key = (review.shot_id, review.provider_id)
+        return (
+            review.validation_passed
+            and self._validated_fingerprints.get(key) == review.dependency_fingerprint
+        )
+
     def approve(
         self,
         shot_id: str,
@@ -247,15 +280,22 @@ class ProductionPackageReviewService:
         notes: str = "",
         provider_id: str = "comfyui",
     ) -> ProductionPackageReview:
-        """Persist explicit human approval after a clean validation pass."""
-        review = self.validate(shot_id, provider_id)
+        """Persist explicit human approval only after explicit current validation."""
+        review = self.inspect(shot_id, provider_id)
+        key = (review.shot_id, review.provider_id)
+        if self._validated_fingerprints.get(key) != review.dependency_fingerprint:
+            raise ValueError(
+                "Validate Package must complete successfully before production approval."
+            )
         reviewer = reviewed_by.strip()
         if not review.validation_passed:
             raise ValueError(
                 "Production Package cannot be approved while validation errors remain."
             )
         if not reviewer:
-            raise ValueError("Human reviewer identity is required for production approval.")
+            raise ValueError(
+                "Human reviewer identity is required for production approval."
+            )
         approved = replace(
             review,
             status=ReviewStatus.APPROVED,
@@ -278,10 +318,13 @@ class ProductionPackageReviewService:
         reviewer = reviewed_by.strip()
         review_notes = notes.strip()
         if not reviewer:
-            raise ValueError("Human reviewer identity is required to request changes.")
+            raise ValueError(
+                "Human reviewer identity is required to request changes."
+            )
         if not review_notes:
             raise ValueError("Review notes are required when requesting changes.")
-        review = self.validate(shot_id, provider_id)
+        review = self.inspect(shot_id, provider_id)
+        self._validated_fingerprints.pop((review.shot_id, review.provider_id), None)
         changed = replace(
             review,
             status=ReviewStatus.CHANGES_REQUIRED,
@@ -301,17 +344,28 @@ class ProductionPackageReviewService:
             return None
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            findings = tuple(ValidationFinding(**item) for item in raw.pop("findings", []))
+            findings = tuple(
+                ValidationFinding(**item) for item in raw.pop("findings", [])
+            )
             raw["status"] = ReviewStatus(str(raw["status"]))
             review = ProductionPackageReview(findings=findings, **raw)
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise ValueError(f"Unable to load Production Package review: {exc}") from exc
-        fresh = self.validate(shot_id, provider_id)
+            raise ValueError(
+                f"Unable to load Production Package review: {exc}"
+            ) from exc
+        fresh = self.inspect(shot_id, provider_id)
         if review.dependency_fingerprint == fresh.dependency_fingerprint:
             return review
-        return replace(review, status=ReviewStatus.STALE, validation_passed=False)
+        self._validated_fingerprints.pop((fresh.shot_id, fresh.provider_id), None)
+        return replace(
+            review,
+            status=ReviewStatus.STALE,
+            validation_passed=False,
+        )
 
-    def execution_authorized(self, shot_id: str, provider_id: str = "comfyui") -> bool:
+    def execution_authorized(
+        self, shot_id: str, provider_id: str = "comfyui"
+    ) -> bool:
         """Return whether current provider execution has final human authorization."""
         review = self.current_review(shot_id, provider_id)
         return review is not None and review.status is ReviewStatus.APPROVED
@@ -348,18 +402,29 @@ class ProductionPackageReviewService:
             "universal_status": str(getattr(universal, "status", "")),
             "provider_dependency": getattr(provider, "dependency_fingerprint", ""),
             "provider_status": str(getattr(provider, "status", "")),
-            "provider_output": (provider.output_value() if provider is not None else {}),
+            "provider_output": (
+                provider.output_value() if provider is not None else {}
+            ),
         }
-        encoded = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
+        encoded = json.dumps(
+            payload,
+            sort_keys=True,
+            default=str,
+            separators=(",", ":"),
+        )
         return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     def _path(self, shot_id: str, provider_id: str) -> Path:
         root = self.projects.project_directory
         if root is None:
-            raise RuntimeError("A project must be open before reviewing a Production Package.")
+            raise RuntimeError(
+                "A project must be open before reviewing a Production Package."
+            )
         directory = root / "production" / "reviews"
         directory.mkdir(parents=True, exist_ok=True)
-        name = f"{shot_id.strip().upper()}--{provider_id.strip().lower()}.review.json"
+        name = (
+            f"{shot_id.strip().upper()}--{provider_id.strip().lower()}.review.json"
+        )
         return directory / name
 
     def _write(self, review: ProductionPackageReview) -> None:
@@ -367,5 +432,8 @@ class ProductionPackageReviewService:
         temporary = path.with_suffix(path.suffix + ".tmp")
         payload = asdict(review)
         payload["status"] = review.status.value
-        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         temporary.replace(path)
