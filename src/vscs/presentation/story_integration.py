@@ -123,8 +123,8 @@ def install_story_browser() -> None:
             (GovernedPlanningReviewService, register_governed_planning_review),
             (GovernedPlanningIntegrationService, register_governed_planning_integration),
         )
-        for service_type, register in registrations:
-            if window.services.get(service_type) is None:
+        for registration_service_type, register in registrations:
+            if window.services.get(registration_service_type) is None:
                 register(window.services)
         register_ai_story_analysis(window.services)
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
@@ -195,7 +195,7 @@ def install_story_browser() -> None:
                 ActionPerformanceCompilerService,
                 ActionPerformanceCompilerService(window.projects, package_service),
             )
-        for service_type, factory in (
+        for compiler_service_type, compiler_factory in (
             (AssetCompilerService, AssetCompilerService),
             (CameraCompilerService, CameraCompilerService),
             (LightingCompilerService, LightingCompilerService),
@@ -206,10 +206,11 @@ def install_story_browser() -> None:
                 UniversalProductionDescriptionCompilerService,
             ),
         ):
-            service = window.services.get(service_type)
+            service = window.services.get(compiler_service_type)
             if service is None:
                 service = window.services.register(
-                    service_type, factory(window.projects, package_service)
+                    compiler_service_type,
+                    compiler_factory(window.projects, package_service),
                 )
             compilers.append(service)
         (
