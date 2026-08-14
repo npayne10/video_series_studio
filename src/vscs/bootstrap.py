@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from vscs.application.acpp import ACPPEditorService
 from vscs.application.assets import AssetRepository, AssetService
+from vscs.application.automation import AutomationProposalService
 from vscs.application.caps import (
     CanonicalReferenceRepository,
     CanonicalReferenceService,
@@ -181,6 +182,7 @@ def build_application_context(
 
     database = services.register(DatabaseManager, DatabaseManager())
     projects = services.register(ProjectService, ProjectService(configuration, database))
+    services.register(AutomationProposalService, AutomationProposalService(projects))
     stories = services.register(StoryService, StoryService(projects))
     register_story_approval(services)
     register_story_analysis(services)
@@ -378,11 +380,10 @@ def _cap_provider(
     settings = configuration.settings.ai
     if settings.provider is AIProvider.OPENAI:
         try:
-            api_key = AICredentialStore().get_openai_api_key()
-            return OpenAICAPGenerationProvider(
-                api_key=api_key,
-                model=settings.openai_model,
-            )
-        except (RuntimeError, ValueError):
-            return TemplateCAPGenerationProvider()
+            credentials = AICredentialStore(configuration).load()
+            api_key = credentials.api_key
+        except Exception:
+            api_key = ""
+        if api_key.strip():
+            return OpenAICAPGenerationProvider(api_key=api_key, model=settings.model)
     return TemplateCAPGenerationProvider()
