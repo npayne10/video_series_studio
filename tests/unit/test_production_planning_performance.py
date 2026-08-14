@@ -150,6 +150,9 @@ class _Workspace:
     def _load_provider_draft(self) -> None:
         self._load("provider")
 
+    def _load_production_review(self) -> None:
+        self._load("review")
+
     def _update_future_footer(self) -> None:
         self.footer_updates += 1
 
@@ -193,6 +196,9 @@ def test_snapshot_refresh_avoids_rematerialization_and_loads_each_compiler_once(
         "universal": 1,
         "provider": 1,
     }
-    assert workspace.loader_calls == workspace.state_calls
+    assert workspace.loader_calls == {
+        **workspace.state_calls,
+        "review": 1,
+    }
     assert selection_events == 0
     assert workspace.footer_updates == 1
