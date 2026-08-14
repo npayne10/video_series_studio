@@ -64,6 +64,9 @@ from vscs.presentation.widgets.environment_planner_integration import (
     install_environment_planner_navigation,
 )
 from vscs.presentation.widgets.episode_planner import install_episode_planner
+from vscs.presentation.widgets.episode_scene_proposal_integration import (
+    install_episode_scene_proposal_action,
+)
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
 from vscs.presentation.widgets.lighting_planner_integration import (
     install_lighting_planner_navigation,
@@ -132,6 +135,7 @@ def install_story_browser() -> None:
         if window.services.get(GovernedPlanningIntegrationService) is None:
             register_governed_planning_integration(window.services)
         register_ai_story_analysis(window.services)
+        install_episode_scene_proposal_action(window.services)
 
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
