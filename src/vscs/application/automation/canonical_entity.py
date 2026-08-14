@@ -7,7 +7,8 @@ from hashlib import sha256
 from vscs.application.asset_resolution import (
     AssetResolutionRequest,
     AssetResolutionService,
-    AssetResolutionStatus,
+    ResolvedAssetBinding,
+    ResolvedCAPBinding,
 )
 from vscs.domain.assets import AssetCategory
 from vscs.domain.story_analysis import (
@@ -75,8 +76,6 @@ class CanonicalEntityAssetResolutionAutomationService:
         candidate: EntityCandidate,
     ) -> AutomationProposal:
         expected_category = self._asset_category(candidate.category)
-        resolution_payload: dict[str, object]
-        canonical_status: str
         dependency_fingerprint = ""
 
         if (
@@ -96,7 +95,7 @@ class CanonicalEntityAssetResolutionAutomationService:
             canonical_status = result.status.value
             if result.fingerprint is not None:
                 dependency_fingerprint = result.fingerprint.checksum
-            resolution_payload = {
+            resolution_payload: dict[str, object] = {
                 "resolution_kind": "existing_canonical_asset",
                 "matched_asset_id": candidate.matched_asset_id,
                 "matched_asset_name": candidate.matched_asset_name or "",
@@ -124,7 +123,11 @@ class CanonicalEntityAssetResolutionAutomationService:
                 ],
             }
         else:
-            canonical_status = "new_asset_required"
+            canonical_status = (
+                "new_asset_required"
+                if candidate.match_kind is ResolutionMatchKind.NEW
+                else "human_resolution_required"
+            )
             resolution_payload = {
                 "resolution_kind": candidate.match_kind.value,
                 "matched_asset_id": candidate.matched_asset_id or "",
@@ -157,15 +160,19 @@ class CanonicalEntityAssetResolutionAutomationService:
                 source_kind=AutomationSourceKind.DETERMINISTIC_RESOLUTION,
                 source_story_id=story_id,
                 source_revision=revision,
-                source_scope="current Story entity-resolution candidate plus authoritative XPD/CAP data",
+                source_scope=(
+                    "current Story entity-resolution candidate plus authoritative XPD/CAP data"
+                ),
                 provider="vscs",
                 model="deterministic-canonical-resolution",
                 confidence=candidate.confidence,
                 inference_note=(
-                    "Canonical identity is resolved deterministically against current XPD/CAP truth. "
-                    "Unmatched or ambiguous entities remain proposals requiring human review."
+                    "Canonical identity is resolved deterministically against current XPD/CAP "
+                    "truth. Unmatched or ambiguous entities remain proposals requiring human review."
                 ),
-                resolution_method="Story entity match plus authoritative Asset/CAP/reference resolution",
+                resolution_method=(
+                    "Story entity match plus authoritative Asset/CAP/reference resolution"
+                ),
             ),
             metadata={
                 "phase": "19.5.5",
@@ -190,7 +197,7 @@ class CanonicalEntityAssetResolutionAutomationService:
         return mapping.get(category, AssetCategory.OTHER)
 
     @staticmethod
-    def _asset_payload(asset: object | None) -> dict[str, object] | None:
+    def _asset_payload(asset: ResolvedAssetBinding | None) -> dict[str, object] | None:
         if asset is None:
             return None
         return {
@@ -204,7 +211,7 @@ class CanonicalEntityAssetResolutionAutomationService:
         }
 
     @staticmethod
-    def _cap_payload(cap: object | None) -> dict[str, object] | None:
+    def _cap_payload(cap: ResolvedCAPBinding | None) -> dict[str, object] | None:
         if cap is None:
             return None
         return {
@@ -220,14 +227,21 @@ class CanonicalEntityAssetResolutionAutomationService:
 
     @staticmethod
     def _proposed_asset_id(candidate: EntityCandidate) -> str:
-        category = CanonicalEntityAssetResolutionAutomationService._asset_category(candidate.category)
-        slug = "-".join(
-            "".join(character for character in candidate.name.upper() if character.isalnum() or character == " ").split()
-        )[:40]
+        category = CanonicalEntityAssetResolutionAutomationService._asset_category(
+            candidate.category
+        )
+        normalized = "".join(
+            character
+            for character in candidate.name.upper()
+            if character.isalnum() or character == " "
+        )
+        slug = "-".join(normalized.split())[:40]
         digest = sha256(candidate.candidate_id.encode("utf-8")).hexdigest()[:8].upper()
         return f"AUTO-{category.value.upper()}-{slug or 'ENTITY'}-{digest}"
 
     @staticmethod
     def _proposal_id(story_id: str, revision: str, candidate_id: str) -> str:
-        digest = sha256(f"{story_id}|{revision}|asset|{candidate_id}".encode("utf-8")).hexdigest()
+        digest = sha256(
+            f"{story_id}|{revision}|asset|{candidate_id}".encode("utf-8")
+        ).hexdigest()
         return f"AUT-ASSET-{digest[:12].upper()}"
