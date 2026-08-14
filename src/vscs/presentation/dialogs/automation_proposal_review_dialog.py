@@ -42,10 +42,8 @@ class AutomationProposalReviewDialog(QDialog):
         self.story_id = story_id.strip().upper()
         self.source_revision = source_revision.strip()
         self._proposal_by_id: dict[str, AutomationProposal] = {}
-
         self.setWindowTitle("Automation Proposal Review")
         self.resize(1100, 720)
-
         layout = QVBoxLayout(self)
         heading = QLabel(
             f"Story: {self.story_id}    Revision: {self.source_revision}\n"
@@ -55,30 +53,26 @@ class AutomationProposalReviewDialog(QDialog):
         )
         heading.setWordWrap(True)
         layout.addWidget(heading)
-
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self.tree = QTreeWidget(splitter)
         self.tree.setObjectName("automationProposalTree")
         self.tree.setHeaderLabels(["Proposal", "Status", "Runtime"])
         self.tree.setColumnWidth(0, 390)
         self.tree.setColumnWidth(1, 100)
-
         self.details = QPlainTextEdit(splitter)
         self.details.setObjectName("automationProposalDetails")
         self.details.setReadOnly(True)
         self.details.setPlaceholderText(
-            "Select a Story, Asset, Episode, Scene or Shot proposal to inspect it."
+            "Select a Story, Asset, Episode, Scene, Shot, Performance or Environment proposal."
         )
         splitter.addWidget(self.tree)
         splitter.addWidget(self.details)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
         layout.addWidget(splitter, 1)
-
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=self)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
-
         self.tree.currentItemChanged.connect(self._selection_changed)
         self.refresh()
 
@@ -93,16 +87,16 @@ class AutomationProposalReviewDialog(QDialog):
             and proposal.provenance.source_revision == self.source_revision
         )
         self._proposal_by_id = {proposal.proposal_id: proposal for proposal in selected}
-
         interpretations = self._of_type(selected, AutomationProposalType.STORY_INTERPRETATION)
         assets = self._of_type(selected, AutomationProposalType.ASSET)
         episodes = self._of_type(selected, AutomationProposalType.EPISODE)
         scenes = self._of_type(selected, AutomationProposalType.SCENE)
         shots = self._of_type(selected, AutomationProposalType.SHOT)
+        performances = self._of_type(selected, AutomationProposalType.ACTION_PERFORMANCE)
+        environments = self._of_type(selected, AutomationProposalType.ENVIRONMENT)
 
         for proposal in interpretations:
             self.tree.addTopLevelItem(self._item(proposal, prefix="Story Interpretation"))
-
         if assets:
             asset_root = QTreeWidgetItem(["Canonical Entity & Asset Resolution", "", ""])
             for proposal in sorted(assets, key=self._asset_sort):
@@ -116,29 +110,45 @@ class AutomationProposalReviewDialog(QDialog):
             episode_item = self._item(episode)
             self.tree.addTopLevelItem(episode_item)
             episode_scenes = (
-                item
-                for item in scenes
-                if str(item.payload.get("episode_id", "")) == episode.target_id
+                item for item in scenes if str(item.payload.get("episode_id", "")) == episode.target_id
             )
             for scene in sorted(episode_scenes, key=self._sequence_sort):
                 scene_item = self._item(scene)
                 episode_item.addChild(scene_item)
                 scene_items[scene.target_id] = scene_item
-
-        orphan_scenes = tuple(scene for scene in scenes if scene.target_id not in scene_items)
-        for scene in sorted(orphan_scenes, key=self._sequence_sort):
+        for scene in sorted(
+            (scene for scene in scenes if scene.target_id not in scene_items),
+            key=self._sequence_sort,
+        ):
             scene_item = self._item(scene)
             self.tree.addTopLevelItem(scene_item)
             scene_items[scene.target_id] = scene_item
 
+        shot_items: dict[str, QTreeWidgetItem] = {}
         for shot in sorted(shots, key=self._shot_sort):
             scene_id = str(shot.payload.get("scene_id", ""))
             parent = scene_items.get(scene_id)
             shot_item = self._item(shot)
+            shot_items[shot.target_id] = shot_item
             if parent is None:
                 self.tree.addTopLevelItem(shot_item)
             else:
                 parent.addChild(shot_item)
+
+        for performance in sorted(performances, key=lambda item: item.target_id):
+            parent = shot_items.get(performance.target_id)
+            item = self._item(performance, prefix="Action / Dialogue / Performance")
+            if parent is None:
+                self.tree.addTopLevelItem(item)
+            else:
+                parent.addChild(item)
+        for environment in sorted(environments, key=lambda item: item.target_id):
+            parent = shot_items.get(environment.target_id)
+            item = self._item(environment, prefix="Environment Production")
+            if parent is None:
+                self.tree.addTopLevelItem(item)
+            else:
+                parent.addChild(item)
 
         self.tree.expandAll()
         if self.tree.topLevelItemCount():
