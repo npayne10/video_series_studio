@@ -27,7 +27,9 @@ class _ProposalStore:
         return tuple(self.proposals)
 
     def save(self, proposal: AutomationProposal) -> AutomationProposal:
-        self.proposals = [item for item in self.proposals if item.proposal_id != proposal.proposal_id]
+        self.proposals = [
+            item for item in self.proposals if item.proposal_id != proposal.proposal_id
+        ]
         self.proposals.append(proposal)
         return proposal
 

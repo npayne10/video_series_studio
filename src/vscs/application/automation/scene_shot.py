@@ -78,7 +78,9 @@ class TemplateSceneShotProposalProvider:
         scene_runtime = max(1, self._integer(scene_payload.get("target_runtime_seconds"), 60))
         events = self._strings(scene_payload.get("required_events"))
         if not events:
-            fallback = str(scene_payload.get("story_scope", "")).strip() or "Present the Scene intent"
+            fallback = (
+                str(scene_payload.get("story_scope", "")).strip() or "Present the Scene intent"
+            )
             events = (fallback,)
         if scene_runtime < len(events):
             events = events[:scene_runtime]
@@ -89,7 +91,9 @@ class TemplateSceneShotProposalProvider:
         remaining = scene_runtime
         shots: list[ShotProposalDraft] = []
         for index, event in enumerate(events, start=1):
-            runtime = remaining if index == count else min(base_runtime, remaining - (count - index))
+            runtime = (
+                remaining if index == count else min(base_runtime, remaining - (count - index))
+            )
             remaining -= runtime
             shots.append(
                 ShotProposalDraft(
@@ -138,11 +142,7 @@ class TemplateSceneShotProposalProvider:
             return (normalized,) if normalized else ()
         if not isinstance(value, Iterable):
             return ()
-        return tuple(
-            normalized
-            for item in value
-            if (normalized := str(item).strip())
-        )
+        return tuple(normalized for item in value if (normalized := str(item).strip()))
 
 
 class SceneShotProposalAutomationService:
@@ -181,7 +181,9 @@ class SceneShotProposalAutomationService:
             and proposal.provenance.source_revision == revision
         )
         if not scene_proposals:
-            raise ValueError("Generate current Episode/Scene proposals before generating Shot proposals")
+            raise ValueError(
+                "Generate current Episode/Scene proposals before generating Shot proposals"
+            )
 
         generated: list[AutomationProposal] = []
         for scene in sorted(scene_proposals, key=lambda item: item.target_id):
@@ -284,7 +286,9 @@ class SceneShotProposalAutomationService:
         draft: SceneShotProposalDraft,
     ) -> None:
         raw_runtime = scene.payload.get("target_runtime_seconds")
-        scene_runtime = raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
+        scene_runtime = (
+            raw_runtime if isinstance(raw_runtime, int) and not isinstance(raw_runtime, bool) else 0
+        )
         if scene_runtime <= 0:
             raise ValueError(f"Scene proposal {scene.target_id} has no valid runtime budget")
         total = sum(shot.target_runtime_seconds for shot in draft.shots)
@@ -295,7 +299,9 @@ class SceneShotProposalAutomationService:
             )
         sequence = tuple(shot.sequence_number for shot in draft.shots)
         if sequence != tuple(range(1, len(draft.shots) + 1)):
-            raise ValueError(f"Shot proposals for {scene.target_id} must use contiguous sequence numbers")
+            raise ValueError(
+                f"Shot proposals for {scene.target_id} must use contiguous sequence numbers"
+            )
 
     @staticmethod
     def _proposal_id(story_id: str, revision: str, scene_id: str, target_id: str) -> str:
