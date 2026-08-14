@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
+from vscs.infrastructure.ai.scene_shot_provider import OpenAISceneShotProposalProvider
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService
 from vscs.infrastructure.services import ApplicationServices
 
@@ -11,6 +12,11 @@ from .episode_scene import (
     EpisodeSceneProposalAutomationService,
     EpisodeSceneProposalProvider,
     TemplateEpisodeSceneProposalProvider,
+)
+from .scene_shot import (
+    SceneShotProposalAutomationService,
+    SceneShotProposalProvider,
+    TemplateSceneShotProposalProvider,
 )
 from .service import AutomationProposalService
 
@@ -21,6 +27,7 @@ def register_episode_scene_automation(
     """Register the configured Episode/Scene proposal service exactly once."""
     existing = services.get(EpisodeSceneProposalAutomationService)
     if existing is not None:
+        register_scene_shot_automation(services)
         return existing
 
     configuration = services.require(ConfigurationService)
@@ -38,4 +45,32 @@ def register_episode_scene_automation(
         provider,
         services.require(AutomationProposalService),
     )
-    return services.register(EpisodeSceneProposalAutomationService, service)
+    registered = services.register(EpisodeSceneProposalAutomationService, service)
+    register_scene_shot_automation(services)
+    return registered
+
+
+def register_scene_shot_automation(
+    services: ApplicationServices,
+) -> SceneShotProposalAutomationService:
+    """Register the configured Scene/Shot proposal service exactly once."""
+    existing = services.get(SceneShotProposalAutomationService)
+    if existing is not None:
+        return existing
+
+    configuration = services.require(ConfigurationService)
+    provider: SceneShotProposalProvider = TemplateSceneShotProposalProvider()
+    if configuration.settings.ai.provider is AIProvider.OPENAI:
+        try:
+            provider = OpenAISceneShotProposalProvider(
+                api_key=AICredentialStore().get_openai_api_key(),
+                model=configuration.settings.ai.openai_model,
+            )
+        except (RuntimeError, ValueError):
+            provider = TemplateSceneShotProposalProvider()
+
+    service = SceneShotProposalAutomationService(
+        provider,
+        services.require(AutomationProposalService),
+    )
+    return services.register(SceneShotProposalAutomationService, service)
