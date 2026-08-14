@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QSplitter,
@@ -100,17 +98,18 @@ class AutomationProposalReviewDialog(QDialog):
         shots = self._of_type(selected, AutomationProposalType.SHOT)
 
         for proposal in interpretations:
-            item = self._item(proposal, prefix="Story Interpretation")
-            self.tree.addTopLevelItem(item)
+            self.tree.addTopLevelItem(self._item(proposal, prefix="Story Interpretation"))
 
         scene_items: dict[str, QTreeWidgetItem] = {}
         for episode in sorted(episodes, key=self._sequence_sort):
             episode_item = self._item(episode)
             self.tree.addTopLevelItem(episode_item)
-            for scene in sorted(
-                (item for item in scenes if str(item.payload.get("episode_id", "")) == episode.target_id),
-                key=self._sequence_sort,
-            ):
+            episode_scenes = (
+                item
+                for item in scenes
+                if str(item.payload.get("episode_id", "")) == episode.target_id
+            )
+            for scene in sorted(episode_scenes, key=self._sequence_sort):
                 scene_item = self._item(scene)
                 episode_item.addChild(scene_item)
                 scene_items[scene.target_id] = scene_item
