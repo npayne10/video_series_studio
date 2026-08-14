@@ -1,6 +1,7 @@
 """AI provider infrastructure exports."""
 
 from vscs.infrastructure.ai.credentials import AICredentialStore, CredentialStorageError
+from vscs.infrastructure.ai.episode_scene_provider import OpenAIEpisodeSceneProposalProvider
 from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
 from vscs.infrastructure.ai.provider import (
     AIProviderError,
@@ -18,6 +19,7 @@ __all__ = (
     "CAPGenerationProvider",
     "CredentialStorageError",
     "OpenAICAPGenerationProvider",
+    "OpenAIEpisodeSceneProposalProvider",
     "OpenAIStoryAIAnalysisProvider",
     "TemplateCAPGenerationProvider",
     "TemplateStoryAIAnalysisProvider",
