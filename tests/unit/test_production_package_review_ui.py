@@ -41,6 +41,45 @@ class _Acceptance:
         return SimpleNamespace(accepted=self.accepted, checks=failed)
 
 
+class _ReviewGate:
+    def __init__(self, confirmed: bool) -> None:
+        self.confirmed = confirmed
+
+    def validation_confirmed(self, _shot_id: str, _provider_id: str) -> bool:
+        return self.confirmed
+
+
+def _workspace(parent: QWidget, *, validated: bool, accepted: bool):
+    return SimpleNamespace(
+        production_review_status=QLabel(parent),
+        production_acceptance_status=QLabel(parent),
+        production_review_summary=QTextEdit(parent),
+        production_review_reviewer=QLineEdit(parent),
+        production_review_notes=QTextEdit(parent),
+        production_review_approve_button=QPushButton(parent),
+        production_review_changes_button=QPushButton(parent),
+        production_review_service=_ReviewGate(validated),
+        production_acceptance_service=_Acceptance(accepted),
+    )
+
+
+def _review(status: ReviewStatus = ReviewStatus.REVIEW_REQUIRED) -> ProductionPackageReview:
+    return ProductionPackageReview(
+        shot_id="SHT-001",
+        provider_id="comfyui",
+        status=status,
+        validation_passed=True,
+        findings=(),
+        dependency_fingerprint="fingerprint",
+        canonical_reference_count=4,
+        asset_count=4,
+        provider_contract="vscs.comfyui.production-input.v1",
+        provider_execution="not-submitted",
+        reviewed_at="2026-08-13T00:00:00+00:00",
+        reviewed_by="Neill" if status is ReviewStatus.APPROVED else "",
+    )
+
+
 def test_production_review_tab_exposes_final_human_gate(qtbot) -> None:
     parent = QWidget()
     qtbot.addWidget(parent)
@@ -56,34 +95,24 @@ def test_production_review_tab_exposes_final_human_gate(qtbot) -> None:
     assert workspace.production_acceptance_status.text() == ""
 
 
-def test_review_render_enables_approval_only_after_validation_pass(qtbot) -> None:
+def test_review_render_blocks_approval_before_explicit_validation(qtbot) -> None:
     parent = QWidget()
     qtbot.addWidget(parent)
-    workspace = SimpleNamespace(
-        production_review_status=QLabel(parent),
-        production_acceptance_status=QLabel(parent),
-        production_review_summary=QTextEdit(parent),
-        production_review_reviewer=QLineEdit(parent),
-        production_review_notes=QTextEdit(parent),
-        production_review_approve_button=QPushButton(parent),
-        production_review_changes_button=QPushButton(parent),
-        production_acceptance_service=_Acceptance(False),
-    )
-    review = ProductionPackageReview(
-        shot_id="SHT-001",
-        provider_id="comfyui",
-        status=ReviewStatus.REVIEW_REQUIRED,
-        validation_passed=True,
-        findings=(),
-        dependency_fingerprint="fingerprint",
-        canonical_reference_count=4,
-        asset_count=4,
-        provider_contract="vscs.comfyui.production-input.v1",
-        provider_execution="not-submitted",
-        reviewed_at="2026-08-13T00:00:00+00:00",
-    )
+    workspace = _workspace(parent, validated=False, accepted=False)
 
-    _render(workspace, review, False)
+    _render(workspace, _review(), False)
+
+    assert "READY FOR VALIDATION" in workspace.production_review_status.text()
+    assert "PHASE 19.4 NOT READY" in workspace.production_acceptance_status.text()
+    assert not workspace.production_review_approve_button.isEnabled()
+
+
+def test_review_render_enables_approval_after_explicit_validation_pass(qtbot) -> None:
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    workspace = _workspace(parent, validated=True, accepted=False)
+
+    _render(workspace, _review(), False)
 
     assert "VALIDATION PASS" in workspace.production_review_status.text()
     assert "PHASE 19.4 NOT READY" in workspace.production_acceptance_status.text()
@@ -94,32 +123,9 @@ def test_review_render_enables_approval_only_after_validation_pass(qtbot) -> Non
 def test_review_render_shows_phase_19_4_accepted_after_final_gate(qtbot) -> None:
     parent = QWidget()
     qtbot.addWidget(parent)
-    workspace = SimpleNamespace(
-        production_review_status=QLabel(parent),
-        production_acceptance_status=QLabel(parent),
-        production_review_summary=QTextEdit(parent),
-        production_review_reviewer=QLineEdit(parent),
-        production_review_notes=QTextEdit(parent),
-        production_review_approve_button=QPushButton(parent),
-        production_review_changes_button=QPushButton(parent),
-        production_acceptance_service=_Acceptance(True),
-    )
-    review = ProductionPackageReview(
-        shot_id="SHT-001",
-        provider_id="comfyui",
-        status=ReviewStatus.APPROVED,
-        validation_passed=True,
-        findings=(),
-        dependency_fingerprint="fingerprint",
-        canonical_reference_count=4,
-        asset_count=4,
-        provider_contract="vscs.comfyui.production-input.v1",
-        provider_execution="not-submitted",
-        reviewed_at="2026-08-13T00:00:00+00:00",
-        reviewed_by="Neill",
-    )
+    workspace = _workspace(parent, validated=False, accepted=True)
 
-    _render(workspace, review, True)
+    _render(workspace, _review(ReviewStatus.APPROVED), True)
 
     assert "APPROVED FOR PRODUCTION" in workspace.production_review_status.text()
     assert "PHASE 19.4 ACCEPTED" in workspace.production_acceptance_status.text()
