@@ -205,6 +205,40 @@ class EntityResolutionService:
             if len(title_matches) > 1:
                 return ResolutionMatchKind.POSSIBLE_DUPLICATE, title_matches[0]
 
+            # Safe subset matching is limited to character identities and only
+            # promotes a unique match when at least two name tokens are present.
+            # A single token such as "James" remains a reviewable suggestion.
+            candidate_token_sets = {
+                cls._character_tokens(name),
+                *(cls._character_tokens(alias) for alias in aliases),
+            }
+            candidate_token_sets.discard(frozenset())
+            multi_token_matches = [
+                asset
+                for asset in compatible
+                if any(
+                    len(tokens) >= 2 and tokens.issubset(cls._character_tokens(asset.name))
+                    for tokens in candidate_token_sets
+                )
+            ]
+            if len(multi_token_matches) == 1:
+                return ResolutionMatchKind.EXISTING, multi_token_matches[0]
+            if len(multi_token_matches) > 1:
+                return ResolutionMatchKind.POSSIBLE_DUPLICATE, multi_token_matches[0]
+
+            single_token_matches = [
+                asset
+                for asset in compatible
+                if any(
+                    len(tokens) == 1 and tokens.issubset(cls._character_tokens(asset.name))
+                    for tokens in candidate_token_sets
+                )
+            ]
+            if len(single_token_matches) == 1:
+                return ResolutionMatchKind.POSSIBLE_DUPLICATE, single_token_matches[0]
+            if len(single_token_matches) > 1:
+                return ResolutionMatchKind.POSSIBLE_DUPLICATE, single_token_matches[0]
+
         return ResolutionMatchKind.NEW, None
 
     @classmethod
@@ -217,6 +251,17 @@ class EntityResolutionService:
                 stripped = stripped[len(prefix) :]
                 break
         return cls._normalize(stripped)
+
+    @classmethod
+    def _character_tokens(cls, value: str) -> frozenset[str]:
+        stripped = " ".join(value.casefold().replace(".", "").split())
+        for title in cls._CHARACTER_TITLES:
+            prefix = f"{title} "
+            if stripped.startswith(prefix):
+                stripped = stripped[len(prefix) :]
+                break
+        normalized = "".join(character if character.isalnum() else " " for character in stripped)
+        return frozenset(token for token in normalized.split() if len(token) >= 2)
 
     @staticmethod
     def _compatible(category: EntityResolutionCategory, asset_category: AssetCategory) -> bool:
