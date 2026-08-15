@@ -10,7 +10,7 @@ Workspace actions; no production service or governance behaviour is duplicated.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QListWidget, QPushButton, QTreeWidget, QTreeWidgetItem
@@ -20,7 +20,8 @@ ACTION_ROLE = SECTION_ROLE + 1
 
 
 def _find_button(workspace: Any, *, object_name: str = "", text: str = "") -> QPushButton | None:
-    for button in workspace.findChildren(QPushButton):
+    for child in workspace.findChildren(QPushButton):
+        button = cast(QPushButton, child)
         if object_name and button.objectName() == object_name:
             return button
         if text and button.text().replace("&", "").strip() == text:
