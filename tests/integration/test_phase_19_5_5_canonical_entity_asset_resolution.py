@@ -42,9 +42,10 @@ def test_canonical_entity_asset_automation_is_registered_with_story_workspace(
         workspace = window.story_browser
 
         assert isinstance(service, CanonicalEntityAssetResolutionAutomationService)
-        assert not workspace.resolve_assets_button.isHidden()
+        # Phase 19.5.12A relocates these actions into hierarchical navigation.
+        assert workspace.resolve_assets_button.isHidden()
         assert workspace.resolve_assets_button.text() == "Resolve Assets…"
-        assert not workspace.review_proposals_button.isHidden()
+        assert workspace.review_proposals_button.isHidden()
 
 
 def test_new_story_entities_remain_proposals_and_do_not_create_assets(
