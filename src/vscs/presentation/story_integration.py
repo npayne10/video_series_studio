@@ -11,6 +11,7 @@ from vscs.application.asset_resolution import AssetBrowserService, register_asse
 from vscs.application.assets import AssetService
 from vscs.application.automation import (
     ActionPerformanceProposalAutomationService,
+    CameraLightingProposalAutomationService,
     EnvironmentProposalAutomationService,
     EpisodeSceneProposalAutomationService,
     SceneShotProposalAutomationService,
@@ -50,16 +51,10 @@ from vscs.application.story import (
     register_story_metadata,
     register_story_status,
 )
-from vscs.application.story_analysis import (
-    ApprovedStoryIntelligenceService,
-    StoryAnalysisCacheService,
-    StoryAnalysisEngine,
-)
+from vscs.application.story_analysis import ApprovedStoryIntelligenceService, StoryAnalysisCacheService, StoryAnalysisEngine
 from vscs.application.story_analysis.ai_composition import register_ai_story_analysis
 from vscs.application.style_compiler import StyleCompilerService
-from vscs.application.universal_production_description_compiler import (
-    UniversalProductionDescriptionCompilerService,
-)
+from vscs.application.universal_production_description_compiler import UniversalProductionDescriptionCompilerService
 from vscs.presentation.dialogs.guided_first_scene_editor_dialog import GuidedFirstSceneEditorDialog
 from vscs.presentation.widgets import episode_planner as episode_planner_module
 from vscs.presentation.widgets import production_planning_workspace as planning_workspace_module
@@ -67,21 +62,13 @@ from vscs.presentation.widgets import story_browser as story_browser_module
 from vscs.presentation.widgets.asset_resolver_integration import install_asset_resolver_navigation
 from vscs.presentation.widgets.automation_story_workspace import AutomationStoryWorkspaceWidget
 from vscs.presentation.widgets.camera_planner_integration import install_camera_planner_navigation
-from vscs.presentation.widgets.environment_planner_integration import (
-    install_environment_planner_navigation,
-)
+from vscs.presentation.widgets.environment_planner_integration import install_environment_planner_navigation
 from vscs.presentation.widgets.episode_planner import install_episode_planner
 from vscs.presentation.widgets.iterative_scene_planner import IterativeScenePlannerDialog
-from vscs.presentation.widgets.lighting_planner_integration import (
-    install_lighting_planner_navigation,
-)
+from vscs.presentation.widgets.lighting_planner_integration import install_lighting_planner_navigation
 from vscs.presentation.widgets.planning_review_integration import install_planning_review_navigation
-from vscs.presentation.widgets.production_planning_workspace import (
-    install_production_planning_workspace,
-)
-from vscs.presentation.widgets.universal_production_description_compiler_workspace import (
-    UniversalProductionDescriptionCompilerWorkspace,
-)
+from vscs.presentation.widgets.production_planning_workspace import install_production_planning_workspace
+from vscs.presentation.widgets.universal_production_description_compiler_workspace import UniversalProductionDescriptionCompilerWorkspace
 from vscs.presentation.windows.main_window import MainWindow
 
 
@@ -130,46 +117,24 @@ def install_story_browser() -> None:
         register_ai_story_analysis(window.services)
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
-            intelligence = window.services.register(
-                ApprovedStoryIntelligenceService,
-                ApprovedStoryIntelligenceService(window.services.require(AssetService)),
-            )
+            intelligence = window.services.register(ApprovedStoryIntelligenceService, ApprovedStoryIntelligenceService(window.services.require(AssetService)))
         analysis_engine = window.services.require(StoryAnalysisEngine)
         analysis_cache = window.services.get(StoryAnalysisCacheService)
         if analysis_cache is None:
-            analysis_cache = window.services.register(
-                StoryAnalysisCacheService,
-                StoryAnalysisCacheService(window.services.require(AssetService), analysis_engine),
-            )
+            analysis_cache = window.services.register(StoryAnalysisCacheService, StoryAnalysisCacheService(window.services.require(AssetService), analysis_engine))
         window.story_browser = AutomationStoryWorkspaceWidget(
-            window.services.require(StoryService),
-            window.services.require(AssetService),
-            window.services.require(ShotPlanningService),
-            window.services.require(ACPPEditorService),
-            asset_browser,
-            window.services.require(StoryLifecycleService),
-            window.services.require(StoryMetadataService),
-            window.services.require(StoryStatusService),
-            window.services.require(StoryApprovalService),
+            window.services.require(StoryService), window.services.require(AssetService), window.services.require(ShotPlanningService), window.services.require(ACPPEditorService), asset_browser,
+            window.services.require(StoryLifecycleService), window.services.require(StoryMetadataService), window.services.require(StoryStatusService), window.services.require(StoryApprovalService),
         )
         window.story_browser.analysis_engine = analysis_engine
         window.story_browser.analysis_cache = analysis_cache
         window.story_browser.intelligence_service = intelligence
-        window.story_browser.semantic_interpretation_service = window.services.require(
-            SemanticStoryInterpretationService
-        )
-        window.story_browser.episode_scene_automation_service = window.services.require(
-            EpisodeSceneProposalAutomationService
-        )
-        window.story_browser.scene_shot_automation_service = window.services.require(
-            SceneShotProposalAutomationService
-        )
-        window.story_browser.action_performance_automation_service = window.services.require(
-            ActionPerformanceProposalAutomationService
-        )
-        window.story_browser.environment_automation_service = window.services.require(
-            EnvironmentProposalAutomationService
-        )
+        window.story_browser.semantic_interpretation_service = window.services.require(SemanticStoryInterpretationService)
+        window.story_browser.episode_scene_automation_service = window.services.require(EpisodeSceneProposalAutomationService)
+        window.story_browser.scene_shot_automation_service = window.services.require(SceneShotProposalAutomationService)
+        window.story_browser.action_performance_automation_service = window.services.require(ActionPerformanceProposalAutomationService)
+        window.story_browser.environment_automation_service = window.services.require(EnvironmentProposalAutomationService)
+        window.story_browser.camera_lighting_automation_service = window.services.require(CameraLightingProposalAutomationService)
         episode_service = window.services.require(EpisodePlanningService)
         scene_service = window.services.require(ScenePlanningService)
         shot_service = window.services.require(GovernedShotPlanningService)
@@ -188,65 +153,32 @@ def install_story_browser() -> None:
         setattr(planning_review, "planning_integration_service", planning_integration)  # noqa: B010
         package_service = window.services.get(ProductionPackageService)
         if package_service is None:
-            package_service = window.services.register(
-                ProductionPackageService,
-                ProductionPackageService(window.projects, planning_integration),
-            )
+            package_service = window.services.register(ProductionPackageService, ProductionPackageService(window.projects, planning_integration))
         compilers = []
         action_service = window.services.get(ActionPerformanceCompilerService)
         if action_service is None:
-            action_service = window.services.register(
-                ActionPerformanceCompilerService,
-                ActionPerformanceCompilerService(window.projects, package_service),
-            )
+            action_service = window.services.register(ActionPerformanceCompilerService, ActionPerformanceCompilerService(window.projects, package_service))
         for compiler_service_type, compiler_factory in (
             (AssetCompilerService, AssetCompilerService),
             (CameraCompilerService, CameraCompilerService),
             (LightingCompilerService, LightingCompilerService),
             (ContinuityCompilerService, ContinuityCompilerService),
             (StyleCompilerService, StyleCompilerService),
-            (
-                UniversalProductionDescriptionCompilerService,
-                UniversalProductionDescriptionCompilerService,
-            ),
+            (UniversalProductionDescriptionCompilerService, UniversalProductionDescriptionCompilerService),
         ):
             service = window.services.get(compiler_service_type)
             if service is None:
-                service = window.services.register(
-                    compiler_service_type,
-                    compiler_factory(window.projects, package_service),
-                )
+                service = window.services.register(compiler_service_type, compiler_factory(window.projects, package_service))
             compilers.append(service)
-        (
-            asset_compiler,
-            camera_compiler,
-            lighting_compiler,
-            continuity_compiler,
-            style_compiler,
-            universal_compiler,
-        ) = compilers
-        window.episode_planner_button = install_episode_planner(
-            window.story_browser, episode_service, scene_service
-        )
+        asset_compiler, camera_compiler, lighting_compiler, continuity_compiler, style_compiler, universal_compiler = compilers
+        window.episode_planner_button = install_episode_planner(window.story_browser, episode_service, scene_service)
         window.episode_planner_button.setText("Production Planning…")
-        window.open_in_planner_button = install_production_planning_workspace(
-            window.story_browser, episode_service, scene_service, shot_service
-        )
+        window.open_in_planner_button = install_production_planning_workspace(window.story_browser, episode_service, scene_service, shot_service)
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(story_placeholder)
         story_placeholder.deleteLater()
         window.content_stack.insertWidget(2, window.story_browser)
-        window.production_package_workspace = UniversalProductionDescriptionCompilerWorkspace(
-            window.projects,
-            package_service,
-            action_service,
-            asset_compiler,
-            camera_compiler,
-            lighting_compiler,
-            continuity_compiler,
-            style_compiler,
-            universal_compiler,
-        )
+        window.production_package_workspace = UniversalProductionDescriptionCompilerWorkspace(window.projects, package_service, action_service, asset_compiler, camera_compiler, lighting_compiler, continuity_compiler, style_compiler, universal_compiler)
         window.content_stack.removeWidget(production_placeholder)
         production_placeholder.deleteLater()
         window.content_stack.insertWidget(6, window.production_package_workspace)
