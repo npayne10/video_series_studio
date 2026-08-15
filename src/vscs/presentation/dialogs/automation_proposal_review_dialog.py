@@ -92,6 +92,7 @@ class AutomationProposalReviewDialog(QDialog):
         environments = self._of_type(selected, AutomationProposalType.ENVIRONMENT)
         cameras = self._of_type(selected, AutomationProposalType.CAMERA)
         lighting = self._of_type(selected, AutomationProposalType.LIGHTING)
+        continuity = self._of_type(selected, AutomationProposalType.CONTINUITY)
 
         for proposal in interpretations:
             self.tree.addTopLevelItem(self._item(proposal, prefix="Story Interpretation"))
@@ -139,6 +140,7 @@ class AutomationProposalReviewDialog(QDialog):
             (environments, "Environment Production"),
             (cameras, "Camera Production"),
             (lighting, "Lighting Production"),
+            (continuity, "Continuity Awareness"),
         )
         for proposals, label in children:
             for proposal in sorted(proposals, key=lambda item: item.target_id):
