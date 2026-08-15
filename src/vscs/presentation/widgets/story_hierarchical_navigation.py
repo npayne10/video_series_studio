@@ -1,9 +1,9 @@
 """Hierarchical Story navigation for Phase 19.5.12A.
 
 The existing flat MainWindow navigation remains the compatibility controller so
-established section indexes, View-menu actions and tests are not rewritten.  A
+established section indexes, View-menu actions and tests are not rewritten. A
 QTreeWidget becomes the visible dock navigation and delegates top-level section
-selection back to that controller.  Story children invoke existing Story
+selection back to that controller. Story children invoke existing Story
 Workspace actions; no production service or governance behaviour is duplicated.
 """
 
@@ -13,7 +13,12 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QListWidget, QPushButton, QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import QListWidget, QMessageBox, QPushButton, QTreeWidget, QTreeWidgetItem
+
+from vscs.application.assets import AssetService
+from vscs.application.automation import AutomationProposalService, ShotAssetBindingService
+
+from .xpd_canonical_library_integration import binding_summary, import_xpd_library
 
 SECTION_ROLE = int(Qt.ItemDataRole.UserRole)
 ACTION_ROLE = SECTION_ROLE + 1
@@ -50,6 +55,40 @@ def _button_action(
     return invoke
 
 
+def _import_xpd_action(window: Any) -> Callable[[], None]:
+    def invoke() -> None:
+        window._story_flat_navigation_controller.setCurrentRow(2)
+        if import_xpd_library(window.story_browser, window.services.require(AssetService)):
+            window.story_browser.refresh()
+
+    return invoke
+
+
+def _bind_shot_assets_action(window: Any) -> Callable[[], None]:
+    def invoke() -> None:
+        window._story_flat_navigation_controller.setCurrentRow(2)
+        story = window.story_browser._selected_story()
+        if story is None:
+            QMessageBox.information(
+                window.story_browser,
+                "Bind Shot Assets",
+                "Select a Story before binding canonical assets to Shots.",
+            )
+            return
+        current = window.story_browser._current_analysis(story)
+        if current is None:
+            return
+        _source_text, revision, _baseline = current
+        service = ShotAssetBindingService(window.services.require(AutomationProposalService))
+        QMessageBox.information(
+            window.story_browser,
+            "Canonical Shot Asset Bindings",
+            binding_summary(service, story_id=story.story_id, revision=revision),
+        )
+
+    return invoke
+
+
 def _story_item(parent: QTreeWidgetItem, label: str, action_key: str) -> QTreeWidgetItem:
     item = QTreeWidgetItem(parent, [label])
     item.setData(0, ACTION_ROLE, action_key)
@@ -70,10 +109,7 @@ def _hide_relocated_toolbar_actions(window: Any) -> None:
         "reviewAutomationGaps",
     }
     for button in window.story_browser.findChildren(QPushButton):
-        if (
-            button.objectName() in relocated_object_names
-            or button.text().strip() == "Analyse Story"
-        ):
+        if button.objectName() in relocated_object_names or button.text().strip() == "Analyse Story":
             button.setVisible(False)
 
     for attribute in ("episode_planner_button", "open_in_planner_button"):
@@ -92,8 +128,6 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     if not isinstance(controller, QListWidget):
         raise RuntimeError("Phase 19.5.12A requires the established flat navigation controller")
 
-    # Keep the established list alive and connected.  MainWindow methods, View
-    # menu actions and historical tests continue to operate against it.
     controller.setParent(window)
     controller.hide()
     window._story_flat_navigation_controller = controller
@@ -128,7 +162,6 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         ("Story Analysis", "story.analysis"),
         ("Planning Proposals", "story.planning_proposals"),
         ("Shot Proposals", "story.shot_proposals"),
-        ("Canonical Asset Resolution", "story.resolve_assets"),
         ("Performance", "story.performance"),
         ("Environment", "story.environment"),
         ("Camera & Lighting", "story.camera_lighting"),
@@ -136,6 +169,12 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         ("AI Review & Gap Detection", "story.review_gaps"),
     ):
         _story_item(automation, label, action_key)
+
+    canonical_library = QTreeWidgetItem(story_root, ["Canonical Library"])
+    canonical_library.setFlags(canonical_library.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+    _story_item(canonical_library, "Import XPD Library…", "story.import_xpd")
+    _story_item(canonical_library, "Resolve Story Entities", "story.resolve_assets")
+    _story_item(canonical_library, "Bind Shot Assets…", "story.bind_shot_assets")
 
     _story_item(story_root, "Proposal Review", "story.proposal_review")
     _story_item(story_root, "Production Planning", "story.production_planning")
@@ -148,11 +187,11 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         "story.resolve_assets": _button_action(window, object_name="resolveCanonicalAssets"),
         "story.performance": _button_action(window, object_name="generatePerformanceProposals"),
         "story.environment": _button_action(window, object_name="generateEnvironmentProposals"),
-        "story.camera_lighting": _button_action(
-            window, object_name="generateCameraLightingProposals"
-        ),
+        "story.camera_lighting": _button_action(window, object_name="generateCameraLightingProposals"),
         "story.continuity": _button_action(window, object_name="generateContinuityProposals"),
         "story.review_gaps": _button_action(window, object_name="reviewAutomationGaps"),
+        "story.import_xpd": _import_xpd_action(window),
+        "story.bind_shot_assets": _bind_shot_assets_action(window),
         "story.proposal_review": _button_action(window, object_name="reviewAutomationProposals"),
         "story.production_planning": _button_action(
             window, explicit=getattr(window, "episode_planner_button", None)
@@ -185,6 +224,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     controller.currentRowChanged.connect(synchronize)
     story_root.setExpanded(True)
     automation.setExpanded(True)
+    canonical_library.setExpanded(True)
     synchronize(controller.currentRow())
     _hide_relocated_toolbar_actions(window)
     return tree
