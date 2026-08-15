@@ -41,7 +41,9 @@ def test_episode_scene_automation_is_registered_with_story_workspace(tmp_path: P
         workspace = window.story_browser
 
         assert isinstance(service, EpisodeSceneProposalAutomationService)
-        assert not workspace.planning_proposals_button.isHidden()
+        # Phase 19.5.12A relocates this action into hierarchical navigation;
+        # the underlying workspace control remains wired for compatibility.
+        assert workspace.planning_proposals_button.isHidden()
         assert workspace.planning_proposals_button.text() == "Planning Proposals…"
 
 
