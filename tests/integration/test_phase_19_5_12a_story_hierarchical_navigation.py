@@ -68,6 +68,8 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
         application.services.require(ProjectService).create(tmp_path / "VSCS TSR", name="VSCS TSR")
         window = application.create_main_window()
         qtbot.addWidget(window)
+        window.show()
+        qtbot.waitUntil(window.isVisible)
 
         for object_name in (
             "generatePlanningProposals",
@@ -86,6 +88,6 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
             assert button is not None
             assert button.isHidden()
 
-        assert not window.story_browser.new_button.isHidden()
-        assert not window.story_browser.edit_button.isHidden()
-        assert not window.story_browser.duplicate_button.isHidden()
+        assert window.story_browser.new_button.isVisible()
+        assert window.story_browser.edit_button.isVisible()
+        assert window.story_browser.duplicate_button.isVisible()
