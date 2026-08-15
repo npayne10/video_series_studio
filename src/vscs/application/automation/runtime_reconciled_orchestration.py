@@ -17,6 +17,8 @@ from .contracts import AutomationProposal, AutomationProposalType
 from .orchestration import (
     AutoCompilationReport,
     AutomationCompilationError,
+)
+from .orchestration import (
     ProposalAutoCompilationOrchestrator as BaseProposalAutoCompilationOrchestrator,
 )
 from .runtime_budget import fit_positive_runtimes_to_budget
