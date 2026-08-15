@@ -12,6 +12,8 @@ from vscs.application.automation import (
     ContinuityProposalAutomationService,
     EnvironmentProposalAutomationService,
     EpisodeSceneProposalAutomationService,
+    ProposalAcceptanceService,
+    ProposalAutoCompilationOrchestrator,
     SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
 )
@@ -47,6 +49,8 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
     environment_automation_service: EnvironmentProposalAutomationService | None = None
     camera_lighting_automation_service: CameraLightingProposalAutomationService | None = None
     continuity_automation_service: ContinuityProposalAutomationService | None = None
+    proposal_acceptance_service: ProposalAcceptanceService | None = None
+    auto_compilation_orchestrator: ProposalAutoCompilationOrchestrator | None = None
 
     def _install_story_panel(self) -> None:
         super()._install_story_panel()
@@ -194,7 +198,8 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         QMessageBox.information(
             self,
             "Planning Proposals Generated",
-            f"Generated {episodes} Episode proposal(s) and {scenes} Scene proposal(s).\n\nNo governed planning authority was created.",
+            f"Generated {episodes} Episode proposal(s) and {scenes} Scene proposal(s).\n\n"
+            "No governed planning authority was created.",
         )
 
     def _generate_shot_proposals(self) -> None:
@@ -220,7 +225,8 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         QMessageBox.information(
             self,
             "Shot Proposals Generated",
-            f"Generated {len(proposals)} Shot proposal(s) across {scenes} Scene proposal(s).\n\nNo governed Shot Plan was created.",
+            f"Generated {len(proposals)} Shot proposal(s) across {scenes} Scene proposal(s).\n\n"
+            "No governed Shot Plan was created.",
         )
 
     def _resolve_assets(self) -> None:
@@ -244,7 +250,9 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             self.canonical_entity_asset_automation_service = service
         try:
             proposals = service.generate(
-                story_id=story.story_id, source_revision=revision, entity_resolution=resolution
+                story_id=story.story_id,
+                source_revision=revision,
+                entity_resolution=resolution,
             )
         except ValueError as exc:
             self._error(str(exc))
@@ -256,7 +264,11 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         QMessageBox.information(
             self,
             "Canonical Entity & Asset Resolution",
-            f"Resolved {len(proposals)} Story entity proposal(s).\n\nExisting XPD matches: {existing}\nFully canonical-ready: {ready}\nNew/ambiguous entities requiring review: {len(proposals) - existing}\n\nNo canonical authority was created.",
+            f"Resolved {len(proposals)} Story entity proposal(s).\n\n"
+            f"Existing XPD matches: {existing}\n"
+            f"Fully canonical-ready: {ready}\n"
+            f"New/ambiguous entities requiring review: {len(proposals) - existing}\n\n"
+            "No canonical authority was created.",
         )
 
     def _generate_performance_proposals(self) -> None:
@@ -270,7 +282,9 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         source_text, revision, _baseline = current
         try:
             proposals = self.action_performance_automation_service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+                story_id=story.story_id,
+                source_text=source_text,
+                source_revision=revision,
             )
         except (AIProviderError, ValueError) as exc:
             self._error(str(exc))
@@ -281,7 +295,10 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         QMessageBox.information(
             self,
             "Action, Dialogue & Performance Proposals Generated",
-            f"Generated {len(proposals)} performance proposal(s).\nProposals containing supported spoken content: {dialogue}.\n\nThese are reviewable proposals only. No Phase 19.4.2 Action & Performance Draft was created, marked Ready, compiled, or approved.",
+            f"Generated {len(proposals)} performance proposal(s).\n"
+            f"Proposals containing supported spoken content: {dialogue}.\n\n"
+            "These are reviewable proposals only. No Phase 19.4.2 Action & Performance Draft was "
+            "created, marked Ready, compiled, or approved.",
         )
 
     def _generate_environment_proposals(self) -> None:
@@ -295,7 +312,9 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         source_text, revision, _baseline = current
         try:
             proposals = self.environment_automation_service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+                story_id=story.story_id,
+                source_text=source_text,
+                source_revision=revision,
             )
         except (AIProviderError, ValueError) as exc:
             self._error(str(exc))
@@ -309,7 +328,10 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         QMessageBox.information(
             self,
             "Environment Production Proposals Generated",
-            f"Generated {len(proposals)} Environment proposal(s).\nProposals preserving unspecified core physical values as unknown: {unknown_physics}.\n\nThese are reviewable proposals only. No governed Environment Plan was created, marked Ready, or approved.",
+            f"Generated {len(proposals)} Environment proposal(s).\n"
+            f"Proposals preserving unspecified core physical values as unknown: {unknown_physics}.\n\n"
+            "These are reviewable proposals only. No governed Environment Plan was created, marked "
+            "Ready, or approved.",
         )
 
     def _generate_camera_lighting_proposals(self) -> None:
@@ -323,7 +345,9 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         source_text, revision, _baseline = current
         try:
             proposals = self.camera_lighting_automation_service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+                story_id=story.story_id,
+                source_text=source_text,
+                source_revision=revision,
             )
         except (AIProviderError, ValueError) as exc:
             self._error(str(exc))
@@ -333,7 +357,9 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         QMessageBox.information(
             self,
             "Camera & Lighting Production Proposals Generated",
-            f"Generated {cameras} Camera proposal(s) and {lighting} Lighting proposal(s).\n\nThese are reviewable proposals only. No governed Camera Plan or Lighting Plan was created, marked Ready, or approved.",
+            f"Generated {cameras} Camera proposal(s) and {lighting} Lighting proposal(s).\n\n"
+            "These are reviewable proposals only. No governed Camera Plan or Lighting Plan was "
+            "created, marked Ready, or approved.",
         )
 
     def _generate_continuity_proposals(self) -> None:
@@ -352,7 +378,9 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             self.continuity_automation_service = service
         try:
             proposals = service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+                story_id=story.story_id,
+                source_text=source_text,
+                source_revision=revision,
             )
         except ValueError as exc:
             self._error(str(exc))
@@ -396,5 +424,10 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             )
             return
         AutomationProposalReviewDialog(
-            proposal_service, story_id=story.story_id, source_revision=revision, parent=self
+            proposal_service,
+            story_id=story.story_id,
+            source_revision=revision,
+            acceptance=self.proposal_acceptance_service,
+            orchestrator=self.auto_compilation_orchestrator,
+            parent=self,
         ).exec()
