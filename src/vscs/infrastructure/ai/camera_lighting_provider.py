@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,13 +28,15 @@ from vscs.infrastructure.ai.provider import AIProviderError
 
 class _CameraResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    shot_size: str
-    angle: str
-    movement: str
-    lens_family: str
+    shot_size: Literal[
+        "extreme_wide", "wide", "medium", "medium_close", "close_up", "extreme_close_up", "insert"
+    ]
+    angle: Literal["eye_level", "high", "low", "over_shoulder", "top_down"]
+    movement: Literal["static", "pan", "tilt", "track", "push_in", "pull_back", "crane", "orbit"]
+    lens_family: Literal["ultra_wide", "wide", "normal", "portrait", "telephoto", "macro"]
     focal_length_mm: int = Field(ge=8, le=1200)
     camera_height_m: float = Field(ge=0.0, le=100.0)
-    screen_direction: str
+    screen_direction: Literal["preserve_previous", "left_to_right", "right_to_left", "neutral"]
     composition: str = Field(min_length=1)
     focus_strategy: str = Field(min_length=1)
     movement_notes: str
@@ -45,12 +47,16 @@ class _CameraResponse(BaseModel):
 
 class _LightingResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    lighting_intent: str
-    key_direction: str
-    key_quality: str
+    lighting_intent: Literal[
+        "naturalistic", "practical_motivated", "low_key", "high_key", "silhouette"
+    ]
+    key_direction: Literal["motivated", "front_side", "side", "back", "top"]
+    key_quality: Literal["soft", "medium", "hard"]
     color_temperature_k: int = Field(ge=1000, le=20000)
     fill_level_percent: int = Field(ge=0, le=100)
-    exposure_intent: str
+    exposure_intent: Literal[
+        "balanced", "protect_highlights", "preserve_shadow_detail", "silhouette_biased"
+    ]
     source_strategy: str = Field(min_length=1)
     shadow_strategy: str = Field(min_length=1)
     subject_readability: str = Field(min_length=1)
@@ -99,14 +105,18 @@ class OpenAICameraLightingProposalProvider:
             "You are the VSCS Camera & Lighting production proposal layer. Propose exactly one "
             "renderer-neutral Camera contract and one renderer-neutral Lighting contract for the "
             "supplied Shot. Preserve Story facts, Shot intent, performance continuity and physical "
-            "Environment. Camera may decide framing, angle, physically plausible movement, lens "
-            "family, focal length, camera height, screen direction, composition and focus. Lighting "
-            "may decide motivated lighting intent, key direction/quality, color temperature, fill, "
-            "exposure priority, source/shadow/readability/separation strategies. Do not invent plot "
-            "facts, canonical asset identities, environmental physics or unsupported continuity. "
-            "Do not select camera_profile_asset_id or lighting_profile_asset_id; canonical profile "
-            "resolution belongs elsewhere. Do not emit renderer prompts, provider settings, Ready "
-            "state or approval. Lighting must respect the physical Environment and proposed Camera."
+            "Environment. Fields constrained by the response schema are governed enum identifiers: "
+            "return only one of the exact schema values for those fields. Put descriptive cinematic "
+            "phrasing in composition, focus_strategy, movement_notes, continuity_notes and the "
+            "lighting strategy fields, never in an enum field. Camera may decide framing, angle, "
+            "physically plausible movement, lens family, focal length, camera height, screen "
+            "direction, composition and focus. Lighting may decide motivated lighting intent, key "
+            "direction/quality, color temperature, fill, exposure priority, and source/shadow/"
+            "readability/separation strategies. Do not invent plot facts, canonical asset identities, "
+            "environmental physics or unsupported continuity. Do not select camera_profile_asset_id "
+            "or lighting_profile_asset_id; canonical profile resolution belongs elsewhere. Do not "
+            "emit renderer prompts, provider settings, Ready state or approval. Lighting must respect "
+            "the physical Environment and proposed Camera."
         )
         input_text = (
             f"Story ID: {story_id}\n\nShot proposal:\n{shot_payload}\n\n"
