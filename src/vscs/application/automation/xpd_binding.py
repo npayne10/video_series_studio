@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from vscs.application.assets import AssetService, XPDWorkbookImportService
-from vscs.domain.assets import XPDImportDisposition
+from vscs.domain.assets import Asset, XPDImportDisposition
 
 from .contracts import AutomationProposal, AutomationProposalType
 from .service import AutomationProposalService
@@ -21,6 +22,37 @@ class CanonicalLibraryImportReport:
     unchanged: int
     conflicts: int
     invalid: int
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalMatchCandidate:
+    asset_id: str
+    asset_name: str
+    score: float
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalMatchDiagnostic:
+    entity_name: str
+    entity_category: str
+    resolution_kind: str
+    current_asset_id: str
+    current_asset_name: str
+    status: str
+    suggestions: tuple[CanonicalMatchCandidate, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalMatchDiagnosticReport:
+    story_id: str
+    source_revision: str
+    entity_count: int
+    resolved_count: int
+    suggested_count: int
+    ambiguous_count: int
+    no_match_count: int
+    diagnostics: tuple[CanonicalMatchDiagnostic, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +107,127 @@ class CanonicalLibraryImportService:
             conflicts=counts[XPDImportDisposition.CONFLICT],
             invalid=counts[XPDImportDisposition.INVALID],
         )
+
+
+class CanonicalMatchDiagnosticService:
+    """Explain current XPD matches and suggest near matches without mutating canon."""
+
+    _CHARACTER_TITLES = {
+        "high", "commander", "captain", "major", "ambassador", "admiral",
+        "general", "colonel", "lieutenant", "doctor", "professor", "cmdr",
+        "capt", "maj", "adm", "gen", "col", "lt", "dr", "prof",
+    }
+
+    def __init__(self, assets: AssetService, proposals: AutomationProposalService) -> None:
+        self._assets = assets
+        self._proposals = proposals
+
+    def review(self, *, story_id: str, source_revision: str) -> CanonicalMatchDiagnosticReport:
+        story = story_id.strip().upper()
+        revision = source_revision.strip()
+        proposals = tuple(
+            item
+            for item in self._proposals.list_proposals()
+            if item.proposal_type is AutomationProposalType.ASSET
+            and item.provenance.source_story_id == story
+            and item.provenance.source_revision == revision
+        )
+        assets = self._assets.list()
+        diagnostics = tuple(self._diagnostic(item, assets) for item in proposals)
+        return CanonicalMatchDiagnosticReport(
+            story_id=story,
+            source_revision=revision,
+            entity_count=len(diagnostics),
+            resolved_count=sum(item.status == "resolved" for item in diagnostics),
+            suggested_count=sum(item.status == "suggested" for item in diagnostics),
+            ambiguous_count=sum(item.status == "ambiguous" for item in diagnostics),
+            no_match_count=sum(item.status == "no_match" for item in diagnostics),
+            diagnostics=diagnostics,
+        )
+
+    def _diagnostic(
+        self, proposal: AutomationProposal, assets: tuple[Asset, ...]
+    ) -> CanonicalMatchDiagnostic:
+        payload = proposal.payload
+        entity_name = str(payload.get("name", ""))
+        category = str(payload.get("expected_asset_category", ""))
+        resolution_kind = str(payload.get("resolution_kind", ""))
+        current_asset_id = str(payload.get("matched_asset_id", ""))
+        current_asset_name = str(payload.get("matched_asset_name", ""))
+        if resolution_kind == "existing_canonical_asset" and current_asset_id:
+            return CanonicalMatchDiagnostic(
+                entity_name=entity_name,
+                entity_category=category,
+                resolution_kind=resolution_kind,
+                current_asset_id=current_asset_id,
+                current_asset_name=current_asset_name,
+                status="resolved",
+                suggestions=(),
+            )
+
+        compatible = tuple(asset for asset in assets if asset.category.value == category)
+        scored = sorted(
+            (candidate for asset in compatible if (candidate := self._score(entity_name, asset)) is not None),
+            key=lambda item: (-item.score, item.asset_name.casefold()),
+        )
+        suggestions = tuple(scored[:3])
+        if not suggestions or suggestions[0].score < 0.58:
+            status = "no_match"
+            suggestions = tuple(item for item in suggestions if item.score >= 0.45)
+        elif len(suggestions) > 1 and suggestions[0].score - suggestions[1].score < 0.08:
+            status = "ambiguous"
+        else:
+            status = "suggested"
+        return CanonicalMatchDiagnostic(
+            entity_name=entity_name,
+            entity_category=category,
+            resolution_kind=resolution_kind,
+            current_asset_id=current_asset_id,
+            current_asset_name=current_asset_name,
+            status=status,
+            suggestions=suggestions,
+        )
+
+    @classmethod
+    def _score(cls, entity_name: str, asset: Asset) -> CanonicalMatchCandidate | None:
+        entity_tokens = cls._tokens(entity_name)
+        asset_tokens = cls._tokens(asset.name)
+        if not entity_tokens or not asset_tokens:
+            return None
+        if entity_tokens == asset_tokens:
+            return CanonicalMatchCandidate(asset.asset_id, asset.name, 1.0, "normalized exact name")
+
+        entity_core = cls._core_tokens(entity_tokens, asset.category.value)
+        asset_core = cls._core_tokens(asset_tokens, asset.category.value)
+        if entity_core and entity_core == asset_core:
+            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.98, "rank/title-normalized exact name")
+        if len(entity_core) >= 2 and entity_core.issubset(asset_core):
+            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.92, "all entity name tokens occur in canonical name")
+        if len(asset_core) >= 2 and asset_core.issubset(entity_core):
+            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.88, "canonical name occurs within longer Story entity name")
+        if asset.category.value == "character" and len(entity_core) == 1 and entity_core.issubset(asset_core):
+            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.74, "single character-name token occurs in canonical name")
+
+        overlap = len(entity_core & asset_core)
+        union = len(entity_core | asset_core)
+        token_score = overlap / union if union else 0.0
+        sequence_score = SequenceMatcher(None, " ".join(sorted(entity_core)), " ".join(sorted(asset_core))).ratio()
+        score = round(max(token_score, sequence_score * 0.82), 3)
+        if score < 0.45:
+            return None
+        reason = "token overlap" if token_score >= sequence_score * 0.82 else "name similarity"
+        return CanonicalMatchCandidate(asset.asset_id, asset.name, score, reason)
+
+    @classmethod
+    def _core_tokens(cls, tokens: frozenset[str], category: str) -> frozenset[str]:
+        if category != "character":
+            return tokens
+        return frozenset(token for token in tokens if token not in cls._CHARACTER_TITLES)
+
+    @staticmethod
+    def _tokens(value: str) -> frozenset[str]:
+        normalized = "".join(character if character.isalnum() else " " for character in value.casefold())
+        return frozenset(token for token in normalized.split() if len(token) >= 2)
 
 
 class ShotAssetBindingService:
