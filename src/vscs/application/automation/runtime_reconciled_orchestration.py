@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from vscs.application.story import ShotPlan, ShotPlanStatus
+from vscs.application.projects import ProjectService
+from vscs.application.story import (
+    EpisodePlanningService,
+    GovernedShotPlanningService,
+    ScenePlanningService,
+    ShotPlan,
+    ShotPlanStatus,
+)
 
 from .contracts import AutomationProposal, AutomationProposalType
 from .orchestration import (
@@ -13,6 +20,7 @@ from .orchestration import (
     ProposalAutoCompilationOrchestrator as BaseProposalAutoCompilationOrchestrator,
 )
 from .runtime_budget import fit_positive_runtimes_to_budget
+from .service import AutomationProposalService
 
 
 class ProposalAutoCompilationOrchestrator(BaseProposalAutoCompilationOrchestrator):
@@ -30,8 +38,15 @@ class ProposalAutoCompilationOrchestrator(BaseProposalAutoCompilationOrchestrato
     differing/unowned governed authority remains protected as human authority.
     """
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+    def __init__(
+        self,
+        projects: ProjectService,
+        proposals: AutomationProposalService,
+        episodes: EpisodePlanningService,
+        scenes: ScenePlanningService,
+        shots: GovernedShotPlanningService,
+    ) -> None:
+        super().__init__(projects, proposals, episodes, scenes, shots)
         self._runtime_overrides: dict[str, int] = {}
 
     def compile_current(
@@ -168,8 +183,6 @@ class ProposalAutoCompilationOrchestrator(BaseProposalAutoCompilationOrchestrato
         if not changes:
             return
 
-        # Remove Ready state first, then shrink before growing. This keeps every
-        # intermediate state inside the authoritative Scene budget.
         for _proposal, plan, _runtime in changes:
             if plan.status is ShotPlanStatus.READY:
                 self.shots.return_to_draft(plan.shot_id)
