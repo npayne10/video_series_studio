@@ -33,6 +33,14 @@ class ContinuityProposalAutomationService:
         "as previous shot",
         "as the previous shot",
     )
+    _EXPLICIT_DISCONTINUITY_MARKERS = (
+        "suddenly",
+        "abruptly",
+        "inexplicably",
+        "without transition",
+        "without explanation",
+        "instantaneously",
+    )
 
     def __init__(self, proposals: AutomationProposalService) -> None:
         self._proposals = proposals
@@ -158,6 +166,14 @@ class ContinuityProposalAutomationService:
         if preservation and previous_closing:
             effective_opening = previous_closing
             opening_resolution = "preserve-previous-directive"
+        elif opening and previous_closing and self._normalized_state(opening) == self._normalized_state(
+            previous_closing
+        ):
+            effective_opening = opening
+            opening_resolution = "matched-previous-state"
+        elif opening and previous_closing:
+            effective_opening = opening
+            opening_resolution = "explicit-transition-state"
         elif opening:
             effective_opening = opening
             opening_resolution = "explicit-opening-state"
@@ -169,9 +185,14 @@ class ContinuityProposalAutomationService:
             opening_resolution = "series-entry"
 
         conflicts: list[str] = []
-        if opening and previous_closing and not preservation and opening != previous_closing:
+        if (
+            opening
+            and previous_closing
+            and not preservation
+            and self._explicit_state_conflict(opening, previous_closing)
+        ):
             conflicts.append(
-                "Current opening state differs from the previous Shot closing state; human review required."
+                "Current opening state contains an explicit discontinuity relative to the previous Shot closing state; human review required."
             )
         previous_screen = (
             str(previous_camera.payload.get("screen_direction", "")).strip()
@@ -222,10 +243,12 @@ class ContinuityProposalAutomationService:
                 "continuity_notes": self._continuity_notes(
                     previous_closing=previous_closing,
                     effective_opening=effective_opening,
+                    opening_resolution=opening_resolution,
                     conflicts=conflicts,
                 ),
                 "continuity_constraints": [
                     "Preserve established character, prop, location and environmental state across adjacent Shots.",
+                    "Treat differently worded but non-contradictory opening state as an explicit transition, not a conflict.",
                     "Do not resolve a detected continuity conflict automatically; require human review.",
                 ],
             },
@@ -240,9 +263,9 @@ class ContinuityProposalAutomationService:
                 model="deterministic-continuity-resolution",
                 confidence=1.0 if not conflicts else 0.75,
                 inference_note=(
-                    "Continuity is resolved deterministically for human review only. Conflicts remain explicit and no governed Continuity compilation is created or marked Ready."
+                    "Continuity is resolved deterministically for human review only. Normal explicit state transitions are retained; concrete discontinuity signals remain explicit conflicts. No governed Continuity compilation is created or marked Ready."
                 ),
-                resolution_method="Phase 19.4.6-compatible previous-Shot state inheritance",
+                resolution_method="Phase 19.4.6-compatible previous-Shot state inheritance with conservative conflict detection",
             ),
             metadata={
                 "phase": "19.5.9",
@@ -258,21 +281,43 @@ class ContinuityProposalAutomationService:
 
     @classmethod
     def _is_preservation_directive(cls, value: str) -> bool:
-        normalized = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+        normalized = cls._normalized_state(value)
         if not normalized:
             return False
         if normalized in {"unchanged", "same", "preserve previous"}:
             return True
         return any(phrase in normalized for phrase in cls._PRESERVATION_PHRASES)
 
+    @classmethod
+    def _explicit_state_conflict(cls, opening: str, previous_closing: str) -> bool:
+        """Flag only deterministic discontinuity signals, never mere wording differences."""
+        if not opening.strip() or not previous_closing.strip():
+            return False
+        normalized = cls._normalized_state(opening)
+        return any(marker in normalized for marker in cls._EXPLICIT_DISCONTINUITY_MARKERS)
+
+    @staticmethod
+    def _normalized_state(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+
     @staticmethod
     def _continuity_notes(
-        *, previous_closing: str, effective_opening: str, conflicts: list[str]
+        *,
+        previous_closing: str,
+        effective_opening: str,
+        opening_resolution: str,
+        conflicts: list[str],
     ) -> str:
         if conflicts:
             return "Human continuity review required: " + " ".join(conflicts)
-        if previous_closing and effective_opening == previous_closing:
-            return "Opening state inherits the previous Shot closing state without conflict."
+        if opening_resolution in {
+            "preserve-previous-directive",
+            "inherited-previous-closing-state",
+            "matched-previous-state",
+        }:
+            return "Opening state aligns with or inherits the previous Shot closing state without conflict."
+        if opening_resolution == "explicit-transition-state":
+            return "Explicit next-Shot state is retained as a continuity transition; no deterministic contradiction was identified."
         if not previous_closing:
             return "Series/sequence entry; no previous Shot state is available to inherit."
         return "No deterministic cross-Shot continuity conflict detected."
