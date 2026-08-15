@@ -181,10 +181,7 @@ def test_auto_compilation_materializes_accepted_structure_with_canonical_id_mapp
     assert report.shots_created == 1
     assert report.blocked_proposals == 0
     assert report.authority_map["EP-001-SC-001"] == "EP-001-SCN-001"
-    assert (
-        report.authority_map["EP-001-SC-001-SHT-001"]
-        == "EP-001-SCN-001-SHT-001"
-    )
+    assert report.authority_map["EP-001-SC-001-SHT-001"] == "EP-001-SCN-001-SHT-001"
     assert episodes.plan("EP-001").status is EpisodePlanStatus.READY
     assert scenes.plan("EP-001-SCN-001").status is ScenePlanStatus.READY
     assert shots.plan("EP-001-SCN-001-SHT-001").status is ShotPlanStatus.READY

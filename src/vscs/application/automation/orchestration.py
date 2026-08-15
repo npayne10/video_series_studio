@@ -257,9 +257,7 @@ class ProposalAutoCompilationOrchestrator:
             )
 
         accepted_by_type = {
-            proposal_type: tuple(
-                item for item in accepted if item.proposal_type is proposal_type
-            )
+            proposal_type: tuple(item for item in accepted if item.proposal_type is proposal_type)
             for proposal_type in AutomationProposalType
         }
         authority_map: dict[str, str] = {}
@@ -385,7 +383,9 @@ class ProposalAutoCompilationOrchestrator:
             raw = json.loads(path.read_text(encoding="utf-8"))
             report = dict(raw["report"])
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            raise AutomationCompilationError(f"Unable to load automation compilation report: {exc}") from exc
+            raise AutomationCompilationError(
+                f"Unable to load automation compilation report: {exc}"
+            ) from exc
         report["authority_map"] = {
             str(key): str(value) for key, value in dict(report.get("authority_map", {})).items()
         }
