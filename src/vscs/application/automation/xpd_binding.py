@@ -113,9 +113,26 @@ class CanonicalMatchDiagnosticService:
     """Explain current XPD matches and suggest near matches without mutating canon."""
 
     _CHARACTER_TITLES = {
-        "high", "commander", "captain", "major", "ambassador", "admiral",
-        "general", "colonel", "lieutenant", "doctor", "professor", "cmdr",
-        "capt", "maj", "adm", "gen", "col", "lt", "dr", "prof",
+        "high",
+        "commander",
+        "captain",
+        "major",
+        "ambassador",
+        "admiral",
+        "general",
+        "colonel",
+        "lieutenant",
+        "doctor",
+        "professor",
+        "cmdr",
+        "capt",
+        "maj",
+        "adm",
+        "gen",
+        "col",
+        "lt",
+        "dr",
+        "prof",
     }
 
     def __init__(self, assets: AssetService, proposals: AutomationProposalService) -> None:
@@ -167,7 +184,11 @@ class CanonicalMatchDiagnosticService:
 
         compatible = tuple(asset for asset in assets if asset.category.value == category)
         scored = sorted(
-            (candidate for asset in compatible if (candidate := self._score(entity_name, asset)) is not None),
+            (
+                candidate
+                for asset in compatible
+                if (candidate := self._score(entity_name, asset)) is not None
+            ),
             key=lambda item: (-item.score, item.asset_name.casefold()),
         )
         suggestions = tuple(scored[:3])
@@ -200,18 +221,38 @@ class CanonicalMatchDiagnosticService:
         entity_core = cls._core_tokens(entity_tokens, asset.category.value)
         asset_core = cls._core_tokens(asset_tokens, asset.category.value)
         if entity_core and entity_core == asset_core:
-            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.98, "rank/title-normalized exact name")
+            return CanonicalMatchCandidate(
+                asset.asset_id, asset.name, 0.98, "rank/title-normalized exact name"
+            )
         if len(entity_core) >= 2 and entity_core.issubset(asset_core):
-            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.92, "all entity name tokens occur in canonical name")
+            return CanonicalMatchCandidate(
+                asset.asset_id, asset.name, 0.92, "all entity name tokens occur in canonical name"
+            )
         if len(asset_core) >= 2 and asset_core.issubset(entity_core):
-            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.88, "canonical name occurs within longer Story entity name")
-        if asset.category.value == "character" and len(entity_core) == 1 and entity_core.issubset(asset_core):
-            return CanonicalMatchCandidate(asset.asset_id, asset.name, 0.74, "single character-name token occurs in canonical name")
+            return CanonicalMatchCandidate(
+                asset.asset_id,
+                asset.name,
+                0.88,
+                "canonical name occurs within longer Story entity name",
+            )
+        if (
+            asset.category.value == "character"
+            and len(entity_core) == 1
+            and entity_core.issubset(asset_core)
+        ):
+            return CanonicalMatchCandidate(
+                asset.asset_id,
+                asset.name,
+                0.74,
+                "single character-name token occurs in canonical name",
+            )
 
         overlap = len(entity_core & asset_core)
         union = len(entity_core | asset_core)
         token_score = overlap / union if union else 0.0
-        sequence_score = SequenceMatcher(None, " ".join(sorted(entity_core)), " ".join(sorted(asset_core))).ratio()
+        sequence_score = SequenceMatcher(
+            None, " ".join(sorted(entity_core)), " ".join(sorted(asset_core))
+        ).ratio()
         score = round(max(token_score, sequence_score * 0.82), 3)
         if score < 0.45:
             return None
@@ -226,7 +267,9 @@ class CanonicalMatchDiagnosticService:
 
     @staticmethod
     def _tokens(value: str) -> frozenset[str]:
-        normalized = "".join(character if character.isalnum() else " " for character in value.casefold())
+        normalized = "".join(
+            character if character.isalnum() else " " for character in value.casefold()
+        )
         return frozenset(token for token in normalized.split() if len(token) >= 2)
 
 
