@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
+from typing import ClassVar
 
 from vscs.application.assets import AssetService, XPDWorkbookImportService
 from vscs.domain.assets import Asset, XPDImportDisposition
@@ -112,28 +113,30 @@ class CanonicalLibraryImportService:
 class CanonicalMatchDiagnosticService:
     """Explain current XPD matches and suggest near matches without mutating canon."""
 
-    _CHARACTER_TITLES = {
-        "high",
-        "commander",
-        "captain",
-        "major",
-        "ambassador",
-        "admiral",
-        "general",
-        "colonel",
-        "lieutenant",
-        "doctor",
-        "professor",
-        "cmdr",
-        "capt",
-        "maj",
-        "adm",
-        "gen",
-        "col",
-        "lt",
-        "dr",
-        "prof",
-    }
+    _CHARACTER_TITLES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "high",
+            "commander",
+            "captain",
+            "major",
+            "ambassador",
+            "admiral",
+            "general",
+            "colonel",
+            "lieutenant",
+            "doctor",
+            "professor",
+            "cmdr",
+            "capt",
+            "maj",
+            "adm",
+            "gen",
+            "col",
+            "lt",
+            "dr",
+            "prof",
+        }
+    )
 
     def __init__(self, assets: AssetService, proposals: AutomationProposalService) -> None:
         self._assets = assets
