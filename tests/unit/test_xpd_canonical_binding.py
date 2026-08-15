@@ -8,7 +8,9 @@ from vscs.application.automation import (
     AutomationSourceKind,
     ShotAssetBindingService,
 )
+from vscs.application.automation.xpd_binding import CanonicalMatchDiagnosticService
 from vscs.application.projects import ProjectService
+from vscs.domain.assets import Asset, AssetCategory, AssetStatus
 from vscs.infrastructure.configuration import ConfigurationService
 
 
@@ -34,6 +36,19 @@ def _proposal(
             source_revision="rev-1",
             source_scope=target,
         ),
+    )
+
+
+def _asset(asset_id: str, name: str, category: AssetCategory) -> Asset:
+    return Asset(
+        id=1,
+        asset_id=asset_id,
+        name=name,
+        category=category,
+        description="",
+        status=AssetStatus.APPROVED,
+        file_path=None,
+        tags=(),
     )
 
 
@@ -94,3 +109,22 @@ def test_shot_binding_never_binds_unresolved_entity(tmp_path: Path) -> None:
     report = ShotAssetBindingService(store).bind(story_id="STORY-001", source_revision="rev-1")
     assert report.binding_count == 0
     assert report.unresolved_entity_count == 1
+
+
+def test_diagnostic_scores_rank_normalized_character_match_highly() -> None:
+    match = CanonicalMatchDiagnosticService._score(
+        "James Spence",
+        _asset("CAP-CHR-001", "Commander James Spence", AssetCategory.CHARACTER),
+    )
+    assert match is not None
+    assert match.asset_id == "CAP-CHR-001"
+    assert match.score >= 0.98
+    assert "rank/title" in match.reason
+
+
+def test_diagnostic_does_not_offer_weak_unrelated_match() -> None:
+    match = CanonicalMatchDiagnosticService._score(
+        "Listening Post 17",
+        _asset("CAP-LOC-001", "Mauritania Bridge", AssetCategory.LOCATION),
+    )
+    assert match is None
