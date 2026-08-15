@@ -85,6 +85,9 @@ from vscs.presentation.widgets.planning_review_integration import install_planni
 from vscs.presentation.widgets.production_planning_workspace import (
     install_production_planning_workspace,
 )
+from vscs.presentation.widgets.story_hierarchical_navigation import (
+    install_story_hierarchical_navigation,
+)
 from vscs.presentation.widgets.universal_production_description_compiler_workspace import (
     UniversalProductionDescriptionCompilerWorkspace,
 )
@@ -302,6 +305,7 @@ def install_story_browser() -> None:
         window.content_stack.removeWidget(production_placeholder)
         production_placeholder.deleteLater()
         window.content_stack.insertWidget(6, window.production_package_workspace)
+        install_story_hierarchical_navigation(window)
 
     def update_status(window: Any, section: str) -> None:
         original_update_status(window, section)
