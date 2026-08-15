@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QListWidget, QMessageBox, QPushButton, QTreeWidget
 
 from vscs.application.assets import AssetService
 from vscs.application.automation import AutomationProposalService, ShotAssetBindingService
+from vscs.application.automation.canonical_scope_review import CanonicalScopeReviewService
 from vscs.application.automation.xpd_binding import CanonicalMatchDiagnosticService
 
 from .xpd_canonical_library_integration import (
@@ -84,12 +85,12 @@ def _review_xpd_matches_action(window: Any) -> Callable[[], None]:
         if current is None:
             return
         _source_text, revision, _baseline = current
-        service = CanonicalMatchDiagnosticService(
-            window.services.require(AssetService),
-            window.services.require(AutomationProposalService),
-        )
-        report = service.review(story_id=story.story_id, source_revision=revision)
-        show_match_diagnostics(window.story_browser, report)
+        assets = window.services.require(AssetService)
+        proposals = window.services.require(AutomationProposalService)
+        diagnostic_service = CanonicalMatchDiagnosticService(assets, proposals)
+        review_service = CanonicalScopeReviewService(assets, proposals)
+        report = diagnostic_service.review(story_id=story.story_id, source_revision=revision)
+        show_match_diagnostics(window.story_browser, report, review_service)
 
     return invoke
 
