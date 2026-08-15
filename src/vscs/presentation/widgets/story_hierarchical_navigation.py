@@ -109,7 +109,10 @@ def _hide_relocated_toolbar_actions(window: Any) -> None:
         "reviewAutomationGaps",
     }
     for button in window.story_browser.findChildren(QPushButton):
-        if button.objectName() in relocated_object_names or button.text().strip() == "Analyse Story":
+        if (
+            button.objectName() in relocated_object_names
+            or button.text().strip() == "Analyse Story"
+        ):
             button.setVisible(False)
 
     for attribute in ("episode_planner_button", "open_in_planner_button"):
@@ -187,7 +190,9 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         "story.resolve_assets": _button_action(window, object_name="resolveCanonicalAssets"),
         "story.performance": _button_action(window, object_name="generatePerformanceProposals"),
         "story.environment": _button_action(window, object_name="generateEnvironmentProposals"),
-        "story.camera_lighting": _button_action(window, object_name="generateCameraLightingProposals"),
+        "story.camera_lighting": _button_action(
+            window, object_name="generateCameraLightingProposals"
+        ),
         "story.continuity": _button_action(window, object_name="generateContinuityProposals"),
         "story.review_gaps": _button_action(window, object_name="reviewAutomationGaps"),
         "story.import_xpd": _import_xpd_action(window),
