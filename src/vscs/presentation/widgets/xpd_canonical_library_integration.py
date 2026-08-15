@@ -6,8 +6,8 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from vscs.application.automation import CanonicalLibraryImportService, ShotAssetBindingService
 from vscs.application.assets import AssetService, XPDWorkbookError
+from vscs.application.automation import CanonicalLibraryImportService, ShotAssetBindingService
 
 
 def import_xpd_library(parent: object, assets: AssetService) -> bool:

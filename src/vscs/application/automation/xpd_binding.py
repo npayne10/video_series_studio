@@ -63,7 +63,7 @@ class CanonicalLibraryImportService:
 
     def preview_counts(self, workbook_path: Path) -> CanonicalLibraryImportReport:
         preview = self._importer.preview(workbook_path)
-        counts = {disposition: 0 for disposition in XPDImportDisposition}
+        counts = dict.fromkeys(XPDImportDisposition, 0)
         for item in preview.items:
             counts[item.disposition] += 1
         return CanonicalLibraryImportReport(
@@ -124,7 +124,7 @@ class ShotAssetBindingService:
                     )
                 )
         unique = tuple(
-            { (binding.shot_id, binding.asset_id): binding for binding in bindings }.values()
+            {(binding.shot_id, binding.asset_id): binding for binding in bindings}.values()
         )
         return ShotAssetBindingReport(
             story_id=story,
