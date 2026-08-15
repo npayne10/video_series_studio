@@ -69,7 +69,10 @@ def _hide_relocated_toolbar_actions(window: Any) -> None:
         "reviewAutomationGaps",
     }
     for button in window.story_browser.findChildren(QPushButton):
-        if button.objectName() in relocated_object_names or button.text().strip() == "Analyse Story":
+        if (
+            button.objectName() in relocated_object_names
+            or button.text().strip() == "Analyse Story"
+        ):
             button.setVisible(False)
 
     for attribute in ("episode_planner_button", "open_in_planner_button"):
@@ -139,9 +142,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     actions: dict[str, Callable[[], None]] = {
         "story.definition": _button_action(window, object_name="editStory"),
         "story.analysis": _button_action(window, text="Analyse Story"),
-        "story.planning_proposals": _button_action(
-            window, object_name="generatePlanningProposals"
-        ),
+        "story.planning_proposals": _button_action(window, object_name="generatePlanningProposals"),
         "story.shot_proposals": _button_action(window, object_name="generateShotProposals"),
         "story.resolve_assets": _button_action(window, object_name="resolveCanonicalAssets"),
         "story.performance": _button_action(window, object_name="generatePerformanceProposals"),

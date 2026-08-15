@@ -80,7 +80,9 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
             "reviewAutomationProposals",
             "reviewAutomationGaps",
         ):
-            button = window.story_browser.findChild(type(window.story_browser.new_button), object_name)
+            button = window.story_browser.findChild(
+                type(window.story_browser.new_button), object_name
+            )
             assert button is not None
             assert button.isHidden()
 
