@@ -129,6 +129,30 @@ def test_continuity_automation_exposes_conflict_for_human_review(tmp_path: Path)
     assert generated[1].payload["effective_opening_state"] == "James is suddenly at the hatch"
 
 
+def test_continuity_automation_allows_noncontradictory_explicit_transition(tmp_path: Path) -> None:
+    service, store = _service(tmp_path)
+    performance = next(item for item in store.list_proposals() if item.proposal_id == "AUT-PERF-2")
+    store.save(
+        AutomationProposal(
+            proposal_id=performance.proposal_id,
+            proposal_type=performance.proposal_type,
+            target_id=performance.target_id,
+            payload={
+                "opening_state": "James stands at the console facing the main display",
+                "closing_state": "James turns toward Cheryl",
+            },
+            provenance=performance.provenance,
+        )
+    )
+    generated = service.generate(
+        story_id="STORY-001", source_text="Bridge sequence", source_revision="rev-1"
+    )
+    second = generated[1]
+    assert second.payload["continuity_conflicts"] == []
+    assert second.payload["opening_resolution"] == "explicit-transition-state"
+    assert second.payload["previous_closing_state"] == "James at console"
+
+
 def test_continuity_automation_requires_current_camera_and_lighting(tmp_path: Path) -> None:
     service, store = _service(tmp_path)
     store._write(
