@@ -17,8 +17,13 @@ from PySide6.QtWidgets import QListWidget, QMessageBox, QPushButton, QTreeWidget
 
 from vscs.application.assets import AssetService
 from vscs.application.automation import AutomationProposalService, ShotAssetBindingService
+from vscs.application.automation.xpd_binding import CanonicalMatchDiagnosticService
 
-from .xpd_canonical_library_integration import binding_summary, import_xpd_library
+from .xpd_canonical_library_integration import (
+    binding_summary,
+    import_xpd_library,
+    show_match_diagnostics,
+)
 
 SECTION_ROLE = int(Qt.ItemDataRole.UserRole)
 ACTION_ROLE = SECTION_ROLE + 1
@@ -60,6 +65,31 @@ def _import_xpd_action(window: Any) -> Callable[[], None]:
         window._story_flat_navigation_controller.setCurrentRow(2)
         if import_xpd_library(window.story_browser, window.services.require(AssetService)):
             window.story_browser.refresh()
+
+    return invoke
+
+
+def _review_xpd_matches_action(window: Any) -> Callable[[], None]:
+    def invoke() -> None:
+        window._story_flat_navigation_controller.setCurrentRow(2)
+        story = window.story_browser._selected_story()
+        if story is None:
+            QMessageBox.information(
+                window.story_browser,
+                "Review XPD Matches",
+                "Select a Story before reviewing canonical XPD matches.",
+            )
+            return
+        current = window.story_browser._current_analysis(story)
+        if current is None:
+            return
+        _source_text, revision, _baseline = current
+        service = CanonicalMatchDiagnosticService(
+            window.services.require(AssetService),
+            window.services.require(AutomationProposalService),
+        )
+        report = service.review(story_id=story.story_id, source_revision=revision)
+        show_match_diagnostics(window.story_browser, report)
 
     return invoke
 
@@ -177,6 +207,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     canonical_library.setFlags(canonical_library.flags() & ~Qt.ItemFlag.ItemIsSelectable)
     _story_item(canonical_library, "Import XPD Library…", "story.import_xpd")
     _story_item(canonical_library, "Resolve Story Entities", "story.resolve_assets")
+    _story_item(canonical_library, "Review XPD Matches…", "story.review_xpd_matches")
     _story_item(canonical_library, "Bind Shot Assets…", "story.bind_shot_assets")
 
     _story_item(story_root, "Proposal Review", "story.proposal_review")
@@ -196,6 +227,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         "story.continuity": _button_action(window, object_name="generateContinuityProposals"),
         "story.review_gaps": _button_action(window, object_name="reviewAutomationGaps"),
         "story.import_xpd": _import_xpd_action(window),
+        "story.review_xpd_matches": _review_xpd_matches_action(window),
         "story.bind_shot_assets": _bind_shot_assets_action(window),
         "story.proposal_review": _button_action(window, object_name="reviewAutomationProposals"),
         "story.production_planning": _button_action(
