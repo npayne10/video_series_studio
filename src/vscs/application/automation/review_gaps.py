@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .contracts import AutomationProposal, AutomationProposalStatus, AutomationProposalType
+from .contracts import AutomationProposalStatus, AutomationProposalType
 from .service import AutomationProposalService
 
 
@@ -70,7 +70,9 @@ class ProposalReviewGapDetectionService:
         shots = tuple(item for item in current if item.proposal_type is AutomationProposalType.SHOT)
         by_type_target = {(item.proposal_type, item.target_id): item for item in current}
 
-        for asset in (item for item in current if item.proposal_type is AutomationProposalType.ASSET):
+        for asset in (
+            item for item in current if item.proposal_type is AutomationProposalType.ASSET
+        ):
             if str(asset.payload.get("canonical_status", "")) != "resolved":
                 gaps.append(
                     ReviewGap(
@@ -80,7 +82,11 @@ class ProposalReviewGapDetectionService:
                         target_id=asset.target_id,
                         proposal_id=asset.proposal_id,
                         summary="Canonical asset identity is unresolved.",
-                        evidence=str(asset.payload.get("resolution_note", "No fully resolved canonical asset.")),
+                        evidence=str(
+                            asset.payload.get(
+                                "resolution_note", "No fully resolved canonical asset."
+                            )
+                        ),
                         repair_suggestion=(
                             "Resolve this entity against existing XPD/CAP/Master Reference authority or "
                             "complete human canonical creation/review. Do not invent or auto-approve an asset."
@@ -116,7 +122,8 @@ class ProposalReviewGapDetectionService:
                             target_id=shot.target_id,
                             proposal_id=specialist.proposal_id,
                             summary=f"{proposal_type.value.replace('_', ' ').title()} proposal was rejected.",
-                            evidence=specialist.review_notes or "Human reviewer rejected this proposal.",
+                            evidence=specialist.review_notes
+                            or "Human reviewer rejected this proposal.",
                             repair_suggestion=(
                                 "Generate a replacement proposal from current upstream authority. Preserve the "
                                 "human rejection record; do not automatically reverse it."
@@ -145,7 +152,9 @@ class ProposalReviewGapDetectionService:
                     )
                 )
 
-        gaps.sort(key=lambda item: (item.severity.value, item.category, item.target_id, item.gap_id))
+        gaps.sort(
+            key=lambda item: (item.severity.value, item.category, item.target_id, item.gap_id)
+        )
         return ProposalReviewReport(
             story_id=normalized_story,
             source_revision=revision,

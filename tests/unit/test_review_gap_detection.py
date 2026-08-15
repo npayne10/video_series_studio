@@ -66,7 +66,5 @@ def test_review_is_read_only(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.save(_proposal("AUT-SHOT-1", AutomationProposalType.SHOT, "SHOT-001", {}))
     before = store.list_proposals()
-    ProposalReviewGapDetectionService(store).review(
-        story_id="STORY-001", source_revision="rev-1"
-    )
+    ProposalReviewGapDetectionService(store).review(story_id="STORY-001", source_revision="rev-1")
     assert store.list_proposals() == before
