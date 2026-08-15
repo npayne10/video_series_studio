@@ -9,15 +9,23 @@ from vscs.application.automation import (
     ProposalReviewGapDetectionService,
 )
 from vscs.application.projects import ProjectService
+from vscs.infrastructure.configuration import ConfigurationService
 
 
 def _store(tmp_path: Path) -> AutomationProposalService:
-    projects = ProjectService()
-    projects._project_directory = tmp_path
+    configuration = ConfigurationService(tmp_path / "settings.yaml")
+    configuration.load()
+    projects = ProjectService(configuration)
+    projects.create(tmp_path / "project", name="Phase 19.5.11 Test")
     return AutomationProposalService(projects)
 
 
-def _proposal(proposal_id: str, proposal_type: AutomationProposalType, target: str, payload: dict[str, object]) -> AutomationProposal:
+def _proposal(
+    proposal_id: str,
+    proposal_type: AutomationProposalType,
+    target: str,
+    payload: dict[str, object],
+) -> AutomationProposal:
     return AutomationProposal(
         proposal_id=proposal_id,
         proposal_type=proposal_type,
@@ -36,15 +44,29 @@ def _proposal(proposal_id: str, proposal_type: AutomationProposalType, target: s
 def test_review_detects_unresolved_assets_and_missing_specialists(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.save(_proposal("AUT-SHOT-1", AutomationProposalType.SHOT, "SHOT-001", {}))
-    store.save(_proposal("AUT-ASSET-1", AutomationProposalType.ASSET, "ENTITY-001", {"canonical_status": "review_required"}))
-    report = ProposalReviewGapDetectionService(store).review(story_id="STORY-001", source_revision="rev-1")
+    store.save(
+        _proposal(
+            "AUT-ASSET-1",
+            AutomationProposalType.ASSET,
+            "ENTITY-001",
+            {"canonical_status": "review_required"},
+        )
+    )
+    report = ProposalReviewGapDetectionService(store).review(
+        story_id="STORY-001", source_revision="rev-1"
+    )
     assert report.blocker_count == 6
-    assert {gap.category for gap in report.gaps} == {"canonical_asset", "missing_specialist_proposal"}
+    assert {gap.category for gap in report.gaps} == {
+        "canonical_asset",
+        "missing_specialist_proposal",
+    }
 
 
 def test_review_is_read_only(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.save(_proposal("AUT-SHOT-1", AutomationProposalType.SHOT, "SHOT-001", {}))
     before = store.list_proposals()
-    ProposalReviewGapDetectionService(store).review(story_id="STORY-001", source_revision="rev-1")
+    ProposalReviewGapDetectionService(store).review(
+        story_id="STORY-001", source_revision="rev-1"
+    )
     assert store.list_proposals() == before
