@@ -39,6 +39,14 @@ from .episode_scene import (
     SceneProposalDraft,
     TemplateEpisodeSceneProposalProvider,
 )
+from .orchestration import (
+    AutoCompilationReport,
+    AutomationCompilationError,
+    ProposalAcceptanceError,
+    ProposalAcceptanceService,
+    ProposalAcceptanceSummary,
+    ProposalAutoCompilationOrchestrator,
+)
 from .scene_shot import (
     SceneShotProposalAutomationService,
     SceneShotProposalDraft,
@@ -53,6 +61,8 @@ __all__ = [
     "ActionPerformanceProposalAutomationService",
     "ActionPerformanceProposalDraft",
     "ActionPerformanceProposalProvider",
+    "AutoCompilationReport",
+    "AutomationCompilationError",
     "AutomationProposal",
     "AutomationProposalError",
     "AutomationProposalService",
@@ -74,6 +84,10 @@ __all__ = [
     "EpisodeSceneProposalDraft",
     "EpisodeSceneProposalProvider",
     "LightingProposalDraft",
+    "ProposalAcceptanceError",
+    "ProposalAcceptanceService",
+    "ProposalAcceptanceSummary",
+    "ProposalAutoCompilationOrchestrator",
     "SceneProposalDraft",
     "SceneShotProposalAutomationService",
     "SceneShotProposalDraft",
