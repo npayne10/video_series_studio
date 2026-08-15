@@ -26,7 +26,9 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def test_camera_lighting_automation_is_registered_with_story_workspace(tmp_path: Path, qtbot) -> None:
+def test_camera_lighting_automation_is_registered_with_story_workspace(
+    tmp_path: Path, qtbot
+) -> None:
     with build_application_context(_options(tmp_path)) as application:
         application.services.require(ProjectService).create(tmp_path / "VSCS TSR", name="VSCS TSR")
         window = application.create_main_window()
@@ -34,7 +36,10 @@ def test_camera_lighting_automation_is_registered_with_story_workspace(tmp_path:
         service = application.services.get(CameraLightingProposalAutomationService)
         assert isinstance(service, CameraLightingProposalAutomationService)
         assert not window.story_browser.camera_lighting_proposals_button.isHidden()
-        assert window.story_browser.camera_lighting_proposals_button.text() == "Camera & Lighting Proposals…"
+        assert (
+            window.story_browser.camera_lighting_proposals_button.text()
+            == "Camera & Lighting Proposals…"
+        )
 
 
 def test_camera_lighting_proposals_do_not_create_governed_authority(tmp_path: Path, qtbot) -> None:
@@ -53,19 +58,25 @@ def test_camera_lighting_proposals_do_not_create_governed_authority(tmp_path: Pa
         )
         for proposal in (
             AutomationProposal(
-                proposal_id="SHOT", proposal_type=AutomationProposalType.SHOT,
+                proposal_id="SHOT",
+                proposal_type=AutomationProposalType.SHOT,
                 target_id="EP-001-SC-001-SHT-001",
-                payload={"required_action": "James crosses the bridge.", "dialogue_requirement": ""},
+                payload={
+                    "required_action": "James crosses the bridge.",
+                    "dialogue_requirement": "",
+                },
                 provenance=provenance,
             ),
             AutomationProposal(
-                proposal_id="PERF", proposal_type=AutomationProposalType.ACTION_PERFORMANCE,
+                proposal_id="PERF",
+                proposal_type=AutomationProposalType.ACTION_PERFORMANCE,
                 target_id="EP-001-SC-001-SHT-001",
                 payload={"temporal_narrative": "James crosses the bridge."},
                 provenance=provenance,
             ),
             AutomationProposal(
-                proposal_id="ENV", proposal_type=AutomationProposalType.ENVIRONMENT,
+                proposal_id="ENV",
+                proposal_type=AutomationProposalType.ENVIRONMENT,
                 target_id="EP-001-SC-001-SHT-001",
                 payload={"environment_context": "interior", "continuity_notes": "Bridge"},
                 provenance=provenance,

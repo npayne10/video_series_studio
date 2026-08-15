@@ -5,9 +5,23 @@ from __future__ import annotations
 import json
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QPlainTextEdit, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QLabel,
+    QPlainTextEdit,
+    QSplitter,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from vscs.application.automation import AutomationProposal, AutomationProposalService, AutomationProposalType
+from vscs.application.automation import (
+    AutomationProposal,
+    AutomationProposalService,
+    AutomationProposalType,
+)
 
 
 class AutomationProposalReviewDialog(QDialog):
@@ -15,7 +29,14 @@ class AutomationProposalReviewDialog(QDialog):
 
     PROPOSAL_ID_ROLE = int(Qt.ItemDataRole.UserRole)
 
-    def __init__(self, proposals: AutomationProposalService, *, story_id: str, source_revision: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        proposals: AutomationProposalService,
+        *,
+        story_id: str,
+        source_revision: str,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._proposals = proposals
         self.story_id = story_id.strip().upper()
@@ -56,7 +77,8 @@ class AutomationProposalReviewDialog(QDialog):
         self.tree.clear()
         self.details.clear()
         selected = tuple(
-            proposal for proposal in self._proposals.list_proposals()
+            proposal
+            for proposal in self._proposals.list_proposals()
             if proposal.provenance.source_story_id == self.story_id
             and proposal.provenance.source_revision == self.source_revision
         )
@@ -85,12 +107,19 @@ class AutomationProposalReviewDialog(QDialog):
         for episode in sorted(episodes, key=self._sequence_sort):
             episode_item = self._item(episode)
             self.tree.addTopLevelItem(episode_item)
-            episode_scenes = (item for item in scenes if str(item.payload.get("episode_id", "")) == episode.target_id)
+            episode_scenes = (
+                item
+                for item in scenes
+                if str(item.payload.get("episode_id", "")) == episode.target_id
+            )
             for scene in sorted(episode_scenes, key=self._sequence_sort):
                 scene_item = self._item(scene)
                 episode_item.addChild(scene_item)
                 scene_items[scene.target_id] = scene_item
-        for scene in sorted((scene for scene in scenes if scene.target_id not in scene_items), key=self._sequence_sort):
+        for scene in sorted(
+            (scene for scene in scenes if scene.target_id not in scene_items),
+            key=self._sequence_sort,
+        ):
             scene_item = self._item(scene)
             self.tree.addTopLevelItem(scene_item)
             scene_items[scene.target_id] = scene_item
@@ -127,7 +156,9 @@ class AutomationProposalReviewDialog(QDialog):
                 self.tree.setCurrentItem(first_item)
 
     @staticmethod
-    def _of_type(proposals: tuple[AutomationProposal, ...], proposal_type: AutomationProposalType) -> tuple[AutomationProposal, ...]:
+    def _of_type(
+        proposals: tuple[AutomationProposal, ...], proposal_type: AutomationProposalType
+    ) -> tuple[AutomationProposal, ...]:
         return tuple(item for item in proposals if item.proposal_type is proposal_type)
 
     def _item(self, proposal: AutomationProposal, *, prefix: str = "") -> QTreeWidgetItem:
@@ -141,7 +172,9 @@ class AutomationProposalReviewDialog(QDialog):
         item.setData(0, self.PROPOSAL_ID_ROLE, proposal.proposal_id)
         return item
 
-    def _selection_changed(self, current: QTreeWidgetItem | None, _previous: QTreeWidgetItem | None) -> None:
+    def _selection_changed(
+        self, current: QTreeWidgetItem | None, _previous: QTreeWidgetItem | None
+    ) -> None:
         if current is None:
             self.details.clear()
             return
@@ -155,14 +188,27 @@ class AutomationProposalReviewDialog(QDialog):
     def _detail_text(proposal: AutomationProposal) -> str:
         provenance = proposal.provenance
         lines = [
-            f"Proposal ID: {proposal.proposal_id}", f"Type: {proposal.proposal_type.value}",
-            f"Target: {proposal.target_id}", f"Status: {proposal.status.value}", "",
-            "PROPOSAL CONTENT", json.dumps(proposal.payload, indent=2, ensure_ascii=False, default=str), "",
-            "PROVENANCE", f"Source kind: {provenance.source_kind.value}", f"Story ID: {provenance.source_story_id}",
-            f"Story revision: {provenance.source_revision}", f"Source scope: {provenance.source_scope}",
-            f"Provider: {provenance.provider}", f"Model: {provenance.model}", f"Confidence: {provenance.confidence:.3f}",
-            f"Resolution: {provenance.resolution_method}", f"Inference note: {provenance.inference_note}", "",
-            "METADATA", json.dumps(proposal.metadata, indent=2, ensure_ascii=False, default=str),
+            f"Proposal ID: {proposal.proposal_id}",
+            f"Type: {proposal.proposal_type.value}",
+            f"Target: {proposal.target_id}",
+            f"Status: {proposal.status.value}",
+            "",
+            "PROPOSAL CONTENT",
+            json.dumps(proposal.payload, indent=2, ensure_ascii=False, default=str),
+            "",
+            "PROVENANCE",
+            f"Source kind: {provenance.source_kind.value}",
+            f"Story ID: {provenance.source_story_id}",
+            f"Story revision: {provenance.source_revision}",
+            f"Source scope: {provenance.source_scope}",
+            f"Provider: {provenance.provider}",
+            f"Model: {provenance.model}",
+            f"Confidence: {provenance.confidence:.3f}",
+            f"Resolution: {provenance.resolution_method}",
+            f"Inference note: {provenance.inference_note}",
+            "",
+            "METADATA",
+            json.dumps(proposal.metadata, indent=2, ensure_ascii=False, default=str),
         ]
         return "\n".join(lines)
 

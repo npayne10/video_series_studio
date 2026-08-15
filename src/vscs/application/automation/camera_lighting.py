@@ -12,8 +12,8 @@ from vscs.application.story import (
     ExposureIntent,
     KeyDirection,
     LensFamily,
-    LightQuality,
     LightingIntent,
+    LightQuality,
     ScreenDirection,
     ShotSize,
 )
@@ -126,17 +126,23 @@ class TemplateCameraLightingProposalProvider:
             focus_strategy="Hold focus on the primary narrative subject with plausible depth of field.",
             movement_notes="Keep movement restrained, motivated and mechanically plausible.",
             continuity_notes=str(shot_payload.get("continuity_in", "")).strip(),
-            camera_constraints=("Do not introduce camera behaviour unsupported by the Shot intent.",),
+            camera_constraints=(
+                "Do not introduce camera behaviour unsupported by the Shot intent.",
+            ),
             confidence=0.6,
         )
         exterior = context in {"orbital_space", "deep_space", "exterior_surface", "atmospheric"}
         lighting = LightingProposalDraft(
-            lighting_intent=(LightingIntent.NATURALISTIC if exterior else LightingIntent.PRACTICAL_MOTIVATED),
+            lighting_intent=(
+                LightingIntent.NATURALISTIC if exterior else LightingIntent.PRACTICAL_MOTIVATED
+            ),
             key_direction=KeyDirection.MOTIVATED,
             key_quality=LightQuality.MEDIUM if exterior else LightQuality.SOFT,
             color_temperature_k=5600 if exterior else 4300,
             fill_level_percent=20 if exterior else 45,
-            exposure_intent=ExposureIntent.PROTECT_HIGHLIGHTS if exterior else ExposureIntent.BALANCED,
+            exposure_intent=ExposureIntent.PROTECT_HIGHLIGHTS
+            if exterior
+            else ExposureIntent.BALANCED,
             source_strategy="Use physically motivated sources justified by the proposed environment; avoid decorative glow.",
             shadow_strategy="Preserve credible modelling while retaining story-critical detail.",
             subject_readability="Keep the primary narrative subject readable without flattening the environment.",
@@ -151,27 +157,44 @@ class TemplateCameraLightingProposalProvider:
 class CameraLightingProposalAutomationService:
     """Generate Camera and Lighting proposals without mutating governed planning authority."""
 
-    def __init__(self, provider: CameraLightingProposalProvider, proposals: AutomationProposalService) -> None:
+    def __init__(
+        self, provider: CameraLightingProposalProvider, proposals: AutomationProposalService
+    ) -> None:
         self._provider = provider
         self._proposals = proposals
 
-    def generate(self, *, story_id: str, source_text: str, source_revision: str) -> tuple[AutomationProposal, ...]:
+    def generate(
+        self, *, story_id: str, source_text: str, source_revision: str
+    ) -> tuple[AutomationProposal, ...]:
         normalized_story = story_id.strip().upper()
         revision = source_revision.strip()
         if not normalized_story or not revision or not source_text.strip():
             raise ValueError("Story ID, source revision and source text are required")
         current = tuple(
-            item for item in self._proposals.list_proposals()
+            item
+            for item in self._proposals.list_proposals()
             if item.provenance.source_story_id == normalized_story
             and item.provenance.source_revision == revision
         )
         shots = tuple(item for item in current if item.proposal_type is AutomationProposalType.SHOT)
-        performances = {item.target_id: item for item in current if item.proposal_type is AutomationProposalType.ACTION_PERFORMANCE}
-        environments = {item.target_id: item for item in current if item.proposal_type is AutomationProposalType.ENVIRONMENT}
+        performances = {
+            item.target_id: item
+            for item in current
+            if item.proposal_type is AutomationProposalType.ACTION_PERFORMANCE
+        }
+        environments = {
+            item.target_id: item
+            for item in current
+            if item.proposal_type is AutomationProposalType.ENVIRONMENT
+        }
         if not shots:
             raise ValueError("Generate current Shot proposals before Camera & Lighting proposals")
-        missing_performance = tuple(shot.target_id for shot in shots if shot.target_id not in performances)
-        missing_environment = tuple(shot.target_id for shot in shots if shot.target_id not in environments)
+        missing_performance = tuple(
+            shot.target_id for shot in shots if shot.target_id not in performances
+        )
+        missing_environment = tuple(
+            shot.target_id for shot in shots if shot.target_id not in environments
+        )
         if missing_performance:
             raise ValueError(
                 "Generate current Action/Performance proposals before Camera & Lighting proposals; "
@@ -197,13 +220,28 @@ class CameraLightingProposalAutomationService:
             self._validate_camera(draft.camera, shot.target_id)
             self._validate_lighting(draft.lighting, shot.target_id)
             camera = self._proposals.save(
-                self._camera_proposal(normalized_story, revision, source_text, shot, performance, environment, draft.camera)
+                self._camera_proposal(
+                    normalized_story,
+                    revision,
+                    source_text,
+                    shot,
+                    performance,
+                    environment,
+                    draft.camera,
+                )
             )
             generated.append(camera)
             generated.append(
                 self._proposals.save(
                     self._lighting_proposal(
-                        normalized_story, revision, source_text, shot, performance, environment, camera, draft.lighting
+                        normalized_story,
+                        revision,
+                        source_text,
+                        shot,
+                        performance,
+                        environment,
+                        camera,
+                        draft.lighting,
                     )
                 )
             )
@@ -216,7 +254,9 @@ class CameraLightingProposalAutomationService:
         if not 0.0 <= draft.camera_height_m <= 100.0:
             raise ValueError(f"Camera proposal for {shot_id} has invalid camera height")
         if not draft.composition.strip() or not draft.focus_strategy.strip():
-            raise ValueError(f"Camera proposal for {shot_id} requires composition and focus strategy")
+            raise ValueError(
+                f"Camera proposal for {shot_id} requires composition and focus strategy"
+            )
 
     @staticmethod
     def _validate_lighting(draft: LightingProposalDraft, shot_id: str) -> None:
@@ -224,8 +264,14 @@ class CameraLightingProposalAutomationService:
             raise ValueError(f"Lighting proposal for {shot_id} has invalid color temperature")
         if not 0 <= draft.fill_level_percent <= 100:
             raise ValueError(f"Lighting proposal for {shot_id} has invalid fill level")
-        if not draft.source_strategy.strip() or not draft.shadow_strategy.strip() or not draft.subject_readability.strip():
-            raise ValueError(f"Lighting proposal for {shot_id} requires source, shadow and readability strategy")
+        if (
+            not draft.source_strategy.strip()
+            or not draft.shadow_strategy.strip()
+            or not draft.subject_readability.strip()
+        ):
+            raise ValueError(
+                f"Lighting proposal for {shot_id} requires source, shadow and readability strategy"
+            )
 
     def _source_kind(self) -> AutomationSourceKind:
         return (

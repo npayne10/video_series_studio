@@ -9,7 +9,9 @@ from vscs.application.automation import (
     AutomationProvenance,
     AutomationSourceKind,
 )
-from vscs.presentation.dialogs.automation_proposal_review_dialog import AutomationProposalReviewDialog
+from vscs.presentation.dialogs.automation_proposal_review_dialog import (
+    AutomationProposalReviewDialog,
+)
 
 
 class _ProposalStore:
@@ -20,7 +22,9 @@ class _ProposalStore:
         return self.proposals
 
 
-def _proposal(proposal_id: str, proposal_type: AutomationProposalType, payload: dict[str, object]) -> AutomationProposal:
+def _proposal(
+    proposal_id: str, proposal_type: AutomationProposalType, payload: dict[str, object]
+) -> AutomationProposal:
     return AutomationProposal(
         proposal_id=proposal_id,
         proposal_type=proposal_type,
@@ -39,9 +43,17 @@ def _proposal(proposal_id: str, proposal_type: AutomationProposalType, payload: 
 
 def test_camera_and_lighting_appear_under_shot_in_shared_review(qtbot) -> None:
     proposals = (
-        _proposal("SHOT", AutomationProposalType.SHOT, {"scene_id": "SC-001", "sequence_number": 1}),
-        _proposal("CAMERA", AutomationProposalType.CAMERA, {"shot_size": "medium", "movement": "static"}),
-        _proposal("LIGHTING", AutomationProposalType.LIGHTING, {"lighting_intent": "naturalistic", "key_direction": "motivated"}),
+        _proposal(
+            "SHOT", AutomationProposalType.SHOT, {"scene_id": "SC-001", "sequence_number": 1}
+        ),
+        _proposal(
+            "CAMERA", AutomationProposalType.CAMERA, {"shot_size": "medium", "movement": "static"}
+        ),
+        _proposal(
+            "LIGHTING",
+            AutomationProposalType.LIGHTING,
+            {"lighting_intent": "naturalistic", "key_direction": "motivated"},
+        ),
     )
     dialog = AutomationProposalReviewDialog(
         cast(AutomationProposalService, _ProposalStore(proposals)),

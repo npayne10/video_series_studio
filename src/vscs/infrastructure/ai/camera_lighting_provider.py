@@ -18,8 +18,8 @@ from vscs.application.story import (
     ExposureIntent,
     KeyDirection,
     LensFamily,
-    LightQuality,
     LightingIntent,
+    LightQuality,
     ScreenDirection,
     ShotSize,
 )
@@ -122,7 +122,9 @@ class OpenAICameraLightingProposalProvider:
             )
             parsed = response.output_parsed
         except Exception as exc:
-            raise AIProviderError(f"OpenAI Camera/Lighting proposal generation failed: {exc}") from exc
+            raise AIProviderError(
+                f"OpenAI Camera/Lighting proposal generation failed: {exc}"
+            ) from exc
         if parsed is None:
             raise AIProviderError("OpenAI Camera/Lighting proposal generation returned no result")
         if not isinstance(parsed, _CameraLightingResponse):
@@ -159,5 +161,7 @@ class OpenAICameraLightingProposalProvider:
                 confidence=parsed.lighting.confidence,
             )
         except ValueError as exc:
-            raise AIProviderError(f"OpenAI Camera/Lighting proposal used an invalid governed enum: {exc}") from exc
+            raise AIProviderError(
+                f"OpenAI Camera/Lighting proposal used an invalid governed enum: {exc}"
+            ) from exc
         return CameraLightingProposalDraft(camera=camera, lighting=lighting)
