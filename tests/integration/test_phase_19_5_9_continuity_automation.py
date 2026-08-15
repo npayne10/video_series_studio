@@ -33,7 +33,8 @@ def test_continuity_automation_is_registered_with_story_workspace(tmp_path: Path
         qtbot.addWidget(window)
         service = application.services.get(ContinuityProposalAutomationService)
         assert isinstance(service, ContinuityProposalAutomationService)
-        assert not window.story_browser.continuity_proposals_button.isHidden()
+        # Phase 19.5.12A relocates this action into hierarchical navigation.
+        assert window.story_browser.continuity_proposals_button.isHidden()
         assert window.story_browser.continuity_proposals_button.text() == "Continuity Proposals…"
 
 
