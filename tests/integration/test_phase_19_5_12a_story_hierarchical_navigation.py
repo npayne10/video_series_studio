@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import QPushButton, QTreeWidget, QTreeWidgetItem
 
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
@@ -82,18 +82,19 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
             "reviewAutomationProposals",
             "reviewAutomationGaps",
         ):
-            button = window.story_browser.findChild(
-                type(window.story_browser.new_button), object_name
-            )
+            button = window.story_browser.findChild(QPushButton, object_name)
             assert button is not None
             assert button.testAttribute(hidden_attribute)
 
-        # Lifecycle controls are retained as the original Story Workspace
-        # controls. Their effective Qt visibility is intentionally not asserted
-        # here because offscreen/unshown parent state affects child visibility.
-        assert window.story_browser.new_button.objectName() == "newStory"
-        assert window.story_browser.new_button.text() == "New Story"
-        assert window.story_browser.edit_button.objectName() == "editStory"
-        assert window.story_browser.edit_button.text() == "Edit"
-        assert window.story_browser.duplicate_button.objectName() == "duplicateStory"
-        assert window.story_browser.duplicate_button.text() == "Duplicate"
+        # Story lifecycle controls are retained. Locate them by their stable Qt
+        # object names rather than inherited Python attributes such as
+        # ``new_button``/``edit_button``, which are also used by the legacy
+        # structured Scene browser.
+        for object_name, label in (
+            ("newStory", "New Story"),
+            ("editStory", "Edit"),
+            ("duplicateStory", "Duplicate"),
+        ):
+            button = window.story_browser.findChild(QPushButton, object_name)
+            assert button is not None
+            assert button.text() == label
