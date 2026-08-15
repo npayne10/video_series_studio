@@ -347,7 +347,9 @@ class AutomationProposalReviewDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if answer is not QMessageBox.StandardButton.Yes:
+        # PySide6 may return an equivalent StandardButton wrapper that is not the
+        # identical Python enum object. Compare by value/equality, not identity.
+        if answer != QMessageBox.StandardButton.Yes:
             return
         try:
             summary = self._acceptance.accept_eligible_current(
@@ -389,7 +391,9 @@ class AutomationProposalReviewDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if answer is not QMessageBox.StandardButton.Yes:
+        # Use equality for the same PySide6 StandardButton reason as the bulk
+        # acceptance confirmation above.
+        if answer != QMessageBox.StandardButton.Yes:
             return
         try:
             report = self._orchestrator.compile_current(
