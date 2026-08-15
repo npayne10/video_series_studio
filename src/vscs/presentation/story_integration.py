@@ -11,9 +11,13 @@ from vscs.application.asset_resolution import AssetBrowserService, register_asse
 from vscs.application.assets import AssetService
 from vscs.application.automation import (
     ActionPerformanceProposalAutomationService,
+    AutomationProposalService,
     CameraLightingProposalAutomationService,
+    ContinuityProposalAutomationService,
     EnvironmentProposalAutomationService,
     EpisodeSceneProposalAutomationService,
+    ProposalAcceptanceService,
+    ProposalAutoCompilationOrchestrator,
     SceneShotProposalAutomationService,
     SemanticStoryInterpretationService,
 )
@@ -128,6 +132,7 @@ def install_story_browser() -> None:
         for registration_service_type, register in registrations:
             if window.services.get(registration_service_type) is None:
                 register(window.services)
+
         register_ai_story_analysis(window.services)
         intelligence = window.services.get(ApprovedStoryIntelligenceService)
         if intelligence is None:
@@ -142,6 +147,37 @@ def install_story_browser() -> None:
                 StoryAnalysisCacheService,
                 StoryAnalysisCacheService(window.services.require(AssetService), analysis_engine),
             )
+
+        episode_service = window.services.require(EpisodePlanningService)
+        scene_service = window.services.require(ScenePlanningService)
+        shot_service = window.services.require(GovernedShotPlanningService)
+        governed_assets = window.services.require(GovernedAssetResolutionService)
+        camera_service = window.services.require(GovernedCameraPlanningService)
+        lighting_service = window.services.require(GovernedLightingPlanningService)
+        environment_service = window.services.require(GovernedEnvironmentPlanningService)
+        planning_review = window.services.require(GovernedPlanningReviewService)
+        planning_integration = window.services.require(GovernedPlanningIntegrationService)
+        proposal_store = window.services.require(AutomationProposalService)
+
+        acceptance_service = window.services.get(ProposalAcceptanceService)
+        if acceptance_service is None:
+            acceptance_service = window.services.register(
+                ProposalAcceptanceService,
+                ProposalAcceptanceService(proposal_store),
+            )
+        orchestrator = window.services.get(ProposalAutoCompilationOrchestrator)
+        if orchestrator is None:
+            orchestrator = window.services.register(
+                ProposalAutoCompilationOrchestrator,
+                ProposalAutoCompilationOrchestrator(
+                    window.projects,
+                    proposal_store,
+                    episode_service,
+                    scene_service,
+                    shot_service,
+                ),
+            )
+
         window.story_browser = AutomationStoryWorkspaceWidget(
             window.services.require(StoryService),
             window.services.require(AssetService),
@@ -174,15 +210,12 @@ def install_story_browser() -> None:
         window.story_browser.camera_lighting_automation_service = window.services.require(
             CameraLightingProposalAutomationService
         )
-        episode_service = window.services.require(EpisodePlanningService)
-        scene_service = window.services.require(ScenePlanningService)
-        shot_service = window.services.require(GovernedShotPlanningService)
-        governed_assets = window.services.require(GovernedAssetResolutionService)
-        camera_service = window.services.require(GovernedCameraPlanningService)
-        lighting_service = window.services.require(GovernedLightingPlanningService)
-        environment_service = window.services.require(GovernedEnvironmentPlanningService)
-        planning_review = window.services.require(GovernedPlanningReviewService)
-        planning_integration = window.services.require(GovernedPlanningIntegrationService)
+        window.story_browser.continuity_automation_service = window.services.require(
+            ContinuityProposalAutomationService
+        )
+        window.story_browser.proposal_acceptance_service = acceptance_service
+        window.story_browser.auto_compilation_orchestrator = orchestrator
+
         setattr(scene_service, "shot_planning_service", shot_service)  # noqa: B010
         setattr(shot_service, "asset_resolution_service", governed_assets)  # noqa: B010
         setattr(shot_service, "camera_planning_service", camera_service)  # noqa: B010
@@ -190,6 +223,7 @@ def install_story_browser() -> None:
         setattr(camera_service, "lighting_planning_service", lighting_service)  # noqa: B010
         setattr(lighting_service, "environment_planning_service", environment_service)  # noqa: B010
         setattr(planning_review, "planning_integration_service", planning_integration)  # noqa: B010
+
         package_service = window.services.get(ProductionPackageService)
         if package_service is None:
             package_service = window.services.register(
@@ -217,7 +251,8 @@ def install_story_browser() -> None:
             service = window.services.get(compiler_service_type)
             if service is None:
                 service = window.services.register(
-                    compiler_service_type, compiler_factory(window.projects, package_service)
+                    compiler_service_type,
+                    compiler_factory(window.projects, package_service),
                 )
             compilers.append(service)
         (
@@ -228,12 +263,18 @@ def install_story_browser() -> None:
             style_compiler,
             universal_compiler,
         ) = compilers
+
         window.episode_planner_button = install_episode_planner(
-            window.story_browser, episode_service, scene_service
+            window.story_browser,
+            episode_service,
+            scene_service,
         )
         window.episode_planner_button.setText("Production Planning…")
         window.open_in_planner_button = install_production_planning_workspace(
-            window.story_browser, episode_service, scene_service, shot_service
+            window.story_browser,
+            episode_service,
+            scene_service,
+            shot_service,
         )
         window.story_workspace = window.story_browser
         window.content_stack.removeWidget(story_placeholder)
