@@ -9,11 +9,14 @@ from vscs.application.automation import (
     ShotAssetBindingService,
 )
 from vscs.application.projects import ProjectService
+from vscs.infrastructure.configuration import ConfigurationService
 
 
 def _store(tmp_path: Path) -> AutomationProposalService:
-    projects = ProjectService()
-    projects._project_directory = tmp_path
+    configuration = ConfigurationService(tmp_path / "settings.yaml")
+    configuration.load()
+    projects = ProjectService(configuration)
+    projects.create(tmp_path / "project", name="Phase 19.5.12 Test")
     return AutomationProposalService(projects)
 
 
