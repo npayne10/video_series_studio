@@ -64,6 +64,7 @@ def test_story_navigation_is_hierarchical_and_complete(tmp_path: Path, qtbot) ->
         assert canonical_library.isExpanded()
         _child(canonical_library, "Import XPD Library…")
         _child(canonical_library, "Resolve Story Entities")
+        _child(canonical_library, "Review XPD Matches…")
         _child(canonical_library, "Bind Shot Assets…")
 
         _child(story, "Proposal Review")
@@ -109,9 +110,11 @@ def test_phase_19_5_12_actions_are_registered_in_story_navigation(tmp_path: Path
         qtbot.addWidget(window)
 
         actions = window.story_navigation_actions
-        assert "story.import_xpd" in actions
-        assert "story.resolve_assets" in actions
-        assert "story.bind_shot_assets" in actions
-        assert callable(actions["story.import_xpd"])
-        assert callable(actions["story.resolve_assets"])
-        assert callable(actions["story.bind_shot_assets"])
+        for key in (
+            "story.import_xpd",
+            "story.resolve_assets",
+            "story.review_xpd_matches",
+            "story.bind_shot_assets",
+        ):
+            assert key in actions
+            assert callable(actions[key])
