@@ -52,7 +52,6 @@ def test_story_navigation_is_hierarchical_and_complete(tmp_path: Path, qtbot) ->
             "Story Analysis",
             "Planning Proposals",
             "Shot Proposals",
-            "Canonical Asset Resolution",
             "Performance",
             "Environment",
             "Camera & Lighting",
@@ -60,6 +59,13 @@ def test_story_navigation_is_hierarchical_and_complete(tmp_path: Path, qtbot) ->
             "AI Review & Gap Detection",
         ):
             _child(automation, label)
+
+        canonical_library = _child(story, "Canonical Library")
+        assert canonical_library.isExpanded()
+        _child(canonical_library, "Import XPD Library…")
+        _child(canonical_library, "Resolve Story Entities")
+        _child(canonical_library, "Bind Shot Assets…")
+
         _child(story, "Proposal Review")
         _child(story, "Production Planning")
 
@@ -86,10 +92,6 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
             assert button is not None
             assert button.testAttribute(hidden_attribute)
 
-        # Story lifecycle controls are retained. Locate them by their stable Qt
-        # object names rather than inherited Python attributes such as
-        # ``new_button``/``edit_button``, which are also used by the legacy
-        # structured Scene browser.
         for object_name, label in (
             ("newStory", "New Story"),
             ("editStory", "Edit"),
@@ -98,3 +100,18 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
             button = window.story_browser.findChild(QPushButton, object_name)
             assert button is not None
             assert button.text() == label
+
+
+def test_phase_19_5_12_actions_are_registered_in_story_navigation(tmp_path: Path, qtbot) -> None:
+    with build_application_context(_options(tmp_path)) as application:
+        application.services.require(ProjectService).create(tmp_path / "VSCS TSR", name="VSCS TSR")
+        window = application.create_main_window()
+        qtbot.addWidget(window)
+
+        actions = window.story_navigation_actions
+        assert "story.import_xpd" in actions
+        assert "story.resolve_assets" in actions
+        assert "story.bind_shot_assets" in actions
+        assert callable(actions["story.import_xpd"])
+        assert callable(actions["story.resolve_assets"])
+        assert callable(actions["story.bind_shot_assets"])
