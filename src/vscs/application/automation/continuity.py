@@ -166,8 +166,10 @@ class ContinuityProposalAutomationService:
         if preservation and previous_closing:
             effective_opening = previous_closing
             opening_resolution = "preserve-previous-directive"
-        elif opening and previous_closing and self._normalized_state(opening) == self._normalized_state(
-            previous_closing
+        elif (
+            opening
+            and previous_closing
+            and self._normalized_state(opening) == self._normalized_state(previous_closing)
         ):
             effective_opening = opening
             opening_resolution = "matched-previous-state"
