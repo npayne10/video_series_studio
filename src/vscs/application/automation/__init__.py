@@ -45,8 +45,8 @@ from .orchestration import (
     ProposalAcceptanceError,
     ProposalAcceptanceService,
     ProposalAcceptanceSummary,
-    ProposalAutoCompilationOrchestrator,
 )
+from .runtime_reconciled_orchestration import ProposalAutoCompilationOrchestrator
 from .scene_shot import (
     SceneShotProposalAutomationService,
     SceneShotProposalDraft,
