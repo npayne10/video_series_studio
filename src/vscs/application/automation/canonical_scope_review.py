@@ -10,8 +10,9 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import ClassVar
 
-from vscs.application.assets import AssetService
+from vscs.application.assets import AssetNotFoundError, AssetService
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus
 
 from .contracts import AutomationProposal, AutomationProposalType
@@ -35,8 +36,10 @@ class CanonicalScopeRecommendation:
 class CanonicalScopeReviewService:
     """Persist explicit human scope and XPD decisions without auto-approving assets."""
 
-    _PERSISTENT_CATEGORIES = frozenset({"character", "ship", "vehicle", "planet", "uniform"})
-    _INCIDENTAL_TERMS = frozenset(
+    _PERSISTENT_CATEGORIES: ClassVar[frozenset[str]] = frozenset(
+        {"character", "ship", "vehicle", "planet", "uniform"}
+    )
+    _INCIDENTAL_TERMS: ClassVar[frozenset[str]] = frozenset(
         {
             "road",
             "rock",
@@ -58,6 +61,25 @@ class CanonicalScopeReviewService:
     def __init__(self, assets: AssetService, proposals: AutomationProposalService) -> None:
         self._assets = assets
         self._proposals = proposals
+
+    def entity_proposal(
+        self, story_id: str, source_revision: str, entity_name: str
+    ) -> AutomationProposal:
+        story = story_id.strip().upper()
+        revision = source_revision.strip()
+        matches = tuple(
+            proposal
+            for proposal in self._proposals.list_proposals()
+            if proposal.proposal_type is AutomationProposalType.ASSET
+            and proposal.provenance.source_story_id == story
+            and proposal.provenance.source_revision == revision
+            and str(proposal.payload.get("name", "")).casefold() == entity_name.strip().casefold()
+        )
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected exactly one current asset proposal for {entity_name!r}; found {len(matches)}"
+            )
+        return matches[0]
 
     def recommend(self, proposal: AutomationProposal) -> CanonicalScopeRecommendation:
         payload = proposal.payload
@@ -100,7 +122,7 @@ class CanonicalScopeReviewService:
         scope: CanonicalScope,
         reviewed_by: str = "VSCS human reviewer",
     ) -> AutomationProposal:
-        proposal = self._entity_proposal(story_id, source_revision, entity_name)
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
         payload = dict(proposal.payload)
         payload["canonical_scope"] = scope.value
         payload["canonical_scope_reviewed_by"] = reviewed_by.strip() or "VSCS human reviewer"
@@ -115,7 +137,7 @@ class CanonicalScopeReviewService:
         asset_id: str,
         reviewed_by: str = "VSCS human reviewer",
     ) -> AutomationProposal:
-        proposal = self._entity_proposal(story_id, source_revision, entity_name)
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
         asset = self._assets.get(asset_id)
         expected = str(proposal.payload.get("expected_asset_category", ""))
         if asset.category.value != expected:
@@ -145,7 +167,7 @@ class CanonicalScopeReviewService:
         asset_id: str,
         reviewed_by: str = "VSCS human reviewer",
     ) -> AutomationProposal:
-        proposal = self._entity_proposal(story_id, source_revision, entity_name)
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
         payload = dict(proposal.payload)
         rejected = [str(item) for item in payload.get("rejected_canonical_asset_ids", [])]
         normalized = asset_id.strip().upper()
@@ -163,7 +185,7 @@ class CanonicalScopeReviewService:
         entity_name: str,
         reviewed_by: str = "VSCS human reviewer",
     ) -> Asset:
-        proposal = self._entity_proposal(story_id, source_revision, entity_name)
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
         category = AssetCategory(str(proposal.payload.get("expected_asset_category", "other")))
         digest = hashlib.sha256(
             f"{story_id.strip().upper()}|{source_revision}|{entity_name.casefold()}".encode()
@@ -172,9 +194,7 @@ class CanonicalScopeReviewService:
         asset_id = f"STORY-{prefix}-{digest}"
         try:
             asset = self._assets.get(asset_id)
-        except Exception as exc:  # AssetNotFoundError is intentionally kept behind AssetService.
-            if exc.__class__.__name__ != "AssetNotFoundError":
-                raise
+        except AssetNotFoundError:
             asset = self._assets.create(
                 AssetCreate(
                     asset_id=asset_id,
@@ -195,7 +215,7 @@ class CanonicalScopeReviewService:
             asset_id=asset.asset_id,
             reviewed_by=reviewed_by,
         )
-        proposal = self._entity_proposal(story_id, source_revision, entity_name)
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
         payload = dict(proposal.payload)
         payload["canonical_scope"] = CanonicalScope.STORY_UNIQUE_CANONICAL.value
         payload["canonical_resolution_source"] = "human_created_draft"
@@ -205,7 +225,7 @@ class CanonicalScopeReviewService:
     def compatible_assets(
         self, *, story_id: str, source_revision: str, entity_name: str
     ) -> tuple[Asset, ...]:
-        proposal = self._entity_proposal(story_id, source_revision, entity_name)
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
         category = str(proposal.payload.get("expected_asset_category", ""))
         rejected = {
             str(item).upper() for item in proposal.payload.get("rejected_canonical_asset_ids", [])
@@ -215,25 +235,6 @@ class CanonicalScopeReviewService:
             for asset in self._assets.list()
             if asset.category.value == category and asset.asset_id not in rejected
         )
-
-    def _entity_proposal(
-        self, story_id: str, source_revision: str, entity_name: str
-    ) -> AutomationProposal:
-        story = story_id.strip().upper()
-        revision = source_revision.strip()
-        matches = tuple(
-            proposal
-            for proposal in self._proposals.list_proposals()
-            if proposal.proposal_type is AutomationProposalType.ASSET
-            and proposal.provenance.source_story_id == story
-            and proposal.provenance.source_revision == revision
-            and str(proposal.payload.get("name", "")).casefold() == entity_name.strip().casefold()
-        )
-        if len(matches) != 1:
-            raise ValueError(
-                f"Expected exactly one current asset proposal for {entity_name!r}; found {len(matches)}"
-            )
-        return matches[0]
 
     @staticmethod
     def _tokens(value: str) -> frozenset[str]:
