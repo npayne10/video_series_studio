@@ -71,6 +71,12 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
         window.show()
         qtbot.waitUntil(window.isVisible)
 
+        # Make Story Workspace the active stacked page before testing effective
+        # child visibility. The application normally does this through the
+        # hierarchical navigation tree.
+        window._story_flat_navigation_controller.setCurrentRow(2)
+        qtbot.waitUntil(lambda: window.content_stack.currentWidget() is window.story_browser)
+
         for object_name in (
             "generatePlanningProposals",
             "generateShotProposals",
