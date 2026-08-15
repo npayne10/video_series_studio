@@ -40,9 +40,10 @@ def test_scene_shot_automation_is_registered_with_story_workspace(tmp_path: Path
         workspace = window.story_browser
 
         assert isinstance(service, SceneShotProposalAutomationService)
-        assert not workspace.shot_proposals_button.isHidden()
+        # Phase 19.5.12A relocates these actions into hierarchical navigation.
+        assert workspace.shot_proposals_button.isHidden()
         assert workspace.shot_proposals_button.text() == "Shot Proposals…"
-        assert not workspace.review_proposals_button.isHidden()
+        assert workspace.review_proposals_button.isHidden()
         assert workspace.review_proposals_button.text() == "Review Proposals…"
 
 
