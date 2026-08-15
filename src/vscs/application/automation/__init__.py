@@ -46,6 +46,12 @@ from .orchestration import (
     ProposalAcceptanceService,
     ProposalAcceptanceSummary,
 )
+from .review_gaps import (
+    ProposalReviewGapDetectionService,
+    ProposalReviewReport,
+    ReviewGap,
+    ReviewGapSeverity,
+)
 from .runtime_reconciled_orchestration import ProposalAutoCompilationOrchestrator
 from .scene_shot import (
     SceneShotProposalAutomationService,
@@ -88,6 +94,10 @@ __all__ = [
     "ProposalAcceptanceService",
     "ProposalAcceptanceSummary",
     "ProposalAutoCompilationOrchestrator",
+    "ProposalReviewGapDetectionService",
+    "ProposalReviewReport",
+    "ReviewGap",
+    "ReviewGapSeverity",
     "SceneProposalDraft",
     "SceneShotProposalAutomationService",
     "SceneShotProposalDraft",
