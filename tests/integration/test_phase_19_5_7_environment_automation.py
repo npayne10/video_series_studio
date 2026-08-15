@@ -47,9 +47,10 @@ def test_environment_automation_is_registered_with_story_workspace(tmp_path: Pat
         workspace = window.story_browser
 
         assert isinstance(service, EnvironmentProposalAutomationService)
-        assert not workspace.environment_proposals_button.isHidden()
+        # Phase 19.5.12A relocates these actions into hierarchical navigation.
+        assert workspace.environment_proposals_button.isHidden()
         assert workspace.environment_proposals_button.text() == "Environment Proposals…"
-        assert not workspace.review_proposals_button.isHidden()
+        assert workspace.review_proposals_button.isHidden()
 
 
 def test_environment_proposals_do_not_create_governed_environment_plans(
