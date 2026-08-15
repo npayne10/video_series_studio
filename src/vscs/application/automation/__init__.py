@@ -6,6 +6,14 @@ from .action_performance import (
     ActionPerformanceProposalProvider,
     TemplateActionPerformanceProposalProvider,
 )
+from .camera_lighting import (
+    CameraLightingProposalAutomationService,
+    CameraLightingProposalDraft,
+    CameraLightingProposalProvider,
+    CameraProposalDraft,
+    LightingProposalDraft,
+    TemplateCameraLightingProposalProvider,
+)
 from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
 from .contracts import (
     AutomationProposal,
@@ -37,10 +45,7 @@ from .scene_shot import (
     ShotProposalDraft,
     TemplateSceneShotProposalProvider,
 )
-from .semantic_interpretation import (
-    SemanticStoryInterpretation,
-    SemanticStoryInterpretationService,
-)
+from .semantic_interpretation import SemanticStoryInterpretation, SemanticStoryInterpretationService
 from .service import AutomationProposalError, AutomationProposalService
 
 __all__ = [
@@ -54,6 +59,10 @@ __all__ = [
     "AutomationProposalType",
     "AutomationProvenance",
     "AutomationSourceKind",
+    "CameraLightingProposalAutomationService",
+    "CameraLightingProposalDraft",
+    "CameraLightingProposalProvider",
+    "CameraProposalDraft",
     "CanonicalEntityAssetResolutionAutomationService",
     "EnvironmentProposalAutomationService",
     "EnvironmentProposalDraft",
@@ -62,6 +71,7 @@ __all__ = [
     "EpisodeSceneProposalAutomationService",
     "EpisodeSceneProposalDraft",
     "EpisodeSceneProposalProvider",
+    "LightingProposalDraft",
     "SceneProposalDraft",
     "SceneShotProposalAutomationService",
     "SceneShotProposalDraft",
@@ -71,6 +81,7 @@ __all__ = [
     "SemanticStoryInterpretationService",
     "ShotProposalDraft",
     "TemplateActionPerformanceProposalProvider",
+    "TemplateCameraLightingProposalProvider",
     "TemplateEnvironmentProposalProvider",
     "TemplateEpisodeSceneProposalProvider",
     "TemplateSceneShotProposalProvider",
