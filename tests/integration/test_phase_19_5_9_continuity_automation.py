@@ -37,7 +37,9 @@ def test_continuity_automation_is_registered_with_story_workspace(tmp_path: Path
         assert window.story_browser.continuity_proposals_button.text() == "Continuity Proposals…"
 
 
-def test_continuity_proposals_do_not_create_governed_continuity_compilation(tmp_path: Path, qtbot) -> None:
+def test_continuity_proposals_do_not_create_governed_continuity_compilation(
+    tmp_path: Path, qtbot
+) -> None:
     with build_application_context(_options(tmp_path)) as application:
         application.services.require(ProjectService).create(tmp_path / "VSCS TSR", name="VSCS TSR")
         window = application.create_main_window()
@@ -53,20 +55,38 @@ def test_continuity_proposals_do_not_create_governed_continuity_compilation(tmp_
         )
         shot_id = "EP-001-SC-001-SHT-001"
         definitions = (
-            ("SHOT", AutomationProposalType.SHOT, {"scene_id": "EP-001-SC-001", "sequence_number": 1}),
-            ("PERF", AutomationProposalType.ACTION_PERFORMANCE, {"opening_state": "Bridge entry", "closing_state": "At console"}),
-            ("ENV", AutomationProposalType.ENVIRONMENT, {"environment_context": "interior", "surface_state": "Bridge"}),
+            (
+                "SHOT",
+                AutomationProposalType.SHOT,
+                {"scene_id": "EP-001-SC-001", "sequence_number": 1},
+            ),
+            (
+                "PERF",
+                AutomationProposalType.ACTION_PERFORMANCE,
+                {"opening_state": "Bridge entry", "closing_state": "At console"},
+            ),
+            (
+                "ENV",
+                AutomationProposalType.ENVIRONMENT,
+                {"environment_context": "interior", "surface_state": "Bridge"},
+            ),
             ("CAM", AutomationProposalType.CAMERA, {"screen_direction": "preserve_previous"}),
-            ("LIGHT", AutomationProposalType.LIGHTING, {"continuity_notes": "Maintain practical bridge lighting"}),
+            (
+                "LIGHT",
+                AutomationProposalType.LIGHTING,
+                {"continuity_notes": "Maintain practical bridge lighting"},
+            ),
         )
         for proposal_id, proposal_type, payload in definitions:
-            store.save(AutomationProposal(
-                proposal_id=proposal_id,
-                proposal_type=proposal_type,
-                target_id=shot_id,
-                payload=payload,
-                provenance=provenance,
-            ))
+            store.save(
+                AutomationProposal(
+                    proposal_id=proposal_id,
+                    proposal_type=proposal_type,
+                    target_id=shot_id,
+                    payload=payload,
+                    provenance=provenance,
+                )
+            )
         authority = application.services.require(ContinuityCompilerService)
         before = authority.list_drafts()
         generated = application.services.require(ContinuityProposalAutomationService).generate(

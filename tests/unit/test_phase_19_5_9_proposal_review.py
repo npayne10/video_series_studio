@@ -9,7 +9,9 @@ from vscs.application.automation import (
     AutomationProvenance,
     AutomationSourceKind,
 )
-from vscs.presentation.dialogs.automation_proposal_review_dialog import AutomationProposalReviewDialog
+from vscs.presentation.dialogs.automation_proposal_review_dialog import (
+    AutomationProposalReviewDialog,
+)
 
 
 class _ProposalStore:

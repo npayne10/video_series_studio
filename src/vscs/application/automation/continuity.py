@@ -62,9 +62,7 @@ class ContinuityProposalAutomationService:
             raise ValueError("Generate current Shot proposals before Continuity proposals")
         by_type = {
             proposal_type: {
-                item.target_id: item
-                for item in current
-                if item.proposal_type is proposal_type
+                item.target_id: item for item in current if item.proposal_type is proposal_type
             }
             for proposal_type in (
                 AutomationProposalType.ACTION_PERFORMANCE,
@@ -143,12 +141,14 @@ class ContinuityProposalAutomationService:
         previous_camera: AutomationProposal | None,
         previous_lighting: AutomationProposal | None,
     ) -> AutomationProposal:
-        opening = str(performance.payload.get("opening_state", "")).strip() or str(
-            shot.payload.get("continuity_in", "")
-        ).strip()
-        closing = str(performance.payload.get("closing_state", "")).strip() or str(
-            shot.payload.get("continuity_out", "")
-        ).strip()
+        opening = (
+            str(performance.payload.get("opening_state", "")).strip()
+            or str(shot.payload.get("continuity_in", "")).strip()
+        )
+        closing = (
+            str(performance.payload.get("closing_state", "")).strip()
+            or str(shot.payload.get("continuity_out", "")).strip()
+        )
         previous_closing = (
             str(previous_performance.payload.get("closing_state", "")).strip()
             if previous_performance is not None
@@ -186,7 +186,9 @@ class ContinuityProposalAutomationService:
             and previous_screen not in {"preserve_previous", "neutral"}
             and current_screen not in {previous_screen, "neutral"}
         ):
-            conflicts.append("Screen direction reverses relative to the previous Shot; human review required.")
+            conflicts.append(
+                "Screen direction reverses relative to the previous Shot; human review required."
+            )
 
         previous_lighting_notes = (
             str(previous_lighting.payload.get("continuity_notes", "")).strip()
