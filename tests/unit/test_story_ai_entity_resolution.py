@@ -109,6 +109,30 @@ def test_character_rank_variant_matches_existing_xpd_identity() -> None:
     assert candidate.matched_asset_name == "Commander James Spence"
 
 
+def test_unique_multi_token_character_subset_is_existing_identity() -> None:
+    kind, asset = EntityResolutionService.match_existing_asset(
+        "James Spence",
+        (),
+        EntityResolutionCategory.CHARACTER,
+        _CharacterCatalog().assets(),
+    )
+    assert kind is ResolutionMatchKind.EXISTING
+    assert asset is not None
+    assert asset.asset_id == "CAP-CHR-001"
+
+
+def test_single_character_name_token_requires_human_review() -> None:
+    kind, asset = EntityResolutionService.match_existing_asset(
+        "James",
+        (),
+        EntityResolutionCategory.CHARACTER,
+        _CharacterCatalog().assets(),
+    )
+    assert kind is ResolutionMatchKind.POSSIBLE_DUPLICATE
+    assert asset is not None
+    assert asset.asset_id == "CAP-CHR-001"
+
+
 def test_candidate_review_state_is_explicit_and_immutable() -> None:
     result = EntityResolutionService(_Provider(), _Catalog()).analyze(
         story_id="STORY-001",
