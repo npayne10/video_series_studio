@@ -15,6 +15,7 @@ from .camera_lighting import (
     TemplateCameraLightingProposalProvider,
 )
 from .canonical_entity import CanonicalEntityAssetResolutionAutomationService
+from .continuity import ContinuityProposalAutomationService
 from .contracts import (
     AutomationProposal,
     AutomationProposalStatus,
@@ -64,6 +65,7 @@ __all__ = [
     "CameraLightingProposalProvider",
     "CameraProposalDraft",
     "CanonicalEntityAssetResolutionAutomationService",
+    "ContinuityProposalAutomationService",
     "EnvironmentProposalAutomationService",
     "EnvironmentProposalDraft",
     "EnvironmentProposalProvider",
