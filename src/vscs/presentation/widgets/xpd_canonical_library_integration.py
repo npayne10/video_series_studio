@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from vscs.application.assets import AssetService, XPDWorkbookError
 from vscs.application.automation import CanonicalLibraryImportService, ShotAssetBindingService
 
 
-def import_xpd_library(parent: object, assets: AssetService) -> bool:
+def import_xpd_library(parent: QWidget | None, assets: AssetService) -> bool:
     path, _filter = QFileDialog.getOpenFileName(
         parent,
         "Import Canonical XPD Library",
