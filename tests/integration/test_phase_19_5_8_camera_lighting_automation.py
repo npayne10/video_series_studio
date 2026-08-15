@@ -35,7 +35,8 @@ def test_camera_lighting_automation_is_registered_with_story_workspace(
         qtbot.addWidget(window)
         service = application.services.get(CameraLightingProposalAutomationService)
         assert isinstance(service, CameraLightingProposalAutomationService)
-        assert not window.story_browser.camera_lighting_proposals_button.isHidden()
+        # Phase 19.5.12A relocates this action into hierarchical navigation.
+        assert window.story_browser.camera_lighting_proposals_button.isHidden()
         assert (
             window.story_browser.camera_lighting_proposals_button.text()
             == "Camera & Lighting Proposals…"
