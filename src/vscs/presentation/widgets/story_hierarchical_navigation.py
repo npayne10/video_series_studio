@@ -245,6 +245,15 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
             action = actions.get(str(action_key))
             if action is not None:
                 action()
+            # Review XPD Matches is a modal action. Return selection to its
+            # parent after the dialog exits by Close, X or Esc so choosing the
+            # same action again always causes a current-item change.
+            if str(action_key) == "story.review_xpd_matches":
+                parent_item = current.parent()
+                if parent_item is not None:
+                    tree.blockSignals(True)
+                    tree.setCurrentItem(parent_item)
+                    tree.blockSignals(False)
             return
         section = current.data(0, SECTION_ROLE)
         if isinstance(section, int):
