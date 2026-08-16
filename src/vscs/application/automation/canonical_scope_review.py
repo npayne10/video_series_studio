@@ -210,12 +210,6 @@ class CanonicalScopeReviewService:
     def preview_safe_recommendations(
         self, *, story_id: str, source_revision: str
     ) -> SafeScopeReviewSummary:
-        """Count recommendations safe for one explicit bulk human decision.
-
-        Only unmatched/new entities with no prior scope decision are eligible.
-        Possible XPD duplicates, existing matches and canonical candidates are
-        deliberately excluded from this bulk operation.
-        """
         eligible, total = self._safe_recommendations(story_id, source_revision)
         return SafeScopeReviewSummary(
             prompt_elements=sum(
@@ -236,7 +230,6 @@ class CanonicalScopeReviewService:
         source_revision: str,
         reviewed_by: str = "VSCS human reviewer",
     ) -> SafeScopeReviewSummary:
-        """Persist only safe non-XPD scopes after explicit human confirmation."""
         eligible, total = self._safe_recommendations(story_id, source_revision)
         reviewer = reviewed_by.strip() or "VSCS human reviewer"
         prompt_elements = 0
@@ -285,16 +278,24 @@ class CanonicalScopeReviewService:
         entity_name: str,
         asset_id: str,
         reviewed_by: str = "VSCS human reviewer",
+        allow_category_correction: bool = False,
     ) -> AutomationProposal:
+        """Bind an existing canonical asset, requiring opt-in for taxonomy correction."""
         proposal = self.entity_proposal(story_id, source_revision, entity_name)
         asset = self._assets.get(asset_id)
         expected = str(proposal.payload.get("expected_asset_category", ""))
-        if asset.category.value != expected:
+        actual = asset.category.value
+        if actual != expected and not allow_category_correction:
             raise ValueError(
-                f"Cannot bind {entity_name!r} ({expected}) to {asset.name!r} "
-                f"({asset.category.value}); canonical categories differ"
+                f"Cannot bind {entity_name!r} ({expected}) to {asset.name!r} ({actual}); "
+                "canonical categories differ and explicit human category correction was not authorized"
             )
         payload = dict(proposal.payload)
+        if actual != expected:
+            payload.setdefault("original_detected_asset_category", expected)
+            payload["expected_asset_category"] = actual
+            payload["asset_category_resolution_source"] = "human_canonical_review"
+            payload["asset_category_corrected_by"] = reviewed_by.strip() or "VSCS human reviewer"
         payload.update(
             {
                 "resolution_kind": "existing_canonical_asset",
@@ -382,18 +383,36 @@ class CanonicalScopeReviewService:
         return asset
 
     def compatible_assets(
-        self, *, story_id: str, source_revision: str, entity_name: str
+        self,
+        *,
+        story_id: str,
+        source_revision: str,
+        entity_name: str,
+        category: str | None = None,
     ) -> tuple[Asset, ...]:
+        """Return canonical candidates, optionally from a human-selected category."""
         proposal = self.entity_proposal(story_id, source_revision, entity_name)
-        category = str(proposal.payload.get("expected_asset_category", ""))
+        selected_category = category or str(proposal.payload.get("expected_asset_category", ""))
         rejected = {
             str(item).upper() for item in proposal.payload.get("rejected_canonical_asset_ids", [])
         }
         return tuple(
             asset
             for asset in self._assets.list()
-            if asset.category.value == category and asset.asset_id not in rejected
+            if asset.category.value == selected_category and asset.asset_id not in rejected
         )
+
+    def available_asset_categories(
+        self, *, story_id: str, source_revision: str, entity_name: str
+    ) -> tuple[str, ...]:
+        """Return available XPD categories with the detected category first."""
+        proposal = self.entity_proposal(story_id, source_revision, entity_name)
+        detected = str(proposal.payload.get("expected_asset_category", ""))
+        available = sorted({asset.category.value for asset in self._assets.list()})
+        if detected in available:
+            available.remove(detected)
+            available.insert(0, detected)
+        return tuple(available)
 
     def _safe_recommendations(
         self, story_id: str, source_revision: str
@@ -417,9 +436,6 @@ class CanonicalScopeReviewService:
                 continue
             if str(payload.get("canonical_scope", "")).strip():
                 continue
-            # Only true new/no-match entities are safe to bulk classify. A
-            # possible duplicate or any entity carrying a candidate match must
-            # remain an individual canonical decision.
             if str(payload.get("resolution_kind", "")) != "new":
                 continue
             if str(payload.get("matched_asset_id", "")).strip():
