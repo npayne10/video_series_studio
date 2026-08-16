@@ -135,9 +135,7 @@ def test_bulk_safe_review_accepts_only_new_noncanonical_scopes(tmp_path: Path) -
     )
     service = CanonicalScopeReviewService(cast(AssetService, object()), store)
 
-    preview = service.preview_safe_recommendations(
-        story_id="STORY-001", source_revision="rev-1"
-    )
+    preview = service.preview_safe_recommendations(story_id="STORY-001", source_revision="rev-1")
     assert preview.prompt_elements == 1
     assert preview.scene_continuity == 1
     assert preview.eligible == 2
@@ -173,13 +171,9 @@ def test_bulk_safe_review_never_overrides_prior_human_scope(tmp_path: Path) -> N
     )
     service = CanonicalScopeReviewService(cast(AssetService, object()), store)
 
-    preview = service.preview_safe_recommendations(
-        story_id="STORY-001", source_revision="rev-1"
-    )
+    preview = service.preview_safe_recommendations(story_id="STORY-001", source_revision="rev-1")
     assert preview.eligible == 0
-    result = service.accept_safe_recommendations(
-        story_id="STORY-001", source_revision="rev-1"
-    )
+    result = service.accept_safe_recommendations(story_id="STORY-001", source_revision="rev-1")
     assert result.eligible == 0
     proposal = service.entity_proposal("STORY-001", "rev-1", "Storage cabinets")
     assert proposal.payload["canonical_scope"] == CanonicalScope.DEFERRED.value
