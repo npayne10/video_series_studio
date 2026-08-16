@@ -69,8 +69,7 @@ def test_generic_set_dressing_defaults_to_prompt_element() -> None:
 
 def test_stateful_prop_defaults_to_scene_continuity() -> None:
     assert (
-        _recommend(_proposal("A1", "Overturned chair", "prop"))
-        is CanonicalScope.SCENE_CONTINUITY
+        _recommend(_proposal("A1", "Overturned chair", "prop")) is CanonicalScope.SCENE_CONTINUITY
     )
 
 

@@ -288,9 +288,7 @@ class CanonicalMatchDiagnosticService:
 class ShotAssetBindingService:
     """Bind resolved Story entities to Shots without creating governed Asset Plans."""
 
-    _NON_GLOBAL_SCOPES: ClassVar[frozenset[str]] = frozenset(
-        {"prompt_element", "scene_continuity"}
-    )
+    _NON_GLOBAL_SCOPES: ClassVar[frozenset[str]] = frozenset({"prompt_element", "scene_continuity"})
 
     def __init__(self, proposals: AutomationProposalService) -> None:
         self._proposals = proposals
