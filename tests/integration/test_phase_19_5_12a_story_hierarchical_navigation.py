@@ -118,3 +118,26 @@ def test_phase_19_5_12_actions_are_registered_in_story_navigation(tmp_path: Path
         ):
             assert key in actions
             assert callable(actions[key])
+
+
+def test_review_xpd_navigation_action_can_be_reopened_after_modal_exit(tmp_path: Path, qtbot) -> None:
+    with build_application_context(_options(tmp_path)) as application:
+        application.services.require(ProjectService).create(tmp_path / "VSCS TSR", name="VSCS TSR")
+        window = application.create_main_window()
+        qtbot.addWidget(window)
+
+        tree = window.story_navigation_tree
+        story = _top(tree, "Story")
+        canonical_library = _child(story, "Canonical Library")
+        review_item = _child(canonical_library, "Review XPD Matches…")
+
+        invocations: list[int] = []
+        window.story_navigation_actions["story.review_xpd_matches"] = lambda: invocations.append(1)
+
+        tree.setCurrentItem(review_item)
+        assert len(invocations) == 1
+        assert tree.currentItem() is canonical_library
+
+        tree.setCurrentItem(review_item)
+        assert len(invocations) == 2
+        assert tree.currentItem() is canonical_library
