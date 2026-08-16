@@ -31,6 +31,14 @@ from vscs.application.automation.xpd_binding import (
 )
 
 
+def _table_item(table: QTableWidget, row: int, column: int) -> QTableWidgetItem:
+    """Return one populated table item or fail fast on an invalid review UI state."""
+    item = table.item(row, column)
+    if item is None:
+        raise RuntimeError(f"Canonical review table cell ({row}, {column}) is not populated")
+    return item
+
+
 def import_xpd_library(parent: QWidget | None, assets: AssetService) -> bool:
     path, _filter = QFileDialog.getOpenFileName(
         parent, "Import Canonical XPD Library", "", "XPD Workbooks (*.xlsx)"
@@ -161,7 +169,7 @@ def show_match_diagnostics(
         if row < 0:
             QMessageBox.information(dialog, "Canonical Review", "Select a Story entity first.")
             return None
-        entity_name = table.item(row, 0).text()
+        entity_name = _table_item(table, row, 0).text()
         diagnostic = next(item for item in diagnostics if item.entity_name == entity_name)
         return row, diagnostic
 
@@ -176,7 +184,7 @@ def show_match_diagnostics(
             entity_name=diagnostic.entity_name,
             scope=scope,
         )
-        table.item(row, 3).setText(scope.value)
+        _table_item(table, row, 3).setText(scope.value)
 
     def accept_suggested() -> None:
         choice = selected()
@@ -195,9 +203,9 @@ def show_match_diagnostics(
             entity_name=diagnostic.entity_name,
             asset_id=candidate.asset_id,
         )
-        table.item(row, 2).setText("resolved")
-        table.item(row, 3).setText(CanonicalScope.PROJECT_CANONICAL.value)
-        table.item(row, 5).setText(f"{candidate.asset_id} — {candidate.asset_name}")
+        _table_item(table, row, 2).setText("resolved")
+        _table_item(table, row, 3).setText(CanonicalScope.PROJECT_CANONICAL.value)
+        _table_item(table, row, 5).setText(f"{candidate.asset_id} — {candidate.asset_name}")
 
     def choose_existing() -> None:
         choice = selected()
@@ -232,9 +240,9 @@ def show_match_diagnostics(
             entity_name=diagnostic.entity_name,
             asset_id=asset.asset_id,
         )
-        table.item(row, 2).setText("resolved")
-        table.item(row, 3).setText(CanonicalScope.PROJECT_CANONICAL.value)
-        table.item(row, 5).setText(f"{asset.asset_id} — {asset.name}")
+        _table_item(table, row, 2).setText("resolved")
+        _table_item(table, row, 3).setText(CanonicalScope.PROJECT_CANONICAL.value)
+        _table_item(table, row, 5).setText(f"{asset.asset_id} — {asset.name}")
 
     def reject_suggested() -> None:
         choice = selected()
@@ -253,9 +261,9 @@ def show_match_diagnostics(
             entity_name=diagnostic.entity_name,
             asset_id=candidate.asset_id,
         )
-        table.item(row, 6).setText("")
-        table.item(row, 7).setText("")
-        table.item(row, 8).setText("candidate rejected by human reviewer")
+        _table_item(table, row, 6).setText("")
+        _table_item(table, row, 7).setText("")
+        _table_item(table, row, 8).setText("candidate rejected by human reviewer")
 
     def create_new() -> None:
         choice = selected()
@@ -274,9 +282,9 @@ def show_match_diagnostics(
             source_revision=report.source_revision,
             entity_name=diagnostic.entity_name,
         )
-        table.item(row, 2).setText("resolved")
-        table.item(row, 3).setText(CanonicalScope.STORY_UNIQUE_CANONICAL.value)
-        table.item(row, 5).setText(f"{asset.asset_id} — {asset.name}")
+        _table_item(table, row, 2).setText("resolved")
+        _table_item(table, row, 3).setText(CanonicalScope.STORY_UNIQUE_CANONICAL.value)
+        _table_item(table, row, 5).setText(f"{asset.asset_id} — {asset.name}")
 
     prompt_button.clicked.connect(lambda: set_scope(CanonicalScope.PROMPT_ELEMENT))
     scene_button.clicked.connect(lambda: set_scope(CanonicalScope.SCENE_CONTINUITY))
