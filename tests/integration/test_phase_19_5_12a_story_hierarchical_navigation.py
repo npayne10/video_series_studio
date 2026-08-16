@@ -69,6 +69,7 @@ def test_story_navigation_is_hierarchical_and_complete(tmp_path: Path, qtbot) ->
 
         _child(story, "Proposal Review")
         _child(story, "Production Planning")
+        _child(story, "Integration & Functional Acceptance…")
 
 
 def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: Path, qtbot) -> None:
@@ -103,7 +104,9 @@ def test_relocated_story_actions_are_removed_from_horizontal_toolbar(tmp_path: P
             assert button.text() == label
 
 
-def test_phase_19_5_12_actions_are_registered_in_story_navigation(tmp_path: Path, qtbot) -> None:
+def test_phase_19_5_12_and_13_actions_are_registered_in_story_navigation(
+    tmp_path: Path, qtbot
+) -> None:
     with build_application_context(_options(tmp_path)) as application:
         application.services.require(ProjectService).create(tmp_path / "VSCS TSR", name="VSCS TSR")
         window = application.create_main_window()
@@ -115,6 +118,7 @@ def test_phase_19_5_12_actions_are_registered_in_story_navigation(tmp_path: Path
             "story.resolve_assets",
             "story.review_xpd_matches",
             "story.bind_shot_assets",
+            "story.functional_acceptance",
         ):
             assert key in actions
             assert callable(actions[key])
