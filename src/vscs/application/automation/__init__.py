@@ -39,6 +39,12 @@ from .episode_scene import (
     SceneProposalDraft,
     TemplateEpisodeSceneProposalProvider,
 )
+from .functional_acceptance import (
+    AcceptanceCriterion,
+    AcceptanceState,
+    FunctionalAcceptanceReport,
+    FunctionalAcceptanceService,
+)
 from .orchestration import (
     AutoCompilationReport,
     AutomationCompilationError,
@@ -71,6 +77,8 @@ from .xpd_binding import (
 )
 
 __all__ = [
+    "AcceptanceCriterion",
+    "AcceptanceState",
     "ActionPerformanceProposalAutomationService",
     "ActionPerformanceProposalDraft",
     "ActionPerformanceProposalProvider",
@@ -98,6 +106,8 @@ __all__ = [
     "EpisodeSceneProposalAutomationService",
     "EpisodeSceneProposalDraft",
     "EpisodeSceneProposalProvider",
+    "FunctionalAcceptanceReport",
+    "FunctionalAcceptanceService",
     "LightingProposalDraft",
     "ProposalAcceptanceError",
     "ProposalAcceptanceService",
