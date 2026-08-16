@@ -39,22 +39,77 @@ class CanonicalScopeReviewService:
     _PERSISTENT_CATEGORIES: ClassVar[frozenset[str]] = frozenset(
         {"character", "ship", "vehicle", "planet", "uniform"}
     )
-    _INCIDENTAL_TERMS: ClassVar[frozenset[str]] = frozenset(
+    _GENERIC_INCIDENTAL_NOUNS: ClassVar[frozenset[str]] = frozenset(
         {
             "road",
             "rock",
             "sandwich",
             "chair",
+            "chairs",
             "cabinet",
             "cabinets",
             "rack",
             "racks",
             "case",
-            "door",
+            "cases",
             "table",
+            "tables",
             "cup",
+            "cups",
             "glass",
-            "wall",
+            "glasses",
+            "crate",
+            "crates",
+            "shelf",
+            "shelves",
+            "workstation",
+            "workstations",
+        }
+    )
+    _GENERIC_INCIDENTAL_MODIFIERS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "storage",
+            "equipment",
+            "generic",
+            "ordinary",
+            "standard",
+            "simple",
+            "small",
+            "large",
+            "metal",
+            "metallic",
+            "nearby",
+        }
+    )
+    _ANONYMOUS_CHARACTER_TERMS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "unknown",
+            "unidentified",
+            "figure",
+            "figures",
+            "people",
+            "person",
+            "team",
+            "group",
+            "crew",
+        }
+    )
+    _GENERIC_LOCATION_NOUNS: ClassVar[frozenset[str]] = frozenset(
+        {"room", "corridor", "hall", "area", "bay", "platform", "surface"}
+    )
+    _GENERIC_LOCATION_MODIFIERS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "operations",
+            "operation",
+            "control",
+            "storage",
+            "engineering",
+            "briefing",
+            "service",
+            "maintenance",
+            "main",
+            "outer",
+            "inner",
         }
     )
 
@@ -81,33 +136,56 @@ class CanonicalScopeReviewService:
             )
         return matches[0]
 
+    @staticmethod
+    def is_resolved_canonical(proposal: AutomationProposal) -> bool:
+        payload = proposal.payload
+        return bool(
+            payload.get("resolution_kind") == "existing_canonical_asset"
+            and payload.get("matched_asset_id")
+        )
+
     def recommend(self, proposal: AutomationProposal) -> CanonicalScopeRecommendation:
         payload = proposal.payload
-        if payload.get("resolution_kind") == "existing_canonical_asset" and payload.get(
-            "matched_asset_id"
-        ):
+        if self.is_resolved_canonical(proposal):
             return CanonicalScopeRecommendation(
                 CanonicalScope.PROJECT_CANONICAL,
                 "already resolves to an existing canonical XPD identity",
             )
+
         category = str(payload.get("expected_asset_category", "")).casefold()
         name = str(payload.get("name", "")).strip()
         tokens = self._tokens(name)
+
+        if self._is_generic_incidental(tokens):
+            return CanonicalScopeRecommendation(
+                CanonicalScope.PROMPT_ELEMENT,
+                "generic set dressing or incidental production detail does not require persistent identity",
+            )
+
+        if category == "character" and tokens & self._ANONYMOUS_CHARACTER_TERMS:
+            return CanonicalScopeRecommendation(
+                CanonicalScope.SCENE_CONTINUITY,
+                "anonymous or group character presence should remain local unless human review identifies persistent canon",
+            )
+
         if category in self._PERSISTENT_CATEGORIES:
             return CanonicalScopeRecommendation(
                 CanonicalScope.STORY_UNIQUE_CANONICAL,
                 "persistent identity category requires canonical review",
             )
-        if tokens and tokens.issubset(self._INCIDENTAL_TERMS):
-            return CanonicalScopeRecommendation(
-                CanonicalScope.PROMPT_ELEMENT,
-                "generic incidental production element does not require persistent identity",
-            )
-        if category == "location" and self._looks_named(name):
-            return CanonicalScopeRecommendation(
-                CanonicalScope.STORY_UNIQUE_CANONICAL,
-                "specific named location may require persistent Story identity",
-            )
+
+        if category == "location":
+            if self._is_generic_location(tokens):
+                return CanonicalScopeRecommendation(
+                    CanonicalScope.SCENE_CONTINUITY,
+                    "generic location is local production context unless explicitly promoted to canon",
+                )
+            if self._looks_named(name):
+                return CanonicalScopeRecommendation(
+                    CanonicalScope.STORY_UNIQUE_CANONICAL,
+                    "specific named location may require persistent Story identity",
+                )
+
         return CanonicalScopeRecommendation(
             CanonicalScope.SCENE_CONTINUITY,
             "retain for local continuity unless a human promotes it to project canon",
@@ -123,6 +201,11 @@ class CanonicalScopeReviewService:
         reviewed_by: str = "VSCS human reviewer",
     ) -> AutomationProposal:
         proposal = self.entity_proposal(story_id, source_revision, entity_name)
+        if self.is_resolved_canonical(proposal) and scope is not CanonicalScope.PROJECT_CANONICAL:
+            raise ValueError(
+                f"{entity_name!r} already has a canonical XPD identity. "
+                "Use a future explicit Change Canonical Resolution workflow to alter it."
+            )
         payload = dict(proposal.payload)
         payload["canonical_scope"] = scope.value
         payload["canonical_scope_reviewed_by"] = reviewed_by.strip() or "VSCS human reviewer"
@@ -168,6 +251,10 @@ class CanonicalScopeReviewService:
         reviewed_by: str = "VSCS human reviewer",
     ) -> AutomationProposal:
         proposal = self.entity_proposal(story_id, source_revision, entity_name)
+        if self.is_resolved_canonical(proposal):
+            raise ValueError(
+                f"{entity_name!r} is already resolved canonically and cannot reject candidates."
+            )
         payload = dict(proposal.payload)
         rejected = [str(item) for item in payload.get("rejected_canonical_asset_ids", [])]
         normalized = asset_id.strip().upper()
@@ -186,6 +273,8 @@ class CanonicalScopeReviewService:
         reviewed_by: str = "VSCS human reviewer",
     ) -> Asset:
         proposal = self.entity_proposal(story_id, source_revision, entity_name)
+        if self.is_resolved_canonical(proposal):
+            raise ValueError(f"{entity_name!r} already has a canonical XPD identity")
         category = AssetCategory(str(proposal.payload.get("expected_asset_category", "other")))
         digest = (
             hashlib.sha256(
@@ -239,6 +328,20 @@ class CanonicalScopeReviewService:
             for asset in self._assets.list()
             if asset.category.value == category and asset.asset_id not in rejected
         )
+
+    @classmethod
+    def _is_generic_incidental(cls, tokens: frozenset[str]) -> bool:
+        if not tokens or not tokens & cls._GENERIC_INCIDENTAL_NOUNS:
+            return False
+        allowed = cls._GENERIC_INCIDENTAL_NOUNS | cls._GENERIC_INCIDENTAL_MODIFIERS
+        return tokens.issubset(allowed)
+
+    @classmethod
+    def _is_generic_location(cls, tokens: frozenset[str]) -> bool:
+        if not tokens or not tokens & cls._GENERIC_LOCATION_NOUNS:
+            return False
+        allowed = cls._GENERIC_LOCATION_NOUNS | cls._GENERIC_LOCATION_MODIFIERS
+        return tokens.issubset(allowed)
 
     @staticmethod
     def _tokens(value: str) -> frozenset[str]:
