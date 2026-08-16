@@ -187,9 +187,13 @@ class CanonicalScopeReviewService:
     ) -> Asset:
         proposal = self.entity_proposal(story_id, source_revision, entity_name)
         category = AssetCategory(str(proposal.payload.get("expected_asset_category", "other")))
-        digest = hashlib.sha256(
-            f"{story_id.strip().upper()}|{source_revision}|{entity_name.casefold()}".encode()
-        ).hexdigest()[:10].upper()
+        digest = (
+            hashlib.sha256(
+                f"{story_id.strip().upper()}|{source_revision}|{entity_name.casefold()}".encode()
+            )
+            .hexdigest()[:10]
+            .upper()
+        )
         prefix = category.value[:3].upper()
         asset_id = f"STORY-{prefix}-{digest}"
         try:
