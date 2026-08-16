@@ -1,11 +1,4 @@
-"""Hierarchical Story navigation for Phase 19.5.12A.
-
-The existing flat MainWindow navigation remains the compatibility controller so
-established section indexes, View-menu actions and tests are not rewritten. A
-QTreeWidget becomes the visible dock navigation and delegates top-level section
-selection back to that controller. Story children invoke existing Story
-Workspace actions; no production service or governance behaviour is duplicated.
-"""
+"""Hierarchical Story navigation for Phase 19.5.12A and Phase 19.5.13 acceptance."""
 
 from __future__ import annotations
 
@@ -16,9 +9,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QListWidget, QMessageBox, QPushButton, QTreeWidget, QTreeWidgetItem
 
 from vscs.application.assets import AssetService
-from vscs.application.automation import AutomationProposalService, ShotAssetBindingService
+from vscs.application.automation import (
+    AutomationProposalService,
+    FunctionalAcceptanceService,
+    ShotAssetBindingService,
+)
 from vscs.application.automation.canonical_scope_review import CanonicalScopeReviewService
 from vscs.application.automation.xpd_binding import CanonicalMatchDiagnosticService
+from vscs.presentation.dialogs.functional_acceptance_dialog import show_functional_acceptance_report
 
 from .xpd_canonical_library_integration import (
     binding_summary,
@@ -120,6 +118,28 @@ def _bind_shot_assets_action(window: Any) -> Callable[[], None]:
     return invoke
 
 
+def _functional_acceptance_action(window: Any) -> Callable[[], None]:
+    def invoke() -> None:
+        window._story_flat_navigation_controller.setCurrentRow(2)
+        story = window.story_browser._selected_story()
+        if story is None:
+            QMessageBox.information(
+                window.story_browser,
+                "Integration & Functional Acceptance",
+                "Select a Story before running Phase 19 functional acceptance.",
+            )
+            return
+        current = window.story_browser._current_analysis(story)
+        if current is None:
+            return
+        _source_text, revision, _baseline = current
+        service = FunctionalAcceptanceService(window.services.require(AutomationProposalService))
+        report = service.evaluate(story_id=story.story_id, source_revision=revision)
+        show_functional_acceptance_report(window.story_browser, report)
+
+    return invoke
+
+
 def _story_item(parent: QTreeWidgetItem, label: str, action_key: str) -> QTreeWidgetItem:
     item = QTreeWidgetItem(parent, [label])
     item.setData(0, ACTION_ROLE, action_key)
@@ -213,6 +233,11 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
 
     _story_item(story_root, "Proposal Review", "story.proposal_review")
     _story_item(story_root, "Production Planning", "story.production_planning")
+    _story_item(
+        story_root,
+        "Integration & Functional Acceptance…",
+        "story.functional_acceptance",
+    )
 
     actions: dict[str, Callable[[], None]] = {
         "story.definition": _button_action(window, object_name="editStory"),
@@ -234,6 +259,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         "story.production_planning": _button_action(
             window, explicit=getattr(window, "episode_planner_button", None)
         ),
+        "story.functional_acceptance": _functional_acceptance_action(window),
     }
     window.story_navigation_actions = actions
 
@@ -245,10 +271,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
             action = actions.get(str(action_key))
             if action is not None:
                 action()
-            # Review XPD Matches is a modal action. Return selection to its
-            # parent after the dialog exits by Close, X or Esc so choosing the
-            # same action again always causes a current-item change.
-            if str(action_key) == "story.review_xpd_matches":
+            if str(action_key) in {"story.review_xpd_matches", "story.functional_acceptance"}:
                 parent_item = current.parent()
                 if parent_item is not None:
                     tree.blockSignals(True)
