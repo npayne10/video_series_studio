@@ -3,7 +3,7 @@ from typing import cast
 
 import pytest
 
-from vscs.application.assets import AssetService
+from vscs.application.assets import AssetRepository, AssetService
 from vscs.application.automation import (
     AutomationProposal,
     AutomationProposalService,
@@ -16,7 +16,9 @@ from vscs.application.automation.canonical_scope_review import (
     CanonicalScopeReviewService,
 )
 from vscs.application.projects import ProjectService
+from vscs.domain.assets import AssetCategory, AssetCreate
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.database import DatabaseManager
 
 
 def _store(tmp_path: Path) -> AutomationProposalService:
@@ -25,6 +27,17 @@ def _store(tmp_path: Path) -> AutomationProposalService:
     projects = ProjectService(configuration)
     projects.create(tmp_path / "project", name="Phase 19.5.12 Scope Test")
     return AutomationProposalService(projects)
+
+
+def _services(tmp_path: Path) -> tuple[CanonicalScopeReviewService, AutomationProposalService]:
+    configuration = ConfigurationService(tmp_path / "settings.yaml")
+    configuration.load()
+    database = DatabaseManager()
+    projects = ProjectService(configuration, database)
+    assets = AssetService(projects, AssetRepository(database))
+    projects.create(tmp_path / "project", name="Phase 19.5.13 Category Correction Test")
+    proposals = AutomationProposalService(projects)
+    return CanonicalScopeReviewService(assets, proposals), proposals
 
 
 def _proposal(
@@ -177,3 +190,72 @@ def test_bulk_safe_review_never_overrides_prior_human_scope(tmp_path: Path) -> N
     assert result.eligible == 0
     proposal = service.entity_proposal("STORY-001", "rev-1", "Storage cabinets")
     assert proposal.payload["canonical_scope"] == CanonicalScope.DEFERRED.value
+
+
+def test_cross_category_binding_requires_explicit_human_authorization(tmp_path: Path) -> None:
+    service, store = _services(tmp_path)
+    store.save(_proposal("A1", "Personnel shuttle", "vehicle"))
+    service._assets.create(
+        AssetCreate(
+            asset_id="CAP-SHP-003",
+            name="Guild Personnel Shuttle",
+            category=AssetCategory.SHIP,
+        )
+    )
+
+    with pytest.raises(ValueError, match="explicit human category correction was not authorized"):
+        service.accept_existing(
+            story_id="STORY-001",
+            source_revision="rev-1",
+            entity_name="Personnel shuttle",
+            asset_id="CAP-SHP-003",
+            reviewed_by="Neill",
+        )
+
+    unchanged = service.entity_proposal("STORY-001", "rev-1", "Personnel shuttle")
+    assert unchanged.payload["expected_asset_category"] == "vehicle"
+    assert "original_detected_asset_category" not in unchanged.payload
+    assert "matched_asset_id" not in unchanged.payload or not unchanged.payload["matched_asset_id"]
+
+
+def test_authorized_cross_category_binding_preserves_detected_category_provenance(
+    tmp_path: Path,
+) -> None:
+    service, store = _services(tmp_path)
+    store.save(_proposal("A1", "Personnel shuttle", "vehicle"))
+    service._assets.create(
+        AssetCreate(
+            asset_id="CAP-SHP-003",
+            name="Guild Personnel Shuttle",
+            category=AssetCategory.SHIP,
+        )
+    )
+
+    categories = service.available_asset_categories(
+        story_id="STORY-001", source_revision="rev-1", entity_name="Personnel shuttle"
+    )
+    assert categories[0] == "vehicle" if "vehicle" in categories else "ship" in categories
+    assert "ship" in categories
+    ship_assets = service.compatible_assets(
+        story_id="STORY-001",
+        source_revision="rev-1",
+        entity_name="Personnel shuttle",
+        category="ship",
+    )
+    assert [asset.asset_id for asset in ship_assets] == ["CAP-SHP-003"]
+
+    resolved = service.accept_existing(
+        story_id="STORY-001",
+        source_revision="rev-1",
+        entity_name="Personnel shuttle",
+        asset_id="CAP-SHP-003",
+        reviewed_by="Neill",
+        allow_category_correction=True,
+    )
+
+    assert resolved.payload["original_detected_asset_category"] == "vehicle"
+    assert resolved.payload["expected_asset_category"] == "ship"
+    assert resolved.payload["asset_category_resolution_source"] == "human_canonical_review"
+    assert resolved.payload["asset_category_corrected_by"] == "Neill"
+    assert resolved.payload["matched_asset_id"] == "CAP-SHP-003"
+    assert resolved.payload["canonical_resolution_source"] == "human_review"
