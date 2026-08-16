@@ -180,6 +180,16 @@ def show_match_diagnostics(
     guidance.setWordWrap(True)
     layout.addWidget(guidance)
 
+    bulk_row = QHBoxLayout()
+    bulk_safe_button = QPushButton("Accept Safe Scope Recommendations…", dialog)
+    bulk_safe_button.setToolTip(
+        "Human-confirm only new/no-match Prompt Element and Scene Continuity recommendations. "
+        "Existing XPD matches and canonical candidates are never bulk accepted."
+    )
+    bulk_row.addWidget(bulk_safe_button)
+    bulk_row.addStretch(1)
+    layout.addLayout(bulk_row)
+
     buttons = QHBoxLayout()
     prompt_button = QPushButton("Mark Prompt Element", dialog)
     scene_button = QPushButton("Mark Scene Continuity", dialog)
@@ -230,6 +240,59 @@ def show_match_diagnostics(
         has_suggestion = bool(diagnostic.suggestions)
         accept_button.setEnabled(editable and has_suggestion)
         reject_button.setEnabled(editable and has_suggestion)
+
+    def refresh_safe_scope_rows() -> None:
+        for row in range(table.rowCount()):
+            entity_name = _table_item(table, row, 0).text()
+            proposal = review_service.entity_proposal(
+                report.story_id, report.source_revision, entity_name
+            )
+            scope = str(proposal.payload.get("canonical_scope", ""))
+            if scope == CanonicalScope.PROMPT_ELEMENT.value:
+                _table_item(table, row, 2).setText("PROMPT ELEMENT")
+                _table_item(table, row, 4).setText(scope)
+            elif scope == CanonicalScope.SCENE_CONTINUITY.value:
+                _table_item(table, row, 2).setText("SCENE CONTINUITY")
+                _table_item(table, row, 4).setText(scope)
+        update_action_state()
+
+    def accept_safe_recommendations() -> None:
+        preview = review_service.preview_safe_recommendations(
+            story_id=report.story_id,
+            source_revision=report.source_revision,
+        )
+        if preview.eligible == 0:
+            QMessageBox.information(
+                dialog,
+                "Safe Scope Recommendations",
+                "There are no unreviewed safe scope recommendations to accept.\n\n"
+                "Existing XPD matches, possible duplicates and new canonical candidates remain individual decisions.",
+            )
+            return
+        answer = QMessageBox.question(
+            dialog,
+            "Accept Safe Scope Recommendations",
+            f"This records one explicit human review decision for {preview.eligible} safe non-XPD entities:\n\n"
+            f"Prompt Elements: {preview.prompt_elements}\n"
+            f"Scene Continuity: {preview.scene_continuity}\n\n"
+            "This will NOT accept an XPD match, create a canonical asset, promote a Story entity to canon, "
+            "or alter any resolved canonical identity.\n\nContinue?",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        result = review_service.accept_safe_recommendations(
+            story_id=report.story_id,
+            source_revision=report.source_revision,
+        )
+        refresh_safe_scope_rows()
+        QMessageBox.information(
+            dialog,
+            "Safe Scope Review Complete",
+            f"Prompt Elements accepted: {result.prompt_elements}\n"
+            f"Scene Continuity accepted: {result.scene_continuity}\n"
+            f"Canonical/previously reviewed decisions left untouched: {result.skipped}\n\n"
+            "No XPD identity was created, matched or approved by this bulk operation.",
+        )
 
     def set_scope(scope: CanonicalScope) -> None:
         choice = selected()
@@ -362,6 +425,7 @@ def show_match_diagnostics(
         _table_item(table, row, 6).setText(f"{asset.asset_id} — {asset.name}")
         update_action_state()
 
+    bulk_safe_button.clicked.connect(accept_safe_recommendations)
     prompt_button.clicked.connect(lambda: set_scope(CanonicalScope.PROMPT_ELEMENT))
     scene_button.clicked.connect(lambda: set_scope(CanonicalScope.SCENE_CONTINUITY))
     defer_button.clicked.connect(lambda: set_scope(CanonicalScope.DEFERRED))
