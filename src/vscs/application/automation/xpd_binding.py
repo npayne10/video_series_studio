@@ -185,7 +185,16 @@ class CanonicalMatchDiagnosticService:
                 suggestions=(),
             )
 
-        compatible = tuple(asset for asset in assets if asset.category.value == category)
+        rejected = {
+            str(item).strip().upper()
+            for item in payload.get("rejected_canonical_asset_ids", [])
+            if str(item).strip()
+        }
+        compatible = tuple(
+            asset
+            for asset in assets
+            if asset.category.value == category and asset.asset_id.upper() not in rejected
+        )
         scored = sorted(
             (
                 candidate
@@ -279,6 +288,10 @@ class CanonicalMatchDiagnosticService:
 class ShotAssetBindingService:
     """Bind resolved Story entities to Shots without creating governed Asset Plans."""
 
+    _NON_GLOBAL_SCOPES: ClassVar[frozenset[str]] = frozenset(
+        {"prompt_element", "scene_continuity"}
+    )
+
     def __init__(self, proposals: AutomationProposalService) -> None:
         self._proposals = proposals
 
@@ -300,7 +313,9 @@ class ShotAssetBindingService:
             and p.payload.get("matched_asset_id")
         }
         unresolved = sum(
-            p.payload.get("resolution_kind") != "existing_canonical_asset" for p in assets
+            p.payload.get("resolution_kind") != "existing_canonical_asset"
+            and str(p.payload.get("canonical_scope", "")) not in self._NON_GLOBAL_SCOPES
+            for p in assets
         )
         bindings: list[ShotAssetBinding] = []
         for shot in shots:
