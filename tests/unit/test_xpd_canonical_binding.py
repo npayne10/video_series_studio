@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import cast
 
+from vscs.application.assets import AssetService
 from vscs.application.automation import (
     AutomationProposal,
     AutomationProposalService,
@@ -111,6 +113,34 @@ def test_shot_binding_never_binds_unresolved_entity(tmp_path: Path) -> None:
     assert report.unresolved_entity_count == 1
 
 
+def test_prompt_and_scene_continuity_entities_are_not_global_canonical_blockers(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    for proposal_id, name, scope in (
+        ("ASSET-1", "Storage cabinets", "prompt_element"),
+        ("ASSET-2", "Overturned chair", "scene_continuity"),
+    ):
+        store.save(
+            _proposal(
+                proposal_id,
+                AutomationProposalType.ASSET,
+                proposal_id,
+                {
+                    "name": name,
+                    "candidate_id": proposal_id,
+                    "aliases": [],
+                    "resolution_kind": "new",
+                    "matched_asset_id": "",
+                    "canonical_scope": scope,
+                },
+            )
+        )
+    report = ShotAssetBindingService(store).bind(story_id="STORY-001", source_revision="rev-1")
+    assert report.binding_count == 0
+    assert report.unresolved_entity_count == 0
+
+
 def test_diagnostic_scores_rank_normalized_character_match_highly() -> None:
     match = CanonicalMatchDiagnosticService._score(
         "James Spence",
@@ -128,3 +158,27 @@ def test_diagnostic_does_not_offer_weak_unrelated_match() -> None:
         _asset("CAP-LOC-001", "Mauritania Bridge", AssetCategory.LOCATION),
     )
     assert match is None
+
+
+def test_diagnostic_does_not_repeat_human_rejected_candidate() -> None:
+    service = CanonicalMatchDiagnosticService(
+        cast(AssetService, object()), cast(AutomationProposalService, object())
+    )
+    proposal = _proposal(
+        "ASSET-1",
+        AutomationProposalType.ASSET,
+        "AUTO-TEC-1",
+        {
+            "name": "Wall display",
+            "expected_asset_category": "technology",
+            "resolution_kind": "new",
+            "matched_asset_id": "",
+            "rejected_canonical_asset_ids": ["CAP-TEC-002"],
+        },
+    )
+    diagnostic = service._diagnostic(
+        proposal,
+        (_asset("CAP-TEC-002", "Tactical Display", AssetCategory.TECHNOLOGY),),
+    )
+    assert diagnostic.status == "no_match"
+    assert diagnostic.suggestions == ()
