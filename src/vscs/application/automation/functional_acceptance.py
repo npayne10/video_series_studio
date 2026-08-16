@@ -107,7 +107,10 @@ class FunctionalAcceptanceService:
 
     @classmethod
     def _structural_coverage(cls, proposals: tuple[AutomationProposal, ...]) -> AcceptanceCriterion:
-        counts = {kind: sum(item.proposal_type is kind for item in proposals) for kind in cls._STRUCTURAL_TYPES}
+        counts = {
+            kind: sum(item.proposal_type is kind for item in proposals)
+            for kind in cls._STRUCTURAL_TYPES
+        }
         missing = [kind.value for kind, count in counts.items() if count == 0]
         detail = ", ".join(f"{kind.value}={counts[kind]}" for kind in cls._STRUCTURAL_TYPES)
         if missing:
@@ -126,7 +129,10 @@ class FunctionalAcceptanceService:
 
     @classmethod
     def _specialist_coverage(cls, proposals: tuple[AutomationProposal, ...]) -> AcceptanceCriterion:
-        counts = {kind: sum(item.proposal_type is kind for item in proposals) for kind in cls._SPECIALIST_TYPES}
+        counts = {
+            kind: sum(item.proposal_type is kind for item in proposals)
+            for kind in cls._SPECIALIST_TYPES
+        }
         missing = [kind.value for kind, count in counts.items() if count == 0]
         detail = ", ".join(f"{kind.value}={counts[kind]}" for kind in cls._SPECIALIST_TYPES)
         if missing:
@@ -148,7 +154,9 @@ class FunctionalAcceptanceService:
         cls, proposals: tuple[AutomationProposal, ...]
     ) -> AcceptanceCriterion:
         shot_ids = {
-            item.target_id for item in proposals if item.proposal_type is AutomationProposalType.SHOT
+            item.target_id
+            for item in proposals
+            if item.proposal_type is AutomationProposalType.SHOT
         }
         if not shot_ids:
             return AcceptanceCriterion(
@@ -208,9 +216,7 @@ class FunctionalAcceptanceService:
         invalid = tuple(
             item
             for item in proposals
-            if (
-                item.status is AutomationProposalStatus.ACCEPTED and not item.accepted_by.strip()
-            )
+            if (item.status is AutomationProposalStatus.ACCEPTED and not item.accepted_by.strip())
             or (item.status is AutomationProposalStatus.REJECTED and not item.rejected_by.strip())
         )
         if invalid:
@@ -228,8 +234,12 @@ class FunctionalAcceptanceService:
         )
 
     @classmethod
-    def _canonical_governance(cls, proposals: tuple[AutomationProposal, ...]) -> AcceptanceCriterion:
-        assets = tuple(item for item in proposals if item.proposal_type is AutomationProposalType.ASSET)
+    def _canonical_governance(
+        cls, proposals: tuple[AutomationProposal, ...]
+    ) -> AcceptanceCriterion:
+        assets = tuple(
+            item for item in proposals if item.proposal_type is AutomationProposalType.ASSET
+        )
         if not assets:
             return AcceptanceCriterion(
                 "canonical-governance",

@@ -26,7 +26,9 @@ def _options(tmp_path: Path) -> BootstrapOptions:
     )
 
 
-def _proposal(proposal_id: str, proposal_type: AutomationProposalType, target_id: str) -> AutomationProposal:
+def _proposal(
+    proposal_id: str, proposal_type: AutomationProposalType, target_id: str
+) -> AutomationProposal:
     return AutomationProposal(
         proposal_id=proposal_id,
         proposal_type=proposal_type,

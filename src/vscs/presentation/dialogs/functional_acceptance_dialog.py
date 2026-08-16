@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QDialog,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from vscs.application.automation import AcceptanceState, FunctionalAcceptanceReport
+from vscs.application.automation import FunctionalAcceptanceReport
 
 
 def show_functional_acceptance_report(
@@ -36,7 +44,9 @@ def show_functional_acceptance_report(
     layout.addWidget(table, 1)
 
     if report.accepted:
-        conclusion = "Phase 19 functional acceptance criteria are satisfied for this Story revision."
+        conclusion = (
+            "Phase 19 functional acceptance criteria are satisfied for this Story revision."
+        )
     elif report.failed:
         conclusion = "Functional acceptance FAILED. Resolve FAIL criteria before closing Phase 19."
     else:
