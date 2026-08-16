@@ -342,21 +342,54 @@ def show_match_diagnostics(
         if choice is None:
             return
         row, diagnostic = choice
-        assets = review_service.compatible_assets(
+        proposal = review_service.entity_proposal(
+            report.story_id, report.source_revision, diagnostic.entity_name
+        )
+        detected_category = str(proposal.payload.get("expected_asset_category", ""))
+        categories = review_service.available_asset_categories(
             story_id=report.story_id,
             source_revision=report.source_revision,
             entity_name=diagnostic.entity_name,
         )
+        if not categories:
+            QMessageBox.information(
+                dialog, "Canonical Review", "No canonical XPD asset categories are available."
+            )
+            return
+        category_labels = [
+            f"{category} (detected)" if category == detected_category else category
+            for category in categories
+        ]
+        category_label, ok = QInputDialog.getItem(
+            dialog,
+            "Choose Canonical Asset Category",
+            f"Canonical category for {diagnostic.entity_name}:\n"
+            f"Story analysis detected: {detected_category}",
+            category_labels,
+            0,
+            False,
+        )
+        if not ok:
+            return
+        selected_category = categories[category_labels.index(category_label)]
+        assets = review_service.compatible_assets(
+            story_id=report.story_id,
+            source_revision=report.source_revision,
+            entity_name=diagnostic.entity_name,
+            category=selected_category,
+        )
         if not assets:
             QMessageBox.information(
-                dialog, "Canonical Review", "No compatible XPD assets are available."
+                dialog,
+                "Canonical Review",
+                f"No XPD assets are available in category '{selected_category}'.",
             )
             return
         labels = [f"{asset.asset_id} — {asset.name}" for asset in assets]
         label, ok = QInputDialog.getItem(
             dialog,
             "Choose Existing Canonical Asset",
-            f"Canonical identity for {diagnostic.entity_name}:",
+            f"Canonical identity for {diagnostic.entity_name} ({selected_category}):",
             labels,
             0,
             False,
@@ -364,12 +397,27 @@ def show_match_diagnostics(
         if not ok:
             return
         asset = assets[labels.index(label)]
+        category_changed = asset.category.value != detected_category
+        if category_changed:
+            answer = QMessageBox.question(
+                dialog,
+                "Confirm Canonical Category Correction",
+                f"Story analysis classified '{diagnostic.entity_name}' as '{detected_category}'.\n\n"
+                f"You selected '{asset.asset_id} — {asset.name}', category '{asset.category.value}'.\n\n"
+                f"Accept this canonical identity and correct the Story entity category from "
+                f"'{detected_category}' to '{asset.category.value}'?\n\n"
+                "The original detected category will be preserved as provenance.",
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
         review_service.accept_existing(
             story_id=report.story_id,
             source_revision=report.source_revision,
             entity_name=diagnostic.entity_name,
             asset_id=asset.asset_id,
+            allow_category_correction=category_changed,
         )
+        _table_item(table, row, 1).setText(asset.category.value)
         _table_item(table, row, 2).setText("RESOLVED CANONICAL")
         _table_item(table, row, 3).setText("resolved")
         _table_item(table, row, 4).setText(CanonicalScope.PROJECT_CANONICAL.value)
