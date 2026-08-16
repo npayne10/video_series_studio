@@ -33,11 +33,27 @@ class CanonicalScopeRecommendation:
     reason: str
 
 
+@dataclass(frozen=True, slots=True)
+class SafeScopeReviewSummary:
+    """Counts for one human-authorized bulk safe-scope operation."""
+
+    prompt_elements: int
+    scene_continuity: int
+    skipped: int
+
+    @property
+    def eligible(self) -> int:
+        return self.prompt_elements + self.scene_continuity
+
+
 class CanonicalScopeReviewService:
     """Persist explicit human scope and XPD decisions without auto-approving assets."""
 
     _PERSISTENT_CATEGORIES: ClassVar[frozenset[str]] = frozenset(
         {"character", "ship", "vehicle", "planet", "uniform"}
+    )
+    _SAFE_BULK_SCOPES: ClassVar[frozenset[CanonicalScope]] = frozenset(
+        {CanonicalScope.PROMPT_ELEMENT, CanonicalScope.SCENE_CONTINUITY}
     )
     _GENERIC_INCIDENTAL_NOUNS: ClassVar[frozenset[str]] = frozenset(
         {
@@ -191,6 +207,56 @@ class CanonicalScopeReviewService:
             "retain for local continuity unless a human promotes it to project canon",
         )
 
+    def preview_safe_recommendations(
+        self, *, story_id: str, source_revision: str
+    ) -> SafeScopeReviewSummary:
+        """Count recommendations safe for one explicit bulk human decision.
+
+        Only unmatched/new entities with no prior scope decision are eligible.
+        Possible XPD duplicates, existing matches and canonical candidates are
+        deliberately excluded from this bulk operation.
+        """
+        eligible, total = self._safe_recommendations(story_id, source_revision)
+        return SafeScopeReviewSummary(
+            prompt_elements=sum(
+                recommendation.scope is CanonicalScope.PROMPT_ELEMENT
+                for _proposal, recommendation in eligible
+            ),
+            scene_continuity=sum(
+                recommendation.scope is CanonicalScope.SCENE_CONTINUITY
+                for _proposal, recommendation in eligible
+            ),
+            skipped=total - len(eligible),
+        )
+
+    def accept_safe_recommendations(
+        self,
+        *,
+        story_id: str,
+        source_revision: str,
+        reviewed_by: str = "VSCS human reviewer",
+    ) -> SafeScopeReviewSummary:
+        """Persist only safe non-XPD scopes after explicit human confirmation."""
+        eligible, total = self._safe_recommendations(story_id, source_revision)
+        reviewer = reviewed_by.strip() or "VSCS human reviewer"
+        prompt_elements = 0
+        scene_continuity = 0
+        for proposal, recommendation in eligible:
+            payload = dict(proposal.payload)
+            payload["canonical_scope"] = recommendation.scope.value
+            payload["canonical_scope_reviewed_by"] = reviewer
+            payload["canonical_scope_resolution_source"] = "human_bulk_safe_review"
+            self._proposals.save(replace(proposal, payload=payload))
+            if recommendation.scope is CanonicalScope.PROMPT_ELEMENT:
+                prompt_elements += 1
+            else:
+                scene_continuity += 1
+        return SafeScopeReviewSummary(
+            prompt_elements=prompt_elements,
+            scene_continuity=scene_continuity,
+            skipped=total - len(eligible),
+        )
+
     def set_scope(
         self,
         *,
@@ -328,6 +394,41 @@ class CanonicalScopeReviewService:
             for asset in self._assets.list()
             if asset.category.value == category and asset.asset_id not in rejected
         )
+
+    def _safe_recommendations(
+        self, story_id: str, source_revision: str
+    ) -> tuple[
+        tuple[tuple[AutomationProposal, CanonicalScopeRecommendation], ...],
+        int,
+    ]:
+        story = story_id.strip().upper()
+        revision = source_revision.strip()
+        proposals = tuple(
+            proposal
+            for proposal in self._proposals.list_proposals()
+            if proposal.proposal_type is AutomationProposalType.ASSET
+            and proposal.provenance.source_story_id == story
+            and proposal.provenance.source_revision == revision
+        )
+        eligible: list[tuple[AutomationProposal, CanonicalScopeRecommendation]] = []
+        for proposal in proposals:
+            payload = proposal.payload
+            if self.is_resolved_canonical(proposal):
+                continue
+            if str(payload.get("canonical_scope", "")).strip():
+                continue
+            # Only true new/no-match entities are safe to bulk classify. A
+            # possible duplicate or any entity carrying a candidate match must
+            # remain an individual canonical decision.
+            if str(payload.get("resolution_kind", "")) != "new":
+                continue
+            if str(payload.get("matched_asset_id", "")).strip():
+                continue
+            recommendation = self.recommend(proposal)
+            if recommendation.scope not in self._SAFE_BULK_SCOPES:
+                continue
+            eligible.append((proposal, recommendation))
+        return tuple(eligible), len(proposals)
 
     @classmethod
     def _is_generic_incidental(cls, tokens: frozenset[str]) -> bool:
