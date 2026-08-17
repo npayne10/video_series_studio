@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from typing import Any
 
 from PySide6.QtWidgets import (
@@ -13,7 +15,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
-    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -28,6 +29,11 @@ from vscs.application.production_tasks import (
 )
 from vscs.application.universal_production_description_compiler import (
     UniversalProductionDescriptionStatus,
+)
+
+_SHOT_HIERARCHY_PATTERN = re.compile(
+    r"^(?P<episode>EP-[A-Z0-9]+)-(?P<scene>SCN-[A-Z0-9]+)-(?P<shot>SHT-[A-Z0-9]+)$",
+    flags=re.IGNORECASE,
 )
 
 
@@ -84,17 +90,27 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         self.production_task_scene_id.setObjectName("production_task_scene_id")
         self.production_task_approved_by = QLineEdit(context_group)
         self.production_task_approved_by.setObjectName("production_task_approved_by")
-        self.production_task_authority_revision = QSpinBox(context_group)
+        self.production_task_authority_revision = QLineEdit(context_group)
         self.production_task_authority_revision.setObjectName("production_task_authority_revision")
-        self.production_task_authority_revision.setMinimum(1)
-        self.production_task_authority_revision.setMaximum(999999)
-        self.production_task_authority_revision.setValue(1)
+        for editor in (
+            self.production_task_production_id,
+            self.production_task_episode_id,
+            self.production_task_scene_id,
+            self.production_task_approved_by,
+            self.production_task_authority_revision,
+        ):
+            editor.setReadOnly(True)
         context_form.addRow("Production ID", self.production_task_production_id)
         context_form.addRow("Episode ID", self.production_task_episode_id)
-        context_form.addRow("Scene ID (optional)", self.production_task_scene_id)
+        context_form.addRow("Scene ID", self.production_task_scene_id)
         context_form.addRow("Approved by", self.production_task_approved_by)
         context_form.addRow("UPD authority revision", self.production_task_authority_revision)
         group_layout.addWidget(context_group)
+
+        self.production_task_context_source = QLabel("", group)
+        self.production_task_context_source.setObjectName("production_task_context_source_label")
+        self.production_task_context_source.setWordWrap(True)
+        group_layout.addWidget(self.production_task_context_source)
 
         actions = QHBoxLayout()
         self.compile_production_tasks_button = QPushButton("Compile Production Tasks", group)
@@ -128,29 +144,107 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         layout.addWidget(group, 1)
         self.compiler_tabs.addTab(tab, "Production Tasks")
 
-        for editor in (
-            self.production_task_production_id,
-            self.production_task_episode_id,
-            self.production_task_scene_id,
-            self.production_task_approved_by,
-        ):
-            editor.textChanged.connect(self._refresh_production_task_eligibility)
-        self.production_task_authority_revision.valueChanged.connect(
-            self._refresh_production_task_eligibility
-        )
         self.compile_production_tasks_button.clicked.connect(self._compile_production_tasks)
 
     def _production_task_shot_id(self: Any) -> str:
         return str(self._selected_shot_id or "").strip().upper()
 
     def _production_task_context(self: Any) -> ProductionTaskCompilationContext:
+        revision_text = self.production_task_authority_revision.text().strip()
+        revision = int(revision_text) if revision_text.isdigit() else 0
         return ProductionTaskCompilationContext(
             production_id=self.production_task_production_id.text().strip(),
             episode_id=self.production_task_episode_id.text().strip(),
             scene_id=self.production_task_scene_id.text().strip() or None,
             approved_by=self.production_task_approved_by.text().strip(),
-            authority_revision=self.production_task_authority_revision.value(),
+            authority_revision=revision,
         )
+
+    def _refresh_production_task_context(self: Any) -> None:
+        shot_id = self._production_task_shot_id()
+        production_id = ""
+        episode_id = ""
+        scene_id = ""
+        approved_by = ""
+        revision = 0
+        sources: list[str] = []
+        legacy_fallbacks: list[str] = []
+
+        package = self.packages.current_package(shot_id) if shot_id else None
+        if package is not None:
+            package_sources = (
+                getattr(package, "production_review", None),
+                getattr(package, "universal_description", None),
+                getattr(package, "validation", None),
+                getattr(package, "story_context", None),
+                getattr(package, "shot", None),
+            )
+            production_id = _first_governed_value(
+                package_sources,
+                ("production_id", "project_id"),
+            )
+            episode_id = _first_governed_value(
+                package_sources,
+                ("episode_id", "episode"),
+            )
+            scene_id = _first_governed_value(
+                package_sources,
+                ("scene_id", "scene"),
+            )
+            approved_by = _first_governed_value(
+                package_sources,
+                (
+                    "production_review_approved_by",
+                    "authority_approved_by",
+                    "approved_by",
+                    "reviewed_by",
+                ),
+            )
+            revision_value = _first_governed_value(
+                package_sources,
+                ("upd_authority_revision", "authority_revision", "revision"),
+            )
+            if revision_value.isdigit() and int(revision_value) >= 1:
+                revision = int(revision_value)
+            if any((production_id, episode_id, scene_id, approved_by, revision)):
+                sources.append("current governed Production Package")
+
+        hierarchy = _shot_hierarchy(shot_id)
+        if not episode_id and hierarchy is not None:
+            episode_id = hierarchy[0]
+            sources.append("governed Shot hierarchy")
+        if not scene_id and hierarchy is not None:
+            scene_id = hierarchy[1]
+            if "governed Shot hierarchy" not in sources:
+                sources.append("governed Shot hierarchy")
+
+        project = getattr(getattr(self, "projects", None), "current_project", None)
+        if not production_id and project is not None:
+            production_id = str(getattr(project, "project_id", "") or "").strip()
+            if production_id:
+                sources.append("project identity")
+        if not approved_by and project is not None:
+            approved_by = str(getattr(project, "author", "") or "").strip()
+            if approved_by:
+                legacy_fallbacks.append("approver uses project author")
+
+        if revision < 1:
+            revision = 1
+            legacy_fallbacks.append("UPD revision defaults to 1")
+
+        self.production_task_production_id.setText(production_id)
+        self.production_task_episode_id.setText(episode_id)
+        self.production_task_scene_id.setText(scene_id)
+        self.production_task_approved_by.setText(approved_by)
+        self.production_task_authority_revision.setText(str(revision))
+
+        source_text = "Derived automatically"
+        if sources:
+            source_text += " from " + ", ".join(dict.fromkeys(sources))
+        source_text += "."
+        if legacy_fallbacks:
+            source_text += " Legacy compatibility: " + "; ".join(legacy_fallbacks) + "."
+        self.production_task_context_source.setText(source_text)
 
     def _production_task_blocker(self: Any) -> str:
         shot_id = self._production_task_shot_id()
@@ -175,11 +269,14 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         if package.validation.get("cross_authority_consistent") is not True:
             return "Universal Production Description has unresolved cross-authority consistency."
         if not self.production_task_production_id.text().strip():
-            return "Enter the governed Production ID."
+            return "Governed Production ID is unavailable from the current project or package."
         if not self.production_task_episode_id.text().strip():
-            return "Enter the governed Episode ID."
+            return "Governed Episode ID is unavailable from the current Shot hierarchy or package."
         if not self.production_task_approved_by.text().strip():
-            return "Enter the human approver identity recorded for the UPD authority."
+            return "UPD approver identity is unavailable from governed authority or project metadata."
+        revision = self.production_task_authority_revision.text().strip()
+        if not revision.isdigit() or int(revision) < 1:
+            return "UPD authority revision is unavailable from governed authority."
         return ""
 
     def _refresh_production_task_eligibility(self: Any, *_args: Any) -> None:
@@ -197,10 +294,12 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
             )
         else:
             self.production_task_status.setText(
-                "Ready to compile provider-neutral ProductionTasks. No execution will be submitted."
+                "Governed compilation context resolved. Ready to compile provider-neutral "
+                "ProductionTasks; no execution will be submitted."
             )
 
     def _compile_production_tasks(self: Any) -> None:
+        self._refresh_production_task_context()
         blocker = self._production_task_blocker()
         if blocker:
             self.production_task_status.setText(blocker)
@@ -264,6 +363,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     def _refresh_production_tasks(self: Any) -> None:
         if not hasattr(self, "production_task_table"):
             return
+        self._refresh_production_task_context()
         shot_id = self._production_task_shot_id()
         self._render_production_tasks(self._compiled_production_tasks.get(shot_id, ()))
         self._refresh_production_task_eligibility()
@@ -282,6 +382,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     workspace_type._build_production_tasks_tab = _build_production_tasks_tab
     workspace_type._production_task_shot_id = _production_task_shot_id
     workspace_type._production_task_context = _production_task_context
+    workspace_type._refresh_production_task_context = _refresh_production_task_context
     workspace_type._production_task_blocker = _production_task_blocker
     workspace_type._refresh_production_task_eligibility = _refresh_production_task_eligibility
     workspace_type._compile_production_tasks = _compile_production_tasks
@@ -293,3 +394,38 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     workspace_type.refresh = production_task_refresh
     workspace_type._selection_changed = production_task_selection_changed
     workspace_type._production_task_compiler_workspace_installed = True
+
+
+def _first_governed_value(sources: Iterable[Any], keys: tuple[str, ...]) -> str:
+    for source in sources:
+        value = _nested_governed_value(source, keys)
+        if value:
+            return value
+    return ""
+
+
+def _nested_governed_value(value: Any, keys: tuple[str, ...]) -> str:
+    if isinstance(value, dict):
+        for key in keys:
+            candidate = value.get(key)
+            if candidate is not None and not isinstance(candidate, dict | list | tuple):
+                text = str(candidate).strip()
+                if text:
+                    return text
+        for nested in value.values():
+            found = _nested_governed_value(nested, keys)
+            if found:
+                return found
+    elif isinstance(value, list | tuple):
+        for nested in value:
+            found = _nested_governed_value(nested, keys)
+            if found:
+                return found
+    return ""
+
+
+def _shot_hierarchy(shot_id: str) -> tuple[str, str] | None:
+    match = _SHOT_HIERARCHY_PATTERN.fullmatch(shot_id.strip())
+    if match is None:
+        return None
+    return match.group("episode").upper(), match.group("scene").upper()
