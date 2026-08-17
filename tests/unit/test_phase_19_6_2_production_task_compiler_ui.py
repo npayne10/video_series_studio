@@ -64,7 +64,7 @@ class FakePackages:
         self.package = SimpleNamespace(
             package_id="PP-EP-001-SCN-001-SHT-027-TEST",
             validation=validation,
-            story_context={},
+            story_context={"scene_id": "EP-001-SCN-001"},
             shot={},
             universal_description={
                 "production": {
@@ -89,9 +89,17 @@ class FakePackages:
 
 class FakeProjects:
     current_project = SimpleNamespace(
-        project_id="PROD-TEST-001",
+        name="Test Production",
         author="Project Author",
     )
+
+
+class FakeProductionReviewService:
+    def current_review(self, _shot_id: str, _provider_id: str) -> Any:
+        return SimpleNamespace(
+            status=SimpleNamespace(value="approved-for-production"),
+            reviewed_by="Production Reviewer",
+        )
 
 
 def _workspace(
@@ -156,7 +164,7 @@ def test_governed_context_is_derived_and_read_only(app: QApplication) -> None:
         draft=FakeDraft(UniversalProductionDescriptionStatus.READY),
     )
 
-    assert workspace.production_task_production_id.text() == "PROD-TEST-001"  # type: ignore[attr-defined]
+    assert workspace.production_task_production_id.text() == "Test Production"  # type: ignore[attr-defined]
     assert workspace.production_task_episode_id.text() == "EP-001"  # type: ignore[attr-defined]
     assert workspace.production_task_scene_id.text() == "SCN-001"  # type: ignore[attr-defined]
     assert workspace.production_task_approved_by.text() == "Neill"  # type: ignore[attr-defined]
@@ -190,6 +198,19 @@ def test_current_ready_upd_compiles_and_displays_governed_task(app: QApplication
     assert table.item(0, 8).text()
 
 
+def test_approved_production_review_supplies_approver(app: QApplication) -> None:
+    workspace = _workspace(
+        app,
+        draft=FakeDraft(UniversalProductionDescriptionStatus.READY),
+    )
+    workspace.packages.package.universal_description["production"].pop("approved_by")  # type: ignore[attr-defined]
+    workspace.production_review_service = FakeProductionReviewService()  # type: ignore[attr-defined]
+    workspace._refresh_production_tasks()  # type: ignore[attr-defined]
+
+    assert workspace.production_task_approved_by.text() == "Production Reviewer"  # type: ignore[attr-defined]
+    assert "current approved Production Review" in workspace.production_task_context_source.text()  # type: ignore[attr-defined]
+
+
 def test_legacy_authority_context_uses_visible_project_fallbacks(app: QApplication) -> None:
     workspace = _workspace(
         app,
@@ -199,9 +220,11 @@ def test_legacy_authority_context_uses_visible_project_fallbacks(app: QApplicati
     workspace.packages.package.universal_description["production"].pop("authority_revision")  # type: ignore[attr-defined]
     workspace._refresh_production_tasks()  # type: ignore[attr-defined]
 
+    assert workspace.production_task_production_id.text() == "Test Production"  # type: ignore[attr-defined]
     assert workspace.production_task_approved_by.text() == "Project Author"  # type: ignore[attr-defined]
     assert workspace.production_task_authority_revision.text() == "1"  # type: ignore[attr-defined]
     source = workspace.production_task_context_source.text()  # type: ignore[attr-defined]
+    assert "Production ID uses current project identity" in source
     assert "approver uses project author" in source
     assert "UPD revision defaults to 1" in source
 
