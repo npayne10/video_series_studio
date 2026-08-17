@@ -266,7 +266,9 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         if not self.production_task_episode_id.text().strip():
             return "Governed Episode ID is unavailable from the current Shot hierarchy or package."
         if not self.production_task_approved_by.text().strip():
-            return "UPD approver identity is unavailable from governed authority or project metadata."
+            return (
+                "UPD approver identity is unavailable from governed authority or project metadata."
+            )
         revision = self.production_task_authority_revision.text().strip()
         if not revision.isdigit() or int(revision) < 1:
             return "UPD authority revision is unavailable from governed authority."
