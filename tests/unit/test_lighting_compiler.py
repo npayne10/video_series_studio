@@ -164,6 +164,25 @@ def test_upstream_change_makes_lighting_stale_and_refresh_preserves_notes(tmp_pa
     assert refreshed.production_notes == "Preserve this user review note."
 
 
+def test_current_refresh_rebuilds_from_governed_compiled_lighting(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    service.create_from_current_package("SHT-001")
+    service.save_notes("SHT-001", "Preserve current review note.")
+    governed = packages._lighting()
+    governed["color_temperature_k"] = 4100
+    packages.value = replace(
+        packages.value,
+        lighting={"governed": governed, "production": {"color_temperature_k": 4100}},
+    )
+
+    refreshed = service.rebase_to_current_package("SHT-001")
+
+    assert refreshed.lighting["color_temperature_k"] == 4100
+    assert "governed" not in refreshed.lighting
+    assert "production" not in refreshed.lighting
+    assert refreshed.production_notes == "Preserve current review note."
+
+
 def test_incomplete_governed_lighting_is_rejected_at_approval(tmp_path: Path) -> None:
     service, packages = _service(tmp_path)
     packages.value = replace(packages.value, lighting={"lighting_intent": "naturalistic"})
