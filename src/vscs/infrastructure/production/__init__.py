@@ -28,6 +28,11 @@ from .staging import (
     StagingPlanItem,
     StagingRequest,
 )
+from .task_execution import (
+    ProductionTaskRenderExecutionOutcome,
+    ProductionTaskRenderExecutionService,
+)
+from .task_repository import JsonProductionTaskRepository
 from .validation import (
     MediaProbe,
     MediaProbeResult,
@@ -56,8 +61,11 @@ __all__ = [
     "ComfyUIProductionExecutor",
     "ComfyUITimeoutError",
     "ComfyUIWorkflowCompiler",
+    "JsonProductionTaskRepository",
     "MediaProbe",
     "MediaProbeResult",
+    "ProductionTaskRenderExecutionOutcome",
+    "ProductionTaskRenderExecutionService",
     "RenderExecutionConfig",
     "RenderExecutionError",
     "RenderExecutionEvent",
