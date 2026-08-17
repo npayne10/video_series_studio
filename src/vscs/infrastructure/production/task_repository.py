@@ -25,6 +25,9 @@ class JsonProductionTaskRepository:
     """Persist one immutable ProductionTask JSON document per stable task identity."""
 
     SCHEMA_VERSION = "1.0"
+    _SAFE_ID_CHARACTERS = frozenset(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    )
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
@@ -90,7 +93,7 @@ class JsonProductionTaskRepository:
             ) from exc
 
     def _path(self, task_id: str) -> Path:
-        if any(character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for character in task_id):
+        if any(character not in self._SAFE_ID_CHARACTERS for character in task_id):
             raise ProductionTaskRepositoryError(
                 f"ProductionTask identity is not filesystem-safe: {task_id}"
             )
@@ -132,7 +135,9 @@ class JsonProductionTaskRepository:
     def _from_payload(payload: dict[str, Any]) -> ProductionTask:
         authority_payload = payload["authority"]
         attempt_payload = payload["attempt_policy"]
-        if not isinstance(authority_payload, dict) or not isinstance(attempt_payload, dict):
+        if not isinstance(authority_payload, dict) or not isinstance(
+            attempt_payload, dict
+        ):
             raise TypeError("authority and attempt_policy must be objects")
         return ProductionTask(
             task_id=str(payload["task_id"]),
@@ -142,7 +147,9 @@ class JsonProductionTaskRepository:
             shot_id=_optional_string(payload.get("shot_id")),
             task_type=ProductionTaskType(str(payload["task_type"])),
             authority=ProductionTaskAuthority(
-                authority_type=ProductionAuthorityType(str(authority_payload["authority_type"])),
+                authority_type=ProductionAuthorityType(
+                    str(authority_payload["authority_type"])
+                ),
                 authority_id=str(authority_payload["authority_id"]),
                 revision=int(authority_payload["revision"]),
                 fingerprint=str(authority_payload["fingerprint"]),
@@ -153,7 +160,9 @@ class JsonProductionTaskRepository:
                 ProductionCapability(str(value)) for value in payload["capabilities"]
             ),
             dependencies=tuple(str(value) for value in payload.get("dependencies", [])),
-            required_inputs=tuple(str(value) for value in payload.get("required_inputs", [])),
+            required_inputs=tuple(
+                str(value) for value in payload.get("required_inputs", [])
+            ),
             expected_outputs=tuple(str(value) for value in payload["expected_outputs"]),
             priority=ProductionTaskPriority(int(payload["priority"])),
             state=ProductionTaskState(str(payload["state"])),
@@ -162,10 +171,12 @@ class JsonProductionTaskRepository:
                 retry_delay_seconds=int(attempt_payload["retry_delay_seconds"]),
             ),
             provenance=tuple(
-                (str(value[0]), str(value[1])) for value in payload.get("provenance", [])
+                (str(value[0]), str(value[1]))
+                for value in payload.get("provenance", [])
             ),
             metadata=tuple(
-                (str(value[0]), str(value[1])) for value in payload.get("metadata", [])
+                (str(value[0]), str(value[1]))
+                for value in payload.get("metadata", [])
             ),
             created_at=datetime.fromisoformat(str(payload["created_at"])),
         )
