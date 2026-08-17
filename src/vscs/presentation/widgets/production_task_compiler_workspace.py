@@ -47,7 +47,8 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
             self.universal_compiler,
             self.packages,
         )
-        self._compiled_production_tasks: dict[str, tuple[ProductionTask, ...]] = {}
+        compiled_production_tasks: dict[str, tuple[ProductionTask, ...]] = {}
+        self._compiled_production_tasks = compiled_production_tasks
         self._build_production_tasks_tab()
         self._refresh_production_tasks()
 
