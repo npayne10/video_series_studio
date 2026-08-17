@@ -207,15 +207,21 @@ def install_accepted_proposal_consumption(proposals: AutomationProposalService) 
     if _INSTALLED:
         return
 
-    original_action_create: Callable[[ActionPerformanceCompilerService, str], ActionPerformanceDraft]
+    original_action_create: Callable[
+        [ActionPerformanceCompilerService, str], ActionPerformanceDraft
+    ]
     original_action_create = ActionPerformanceCompilerService.create_from_current_package
     original_camera_suggested: Callable[[GovernedCameraPlanningService, str], CameraPlan]
     original_camera_suggested = GovernedCameraPlanningService.suggested_plan
     original_lighting_suggested: Callable[[GovernedLightingPlanningService, str], LightingPlan]
     original_lighting_suggested = GovernedLightingPlanningService.suggested_plan
-    original_environment_suggested: Callable[[GovernedEnvironmentPlanningService, str], EnvironmentPlan]
+    original_environment_suggested: Callable[
+        [GovernedEnvironmentPlanningService, str], EnvironmentPlan
+    ]
     original_environment_suggested = GovernedEnvironmentPlanningService.suggested_plan
-    original_continuity_create: Callable[[ContinuityCompilerService, str], ContinuityCompilationDraft]
+    original_continuity_create: Callable[
+        [ContinuityCompilerService, str], ContinuityCompilationDraft
+    ]
     original_continuity_create = ContinuityCompilerService.create_from_current_package
 
     def action_create(
@@ -223,7 +229,9 @@ def install_accepted_proposal_consumption(proposals: AutomationProposalService) 
         shot_id: str,
     ) -> ActionPerformanceDraft:
         draft = original_action_create(service, shot_id)
-        proposal = accepted_current_proposal(AutomationProposalType.ACTION_PERFORMANCE, draft.shot_id)
+        proposal = accepted_current_proposal(
+            AutomationProposalType.ACTION_PERFORMANCE, draft.shot_id
+        )
         if proposal is None:
             return draft
         payload = proposal.payload
