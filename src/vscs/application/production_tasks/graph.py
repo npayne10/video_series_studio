@@ -48,7 +48,9 @@ class ProductionTaskGraph:
     def __init__(self, tasks: tuple[ProductionTask, ...]) -> None:
         identifiers = [task.task_id for task in tasks]
         if len(set(identifiers)) != len(identifiers):
-            raise ProductionTaskGraphError("ProductionTask graph contains duplicate task identities")
+            raise ProductionTaskGraphError(
+                "ProductionTask graph contains duplicate task identities"
+            )
         production_ids = {task.production_id for task in tasks}
         if len(production_ids) > 1:
             raise ProductionTaskGraphError(
