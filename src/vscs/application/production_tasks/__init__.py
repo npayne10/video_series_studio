@@ -30,12 +30,14 @@ from .models import (
     ProductionTaskType,
 )
 from .repository import ProductionTaskRepository, ProductionTaskRepositoryError
+from .service import ProductionTaskApplicationService
 
 __all__ = [
     "PRODUCTION_TASK_ID_METADATA_KEY",
     "ProductionAuthorityType",
     "ProductionCapability",
     "ProductionTask",
+    "ProductionTaskApplicationService",
     "ProductionTaskAttemptPolicy",
     "ProductionTaskAuthority",
     "ProductionTaskCompilationContext",
