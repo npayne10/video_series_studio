@@ -44,7 +44,7 @@ class UniversalProductionDescriptionCompilerService:
     """Compile all governed Shot authority into one provider-neutral production description."""
 
     FILE_NAME = "universal_production_description_compilation.json"
-    SCHEMA_VERSION = "1.2"
+    SCHEMA_VERSION = "1.3"
     REQUIRED_UPSTREAM = (
         ("action_performance_complete", "Action & Performance"),
         ("assets_complete", "Assets"),
@@ -68,6 +68,7 @@ class UniversalProductionDescriptionCompilerService:
         "lab",
     )
     _INTERIOR_ATMOSPHERES = frozenset({"controlled", "pressurized", "pressurised"})
+    _CHARACTER_ASSET_CATEGORIES = frozenset({"character", "person", "performer", "actor"})
     _STOPWORDS = frozenset(
         {
             "a",
@@ -423,17 +424,26 @@ class UniversalProductionDescriptionCompilerService:
             )
 
         categories = {str(item.get("category", "")).strip().lower() for item in assets}
-        spoken = str(action.get("spoken_content", ""))
-        speakers = tuple(
-            dict.fromkeys(
-                match.group(1).strip()
-                for match in re.finditer(r"(?:^|\n)\s*([A-Z][A-Za-z0-9 .'-]{0,50})\s*:", spoken)
-            )
+        spoken = str(action.get("spoken_content", "")).strip()
+        character_assets = tuple(
+            item
+            for item in assets
+            if str(item.get("category", "")).strip().lower()
+            in cls._CHARACTER_ASSET_CATEGORIES
         )
-        if speakers and not categories.intersection({"character", "person", "performer"}):
+        if spoken and not character_assets:
             findings.append(
-                "Spoken performers are present in Action & Performance but no character asset is governed for this Shot: "
-                + ", ".join(speakers)
+                "Action & Performance contains spoken content, but no governed character asset binding exists for this Shot."
+            )
+        character_assets_without_references = sorted(
+            cls._governed_asset_label(item)
+            for item in character_assets
+            if not cls._asset_has_canonical_reference(item)
+        )
+        if character_assets_without_references:
+            findings.append(
+                "Governed character asset bindings lack canonical references: "
+                + ", ".join(character_assets_without_references)
                 + "."
             )
         if interior and not categories.intersection({"environment", "location", "set"}):
@@ -490,6 +500,57 @@ class UniversalProductionDescriptionCompilerService:
                 if value:
                     governed_ids.add(value)
         return governed_ids
+
+    @classmethod
+    def _governed_asset_label(cls, asset: dict[str, Any]) -> str:
+        asset_id = cls._governed_asset_id(asset)
+        role = str(asset.get("role", "")).strip()
+        if role and asset_id:
+            return f"{role} ({asset_id})"
+        return asset_id or role or "unidentified governed character asset"
+
+    @staticmethod
+    def _governed_asset_id(asset: dict[str, Any]) -> str:
+        direct = str(asset.get("asset_id", "")).strip().upper()
+        if direct:
+            return direct
+        for section_name in ("production", "resolution", "binding", "governed"):
+            section = asset.get(section_name)
+            if isinstance(section, dict):
+                value = str(section.get("asset_id", "")).strip().upper()
+                if value:
+                    return value
+        return ""
+
+    @staticmethod
+    def _asset_has_canonical_reference(asset: dict[str, Any]) -> bool:
+        def has_reference(value: dict[str, Any]) -> bool:
+            if str(value.get("canonical_reference", "") or "").strip():
+                return True
+            references = value.get("canonical_references")
+            if not isinstance(references, list | tuple):
+                references = value.get("references")
+            if not isinstance(references, list | tuple):
+                return False
+            return any(
+                isinstance(item, dict)
+                and bool(
+                    str(
+                        item.get("file_path")
+                        or item.get("canonical_reference")
+                        or ""
+                    ).strip()
+                )
+                for item in references
+            )
+
+        if has_reference(asset):
+            return True
+        for section_name in ("production", "resolution", "governed"):
+            section = asset.get(section_name)
+            if isinstance(section, dict) and has_reference(section):
+                return True
+        return False
 
     @classmethod
     def _meaningful_tokens(cls, text: str) -> set[str]:
