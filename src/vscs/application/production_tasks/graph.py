@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import ClassVar
 
 from .lifecycle import ProductionTaskLifecycleService, ProductionTaskTransition
 from .models import ProductionTask, ProductionTaskState
@@ -35,7 +36,7 @@ class ProductionTaskGraphRefreshResult:
 class ProductionTaskGraph:
     """Analyze dependency ordering and readiness for authoritative ProductionTasks."""
 
-    _BLOCKING_STATES = frozenset(
+    _BLOCKING_STATES: ClassVar[frozenset[ProductionTaskState]] = frozenset(
         {
             ProductionTaskState.BLOCKED,
             ProductionTaskState.FAILED,
@@ -91,9 +92,9 @@ class ProductionTaskGraph:
             )
         if not task.dependencies:
             return ProductionTaskDependencyDisposition.READY
-        dependencies = tuple(self._tasks[dependency] for dependency in task.dependencies)
-        if any(dependency.state in self._BLOCKING_STATES for dependency in dependencies):
+        if self._dependency_chain_blocked(task):
             return ProductionTaskDependencyDisposition.BLOCKED
+        dependencies = tuple(self._tasks[dependency] for dependency in task.dependencies)
         if all(dependency.state is ProductionTaskState.COMPLETED for dependency in dependencies):
             return ProductionTaskDependencyDisposition.READY
         return ProductionTaskDependencyDisposition.WAITING
@@ -123,24 +124,29 @@ class ProductionTaskGraph:
 
     def blocked_tasks(self) -> tuple[ProductionTask, ...]:
         """Return non-terminal tasks blocked by an unavailable dependency chain."""
-        blocked_ids: set[str] = set()
-        blocked: list[ProductionTask] = []
         candidates = {
             ProductionTaskState.PLANNED,
             ProductionTaskState.READY,
             ProductionTaskState.BLOCKED,
         }
-        for task in self.topological_order():
-            if task.state not in candidates:
-                continue
-            dependency_blocked = any(dependency in blocked_ids for dependency in task.dependencies)
+        return tuple(
+            task
+            for task in self.topological_order()
+            if task.state in candidates
+            and self.disposition(task) is ProductionTaskDependencyDisposition.BLOCKED
+        )
+
+    def _dependency_chain_blocked(self, task: ProductionTask) -> bool:
+        for dependency_id in task.dependencies:
+            dependency = self._tasks[dependency_id]
+            if dependency.state in self._BLOCKING_STATES:
+                return True
             if (
-                dependency_blocked
-                or self.disposition(task) is ProductionTaskDependencyDisposition.BLOCKED
+                dependency.state is not ProductionTaskState.COMPLETED
+                and self._dependency_chain_blocked(dependency)
             ):
-                blocked_ids.add(task.task_id)
-                blocked.append(task)
-        return tuple(blocked)
+                return True
+        return False
 
     def _validate_dependencies(self) -> None:
         for task in self.tasks:
