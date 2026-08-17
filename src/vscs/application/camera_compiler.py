@@ -39,7 +39,7 @@ class CameraCompilerService:
     """Compile governed Camera planning into canonical production Camera intent."""
 
     FILE_NAME = "camera_compilation.json"
-    SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "1.1"
 
     def __init__(self, projects: ProjectService, packages: ProductionPackageService) -> None:
         self.projects = projects
@@ -74,34 +74,34 @@ class CameraCompilerService:
         package = self.packages.current_package(normalized)
         if package is None:
             package = self.packages.materialize(normalized)
-        if not package.camera:
+        camera = self._governed_source(package.camera)
+        if not camera:
             raise CameraCompilerError("Current Production Package has no governed Camera plan")
         draft = CameraCompilationDraft(
             shot_id=normalized,
             source_package_id=package.package_id,
             source_fingerprint=package.source_fingerprint,
-            camera=self._detached(package.camera),
+            camera=camera,
         )
         self._write((*self.list_drafts(), draft))
         return draft
 
     def rebase_to_current_package(self, shot_id: str) -> CameraCompilationDraft:
-        """Refresh stale Camera authority while preserving human production notes."""
+        """Rebuild Camera authority from the current package while preserving review notes."""
         current = self._require_draft(shot_id)
         if current.status is CameraCompilationStatus.READY:
             raise CameraCompilerError(
                 "Ready Camera compilation must return to Draft before refreshing its source"
             )
         package = self.packages.require_current_package(current.shot_id)
-        if not package.camera:
+        camera = self._governed_source(package.camera)
+        if not camera:
             raise CameraCompilerError("Current Production Package has no governed Camera plan")
-        if current.source_fingerprint == package.source_fingerprint:
-            return current
         updated = replace(
             current,
             source_package_id=package.package_id,
             source_fingerprint=package.source_fingerprint,
-            camera=self._detached(package.camera),
+            camera=camera,
         )
         self._replace(updated)
         return updated
@@ -197,6 +197,13 @@ class CameraCompilerService:
             raise CameraCompilerError(
                 "Governed Camera plan is incomplete: " + ", ".join(sorted(missing))
             )
+
+    @classmethod
+    def _governed_source(cls, value: dict[str, Any]) -> dict[str, Any]:
+        governed = value.get("governed")
+        if isinstance(governed, dict):
+            return cls._detached(governed)
+        return cls._detached(value)
 
     @staticmethod
     def _detached(value: dict[str, Any]) -> dict[str, Any]:
