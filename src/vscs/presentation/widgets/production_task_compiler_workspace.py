@@ -35,6 +35,8 @@ _SHOT_HIERARCHY_PATTERN = re.compile(
     r"^(?P<episode>EP-[A-Z0-9]+)-(?P<scene>SCN-[A-Z0-9]+)-(?P<shot>SHT-[A-Z0-9]+)$",
     flags=re.IGNORECASE,
 )
+_EPISODE_ID_PATTERN = re.compile(r"EP-[A-Z0-9]+", flags=re.IGNORECASE)
+_SCENE_ID_PATTERN = re.compile(r"SCN-[A-Z0-9]+", flags=re.IGNORECASE)
 
 
 def install_production_task_compiler_workspace(workspace_class: type[Any]) -> None:
@@ -183,8 +185,12 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
                 package_sources,
                 ("production_id", "project_id"),
             )
-            episode_id = _first_governed_value(package_sources, ("episode_id",))
-            scene_id = _first_governed_value(package_sources, ("scene_id",))
+            episode_id = _canonical_episode_id(
+                _first_governed_value(package_sources, ("episode_id",))
+            )
+            scene_id = _canonical_scene_id(
+                _first_governed_value(package_sources, ("scene_id",))
+            )
             approved_by = _first_governed_value(
                 package_sources,
                 (
@@ -211,9 +217,18 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
             if "governed Shot hierarchy" not in sources:
                 sources.append("governed Shot hierarchy")
 
+        review_approver = _approved_production_reviewer(self, shot_id)
+        if not approved_by and review_approver:
+            approved_by = review_approver
+            sources.append("current approved Production Review")
+
         project = getattr(getattr(self, "projects", None), "current_project", None)
         if not production_id and project is not None:
-            production_id = str(getattr(project, "project_id", "") or "").strip()
+            production_id = str(
+                getattr(project, "project_id", "")
+                or getattr(project, "name", "")
+                or ""
+            ).strip()
             if production_id:
                 legacy_fallbacks.append("Production ID uses current project identity")
         if not approved_by and project is not None:
@@ -417,6 +432,36 @@ def _nested_governed_value(value: Any, keys: tuple[str, ...]) -> str:
             if found:
                 return found
     return ""
+
+
+def _approved_production_reviewer(workspace: Any, shot_id: str) -> str:
+    service = getattr(workspace, "production_review_service", None)
+    if service is None or not shot_id:
+        return ""
+    selector = getattr(workspace, "provider_selector", None)
+    provider_id = "comfyui"
+    if selector is not None:
+        provider_id = str(selector.currentData() or "comfyui").strip().lower()
+    try:
+        review = service.current_review(shot_id, provider_id)
+    except (RuntimeError, ValueError):
+        return ""
+    if review is None:
+        return ""
+    status = getattr(getattr(review, "status", None), "value", "")
+    if status != "approved-for-production":
+        return ""
+    return str(getattr(review, "reviewed_by", "") or "").strip()
+
+
+def _canonical_episode_id(value: str) -> str:
+    match = _EPISODE_ID_PATTERN.search(value.strip())
+    return match.group(0).upper() if match is not None else ""
+
+
+def _canonical_scene_id(value: str) -> str:
+    match = _SCENE_ID_PATTERN.search(value.strip())
+    return match.group(0).upper() if match is not None else ""
 
 
 def _shot_hierarchy(shot_id: str) -> tuple[str, str] | None:
