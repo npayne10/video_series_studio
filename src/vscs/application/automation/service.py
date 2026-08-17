@@ -31,6 +31,9 @@ class AutomationProposalService:
 
     def __init__(self, projects: ProjectService) -> None:
         self.projects = projects
+        from .accepted_proposal_integration import install_accepted_proposal_consumption
+
+        install_accepted_proposal_consumption(self)
 
     @property
     def proposal_file(self) -> Path:
