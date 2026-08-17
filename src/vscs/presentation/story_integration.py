@@ -85,6 +85,9 @@ from vscs.presentation.widgets.planning_review_integration import install_planni
 from vscs.presentation.widgets.production_planning_workspace import (
     install_production_planning_workspace,
 )
+from vscs.presentation.widgets.production_task_compiler_workspace import (
+    install_production_task_compiler_workspace,
+)
 from vscs.presentation.widgets.story_hierarchical_navigation import (
     install_story_hierarchical_navigation,
 )
@@ -105,6 +108,7 @@ def install_story_browser() -> None:
     install_lighting_planner_navigation()
     install_environment_planner_navigation()
     install_planning_review_navigation()
+    install_production_task_compiler_workspace(UniversalProductionDescriptionCompilerWorkspace)
     original_create_content = MainWindow._create_content_area
     original_update_status = MainWindow._update_status_for_section
     original_update_state = MainWindow._update_project_state
