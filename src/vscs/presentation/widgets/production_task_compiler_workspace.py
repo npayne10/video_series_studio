@@ -117,7 +117,9 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
             )
         )
         self.production_task_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.production_task_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.production_task_table.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
         self.production_task_table.setAlternatingRowColors(True)
         self.production_task_table.horizontalHeader().setStretchLastSection(True)
         group_layout.addWidget(self.production_task_table, 1)
@@ -156,14 +158,18 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         if draft is None:
             return "No Universal Production Description exists for the selected Shot."
         if draft.status is not UniversalProductionDescriptionStatus.READY:
-            return "Universal Production Description must be Ready before ProductionTask compilation."
+            return (
+                "Universal Production Description must be Ready before ProductionTask compilation."
+            )
         if not self.universal_compiler.is_current(draft):
             return "Universal Production Description is stale against current production authority."
         package = self.packages.current_package(shot_id)
         if package is None:
             return "No current Production Package exists for the selected Shot."
         if package.validation.get("universal_description_complete") is not True:
-            return "Universal Production Description authority is not compiled in the current package."
+            return (
+                "Universal Production Description authority is not compiled in the current package."
+            )
         if package.validation.get("cross_authority_consistent") is not True:
             return "Universal Production Description has unresolved cross-authority consistency."
         if not self.production_task_production_id.text().strip():
