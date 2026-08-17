@@ -205,7 +205,7 @@ def test_cross_authority_inconsistencies_are_exposed_and_block_ready(tmp_path: P
 
     assert len(findings) == 5
     assert any("vacuum/orbital space" in item for item in findings)
-    assert any("no character asset" in item for item in findings)
+    assert any("no governed character asset binding" in item for item in findings)
     assert any("no environment/location asset" in item for item in findings)
     assert any("dialogue requirement" in item for item in findings)
     assert any("required action" in item for item in findings)
@@ -221,7 +221,13 @@ def test_controlled_interior_reports_specific_pressure_and_constraint_findings(
     packages.value = replace(
         packages.value,
         assets=(
-            {"production": {"asset_id": "CAP-CHR-001", "category": "character"}},
+            {
+                "production": {
+                    "asset_id": "CAP-CHR-001",
+                    "category": "character",
+                    "canonical_reference": "refs/james.png",
+                }
+            },
             {"production": {"asset_id": "CAP-LOC-001", "category": "location"}},
         ),
         environment={
