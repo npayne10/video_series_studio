@@ -166,7 +166,7 @@ class CameraCompilerWorkspace(ProductionPackageWorkspace):
         if stale:
             self.camera_status.setText(
                 "Camera compilation is stale because its approved Planning source changed. "
-                "Refresh from Current Package to load the governed Camera Plan while preserving "
+                "Refresh from Current Package to rebuild the governed Camera Plan while preserving "
                 "human review notes."
             )
         elif ready:
@@ -175,11 +175,12 @@ class CameraCompilerWorkspace(ProductionPackageWorkspace):
             )
         else:
             self.camera_status.setText(
-                "Camera Compiler Draft is current. Review the governed Camera Plan and mark it "
-                "Ready when you approve it."
+                "Camera Compiler Draft is current. Review the governed Camera Plan, or refresh it "
+                "from the current Production Package to rebuild the Draft, then mark it Ready when "
+                "you approve it."
             )
         self.camera_create_button.setEnabled(False)
-        self.camera_refresh_button.setEnabled(stale and not ready)
+        self.camera_refresh_button.setEnabled(not ready)
         self.camera_save_button.setEnabled(not stale and not ready)
         self.camera_ready_button.setEnabled(not stale and not ready)
         self.camera_draft_button.setEnabled(ready)
