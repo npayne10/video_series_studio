@@ -179,7 +179,7 @@ class LightingCompilerWorkspace(CameraCompilerWorkspace):
         if stale:
             self.lighting_status.setText(
                 "Lighting compilation is stale because its approved Planning source changed. "
-                "Refresh from Current Package to load the governed Lighting Plan while preserving "
+                "Refresh from Current Package to rebuild the governed Lighting Plan while preserving "
                 "human review notes."
             )
         elif ready:
@@ -188,11 +188,12 @@ class LightingCompilerWorkspace(CameraCompilerWorkspace):
             )
         else:
             self.lighting_status.setText(
-                "Lighting Compiler Draft is current. Review the governed Lighting Plan and mark it "
-                "Ready when you approve it."
+                "Lighting Compiler Draft is current. Review the governed Lighting Plan, or refresh "
+                "it from the current Production Package to rebuild the Draft, then mark it Ready "
+                "when you approve it."
             )
         self.lighting_create_button.setEnabled(False)
-        self.lighting_refresh_button.setEnabled(stale and not ready)
+        self.lighting_refresh_button.setEnabled(not ready)
         self.lighting_save_button.setEnabled(not stale and not ready)
         self.lighting_ready_button.setEnabled(not stale and not ready)
         self.lighting_draft_button.setEnabled(ready)
