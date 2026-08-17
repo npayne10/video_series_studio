@@ -232,7 +232,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     _story_item(canonical_library, "Bind Shot Assets…", "story.bind_shot_assets")
 
     _story_item(story_root, "Proposal Review", "story.proposal_review")
-    _story_item(story_root, "Production Planning", "story.production_planning")
+    _story_item(story_root, "Episode Planning", "story.episode_planning")
     _story_item(
         story_root,
         "Integration & Functional Acceptance…",
@@ -256,7 +256,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
         "story.review_xpd_matches": _review_xpd_matches_action(window),
         "story.bind_shot_assets": _bind_shot_assets_action(window),
         "story.proposal_review": _button_action(window, object_name="reviewAutomationProposals"),
-        "story.production_planning": _button_action(
+        "story.episode_planning": _button_action(
             window, explicit=getattr(window, "episode_planner_button", None)
         ),
         "story.functional_acceptance": _functional_acceptance_action(window),
