@@ -187,7 +187,9 @@ def test_ui_exposes_no_provider_workflow_or_state_transition_controls(app: QAppl
     workspace.compile_production_tasks_button.click()  # type: ignore[attr-defined]
     table = workspace.production_task_table  # type: ignore[attr-defined]
 
-    headers = [table.horizontalHeaderItem(index).text().lower() for index in range(table.columnCount())]
+    headers = [
+        table.horizontalHeaderItem(index).text().lower() for index in range(table.columnCount())
+    ]
     assert not any("provider" in header for header in headers)
     assert not any("workflow" in header for header in headers)
     assert not hasattr(workspace, "production_task_state_selector")
