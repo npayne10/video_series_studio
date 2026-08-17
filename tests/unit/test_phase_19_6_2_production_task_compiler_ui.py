@@ -8,7 +8,13 @@ from typing import Any
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtWidgets import QApplication, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from vscs.application.universal_production_description_compiler import (
     UniversalProductionDescriptionStatus,
@@ -95,15 +101,12 @@ def _workspace(
             layout = QVBoxLayout(self)
             self.compiler_tabs = QTabWidget(self)
             layout.addWidget(self.compiler_tabs)
-            self._shot_id = "SH027"
-
-        def _current_shot_id(self) -> str:
-            return self._shot_id
+            self._selected_shot_id = "SH027"
 
         def refresh(self) -> None:
             return None
 
-        def _on_shot_selection_changed(self) -> None:
+        def _selection_changed(self) -> None:
             return None
 
     install_production_task_compiler_workspace(TestWorkspace)
@@ -190,4 +193,4 @@ def test_ui_exposes_no_provider_workflow_or_state_transition_controls(app: QAppl
     assert not hasattr(workspace, "production_task_state_selector")
     assert not hasattr(workspace, "production_task_execute_button")
     assert table.item(0, 2).text() == "planned"
-    assert table.editTriggers().name == "NoEditTriggers"
+    assert table.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers
