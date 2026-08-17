@@ -188,9 +188,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
             episode_id = _canonical_episode_id(
                 _first_governed_value(package_sources, ("episode_id",))
             )
-            scene_id = _canonical_scene_id(
-                _first_governed_value(package_sources, ("scene_id",))
-            )
+            scene_id = _canonical_scene_id(_first_governed_value(package_sources, ("scene_id",)))
             approved_by = _first_governed_value(
                 package_sources,
                 (
@@ -225,9 +223,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         project = getattr(getattr(self, "projects", None), "current_project", None)
         if not production_id and project is not None:
             production_id = str(
-                getattr(project, "project_id", "")
-                or getattr(project, "name", "")
-                or ""
+                getattr(project, "project_id", "") or getattr(project, "name", "") or ""
             ).strip()
             if production_id:
                 legacy_fallbacks.append("Production ID uses current project identity")
