@@ -4,7 +4,7 @@ from vscs.application.universal_production_description_compiler import (
 from vscs.application.universal_validation_refinement import install_universal_validation_refinement
 
 
-def test_installed_refinement_adds_runtime_and_missing_performer_findings():
+def test_installed_refinement_adds_runtime_without_inventing_performers():
     install_universal_validation_refinement()
     description = {
         "shot": {"target_runtime_seconds": 15},
@@ -26,4 +26,4 @@ def test_installed_refinement_adds_runtime_and_missing_performer_findings():
     }
     findings = UniversalProductionDescriptionCompilerService._consistency_findings(description)
     assert any("target runtime is 15 seconds" in item for item in findings)
-    assert any("Cheryl" in item and "canonical references" in item for item in findings)
+    assert not any("Cheryl" in item and "canonical references" in item for item in findings)
