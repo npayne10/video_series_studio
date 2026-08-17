@@ -79,7 +79,9 @@ class ProductionTaskCompilerService:
 
         draft = self.universal.draft(shot)
         if draft is None:
-            raise ProductionTaskCompilationError(f"No Universal Production Description exists for {shot}")
+            raise ProductionTaskCompilationError(
+                f"No Universal Production Description exists for {shot}"
+            )
         if draft.status is not UniversalProductionDescriptionStatus.READY:
             raise ProductionTaskCompilationError(
                 f"Universal Production Description for {shot} is not Ready"
@@ -96,7 +98,8 @@ class ProductionTaskCompilerService:
             )
         if package.validation.get("cross_authority_consistent") is not True:
             raise ProductionTaskCompilationError(
-                f"Universal Production Description authority for {shot} is not cross-authority consistent"
+                "Universal Production Description authority for "
+                f"{shot} is not cross-authority consistent"
             )
 
         authority_fingerprint = self._fingerprint(package.universal_description)
