@@ -40,6 +40,31 @@ Phase 19.6.2 therefore does not invent those values or silently reinterpret prov
 
 This preserves backward compatibility with existing Phase 19.4 Production Packages and avoids a broad rewrite of the established production-planning pipeline.
 
+## Production Planning UI
+
+Phase 19.6.2 extends the existing Production Planning workspace with a `Production Tasks` tab rather than creating a separate execution surface.
+
+The tab exposes the explicit governed compilation context required by the legacy UPD compatibility boundary and enables `Compile Production Tasks` only when the selected Shot has a current Ready UPD, a current Production Package, completed Universal Description authority and cross-authority consistency.
+
+Compiled tasks are displayed read-only with task identity, type, state, authority revision and fingerprint, human approver, provider-neutral capabilities, required inputs and expected outputs.
+
+The Phase 19.6.2 UI deliberately exposes no provider selector, workflow selector, execution button, scheduler control or task-state transition control. A compiled task is visible only in `PLANNED` state. Scheduling and execution remain later architecture concerns.
+
+Compiled task objects are currently held by the workspace as deterministic session derivatives. Phase 19.6.2 does not introduce a persistent task repository or ProductionGraph migration merely to support the view; durable task/graph ownership remains part of later Phase 19.6 work.
+
+## UI acceptance coverage
+
+Focused Qt tests verify that:
+
+- missing UPD authority blocks compilation;
+- Draft UPD authority blocks compilation;
+- stale UPD authority blocks compilation;
+- current Ready UPD authority permits compilation;
+- compiled task authority and output contracts are displayed;
+- recompilation of unchanged governed authority/context produces the same task identity;
+- provider/workflow controls are absent;
+- the UI exposes no state transition away from `PLANNED`.
+
 ## Provider neutrality
 
 No provider, renderer, workflow, model, endpoint, node graph or adapter identity is emitted by the compiler.
