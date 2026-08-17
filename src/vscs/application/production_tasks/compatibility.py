@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import ClassVar
 
 from vscs.application.production_pipeline import (
     ProductionNode,
@@ -26,7 +27,7 @@ class ProductionTaskLegacyBridge:
     execution is migrated incrementally.
     """
 
-    _STATE_MAP: dict[ProductionTaskState, ProductionState] = {
+    _STATE_MAP: ClassVar[dict[ProductionTaskState, ProductionState]] = {
         ProductionTaskState.PLANNED: ProductionState.PENDING,
         ProductionTaskState.READY: ProductionState.READY,
         ProductionTaskState.BLOCKED: ProductionState.BLOCKED,
