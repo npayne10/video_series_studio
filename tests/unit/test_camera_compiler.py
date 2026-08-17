@@ -160,6 +160,25 @@ def test_upstream_change_makes_camera_stale_and_refresh_preserves_notes(tmp_path
     assert refreshed.production_notes == "Preserve this user review note."
 
 
+def test_current_refresh_rebuilds_from_governed_compiled_camera(tmp_path: Path) -> None:
+    service, packages = _service(tmp_path)
+    service.create_from_current_package("SHT-001")
+    service.save_notes("SHT-001", "Preserve current review note.")
+    governed = packages._camera()
+    governed["focal_length_mm"] = 32
+    packages.value = replace(
+        packages.value,
+        camera={"governed": governed, "production": {"focal_length_mm": 32}},
+    )
+
+    refreshed = service.rebase_to_current_package("SHT-001")
+
+    assert refreshed.camera["focal_length_mm"] == 32
+    assert "governed" not in refreshed.camera
+    assert "production" not in refreshed.camera
+    assert refreshed.production_notes == "Preserve current review note."
+
+
 def test_incomplete_governed_camera_is_rejected_at_approval(tmp_path: Path) -> None:
     service, packages = _service(tmp_path)
     packages.value = replace(packages.value, camera={"shot_size": "wide"})
