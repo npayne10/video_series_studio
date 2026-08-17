@@ -428,8 +428,7 @@ class UniversalProductionDescriptionCompilerService:
         character_assets = tuple(
             item
             for item in assets
-            if str(item.get("category", "")).strip().lower()
-            in cls._CHARACTER_ASSET_CATEGORIES
+            if str(item.get("category", "")).strip().lower() in cls._CHARACTER_ASSET_CATEGORIES
         )
         if spoken and not character_assets:
             findings.append(
@@ -535,11 +534,7 @@ class UniversalProductionDescriptionCompilerService:
             return any(
                 isinstance(item, dict)
                 and bool(
-                    str(
-                        item.get("file_path")
-                        or item.get("canonical_reference")
-                        or ""
-                    ).strip()
+                    str(item.get("file_path") or item.get("canonical_reference") or "").strip()
                 )
                 for item in references
             )
