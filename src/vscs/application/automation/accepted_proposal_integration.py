@@ -282,9 +282,9 @@ def install_accepted_proposal_consumption(proposals: AutomationProposalService) 
         service._replace(updated)
         return updated
 
-    ActionPerformanceCompilerService.create_from_current_package = action_create  # type: ignore[method-assign]
-    GovernedCameraPlanningService.suggested_plan = camera_suggested  # type: ignore[method-assign]
-    GovernedLightingPlanningService.suggested_plan = lighting_suggested  # type: ignore[method-assign]
-    GovernedEnvironmentPlanningService.suggested_plan = environment_suggested  # type: ignore[method-assign]
-    ContinuityCompilerService.create_from_current_package = continuity_create  # type: ignore[method-assign]
+    ActionPerformanceCompilerService.create_from_current_package = action_create  # type: ignore[assignment]
+    GovernedCameraPlanningService.suggested_plan = camera_suggested  # type: ignore[assignment]
+    GovernedLightingPlanningService.suggested_plan = lighting_suggested  # type: ignore[assignment]
+    GovernedEnvironmentPlanningService.suggested_plan = environment_suggested  # type: ignore[assignment]
+    ContinuityCompilerService.create_from_current_package = continuity_create  # type: ignore[assignment]
     _INSTALLED = True
