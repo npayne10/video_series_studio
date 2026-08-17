@@ -54,9 +54,7 @@ def test_prose_capitalisation_cannot_manufacture_performers() -> None:
         ]
     )
 
-    findings = UniversalProductionDescriptionCompilerService._consistency_findings(  # noqa: SLF001
-        description
-    )
+    findings = UniversalProductionDescriptionCompilerService._consistency_findings(description)
 
     assert not findings
     rendered = "\n".join(findings)
@@ -79,9 +77,7 @@ def test_missing_reference_is_reported_only_from_governed_character_binding() ->
         ]
     )
 
-    findings = UniversalProductionDescriptionCompilerService._consistency_findings(  # noqa: SLF001
-        description
-    )
+    findings = UniversalProductionDescriptionCompilerService._consistency_findings(description)
 
     assert findings == (
         "Governed character asset bindings lack canonical references: "
@@ -103,9 +99,7 @@ def test_spoken_content_without_character_binding_reports_generic_governance_gap
         ]
     )
 
-    findings = UniversalProductionDescriptionCompilerService._consistency_findings(  # noqa: SLF001
-        description
-    )
+    findings = UniversalProductionDescriptionCompilerService._consistency_findings(description)
 
     assert findings == (
         "Action & Performance contains spoken content, but no governed character asset binding "
