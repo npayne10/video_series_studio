@@ -15,7 +15,6 @@ from vscs.application.production_pipeline import (
 
 from .models import ProductionTask, ProductionTaskState
 
-
 PRODUCTION_TASK_ID_METADATA_KEY = "production_task_id"
 
 
