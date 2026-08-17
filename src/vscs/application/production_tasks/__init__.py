@@ -13,6 +13,13 @@ from .governance import (
     ProductionTaskGovernanceService,
     ProductionTaskGovernanceSeverity,
 )
+from .graph import (
+    ProductionTaskDependencyDisposition,
+    ProductionTaskGraph,
+    ProductionTaskGraphError,
+    ProductionTaskGraphIntegrationService,
+    ProductionTaskGraphRefreshResult,
+)
 from .lifecycle import (
     ProductionTaskLifecycleService,
     ProductionTaskStageService,
@@ -43,11 +50,16 @@ __all__ = [
     "ProductionTaskCompilationContext",
     "ProductionTaskCompilationError",
     "ProductionTaskCompilerService",
+    "ProductionTaskDependencyDisposition",
     "ProductionTaskGovernanceError",
     "ProductionTaskGovernanceIssue",
     "ProductionTaskGovernanceResult",
     "ProductionTaskGovernanceService",
     "ProductionTaskGovernanceSeverity",
+    "ProductionTaskGraph",
+    "ProductionTaskGraphError",
+    "ProductionTaskGraphIntegrationService",
+    "ProductionTaskGraphRefreshResult",
     "ProductionTaskLegacyBridge",
     "ProductionTaskLifecycleService",
     "ProductionTaskPriority",
