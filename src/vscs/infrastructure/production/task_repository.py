@@ -171,12 +171,10 @@ class JsonProductionTaskRepository:
                 retry_delay_seconds=int(attempt_payload["retry_delay_seconds"]),
             ),
             provenance=tuple(
-                (str(value[0]), str(value[1]))
-                for value in payload.get("provenance", [])
+                (str(value[0]), str(value[1])) for value in payload.get("provenance", [])
             ),
             metadata=tuple(
-                (str(value[0]), str(value[1]))
-                for value in payload.get("metadata", [])
+                (str(value[0]), str(value[1])) for value in payload.get("metadata", [])
             ),
             created_at=datetime.fromisoformat(str(payload["created_at"])),
         )
