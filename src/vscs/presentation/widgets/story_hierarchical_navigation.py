@@ -232,7 +232,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     _story_item(canonical_library, "Bind Shot Assets…", "story.bind_shot_assets")
 
     _story_item(story_root, "Proposal Review", "story.proposal_review")
-    _story_item(story_root, "Episode Planning", "story.episode_planning")
+    _story_item(story_root, "Production Planning", "story.episode_planning")
     _story_item(
         story_root,
         "Integration & Functional Acceptance…",
