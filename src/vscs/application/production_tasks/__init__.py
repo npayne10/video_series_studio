@@ -1,5 +1,10 @@
-"""VSCS vNext ProductionTask domain and governance public API."""
+"""VSCS vNext ProductionTask domain, compilation and governance public API."""
 
+from .compiler import (
+    ProductionTaskCompilationContext,
+    ProductionTaskCompilationError,
+    ProductionTaskCompilerService,
+)
 from .governance import (
     ProductionTaskGovernanceError,
     ProductionTaskGovernanceIssue,
@@ -24,6 +29,9 @@ __all__ = [
     "ProductionTask",
     "ProductionTaskAttemptPolicy",
     "ProductionTaskAuthority",
+    "ProductionTaskCompilationContext",
+    "ProductionTaskCompilationError",
+    "ProductionTaskCompilerService",
     "ProductionTaskGovernanceError",
     "ProductionTaskGovernanceIssue",
     "ProductionTaskGovernanceResult",
