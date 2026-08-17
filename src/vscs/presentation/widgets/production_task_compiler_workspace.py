@@ -51,6 +51,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         self._compiled_production_tasks = compiled_production_tasks
         self._build_production_tasks_tab()
         self._refresh_production_tasks()
+        self._apply_production_planning_refresh_policy()
 
     def _build_production_tasks_tab(self: Any) -> None:
         tab = QWidget(self.compiler_tabs)
@@ -236,6 +237,30 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
                 self.production_task_table.setItem(row, column, QTableWidgetItem(value))
         self.production_task_table.resizeColumnsToContents()
 
+    def _apply_production_planning_refresh_policy(self: Any) -> None:
+        shot_id = self._production_task_shot_id()
+        if not shot_id:
+            return
+        refresh_bindings = (
+            ("action_performance", "refresh_source_button"),
+            ("asset_compiler", "asset_refresh_button"),
+            ("camera_compiler", "camera_refresh_button"),
+            ("lighting_compiler", "lighting_refresh_button"),
+            ("continuity_compiler", "continuity_refresh_button"),
+            ("style_compiler", "style_refresh_button"),
+            ("universal_compiler", "universal_refresh_button"),
+        )
+        for service_name, button_name in refresh_bindings:
+            service = getattr(self, service_name, None)
+            button = getattr(self, button_name, None)
+            if service is None or button is None:
+                continue
+            draft = service.draft(shot_id)
+            if draft is None:
+                continue
+            status = getattr(getattr(draft, "status", None), "value", "")
+            button.setEnabled(status != "ready")
+
     def _refresh_production_tasks(self: Any) -> None:
         if not hasattr(self, "production_task_table"):
             return
@@ -246,10 +271,12 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     def production_task_refresh(self: Any) -> None:
         original_refresh(self)
         self._refresh_production_tasks()
+        self._apply_production_planning_refresh_policy()
 
     def production_task_selection_changed(self: Any) -> None:
         original_selection_changed(self)
         self._refresh_production_tasks()
+        self._apply_production_planning_refresh_policy()
 
     workspace_type.__init__ = production_task_init
     workspace_type._build_production_tasks_tab = _build_production_tasks_tab
@@ -259,6 +286,9 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     workspace_type._refresh_production_task_eligibility = _refresh_production_task_eligibility
     workspace_type._compile_production_tasks = _compile_production_tasks
     workspace_type._render_production_tasks = _render_production_tasks
+    workspace_type._apply_production_planning_refresh_policy = (
+        _apply_production_planning_refresh_policy
+    )
     workspace_type._refresh_production_tasks = _refresh_production_tasks
     workspace_type.refresh = production_task_refresh
     workspace_type._selection_changed = production_task_selection_changed
