@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from typing import ClassVar
 
 from .models import ProductionTask, ProductionTaskState
 from .repository import ProductionTaskRepository
@@ -27,7 +28,7 @@ class ProductionTaskTransition:
 class ProductionTaskStageService:
     """Apply the smallest governed lifecycle contract around ProductionTask."""
 
-    _ALLOWED: dict[ProductionTaskState, frozenset[ProductionTaskState]] = {
+    _ALLOWED: ClassVar[dict[ProductionTaskState, frozenset[ProductionTaskState]]] = {
         ProductionTaskState.PLANNED: frozenset(
             {
                 ProductionTaskState.READY,
