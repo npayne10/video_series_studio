@@ -50,6 +50,12 @@ def _task(*, state: ProductionTaskState = ProductionTaskState.PLANNED) -> Produc
     )
 
 
+def _node(pipeline: ProductionPipeline, node_id: str) -> ProductionNode:
+    node = pipeline.node(node_id)
+    assert node is not None
+    return node
+
+
 def test_stage_service_enforces_provider_neutral_lifecycle() -> None:
     service = ProductionTaskStageService()
     ready, transition = service.transition(
@@ -139,6 +145,6 @@ def test_legacy_pipeline_is_only_a_projection_of_task_state() -> None:
         clip_id="SH-001",
     )
 
-    assert pipeline.node("RENDER-001").state is ProductionState.PENDING
-    assert projected.node("RENDER-001").state is ProductionState.RUNNING
-    assert projected.node("PREP-001").state is ProductionState.COMPLETED
+    assert _node(pipeline, "RENDER-001").state is ProductionState.PENDING
+    assert _node(projected, "RENDER-001").state is ProductionState.RUNNING
+    assert _node(projected, "PREP-001").state is ProductionState.COMPLETED
