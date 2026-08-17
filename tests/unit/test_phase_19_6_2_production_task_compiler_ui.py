@@ -11,6 +11,7 @@ import pytest
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QPushButton,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -196,3 +197,68 @@ def test_ui_exposes_no_provider_workflow_or_state_transition_controls(app: QAppl
     assert not hasattr(workspace, "production_task_execute_button")
     assert table.item(0, 2).text() == "planned"
     assert table.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers
+
+
+def test_current_non_ready_compiler_draft_keeps_refresh_available(app: QApplication) -> None:
+    del app
+    universal = FakeUniversalCompiler(FakeDraft(UniversalProductionDescriptionStatus.DRAFT))
+    camera = FakeUniversalCompiler(FakeDraft(UniversalProductionDescriptionStatus.DRAFT))
+    packages = FakePackages(valid=False)
+
+    class RefreshWorkspace(QWidget):
+        def __init__(self) -> None:
+            super().__init__()
+            self.universal_compiler = universal
+            self.camera_compiler = camera
+            self.packages = packages
+            self._selected_shot_id = "SH027"
+            layout = QVBoxLayout(self)
+            self.compiler_tabs = QTabWidget(self)
+            self.camera_refresh_button = QPushButton("Refresh from Current Package", self)
+            self.camera_refresh_button.setEnabled(False)
+            layout.addWidget(self.compiler_tabs)
+            layout.addWidget(self.camera_refresh_button)
+
+        def refresh(self) -> None:
+            self.camera_refresh_button.setEnabled(False)
+
+        def _selection_changed(self) -> None:
+            self.camera_refresh_button.setEnabled(False)
+
+    install_production_task_compiler_workspace(RefreshWorkspace)
+    workspace = RefreshWorkspace()
+
+    assert workspace.camera_refresh_button.isEnabled()
+    workspace.refresh()  # type: ignore[attr-defined]
+    assert workspace.camera_refresh_button.isEnabled()
+
+
+def test_ready_compiler_authority_keeps_refresh_disabled(app: QApplication) -> None:
+    del app
+    universal = FakeUniversalCompiler(FakeDraft(UniversalProductionDescriptionStatus.DRAFT))
+    camera = FakeUniversalCompiler(FakeDraft(UniversalProductionDescriptionStatus.READY))
+    packages = FakePackages(valid=False)
+
+    class ReadyRefreshWorkspace(QWidget):
+        def __init__(self) -> None:
+            super().__init__()
+            self.universal_compiler = universal
+            self.camera_compiler = camera
+            self.packages = packages
+            self._selected_shot_id = "SH027"
+            layout = QVBoxLayout(self)
+            self.compiler_tabs = QTabWidget(self)
+            self.camera_refresh_button = QPushButton("Refresh from Current Package", self)
+            layout.addWidget(self.compiler_tabs)
+            layout.addWidget(self.camera_refresh_button)
+
+        def refresh(self) -> None:
+            self.camera_refresh_button.setEnabled(True)
+
+        def _selection_changed(self) -> None:
+            self.camera_refresh_button.setEnabled(True)
+
+    install_production_task_compiler_workspace(ReadyRefreshWorkspace)
+    workspace = ReadyRefreshWorkspace()
+
+    assert not workspace.camera_refresh_button.isEnabled()
