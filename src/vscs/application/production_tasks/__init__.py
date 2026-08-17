@@ -1,5 +1,6 @@
 """VSCS vNext ProductionTask domain, compilation and governance public API."""
 
+from .compatibility import PRODUCTION_TASK_ID_METADATA_KEY, ProductionTaskLegacyBridge
 from .compiler import (
     ProductionTaskCompilationContext,
     ProductionTaskCompilationError,
@@ -12,6 +13,12 @@ from .governance import (
     ProductionTaskGovernanceService,
     ProductionTaskGovernanceSeverity,
 )
+from .lifecycle import (
+    ProductionTaskLifecycleService,
+    ProductionTaskStageService,
+    ProductionTaskTransition,
+    ProductionTaskTransitionError,
+)
 from .models import (
     ProductionAuthorityType,
     ProductionCapability,
@@ -22,8 +29,10 @@ from .models import (
     ProductionTaskState,
     ProductionTaskType,
 )
+from .repository import ProductionTaskRepository, ProductionTaskRepositoryError
 
 __all__ = [
+    "PRODUCTION_TASK_ID_METADATA_KEY",
     "ProductionAuthorityType",
     "ProductionCapability",
     "ProductionTask",
@@ -37,7 +46,14 @@ __all__ = [
     "ProductionTaskGovernanceResult",
     "ProductionTaskGovernanceService",
     "ProductionTaskGovernanceSeverity",
+    "ProductionTaskLegacyBridge",
+    "ProductionTaskLifecycleService",
     "ProductionTaskPriority",
+    "ProductionTaskRepository",
+    "ProductionTaskRepositoryError",
+    "ProductionTaskStageService",
     "ProductionTaskState",
+    "ProductionTaskTransition",
+    "ProductionTaskTransitionError",
     "ProductionTaskType",
 ]
