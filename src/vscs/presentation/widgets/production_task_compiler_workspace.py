@@ -36,11 +36,12 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     if getattr(workspace_class, "_production_task_compiler_workspace_installed", False):
         return
 
-    original_init = workspace_class.__init__
-    original_refresh = workspace_class.refresh
-    original_selection_changed = workspace_class._on_shot_selection_changed
+    workspace_type: Any = workspace_class
+    original_init = workspace_type.__init__
+    original_refresh = workspace_type.refresh
+    original_selection_changed = workspace_type._selection_changed
 
-    def __init__(self: Any, *args: Any, **kwargs: Any) -> None:
+    def production_task_init(self: Any, *args: Any, **kwargs: Any) -> None:
         original_init(self, *args, **kwargs)
         self.production_task_compiler = ProductionTaskCompilerService(
             self.universal_compiler,
@@ -135,6 +136,9 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         )
         self.compile_production_tasks_button.clicked.connect(self._compile_production_tasks)
 
+    def _production_task_shot_id(self: Any) -> str:
+        return str(self._selected_shot_id or "").strip().upper()
+
     def _production_task_context(self: Any) -> ProductionTaskCompilationContext:
         return ProductionTaskCompilationContext(
             production_id=self.production_task_production_id.text().strip(),
@@ -145,7 +149,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         )
 
     def _production_task_blocker(self: Any) -> str:
-        shot_id = self._current_shot_id()
+        shot_id = self._production_task_shot_id()
         if not shot_id:
             return "Select a Shot before compiling ProductionTasks."
         draft = self.universal_compiler.draft(shot_id)
@@ -176,7 +180,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         if blocker:
             self.production_task_status.setText(blocker)
             return
-        shot_id = self._current_shot_id()
+        shot_id = self._production_task_shot_id()
         tasks = self._compiled_production_tasks.get(shot_id, ())
         if tasks:
             self.production_task_status.setText(
@@ -193,7 +197,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         if blocker:
             self.production_task_status.setText(blocker)
             return
-        shot_id = self._current_shot_id()
+        shot_id = self._production_task_shot_id()
         try:
             tasks = self.production_task_compiler.compile_shot(
                 shot_id,
@@ -228,30 +232,27 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     def _refresh_production_tasks(self: Any) -> None:
         if not hasattr(self, "production_task_table"):
             return
-        shot_id = self._current_shot_id()
+        shot_id = self._production_task_shot_id()
         self._render_production_tasks(self._compiled_production_tasks.get(shot_id, ()))
         self._refresh_production_task_eligibility()
 
-    def refresh(self: Any) -> None:
+    def production_task_refresh(self: Any) -> None:
         original_refresh(self)
         self._refresh_production_tasks()
 
-    def _on_shot_selection_changed(self: Any) -> None:
+    def production_task_selection_changed(self: Any) -> None:
         original_selection_changed(self)
         self._refresh_production_tasks()
 
-    setattr(workspace_class, "__init__", __init__)
-    setattr(workspace_class, "_build_production_tasks_tab", _build_production_tasks_tab)
-    setattr(workspace_class, "_production_task_context", _production_task_context)
-    setattr(workspace_class, "_production_task_blocker", _production_task_blocker)
-    setattr(
-        workspace_class,
-        "_refresh_production_task_eligibility",
-        _refresh_production_task_eligibility,
-    )
-    setattr(workspace_class, "_compile_production_tasks", _compile_production_tasks)
-    setattr(workspace_class, "_render_production_tasks", _render_production_tasks)
-    setattr(workspace_class, "_refresh_production_tasks", _refresh_production_tasks)
-    setattr(workspace_class, "refresh", refresh)
-    setattr(workspace_class, "_on_shot_selection_changed", _on_shot_selection_changed)
-    setattr(workspace_class, "_production_task_compiler_workspace_installed", True)
+    workspace_type.__init__ = production_task_init
+    workspace_type._build_production_tasks_tab = _build_production_tasks_tab
+    workspace_type._production_task_shot_id = _production_task_shot_id
+    workspace_type._production_task_context = _production_task_context
+    workspace_type._production_task_blocker = _production_task_blocker
+    workspace_type._refresh_production_task_eligibility = _refresh_production_task_eligibility
+    workspace_type._compile_production_tasks = _compile_production_tasks
+    workspace_type._render_production_tasks = _render_production_tasks
+    workspace_type._refresh_production_tasks = _refresh_production_tasks
+    workspace_type.refresh = production_task_refresh
+    workspace_type._selection_changed = production_task_selection_changed
+    workspace_type._production_task_compiler_workspace_installed = True
