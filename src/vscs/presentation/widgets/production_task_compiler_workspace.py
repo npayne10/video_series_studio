@@ -183,26 +183,19 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
                 package_sources,
                 ("production_id", "project_id"),
             )
-            episode_id = _first_governed_value(
-                package_sources,
-                ("episode_id", "episode"),
-            )
-            scene_id = _first_governed_value(
-                package_sources,
-                ("scene_id", "scene"),
-            )
+            episode_id = _first_governed_value(package_sources, ("episode_id",))
+            scene_id = _first_governed_value(package_sources, ("scene_id",))
             approved_by = _first_governed_value(
                 package_sources,
                 (
                     "production_review_approved_by",
                     "authority_approved_by",
                     "approved_by",
-                    "reviewed_by",
                 ),
             )
             revision_value = _first_governed_value(
                 package_sources,
-                ("upd_authority_revision", "authority_revision", "revision"),
+                ("upd_authority_revision", "authority_revision", "upd_revision"),
             )
             if revision_value.isdigit() and int(revision_value) >= 1:
                 revision = int(revision_value)
@@ -222,7 +215,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         if not production_id and project is not None:
             production_id = str(getattr(project, "project_id", "") or "").strip()
             if production_id:
-                sources.append("project identity")
+                legacy_fallbacks.append("Production ID uses current project identity")
         if not approved_by and project is not None:
             approved_by = str(getattr(project, "author", "") or "").strip()
             if approved_by:
