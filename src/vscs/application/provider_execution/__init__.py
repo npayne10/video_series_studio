@@ -6,6 +6,17 @@ from .adapter_registry import (
 )
 from .binding import ProviderExecutionBindingError, ProviderExecutionContextFactory
 from .contracts import ProviderExecutionAdapter, ProviderExecutionValidation
+from .execution_records import (
+    DurableExecutionEvent,
+    DurableExecutionJob,
+    DurableExecutionJobError,
+    DurableExecutionJobTracker,
+)
+from .execution_repository import (
+    DurableExecutionJobRepository,
+    DurableExecutionJobRepositoryError,
+)
+from .execution_service import DurableExecutionJobService
 from .models import (
     ProviderExecutionContext,
     ProviderExecutionHandle,
@@ -39,6 +50,13 @@ from .rendering_bridge import (
 )
 
 __all__ = [
+    "DurableExecutionEvent",
+    "DurableExecutionJob",
+    "DurableExecutionJobError",
+    "DurableExecutionJobRepository",
+    "DurableExecutionJobRepositoryError",
+    "DurableExecutionJobService",
+    "DurableExecutionJobTracker",
     "ProviderCapabilityResolution",
     "ProviderCapabilityResolver",
     "ProviderExecutionAdapter",
