@@ -135,6 +135,16 @@ class ProductionQueueCompilerService:
                 raise ProductionQueueError(
                     f"Scheduled ProductionTask is no longer READY: {task.task_id}"
                 )
+            scheduled_capabilities = tuple(
+                sorted(task.capabilities, key=lambda capability: capability.value)
+            )
+            if (
+                assignment.priority is not task.priority
+                or assignment.required_capabilities != scheduled_capabilities
+            ):
+                raise ProductionQueueError(
+                    f"Scheduled ProductionTask authority changed after review: {task.task_id}"
+                )
             entries.append(
                 ProductionQueueEntry(
                     entry_id=f"PQE-{task.task_id}",
