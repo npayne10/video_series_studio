@@ -51,9 +51,7 @@ class GeneratedMediaGovernanceError(ValueError):
 class GeneratedMediaGovernanceService:
     """Own explicit human-governed transitions for authoritative Generated Media."""
 
-    _ALLOWED_TRANSITIONS: ClassVar[
-        dict[GeneratedMediaState, frozenset[GeneratedMediaState]]
-    ] = {
+    _ALLOWED_TRANSITIONS: ClassVar[dict[GeneratedMediaState, frozenset[GeneratedMediaState]]] = {
         GeneratedMediaState.GENERATED: frozenset(
             {GeneratedMediaState.UNDER_REVIEW, GeneratedMediaState.INVALID}
         ),
