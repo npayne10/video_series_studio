@@ -18,7 +18,7 @@ class ProductionPackageComfyUIAdapter(ComfyUIAdapter):
     production_package_title: str = "Xorix Production Package — Canonical Composition v7.1.4"
 
     def compile_request(self, request: RenderRequest) -> CompiledRenderRequest:
-        compiled = super().compile_request(request)
+        compiled = ComfyUIAdapter.compile_request(self, request)
         package = request.metadata.get("production_package", "").strip()
         if not package:
             raise ComfyUIAdapterError("production_package metadata is required")
