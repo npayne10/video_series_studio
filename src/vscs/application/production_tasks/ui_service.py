@@ -70,13 +70,7 @@ class ProductionSchedulingUiService:
             if existing is None:
                 lifecycle.register(task)
                 continue
-            if (
-                existing.authority != task.authority
-                or existing.production_id != task.production_id
-                or existing.task_type is not task.task_type
-                or existing.capabilities != task.capabilities
-                or existing.expected_outputs != task.expected_outputs
-            ):
+            if not _same_compiled_contract(existing, task):
                 raise ProductionSchedulingUiError(
                     f"ProductionTask already exists with different governed content: {task.task_id}"
                 )
@@ -213,3 +207,24 @@ class ProductionSchedulingUiService:
         if not normalized:
             raise ProductionSchedulingUiError("production_id cannot be blank")
         return normalized
+
+
+def _same_compiled_contract(existing: ProductionTask, candidate: ProductionTask) -> bool:
+    """Compare immutable compiled authority while ignoring lifecycle state/timestamps."""
+    return (
+        existing.task_id == candidate.task_id
+        and existing.production_id == candidate.production_id
+        and existing.episode_id == candidate.episode_id
+        and existing.scene_id == candidate.scene_id
+        and existing.shot_id == candidate.shot_id
+        and existing.task_type is candidate.task_type
+        and existing.authority == candidate.authority
+        and existing.capabilities == candidate.capabilities
+        and existing.expected_outputs == candidate.expected_outputs
+        and existing.dependencies == candidate.dependencies
+        and existing.required_inputs == candidate.required_inputs
+        and existing.priority is candidate.priority
+        and existing.attempt_policy == candidate.attempt_policy
+        and existing.provenance == candidate.provenance
+        and existing.metadata == candidate.metadata
+    )
