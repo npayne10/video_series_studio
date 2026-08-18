@@ -1,5 +1,6 @@
 """Focused tests for Phase 20.2 Generated Media persistence."""
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -152,9 +153,10 @@ def test_scope_task_and_execution_queries_are_deterministic(tmp_path) -> None:
 
 def test_repository_rejects_unsafe_media_identity(tmp_path) -> None:
     repository = JsonGeneratedMediaRepository(tmp_path / "generated_media")
+    unsafe_media = replace(_media("GM-001"), media_id="../GM-001")
 
     with pytest.raises(GeneratedMediaRepositoryError, match="filesystem-safe"):
-        repository.save(_media("../GM-001"))
+        repository.save(unsafe_media)
 
 
 def test_repository_rejects_unsupported_schema(tmp_path) -> None:
