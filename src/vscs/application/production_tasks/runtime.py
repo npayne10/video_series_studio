@@ -18,11 +18,11 @@ from .repository import ProductionTaskRepository
 
 
 class ProductionWorkerError(ValueError):
-    """Raised when worker registration or queue coordination is invalid."""
+    """Raised when worker registration or runtime coordination is invalid."""
 
 
 class ProductionWorkerState(StrEnum):
-    """Provider-neutral worker availability."""
+    """Provider-neutral runtime worker availability."""
 
     AVAILABLE = "available"
     UNAVAILABLE = "unavailable"
@@ -59,17 +59,14 @@ class ProductionWorkerRegistry:
         self._workers: dict[str, ProductionWorker] = {}
 
     def register(self, worker: ProductionWorker) -> None:
-        """Register one worker without replacing an existing identity."""
         if worker.worker_id in self._workers:
             raise ProductionWorkerError(f"ProductionWorker already registered: {worker.worker_id}")
         self._workers[worker.worker_id] = worker
 
     def get(self, worker_id: str) -> ProductionWorker | None:
-        """Return one registered worker."""
         return self._workers.get(worker_id.strip())
 
     def require(self, worker_id: str) -> ProductionWorker:
-        """Return one registered worker or fail with a stable error."""
         normalized = worker_id.strip()
         if not normalized:
             raise ProductionWorkerError("worker_id cannot be blank")
@@ -93,16 +90,18 @@ class ProductionExecutionLease:
     last_heartbeat_at: datetime
 
     def __post_init__(self) -> None:
-        _require_text(self.lease_id, "lease_id")
-        _require_text(self.queue_id, "queue_id")
-        _require_text(self.entry_id, "entry_id")
-        _require_text(self.task_id, "task_id")
-        _require_text(self.worker_id, "worker_id")
+        for field_name, value in (
+            ("lease_id", self.lease_id),
+            ("queue_id", self.queue_id),
+            ("entry_id", self.entry_id),
+            ("task_id", self.task_id),
+            ("worker_id", self.worker_id),
+        ):
+            _require_text(value, field_name)
         if self.expires_at <= self.acquired_at:
             raise ValueError("lease expiry must be after acquisition")
 
     def is_expired(self, now: datetime) -> bool:
-        """Return whether this lease is expired at the supplied time."""
         return self.expires_at <= now
 
 
@@ -121,18 +120,18 @@ class ProductionLeaseManager:
         duration_seconds: float,
         now: datetime | None = None,
     ) -> ProductionExecutionLease:
-        """Acquire exclusive worker and queue-entry ownership."""
         if duration_seconds <= 0:
             raise ProductionWorkerError("lease duration_seconds must be positive")
         normalized_worker = worker_id.strip()
         if not normalized_worker:
             raise ProductionWorkerError("worker_id cannot be blank")
         current = now or datetime.now(UTC)
-        self._purge_expired(current)
         if self.active_for_entry(queue.queue_id, entry.entry_id, now=current) is not None:
             raise ProductionWorkerError(f"ProductionQueue entry already leased: {entry.entry_id}")
         if self.active_for_worker(normalized_worker, now=current) is not None:
-            raise ProductionWorkerError(f"ProductionWorker already has an active lease: {normalized_worker}")
+            raise ProductionWorkerError(
+                f"ProductionWorker already has an active lease: {normalized_worker}"
+            )
         lease = ProductionExecutionLease(
             lease_id=f"PLEASE-{queue.queue_id}-{entry.entry_id}-{normalized_worker}",
             queue_id=queue.queue_id,
@@ -147,12 +146,8 @@ class ProductionLeaseManager:
         return lease
 
     def require_active(
-        self,
-        lease_id: str,
-        *,
-        now: datetime | None = None,
+        self, lease_id: str, *, now: datetime | None = None
     ) -> ProductionExecutionLease:
-        """Return a non-expired active lease."""
         normalized = lease_id.strip()
         if not normalized:
             raise ProductionWorkerError("lease_id cannot be blank")
@@ -171,7 +166,6 @@ class ProductionLeaseManager:
         duration_seconds: float,
         now: datetime | None = None,
     ) -> ProductionExecutionLease:
-        """Renew one active lease."""
         if duration_seconds <= 0:
             raise ProductionWorkerError("lease duration_seconds must be positive")
         current = now or datetime.now(UTC)
@@ -185,7 +179,6 @@ class ProductionLeaseManager:
         return renewed
 
     def release(self, lease_id: str) -> ProductionExecutionLease | None:
-        """Release one lease if it is still tracked."""
         return self._leases.pop(lease_id.strip(), None)
 
     def active_for_entry(
@@ -195,7 +188,6 @@ class ProductionLeaseManager:
         *,
         now: datetime | None = None,
     ) -> ProductionExecutionLease | None:
-        """Return the active lease for one queue entry."""
         current = now or datetime.now(UTC)
         return next(
             (
@@ -209,12 +201,8 @@ class ProductionLeaseManager:
         )
 
     def active_for_worker(
-        self,
-        worker_id: str,
-        *,
-        now: datetime | None = None,
+        self, worker_id: str, *, now: datetime | None = None
     ) -> ProductionExecutionLease | None:
-        """Return the active lease held by one worker."""
         current = now or datetime.now(UTC)
         return next(
             (
@@ -226,12 +214,8 @@ class ProductionLeaseManager:
         )
 
     def expired_for_queue(
-        self,
-        queue_id: str,
-        *,
-        now: datetime | None = None,
+        self, queue_id: str, *, now: datetime | None = None
     ) -> tuple[ProductionExecutionLease, ...]:
-        """Return expired leases for one queue without removing them."""
         current = now or datetime.now(UTC)
         return tuple(
             sorted(
@@ -243,12 +227,6 @@ class ProductionLeaseManager:
                 key=lambda lease: (lease.expires_at, lease.lease_id),
             )
         )
-
-    def _purge_expired(self, now: datetime) -> None:
-        for lease_id in tuple(
-            lease.lease_id for lease in self._leases.values() if lease.is_expired(now)
-        ):
-            self._leases.pop(lease_id, None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -283,22 +261,12 @@ class ProductionQueueRuntimeService:
         lease_duration_seconds: float,
         now: datetime | None = None,
     ) -> ProductionQueueClaim:
-        """Claim a READY entry only with its scheduled compatible worker resource."""
         current = now or datetime.now(UTC)
         refreshed = self.queue_engine.refresh(queue, current)
         entry = self._require_entry(refreshed, entry_id)
         worker = self.workers.require(worker_id)
         task = self._require_task(entry.task_id)
-        if worker.state is not ProductionWorkerState.AVAILABLE:
-            raise ProductionWorkerError(f"ProductionWorker is unavailable: {worker.worker_id}")
-        if worker.resource_id != entry.resource_id:
-            raise ProductionWorkerError(
-                f"ProductionWorker resource does not match scheduled resource: {worker.worker_id}"
-            )
-        if not frozenset(task.capabilities).issubset(worker.capabilities):
-            raise ProductionWorkerError(
-                f"ProductionWorker lacks required ProductionTask capabilities: {worker.worker_id}"
-            )
+        self._validate_worker(worker, entry, task)
         lease = self.leases.acquire(
             refreshed,
             entry,
@@ -308,10 +276,7 @@ class ProductionQueueRuntimeService:
         )
         try:
             claimed = self.queue_engine.claim(
-                refreshed,
-                entry.entry_id,
-                worker.worker_id,
-                now=current,
+                refreshed, entry.entry_id, worker.worker_id, now=current
             )
         except Exception:
             self.leases.release(lease.lease_id)
@@ -326,7 +291,6 @@ class ProductionQueueRuntimeService:
         *,
         now: datetime | None = None,
     ) -> ProductionQueue:
-        """Start a claimed entry only while its worker lease remains active."""
         current = now or datetime.now(UTC)
         self._validate_lease(queue, entry_id, lease_id, current)
         return self.queue_engine.start(queue, entry_id, now=current)
@@ -340,13 +304,10 @@ class ProductionQueueRuntimeService:
         duration_seconds: float,
         now: datetime | None = None,
     ) -> ProductionExecutionLease:
-        """Renew the active lease for a claimed or running entry."""
         current = now or datetime.now(UTC)
         self._validate_lease(queue, entry_id, lease_id, current)
         return self.leases.heartbeat(
-            lease_id,
-            duration_seconds=duration_seconds,
-            now=current,
+            lease_id, duration_seconds=duration_seconds, now=current
         )
 
     def complete(
@@ -357,7 +318,6 @@ class ProductionQueueRuntimeService:
         *,
         now: datetime | None = None,
     ) -> ProductionQueue:
-        """Complete a running entry and release its worker lease."""
         current = now or datetime.now(UTC)
         self._validate_lease(queue, entry_id, lease_id, current)
         updated = self.queue_engine.complete(queue, entry_id, now=current)
@@ -373,7 +333,6 @@ class ProductionQueueRuntimeService:
         *,
         now: datetime | None = None,
     ) -> ProductionQueue:
-        """Fail a running attempt, release its lease, and apply task retry policy."""
         current = now or datetime.now(UTC)
         self._validate_lease(queue, entry_id, lease_id, current)
         updated = self.queue_engine.fail(queue, entry_id, error_message, now=current)
@@ -381,12 +340,9 @@ class ProductionQueueRuntimeService:
         return updated
 
     def recover_expired_leases(
-        self,
-        queue: ProductionQueue,
-        *,
-        now: datetime | None = None,
+        self, queue: ProductionQueue, *, now: datetime | None = None
     ) -> ProductionQueue:
-        """Recover expired claims and running attempts through deterministic retry rules."""
+        """Release abandoned claims and turn expired running attempts into retries/failures."""
         current = now or datetime.now(UTC)
         updated = queue
         for lease in self.leases.expired_for_queue(queue.queue_id, now=current):
@@ -395,7 +351,7 @@ class ProductionQueueRuntimeService:
                 self.leases.release(lease.lease_id)
                 continue
             if entry.state is ProductionQueueState.CLAIMED:
-                updated = self.queue_engine.release_claim(updated, entry.entry_id, now=current)
+                updated = self._release_expired_claim(updated, entry, current)
             elif entry.state is ProductionQueueState.RUNNING:
                 updated = self.queue_engine.fail(
                     updated,
@@ -405,6 +361,43 @@ class ProductionQueueRuntimeService:
                 )
             self.leases.release(lease.lease_id)
         return self.queue_engine.refresh(updated, current)
+
+    @staticmethod
+    def _release_expired_claim(
+        queue: ProductionQueue,
+        entry: ProductionQueueEntry,
+        now: datetime,
+    ) -> ProductionQueue:
+        released = replace(
+            entry,
+            state=ProductionQueueState.READY,
+            claimed_by=None,
+            updated_at=now,
+        )
+        return replace(
+            queue,
+            entries=tuple(
+                released if candidate.entry_id == entry.entry_id else candidate
+                for candidate in queue.entries
+            ),
+        )
+
+    @staticmethod
+    def _validate_worker(
+        worker: ProductionWorker,
+        entry: ProductionQueueEntry,
+        task: ProductionTask,
+    ) -> None:
+        if worker.state is not ProductionWorkerState.AVAILABLE:
+            raise ProductionWorkerError(f"ProductionWorker is unavailable: {worker.worker_id}")
+        if worker.resource_id != entry.resource_id:
+            raise ProductionWorkerError(
+                f"ProductionWorker resource does not match scheduled resource: {worker.worker_id}"
+            )
+        if not frozenset(task.capabilities).issubset(worker.capabilities):
+            raise ProductionWorkerError(
+                f"ProductionWorker lacks required ProductionTask capabilities: {worker.worker_id}"
+            )
 
     def _validate_lease(
         self,
@@ -418,7 +411,9 @@ class ProductionQueueRuntimeService:
         if lease.queue_id != queue.queue_id or lease.entry_id != entry.entry_id:
             raise ProductionWorkerError("Production execution lease does not own this queue entry")
         if lease.task_id != entry.task_id or lease.worker_id != entry.claimed_by:
-            raise ProductionWorkerError("Production execution lease ownership does not match queue state")
+            raise ProductionWorkerError(
+                "Production execution lease ownership does not match queue state"
+            )
         return lease
 
     def _require_task(self, task_id: str) -> ProductionTask:
