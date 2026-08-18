@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol
 
-from .scheduler import ProductionSchedule, ProductionSchedulingService
+from .scheduler import ProductionSchedule
 
 
 class ProductionSchedulePersistenceError(RuntimeError):
@@ -55,6 +55,8 @@ class ProductionScheduleSnapshot:
             raise ValueError("revision must be at least 1")
         if self.schedule.production_id != self.production_id:
             raise ValueError("schedule production_id must match snapshot production_id")
+        if self.fingerprint != production_schedule_fingerprint(self.schedule):
+            raise ValueError("schedule fingerprint does not match schedule content")
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +91,14 @@ class ProductionScheduleReviewView:
     state: ProductionScheduleReviewState
     current: bool
     can_review: bool
+
+
+class ProductionScheduleSource(Protocol):
+    """Provider-neutral source capable of producing a schedule for one production."""
+
+    def schedule(self, production_id: str) -> ProductionSchedule:
+        """Build a schedule without starting execution."""
+        ...
 
 
 class ProductionScheduleRepository(Protocol):
@@ -134,7 +144,7 @@ class ProductionSchedulePersistenceService:
 
     def __init__(
         self,
-        scheduling: ProductionSchedulingService,
+        scheduling: ProductionScheduleSource,
         repository: ProductionScheduleRepository,
     ) -> None:
         self.scheduling = scheduling
