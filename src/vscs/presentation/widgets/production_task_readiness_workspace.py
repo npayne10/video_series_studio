@@ -59,13 +59,19 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             tuple[ProductionTask, ...],
             self.production_scheduling.tasks(normalized_production_id),
         )
-        return tuple(task for task in tasks if task.shot_id == shot_id)
+        filtered: tuple[ProductionTask, ...] = tuple(
+            task for task in tasks if task.shot_id == shot_id
+        )
+        return filtered
 
     def _refresh_persisted_production_tasks(
         self: Any,
         production_id: str | None = None,
     ) -> tuple[ProductionTask, ...]:
-        persisted = self._persisted_tasks_for_selected_shot(production_id)
+        persisted = cast(
+            tuple[ProductionTask, ...],
+            self._persisted_tasks_for_selected_shot(production_id),
+        )
         shot_id = self._production_task_shot_id()
         if persisted and shot_id:
             authoritative_production_id = persisted[0].production_id
@@ -89,7 +95,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         ):
             return
 
-        persisted = self._refresh_persisted_production_tasks(requested_production_id or None)
+        persisted = cast(
+            tuple[ProductionTask, ...],
+            self._refresh_persisted_production_tasks(requested_production_id or None),
+        )
         if not hasattr(self, "production_task_readiness_status"):
             return
         if persisted:
@@ -118,7 +127,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         except (ValueError, RuntimeError) as exc:
             self.production_task_readiness_status.setText(str(exc))
             return
-        persisted = self._refresh_persisted_production_tasks(production_id)
+        persisted = cast(
+            tuple[ProductionTask, ...],
+            self._refresh_persisted_production_tasks(production_id),
+        )
         states = ", ".join(sorted({task.state.value for task in persisted})) or "none"
         self.production_task_readiness_status.setText(
             f"Readiness refreshed: {len(result.transitions)} transition(s). "
