@@ -1,6 +1,5 @@
 """Focused regression tests for Phase 19.6.6 provider-neutral scheduling."""
 
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -212,14 +211,13 @@ def test_scheduler_does_not_double_assign_one_resource_in_same_pass() -> None:
 
     assert schedule.scheduled_task_ids == ("PT-A",)
     assert schedule.assignments[0].resource_id == "RESOURCE-A"
-    assert schedule.deferrals == (
-        replace(
-            schedule.deferrals[0],
-            task_id="PT-B",
-            reason=ProductionSchedulingDeferralReason.RESOURCE_ALREADY_ASSIGNED,
-            resource_ids=("RESOURCE-A",),
-        ),
+    assert len(schedule.deferrals) == 1
+    assert schedule.deferrals[0].task_id == "PT-B"
+    assert (
+        schedule.deferrals[0].reason
+        is ProductionSchedulingDeferralReason.RESOURCE_ALREADY_ASSIGNED
     )
+    assert schedule.deferrals[0].resource_ids == ("RESOURCE-A",)
 
 
 def test_scheduling_service_loads_only_requested_production_and_does_not_execute() -> None:
