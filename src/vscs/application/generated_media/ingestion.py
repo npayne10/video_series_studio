@@ -32,7 +32,11 @@ class GeneratedMediaIngestionError(RuntimeError):
 class GeneratedMediaFileStore(Protocol):
     """Copy provider output bytes into VSCS-managed project media storage."""
 
-    def ingest(self, source_relative_path: str, destination_relative_path: str) -> GeneratedMediaFile:
+    def ingest(
+        self,
+        source_relative_path: str,
+        destination_relative_path: str,
+    ) -> GeneratedMediaFile:
         """Ingest one source file and return its managed file metadata."""
         ...
 
@@ -87,7 +91,8 @@ class GeneratedMediaIngestionService:
         output_ids = tuple(output.output_id for output in outputs)
         if len(set(output_ids)) != len(output_ids):
             raise GeneratedMediaIngestionError("provider outputs contain duplicate output identities")
-        return tuple(self._ingest_one(execution, task, output) for output in outputs)
+        ordered = tuple(sorted(outputs, key=lambda output: output.output_id))
+        return tuple(self._ingest_one(execution, task, output) for output in ordered)
 
     def _ingest_one(
         self,
@@ -156,8 +161,7 @@ class GeneratedMediaIngestionService:
             raise GeneratedMediaIngestionError(
                 "deterministic Generated Media identity belongs to another execution"
             )
-        expected_render_output = output.source_output_id
-        if media.provenance.render_output_id != expected_render_output:
+        if media.provenance.render_output_id != output.source_output_id:
             raise GeneratedMediaIngestionError(
                 "deterministic Generated Media identity belongs to another provider output"
             )
@@ -221,7 +225,12 @@ class GeneratedMediaIngestionService:
 
 
 def _safe_segment(value: str) -> str:
-    normalized = "".join(character if character.isalnum() or character in "-_" else "_" for character in value.strip())
+    normalized = "".join(
+        character if character.isalnum() or character in "-_" else "_"
+        for character in value.strip()
+    )
     if not normalized:
-        raise GeneratedMediaIngestionError("Generated Media destination contains an empty scope segment")
+        raise GeneratedMediaIngestionError(
+            "Generated Media destination contains an empty scope segment"
+        )
     return normalized
