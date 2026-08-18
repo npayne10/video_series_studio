@@ -7,6 +7,8 @@ from .governance import (
     GeneratedMediaGovernanceService,
     GeneratedMediaGovernanceSeverity,
 )
+from .persistence import GeneratedMediaPersistenceService
+from .repository import GeneratedMediaRepository, GeneratedMediaRepositoryError
 
 __all__ = [
     "GeneratedMediaGovernanceError",
@@ -14,4 +16,7 @@ __all__ = [
     "GeneratedMediaGovernanceResult",
     "GeneratedMediaGovernanceService",
     "GeneratedMediaGovernanceSeverity",
+    "GeneratedMediaPersistenceService",
+    "GeneratedMediaRepository",
+    "GeneratedMediaRepositoryError",
 ]
