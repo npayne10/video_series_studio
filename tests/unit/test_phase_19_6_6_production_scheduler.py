@@ -21,7 +21,6 @@ from vscs.application.production_tasks import (
     ProductionTaskType,
 )
 
-
 _BASE_TIME = datetime(2026, 8, 18, 8, 0, tzinfo=UTC)
 
 
@@ -214,8 +213,7 @@ def test_scheduler_does_not_double_assign_one_resource_in_same_pass() -> None:
     assert len(schedule.deferrals) == 1
     assert schedule.deferrals[0].task_id == "PT-B"
     assert (
-        schedule.deferrals[0].reason
-        is ProductionSchedulingDeferralReason.RESOURCE_ALREADY_ASSIGNED
+        schedule.deferrals[0].reason is ProductionSchedulingDeferralReason.RESOURCE_ALREADY_ASSIGNED
     )
     assert schedule.deferrals[0].resource_ids == ("RESOURCE-A",)
 

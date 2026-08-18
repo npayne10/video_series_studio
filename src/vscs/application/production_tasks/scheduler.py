@@ -89,11 +89,7 @@ class ProductionScheduler:
             key=lambda task: (-int(task.priority), task.created_at, task.task_id),
         )
         ignored_task_ids = tuple(
-            sorted(
-                task.task_id
-                for task in tasks
-                if task.state is not ProductionTaskState.READY
-            )
+            sorted(task.task_id for task in tasks if task.state is not ProductionTaskState.READY)
         )
         assigned_resources: set[str] = set()
         assignments: list[ProductionScheduleAssignment] = []

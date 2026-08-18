@@ -69,8 +69,7 @@ def test_scheduler_uses_persisted_task_authority_without_changing_runtime_state(
     assert len(schedule.deferrals) == 1
     assert schedule.deferrals[0].task_id == "PT-NORMAL"
     assert (
-        schedule.deferrals[0].reason
-        is ProductionSchedulingDeferralReason.RESOURCE_ALREADY_ASSIGNED
+        schedule.deferrals[0].reason is ProductionSchedulingDeferralReason.RESOURCE_ALREADY_ASSIGNED
     )
     assert repository.get("PT-HIGH") == high
     assert repository.get("PT-NORMAL") == normal
