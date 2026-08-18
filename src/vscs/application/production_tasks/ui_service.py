@@ -89,12 +89,14 @@ class ProductionSchedulingUiService:
         return tuple(self._resources[key] for key in sorted(self._resources))
 
     def register_worker(self, worker: ProductionWorker) -> ProductionWorker:
-        if worker.worker_id in self._workers:
-            raise ProductionSchedulingUiError(
-                f"ProductionWorker already registered: {worker.worker_id}"
-            )
-        self._worker_registry.register(worker)
+        """Register or update one session worker under a stable worker identity."""
         self._workers[worker.worker_id] = worker
+        refreshed_registry = ProductionWorkerRegistry()
+        for worker_id in sorted(self._workers):
+            refreshed_registry.register(self._workers[worker_id])
+        self._worker_registry = refreshed_registry
+        for runtime in self._runtime_by_production.values():
+            runtime.workers = refreshed_registry
         return worker
 
     def workers(self) -> tuple[ProductionWorker, ...]:
