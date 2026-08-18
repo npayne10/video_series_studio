@@ -106,8 +106,11 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         )
         self.scheduling_resource_state = QComboBox(resource_group)
         self.scheduling_resource_state.setObjectName("scheduling_resource_state")
-        for state in ProductionResourceState:
-            self.scheduling_resource_state.addItem(state.value.title(), state)
+        for resource_state in ProductionResourceState:
+            self.scheduling_resource_state.addItem(
+                resource_state.value.title(),
+                resource_state,
+            )
         resource_form.addRow("Resource ID", self.scheduling_resource_id)
         resource_form.addRow("Capabilities", self.scheduling_resource_capabilities)
         resource_form.addRow("State", self.scheduling_resource_state)
@@ -214,8 +217,11 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self.scheduling_worker_capabilities.setObjectName("scheduling_worker_capabilities")
         self.scheduling_worker_state = QComboBox(worker_group)
         self.scheduling_worker_state.setObjectName("scheduling_worker_state")
-        for state in ProductionWorkerState:
-            self.scheduling_worker_state.addItem(state.value.title(), state)
+        for worker_state in ProductionWorkerState:
+            self.scheduling_worker_state.addItem(
+                worker_state.value.title(),
+                worker_state,
+            )
         worker_form.addRow("Worker ID", self.scheduling_worker_id)
         worker_form.addRow("Resource ID", self.scheduling_worker_resource_id)
         worker_form.addRow("Capabilities", self.scheduling_worker_capabilities)
