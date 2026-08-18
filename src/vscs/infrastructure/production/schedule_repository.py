@@ -62,7 +62,8 @@ class JsonProductionScheduleRepository(ProductionScheduleRepository):
         normalized = production_id.strip()
         snapshots = tuple(
             snapshot
-            for path in sorted(self.root.glob("*/revision-*.json")) if self.root.exists()
+            for path in sorted(self.root.glob("*/revision-*.json"))
+            if self.root.exists()
             if (snapshot := self._read_snapshot(path)).production_id == normalized
         )
         return tuple(sorted(snapshots, key=lambda item: item.revision))
@@ -85,9 +86,7 @@ class JsonProductionScheduleRepository(ProductionScheduleRepository):
             )
         payload = {
             "schema_version": self.SCHEMA_VERSION,
-            "records": [
-                self._review_to_payload(record) for record in (*records, review)
-            ],
+            "records": [self._review_to_payload(record) for record in (*records, review)],
         }
         self._write_atomic(path, payload)
         return review
@@ -99,9 +98,7 @@ class JsonProductionScheduleRepository(ProductionScheduleRepository):
     ) -> tuple[ProductionScheduleReviewRecord, ...]:
         """Return reviews for one exact schedule revision."""
         path = self._reviews_path(schedule_id.strip())
-        return tuple(
-            record for record in self._read_reviews(path) if record.revision == revision
-        )
+        return tuple(record for record in self._read_reviews(path) if record.revision == revision)
 
     def _read_snapshot(self, path: Path) -> ProductionScheduleSnapshot:
         payload = self._read_payload(path)

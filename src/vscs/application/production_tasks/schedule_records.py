@@ -221,7 +221,9 @@ class ProductionScheduleReviewService:
             )
         latest = self.repository.latest_for_production(snapshot.production_id)
         if latest is None or latest.revision != snapshot.revision:
-            raise ProductionScheduleReviewError("Only the current schedule revision may be reviewed")
+            raise ProductionScheduleReviewError(
+                "Only the current schedule revision may be reviewed"
+            )
         if self.repository.reviews(snapshot.schedule_id, snapshot.revision):
             raise ProductionScheduleReviewError("Schedule revision has already been reviewed")
         record = ProductionScheduleReviewRecord(

@@ -8,6 +8,7 @@ from vscs.application.production_tasks import (
     ProductionCapability,
     ProductionSchedule,
     ProductionScheduleAssignment,
+    ProductionScheduleDeferral,
     ProductionSchedulePersistenceError,
     ProductionSchedulePersistenceService,
     ProductionScheduleRepository,
@@ -18,11 +19,9 @@ from vscs.application.production_tasks import (
     ProductionScheduleReviewState,
     ProductionScheduleSnapshot,
     ProductionSchedulingDeferralReason,
-    ProductionScheduleDeferral,
     ProductionTaskPriority,
     production_schedule_fingerprint,
 )
-
 
 _NOW = datetime(2026, 8, 18, 10, 0, tzinfo=UTC)
 
@@ -167,7 +166,9 @@ def test_review_records_explicit_human_decision_against_exact_fingerprint() -> N
 
 def test_review_requires_human_identity_and_notes() -> None:
     repository = _Repository()
-    snapshot = ProductionSchedulePersistenceService(_Scheduling(_schedule()), repository).create_revision(  # type: ignore[arg-type]
+    snapshot = ProductionSchedulePersistenceService(
+        _Scheduling(_schedule()), repository
+    ).create_revision(  # type: ignore[arg-type]
         "PROD-001",
         now=_NOW,
     )
@@ -193,7 +194,9 @@ def test_review_requires_human_identity_and_notes() -> None:
 
 def test_schedule_revision_can_only_be_reviewed_once() -> None:
     repository = _Repository()
-    snapshot = ProductionSchedulePersistenceService(_Scheduling(_schedule()), repository).create_revision(  # type: ignore[arg-type]
+    snapshot = ProductionSchedulePersistenceService(
+        _Scheduling(_schedule()), repository
+    ).create_revision(  # type: ignore[arg-type]
         "PROD-001",
         now=_NOW,
     )
@@ -256,7 +259,9 @@ def test_newer_schedule_revision_supersedes_older_review_without_erasing_history
 
 def test_rejected_current_schedule_remains_reviewable_history_not_execution_authority() -> None:
     repository = _Repository()
-    snapshot = ProductionSchedulePersistenceService(_Scheduling(_schedule()), repository).create_revision(  # type: ignore[arg-type]
+    snapshot = ProductionSchedulePersistenceService(
+        _Scheduling(_schedule()), repository
+    ).create_revision(  # type: ignore[arg-type]
         "PROD-001",
         now=_NOW,
     )

@@ -23,7 +23,6 @@ from vscs.infrastructure.production import (
     JsonProductionTaskRepository,
 )
 
-
 _NOW = datetime(2026, 8, 18, 10, 0, tzinfo=UTC)
 
 
