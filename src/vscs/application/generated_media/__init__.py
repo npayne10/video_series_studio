@@ -1,5 +1,7 @@
 """Generated Media application services for VSCS Phase 20."""
 
+from vscs.domain.generated_media import GeneratedMediaKind
+
 from .governance import (
     GeneratedMediaGovernanceError,
     GeneratedMediaGovernanceIssue,
@@ -16,6 +18,7 @@ __all__ = [
     "GeneratedMediaGovernanceResult",
     "GeneratedMediaGovernanceService",
     "GeneratedMediaGovernanceSeverity",
+    "GeneratedMediaKind",
     "GeneratedMediaPersistenceService",
     "GeneratedMediaRepository",
     "GeneratedMediaRepositoryError",
