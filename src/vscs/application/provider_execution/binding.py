@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from vscs.application.production_tasks import (
     ProductionExecutionLease,
     ProductionQueue,
@@ -25,7 +27,10 @@ class ProviderExecutionContextFactory:
         entry_id: str,
         lease: ProductionExecutionLease,
         task: ProductionTask,
+        *,
+        now: datetime | None = None,
     ) -> ProviderExecutionContext:
+        current = now or datetime.now(UTC)
         entry = queue.entry(entry_id)
         if entry is None:
             raise ProviderExecutionBindingError(f"ProductionQueue entry not found: {entry_id}")
@@ -42,6 +47,10 @@ class ProviderExecutionContextFactory:
         if queue.production_id != task.production_id or entry.task_id != task.task_id:
             raise ProviderExecutionBindingError(
                 "ProductionTask authority does not match ProductionQueue execution"
+            )
+        if lease.is_expired(current):
+            raise ProviderExecutionBindingError(
+                f"Production execution lease is expired: {lease.lease_id}"
             )
         if lease.queue_id != queue.queue_id or lease.entry_id != entry.entry_id:
             raise ProviderExecutionBindingError(
