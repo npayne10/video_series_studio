@@ -255,8 +255,8 @@ class ProductionReadinessIntegrationService:
 
         task_by_id = {task.task_id: task for task in tasks}
         for entry in executable_entries:
-            task = task_by_id.get(entry.task_id)
-            if task is None:
+            queued_task = task_by_id.get(entry.task_id)
+            if queued_task is None:
                 findings.append(
                     ProductionReadinessFinding(
                         ProductionReadinessCode.QUEUE_NOT_EXECUTABLE,
@@ -275,7 +275,7 @@ class ProductionReadinessIntegrationService:
                         ProductionReadinessCode.RESOURCE_NOT_REGISTERED,
                         ProductionReadinessSeverity.BLOCKING,
                         f"Scheduled resource {entry.resource_id} is not registered in this session.",
-                        task_id=task.task_id,
+                        task_id=queued_task.task_id,
                         resource_id=entry.resource_id,
                     )
                 )
@@ -286,17 +286,17 @@ class ProductionReadinessIntegrationService:
                         ProductionReadinessCode.RESOURCE_UNAVAILABLE,
                         ProductionReadinessSeverity.BLOCKING,
                         f"Scheduled resource {resource.resource_id} is unavailable.",
-                        task_id=task.task_id,
+                        task_id=queued_task.task_id,
                         resource_id=resource.resource_id,
                     )
                 )
-            if not frozenset(task.capabilities).issubset(resource.capabilities):
+            if not frozenset(queued_task.capabilities).issubset(resource.capabilities):
                 findings.append(
                     ProductionReadinessFinding(
                         ProductionReadinessCode.RESOURCE_CAPABILITY_MISMATCH,
                         ProductionReadinessSeverity.BLOCKING,
                         f"Scheduled resource {resource.resource_id} no longer satisfies ProductionTask capabilities.",
-                        task_id=task.task_id,
+                        task_id=queued_task.task_id,
                         resource_id=resource.resource_id,
                     )
                 )
@@ -308,7 +308,7 @@ class ProductionReadinessIntegrationService:
                         ProductionReadinessCode.WORKER_NOT_REGISTERED,
                         ProductionReadinessSeverity.BLOCKING,
                         f"No ProductionWorker is registered for resource {resource.resource_id}.",
-                        task_id=task.task_id,
+                        task_id=queued_task.task_id,
                         resource_id=resource.resource_id,
                     )
                 )
@@ -323,7 +323,7 @@ class ProductionReadinessIntegrationService:
                         ProductionReadinessCode.WORKER_UNAVAILABLE,
                         ProductionReadinessSeverity.BLOCKING,
                         f"No available ProductionWorker is bound to resource {resource.resource_id}.",
-                        task_id=task.task_id,
+                        task_id=queued_task.task_id,
                         resource_id=resource.resource_id,
                     )
                 )
@@ -332,7 +332,7 @@ class ProductionReadinessIntegrationService:
             capable = tuple(
                 worker
                 for worker in available
-                if frozenset(task.capabilities).issubset(worker.capabilities)
+                if frozenset(queued_task.capabilities).issubset(worker.capabilities)
             )
             if not capable:
                 findings.append(
@@ -340,7 +340,7 @@ class ProductionReadinessIntegrationService:
                         ProductionReadinessCode.WORKER_CAPABILITY_MISMATCH,
                         ProductionReadinessSeverity.BLOCKING,
                         f"Available workers for resource {resource.resource_id} lack required ProductionTask capabilities.",
-                        task_id=task.task_id,
+                        task_id=queued_task.task_id,
                         resource_id=resource.resource_id,
                     )
                 )
