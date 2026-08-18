@@ -12,7 +12,7 @@ from vscs.application.production_tasks import ProductionQueue
 from .adapter_registry import ProviderExecutionAdapterRegistry
 from .execution_records import DurableExecutionJob
 from .execution_service import DurableExecutionJobService
-from .models import ProviderExecutionHandle, ProviderExecutionOutput, ProviderExecutionState
+from .models import ProviderExecutionHandle
 from .queue_integration import QueueProviderExecutionReconciliation, QueueProviderExecutionService
 
 
@@ -121,6 +121,7 @@ class LiveExecutionMonitoringService:
                 message="execution has no provider job identity to query",
             )
 
+        was_stale = self._is_stale(job, current)
         adapter = self.adapters.require(job.provider_id)
         if not isinstance(adapter, ProviderExecutionHandleRestorer):
             raise ExecutionMonitoringError(
@@ -130,13 +131,12 @@ class LiveExecutionMonitoringService:
         try:
             refreshed = adapter.monitor(handle)
         except Exception as exc:
-            stale = self._is_stale(job, current)
             return ExecutionMonitoringResult(
                 execution_job=job,
                 disposition=ExecutionMonitoringDisposition.PROVIDER_UNREACHABLE,
                 recovery_action=(
                     ExecutionRecoveryAction.REQUIRE_OPERATOR_REVIEW
-                    if stale
+                    if was_stale
                     else ExecutionRecoveryAction.RETRY_PROVIDER_QUERY
                 ),
                 observed_at=current,
@@ -156,24 +156,23 @@ class LiveExecutionMonitoringService:
                 message=f"provider reports terminal state: {observed.state.value}",
                 handle=refreshed,
             )
-        stale = self._is_stale(observed, current)
         return ExecutionMonitoringResult(
             execution_job=observed,
             disposition=(
                 ExecutionMonitoringDisposition.STALE_ACTIVE
-                if stale
+                if was_stale
                 else ExecutionMonitoringDisposition.ACTIVE
             ),
             recovery_action=(
-                ExecutionRecoveryAction.REQUIRE_OPERATOR_REVIEW
-                if stale
+                ExecutionRecoveryAction.CONTINUE_MONITORING
+                if was_stale
                 else ExecutionRecoveryAction.CONTINUE_MONITORING
             ),
             observed_at=current,
             provider_observed=True,
             message=(
-                "provider execution remains active but stale threshold is exceeded"
-                if stale
+                "stale durable execution was successfully re-observed as active"
+                if was_stale
                 else "provider execution remains active"
             ),
             handle=refreshed,
