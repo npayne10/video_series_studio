@@ -149,9 +149,7 @@ def test_context_rejects_mismatched_lease_ownership() -> None:
     )
 
     with pytest.raises(ProviderExecutionBindingError, match="does not own"):
-        ProviderExecutionContextFactory().bind(
-            _queue(), "PQE-PT-001", lease, _task(), now=NOW
-        )
+        ProviderExecutionContextFactory().bind(_queue(), "PQE-PT-001", lease, _task(), now=NOW)
 
 
 def test_provider_execution_payload_kind_is_provider_neutral() -> None:

@@ -45,8 +45,6 @@ class ProviderExecutionAdapter(Protocol):
         """Request provider cancellation when supported."""
         ...
 
-    def fetch_outputs(
-        self, handle: ProviderExecutionHandle
-    ) -> tuple[ProviderExecutionOutput, ...]:
+    def fetch_outputs(self, handle: ProviderExecutionHandle) -> tuple[ProviderExecutionOutput, ...]:
         """Return provider outputs without creating Generated Media authority."""
         ...

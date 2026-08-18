@@ -79,7 +79,7 @@ class UrllibComfyUITransport:
             method=method.upper(),
         )
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310
+            with urlopen(request, timeout=self.timeout_seconds) as response:
                 raw = response.read()
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
@@ -404,9 +404,7 @@ def _history_outputs(history: dict[str, object]) -> tuple[str, ...]:
                     continue
                 subfolder = str(item.get("subfolder", "")).strip().replace("\\", "/")
                 candidate = (
-                    PurePosixPath(subfolder) / filename
-                    if subfolder
-                    else PurePosixPath(filename)
+                    PurePosixPath(subfolder) / filename if subfolder else PurePosixPath(filename)
                 )
                 normalized = str(candidate)
                 if normalized.startswith("/") or ".." in candidate.parts:

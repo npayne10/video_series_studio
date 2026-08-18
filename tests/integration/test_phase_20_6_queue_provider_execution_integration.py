@@ -39,9 +39,9 @@ from vscs.application.rendering import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
+    RendererKind,
     RenderJob,
     RenderJobStatus,
-    RendererKind,
     RenderOutput,
     RenderOutputKind,
     RenderRequest,
@@ -224,9 +224,7 @@ def _service(tmp_path, *, second_provider: bool = False, fail_submit: bool = Fal
             ),
         )
     )
-    providers = ProviderRegistryService(
-        JsonProviderRegistrationRepository(tmp_path / "providers")
-    )
+    providers = ProviderRegistryService(JsonProviderRegistrationRepository(tmp_path / "providers"))
     providers.register(_provider("PROVIDER-A"))
     adapters = ProviderExecutionAdapterRegistry()
     controlled = ControlledRenderAdapter(fail_submit=fail_submit)

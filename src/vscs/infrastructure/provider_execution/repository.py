@@ -53,9 +53,7 @@ class JsonProviderRegistrationRepository:
 
     def list_for_resource(self, resource_id: str) -> tuple[ProviderRegistration, ...]:
         normalized = self._require_query(resource_id, "resource_id")
-        return tuple(
-            provider for provider in self.list_all() if provider.resource_id == normalized
-        )
+        return tuple(provider for provider in self.list_all() if provider.resource_id == normalized)
 
     def _read(self, path: Path) -> ProviderRegistration:
         try:
@@ -124,7 +122,8 @@ class JsonProviderRegistrationRepository:
             adapter_type=str(raw["adapter_type"]),
             resource_id=str(raw["resource_id"]),
             capabilities=frozenset(
-                ProductionCapability(str(item)) for item in _list(raw["capabilities"], "capabilities")
+                ProductionCapability(str(item))
+                for item in _list(raw["capabilities"], "capabilities")
             ),
             supported_task_types=frozenset(
                 ProductionTaskType(str(item))
