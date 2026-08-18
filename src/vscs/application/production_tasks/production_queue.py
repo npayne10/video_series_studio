@@ -146,22 +146,30 @@ class ProductionQueueCompilerService:
         if snapshot is None:
             raise ProductionQueueError(f"No ProductionSchedule exists for production: {normalized}")
         if production_schedule_fingerprint(snapshot.schedule) != snapshot.fingerprint:
-            raise ProductionQueueError("ProductionSchedule fingerprint does not match persisted content")
+            raise ProductionQueueError(
+                "ProductionSchedule fingerprint does not match persisted content"
+            )
         reviews = self.schedules.reviews(snapshot.schedule_id, snapshot.revision)
         if len(reviews) != 1:
-            raise ProductionQueueError("Current ProductionSchedule must have exactly one review decision")
+            raise ProductionQueueError(
+                "Current ProductionSchedule must have exactly one review decision"
+            )
         review = reviews[0]
         if review.fingerprint != snapshot.fingerprint:
             raise ProductionQueueError("ProductionSchedule review fingerprint is stale")
         if review.decision is not ProductionScheduleReviewDecision.APPROVED:
-            raise ProductionQueueError("Current ProductionSchedule is not approved for queue compilation")
+            raise ProductionQueueError(
+                "Current ProductionSchedule is not approved for queue compilation"
+            )
 
         current = now or datetime.now(UTC)
         entries: list[ProductionQueueEntry] = []
         for assignment in snapshot.schedule.assignments:
             task = self.tasks.get(assignment.task_id)
             if task is None:
-                raise ProductionQueueError(f"Scheduled ProductionTask not found: {assignment.task_id}")
+                raise ProductionQueueError(
+                    f"Scheduled ProductionTask not found: {assignment.task_id}"
+                )
             if task.production_id != normalized:
                 raise ProductionQueueError(
                     f"Scheduled ProductionTask belongs to a different production: {task.task_id}"
@@ -231,9 +239,8 @@ class ProductionQueueEngine:
         current = now or datetime.now(UTC)
         refreshed: list[ProductionQueueEntry] = []
         for entry in queue.entries:
-            if (
-                entry.state is ProductionQueueState.RETRYING
-                and (entry.available_at is None or entry.available_at <= current)
+            if entry.state is ProductionQueueState.RETRYING and (
+                entry.available_at is None or entry.available_at <= current
             ):
                 refreshed.append(
                     replace(
@@ -342,9 +349,7 @@ class ProductionQueueEngine:
             queue,
             replace(
                 entry,
-                state=(
-                    ProductionQueueState.RETRYING if retryable else ProductionQueueState.FAILED
-                ),
+                state=(ProductionQueueState.RETRYING if retryable else ProductionQueueState.FAILED),
                 attempts=attempts,
                 claimed_by=None,
                 available_at=(
@@ -389,7 +394,9 @@ class ProductionQueueEngine:
         error_message: str | None = None,
     ) -> tuple[ProductionQueueAttempt, ...]:
         if not entry.attempts:
-            raise ProductionQueueError(f"ProductionQueue entry has no active attempt: {entry.entry_id}")
+            raise ProductionQueueError(
+                f"ProductionQueue entry has no active attempt: {entry.entry_id}"
+            )
         latest = entry.attempts[-1]
         if latest.completed_at is not None:
             raise ProductionQueueError(

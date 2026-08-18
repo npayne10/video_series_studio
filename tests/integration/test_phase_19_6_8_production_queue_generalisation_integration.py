@@ -21,7 +21,6 @@ from vscs.application.production_tasks import (
 from vscs.infrastructure.production.schedule_repository import JsonProductionScheduleRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 
-
 _NOW = datetime(2026, 8, 18, 10, 0, tzinfo=UTC)
 
 

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from vscs.application.production_pipeline import RenderQueue, RenderQueueEntry
 from vscs.application.production_tasks import (
     ProductionAuthorityType,
     ProductionCapability,
@@ -24,8 +25,6 @@ from vscs.application.production_tasks import (
     ProductionTaskType,
     production_schedule_fingerprint,
 )
-from vscs.application.production_pipeline import RenderQueue, RenderQueueEntry
-
 
 _NOW = datetime(2026, 8, 18, 10, 0, tzinfo=UTC)
 
@@ -79,9 +78,7 @@ class _TaskRepository:
         return task
 
     def list_for_production(self, production_id: str) -> tuple[ProductionTask, ...]:
-        return tuple(
-            task for task in self.tasks.values() if task.production_id == production_id
-        )
+        return tuple(task for task in self.tasks.values() if task.production_id == production_id)
 
 
 class _ScheduleRepository:
@@ -102,9 +99,7 @@ class _ScheduleRepository:
             return self.snapshot
         return None
 
-    def history_for_production(
-        self, production_id: str
-    ) -> tuple[ProductionScheduleSnapshot, ...]:
+    def history_for_production(self, production_id: str) -> tuple[ProductionScheduleSnapshot, ...]:
         return (self.snapshot,) if self.snapshot.production_id == production_id else ()
 
     def latest_for_production(self, production_id: str) -> ProductionScheduleSnapshot | None:
@@ -200,9 +195,7 @@ def test_queue_compiler_rejects_task_that_is_no_longer_ready() -> None:
 def test_queue_compiler_rejects_stale_task_priority_after_schedule_review() -> None:
     scheduled_task = _task("PT-001", priority=ProductionTaskPriority.NORMAL)
     schedules, tasks = _schedule_context((scheduled_task,))
-    tasks.tasks[scheduled_task.task_id] = _task(
-        "PT-001", priority=ProductionTaskPriority.URGENT
-    )
+    tasks.tasks[scheduled_task.task_id] = _task("PT-001", priority=ProductionTaskPriority.URGENT)
 
     with pytest.raises(ProductionQueueError, match="authority changed after review"):
         ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
@@ -216,9 +209,7 @@ def test_queue_is_general_across_non_render_production_task_types() -> None:
     )
     schedules, tasks = _schedule_context((task,))
 
-    queue = ProductionQueueCompilerService(schedules, tasks).compile(
-        "PROD-001", now=_NOW
-    )
+    queue = ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
 
     assert queue.schedule_id == "PS-001"
     assert queue.schedule_revision == 1
@@ -238,9 +229,9 @@ def test_queue_preserves_task_priority_and_attempt_policy() -> None:
     )
     schedules, tasks = _schedule_context((task,))
 
-    entry = ProductionQueueCompilerService(schedules, tasks).compile(
-        "PROD-001", now=_NOW
-    ).entries[0]
+    entry = (
+        ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW).entries[0]
+    )
 
     assert entry.priority is ProductionTaskPriority.URGENT
     assert entry.maximum_attempts == 5
@@ -251,9 +242,7 @@ def test_queue_engine_orders_ready_entries_by_priority() -> None:
     low = _task("PT-LOW", priority=ProductionTaskPriority.LOW)
     urgent = _task("PT-URGENT", priority=ProductionTaskPriority.URGENT)
     schedules, tasks = _schedule_context((low, urgent))
-    queue = ProductionQueueCompilerService(schedules, tasks).compile(
-        "PROD-001", now=_NOW
-    )
+    queue = ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
 
     ready = ProductionQueueEngine().ready_entries(queue, now=_NOW)
 
@@ -263,9 +252,7 @@ def test_queue_engine_orders_ready_entries_by_priority() -> None:
 def test_queue_engine_claim_start_and_complete_are_provider_neutral() -> None:
     task = _task("PT-001")
     schedules, tasks = _schedule_context((task,))
-    queue = ProductionQueueCompilerService(schedules, tasks).compile(
-        "PROD-001", now=_NOW
-    )
+    queue = ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
     engine = ProductionQueueEngine()
 
     queue = engine.claim(queue, "PQE-PT-001", "WORKER-01", now=_NOW)
@@ -284,9 +271,7 @@ def test_queue_engine_claim_start_and_complete_are_provider_neutral() -> None:
 def test_queue_engine_uses_task_retry_policy() -> None:
     task = _task("PT-001", maximum_attempts=2, retry_delay_seconds=10)
     schedules, tasks = _schedule_context((task,))
-    queue = ProductionQueueCompilerService(schedules, tasks).compile(
-        "PROD-001", now=_NOW
-    )
+    queue = ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
     engine = ProductionQueueEngine()
 
     queue = engine.claim(queue, "PQE-PT-001", "WORKER-01", now=_NOW)
