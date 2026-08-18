@@ -25,6 +25,16 @@ from .models import (
     ProviderExecutionRequest,
     ProviderExecutionState,
 )
+from .monitoring_recovery import (
+    ExecutionMonitoringDisposition,
+    ExecutionMonitoringError,
+    ExecutionMonitoringPolicy,
+    ExecutionMonitoringResult,
+    ExecutionRecoveryAction,
+    LiveExecutionMonitoringService,
+    LiveExecutionRecoveryResult,
+    ProviderExecutionHandleRestorer,
+)
 from .provider_registry import (
     ProviderCapabilityResolution,
     ProviderCapabilityResolver,
@@ -57,6 +67,13 @@ __all__ = [
     "DurableExecutionJobRepositoryError",
     "DurableExecutionJobService",
     "DurableExecutionJobTracker",
+    "ExecutionMonitoringDisposition",
+    "ExecutionMonitoringError",
+    "ExecutionMonitoringPolicy",
+    "ExecutionMonitoringResult",
+    "ExecutionRecoveryAction",
+    "LiveExecutionMonitoringService",
+    "LiveExecutionRecoveryResult",
     "ProviderCapabilityResolution",
     "ProviderCapabilityResolver",
     "ProviderExecutionAdapter",
@@ -66,6 +83,7 @@ __all__ = [
     "ProviderExecutionContext",
     "ProviderExecutionContextFactory",
     "ProviderExecutionHandle",
+    "ProviderExecutionHandleRestorer",
     "ProviderExecutionOutput",
     "ProviderExecutionPayloadKind",
     "ProviderExecutionRequest",
