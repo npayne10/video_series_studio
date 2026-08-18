@@ -16,6 +16,7 @@ from vscs.application.provider_execution.provider_registry import (
 from vscs.application.provider_execution.provider_repository import (
     ProviderRegistrationRepositoryError,
 )
+from vscs.domain.generated_media import GeneratedMediaKind
 
 
 class JsonProviderRegistrationRepository:
@@ -107,7 +108,7 @@ class JsonProviderRegistrationRepository:
             "resource_id": provider.resource_id,
             "capabilities": sorted(item.value for item in provider.capabilities),
             "supported_task_types": sorted(item.value for item in provider.supported_task_types),
-            "supported_media_kinds": sorted(provider.supported_media_kinds),
+            "supported_media_kinds": sorted(item.value for item in provider.supported_media_kinds),
             "endpoint": provider.endpoint,
             "secret_reference": provider.secret_reference,
             "state": provider.state.value,
@@ -130,7 +131,8 @@ class JsonProviderRegistrationRepository:
                 for item in _list(raw["supported_task_types"], "supported_task_types")
             ),
             supported_media_kinds=frozenset(
-                str(item) for item in _list(raw["supported_media_kinds"], "supported_media_kinds")
+                GeneratedMediaKind(str(item))
+                for item in _list(raw["supported_media_kinds"], "supported_media_kinds")
             ),
             endpoint=_optional_string(raw.get("endpoint")),
             secret_reference=_optional_string(raw.get("secret_reference")),
