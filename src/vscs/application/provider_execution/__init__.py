@@ -1,5 +1,9 @@
 """Provider-neutral execution contracts bridging Phase 19 orchestration to providers."""
 
+from .adapter_registry import (
+    ProviderExecutionAdapterRegistry,
+    ProviderExecutionAdapterRegistryError,
+)
 from .binding import ProviderExecutionBindingError, ProviderExecutionContextFactory
 from .contracts import ProviderExecutionAdapter, ProviderExecutionValidation
 from .models import (
@@ -22,6 +26,12 @@ from .provider_repository import (
     ProviderRegistrationRepositoryError,
 )
 from .provider_service import ProviderRegistryService
+from .queue_integration import (
+    QueueProviderExecutionError,
+    QueueProviderExecutionReconciliation,
+    QueueProviderExecutionService,
+    QueueProviderExecutionSubmission,
+)
 from .rendering_bridge import (
     RenderProviderExecutionAdapter,
     RenderProviderExecutionCompiler,
@@ -32,6 +42,8 @@ __all__ = [
     "ProviderCapabilityResolution",
     "ProviderCapabilityResolver",
     "ProviderExecutionAdapter",
+    "ProviderExecutionAdapterRegistry",
+    "ProviderExecutionAdapterRegistryError",
     "ProviderExecutionBindingError",
     "ProviderExecutionContext",
     "ProviderExecutionContextFactory",
@@ -47,6 +59,10 @@ __all__ = [
     "ProviderRegistrationRepositoryError",
     "ProviderRegistrationState",
     "ProviderRegistryService",
+    "QueueProviderExecutionError",
+    "QueueProviderExecutionReconciliation",
+    "QueueProviderExecutionService",
+    "QueueProviderExecutionSubmission",
     "RenderProviderExecutionAdapter",
     "RenderProviderExecutionCompiler",
     "RenderProviderExecutionError",
