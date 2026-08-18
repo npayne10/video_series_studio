@@ -292,9 +292,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
                     capabilities=self._scheduling_capabilities(
                         self.scheduling_worker_capabilities.text()
                     ),
-                    state=ProductionWorkerState(
-                        str(self.scheduling_worker_state.currentData())
-                    ),
+                    state=ProductionWorkerState(str(self.scheduling_worker_state.currentData())),
                 )
             )
         except (ValueError, RuntimeError) as exc:
