@@ -1,6 +1,5 @@
 """Focused regression tests for Phase 19.6.8 ProductionQueue generalisation."""
 
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -141,7 +140,9 @@ def _schedule_context(
                 task_id=task.task_id,
                 resource_id=f"RESOURCE-{index:02d}",
                 priority=task.priority,
-                required_capabilities=task.capabilities,
+                required_capabilities=tuple(
+                    sorted(task.capabilities, key=lambda capability: capability.value)
+                ),
             )
             for index, task in enumerate(tasks, start=1)
         ),
@@ -193,6 +194,17 @@ def test_queue_compiler_rejects_task_that_is_no_longer_ready() -> None:
     schedules, tasks = _schedule_context((task,))
 
     with pytest.raises(ProductionQueueError, match="no longer READY"):
+        ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
+
+
+def test_queue_compiler_rejects_stale_task_priority_after_schedule_review() -> None:
+    scheduled_task = _task("PT-001", priority=ProductionTaskPriority.NORMAL)
+    schedules, tasks = _schedule_context((scheduled_task,))
+    tasks.tasks[scheduled_task.task_id] = _task(
+        "PT-001", priority=ProductionTaskPriority.URGENT
+    )
+
+    with pytest.raises(ProductionQueueError, match="authority changed after review"):
         ProductionQueueCompilerService(schedules, tasks).compile("PROD-001", now=_NOW)
 
 
