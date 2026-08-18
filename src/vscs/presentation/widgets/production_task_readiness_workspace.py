@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout
 
@@ -55,8 +55,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         shot_id = self._production_task_shot_id()
         if not normalized_production_id or not shot_id or not self.projects.is_project_open:
             return ()
-        tasks: tuple[ProductionTask, ...] = self.production_scheduling.tasks(
-            normalized_production_id
+        tasks = cast(
+            tuple[ProductionTask, ...],
+            self.production_scheduling.tasks(normalized_production_id),
         )
         return tuple(task for task in tasks if task.shot_id == shot_id)
 
