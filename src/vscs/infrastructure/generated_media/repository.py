@@ -303,4 +303,10 @@ def _optional_string(value: object) -> str | None:
 def _optional_int(value: object) -> int | None:
     if value is None:
         return None
-    return int(value)
+    if isinstance(value, bool):
+        raise TypeError("optional integer value cannot be boolean")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        return int(value)
+    raise TypeError("optional integer value must be an integer or integer string")
