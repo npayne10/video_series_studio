@@ -24,13 +24,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             return
 
         self.production_task_readiness_status = QLabel("", group)
-        self.production_task_readiness_status.setObjectName(
-            "production_task_readiness_status"
-        )
+        self.production_task_readiness_status.setObjectName("production_task_readiness_status")
         self.production_task_readiness_status.setWordWrap(True)
-        self.production_task_refresh_readiness_button = QPushButton(
-            "Refresh Task Readiness", group
-        )
+        self.production_task_refresh_readiness_button = QPushButton("Refresh Task Readiness", group)
         self.production_task_refresh_readiness_button.setObjectName(
             "production_task_refresh_readiness_button"
         )
