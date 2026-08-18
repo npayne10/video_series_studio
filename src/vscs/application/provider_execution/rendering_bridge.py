@@ -116,9 +116,7 @@ class RenderProviderExecutionAdapter(ProviderExecutionAdapter):
         cancelled = self.adapter.cancel(job)
         return self._handle(handle.execution_id, cancelled)
 
-    def fetch_outputs(
-        self, handle: ProviderExecutionHandle
-    ) -> tuple[ProviderExecutionOutput, ...]:
+    def fetch_outputs(self, handle: ProviderExecutionHandle) -> tuple[ProviderExecutionOutput, ...]:
         job = self._require_job(handle)
         outputs = self.adapter.fetch_outputs(job)
         return tuple(self._output(output) for output in outputs)

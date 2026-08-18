@@ -141,9 +141,7 @@ def test_provider_resolution_requires_available_capable_resource() -> None:
 
 
 def test_registry_service_returns_eligible_providers_deterministically(tmp_path) -> None:
-    service = ProviderRegistryService(
-        JsonProviderRegistrationRepository(tmp_path / "providers")
-    )
+    service = ProviderRegistryService(JsonProviderRegistrationRepository(tmp_path / "providers"))
     service.register(_provider("PROVIDER-B"))
     service.register(_provider("PROVIDER-A"))
     service.register(
@@ -160,9 +158,7 @@ def test_registry_service_returns_eligible_providers_deterministically(tmp_path)
 
 
 def test_registry_rejects_duplicate_stable_identity(tmp_path) -> None:
-    service = ProviderRegistryService(
-        JsonProviderRegistrationRepository(tmp_path / "providers")
-    )
+    service = ProviderRegistryService(JsonProviderRegistrationRepository(tmp_path / "providers"))
     provider = _provider()
     service.register(provider)
 
