@@ -53,6 +53,16 @@ from .resources import (
     ProductionResourceMatch,
     ProductionResourceState,
 )
+from .runtime import (
+    ProductionExecutionLease,
+    ProductionLeaseManager,
+    ProductionQueueClaim,
+    ProductionQueueRuntimeService,
+    ProductionWorker,
+    ProductionWorkerError,
+    ProductionWorkerRegistry,
+    ProductionWorkerState,
+)
 from .schedule_records import (
     ProductionSchedulePersistenceError,
     ProductionSchedulePersistenceService,
@@ -81,12 +91,16 @@ __all__ = [
     "PRODUCTION_TASK_ID_METADATA_KEY",
     "ProductionAuthorityType",
     "ProductionCapability",
+    "ProductionExecutionLease",
+    "ProductionLeaseManager",
     "ProductionQueue",
     "ProductionQueueAttempt",
+    "ProductionQueueClaim",
     "ProductionQueueCompilerService",
     "ProductionQueueEngine",
     "ProductionQueueEntry",
     "ProductionQueueError",
+    "ProductionQueueRuntimeService",
     "ProductionQueueState",
     "ProductionResource",
     "ProductionResourceCatalog",
@@ -137,5 +151,9 @@ __all__ = [
     "ProductionTaskTransition",
     "ProductionTaskTransitionError",
     "ProductionTaskType",
+    "ProductionWorker",
+    "ProductionWorkerError",
+    "ProductionWorkerRegistry",
+    "ProductionWorkerState",
     "production_schedule_fingerprint",
 ]
