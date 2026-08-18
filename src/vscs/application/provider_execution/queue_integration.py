@@ -11,7 +11,9 @@ from vscs.application.production_tasks import (
     ProductionQueue,
     ProductionQueueRuntimeService,
     ProductionQueueState,
+    ProductionResource,
     ProductionResourceCatalog,
+    ProductionTask,
     ProductionTaskRepository,
 )
 from vscs.application.rendering import RenderRequest
@@ -152,11 +154,12 @@ class QueueProviderExecutionService:
                 raise QueueProviderExecutionError("; ".join(validation.messages))
             handle = adapter.submit(execution_request)
         except Exception as exc:
+            message = str(exc) or exc.__class__.__name__
             failed = self.runtime.fail(
                 running,
                 entry.entry_id,
                 claim.lease.lease_id,
-                str(exc) or exc.__class__.__name__,
+                message,
                 now=current,
             )
             return QueueProviderExecutionSubmission(
@@ -164,7 +167,7 @@ class QueueProviderExecutionService:
                 provider=provider,
                 lease=None,
                 handle=None,
-                error_message=str(exc) or exc.__class__.__name__,
+                error_message=message,
             )
         return QueueProviderExecutionSubmission(
             queue=running,
@@ -217,9 +220,8 @@ class QueueProviderExecutionService:
                 lease=None,
             )
         if refreshed.state is ProviderExecutionState.CANCELLED:
-            cancelled = self.runtime.cancel(queue, entry_id, lease_id, now=current)
             return QueueProviderExecutionReconciliation(
-                queue=cancelled,
+                queue=self._cancel_queue(queue, entry_id, lease_id, current),
                 handle=refreshed,
                 lease=None,
             )
@@ -242,20 +244,44 @@ class QueueProviderExecutionService:
         current = now or datetime.now(UTC)
         adapter = self.adapters.require(handle.provider_id)
         cancelled_handle = adapter.cancel(handle)
-        cancelled_queue = self.runtime.cancel(queue, entry_id, lease_id, now=current)
+        cancelled_queue = self._cancel_queue(queue, entry_id, lease_id, current)
         return QueueProviderExecutionReconciliation(
             queue=cancelled_queue,
             handle=cancelled_handle,
             lease=None,
         )
 
+    def _cancel_queue(
+        self,
+        queue: ProductionQueue,
+        entry_id: str,
+        lease_id: str,
+        now: datetime,
+    ) -> ProductionQueue:
+        lease = self.runtime.leases.require_active(lease_id, now=now)
+        entry = queue.entry(entry_id)
+        if entry is None:
+            raise QueueProviderExecutionError(f"ProductionQueue entry not found: {entry_id}")
+        if (
+            lease.queue_id != queue.queue_id
+            or lease.entry_id != entry.entry_id
+            or lease.task_id != entry.task_id
+            or lease.worker_id != entry.claimed_by
+        ):
+            raise QueueProviderExecutionError(
+                "Production execution lease does not own this queue entry"
+            )
+        cancelled = self.runtime.queue_engine.cancel(queue, entry_id, now=now)
+        self.runtime.leases.release(lease_id)
+        return cancelled
+
     def _select_provider(
         self,
-        task: object,
-        resource: object,
+        task: ProductionTask,
+        resource: ProductionResource,
         provider_id: str | None,
     ) -> ProviderRegistration:
-        eligible = self.providers.eligible_providers(task, resource)  # type: ignore[arg-type]
+        eligible = self.providers.eligible_providers(task, resource)
         if provider_id is not None:
             normalized = provider_id.strip()
             if not normalized:
@@ -268,7 +294,7 @@ class QueueProviderExecutionService:
             return selected
         if not eligible:
             raise QueueProviderExecutionError(
-                f"No eligible provider exists for ProductionTask: {getattr(task, 'task_id', '?')}"
+                f"No eligible provider exists for ProductionTask: {task.task_id}"
             )
         if len(eligible) > 1:
             provider_ids = ", ".join(item.provider_id for item in eligible)
