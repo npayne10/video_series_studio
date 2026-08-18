@@ -8,6 +8,10 @@ from .graph import ProductionTaskGraphIntegrationService, ProductionTaskGraphRef
 from .lifecycle import ProductionTaskLifecycleService
 from .models import ProductionTask
 from .production_queue import ProductionQueue, ProductionQueueCompilerService
+from .production_readiness import (
+    ProductionReadinessAssessment,
+    ProductionReadinessIntegrationService,
+)
 from .repository import ProductionTaskRepository
 from .resources import ProductionResource, ProductionResourceCatalog
 from .runtime import ProductionQueueRuntimeService, ProductionWorker, ProductionWorkerRegistry
@@ -109,6 +113,19 @@ class ProductionSchedulingUiService:
             repository,
             ProductionTaskLifecycleService(repository),
         ).refresh(normalized)
+
+    def production_readiness(self, production_id: str) -> ProductionReadinessAssessment:
+        """Return the integrated read-only readiness assessment for one production."""
+        normalized = self._require_production_id(production_id)
+        return ProductionReadinessIntegrationService(
+            self._task_repository(),
+            self._schedule_repository(),
+        ).assess(
+            normalized,
+            queue=self._queues.get(normalized),
+            resources=self.resources(),
+            workers=self.workers(),
+        )
 
     def create_schedule_revision(self, production_id: str) -> ProductionScheduleSnapshot:
         normalized = self._require_production_id(production_id)
