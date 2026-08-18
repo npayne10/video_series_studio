@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "workflow_id": "video_production_engine_v7_1_4",
+    "display_name": "Video Production Engine v7.1.4",
+    "description": "Reference production workflow using the governed VSCS production package as its primary runtime input.",
+    "renderer": "comfyui",
+    "workflow_version": "7.1.4",
+    "manifest_version": "1.0",
+    "author": "VSCS"
+  },
+  "quality_levels": ["preview", "production"],
+  "capabilities": [
+    "text_to_video",
+    "image_to_video",
+    "start_frame",
+    "reference_images",
+    "multiple_reference_images",
+    "loras",
+    "audio",
+    "seed_control"
+  ],
+  "bindings": [],
+  "requirements": [
+    {"kind": "video_model", "identifier": "ltx-2.3", "version": "2.3", "optional": false},
+    {"kind": "custom_node", "identifier": "XorixProductionPackageLoaderV714", "optional": false},
+    {"kind": "custom_node", "identifier": "XorixCanonicalCompositionBuilderV714", "optional": false},
+    {"kind": "custom_node", "identifier": "XorixOptionalImageLoaderV60", "optional": false},
+    {"kind": "lora", "identifier": "ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors", "optional": false}
+  ],
+  "output_kinds": ["preview_video", "production_video", "reference_frame", "metadata"],
+  "lip_sync_modes": ["none", "off_screen"],
+  "tags": ["ltx", "video", "production", "production-package", "ic-lora"],
+  "workflow_file": "workflows/video_production_engine_v7_1_4_api.json",
+  "extra": [
+    ["primary_runtime_input", "production_package"],
+    ["production_package_loader_title", "Xorix Production Package — Canonical Composition v7.1.4"]
+  ]
+}
