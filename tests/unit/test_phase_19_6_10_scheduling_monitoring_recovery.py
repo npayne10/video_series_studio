@@ -5,7 +5,6 @@ from datetime import UTC, datetime, timedelta
 from vscs.application.production_tasks import (
     ProductionAuthorityType,
     ProductionCapability,
-    ProductionLeaseManager,
     ProductionQueue,
     ProductionQueueEngine,
     ProductionQueueEntry,
@@ -133,9 +132,7 @@ def test_monitor_reports_provider_neutral_queue_progress() -> None:
 def test_monitor_detects_active_entry_without_lease() -> None:
     queue = _queue(state=ProductionQueueState.CLAIMED, claimed_by="WORKER-01")
 
-    snapshot = ProductionSchedulingMonitor().snapshot(
-        queue, workers=(_worker(),), now=_NOW
-    )
+    snapshot = ProductionSchedulingMonitor().snapshot(queue, workers=(_worker(),), now=_NOW)
 
     assert "QUEUE_ENTRY_ACTIVE_WITHOUT_LEASE" in {
         diagnostic.code for diagnostic in snapshot.diagnostics
@@ -177,9 +174,7 @@ def test_monitor_detects_unavailable_claimed_worker() -> None:
         now=_NOW,
     )
 
-    assert "CLAIMED_WORKER_UNAVAILABLE" in {
-        diagnostic.code for diagnostic in snapshot.diagnostics
-    }
+    assert "CLAIMED_WORKER_UNAVAILABLE" in {diagnostic.code for diagnostic in snapshot.diagnostics}
 
 
 def test_monitor_is_observational_and_does_not_mutate_queue() -> None:
@@ -251,9 +246,7 @@ def test_recovery_fails_when_expired_running_lease_exhausts_attempts() -> None:
         lease_duration_seconds=10,
         now=_NOW,
     )
-    running = ProductionQueueEngine().start(
-        claim.queue, "PQE-001", now=_NOW
-    )
+    running = ProductionQueueEngine().start(claim.queue, "PQE-001", now=_NOW)
 
     result = ProductionSchedulingRecoveryService(runtime).recover_expired(
         running, now=_NOW + timedelta(seconds=11)

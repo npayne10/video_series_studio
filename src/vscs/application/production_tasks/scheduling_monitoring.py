@@ -323,7 +323,10 @@ class ProductionSchedulingRecoveryService:
             updated = recovered.entry(lease.entry_id)
             if previous is None or updated is None:
                 continue
-            if previous.state is ProductionQueueState.CLAIMED and updated.state is ProductionQueueState.READY:
+            if (
+                previous.state is ProductionQueueState.CLAIMED
+                and updated.state is ProductionQueueState.READY
+            ):
                 action = SchedulingRecoveryAction.RELEASE_CLAIM
                 message = "Expired claim released back to READY"
             elif previous.state is ProductionQueueState.RUNNING and updated.state in {
@@ -332,7 +335,10 @@ class ProductionSchedulingRecoveryService:
             }:
                 action = SchedulingRecoveryAction.RETRY
                 message = "Expired running lease recovered through retry policy"
-            elif previous.state is ProductionQueueState.RUNNING and updated.state is ProductionQueueState.FAILED:
+            elif (
+                previous.state is ProductionQueueState.RUNNING
+                and updated.state is ProductionQueueState.FAILED
+            ):
                 action = SchedulingRecoveryAction.FAIL
                 message = "Expired running lease exhausted retry policy"
             else:

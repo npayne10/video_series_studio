@@ -93,9 +93,7 @@ def test_persisted_task_runtime_is_monitorable_and_recovers_expired_claim(tmp_pa
         now=_NOW + timedelta(seconds=11),
     )
 
-    assert "EXECUTION_LEASE_EXPIRED" in {
-        diagnostic.code for diagnostic in monitored.diagnostics
-    }
+    assert "EXECUTION_LEASE_EXPIRED" in {diagnostic.code for diagnostic in monitored.diagnostics}
     entry = recovered.queue.entry("PQE-PT-AUDIO-001")
     assert entry is not None
     assert entry.state is ProductionQueueState.READY
