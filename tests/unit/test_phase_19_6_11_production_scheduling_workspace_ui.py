@@ -80,13 +80,13 @@ def test_production_planning_installs_scheduling_tab(
     qtbot.addWidget(window)  # type: ignore[attr-defined]
     workspace = window.production_package_workspace
 
-    tab = workspace.findChild(type(workspace), "production_scheduling_tab")
     labels = [
         workspace.compiler_tabs.tabText(index)
         for index in range(workspace.compiler_tabs.count())
     ]
 
     assert "Scheduling" in labels
+    assert workspace.findChild(QWidget, "production_scheduling_tab") is not None
     assert workspace.production_scheduling_status is not None
     assert not workspace.scheduling_create_revision_button.isEnabled()
     assert not workspace.scheduling_approve_button.isEnabled()
@@ -147,7 +147,10 @@ def test_operator_can_review_schedule_and_compile_queue_without_execution(
     )
 
     assert workspace.scheduling_queue_table.rowCount() == 1
-    assert "external execution has not started" in workspace.production_scheduling_status.text().lower()
+    assert (
+        "external execution has not started"
+        in workspace.production_scheduling_status.text().lower()
+    )
     queue = workspace.production_scheduling.queue("PROD-UI")
     assert queue is not None
     assert queue.entries[0].state.value == "ready"
