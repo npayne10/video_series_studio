@@ -102,7 +102,7 @@ def _lease() -> ProductionExecutionLease:
 
 def test_context_binds_running_queue_attempt_and_lease() -> None:
     context = ProviderExecutionContextFactory().bind(
-        _queue(), "PQE-PT-001", _lease(), _task()
+        _queue(), "PQE-PT-001", _lease(), _task(), now=NOW
     )
 
     assert context.execution_id == "PEX-PQ-001-PQE-PT-001-A001"
@@ -117,7 +117,22 @@ def test_context_binds_running_queue_attempt_and_lease() -> None:
 def test_context_rejects_claimed_entry_before_attempt_start() -> None:
     with pytest.raises(ProviderExecutionBindingError, match="RUNNING"):
         ProviderExecutionContextFactory().bind(
-            _queue(ProductionQueueState.CLAIMED), "PQE-PT-001", _lease(), _task()
+            _queue(ProductionQueueState.CLAIMED),
+            "PQE-PT-001",
+            _lease(),
+            _task(),
+            now=NOW,
+        )
+
+
+def test_context_rejects_expired_lease() -> None:
+    with pytest.raises(ProviderExecutionBindingError, match="expired"):
+        ProviderExecutionContextFactory().bind(
+            _queue(),
+            "PQE-PT-001",
+            _lease(),
+            _task(),
+            now=NOW + timedelta(minutes=6),
         )
 
 
@@ -135,7 +150,7 @@ def test_context_rejects_mismatched_lease_ownership() -> None:
 
     with pytest.raises(ProviderExecutionBindingError, match="does not own"):
         ProviderExecutionContextFactory().bind(
-            _queue(), "PQE-PT-001", lease, _task()
+            _queue(), "PQE-PT-001", lease, _task(), now=NOW
         )
 
 
