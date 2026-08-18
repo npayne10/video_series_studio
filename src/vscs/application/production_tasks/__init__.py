@@ -101,6 +101,7 @@ from .scheduling_monitoring import (
     SchedulingRecoveryReason,
 )
 from .service import ProductionTaskApplicationService
+from .ui_service import ProductionSchedulingUiError, ProductionSchedulingUiService
 
 __all__ = [
     "PRODUCTION_TASK_ID_METADATA_KEY",
@@ -145,6 +146,8 @@ __all__ = [
     "ProductionSchedulingRecoveryResult",
     "ProductionSchedulingRecoveryService",
     "ProductionSchedulingService",
+    "ProductionSchedulingUiError",
+    "ProductionSchedulingUiService",
     "ProductionTask",
     "ProductionTaskApplicationService",
     "ProductionTaskAttemptPolicy",
