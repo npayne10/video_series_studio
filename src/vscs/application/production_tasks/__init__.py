@@ -44,6 +44,15 @@ from .resources import (
     ProductionResourceMatch,
     ProductionResourceState,
 )
+from .scheduler import (
+    ProductionSchedule,
+    ProductionScheduleAssignment,
+    ProductionScheduleDeferral,
+    ProductionScheduler,
+    ProductionSchedulingDeferralReason,
+    ProductionSchedulingError,
+    ProductionSchedulingService,
+)
 from .service import ProductionTaskApplicationService
 
 __all__ = [
@@ -55,6 +64,13 @@ __all__ = [
     "ProductionResourceCatalogError",
     "ProductionResourceMatch",
     "ProductionResourceState",
+    "ProductionSchedule",
+    "ProductionScheduleAssignment",
+    "ProductionScheduleDeferral",
+    "ProductionScheduler",
+    "ProductionSchedulingDeferralReason",
+    "ProductionSchedulingError",
+    "ProductionSchedulingService",
     "ProductionTask",
     "ProductionTaskApplicationService",
     "ProductionTaskAttemptPolicy",
