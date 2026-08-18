@@ -17,6 +17,7 @@ from .execution import (
     RenderExecutionRequest,
     RenderExecutionService,
 )
+from .schedule_repository import JsonProductionScheduleRepository
 from .staging import (
     AssetStager,
     AssetStagingConfig,
@@ -61,6 +62,7 @@ __all__ = [
     "ComfyUIProductionExecutor",
     "ComfyUITimeoutError",
     "ComfyUIWorkflowCompiler",
+    "JsonProductionScheduleRepository",
     "JsonProductionTaskRepository",
     "MediaProbe",
     "MediaProbeResult",
