@@ -36,6 +36,15 @@ from .models import (
     ProductionTaskState,
     ProductionTaskType,
 )
+from .production_queue import (
+    ProductionQueue,
+    ProductionQueueAttempt,
+    ProductionQueueCompilerService,
+    ProductionQueueEngine,
+    ProductionQueueEntry,
+    ProductionQueueError,
+    ProductionQueueState,
+)
 from .repository import ProductionTaskRepository, ProductionTaskRepositoryError
 from .resources import (
     ProductionResource,
@@ -72,6 +81,13 @@ __all__ = [
     "PRODUCTION_TASK_ID_METADATA_KEY",
     "ProductionAuthorityType",
     "ProductionCapability",
+    "ProductionQueue",
+    "ProductionQueueAttempt",
+    "ProductionQueueCompilerService",
+    "ProductionQueueEngine",
+    "ProductionQueueEntry",
+    "ProductionQueueError",
+    "ProductionQueueState",
     "ProductionResource",
     "ProductionResourceCatalog",
     "ProductionResourceCatalogError",
