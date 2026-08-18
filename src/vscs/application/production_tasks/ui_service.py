@@ -52,7 +52,9 @@ class ProductionSchedulingUiService:
         self._runtime_by_production: dict[str, ProductionQueueRuntimeService] = {}
         self._monitor = ProductionSchedulingMonitor()
 
-    def register_compiled_tasks(self, tasks: tuple[ProductionTask, ...]) -> tuple[ProductionTask, ...]:
+    def register_compiled_tasks(
+        self, tasks: tuple[ProductionTask, ...]
+    ) -> tuple[ProductionTask, ...]:
         """Persist compiler output without changing task lifecycle state."""
         repository = self._task_repository()
         lifecycle = ProductionTaskLifecycleService(repository)
@@ -61,7 +63,9 @@ class ProductionSchedulingUiService:
         return tasks
 
     def tasks(self, production_id: str) -> tuple[ProductionTask, ...]:
-        return self._task_repository().list_for_production(self._require_production_id(production_id))
+        return self._task_repository().list_for_production(
+            self._require_production_id(production_id)
+        )
 
     def register_resource(self, resource: ProductionResource) -> ProductionResource:
         self._resources[resource.resource_id] = resource
@@ -71,9 +75,10 @@ class ProductionSchedulingUiService:
         return tuple(self._resources[key] for key in sorted(self._resources))
 
     def register_worker(self, worker: ProductionWorker) -> ProductionWorker:
-        existing = self._workers.get(worker.worker_id)
-        if existing is not None:
-            raise ProductionSchedulingUiError(f"ProductionWorker already registered: {worker.worker_id}")
+        if worker.worker_id in self._workers:
+            raise ProductionSchedulingUiError(
+                f"ProductionWorker already registered: {worker.worker_id}"
+            )
         self._worker_registry.register(worker)
         self._workers[worker.worker_id] = worker
         return worker
@@ -154,12 +159,7 @@ class ProductionSchedulingUiService:
         queue = self._queues.get(normalized)
         if queue is None:
             return None
-        runtime = self._runtime(normalized)
-        return self._monitor.snapshot(
-            queue,
-            workers=self.workers(),
-            leases=tuple(runtime.leases.active_leases(now=None)),
-        )
+        return self._monitor.snapshot(queue, workers=self.workers())
 
     def recover(self, production_id: str) -> ProductionSchedulingRecoveryResult:
         normalized = self._require_production_id(production_id)
@@ -167,7 +167,7 @@ class ProductionSchedulingUiService:
         if queue is None:
             raise ProductionSchedulingUiError("No ProductionQueue exists for recovery")
         runtime = self._runtime(normalized)
-        result = ProductionSchedulingRecoveryService(runtime).recover(queue)
+        result = ProductionSchedulingRecoveryService(runtime).recover_expired(queue)
         self._queues[normalized] = result.queue
         return result
 
@@ -182,17 +182,17 @@ class ProductionSchedulingUiService:
         return runtime
 
     def _task_repository(self) -> JsonProductionTaskRepository:
-        root = self._production_root() / "tasks"
-        return JsonProductionTaskRepository(root)
+        return JsonProductionTaskRepository(self._production_root() / "tasks")
 
     def _schedule_repository(self) -> JsonProductionScheduleRepository:
-        root = self._production_root() / "schedules"
-        return JsonProductionScheduleRepository(root)
+        return JsonProductionScheduleRepository(self._production_root() / "schedules")
 
     def _production_root(self) -> Path:
         project_directory = self.projects.project_directory
         if project_directory is None:
-            raise ProductionSchedulingUiError("Open a VSCS project before using Production Scheduling")
+            raise ProductionSchedulingUiError(
+                "Open a VSCS project before using Production Scheduling"
+            )
         return project_directory / "production" / "scheduling"
 
     @staticmethod
