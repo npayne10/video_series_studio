@@ -14,6 +14,7 @@ from vscs.application.provider_execution import (
     ProviderRegistration,
     ProviderRegistryService,
 )
+from vscs.domain.generated_media import GeneratedMediaKind
 from vscs.infrastructure.provider_execution import JsonProviderRegistrationRepository
 
 
@@ -26,7 +27,7 @@ def test_phase_20_4_provider_registration_survives_restart_and_resolves(tmp_path
         resource_id="LOCAL-GPU-01",
         capabilities=frozenset({ProductionCapability.VIDEO_GENERATION}),
         supported_task_types=frozenset({ProductionTaskType.VIDEO_GENERATION}),
-        supported_media_kinds=frozenset({"video"}),
+        supported_media_kinds=frozenset({GeneratedMediaKind.VIDEO}),
         endpoint="http://127.0.0.1:8188",
         secret_reference="secret://providers/local-comfyui",
         health=ProviderHealthState.HEALTHY,
