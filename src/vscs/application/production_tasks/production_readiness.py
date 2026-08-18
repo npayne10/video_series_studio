@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .models import ProductionTask, ProductionTaskState
+from .models import ProductionTaskState
 from .production_queue import ProductionQueue, ProductionQueueState
 from .repository import ProductionTaskRepository
 from .resources import ProductionResource, ProductionResourceState
@@ -141,9 +141,7 @@ class ProductionReadinessIntegrationService:
                 executable_entry_count=0,
             )
 
-        blocking_tasks = tuple(
-            task for task in tasks if task.state in self._BLOCKING_TASK_STATES
-        )
+        blocking_tasks = tuple(task for task in tasks if task.state in self._BLOCKING_TASK_STATES)
         for task in blocking_tasks:
             findings.append(
                 ProductionReadinessFinding(
@@ -317,9 +315,7 @@ class ProductionReadinessIntegrationService:
                 continue
 
             available = tuple(
-                worker
-                for worker in candidates
-                if worker.state is ProductionWorkerState.AVAILABLE
+                worker for worker in candidates if worker.state is ProductionWorkerState.AVAILABLE
             )
             if not available:
                 findings.append(
@@ -377,15 +373,9 @@ class ProductionReadinessIntegrationService:
         queue_entry_count: int,
         executable_entry_count: int,
     ) -> ProductionReadinessAssessment:
-        if any(
-            finding.severity is ProductionReadinessSeverity.BLOCKING
-            for finding in findings
-        ):
+        if any(finding.severity is ProductionReadinessSeverity.BLOCKING for finding in findings):
             status = ProductionReadinessStatus.BLOCKED
-        elif any(
-            finding.severity is ProductionReadinessSeverity.WARNING
-            for finding in findings
-        ):
+        elif any(finding.severity is ProductionReadinessSeverity.WARNING for finding in findings):
             status = ProductionReadinessStatus.NOT_READY
         else:
             status = ProductionReadinessStatus.READY
