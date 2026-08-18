@@ -85,6 +85,21 @@ from .scheduler import (
     ProductionSchedulingError,
     ProductionSchedulingService,
 )
+from .scheduling_monitoring import (
+    ProductionQueueProgressSnapshot,
+    ProductionSchedulingMonitor,
+    ProductionSchedulingMonitoringConfig,
+    ProductionSchedulingMonitoringSnapshot,
+    ProductionSchedulingRecoveryResult,
+    ProductionSchedulingRecoveryService,
+    ProductionWorkerRuntimeSnapshot,
+    SchedulingMonitoringDiagnostic,
+    SchedulingMonitoringSeverity,
+    SchedulingRecoveryAction,
+    SchedulingRecoveryDecision,
+    SchedulingRecoveryEvent,
+    SchedulingRecoveryReason,
+)
 from .service import ProductionTaskApplicationService
 
 __all__ = [
@@ -100,6 +115,7 @@ __all__ = [
     "ProductionQueueEngine",
     "ProductionQueueEntry",
     "ProductionQueueError",
+    "ProductionQueueProgressSnapshot",
     "ProductionQueueRuntimeService",
     "ProductionQueueState",
     "ProductionResource",
@@ -123,6 +139,11 @@ __all__ = [
     "ProductionScheduler",
     "ProductionSchedulingDeferralReason",
     "ProductionSchedulingError",
+    "ProductionSchedulingMonitor",
+    "ProductionSchedulingMonitoringConfig",
+    "ProductionSchedulingMonitoringSnapshot",
+    "ProductionSchedulingRecoveryResult",
+    "ProductionSchedulingRecoveryService",
     "ProductionSchedulingService",
     "ProductionTask",
     "ProductionTaskApplicationService",
@@ -154,6 +175,13 @@ __all__ = [
     "ProductionWorker",
     "ProductionWorkerError",
     "ProductionWorkerRegistry",
+    "ProductionWorkerRuntimeSnapshot",
     "ProductionWorkerState",
+    "SchedulingMonitoringDiagnostic",
+    "SchedulingMonitoringSeverity",
+    "SchedulingRecoveryAction",
+    "SchedulingRecoveryDecision",
+    "SchedulingRecoveryEvent",
+    "SchedulingRecoveryReason",
     "production_schedule_fingerprint",
 ]
