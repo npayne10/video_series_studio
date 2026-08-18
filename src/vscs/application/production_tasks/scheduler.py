@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .models import ProductionCapability, ProductionTask, ProductionTaskPriority, ProductionTaskState
+from .models import (
+    ProductionCapability,
+    ProductionTask,
+    ProductionTaskPriority,
+    ProductionTaskState,
+)
 from .repository import ProductionTaskRepository
 from .resources import ProductionResourceCatalog
 
@@ -84,7 +89,11 @@ class ProductionScheduler:
             key=lambda task: (-int(task.priority), task.created_at, task.task_id),
         )
         ignored_task_ids = tuple(
-            sorted(task.task_id for task in tasks if task.state is not ProductionTaskState.READY)
+            sorted(
+                task.task_id
+                for task in tasks
+                if task.state is not ProductionTaskState.READY
+            )
         )
         assigned_resources: set[str] = set()
         assignments: list[ProductionScheduleAssignment] = []
