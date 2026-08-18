@@ -141,6 +141,7 @@ class JsonDurableExecutionJobRepository:
             "submitted_at": job.submitted_at.isoformat() if job.submitted_at is not None else None,
             "progress": job.progress,
             "failure_reason": job.failure_reason,
+            "provider_metadata": [list(item) for item in job.provider_metadata],
             "events": [
                 {
                     "state": event.state.value,
@@ -179,6 +180,7 @@ class JsonDurableExecutionJobRepository:
             submitted_at=_optional_datetime(raw.get("submitted_at")),
             progress=_float(raw.get("progress", 0.0), "progress"),
             failure_reason=_optional_string(raw.get("failure_reason")),
+            provider_metadata=_pairs(raw.get("provider_metadata", []), "provider_metadata"),
             events=tuple(
                 DurableExecutionEvent(
                     state=ProviderExecutionState(str(_mapping(item, "event")["state"])),
@@ -209,6 +211,17 @@ def _mapping(value: object, field_name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"{field_name} must be an object")
     return value
+
+
+def _pairs(value: object, field_name: str) -> tuple[tuple[str, str], ...]:
+    if not isinstance(value, list):
+        raise TypeError(f"{field_name} must be an array")
+    pairs: list[tuple[str, str]] = []
+    for item in value:
+        if not isinstance(item, list) or len(item) != 2:
+            raise TypeError(f"{field_name} entries must be two-item arrays")
+        pairs.append((str(item[0]), str(item[1])))
+    return tuple(pairs)
 
 
 def _optional_string(value: object) -> str | None:
