@@ -1,7 +1,7 @@
 """Integration acceptance for the Phase 20.3 rendering compatibility bridge."""
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from vscs.application.production_tasks import (
     ProductionAuthorityType,
@@ -143,8 +143,6 @@ def _queue() -> ProductionQueue:
 
 
 def _lease() -> ProductionExecutionLease:
-    from datetime import timedelta
-
     return ProductionExecutionLease(
         lease_id="LEASE-001",
         queue_id="PQ-001",
