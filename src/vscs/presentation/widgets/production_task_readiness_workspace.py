@@ -26,7 +26,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_readiness_status = QLabel("", group)
         self.production_task_readiness_status.setObjectName("production_task_readiness_status")
         self.production_task_readiness_status.setWordWrap(True)
-        self.production_task_refresh_readiness_button = QPushButton("Refresh Task Readiness", group)
+        self.production_task_refresh_readiness_button = QPushButton(
+            "Refresh Task Readiness", group
+        )
         self.production_task_refresh_readiness_button.setObjectName(
             "production_task_refresh_readiness_button"
         )
@@ -38,29 +40,46 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         self._refresh_production_tasks()
 
-    def _persisted_tasks_for_selected_shot(self: Any) -> tuple[Any, ...]:
+    def _persisted_tasks_for_selected_shot(
+        self: Any,
+        production_id: str | None = None,
+    ) -> tuple[Any, ...]:
         if not hasattr(self, "production_scheduling"):
             return ()
-        production_id = self.production_task_production_id.text().strip()
+        normalized_production_id = (
+            production_id.strip()
+            if production_id is not None
+            else self.production_task_production_id.text().strip()
+        )
         shot_id = self._production_task_shot_id()
-        if not production_id or not shot_id or not self.projects.is_project_open:
+        if (
+            not normalized_production_id
+            or not shot_id
+            or not self.projects.is_project_open
+        ):
             return ()
-        tasks = self.production_scheduling.tasks(production_id)
+        tasks = self.production_scheduling.tasks(normalized_production_id)
         return tuple(task for task in tasks if task.shot_id == shot_id)
 
-    def _refresh_persisted_production_tasks(self: Any) -> tuple[Any, ...]:
-        persisted = self._persisted_tasks_for_selected_shot()
+    def _refresh_persisted_production_tasks(
+        self: Any,
+        production_id: str | None = None,
+    ) -> tuple[Any, ...]:
+        persisted = self._persisted_tasks_for_selected_shot(production_id)
         shot_id = self._production_task_shot_id()
         if persisted and shot_id:
+            authoritative_production_id = persisted[0].production_id
+            self.production_task_production_id.setText(authoritative_production_id)
             self._compiled_production_tasks[shot_id] = persisted
             self._render_production_tasks(persisted)
         return persisted
 
     def readiness_refresh_tasks(self: Any) -> None:
+        requested_production_id = self.production_task_production_id.text().strip()
         original_refresh_tasks(self)
         if not hasattr(self, "production_scheduling"):
             return
-        persisted = self._refresh_persisted_production_tasks()
+        persisted = self._refresh_persisted_production_tasks(requested_production_id)
         if not hasattr(self, "production_task_readiness_status"):
             return
         if persisted:
@@ -89,7 +108,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         except (ValueError, RuntimeError) as exc:
             self.production_task_readiness_status.setText(str(exc))
             return
-        persisted = self._refresh_persisted_production_tasks()
+        persisted = self._refresh_persisted_production_tasks(production_id)
         states = ", ".join(sorted({task.state.value for task in persisted})) or "none"
         self.production_task_readiness_status.setText(
             f"Readiness refreshed: {len(result.transitions)} transition(s). "
