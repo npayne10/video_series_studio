@@ -46,10 +46,11 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     ) -> tuple[Any, ...]:
         if not hasattr(self, "production_scheduling"):
             return ()
+        editor = getattr(self, "production_task_production_id", None)
         normalized_production_id = (
             production_id.strip()
             if production_id is not None
-            else self.production_task_production_id.text().strip()
+            else str(editor.text() if editor is not None else "").strip()
         )
         shot_id = self._production_task_shot_id()
         if (
@@ -75,11 +76,23 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         return persisted
 
     def readiness_refresh_tasks(self: Any) -> None:
-        requested_production_id = self.production_task_production_id.text().strip()
+        editor = getattr(self, "production_task_production_id", None)
+        requested_production_id = str(editor.text() if editor is not None else "").strip()
         original_refresh_tasks(self)
-        if not hasattr(self, "production_scheduling"):
+
+        # Base ProductionPackageWorkspace construction invokes refresh() before the
+        # Phase 19.6.2 ProductionTask controls and Phase 19.6.11 scheduling facade
+        # have been created. The wrapper must remain inert during that early pass.
+        if (
+            not hasattr(self, "production_task_table")
+            or not hasattr(self, "production_task_production_id")
+            or not hasattr(self, "production_scheduling")
+        ):
             return
-        persisted = self._refresh_persisted_production_tasks(requested_production_id)
+
+        persisted = self._refresh_persisted_production_tasks(
+            requested_production_id or None
+        )
         if not hasattr(self, "production_task_readiness_status"):
             return
         if persisted:
