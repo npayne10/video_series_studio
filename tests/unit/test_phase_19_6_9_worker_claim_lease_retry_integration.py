@@ -23,7 +23,6 @@ from vscs.application.production_tasks import (
     ProductionWorkerState,
 )
 
-
 _NOW = datetime(2026, 8, 18, 10, 30, tzinfo=UTC)
 
 
@@ -96,9 +95,7 @@ class _TaskRepository:
         return task
 
     def list_for_production(self, production_id: str) -> tuple[ProductionTask, ...]:
-        return tuple(
-            task for task in self.tasks.values() if task.production_id == production_id
-        )
+        return tuple(task for task in self.tasks.values() if task.production_id == production_id)
 
 
 def _runtime(
@@ -272,9 +269,7 @@ def test_expired_claim_returns_to_ready_without_consuming_attempt() -> None:
         now=_NOW,
     )
 
-    recovered = runtime.recover_expired_leases(
-        claim.queue, now=_NOW + timedelta(seconds=10)
-    )
+    recovered = runtime.recover_expired_leases(claim.queue, now=_NOW + timedelta(seconds=10))
 
     entry = recovered.entry("PQE-PT-001")
     assert entry is not None
@@ -293,13 +288,9 @@ def test_expired_running_lease_uses_retry_policy() -> None:
         lease_duration_seconds=10,
         now=_NOW,
     )
-    running = runtime.start(
-        claim.queue, "PQE-PT-001", claim.lease.lease_id, now=_NOW
-    )
+    running = runtime.start(claim.queue, "PQE-PT-001", claim.lease.lease_id, now=_NOW)
 
-    recovered = runtime.recover_expired_leases(
-        running, now=_NOW + timedelta(seconds=10)
-    )
+    recovered = runtime.recover_expired_leases(running, now=_NOW + timedelta(seconds=10))
 
     entry = recovered.entry("PQE-PT-001")
     assert entry is not None
@@ -321,13 +312,9 @@ def test_expired_running_lease_fails_when_attempts_exhausted() -> None:
         lease_duration_seconds=10,
         now=_NOW,
     )
-    running = runtime.start(
-        claim.queue, "PQE-PT-001", claim.lease.lease_id, now=_NOW
-    )
+    running = runtime.start(claim.queue, "PQE-PT-001", claim.lease.lease_id, now=_NOW)
 
-    recovered = runtime.recover_expired_leases(
-        running, now=_NOW + timedelta(seconds=10)
-    )
+    recovered = runtime.recover_expired_leases(running, now=_NOW + timedelta(seconds=10))
 
     entry = recovered.entry("PQE-PT-001")
     assert entry is not None

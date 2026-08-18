@@ -306,9 +306,7 @@ class ProductionQueueRuntimeService:
     ) -> ProductionExecutionLease:
         current = now or datetime.now(UTC)
         self._validate_lease(queue, entry_id, lease_id, current)
-        return self.leases.heartbeat(
-            lease_id, duration_seconds=duration_seconds, now=current
-        )
+        return self.leases.heartbeat(lease_id, duration_seconds=duration_seconds, now=current)
 
     def complete(
         self,
