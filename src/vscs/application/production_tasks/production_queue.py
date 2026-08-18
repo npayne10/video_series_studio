@@ -6,7 +6,8 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
-from .models import ProductionTaskPriority, ProductionTaskRepository, ProductionTaskState, ProductionTaskType
+from .models import ProductionTaskPriority, ProductionTaskState, ProductionTaskType
+from .repository import ProductionTaskRepository
 from .schedule_records import (
     ProductionScheduleRepository,
     ProductionScheduleReviewDecision,
