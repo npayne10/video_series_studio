@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -78,23 +79,37 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
     def _build_production_scheduling_tab(self: Any) -> None:
         tab = QWidget(self.compiler_tabs)
         tab.setObjectName("production_scheduling_tab")
-        layout = QVBoxLayout(tab)
+        tab_layout = QVBoxLayout(tab)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea(tab)
+        scroll.setObjectName("production_scheduling_scroll_area")
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(scroll.horizontalScrollBarPolicy())
+        tab_layout.addWidget(scroll)
+
+        content = QWidget(scroll)
+        content.setObjectName("production_scheduling_scroll_content")
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(12, 10, 12, 12)
+        layout.setSpacing(10)
+        scroll.setWidget(content)
 
         guidance = QLabel(
             "Schedule persisted READY ProductionTasks onto provider-neutral resources; "
             "review the schedule explicitly; compile the approved ProductionQueue; and "
             "inspect runtime diagnostics. This tab does not choose provider workflows "
             "or start external execution.",
-            tab,
+            content,
         )
         guidance.setWordWrap(True)
         layout.addWidget(guidance)
-        self.production_scheduling_status = QLabel("", tab)
+        self.production_scheduling_status = QLabel("", content)
         self.production_scheduling_status.setObjectName("production_scheduling_status")
         self.production_scheduling_status.setWordWrap(True)
         layout.addWidget(self.production_scheduling_status)
 
-        resource_group = QGroupBox("Session Resources", tab)
+        resource_group = QGroupBox("Session Resources", content)
         resource_layout = QVBoxLayout(resource_group)
         resource_form = QFormLayout()
         self.scheduling_resource_id = QLineEdit(resource_group)
@@ -130,7 +145,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         resource_layout.addWidget(self.scheduling_resource_table)
         layout.addWidget(resource_group)
 
-        schedule_group = QGroupBox("Schedule Revision & Human Review", tab)
+        schedule_group = QGroupBox("Schedule Revision & Human Review", content)
         schedule_layout = QVBoxLayout(schedule_group)
         schedule_actions = QHBoxLayout()
         self.scheduling_refresh_readiness_button = QPushButton(
@@ -162,7 +177,8 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self.scheduling_reviewer.setObjectName("scheduling_reviewer")
         self.scheduling_review_notes = QTextEdit(schedule_group)
         self.scheduling_review_notes.setObjectName("scheduling_review_notes")
-        self.scheduling_review_notes.setMaximumHeight(80)
+        self.scheduling_review_notes.setMinimumHeight(70)
+        self.scheduling_review_notes.setMaximumHeight(90)
         review_form.addRow("Reviewer", self.scheduling_reviewer)
         review_form.addRow("Review notes", self.scheduling_review_notes)
         schedule_layout.addLayout(review_form)
@@ -177,7 +193,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         schedule_layout.addLayout(review_actions)
         layout.addWidget(schedule_group)
 
-        queue_group = QGroupBox("Production Queue & Monitoring", tab)
+        queue_group = QGroupBox("Production Queue & Monitoring", content)
         queue_layout = QVBoxLayout(queue_group)
         queue_actions = QHBoxLayout()
         self.scheduling_compile_queue_button = QPushButton("Compile Approved Queue", queue_group)
@@ -202,11 +218,12 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self.scheduling_monitoring_summary = QTextEdit(queue_group)
         self.scheduling_monitoring_summary.setObjectName("scheduling_monitoring_summary")
         self.scheduling_monitoring_summary.setReadOnly(True)
+        self.scheduling_monitoring_summary.setMinimumHeight(100)
         self.scheduling_monitoring_summary.setMaximumHeight(130)
         queue_layout.addWidget(self.scheduling_monitoring_summary)
-        layout.addWidget(queue_group, 1)
+        layout.addWidget(queue_group)
 
-        worker_group = QGroupBox("Session Workers", tab)
+        worker_group = QGroupBox("Session Workers", content)
         worker_layout = QVBoxLayout(worker_group)
         worker_form = QFormLayout()
         self.scheduling_worker_id = QLineEdit(worker_group)
@@ -227,7 +244,9 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         worker_form.addRow("Capabilities", self.scheduling_worker_capabilities)
         worker_form.addRow("State", self.scheduling_worker_state)
         worker_layout.addLayout(worker_form)
-        self.scheduling_register_worker_button = QPushButton("Register Worker", worker_group)
+        self.scheduling_register_worker_button = QPushButton(
+            "Register / Update Worker", worker_group
+        )
         self.scheduling_register_worker_button.setObjectName("scheduling_register_worker_button")
         worker_layout.addWidget(self.scheduling_register_worker_button)
         self.scheduling_worker_table = _table(
@@ -237,6 +256,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         )
         worker_layout.addWidget(self.scheduling_worker_table)
         layout.addWidget(worker_group)
+        layout.addStretch(1)
 
         self.compiler_tabs.addTab(tab, "Scheduling")
         self.scheduling_register_resource_button.clicked.connect(self._scheduling_register_resource)
@@ -423,11 +443,19 @@ def _table(parent: QWidget, name: str, headers: tuple[str, ...]) -> QTableWidget
     table.setHorizontalHeaderLabels(headers)
     table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     table.horizontalHeader().setStretchLastSection(True)
+    table.setMinimumHeight(120)
     return table
 
 
 def _warning(parent: QWidget, title: str, exc: Exception) -> None:
     QMessageBox.warning(parent, title, str(exc))
+
+
+def _set_combo_value(combo: QComboBox, value: str) -> None:
+    for index in range(combo.count()):
+        if str(combo.itemData(index)) == value:
+            combo.setCurrentIndex(index)
+            return
 
 
 def _render_resources(workspace: Any) -> None:
@@ -444,6 +472,19 @@ def _render_resources(workspace: Any) -> None:
             ),
         )
 
+    if values:
+        current_id = workspace.scheduling_resource_id.text().strip()
+        selected = next(
+            (resource for resource in values if resource.resource_id == current_id),
+            values[0] if not current_id else None,
+        )
+        if selected is not None:
+            workspace.scheduling_resource_id.setText(selected.resource_id)
+            workspace.scheduling_resource_capabilities.setText(
+                ", ".join(sorted(item.value for item in selected.capabilities))
+            )
+            _set_combo_value(workspace.scheduling_resource_state, selected.state.value)
+
 
 def _render_workers(workspace: Any) -> None:
     values = workspace.production_scheduling.workers()
@@ -459,6 +500,20 @@ def _render_workers(workspace: Any) -> None:
                 ", ".join(sorted(item.value for item in worker.capabilities)),
             ),
         )
+
+    if values:
+        current_id = workspace.scheduling_worker_id.text().strip()
+        selected = next(
+            (worker for worker in values if worker.worker_id == current_id),
+            values[0] if not current_id else None,
+        )
+        if selected is not None:
+            workspace.scheduling_worker_id.setText(selected.worker_id)
+            workspace.scheduling_worker_resource_id.setText(selected.resource_id)
+            workspace.scheduling_worker_capabilities.setText(
+                ", ".join(sorted(item.value for item in selected.capabilities))
+            )
+            _set_combo_value(workspace.scheduling_worker_state, selected.state.value)
 
 
 def _render_schedule(workspace: Any) -> None:
