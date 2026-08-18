@@ -6,6 +6,8 @@ from typing import Any
 
 from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout
 
+from vscs.application.production_tasks import ProductionTask
+
 
 def install_production_task_readiness_workspace(workspace_class: type[Any]) -> None:
     """Expose authoritative persisted task state and graph-derived readiness in the UI."""
@@ -41,7 +43,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     def _persisted_tasks_for_selected_shot(
         self: Any,
         production_id: str | None = None,
-    ) -> tuple[Any, ...]:
+    ) -> tuple[ProductionTask, ...]:
         if not hasattr(self, "production_scheduling"):
             return ()
         editor = getattr(self, "production_task_production_id", None)
@@ -53,13 +55,15 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         shot_id = self._production_task_shot_id()
         if not normalized_production_id or not shot_id or not self.projects.is_project_open:
             return ()
-        tasks = self.production_scheduling.tasks(normalized_production_id)
+        tasks: tuple[ProductionTask, ...] = self.production_scheduling.tasks(
+            normalized_production_id
+        )
         return tuple(task for task in tasks if task.shot_id == shot_id)
 
     def _refresh_persisted_production_tasks(
         self: Any,
         production_id: str | None = None,
-    ) -> tuple[Any, ...]:
+    ) -> tuple[ProductionTask, ...]:
         persisted = self._persisted_tasks_for_selected_shot(production_id)
         shot_id = self._production_task_shot_id()
         if persisted and shot_id:
