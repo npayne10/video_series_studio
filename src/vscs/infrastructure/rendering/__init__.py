@@ -15,6 +15,7 @@ from .comfyui_live import (
     LiveComfyUIAdapter,
     UrllibComfyUITransport,
 )
+from .comfyui_production import ProductionPackageComfyUIAdapter
 
 __all__ = [
     "ComfyUIAdapter",
@@ -27,5 +28,6 @@ __all__ = [
     "ComfyUIWorkflowCompiler",
     "LiveComfyUIAdapter",
     "MetadataComfyUIInputResolver",
+    "ProductionPackageComfyUIAdapter",
     "UrllibComfyUITransport",
 ]
