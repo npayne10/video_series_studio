@@ -55,9 +55,7 @@ class GeneratedMediaPersistenceService:
         episode_id: str,
         scene_id: str,
     ) -> tuple[GeneratedMedia, ...]:
-        return self._validated(
-            self.repository.list_for_scene(production_id, episode_id, scene_id)
-        )
+        return self._validated(self.repository.list_for_scene(production_id, episode_id, scene_id))
 
     def list_for_shot(
         self,

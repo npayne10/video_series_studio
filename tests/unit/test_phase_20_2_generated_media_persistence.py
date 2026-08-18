@@ -135,12 +135,13 @@ def test_scope_task_and_execution_queries_are_deterministic(tmp_path) -> None:
         "GM-002",
         "GM-003",
     ]
+    assert [item.media_id for item in service.list_for_scene("PROD-001", "EP-001", "SCN-001")] == [
+        "GM-001",
+        "GM-002",
+        "GM-003",
+    ]
     assert [
-        item.media_id for item in service.list_for_scene("PROD-001", "EP-001", "SCN-001")
-    ] == ["GM-001", "GM-002", "GM-003"]
-    assert [
-        item.media_id
-        for item in service.list_for_shot("PROD-001", "EP-001", "SCN-001", "SHT-001")
+        item.media_id for item in service.list_for_shot("PROD-001", "EP-001", "SCN-001", "SHT-001")
     ] == ["GM-001", "GM-002"]
     assert [item.media_id for item in service.list_for_task("PT-001")] == ["GM-001", "GM-002"]
     assert [item.media_id for item in service.list_for_execution("EXEC-001")] == [

@@ -60,8 +60,9 @@ class JsonGeneratedMediaRepository:
         production = self._require_query(production_id, "production_id")
         episode = self._require_query(episode_id, "episode_id")
         return self._matching(
-            lambda media: media.scope.production_id == production
-            and media.scope.episode_id == episode
+            lambda media: (
+                media.scope.production_id == production and media.scope.episode_id == episode
+            )
         )
 
     def list_for_scene(
@@ -74,9 +75,11 @@ class JsonGeneratedMediaRepository:
         episode = self._require_query(episode_id, "episode_id")
         scene = self._require_query(scene_id, "scene_id")
         return self._matching(
-            lambda media: media.scope.production_id == production
-            and media.scope.episode_id == episode
-            and media.scope.scene_id == scene
+            lambda media: (
+                media.scope.production_id == production
+                and media.scope.episode_id == episode
+                and media.scope.scene_id == scene
+            )
         )
 
     def list_for_shot(
@@ -91,10 +94,12 @@ class JsonGeneratedMediaRepository:
         scene = self._require_query(scene_id, "scene_id")
         shot = self._require_query(shot_id, "shot_id")
         return self._matching(
-            lambda media: media.scope.production_id == production
-            and media.scope.episode_id == episode
-            and media.scope.scene_id == scene
-            and media.scope.shot_id == shot
+            lambda media: (
+                media.scope.production_id == production
+                and media.scope.episode_id == episode
+                and media.scope.scene_id == scene
+                and media.scope.shot_id == shot
+            )
         )
 
     def list_for_task(self, production_task_id: str) -> tuple[GeneratedMedia, ...]:
@@ -243,8 +248,12 @@ class JsonGeneratedMediaRepository:
             technical_metadata=_pairs(raw.get("technical_metadata", []), "technical_metadata"),
             governance_history=tuple(
                 GeneratedMediaGovernanceEvent(
-                    from_state=GeneratedMediaState(str(_mapping(item, "governance event")["from_state"])),
-                    to_state=GeneratedMediaState(str(_mapping(item, "governance event")["to_state"])),
+                    from_state=GeneratedMediaState(
+                        str(_mapping(item, "governance event")["from_state"])
+                    ),
+                    to_state=GeneratedMediaState(
+                        str(_mapping(item, "governance event")["to_state"])
+                    ),
                     actor=str(_mapping(item, "governance event")["actor"]),
                     reason=str(_mapping(item, "governance event")["reason"]),
                     occurred_at=datetime.fromisoformat(
