@@ -22,6 +22,7 @@ from vscs.application.provider_execution import (
     ProviderRegistrationState,
     ProviderRegistryService,
 )
+from vscs.domain.generated_media import GeneratedMediaKind
 from vscs.infrastructure.provider_execution import JsonProviderRegistrationRepository
 
 
@@ -82,7 +83,7 @@ def _provider(
         resource_id=resource_id,
         capabilities=capabilities,
         supported_task_types=frozenset({ProductionTaskType.VIDEO_GENERATION}),
-        supported_media_kinds=frozenset({"video"}),
+        supported_media_kinds=frozenset({GeneratedMediaKind.VIDEO}),
         endpoint="http://127.0.0.1:8188",
         secret_reference="secret://providers/local-comfyui",
         state=state,
