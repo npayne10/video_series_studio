@@ -13,6 +13,7 @@ from vscs.application.production_tasks import (
     ProductionTask,
     ProductionTaskType,
 )
+from vscs.domain.generated_media import GeneratedMediaKind
 
 
 class ProviderRegistrationState(StrEnum):
@@ -39,7 +40,7 @@ class ProviderRegistration:
     resource_id: str
     capabilities: frozenset[ProductionCapability]
     supported_task_types: frozenset[ProductionTaskType]
-    supported_media_kinds: frozenset[str]
+    supported_media_kinds: frozenset[GeneratedMediaKind]
     endpoint: str | None = None
     secret_reference: str | None = None
     state: ProviderRegistrationState = ProviderRegistrationState.ENABLED
@@ -66,8 +67,6 @@ class ProviderRegistration:
             raise ValueError("supported_task_types must not be empty")
         if not self.supported_media_kinds:
             raise ValueError("supported_media_kinds must not be empty")
-        for value in self.supported_media_kinds:
-            _require_text(value, "supported_media_kind")
         _require_pairs(self.configuration, "configuration")
         _require_pairs(self.metadata, "metadata")
         for key, _value in self.configuration:
