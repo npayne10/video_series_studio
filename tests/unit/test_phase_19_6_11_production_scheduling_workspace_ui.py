@@ -81,8 +81,7 @@ def test_production_planning_installs_scheduling_tab(
     workspace = window.production_package_workspace
 
     labels = [
-        workspace.compiler_tabs.tabText(index)
-        for index in range(workspace.compiler_tabs.count())
+        workspace.compiler_tabs.tabText(index) for index in range(workspace.compiler_tabs.count())
     ]
 
     assert "Scheduling" in labels

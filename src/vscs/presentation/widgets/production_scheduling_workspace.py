@@ -56,9 +56,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
                 raise ProductionSchedulingUiError(
                     "Open a VSCS project before using Production Scheduling"
                 )
-            return JsonProductionTaskRepository(
-                directory / "production" / "scheduling" / "tasks"
-            )
+            return JsonProductionTaskRepository(directory / "production" / "scheduling" / "tasks")
 
         def schedule_repository() -> JsonProductionScheduleRepository:
             directory = self.projects.project_directory
@@ -102,9 +100,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self.scheduling_resource_id = QLineEdit(resource_group)
         self.scheduling_resource_id.setObjectName("scheduling_resource_id")
         self.scheduling_resource_capabilities = QLineEdit(resource_group)
-        self.scheduling_resource_capabilities.setObjectName(
-            "scheduling_resource_capabilities"
-        )
+        self.scheduling_resource_capabilities.setObjectName("scheduling_resource_capabilities")
         self.scheduling_resource_capabilities.setPlaceholderText(
             "video_generation, image_generation, audio_generation"
         )
@@ -143,9 +139,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self.scheduling_create_revision_button = QPushButton(
             "Create Schedule Revision", schedule_group
         )
-        self.scheduling_create_revision_button.setObjectName(
-            "scheduling_create_revision_button"
-        )
+        self.scheduling_create_revision_button.setObjectName("scheduling_create_revision_button")
         schedule_actions.addWidget(self.scheduling_refresh_readiness_button)
         schedule_actions.addWidget(self.scheduling_create_revision_button)
         schedule_actions.addStretch(1)
@@ -183,21 +177,13 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         queue_group = QGroupBox("Production Queue & Monitoring", tab)
         queue_layout = QVBoxLayout(queue_group)
         queue_actions = QHBoxLayout()
-        self.scheduling_compile_queue_button = QPushButton(
-            "Compile Approved Queue", queue_group
-        )
-        self.scheduling_compile_queue_button.setObjectName(
-            "scheduling_compile_queue_button"
-        )
-        self.scheduling_refresh_monitoring_button = QPushButton(
-            "Refresh Monitoring", queue_group
-        )
+        self.scheduling_compile_queue_button = QPushButton("Compile Approved Queue", queue_group)
+        self.scheduling_compile_queue_button.setObjectName("scheduling_compile_queue_button")
+        self.scheduling_refresh_monitoring_button = QPushButton("Refresh Monitoring", queue_group)
         self.scheduling_refresh_monitoring_button.setObjectName(
             "scheduling_refresh_monitoring_button"
         )
-        self.scheduling_recover_button = QPushButton(
-            "Recover Expired Leases", queue_group
-        )
+        self.scheduling_recover_button = QPushButton("Recover Expired Leases", queue_group)
         self.scheduling_recover_button.setObjectName("scheduling_recover_button")
         queue_actions.addWidget(self.scheduling_compile_queue_button)
         queue_actions.addWidget(self.scheduling_refresh_monitoring_button)
@@ -211,9 +197,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         )
         queue_layout.addWidget(self.scheduling_queue_table)
         self.scheduling_monitoring_summary = QTextEdit(queue_group)
-        self.scheduling_monitoring_summary.setObjectName(
-            "scheduling_monitoring_summary"
-        )
+        self.scheduling_monitoring_summary.setObjectName("scheduling_monitoring_summary")
         self.scheduling_monitoring_summary.setReadOnly(True)
         self.scheduling_monitoring_summary.setMaximumHeight(130)
         queue_layout.addWidget(self.scheduling_monitoring_summary)
@@ -225,13 +209,9 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self.scheduling_worker_id = QLineEdit(worker_group)
         self.scheduling_worker_id.setObjectName("scheduling_worker_id")
         self.scheduling_worker_resource_id = QLineEdit(worker_group)
-        self.scheduling_worker_resource_id.setObjectName(
-            "scheduling_worker_resource_id"
-        )
+        self.scheduling_worker_resource_id.setObjectName("scheduling_worker_resource_id")
         self.scheduling_worker_capabilities = QLineEdit(worker_group)
-        self.scheduling_worker_capabilities.setObjectName(
-            "scheduling_worker_capabilities"
-        )
+        self.scheduling_worker_capabilities.setObjectName("scheduling_worker_capabilities")
         self.scheduling_worker_state = QComboBox(worker_group)
         self.scheduling_worker_state.setObjectName("scheduling_worker_state")
         for state in ProductionWorkerState:
@@ -241,12 +221,8 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         worker_form.addRow("Capabilities", self.scheduling_worker_capabilities)
         worker_form.addRow("State", self.scheduling_worker_state)
         worker_layout.addLayout(worker_form)
-        self.scheduling_register_worker_button = QPushButton(
-            "Register Worker", worker_group
-        )
-        self.scheduling_register_worker_button.setObjectName(
-            "scheduling_register_worker_button"
-        )
+        self.scheduling_register_worker_button = QPushButton("Register Worker", worker_group)
+        self.scheduling_register_worker_button.setObjectName("scheduling_register_worker_button")
         worker_layout.addWidget(self.scheduling_register_worker_button)
         self.scheduling_worker_table = _table(
             worker_group,
@@ -257,23 +233,13 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         layout.addWidget(worker_group)
 
         self.compiler_tabs.addTab(tab, "Scheduling")
-        self.scheduling_register_resource_button.clicked.connect(
-            self._scheduling_register_resource
-        )
-        self.scheduling_register_worker_button.clicked.connect(
-            self._scheduling_register_worker
-        )
-        self.scheduling_refresh_readiness_button.clicked.connect(
-            self._scheduling_refresh_readiness
-        )
-        self.scheduling_create_revision_button.clicked.connect(
-            self._scheduling_create_revision
-        )
+        self.scheduling_register_resource_button.clicked.connect(self._scheduling_register_resource)
+        self.scheduling_register_worker_button.clicked.connect(self._scheduling_register_worker)
+        self.scheduling_refresh_readiness_button.clicked.connect(self._scheduling_refresh_readiness)
+        self.scheduling_create_revision_button.clicked.connect(self._scheduling_create_revision)
         self.scheduling_approve_button.clicked.connect(self._scheduling_approve)
         self.scheduling_reject_button.clicked.connect(self._scheduling_reject)
-        self.scheduling_compile_queue_button.clicked.connect(
-            self._scheduling_compile_queue
-        )
+        self.scheduling_compile_queue_button.clicked.connect(self._scheduling_compile_queue)
         self.scheduling_refresh_monitoring_button.clicked.connect(
             self._refresh_production_scheduling
         )
@@ -283,9 +249,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         editor = getattr(self, "production_task_production_id", None)
         return str(editor.text() if editor is not None else "").strip()
 
-    def _scheduling_capabilities(
-        self: Any, text: str
-    ) -> frozenset[ProductionCapability]:
+    def _scheduling_capabilities(self: Any, text: str) -> frozenset[ProductionCapability]:
         values = [part.strip().lower() for part in text.split(",") if part.strip()]
         if not values:
             raise ValueError("At least one ProductionCapability is required")
@@ -293,9 +257,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
             return frozenset(ProductionCapability(value) for value in values)
         except ValueError as exc:
             allowed = ", ".join(item.value for item in ProductionCapability)
-            raise ValueError(
-                f"Unknown ProductionCapability. Allowed values: {allowed}"
-            ) from exc
+            raise ValueError(f"Unknown ProductionCapability. Allowed values: {allowed}") from exc
 
     def _scheduling_register_resource(self: Any) -> None:
         try:
@@ -355,9 +317,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         )
         self._refresh_production_scheduling()
 
-    def _scheduling_review(
-        self: Any, decision: ProductionScheduleReviewDecision
-    ) -> None:
+    def _scheduling_review(self: Any, decision: ProductionScheduleReviewDecision) -> None:
         try:
             self.production_scheduling.review_current(
                 self._scheduling_production_id(),
@@ -378,9 +338,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
 
     def _scheduling_compile_queue(self: Any) -> None:
         try:
-            queue = self.production_scheduling.compile_queue(
-                self._scheduling_production_id()
-            )
+            queue = self.production_scheduling.compile_queue(self._scheduling_production_id())
         except (ValueError, RuntimeError) as exc:
             _warning(self, "Production Queue", exc)
             return
@@ -391,9 +349,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
 
     def _scheduling_recover(self: Any) -> None:
         try:
-            result = self.production_scheduling.recover(
-                self._scheduling_production_id()
-            )
+            result = self.production_scheduling.recover(self._scheduling_production_id())
         except (ValueError, RuntimeError) as exc:
             _warning(self, "Scheduling Recovery", exc)
             return
