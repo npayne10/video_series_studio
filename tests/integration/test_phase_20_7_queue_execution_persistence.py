@@ -36,9 +36,9 @@ from vscs.application.rendering import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
+    RendererKind,
     RenderJob,
     RenderJobStatus,
-    RendererKind,
     RenderOutput,
     RenderOutputKind,
     RenderRequest,
@@ -205,9 +205,7 @@ def test_phase_20_7_queue_submission_and_completion_survive_repository_restart(t
             ),
         )
     )
-    providers = ProviderRegistryService(
-        JsonProviderRegistrationRepository(tmp_path / "providers")
-    )
+    providers = ProviderRegistryService(JsonProviderRegistrationRepository(tmp_path / "providers"))
     providers.register(
         ProviderRegistration(
             provider_id="LOCAL-COMFYUI-01",
@@ -221,9 +219,7 @@ def test_phase_20_7_queue_submission_and_completion_survive_repository_restart(t
         )
     )
     adapters = ProviderExecutionAdapterRegistry()
-    adapters.register(
-        RenderProviderExecutionAdapter("LOCAL-COMFYUI-01", CompletingRenderAdapter())
-    )
+    adapters.register(RenderProviderExecutionAdapter("LOCAL-COMFYUI-01", CompletingRenderAdapter()))
     execution_root = tmp_path / "executions"
     durable = DurableExecutionJobService(JsonDurableExecutionJobRepository(execution_root))
     service = QueueProviderExecutionService(

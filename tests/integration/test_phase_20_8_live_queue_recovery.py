@@ -38,9 +38,9 @@ from vscs.application.rendering import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
+    RendererKind,
     RenderJob,
     RenderJobStatus,
-    RendererKind,
     RenderOutput,
     RenderOutputKind,
     RenderRequest,
@@ -187,7 +187,9 @@ def _request() -> RenderRequest:
     )
 
 
-def test_live_monitoring_reconciles_terminal_provider_state_through_original_lease(tmp_path) -> None:
+def test_live_monitoring_reconciles_terminal_provider_state_through_original_lease(
+    tmp_path,
+) -> None:
     task = _task()
     tasks = TaskRepository(task)
     workers = ProductionWorkerRegistry()
@@ -207,9 +209,7 @@ def test_live_monitoring_reconciles_terminal_provider_state_through_original_lea
             ),
         )
     )
-    providers = ProviderRegistryService(
-        JsonProviderRegistrationRepository(tmp_path / "providers")
-    )
+    providers = ProviderRegistryService(JsonProviderRegistrationRepository(tmp_path / "providers"))
     providers.register(
         ProviderRegistration(
             provider_id="LOCAL-COMFYUI-01",
@@ -223,12 +223,8 @@ def test_live_monitoring_reconciles_terminal_provider_state_through_original_lea
         )
     )
     adapters = ProviderExecutionAdapterRegistry()
-    adapters.register(
-        RenderProviderExecutionAdapter("LOCAL-COMFYUI-01", CompletingRenderAdapter())
-    )
-    durable = DurableExecutionJobService(
-        JsonDurableExecutionJobRepository(tmp_path / "executions")
-    )
+    adapters.register(RenderProviderExecutionAdapter("LOCAL-COMFYUI-01", CompletingRenderAdapter()))
+    durable = DurableExecutionJobService(JsonDurableExecutionJobRepository(tmp_path / "executions"))
     queue_service = QueueProviderExecutionService(
         runtime=runtime,
         tasks=tasks,
@@ -260,6 +256,14 @@ def test_live_monitoring_reconciles_terminal_provider_state_through_original_lea
 
     assert recovered.reconciliation is not None
     assert recovered.monitoring.disposition is ExecutionMonitoringDisposition.TERMINAL
-    assert recovered.reconciliation.queue.entry("PQE-PT-20-8-001").state is ProductionQueueState.COMPLETED
+    assert (
+        recovered.reconciliation.queue.entry("PQE-PT-20-8-001").state
+        is ProductionQueueState.COMPLETED
+    )
     assert recovered.reconciliation.outputs[0].relative_path.endswith("phase_20_8.mp4")
-    assert runtime.leases.active_for_entry("PQ-20-8-001", "PQE-PT-20-8-001", now=NOW + timedelta(seconds=30)) is None
+    assert (
+        runtime.leases.active_for_entry(
+            "PQ-20-8-001", "PQE-PT-20-8-001", now=NOW + timedelta(seconds=30)
+        )
+        is None
+    )

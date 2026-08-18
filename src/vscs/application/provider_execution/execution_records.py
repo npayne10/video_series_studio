@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 
 from .models import ProviderExecutionContext, ProviderExecutionHandle, ProviderExecutionState
 
-
 _TERMINAL_STATES = frozenset(
     {
         ProviderExecutionState.COMPLETED,
@@ -243,7 +242,9 @@ class DurableExecutionJobTracker:
     @staticmethod
     def _validate_handle(job: DurableExecutionJob, handle: ProviderExecutionHandle) -> None:
         if handle.execution_id != job.execution_id:
-            raise DurableExecutionJobError("provider handle execution_id does not match durable job")
+            raise DurableExecutionJobError(
+                "provider handle execution_id does not match durable job"
+            )
         if handle.provider_id != job.provider_id:
             raise DurableExecutionJobError("provider handle provider_id does not match durable job")
         if job.provider_job_id is not None and handle.provider_job_id != job.provider_job_id:
