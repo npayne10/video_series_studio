@@ -184,7 +184,7 @@ def _render_request() -> RenderRequest:
 
 def test_phase_20_3_bridges_running_queue_authority_to_render_adapter() -> None:
     context = ProviderExecutionContextFactory().bind(
-        _queue(), "PQE-PT-001", _lease(), _task()
+        _queue(), "PQE-PT-001", _lease(), _task(), now=NOW
     )
     render_adapter = FakeRenderAdapter()
     execution_request = RenderProviderExecutionCompiler().compile(
