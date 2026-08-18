@@ -177,6 +177,8 @@ class DurableExecutionJobTracker:
         now: datetime | None = None,
     ) -> DurableExecutionJob:
         self._validate_handle(job, handle)
+        if job.terminal and handle.state is not job.state:
+            raise DurableExecutionJobError("terminal durable execution state cannot be changed")
         current = now or datetime.now(UTC)
         submitted_at = job.submitted_at or handle.submitted_at
         failure_reason = handle.failure_reason
@@ -215,6 +217,8 @@ class DurableExecutionJobTracker:
         *,
         now: datetime | None = None,
     ) -> DurableExecutionJob:
+        if job.terminal:
+            raise DurableExecutionJobError("terminal durable execution state cannot be changed")
         message = reason.strip()
         if not message:
             raise DurableExecutionJobError("submission failure reason cannot be blank")
