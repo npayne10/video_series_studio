@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import ClassVar
 
 from vscs.application.production_tasks import (
     ProductionCapability,
@@ -46,7 +47,7 @@ class ProviderRegistration:
     configuration: tuple[tuple[str, str], ...] = ()
     metadata: tuple[tuple[str, str], ...] = ()
 
-    _SECRET_TOKENS = frozenset(
+    _SECRET_TOKENS: ClassVar[frozenset[str]] = frozenset(
         {"api_key", "apikey", "authorization", "bearer", "password", "secret", "token"}
     )
 
@@ -71,9 +72,7 @@ class ProviderRegistration:
         _require_pairs(self.metadata, "metadata")
         for key, _value in self.configuration:
             normalized = key.casefold().replace("-", "_")
-            if normalized in self._SECRET_TOKENS or any(
-                token in normalized.split("_") for token in self._SECRET_TOKENS
-            ):
+            if any(token in normalized for token in self._SECRET_TOKENS):
                 raise ValueError(
                     "provider configuration may not contain credentials; use secret_reference"
                 )
