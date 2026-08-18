@@ -1,4 +1,4 @@
-"""Phase 20.6 orchestration from authoritative ProductionQueue state to provider execution."""
+"""Phase 20 orchestration from authoritative ProductionQueue state to provider execution."""
 
 from __future__ import annotations
 
@@ -20,6 +20,8 @@ from vscs.application.rendering import RenderRequest
 
 from .adapter_registry import ProviderExecutionAdapterRegistry
 from .binding import ProviderExecutionContextFactory
+from .execution_records import DurableExecutionJob
+from .execution_service import DurableExecutionJobService
 from .models import (
     ProviderExecutionHandle,
     ProviderExecutionOutput,
@@ -45,6 +47,7 @@ class QueueProviderExecutionSubmission:
     provider: ProviderRegistration
     lease: ProductionExecutionLease | None
     handle: ProviderExecutionHandle | None
+    execution_job: DurableExecutionJob | None = None
     error_message: str | None = None
 
     @property
@@ -60,6 +63,7 @@ class QueueProviderExecutionReconciliation:
     handle: ProviderExecutionHandle
     lease: ProductionExecutionLease | None
     outputs: tuple[ProviderExecutionOutput, ...] = ()
+    execution_job: DurableExecutionJob | None = None
 
     @property
     def terminal(self) -> bool:
@@ -81,6 +85,7 @@ class QueueProviderExecutionService:
         resources: ProductionResourceCatalog,
         providers: ProviderRegistryService,
         adapters: ProviderExecutionAdapterRegistry,
+        execution_jobs: DurableExecutionJobService | None = None,
         context_factory: ProviderExecutionContextFactory | None = None,
         compiler: RenderProviderExecutionCompiler | None = None,
     ) -> None:
@@ -89,6 +94,7 @@ class QueueProviderExecutionService:
         self.resources = resources
         self.providers = providers
         self.adapters = adapters
+        self.execution_jobs = execution_jobs
         self.context_factory = context_factory or ProviderExecutionContextFactory()
         self.compiler = compiler or RenderProviderExecutionCompiler()
 
@@ -140,6 +146,8 @@ class QueueProviderExecutionService:
             claim.lease.lease_id,
             now=current,
         )
+        durable_job: DurableExecutionJob | None = None
+        execution_id: str | None = None
         try:
             context = self.context_factory.bind(
                 running,
@@ -148,13 +156,37 @@ class QueueProviderExecutionService:
                 task,
                 now=current,
             )
+            execution_id = context.execution_id
+            if self.execution_jobs is not None:
+                durable_job = self.execution_jobs.prepare(
+                    context,
+                    provider.provider_id,
+                    render_request_id=request.request_id,
+                    workflow_id=request.workflow_id,
+                    now=current,
+                )
             execution_request = self.compiler.compile(context, request, adapter.adapter)
             validation = adapter.validate(execution_request)
             if not validation.passed:
                 raise QueueProviderExecutionError("; ".join(validation.messages))
             handle = adapter.submit(execution_request)
+            if self.execution_jobs is not None:
+                durable_job = self.execution_jobs.observe(
+                    context.execution_id,
+                    handle,
+                    now=current,
+                )
         except Exception as exc:
             message = str(exc) or exc.__class__.__name__
+            if self.execution_jobs is not None and execution_id is not None and durable_job is not None:
+                try:
+                    durable_job = self.execution_jobs.submission_failed(
+                        execution_id,
+                        message,
+                        now=current,
+                    )
+                except Exception as persistence_exc:
+                    message = f"{message}; durable execution persistence failed: {persistence_exc}"
             failed = self.runtime.fail(
                 running,
                 entry.entry_id,
@@ -167,6 +199,7 @@ class QueueProviderExecutionService:
                 provider=provider,
                 lease=None,
                 handle=None,
+                execution_job=durable_job,
                 error_message=message,
             )
         return QueueProviderExecutionSubmission(
@@ -174,6 +207,7 @@ class QueueProviderExecutionService:
             provider=provider,
             lease=claim.lease,
             handle=handle,
+            execution_job=durable_job,
         )
 
     def reconcile(
@@ -197,6 +231,7 @@ class QueueProviderExecutionService:
             now=current,
         )
         refreshed = adapter.monitor(handle)
+        durable_job = self._observe_durable(refreshed, current)
         if refreshed.state is ProviderExecutionState.COMPLETED:
             outputs = adapter.fetch_outputs(refreshed)
             completed = self.runtime.complete(queue, entry_id, lease_id, now=current)
@@ -205,6 +240,7 @@ class QueueProviderExecutionService:
                 handle=refreshed,
                 lease=None,
                 outputs=outputs,
+                execution_job=durable_job,
             )
         if refreshed.state is ProviderExecutionState.FAILED:
             failed = self.runtime.fail(
@@ -218,17 +254,20 @@ class QueueProviderExecutionService:
                 queue=failed,
                 handle=refreshed,
                 lease=None,
+                execution_job=durable_job,
             )
         if refreshed.state is ProviderExecutionState.CANCELLED:
             return QueueProviderExecutionReconciliation(
                 queue=self._cancel_queue(queue, entry_id, lease_id, current),
                 handle=refreshed,
                 lease=None,
+                execution_job=durable_job,
             )
         return QueueProviderExecutionReconciliation(
             queue=queue,
             handle=refreshed,
             lease=renewed,
+            execution_job=durable_job,
         )
 
     def cancel(
@@ -244,12 +283,23 @@ class QueueProviderExecutionService:
         current = now or datetime.now(UTC)
         adapter = self.adapters.require(handle.provider_id)
         cancelled_handle = adapter.cancel(handle)
+        durable_job = self._observe_durable(cancelled_handle, current)
         cancelled_queue = self._cancel_queue(queue, entry_id, lease_id, current)
         return QueueProviderExecutionReconciliation(
             queue=cancelled_queue,
             handle=cancelled_handle,
             lease=None,
+            execution_job=durable_job,
         )
+
+    def _observe_durable(
+        self,
+        handle: ProviderExecutionHandle,
+        now: datetime,
+    ) -> DurableExecutionJob | None:
+        if self.execution_jobs is None:
+            return None
+        return self.execution_jobs.observe(handle.execution_id, handle, now=now)
 
     def _cancel_queue(
         self,
