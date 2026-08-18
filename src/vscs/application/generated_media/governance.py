@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import ClassVar
 
 from vscs.domain.generated_media import (
     GeneratedMedia,
@@ -50,7 +51,9 @@ class GeneratedMediaGovernanceError(ValueError):
 class GeneratedMediaGovernanceService:
     """Own explicit human-governed transitions for authoritative Generated Media."""
 
-    _ALLOWED_TRANSITIONS: dict[GeneratedMediaState, frozenset[GeneratedMediaState]] = {
+    _ALLOWED_TRANSITIONS: ClassVar[
+        dict[GeneratedMediaState, frozenset[GeneratedMediaState]]
+    ] = {
         GeneratedMediaState.GENERATED: frozenset(
             {GeneratedMediaState.UNDER_REVIEW, GeneratedMediaState.INVALID}
         ),
