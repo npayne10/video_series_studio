@@ -325,7 +325,9 @@ def main() -> int:
                     print("Lease active              : no")
                     print("PHASE 20.6 LIVE ACCEPTANCE: PASS")
                     return 0
-                print(f"Failure reason            : {handle.failure_reason or 'provider did not complete'}")
+                print(
+                    f"Failure reason            : {handle.failure_reason or 'provider did not complete'}"
+                )
                 print("PHASE 20.6 LIVE ACCEPTANCE: FAIL")
                 return 4
             if reconciled.lease is None:
