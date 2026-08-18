@@ -44,6 +44,11 @@ class ProductionQueueAttempt:
     succeeded: bool | None = None
     error_message: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.attempt_number < 1:
+            raise ValueError("attempt_number must be at least 1")
+        _require_text(self.worker_id, "worker_id")
+
 
 @dataclass(frozen=True, slots=True)
 class ProductionQueueEntry:
@@ -64,6 +69,21 @@ class ProductionQueueEntry:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
+    def __post_init__(self) -> None:
+        _require_text(self.entry_id, "entry_id")
+        _require_text(self.task_id, "task_id")
+        _require_text(self.resource_id, "resource_id")
+        if self.maximum_attempts < 1:
+            raise ValueError("maximum_attempts must be at least 1")
+        if self.retry_delay_seconds < 0:
+            raise ValueError("retry_delay_seconds cannot be negative")
+        if len(set(self.dependencies)) != len(self.dependencies):
+            raise ValueError("dependencies cannot contain duplicates")
+        for dependency in self.dependencies:
+            _require_text(dependency, "dependency")
+        if self.task_id in self.dependencies:
+            raise ValueError("a ProductionQueue entry cannot depend on its own task")
+
     @property
     def attempt_count(self) -> int:
         """Return the number of execution attempts already recorded."""
@@ -81,6 +101,21 @@ class ProductionQueue:
     schedule_fingerprint: str
     entries: tuple[ProductionQueueEntry, ...]
     schema_version: str = "1.0"
+
+    def __post_init__(self) -> None:
+        _require_text(self.queue_id, "queue_id")
+        _require_text(self.production_id, "production_id")
+        _require_text(self.schedule_id, "schedule_id")
+        _require_text(self.schedule_fingerprint, "schedule_fingerprint")
+        _require_text(self.schema_version, "schema_version")
+        if self.schedule_revision < 1:
+            raise ValueError("schedule_revision must be at least 1")
+        entry_ids = tuple(entry.entry_id for entry in self.entries)
+        task_ids = tuple(entry.task_id for entry in self.entries)
+        if len(set(entry_ids)) != len(entry_ids):
+            raise ValueError("ProductionQueue cannot contain duplicate entry identities")
+        if len(set(task_ids)) != len(task_ids):
+            raise ValueError("ProductionQueue cannot contain duplicate ProductionTasks")
 
     def entry(self, entry_id: str) -> ProductionQueueEntry | None:
         """Return one queue entry by stable queue-entry identity."""
@@ -390,3 +425,8 @@ class ProductionQueueEngine:
                 updated if entry.entry_id == updated.entry_id else entry for entry in queue.entries
             ),
         )
+
+
+def _require_text(value: str, field_name: str) -> None:
+    if not value.strip():
+        raise ValueError(f"{field_name} cannot be blank")
