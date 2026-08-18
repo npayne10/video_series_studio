@@ -10,6 +10,18 @@ from .models import (
     ProviderExecutionRequest,
     ProviderExecutionState,
 )
+from .provider_registry import (
+    ProviderCapabilityResolution,
+    ProviderCapabilityResolver,
+    ProviderHealthState,
+    ProviderRegistration,
+    ProviderRegistrationState,
+)
+from .provider_repository import (
+    ProviderRegistrationRepository,
+    ProviderRegistrationRepositoryError,
+)
+from .provider_service import ProviderRegistryService
 from .rendering_bridge import (
     RenderProviderExecutionAdapter,
     RenderProviderExecutionCompiler,
@@ -17,6 +29,8 @@ from .rendering_bridge import (
 )
 
 __all__ = [
+    "ProviderCapabilityResolution",
+    "ProviderCapabilityResolver",
     "ProviderExecutionAdapter",
     "ProviderExecutionBindingError",
     "ProviderExecutionContext",
@@ -27,6 +41,12 @@ __all__ = [
     "ProviderExecutionRequest",
     "ProviderExecutionState",
     "ProviderExecutionValidation",
+    "ProviderHealthState",
+    "ProviderRegistration",
+    "ProviderRegistrationRepository",
+    "ProviderRegistrationRepositoryError",
+    "ProviderRegistrationState",
+    "ProviderRegistryService",
     "RenderProviderExecutionAdapter",
     "RenderProviderExecutionCompiler",
     "RenderProviderExecutionError",
