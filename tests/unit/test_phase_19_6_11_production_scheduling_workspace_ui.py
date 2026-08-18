@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QScrollArea, QWidget
 
 from vscs.application.production_tasks import (
     ProductionAuthorityType,
@@ -86,10 +86,55 @@ def test_production_planning_installs_scheduling_tab(
 
     assert "Scheduling" in labels
     assert workspace.findChild(QWidget, "production_scheduling_tab") is not None
+    scroll = workspace.findChild(QScrollArea, "production_scheduling_scroll_area")
+    assert scroll is not None
+    assert scroll.widgetResizable()
     assert workspace.production_scheduling_status is not None
     assert not workspace.scheduling_create_revision_button.isEnabled()
     assert not workspace.scheduling_approve_button.isEnabled()
     assert not workspace.scheduling_compile_queue_button.isEnabled()
+
+
+def test_session_resource_and_worker_forms_restore_registered_values(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
+) -> None:
+    projects = application_context.services.require(ProjectService)
+    projects.create(tmp_path / "Project", name="Project")
+    window = application_context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    workspace = window.production_package_workspace
+    workspace.production_task_production_id.setText("PROD-UI")
+
+    workspace.scheduling_resource_id.setText("LOCAL-GPU-01")
+    workspace.scheduling_resource_capabilities.setText("video_generation")
+    qtbot.mouseClick(  # type: ignore[attr-defined]
+        workspace.scheduling_register_resource_button,
+        Qt.MouseButton.LeftButton,
+    )
+
+    workspace.scheduling_worker_id.setText("LOCAL-WORKER-01")
+    workspace.scheduling_worker_resource_id.setText("LOCAL-GPU-01")
+    workspace.scheduling_worker_capabilities.setText("video_generation")
+    qtbot.mouseClick(  # type: ignore[attr-defined]
+        workspace.scheduling_register_worker_button,
+        Qt.MouseButton.LeftButton,
+    )
+
+    workspace.scheduling_resource_id.clear()
+    workspace.scheduling_resource_capabilities.clear()
+    workspace.scheduling_worker_id.clear()
+    workspace.scheduling_worker_resource_id.clear()
+    workspace.scheduling_worker_capabilities.clear()
+    workspace._refresh_production_scheduling()
+
+    assert workspace.scheduling_resource_id.text() == "LOCAL-GPU-01"
+    assert workspace.scheduling_resource_capabilities.text() == "video_generation"
+    assert workspace.scheduling_worker_id.text() == "LOCAL-WORKER-01"
+    assert workspace.scheduling_worker_resource_id.text() == "LOCAL-GPU-01"
+    assert workspace.scheduling_worker_capabilities.text() == "video_generation"
 
 
 def test_operator_can_review_schedule_and_compile_queue_without_execution(
