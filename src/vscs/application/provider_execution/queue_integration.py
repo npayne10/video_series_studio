@@ -52,7 +52,8 @@ class QueueProviderExecutionSubmission:
 
     @property
     def submitted(self) -> bool:
-        return self.handle is not None and self.error_message is None
+        """Return whether the provider accepted the job, independent of persistence warnings."""
+        return self.handle is not None
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,45 +170,52 @@ class QueueProviderExecutionService:
             validation = adapter.validate(execution_request)
             if not validation.passed:
                 raise QueueProviderExecutionError("; ".join(validation.messages))
+        except Exception as exc:
+            return self._fail_before_provider_submission(
+                running,
+                entry.entry_id,
+                claim.lease,
+                provider,
+                durable_job,
+                execution_id,
+                exc,
+                current,
+            )
+
+        try:
             handle = adapter.submit(execution_request)
-            if self.execution_jobs is not None:
+        except Exception as exc:
+            return self._fail_before_provider_submission(
+                running,
+                entry.entry_id,
+                claim.lease,
+                provider,
+                durable_job,
+                execution_id,
+                exc,
+                current,
+            )
+
+        persistence_error: str | None = None
+        if self.execution_jobs is not None:
+            try:
                 durable_job = self.execution_jobs.observe(
                     context.execution_id,
                     handle,
                     now=current,
                 )
-        except Exception as exc:
-            message = str(exc) or exc.__class__.__name__
-            if self.execution_jobs is not None and execution_id is not None and durable_job is not None:
-                try:
-                    durable_job = self.execution_jobs.submission_failed(
-                        execution_id,
-                        message,
-                        now=current,
-                    )
-                except Exception as persistence_exc:
-                    message = f"{message}; durable execution persistence failed: {persistence_exc}"
-            failed = self.runtime.fail(
-                running,
-                entry.entry_id,
-                claim.lease.lease_id,
-                message,
-                now=current,
-            )
-            return QueueProviderExecutionSubmission(
-                queue=failed,
-                provider=provider,
-                lease=None,
-                handle=None,
-                execution_job=durable_job,
-                error_message=message,
-            )
+            except Exception as exc:
+                persistence_error = (
+                    "provider submitted but durable execution persistence failed: "
+                    f"{str(exc) or exc.__class__.__name__}"
+                )
         return QueueProviderExecutionSubmission(
             queue=running,
             provider=provider,
             lease=claim.lease,
             handle=handle,
             execution_job=durable_job,
+            error_message=persistence_error,
         )
 
     def reconcile(
@@ -290,6 +298,43 @@ class QueueProviderExecutionService:
             handle=cancelled_handle,
             lease=None,
             execution_job=durable_job,
+        )
+
+    def _fail_before_provider_submission(
+        self,
+        queue: ProductionQueue,
+        entry_id: str,
+        lease: ProductionExecutionLease,
+        provider: ProviderRegistration,
+        durable_job: DurableExecutionJob | None,
+        execution_id: str | None,
+        exc: Exception,
+        now: datetime,
+    ) -> QueueProviderExecutionSubmission:
+        message = str(exc) or exc.__class__.__name__
+        if self.execution_jobs is not None and execution_id is not None and durable_job is not None:
+            try:
+                durable_job = self.execution_jobs.submission_failed(
+                    execution_id,
+                    message,
+                    now=now,
+                )
+            except Exception as persistence_exc:
+                message = f"{message}; durable execution persistence failed: {persistence_exc}"
+        failed = self.runtime.fail(
+            queue,
+            entry_id,
+            lease.lease_id,
+            message,
+            now=now,
+        )
+        return QueueProviderExecutionSubmission(
+            queue=failed,
+            provider=provider,
+            lease=None,
+            handle=None,
+            execution_job=durable_job,
+            error_message=message,
         )
 
     def _observe_durable(
