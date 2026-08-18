@@ -329,7 +329,7 @@ class LiveComfyUIAdapter(RenderAdapter):
 def _mapping(value: object, field_name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ComfyUILiveAdapterError(f"ComfyUI {field_name} must be an object")
-    return value
+    return {str(key): item for key, item in value.items()}
 
 
 def _quality_level(payload: dict[str, object]) -> QualityLevel:
@@ -340,7 +340,9 @@ def _quality_level(payload: dict[str, object]) -> QualityLevel:
     try:
         return QualityLevel(raw)
     except ValueError as exc:
-        raise ComfyUILiveAdapterError(f"Unsupported VSCS quality level in ComfyUI payload: {raw}") from exc
+        raise ComfyUILiveAdapterError(
+            f"Unsupported VSCS quality level in ComfyUI payload: {raw}"
+        ) from exc
 
 
 def _queue_contains(raw: object, prompt_id: str) -> bool:
@@ -394,14 +396,23 @@ def _history_outputs(history: dict[str, object]) -> tuple[str, ...]:
             for item in collection:
                 if not isinstance(item, dict):
                     continue
+                output_type = str(item.get("type", "output")).casefold()
+                if output_type != "output":
+                    continue
                 filename = str(item.get("filename", "")).strip()
                 if not filename:
                     continue
                 subfolder = str(item.get("subfolder", "")).strip().replace("\\", "/")
-                candidate = PurePosixPath(subfolder) / filename if subfolder else PurePosixPath(filename)
+                candidate = (
+                    PurePosixPath(subfolder) / filename
+                    if subfolder
+                    else PurePosixPath(filename)
+                )
                 normalized = str(candidate)
                 if normalized.startswith("/") or ".." in candidate.parts:
-                    raise ComfyUILiveAdapterError("ComfyUI output path must remain project-relative")
+                    raise ComfyUILiveAdapterError(
+                        "ComfyUI output path must remain project-relative"
+                    )
                 paths.add(normalized)
     return tuple(sorted(paths))
 
