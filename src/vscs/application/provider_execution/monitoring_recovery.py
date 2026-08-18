@@ -163,11 +163,7 @@ class LiveExecutionMonitoringService:
                 if was_stale
                 else ExecutionMonitoringDisposition.ACTIVE
             ),
-            recovery_action=(
-                ExecutionRecoveryAction.CONTINUE_MONITORING
-                if was_stale
-                else ExecutionRecoveryAction.CONTINUE_MONITORING
-            ),
+            recovery_action=ExecutionRecoveryAction.CONTINUE_MONITORING,
             observed_at=current,
             provider_observed=True,
             message=(
