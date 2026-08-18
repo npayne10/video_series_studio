@@ -2,9 +2,9 @@
 
 from vscs.application.rendering import (
     QualityLevel,
+    RendererKind,
     RenderOutput,
     RenderOutputKind,
-    RendererKind,
 )
 from vscs.domain.generated_media import (
     GeneratedMedia,
@@ -16,7 +16,9 @@ from vscs.domain.generated_media import (
 )
 
 
-def test_render_output_remains_execution_result_while_generated_media_owns_production_authority() -> None:
+def test_render_output_remains_execution_result_while_generated_media_owns_production_authority() -> (
+    None
+):
     output = RenderOutput(
         output_id="OUT-001",
         kind=RenderOutputKind.PRODUCTION_VIDEO,

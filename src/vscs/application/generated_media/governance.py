@@ -231,8 +231,7 @@ class GeneratedMediaGovernanceService:
         self.require_valid(media)
         if target not in self._ALLOWED_TRANSITIONS[media.state]:
             raise GeneratedMediaGovernanceError(
-                "Generated Media transition is not allowed: "
-                f"{media.state.value} -> {target.value}"
+                f"Generated Media transition is not allowed: {media.state.value} -> {target.value}"
             )
         event = GeneratedMediaGovernanceEvent(
             from_state=media.state,

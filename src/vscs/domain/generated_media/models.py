@@ -94,7 +94,9 @@ class GeneratedMediaFile:
         object.__setattr__(self, "relative_path", normalized)
         if self.checksum_sha256 is not None:
             checksum = self.checksum_sha256.strip().lower()
-            if len(checksum) != 64 or any(character not in "0123456789abcdef" for character in checksum):
+            if len(checksum) != 64 or any(
+                character not in "0123456789abcdef" for character in checksum
+            ):
                 raise ValueError("checksum_sha256 must be a 64-character hexadecimal SHA-256")
             object.__setattr__(self, "checksum_sha256", checksum)
         if self.size_bytes is not None and self.size_bytes < 0:
@@ -120,7 +122,10 @@ class GeneratedMediaGovernanceEvent:
         _require_optional_text(self.replacement_media_id, "replacement_media_id")
         if self.to_state is GeneratedMediaState.SUPERSEDED and self.replacement_media_id is None:
             raise ValueError("superseded governance event requires replacement_media_id")
-        if self.to_state is not GeneratedMediaState.SUPERSEDED and self.replacement_media_id is not None:
+        if (
+            self.to_state is not GeneratedMediaState.SUPERSEDED
+            and self.replacement_media_id is not None
+        ):
             raise ValueError("replacement_media_id is valid only for supersession")
 
 
