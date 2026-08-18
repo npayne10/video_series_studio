@@ -12,6 +12,7 @@ from vscs.application.rendering import (
 )
 
 from .contracts import ProviderExecutionAdapter, ProviderExecutionValidation
+from .execution_records import DurableExecutionJob
 from .models import (
     ProviderExecutionContext,
     ProviderExecutionHandle,
@@ -34,6 +35,9 @@ _RENDER_STATE_MAP: dict[RenderJobStatus, ProviderExecutionState] = {
     RenderJobStatus.FAILED: ProviderExecutionState.FAILED,
     RenderJobStatus.CANCELLED: ProviderExecutionState.CANCELLED,
     RenderJobStatus.RETRYING: ProviderExecutionState.RETRYING,
+}
+_RENDER_STATUS_MAP: dict[ProviderExecutionState, RenderJobStatus] = {
+    provider: render for render, provider in _RENDER_STATE_MAP.items()
 }
 
 
@@ -120,6 +124,44 @@ class RenderProviderExecutionAdapter(ProviderExecutionAdapter):
         job = self._require_job(handle)
         outputs = self.adapter.fetch_outputs(job)
         return tuple(self._output(output) for output in outputs)
+
+    def restore_handle(self, job: DurableExecutionJob) -> ProviderExecutionHandle:
+        """Rebuild transient render state from durable provider identity after detachment."""
+        if job.provider_id != self.provider_id:
+            raise RenderProviderExecutionError("durable execution belongs to a different provider")
+        if job.provider_job_id is None or job.submitted_at is None:
+            raise RenderProviderExecutionError(
+                "durable execution does not contain submitted provider identity"
+            )
+        metadata = dict(job.provider_metadata)
+        render_job_id = metadata.get("render_job_id", "").strip()
+        request_id = (metadata.get("request_id") or job.render_request_id or "").strip()
+        if not render_job_id or not request_id:
+            raise RenderProviderExecutionError(
+                "durable execution lacks render_job_id/request_id recovery metadata"
+            )
+        render_job = RenderJob(
+            job_id=render_job_id,
+            request_id=request_id,
+            status=_RENDER_STATUS_MAP[job.state],
+            submitted_at=job.submitted_at,
+            started_at=(job.submitted_at if job.state is ProviderExecutionState.RUNNING else None),
+            finished_at=(job.updated_at if job.terminal else None),
+            progress=job.progress,
+            renderer_job_id=job.provider_job_id,
+            failure_reason=job.failure_reason,
+        )
+        return ProviderExecutionHandle(
+            execution_id=job.execution_id,
+            provider_id=job.provider_id,
+            provider_job_id=job.provider_job_id,
+            state=job.state,
+            submitted_at=job.submitted_at,
+            progress=job.progress,
+            failure_reason=job.failure_reason,
+            metadata=job.provider_metadata,
+            native_handle=render_job,
+        )
 
     def _handle(self, execution_id: str, job: RenderJob) -> ProviderExecutionHandle:
         provider_job_id = job.renderer_job_id or job.job_id
