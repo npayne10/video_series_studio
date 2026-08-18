@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from vscs.application.projects import ProjectService
-from vscs.infrastructure.production.schedule_repository import JsonProductionScheduleRepository
-from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
+from collections.abc import Callable
 
 from .graph import ProductionTaskGraphIntegrationService, ProductionTaskGraphRefreshResult
 from .lifecycle import ProductionTaskLifecycleService
 from .models import ProductionTask
 from .production_queue import ProductionQueue, ProductionQueueCompilerService
+from .repository import ProductionTaskRepository
 from .resources import ProductionResource, ProductionResourceCatalog
 from .runtime import ProductionQueueRuntimeService, ProductionWorker, ProductionWorkerRegistry
 from .schedule_records import (
     ProductionSchedulePersistenceService,
+    ProductionScheduleRepository,
     ProductionScheduleReviewDecision,
     ProductionScheduleReviewRecord,
     ProductionScheduleReviewService,
@@ -35,16 +33,25 @@ class ProductionSchedulingUiError(RuntimeError):
     """Raised when the scheduling workspace cannot perform an application command."""
 
 
+TaskRepositoryFactory = Callable[[], ProductionTaskRepository]
+ScheduleRepositoryFactory = Callable[[], ProductionScheduleRepository]
+
+
 class ProductionSchedulingUiService:
     """Thin application facade for operator-facing scheduling commands and queries.
 
-    Durable task/schedule authority is project-scoped. Resource and worker registration
-    remains session-scoped because Phase 19.6 has not yet introduced resource discovery
-    or persistence.
+    Repository factories are supplied by composition so this application layer remains
+    independent of concrete persistence. Resources, workers, queues and leases stay
+    session scoped until later Phase 19.6 runtime persistence/discovery work.
     """
 
-    def __init__(self, projects: ProjectService) -> None:
-        self.projects = projects
+    def __init__(
+        self,
+        task_repository_factory: TaskRepositoryFactory,
+        schedule_repository_factory: ScheduleRepositoryFactory,
+    ) -> None:
+        self._task_repository_factory = task_repository_factory
+        self._schedule_repository_factory = schedule_repository_factory
         self._resources: dict[str, ProductionResource] = {}
         self._workers: dict[str, ProductionWorker] = {}
         self._worker_registry = ProductionWorkerRegistry()
@@ -59,7 +66,20 @@ class ProductionSchedulingUiService:
         repository = self._task_repository()
         lifecycle = ProductionTaskLifecycleService(repository)
         for task in tasks:
-            lifecycle.register(task)
+            existing = repository.get(task.task_id)
+            if existing is None:
+                lifecycle.register(task)
+                continue
+            if (
+                existing.authority != task.authority
+                or existing.production_id != task.production_id
+                or existing.task_type is not task.task_type
+                or existing.capabilities != task.capabilities
+                or existing.expected_outputs != task.expected_outputs
+            ):
+                raise ProductionSchedulingUiError(
+                    f"ProductionTask already exists with different governed content: {task.task_id}"
+                )
         return tasks
 
     def tasks(self, production_id: str) -> tuple[ProductionTask, ...]:
@@ -181,19 +201,11 @@ class ProductionSchedulingUiService:
             self._runtime_by_production[production_id] = runtime
         return runtime
 
-    def _task_repository(self) -> JsonProductionTaskRepository:
-        return JsonProductionTaskRepository(self._production_root() / "tasks")
+    def _task_repository(self) -> ProductionTaskRepository:
+        return self._task_repository_factory()
 
-    def _schedule_repository(self) -> JsonProductionScheduleRepository:
-        return JsonProductionScheduleRepository(self._production_root() / "schedules")
-
-    def _production_root(self) -> Path:
-        project_directory = self.projects.project_directory
-        if project_directory is None:
-            raise ProductionSchedulingUiError(
-                "Open a VSCS project before using Production Scheduling"
-            )
-        return project_directory / "production" / "scheduling"
+    def _schedule_repository(self) -> ProductionScheduleRepository:
+        return self._schedule_repository_factory()
 
     @staticmethod
     def _require_production_id(production_id: str) -> str:
