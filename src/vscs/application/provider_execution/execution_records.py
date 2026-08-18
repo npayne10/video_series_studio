@@ -66,6 +66,7 @@ class DurableExecutionJob:
     submitted_at: datetime | None = None
     progress: float = 0.0
     failure_reason: str | None = None
+    provider_metadata: tuple[tuple[str, str], ...] = ()
     events: tuple[DurableExecutionEvent, ...] = ()
 
     def __post_init__(self) -> None:
@@ -95,6 +96,7 @@ class DurableExecutionJob:
             raise ValueError("workflow_id cannot be blank when supplied")
         if self.failure_reason is not None and not self.failure_reason.strip():
             raise ValueError("failure_reason cannot be blank when supplied")
+        _require_pairs(self.provider_metadata, "provider_metadata")
         if self.updated_at < self.created_at:
             raise ValueError("updated_at cannot be before created_at")
         if not self.events:
@@ -189,6 +191,7 @@ class DurableExecutionJobTracker:
             or job.progress != handle.progress
             or job.provider_job_id != handle.provider_job_id
             or job.failure_reason != failure_reason
+            or job.provider_metadata != handle.metadata
         )
         if not changed:
             return replace(job, updated_at=current, submitted_at=submitted_at)
@@ -207,6 +210,7 @@ class DurableExecutionJobTracker:
             progress=handle.progress,
             provider_job_id=handle.provider_job_id,
             failure_reason=failure_reason,
+            provider_metadata=handle.metadata,
             events=(*job.events, event),
         )
 
@@ -244,3 +248,14 @@ class DurableExecutionJobTracker:
             raise DurableExecutionJobError("provider handle provider_id does not match durable job")
         if job.provider_job_id is not None and handle.provider_job_id != job.provider_job_id:
             raise DurableExecutionJobError("provider job identity changed during execution")
+
+
+def _require_pairs(values: tuple[tuple[str, str], ...], field_name: str) -> None:
+    keys: set[str] = set()
+    for key, value in values:
+        normalized = key.strip()
+        if not normalized or not value.strip():
+            raise ValueError(f"{field_name} keys and values cannot be blank")
+        if normalized in keys:
+            raise ValueError(f"{field_name} cannot contain duplicate keys")
+        keys.add(normalized)
