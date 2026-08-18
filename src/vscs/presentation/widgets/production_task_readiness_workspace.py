@@ -26,9 +26,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_readiness_status = QLabel("", group)
         self.production_task_readiness_status.setObjectName("production_task_readiness_status")
         self.production_task_readiness_status.setWordWrap(True)
-        self.production_task_refresh_readiness_button = QPushButton(
-            "Refresh Task Readiness", group
-        )
+        self.production_task_refresh_readiness_button = QPushButton("Refresh Task Readiness", group)
         self.production_task_refresh_readiness_button.setObjectName(
             "production_task_refresh_readiness_button"
         )
@@ -53,11 +51,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             else str(editor.text() if editor is not None else "").strip()
         )
         shot_id = self._production_task_shot_id()
-        if (
-            not normalized_production_id
-            or not shot_id
-            or not self.projects.is_project_open
-        ):
+        if not normalized_production_id or not shot_id or not self.projects.is_project_open:
             return ()
         tasks = self.production_scheduling.tasks(normalized_production_id)
         return tuple(task for task in tasks if task.shot_id == shot_id)
@@ -90,9 +84,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         ):
             return
 
-        persisted = self._refresh_persisted_production_tasks(
-            requested_production_id or None
-        )
+        persisted = self._refresh_persisted_production_tasks(requested_production_id or None)
         if not hasattr(self, "production_task_readiness_status"):
             return
         if persisted:
