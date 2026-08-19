@@ -133,9 +133,7 @@ class GeneratedMediaTechnicalValidationResult:
 
     @property
     def passed(self) -> bool:
-        return not any(
-            issue.severity is TechnicalValidationSeverity.ERROR for issue in self.issues
-        )
+        return not any(issue.severity is TechnicalValidationSeverity.ERROR for issue in self.issues)
 
 
 @runtime_checkable
@@ -270,18 +268,18 @@ class GeneratedMediaTechnicalValidationService:
                     f"Container format {observation.container_format or '<unknown>'} is not allowed.",
                 )
             )
-        if requirements.allowed_video_codecs and (
-            observation.video_codec or ""
-        ).casefold() not in {value.casefold() for value in requirements.allowed_video_codecs}:
+        if requirements.allowed_video_codecs and (observation.video_codec or "").casefold() not in {
+            value.casefold() for value in requirements.allowed_video_codecs
+        }:
             issues.append(
                 TechnicalValidationIssue(
                     "video-codec-not-allowed",
                     f"Video codec {observation.video_codec or '<unknown>'} is not allowed.",
                 )
             )
-        if requirements.allowed_audio_codecs and (
-            observation.audio_codec or ""
-        ).casefold() not in {value.casefold() for value in requirements.allowed_audio_codecs}:
+        if requirements.allowed_audio_codecs and (observation.audio_codec or "").casefold() not in {
+            value.casefold() for value in requirements.allowed_audio_codecs
+        }:
             issues.append(
                 TechnicalValidationIssue(
                     "audio-codec-not-allowed",
@@ -367,7 +365,9 @@ class GeneratedMediaTechnicalValidationService:
                     "audio-stream-not-allowed", "An audio stream is not allowed."
                 )
             )
-        return tuple(sorted(issues, key=lambda issue: (issue.severity.value, issue.code, issue.message)))
+        return tuple(
+            sorted(issues, key=lambda issue: (issue.severity.value, issue.code, issue.message))
+        )
 
     def _with_metadata(
         self,

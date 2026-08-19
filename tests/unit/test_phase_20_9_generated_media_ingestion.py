@@ -39,7 +39,9 @@ class InMemoryGeneratedMediaRepository:
         return media
 
     def list_for_production(self, production_id: str):
-        return tuple(item for item in self.items.values() if item.scope.production_id == production_id)
+        return tuple(
+            item for item in self.items.values() if item.scope.production_id == production_id
+        )
 
     def list_for_episode(self, production_id: str, episode_id: str):
         return tuple(
@@ -84,7 +86,9 @@ class RecordingFileStore:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
 
-    def ingest(self, source_relative_path: str, destination_relative_path: str) -> GeneratedMediaFile:
+    def ingest(
+        self, source_relative_path: str, destination_relative_path: str
+    ) -> GeneratedMediaFile:
         self.calls.append((source_relative_path, destination_relative_path))
         return GeneratedMediaFile(
             relative_path=destination_relative_path,
@@ -150,7 +154,9 @@ def _execution(
     )
 
 
-def _output(output_id: str = "PEO-RO-20-9-001", kind: str = "production_video") -> ProviderExecutionOutput:
+def _output(
+    output_id: str = "PEO-RO-20-9-001", kind: str = "production_video"
+) -> ProviderExecutionOutput:
     return ProviderExecutionOutput(
         output_id=output_id,
         relative_path="Xorix/Production/preview/test.mp4",
@@ -185,7 +191,9 @@ def test_completed_provider_video_becomes_generated_media_with_full_provenance()
     assert result.media.provenance.render_output_id == "RO-PEO-RO-20-9-001"
     assert result.media.file.checksum_sha256 == "a" * 64
     assert result.media.file.size_bytes == 123
-    assert result.media.file.relative_path.startswith("generated_media/XORIX/EP-001/PT-20-9-001/GM-")
+    assert result.media.file.relative_path.startswith(
+        "generated_media/XORIX/EP-001/PT-20-9-001/GM-"
+    )
     assert repository.get(result.media.media_id) == result.media
     assert len(store.calls) == 1
 
@@ -215,7 +223,9 @@ def test_ingestion_rejects_changed_production_authority() -> None:
 def test_unsupported_provider_media_kind_is_rejected_before_file_copy() -> None:
     service, _, store = _service()
 
-    with pytest.raises(GeneratedMediaIngestionError, match="unsupported provider output media kind"):
+    with pytest.raises(
+        GeneratedMediaIngestionError, match="unsupported provider output media kind"
+    ):
         service.ingest_execution_outputs(_execution(), _task(), (_output(kind="unknown_blob"),))
 
     assert store.calls == []

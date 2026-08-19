@@ -87,10 +87,14 @@ class GeneratedMediaIngestionService:
         """Ingest completed provider outputs deterministically and idempotently."""
         self._validate_execution(execution, task)
         if not outputs:
-            raise GeneratedMediaIngestionError("completed execution has no provider outputs to ingest")
+            raise GeneratedMediaIngestionError(
+                "completed execution has no provider outputs to ingest"
+            )
         output_ids = tuple(output.output_id for output in outputs)
         if len(set(output_ids)) != len(output_ids):
-            raise GeneratedMediaIngestionError("provider outputs contain duplicate output identities")
+            raise GeneratedMediaIngestionError(
+                "provider outputs contain duplicate output identities"
+            )
         ordered = tuple(sorted(outputs, key=lambda output: output.output_id))
         return tuple(self._ingest_one(execution, task, output) for output in ordered)
 
@@ -175,7 +179,7 @@ class GeneratedMediaIngestionService:
 
     @staticmethod
     def _media_id(execution_id: str, output_id: str) -> str:
-        digest = sha256(f"{execution_id}|{output_id}".encode("utf-8")).hexdigest()[:24].upper()
+        digest = sha256(f"{execution_id}|{output_id}".encode()).hexdigest()[:24].upper()
         return f"GM-{digest}"
 
     @staticmethod

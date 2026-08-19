@@ -34,22 +34,46 @@ class MemoryRepository:
         return media
 
     def list_for_production(self, production_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.records.values() if item.scope.production_id == production_id)
+        return tuple(
+            item for item in self.records.values() if item.scope.production_id == production_id
+        )
 
     def list_for_episode(self, production_id: str, episode_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.list_for_production(production_id) if item.scope.episode_id == episode_id)
+        return tuple(
+            item
+            for item in self.list_for_production(production_id)
+            if item.scope.episode_id == episode_id
+        )
 
-    def list_for_scene(self, production_id: str, episode_id: str, scene_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.list_for_episode(production_id, episode_id) if item.scope.scene_id == scene_id)
+    def list_for_scene(
+        self, production_id: str, episode_id: str, scene_id: str
+    ) -> tuple[GeneratedMedia, ...]:
+        return tuple(
+            item
+            for item in self.list_for_episode(production_id, episode_id)
+            if item.scope.scene_id == scene_id
+        )
 
-    def list_for_shot(self, production_id: str, episode_id: str, scene_id: str, shot_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.list_for_scene(production_id, episode_id, scene_id) if item.scope.shot_id == shot_id)
+    def list_for_shot(
+        self, production_id: str, episode_id: str, scene_id: str, shot_id: str
+    ) -> tuple[GeneratedMedia, ...]:
+        return tuple(
+            item
+            for item in self.list_for_scene(production_id, episode_id, scene_id)
+            if item.scope.shot_id == shot_id
+        )
 
     def list_for_task(self, production_task_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.records.values() if item.scope.production_task_id == production_task_id)
+        return tuple(
+            item
+            for item in self.records.values()
+            if item.scope.production_task_id == production_task_id
+        )
 
     def list_for_execution(self, execution_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.records.values() if item.provenance.execution_id == execution_id)
+        return tuple(
+            item for item in self.records.values() if item.provenance.execution_id == execution_id
+        )
 
 
 class FixedInspector:

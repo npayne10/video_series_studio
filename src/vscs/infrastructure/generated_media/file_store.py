@@ -18,7 +18,9 @@ class LocalGeneratedMediaFileStore:
         self.source_root = Path(source_root).resolve()
         self.project_root = Path(project_root).resolve()
 
-    def ingest(self, source_relative_path: str, destination_relative_path: str) -> GeneratedMediaFile:
+    def ingest(
+        self, source_relative_path: str, destination_relative_path: str
+    ) -> GeneratedMediaFile:
         source = self._resolve_relative(self.source_root, source_relative_path, "source")
         destination = self._resolve_relative(
             self.project_root,
@@ -84,9 +86,7 @@ class LocalGeneratedMediaFileStore:
             )
         candidate = root.joinpath(*pure.parts).resolve()
         if not candidate.is_relative_to(root):
-            raise GeneratedMediaIngestionError(
-                f"{field_name} path escapes its configured root"
-            )
+            raise GeneratedMediaIngestionError(f"{field_name} path escapes its configured root")
         return candidate
 
     def _project_relative(self, path: Path) -> str:
