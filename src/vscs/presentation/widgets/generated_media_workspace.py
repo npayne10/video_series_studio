@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -23,7 +24,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.generated_media import GeneratedMediaDetailView, GeneratedMediaUiService
+from vscs.application.generated_media import (
+    GeneratedMediaDetailView,
+    GeneratedMediaListItem,
+    GeneratedMediaUiService,
+)
 from vscs.domain.generated_media import GeneratedMediaState
 
 
@@ -80,30 +85,54 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         super().__init__(parent)
         self._service_provider = service_provider
         self._current_media_id: str | None = None
+        self._all_items: tuple[GeneratedMediaListItem, ...] = ()
+        self._rebuilding_filters = False
 
-        self.production_id = QLineEdit()
-        self.production_id.setPlaceholderText("Production ID")
+        self.production_filter = QComboBox()
+        self.episode_filter = QComboBox()
+        self.task_filter = QComboBox()
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.refresh)
+        self.production_filter.currentIndexChanged.connect(self._production_changed)
+        self.episode_filter.currentIndexChanged.connect(self._episode_changed)
+        self.task_filter.currentIndexChanged.connect(self._apply_filters)
 
         filter_row = QHBoxLayout()
         filter_row.addWidget(QLabel("Production"))
-        filter_row.addWidget(self.production_id, 1)
+        filter_row.addWidget(self.production_filter, 2)
+        filter_row.addWidget(QLabel("Episode"))
+        filter_row.addWidget(self.episode_filter, 2)
+        filter_row.addWidget(QLabel("Task"))
+        filter_row.addWidget(self.task_filter, 3)
         filter_row.addWidget(self.refresh_button)
 
-        self.media_table = QTableWidget(0, 7)
+        self.media_table = QTableWidget(0, 10)
         self.media_table.setHorizontalHeaderLabels(
-            ("Media ID", "Task", "Kind", "State", "Revision", "Technical", "Selected")
+            (
+                "Production",
+                "Episode",
+                "Scene",
+                "Shot",
+                "Task",
+                "Kind",
+                "State",
+                "Revision",
+                "Technical",
+                "Selected",
+            )
         )
         self.media_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.media_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.media_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.media_table.itemSelectionChanged.connect(self._selection_changed)
 
-        self.summary = QLabel("Select Generated Media to inspect its authority.")
+        self.summary = QLabel("Open a project to browse Generated Media.")
         self.summary.setWordWrap(True)
         self.path_label = QLabel()
         self.path_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.identifiers = QTextEdit()
+        self.identifiers.setReadOnly(True)
+        self.identifiers.setMaximumHeight(115)
         self.provenance = QTextEdit()
         self.provenance.setReadOnly(True)
         self.history = QTextEdit()
@@ -115,6 +144,8 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         details_layout = QVBoxLayout(details)
         details_layout.addWidget(self.summary)
         details_layout.addWidget(self.path_label)
+        details_layout.addWidget(QLabel("Stable IDs"))
+        details_layout.addWidget(self.identifiers)
         details_layout.addWidget(QLabel("Provenance"))
         details_layout.addWidget(self.provenance)
         details_layout.addWidget(QLabel("Governance / Selection History"))
@@ -154,30 +185,75 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         layout.addWidget(splitter, 1)
         layout.addLayout(action_row)
         self._set_actions_enabled(False)
+        self._reset_filters()
 
     def refresh(self) -> None:
         service = self._service_provider()
-        production_id = self.production_id.text().strip()
-        self.media_table.setRowCount(0)
         self._current_media_id = None
         self._clear_detail()
         if service is None:
+            self._all_items = ()
+            self._reset_filters()
+            self.media_table.setRowCount(0)
             self.summary.setText("Open a project to browse Generated Media.")
             return
-        if not production_id:
-            self.summary.setText("Enter a Production ID, then choose Refresh.")
-            return
         try:
-            items = service.list_for_production(production_id)
+            self._all_items = service.list_all()
         except Exception as exc:
             QMessageBox.critical(self, "Generated Media", str(exc))
             return
+        self._rebuild_filters_preserving_selection()
+        self._apply_filters()
+
+    def _production_changed(self) -> None:
+        if self._rebuilding_filters:
+            return
+        self._rebuild_episode_filter()
+        self._rebuild_task_filter()
+        self._apply_filters()
+
+    def _episode_changed(self) -> None:
+        if self._rebuilding_filters:
+            return
+        self._rebuild_task_filter()
+        self._apply_filters()
+
+    def _apply_filters(self) -> None:
+        if self._rebuilding_filters:
+            return
+        production = self._combo_value(self.production_filter)
+        episode = self._combo_value(self.episode_filter)
+        task = self._combo_value(self.task_filter)
+        items = tuple(
+            item
+            for item in self._all_items
+            if (production is None or item.production_id == production)
+            and (episode is None or item.episode_id == episode)
+            and (task is None or item.task_id == task)
+        )
+        self._populate_table(items)
+        if not self._all_items:
+            self.summary.setText("No Generated Media has been ingested for this project yet.")
+        elif not items:
+            self.summary.setText("No Generated Media matches the current filters.")
+        else:
+            self.summary.setText(
+                f"Showing {len(items)} of {len(self._all_items)} Generated Media record(s)."
+            )
+
+    def _populate_table(self, items: tuple[GeneratedMediaListItem, ...]) -> None:
+        self.media_table.setRowCount(0)
+        self._current_media_id = None
+        self._set_actions_enabled(False)
         for item in items:
             row = self.media_table.rowCount()
             self.media_table.insertRow(row)
             values = (
-                item.media_id,
-                item.task_id,
+                item.production_id,
+                item.episode_id,
+                item.scene_id or "—",
+                item.shot_id or "—",
+                item.task_label,
                 item.kind.value,
                 item.state.value,
                 str(item.revision),
@@ -185,8 +261,115 @@ class GeneratedMediaWorkspaceWidget(QWidget):
                 "Yes" if item.selected else "No",
             )
             for column, value in enumerate(values):
-                self.media_table.setItem(row, column, QTableWidgetItem(value))
-        self.summary.setText(f"{len(items)} Generated Media record(s) for {production_id}.")
+                cell = QTableWidgetItem(value)
+                if column == 4:
+                    cell.setToolTip(item.task_id)
+                if column == 0:
+                    cell.setData(Qt.ItemDataRole.UserRole, item.media_id)
+                self.media_table.setItem(row, column, cell)
+
+    def _rebuild_filters_preserving_selection(self) -> None:
+        previous_production = self._combo_value(self.production_filter)
+        previous_episode = self._combo_value(self.episode_filter)
+        previous_task = self._combo_value(self.task_filter)
+        self._rebuilding_filters = True
+        try:
+            self._fill_combo(
+                self.production_filter,
+                "All Productions",
+                tuple(sorted({item.production_id for item in self._all_items})),
+                previous_production,
+            )
+            self._rebuild_episode_filter(previous_episode)
+            self._rebuild_task_filter(previous_task)
+        finally:
+            self._rebuilding_filters = False
+
+    def _rebuild_episode_filter(self, preferred: str | None = None) -> None:
+        production = self._combo_value(self.production_filter)
+        if preferred is None:
+            preferred = self._combo_value(self.episode_filter)
+        episodes = tuple(
+            sorted(
+                {
+                    item.episode_id
+                    for item in self._all_items
+                    if production is None or item.production_id == production
+                }
+            )
+        )
+        was_rebuilding = self._rebuilding_filters
+        self._rebuilding_filters = True
+        try:
+            self._fill_combo(self.episode_filter, "All Episodes", episodes, preferred)
+        finally:
+            self._rebuilding_filters = was_rebuilding
+
+    def _rebuild_task_filter(self, preferred: str | None = None) -> None:
+        production = self._combo_value(self.production_filter)
+        episode = self._combo_value(self.episode_filter)
+        if preferred is None:
+            preferred = self._combo_value(self.task_filter)
+        task_items = {
+            item.task_id: item.task_label
+            for item in self._all_items
+            if (production is None or item.production_id == production)
+            and (episode is None or item.episode_id == episode)
+        }
+        was_rebuilding = self._rebuilding_filters
+        self._rebuilding_filters = True
+        try:
+            self.task_filter.clear()
+            self.task_filter.addItem("All Tasks", None)
+            for task_id, label in sorted(task_items.items(), key=lambda pair: pair[1].casefold()):
+                self.task_filter.addItem(label, task_id)
+                index = self.task_filter.count() - 1
+                self.task_filter.setItemData(index, task_id, Qt.ItemDataRole.ToolTipRole)
+            self._select_combo_value(self.task_filter, preferred)
+        finally:
+            self._rebuilding_filters = was_rebuilding
+
+    def _reset_filters(self) -> None:
+        self._rebuilding_filters = True
+        try:
+            for combo, label in (
+                (self.production_filter, "All Productions"),
+                (self.episode_filter, "All Episodes"),
+                (self.task_filter, "All Tasks"),
+            ):
+                combo.clear()
+                combo.addItem(label, None)
+        finally:
+            self._rebuilding_filters = False
+
+    @staticmethod
+    def _fill_combo(
+        combo: QComboBox,
+        all_label: str,
+        values: tuple[str, ...],
+        preferred: str | None,
+    ) -> None:
+        combo.clear()
+        combo.addItem(all_label, None)
+        for value in values:
+            combo.addItem(value, value)
+        GeneratedMediaWorkspaceWidget._select_combo_value(combo, preferred)
+
+    @staticmethod
+    def _select_combo_value(combo: QComboBox, value: str | None) -> None:
+        if value is None:
+            combo.setCurrentIndex(0)
+            return
+        index = combo.findData(value)
+        combo.setCurrentIndex(index if index >= 0 else 0)
+
+    @staticmethod
+    def _combo_value(combo: QComboBox) -> str | None:
+        value = combo.currentData()
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
 
     def _selection_changed(self) -> None:
         rows = self.media_table.selectionModel().selectedRows()
@@ -194,10 +377,13 @@ class GeneratedMediaWorkspaceWidget(QWidget):
             self._current_media_id = None
             self._set_actions_enabled(False)
             return
-        media_id_item = self.media_table.item(rows[0].row(), 0)
-        if media_id_item is None:
+        first_cell = self.media_table.item(rows[0].row(), 0)
+        if first_cell is None:
             return
-        self._current_media_id = media_id_item.text()
+        media_id = first_cell.data(Qt.ItemDataRole.UserRole)
+        if media_id is None:
+            return
+        self._current_media_id = str(media_id)
         service = self._service_provider()
         if service is None:
             return
@@ -217,12 +403,25 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         selected = (
             detail.selection is not None and detail.selection.selected_media_id == media.media_id
         )
+        location = media.scope.shot_id or media.scope.scene_id or media.scope.episode_id
         self.summary.setText(
-            f"{media.media_id} — {media.kind.value} — {media.state.value} — "
+            f"{media.kind.value.replace('_', ' ').title()} — {location} — {media.state.value} — "
             f"revision {media.revision} — technical {technical} — "
             f"selected {'yes' if selected else 'no'}"
         )
         self.path_label.setText(f"Managed file: {media.file.relative_path}")
+        self.identifiers.setPlainText(
+            "\n".join(
+                (
+                    f"Media ID: {media.media_id}",
+                    f"Production ID: {media.scope.production_id}",
+                    f"Episode ID: {media.scope.episode_id}",
+                    f"Scene ID: {media.scope.scene_id or '-'}",
+                    f"Shot ID: {media.scope.shot_id or '-'}",
+                    f"ProductionTask ID: {media.scope.production_task_id}",
+                )
+            )
+        )
         provenance_lines = [
             f"Execution: {media.provenance.execution_id}",
             f"Provider: {media.provenance.provider_id}",
@@ -314,20 +513,11 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         except Exception as exc:
             QMessageBox.warning(self, "Generated Media Governance", str(exc))
             return
-        selected_media_id = self._current_media_id
         self.refresh()
-        self._reselect(selected_media_id)
-
-    def _reselect(self, media_id: str) -> None:
-        for row in range(self.media_table.rowCount()):
-            item = self.media_table.item(row, 0)
-            if item is not None and item.text() == media_id:
-                self.media_table.selectRow(row)
-                return
 
     def _clear_detail(self) -> None:
-        self.summary.setText("Select Generated Media to inspect its authority.")
         self.path_label.clear()
+        self.identifiers.clear()
         self.provenance.clear()
         self.history.clear()
         self.candidates.clear()
