@@ -29,8 +29,13 @@ from vscs.application.caps import (
     CAPService,
     ProductionProjectionService,
 )
+from vscs.application.generated_media import GeneratedMediaUiService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.infrastructure.generated_media import (
+    JsonGeneratedMediaRepository,
+    JsonGeneratedMediaSelectionRepository,
+)
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.services import ApplicationServices
@@ -46,6 +51,7 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
 from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 from vscs.presentation.widgets.cap_readiness_widget import install_cap_readiness
 from vscs.presentation.widgets.dashboard import DashboardWidget
+from vscs.presentation.widgets.generated_media_workspace import GeneratedMediaWorkspaceWidget
 
 
 class MainWindow(QMainWindow):
@@ -128,6 +134,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction("Assets", lambda: self._select_navigation_item(3))
         view_menu.addAction("Canonical Profiles", lambda: self._select_navigation_item(4))
         view_menu.addAction("Behaviour Profiles", lambda: self._select_navigation_item(5))
+        view_menu.addAction("Generated Media", lambda: self._select_navigation_item(8))
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
         tools_menu.addAction(self.plugin_manager_action)
@@ -156,6 +163,7 @@ class MainWindow(QMainWindow):
             "Behaviour Profiles",
             "Production Planning",
             "Render Queue",
+            "Generated Media",
             "Post-Production",
         )
         for section in sections:
@@ -206,8 +214,13 @@ class MainWindow(QMainWindow):
             project_available=lambda: self.projects.is_project_open,
         )
         self.content_stack.addWidget(self.behaviour_manager)
-        for section in ("Production Planning", "Render Queue", "Post-Production"):
-            self.content_stack.addWidget(self._placeholder_page(section))
+        self.content_stack.addWidget(self._placeholder_page("Production Planning"))
+        self.content_stack.addWidget(self._placeholder_page("Render Queue"))
+        self.generated_media_workspace = GeneratedMediaWorkspaceWidget(
+            self._generated_media_ui_service
+        )
+        self.content_stack.addWidget(self.generated_media_workspace)
+        self.content_stack.addWidget(self._placeholder_page("Post-Production"))
         self.setCentralWidget(self.content_stack)
         self.navigation.setCurrentRow(0)
 
@@ -242,6 +255,8 @@ class MainWindow(QMainWindow):
             self.cap_manager.refresh()
         elif section == "Behaviour Profiles":
             self.behaviour_manager.refresh()
+        elif section == "Generated Media":
+            self.generated_media_workspace.refresh()
 
     def _select_navigation_item(self, row: int) -> None:
         self.navigation.setCurrentRow(row)
@@ -251,6 +266,20 @@ class MainWindow(QMainWindow):
         self._select_navigation_item(4)
         self.cap_manager.refresh()
         self.statusBar().showMessage(f"Canonical Profiles — {asset_id}", 5000)
+
+    def _generated_media_ui_service(self) -> GeneratedMediaUiService | None:
+        project_directory = self.projects.project_directory
+        if project_directory is None:
+            return None
+        root = project_directory / ".vscs"
+        return GeneratedMediaUiService(
+            media_repository_factory=lambda: JsonGeneratedMediaRepository(
+                root / "generated_media"
+            ),
+            selection_repository_factory=lambda: JsonGeneratedMediaSelectionRepository(
+                root / "generated_media_selections"
+            ),
+        )
 
     def _create_project(self) -> None:
         name, accepted = QInputDialog.getText(self, "New Project", "Project name:")
@@ -316,6 +345,7 @@ class MainWindow(QMainWindow):
         self.asset_manager.refresh()
         self.cap_manager.refresh()
         self.behaviour_manager.refresh()
+        self.generated_media_workspace.refresh()
         self.statusBar().showMessage("Project closed", 5000)
 
     def _show_settings_dialog(self) -> None:
@@ -356,6 +386,7 @@ class MainWindow(QMainWindow):
         self.asset_manager.refresh()
         self.cap_manager.refresh()
         self.behaviour_manager.refresh()
+        self.generated_media_workspace.refresh()
 
         if active and self.projects.current_project is not None:
             project = self.projects.current_project
