@@ -185,6 +185,7 @@ def test_completed_provider_video_becomes_generated_media_with_full_provenance()
     assert result.created
     assert result.media.kind is GeneratedMediaKind.VIDEO
     assert result.media.state is GeneratedMediaState.GENERATED
+    assert result.media.revision == 1
     assert result.media.scope.production_task_id == "PT-20-9-001"
     assert result.media.provenance.execution_id == "PEX-PQ-20-9-PQE-20-9-A001"
     assert result.media.provenance.provider_job_id == "prompt-20-9"
@@ -264,4 +265,5 @@ def test_multiple_outputs_are_ingested_in_deterministic_output_identity_order() 
     results = service.ingest_execution_outputs(_execution(), _task(), (output_b, output_a))
 
     assert [call[0] for call in store.calls] == ["a.mp4", "b.mp4"]
+    assert [result.media.revision for result in results] == [1, 2]
     assert len(results) == 2
