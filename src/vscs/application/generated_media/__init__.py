@@ -17,6 +17,16 @@ from .ingestion import (
 )
 from .persistence import GeneratedMediaPersistenceService
 from .repository import GeneratedMediaRepository, GeneratedMediaRepositoryError
+from .technical_validation import (
+    GeneratedMediaTechnicalRequirements,
+    GeneratedMediaTechnicalValidationError,
+    GeneratedMediaTechnicalValidationResult,
+    GeneratedMediaTechnicalValidationService,
+    TechnicalMediaInspector,
+    TechnicalMediaObservation,
+    TechnicalValidationIssue,
+    TechnicalValidationSeverity,
+)
 
 __all__ = [
     "GeneratedMediaFileStore",
@@ -32,4 +42,12 @@ __all__ = [
     "GeneratedMediaPersistenceService",
     "GeneratedMediaRepository",
     "GeneratedMediaRepositoryError",
+    "GeneratedMediaTechnicalRequirements",
+    "GeneratedMediaTechnicalValidationError",
+    "GeneratedMediaTechnicalValidationResult",
+    "GeneratedMediaTechnicalValidationService",
+    "TechnicalMediaInspector",
+    "TechnicalMediaObservation",
+    "TechnicalValidationIssue",
+    "TechnicalValidationSeverity",
 ]
