@@ -39,6 +39,9 @@ class GeneratedMediaPersistenceService:
             self.governance.require_valid(media)
         return media
 
+    def list_all(self) -> tuple[GeneratedMedia, ...]:
+        return self._validated(self.repository.list_all())
+
     def list_for_production(self, production_id: str) -> tuple[GeneratedMedia, ...]:
         return self._validated(self.repository.list_for_production(production_id))
 
