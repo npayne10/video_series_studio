@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from vscs.application.provider_execution.execution_records import (
     DurableExecutionEvent,
@@ -184,16 +185,12 @@ class JsonDurableExecutionJobRepository:
             events=tuple(
                 DurableExecutionEvent(
                     state=ProviderExecutionState(str(_mapping(item, "event")["state"])),
-                    observed_at=datetime.fromisoformat(
-                        str(_mapping(item, "event")["observed_at"])
-                    ),
+                    observed_at=datetime.fromisoformat(str(_mapping(item, "event")["observed_at"])),
                     progress=_float(_mapping(item, "event").get("progress", 0.0), "progress"),
                     provider_job_id=_optional_string(
                         _mapping(item, "event").get("provider_job_id")
                     ),
-                    failure_reason=_optional_string(
-                        _mapping(item, "event").get("failure_reason")
-                    ),
+                    failure_reason=_optional_string(_mapping(item, "event").get("failure_reason")),
                 )
                 for item in events_raw
             ),

@@ -71,9 +71,7 @@ class DurableExecutionJobService:
             raise DurableExecutionJobRepositoryError("execution_id cannot be blank")
         job = self.repository.get(normalized)
         if job is None:
-            raise DurableExecutionJobRepositoryError(
-                f"DurableExecutionJob not found: {normalized}"
-            )
+            raise DurableExecutionJobRepositoryError(f"DurableExecutionJob not found: {normalized}")
         return job
 
     def list_for_task(self, task_id: str) -> tuple[DurableExecutionJob, ...]:

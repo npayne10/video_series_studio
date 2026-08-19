@@ -98,7 +98,9 @@ class LiveExecutionMonitoringService:
         self.adapters = adapters
         self.policy = policy or ExecutionMonitoringPolicy()
 
-    def inspect(self, execution_id: str, *, now: datetime | None = None) -> ExecutionMonitoringResult:
+    def inspect(
+        self, execution_id: str, *, now: datetime | None = None
+    ) -> ExecutionMonitoringResult:
         """Reconstruct, query, and durably record one provider execution."""
         current = now or datetime.now(UTC)
         job = self.execution_jobs.require(execution_id)
@@ -174,10 +176,14 @@ class LiveExecutionMonitoringService:
             handle=refreshed,
         )
 
-    def inspect_active(self, *, now: datetime | None = None) -> tuple[ExecutionMonitoringResult, ...]:
+    def inspect_active(
+        self, *, now: datetime | None = None
+    ) -> tuple[ExecutionMonitoringResult, ...]:
         """Inspect all durable non-terminal executions in deterministic identity order."""
         current = now or datetime.now(UTC)
-        return tuple(self.inspect(job.execution_id, now=current) for job in self.execution_jobs.list_active())
+        return tuple(
+            self.inspect(job.execution_id, now=current) for job in self.execution_jobs.list_active()
+        )
 
     def recover_live(
         self,
@@ -193,7 +199,10 @@ class LiveExecutionMonitoringService:
         monitored = self.inspect(execution_id, now=current)
         handle = monitored.handle
         job = monitored.execution_job
-        if handle is None or monitored.disposition is ExecutionMonitoringDisposition.PROVIDER_UNREACHABLE:
+        if (
+            handle is None
+            or monitored.disposition is ExecutionMonitoringDisposition.PROVIDER_UNREACHABLE
+        ):
             return LiveExecutionRecoveryResult(monitored, None)
 
         lease = queue_service.runtime.leases.active_for_entry(

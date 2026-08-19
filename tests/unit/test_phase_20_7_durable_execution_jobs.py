@@ -77,9 +77,7 @@ def test_prepare_persists_restart_safe_execution_authority(tmp_path) -> None:
 
 
 def test_provider_observations_persist_job_identity_and_history(tmp_path) -> None:
-    service = DurableExecutionJobService(
-        JsonDurableExecutionJobRepository(tmp_path / "executions")
-    )
+    service = DurableExecutionJobService(JsonDurableExecutionJobRepository(tmp_path / "executions"))
     prepared = service.prepare(
         _context(),
         "LOCAL-COMFYUI-01",
@@ -116,9 +114,7 @@ def test_provider_observations_persist_job_identity_and_history(tmp_path) -> Non
 
 
 def test_submission_failure_is_durable_without_provider_job_id(tmp_path) -> None:
-    service = DurableExecutionJobService(
-        JsonDurableExecutionJobRepository(tmp_path / "executions")
-    )
+    service = DurableExecutionJobService(JsonDurableExecutionJobRepository(tmp_path / "executions"))
     prepared = service.prepare(
         _context(),
         "LOCAL-COMFYUI-01",
@@ -140,9 +136,7 @@ def test_submission_failure_is_durable_without_provider_job_id(tmp_path) -> None
 
 
 def test_provider_job_identity_cannot_change_mid_execution(tmp_path) -> None:
-    service = DurableExecutionJobService(
-        JsonDurableExecutionJobRepository(tmp_path / "executions")
-    )
+    service = DurableExecutionJobService(JsonDurableExecutionJobRepository(tmp_path / "executions"))
     prepared = service.prepare(
         _context(),
         "LOCAL-COMFYUI-01",
@@ -165,9 +159,7 @@ def test_provider_job_identity_cannot_change_mid_execution(tmp_path) -> None:
 
 
 def test_terminal_execution_cannot_return_to_running(tmp_path) -> None:
-    service = DurableExecutionJobService(
-        JsonDurableExecutionJobRepository(tmp_path / "executions")
-    )
+    service = DurableExecutionJobService(JsonDurableExecutionJobRepository(tmp_path / "executions"))
     prepared = service.prepare(
         _context(),
         "LOCAL-COMFYUI-01",

@@ -47,7 +47,12 @@ class MemoryExecutionRepository:
         return tuple(job for job in self.jobs.values() if job.provider_id == provider_id)
 
     def list_active(self) -> tuple[DurableExecutionJob, ...]:
-        return tuple(sorted((job for job in self.jobs.values() if not job.terminal), key=lambda j: j.execution_id))
+        return tuple(
+            sorted(
+                (job for job in self.jobs.values() if not job.terminal),
+                key=lambda j: j.execution_id,
+            )
+        )
 
 
 class RecoveringAdapter:
