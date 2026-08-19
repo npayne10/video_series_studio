@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path, PurePath
+from pathlib import Path, PurePosixPath
 
 
 class ProjectMediaOutputError(ValueError):
@@ -20,14 +20,18 @@ class ProjectMediaOutputResolver:
         configured = (configured_directory or cls.DEFAULT_DIRECTORY).strip().replace("\\", "/")
         if not configured:
             configured = cls.DEFAULT_DIRECTORY
-        relative = PurePath(configured)
-        if relative.is_absolute() or relative.drive or ".." in relative.parts:
+        relative = PurePosixPath(configured)
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or (relative.parts and ":" in relative.parts[0])
+        ):
             raise ProjectMediaOutputError(
                 "Media output directory must remain inside the current VSCS project"
             )
         if configured in {".", ".."}:
             raise ProjectMediaOutputError("Media output directory must name a project subdirectory")
-        output = (project / Path(*relative.parts)).resolve(strict=False)
+        output = project.joinpath(*relative.parts).resolve(strict=False)
         try:
             output.relative_to(project)
         except ValueError as exc:
