@@ -43,9 +43,7 @@ class MemoryTaskRepository:
         return task
 
     def list_for_production(self, production_id: str) -> tuple[ProductionTask, ...]:
-        return tuple(
-            item for item in self.records.values() if item.production_id == production_id
-        )
+        return tuple(item for item in self.records.values() if item.production_id == production_id)
 
 
 def _task() -> ProductionTask:

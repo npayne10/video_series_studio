@@ -1,4 +1,3 @@
-from dataclasses import replace
 from datetime import UTC, datetime
 
 from vscs.application.generated_media import (
@@ -22,7 +21,6 @@ from vscs.domain.generated_media import (
     GeneratedMediaKind,
     GeneratedMediaProvenance,
     GeneratedMediaScope,
-    GeneratedMediaState,
 )
 
 NOW = datetime(2026, 8, 19, 17, 0, tzinfo=UTC)
@@ -43,9 +41,7 @@ class MemoryTaskRepository:
         return task
 
     def list_for_production(self, production_id: str) -> tuple[ProductionTask, ...]:
-        return tuple(
-            item for item in self.records.values() if item.production_id == production_id
-        )
+        return tuple(item for item in self.records.values() if item.production_id == production_id)
 
 
 class MemoryMediaRepository:
@@ -98,9 +94,7 @@ class MemoryMediaRepository:
 
     def list_for_execution(self, execution_id: str) -> tuple[GeneratedMedia, ...]:
         return tuple(
-            item
-            for item in self.records.values()
-            if item.provenance.execution_id == execution_id
+            item for item in self.records.values() if item.provenance.execution_id == execution_id
         )
 
 

@@ -69,9 +69,7 @@ def test_review_submission_and_approval_survive_repository_restart(tmp_path) -> 
     )
     assert submission.media.state is GeneratedMediaState.UNDER_REVIEW
 
-    after_submission_restart = GeneratedMediaPersistenceService(
-        JsonGeneratedMediaRepository(root)
-    )
+    after_submission_restart = GeneratedMediaPersistenceService(JsonGeneratedMediaRepository(root))
     restored_under_review = after_submission_restart.get("GM-20-11-INTEGRATION-001")
     assert restored_under_review is not None
     assert restored_under_review.state is GeneratedMediaState.UNDER_REVIEW
@@ -86,9 +84,7 @@ def test_review_submission_and_approval_survive_repository_restart(tmp_path) -> 
     )
     assert approved.media.state is GeneratedMediaState.APPROVED
 
-    after_approval_restart = GeneratedMediaPersistenceService(
-        JsonGeneratedMediaRepository(root)
-    )
+    after_approval_restart = GeneratedMediaPersistenceService(JsonGeneratedMediaRepository(root))
     restored_approved = after_approval_restart.get("GM-20-11-INTEGRATION-001")
     assert restored_approved is not None
     assert restored_approved.state is GeneratedMediaState.APPROVED

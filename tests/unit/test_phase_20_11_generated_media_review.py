@@ -33,7 +33,9 @@ class MemoryRepository:
         return media
 
     def list_for_production(self, production_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.records.values() if item.scope.production_id == production_id)
+        return tuple(
+            item for item in self.records.values() if item.scope.production_id == production_id
+        )
 
     def list_for_episode(self, production_id: str, episode_id: str) -> tuple[GeneratedMedia, ...]:
         return tuple(
@@ -75,9 +77,7 @@ class MemoryRepository:
 
 def _media(*, technical_status: str | None = "passed") -> GeneratedMedia:
     metadata = (
-        (("technical_validation.status", technical_status),)
-        if technical_status is not None
-        else ()
+        (("technical_validation.status", technical_status),) if technical_status is not None else ()
     )
     return GeneratedMedia(
         media_id="GM-20-11-001",
@@ -104,9 +104,7 @@ def _actor(actor_id: str) -> GeneratedMediaReviewActor:
 
 
 def _service(media: GeneratedMedia) -> GeneratedMediaReviewService:
-    return GeneratedMediaReviewService(
-        GeneratedMediaPersistenceService(MemoryRepository(media))
-    )
+    return GeneratedMediaReviewService(GeneratedMediaPersistenceService(MemoryRepository(media)))
 
 
 def test_submission_requires_successful_technical_validation() -> None:

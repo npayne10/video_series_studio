@@ -71,8 +71,7 @@ class ProductionTaskCompletionAssessment:
     @property
     def ready_to_complete(self) -> bool:
         return not any(
-            finding.severity is ProductionTaskCompletionSeverity.ERROR
-            for finding in self.findings
+            finding.severity is ProductionTaskCompletionSeverity.ERROR for finding in self.findings
         )
 
 
@@ -378,9 +377,7 @@ class ProductionTaskCompletionReconciliationService:
         completed_at: datetime,
     ) -> tuple[tuple[str, str], ...]:
         retained = tuple(
-            (key, value)
-            for key, value in task.metadata
-            if not key.startswith(self.METADATA_PREFIX)
+            (key, value) for key, value in task.metadata if not key.startswith(self.METADATA_PREFIX)
         )
         values: list[tuple[str, str]] = [
             ("completion_reconciliation.status", "completed"),

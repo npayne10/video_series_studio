@@ -43,7 +43,9 @@ def _generated(media_id: str, revision: int) -> GeneratedMedia:
     )
 
 
-def _approve(media: GeneratedMedia, persistence: GeneratedMediaPersistenceService) -> GeneratedMedia:
+def _approve(
+    media: GeneratedMedia, persistence: GeneratedMediaPersistenceService
+) -> GeneratedMedia:
     under_review = persistence.governance.submit_for_review(
         media,
         submitted_by="human:submitter",
