@@ -273,9 +273,7 @@ class MainWindow(QMainWindow):
             return None
         root = project_directory / ".vscs"
         return GeneratedMediaUiService(
-            media_repository_factory=lambda: JsonGeneratedMediaRepository(
-                root / "generated_media"
-            ),
+            media_repository_factory=lambda: JsonGeneratedMediaRepository(root / "generated_media"),
             selection_repository_factory=lambda: JsonGeneratedMediaSelectionRepository(
                 root / "generated_media_selections"
             ),

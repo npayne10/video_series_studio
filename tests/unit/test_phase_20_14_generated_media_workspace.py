@@ -2,7 +2,10 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
-from vscs.application.generated_media import GeneratedMediaPersistenceService, GeneratedMediaUiService
+from vscs.application.generated_media import (
+    GeneratedMediaPersistenceService,
+    GeneratedMediaUiService,
+)
 from vscs.domain.generated_media import (
     GeneratedMedia,
     GeneratedMediaFile,

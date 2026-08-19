@@ -214,7 +214,9 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         technical = dict(media.technical_metadata).get(
             "technical_validation.status", "not-validated"
         )
-        selected = detail.selection is not None and detail.selection.selected_media_id == media.media_id
+        selected = (
+            detail.selection is not None and detail.selection.selected_media_id == media.media_id
+        )
         self.summary.setText(
             f"{media.media_id} — {media.kind.value} — {media.state.value} — "
             f"revision {media.revision} — technical {technical} — "
@@ -259,10 +261,7 @@ class GeneratedMediaWorkspaceWidget(QWidget):
     def _update_action_availability(self, detail: GeneratedMediaDetailView) -> None:
         media = detail.media
         technical_passed = (
-            dict(media.technical_metadata)
-            .get("technical_validation.status", "")
-            .strip()
-            .casefold()
+            dict(media.technical_metadata).get("technical_validation.status", "").strip().casefold()
             == "passed"
         )
         selected_media_id = detail.selection.selected_media_id if detail.selection else None

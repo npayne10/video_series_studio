@@ -55,7 +55,9 @@ def _service(tmp_path: Path) -> tuple[GeneratedMediaUiService, GeneratedMediaPer
     return service, persistence
 
 
-def _approve_direct(media: GeneratedMedia, persistence: GeneratedMediaPersistenceService) -> GeneratedMedia:
+def _approve_direct(
+    media: GeneratedMedia, persistence: GeneratedMediaPersistenceService
+) -> GeneratedMedia:
     reviewed = persistence.governance.submit_for_review(
         media,
         submitted_by="human:submitter",
