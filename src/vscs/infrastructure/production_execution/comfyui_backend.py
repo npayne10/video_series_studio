@@ -101,6 +101,8 @@ class LocalComfyUIProductionExecutionBackend:
         managed_media_directory: str = "Media Output",
         lease_duration_seconds: float = 120.0,
     ) -> None:
+        if lease_duration_seconds <= 0:
+            raise ValueError("lease_duration_seconds must be positive")
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.endpoint = endpoint.strip().rstrip("/")
         self.comfyui_output_directory = (
@@ -265,7 +267,7 @@ class LocalComfyUIProductionExecutionBackend:
                 self.media,
                 LocalGeneratedMediaFileStore(
                     source_root=self._require_comfyui_output_directory(),
-                    managed_root=self.project_directory,
+                    project_root=self.project_directory,
                     managed_relative_root=self.managed_media_directory,
                 ),
             )
