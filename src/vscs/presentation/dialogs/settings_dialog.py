@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -38,7 +41,7 @@ class SettingsDialog(QDialog):
         self.configuration = configuration
         self.credentials = AICredentialStore()
         self.setWindowTitle("VSCS Settings")
-        self.setMinimumWidth(520)
+        self.setMinimumWidth(560)
 
         self.theme_combo = QComboBox()
         for theme in Theme:
@@ -60,8 +63,8 @@ class SettingsDialog(QDialog):
         )
         self.media_output_directory.setPlaceholderText("Media Output")
         self.media_output_directory.setToolTip(
-            "Project-relative folder used for authoritative generated media files. "
-            "Default: Media Output"
+            "Project-relative folder used for authoritative Generated Media. "
+            "The default is 'Media Output'."
         )
 
         general_form = QFormLayout()
@@ -69,9 +72,31 @@ class SettingsDialog(QDialog):
         general_form.addRow("Maximum recent projects", self.maximum_recent_spin)
         general_form.addRow("Restore last project", self.restore_last_project)
         general_form.addRow("Confirm before exit", self.confirm_before_exit)
-        general_form.addRow("Media output folder", self.media_output_directory)
+        general_form.addRow("Project media output folder", self.media_output_directory)
         general_group = QGroupBox("General")
         general_group.setLayout(general_form)
+
+        comfyui = configuration.settings.renderers.get("comfyui")
+        self.comfyui_output_directory = QLineEdit(
+            str(comfyui.output_directory) if comfyui and comfyui.output_directory else ""
+        )
+        self.comfyui_output_directory.setPlaceholderText("Required for automatic media ingestion")
+        self.comfyui_output_browse = QPushButton("Browse…")
+        self.comfyui_output_browse.clicked.connect(self._browse_comfyui_output_directory)
+        comfyui_output_row = QHBoxLayout()
+        comfyui_output_row.addWidget(self.comfyui_output_directory, 1)
+        comfyui_output_row.addWidget(self.comfyui_output_browse)
+
+        renderer_note = QLabel(
+            "VSCS copies completed provider files from this source folder into the current "
+            "project's managed media output folder. Provider files are not moved or deleted."
+        )
+        renderer_note.setWordWrap(True)
+        renderer_form = QFormLayout()
+        renderer_form.addRow("ComfyUI output folder", comfyui_output_row)
+        renderer_form.addRow("", renderer_note)
+        renderer_group = QGroupBox("Production Renderer")
+        renderer_group.setLayout(renderer_form)
 
         self.ai_provider = QComboBox()
         for provider in AIProvider:
@@ -116,11 +141,22 @@ class SettingsDialog(QDialog):
 
         layout = QVBoxLayout(self)
         layout.addWidget(general_group)
+        layout.addWidget(renderer_group)
         layout.addWidget(ai_group)
         layout.addWidget(buttons)
 
         self._refresh_openai_key_status()
         self._update_ai_controls()
+
+    def _browse_comfyui_output_directory(self) -> None:
+        current = self.comfyui_output_directory.text().strip()
+        selected = QFileDialog.getExistingDirectory(
+            self,
+            "Select ComfyUI Output Folder",
+            current or str(Path.home()),
+        )
+        if selected:
+            self.comfyui_output_directory.setText(selected)
 
     def _refresh_openai_key_status(self) -> None:
         try:
@@ -214,17 +250,24 @@ class SettingsDialog(QDialog):
         settings = self.configuration.settings
         settings.theme = self.theme_combo.currentData()
         settings.maximum_recent_projects = self.maximum_recent_spin.value()
-        settings.workspace.restore_last_project = self.restore_last_project.isChecked()
-        settings.workspace.confirm_before_exit = self.confirm_before_exit.isChecked()
+
         try:
-            settings.workspace.media_output_directory = type(settings.workspace).model_fields[
-                "media_output_directory"
-            ].annotation(self.media_output_directory.text().strip()) if False else self.media_output_directory.text().strip()
-            # Revalidate the nested model so project-boundary rules are applied before saving.
-            settings.workspace = type(settings.workspace).model_validate(settings.workspace.model_dump())
+            workspace_payload = settings.workspace.model_dump()
+            workspace_payload["restore_last_project"] = self.restore_last_project.isChecked()
+            workspace_payload["confirm_before_exit"] = self.confirm_before_exit.isChecked()
+            workspace_payload["media_output_directory"] = self.media_output_directory.text().strip()
+            settings.workspace = type(settings.workspace).model_validate(workspace_payload)
         except ValueError as exc:
             QMessageBox.critical(self, "Settings Error", str(exc))
             return
+
+        comfyui = settings.renderers.get("comfyui")
+        if comfyui is not None:
+            renderer_payload = comfyui.model_dump()
+            source_text = self.comfyui_output_directory.text().strip()
+            renderer_payload["output_directory"] = Path(source_text) if source_text else None
+            settings.renderers["comfyui"] = type(comfyui).model_validate(renderer_payload)
+
         settings.recent_projects = settings.recent_projects[: settings.maximum_recent_projects]
         settings.ai.provider = self.ai_provider.currentData()
         settings.ai.openai_model = self.openai_model.text().strip()
