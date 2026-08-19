@@ -183,11 +183,12 @@ class GeneratedMediaSelectionService:
             raise GeneratedMediaSelectionError(
                 "Generated Media production intent has no current selection to supersede"
             )
+        if existing.selected_media_id == replacement.media_id:
+            return self._finish_pending_supersession(existing, replacement)
+
         previous = self._require_media(existing.selected_media_id)
         self._require_approved(previous)
         self._require_same_intent(previous, replacement)
-        if replacement.media_id == previous.media_id:
-            raise GeneratedMediaSelectionError("replacement media is already selected")
         if replacement.revision <= previous.revision:
             raise GeneratedMediaSelectionError(
                 "replacement media revision must be later than the selected revision"
@@ -216,9 +217,8 @@ class GeneratedMediaSelectionService:
             history=(*existing.history, event),
         )
 
-        # Persist the new authoritative selection first. If the subsequent media save fails,
-        # VSCS still has one unambiguous selected candidate; the earlier media remains approved
-        # rather than becoming an incorrectly selected superseded artifact.
+        # Persist selection first. A retry can deterministically finish the governance write
+        # from the latest immutable selection event if the second persistence step fails.
         saved_selection = self.selections.save(updated_selection)
         superseded = self.media.governance.supersede(
             previous,
@@ -232,6 +232,42 @@ class GeneratedMediaSelectionService:
             previous_media=saved_previous,
             replacement_media=replacement,
             selection=saved_selection,
+        )
+
+    def _finish_pending_supersession(
+        self,
+        selection: GeneratedMediaSelection,
+        replacement: GeneratedMedia,
+    ) -> GeneratedMediaSupersessionResult:
+        latest = selection.history[-1]
+        previous_media_id = latest.previous_media_id
+        if previous_media_id is None:
+            raise GeneratedMediaSelectionError("replacement media is already selected")
+        previous = self._require_media(previous_media_id)
+        self._require_same_intent(previous, replacement)
+        if previous.state is GeneratedMediaState.SUPERSEDED:
+            event = previous.governance_history[-1]
+            if event.replacement_media_id != replacement.media_id:
+                raise GeneratedMediaSelectionError(
+                    "superseded media points to a different replacement"
+                )
+            return GeneratedMediaSupersessionResult(
+                previous_media=previous,
+                replacement_media=replacement,
+                selection=selection,
+            )
+        self._require_approved(previous)
+        superseded = self.media.governance.supersede(
+            previous,
+            replacement_media_id=replacement.media_id,
+            actor=latest.actor,
+            reason=latest.reason,
+            occurred_at=latest.occurred_at,
+        )
+        return GeneratedMediaSupersessionResult(
+            previous_media=self.media.save(superseded),
+            replacement_media=replacement,
+            selection=selection,
         )
 
     def get_for_media(self, media: GeneratedMedia) -> GeneratedMediaSelection | None:
