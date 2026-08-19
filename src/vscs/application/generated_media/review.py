@@ -16,9 +16,12 @@ class GeneratedMediaReviewError(RuntimeError):
 
 
 class ReviewAuthorityType(StrEnum):
-    """Authority kinds accepted by the Generated Media review workflow."""
+    """Actor authority categories distinguish human review from automated identities."""
 
     HUMAN = "human"
+    SYSTEM = "system"
+    AUTOMATION = "automation"
+    PROVIDER = "provider"
 
 
 class GeneratedMediaReviewDecision(StrEnum):
