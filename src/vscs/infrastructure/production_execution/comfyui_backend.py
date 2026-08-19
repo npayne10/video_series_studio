@@ -17,6 +17,8 @@ from vscs.application.production_execution import (
     ProductionExecutionState,
 )
 from vscs.application.production_tasks import (
+    ProductionCapability,
+    ProductionLeaseManager,
     ProductionQueue,
     ProductionQueueCompilerService,
     ProductionQueueRuntimeService,
@@ -78,6 +80,7 @@ from vscs.infrastructure.rendering import (
 
 WORKFLOW_ID = "video_production_engine_v7_1_4"
 _PROVIDER_PREFIX = "LOCAL-COMFYUI"
+_VIDEO_CAPABILITIES = frozenset({ProductionCapability.VIDEO_GENERATION})
 
 
 @dataclass(slots=True)
@@ -90,7 +93,11 @@ class _ActiveExecution:
 
 
 class LocalComfyUIProductionExecutionBackend:
-    """Run approved scheduled video work through the existing Phase 19/20 authorities."""
+    """Run approved scheduled video work through existing Phase 19/20 authorities.
+
+    Workers and leases are project-session scoped. A scheduled resource therefore cannot
+    be claimed twice merely because the operator starts work from two UI rows.
+    """
 
     def __init__(
         self,
@@ -126,6 +133,8 @@ class LocalComfyUIProductionExecutionBackend:
         self.media = GeneratedMediaPersistenceService(
             JsonGeneratedMediaRepository(self.project_directory / ".vscs" / "generated_media")
         )
+        self._workers = ProductionWorkerRegistry()
+        self._leases = ProductionLeaseManager()
         self._active: dict[str, _ActiveExecution] = {}
         self._latest: dict[str, ProductionExecutionResult] = {}
 
@@ -308,19 +317,30 @@ class LocalComfyUIProductionExecutionBackend:
         task: ProductionTask,
         resource_id: str,
     ) -> tuple[QueueProviderExecutionService, str]:
+        if task.task_type is not ProductionTaskType.VIDEO_GENERATION:
+            raise ProductionExecutionError("Local ComfyUI execution requires VIDEO_GENERATION")
         worker_id = f"WORKER-{resource_id}"
-        workers = ProductionWorkerRegistry()
-        workers.register(
-            ProductionWorker(
-                worker_id=worker_id,
-                resource_id=resource_id,
-                capabilities=frozenset(task.capabilities),
+        worker = self._workers.get(worker_id)
+        if worker is None:
+            self._workers.register(
+                ProductionWorker(
+                    worker_id=worker_id,
+                    resource_id=resource_id,
+                    capabilities=_VIDEO_CAPABILITIES,
+                )
             )
+        elif worker.resource_id != resource_id or worker.capabilities != _VIDEO_CAPABILITIES:
+            raise ProductionExecutionError(
+                f"Production worker identity conflicts with scheduled resource: {worker_id}"
+            )
+        runtime = ProductionQueueRuntimeService(
+            self.tasks,
+            self._workers,
+            leases=self._leases,
         )
-        runtime = ProductionQueueRuntimeService(self.tasks, workers)
         resource = ProductionResource(
             resource_id=resource_id,
-            capabilities=frozenset(task.capabilities),
+            capabilities=_VIDEO_CAPABILITIES,
         )
         resources = ProductionResourceCatalog((resource,))
 
@@ -334,16 +354,20 @@ class LocalComfyUIProductionExecutionBackend:
             provider_id=provider_id,
             adapter_type="comfyui",
             resource_id=resource_id,
-            capabilities=frozenset(task.capabilities),
+            capabilities=_VIDEO_CAPABILITIES,
             supported_task_types=frozenset({ProductionTaskType.VIDEO_GENERATION}),
             supported_media_kinds=frozenset({GeneratedMediaKind.VIDEO}),
             endpoint=self.endpoint,
             health=self._provider_health(),
+            metadata=(("managed_by", "production-execution-ui"),),
         )
-        if providers.get(provider_id) is None:
-            providers.register(registration)
+        existing = providers.get(provider_id)
+        if existing is None:
+            registration = providers.register(registration)
+        elif dict(existing.metadata).get("managed_by") == "production-execution-ui":
+            registration = providers.save(registration)
         else:
-            providers.save(registration)
+            registration = existing
 
         adapter = ComfyUIProviderAdapterFactory().build(
             registration,
