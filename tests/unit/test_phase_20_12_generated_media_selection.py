@@ -7,6 +7,7 @@ from vscs.application.generated_media import (
     GeneratedMediaReviewActor,
     GeneratedMediaSelection,
     GeneratedMediaSelectionError,
+    GeneratedMediaSelectionEvent,
     GeneratedMediaSelectionService,
 )
 from vscs.domain.generated_media import (
@@ -107,7 +108,9 @@ def _generated(media_id: str, revision: int, *, task_id: str = "PT-20-12-001") -
 
 
 def _approved(media_id: str, revision: int, *, task_id: str = "PT-20-12-001") -> GeneratedMedia:
-    persistence = GeneratedMediaPersistenceService(MemoryMediaRepository((_generated(media_id, revision, task_id=task_id),)))
+    persistence = GeneratedMediaPersistenceService(
+        MemoryMediaRepository((_generated(media_id, revision, task_id=task_id),))
+    )
     media = persistence.get(media_id)
     assert media is not None
     reviewed = persistence.governance.submit_for_review(
@@ -124,7 +127,13 @@ def _approved(media_id: str, revision: int, *, task_id: str = "PT-20-12-001") ->
     )
 
 
-def _service(*media: GeneratedMedia) -> tuple[GeneratedMediaSelectionService, MemoryMediaRepository, MemorySelectionRepository]:
+def _service(
+    *media: GeneratedMedia,
+) -> tuple[
+    GeneratedMediaSelectionService,
+    MemoryMediaRepository,
+    MemorySelectionRepository,
+]:
     media_repository = MemoryMediaRepository(tuple(media))
     selections = MemorySelectionRepository()
     return (
@@ -205,6 +214,52 @@ def test_supersede_and_select_preserves_history_and_marks_previous_superseded() 
     assert result.previous_media.governance_history[-1].replacement_media_id == "GM-R2"
     assert result.replacement_media.state is GeneratedMediaState.APPROVED
     assert media_repository.records["GM-R1"].file.relative_path == first.file.relative_path
+
+
+def test_retry_finishes_pending_supersession_after_selection_was_already_persisted() -> None:
+    first = _approved("GM-R1", 1)
+    second = _approved("GM-R2", 2)
+    service, media_repository, selections = _service(first, second)
+    initial = service.select("GM-R1", selected_by=_actor(), reason="Initial master", now=NOW)
+    event = GeneratedMediaSelectionEvent(
+        previous_media_id="GM-R1",
+        selected_media_id="GM-R2",
+        selected_revision=2,
+        actor="human:editor-01",
+        reason="Revision two accepted as replacement",
+        occurred_at=NOW,
+    )
+    selections.save(
+        GeneratedMediaSelection(
+            selection_id=initial.selection_id,
+            production_id=initial.production_id,
+            episode_id=initial.episode_id,
+            production_task_id=initial.production_task_id,
+            kind=initial.kind,
+            selected_media_id="GM-R2",
+            selected_revision=2,
+            selected_by=event.actor,
+            reason=event.reason,
+            selected_at=event.occurred_at,
+            history=(*initial.history, event),
+        )
+    )
+
+    result = service.supersede_and_select(
+        "GM-R2",
+        selected_by=_actor(),
+        reason="Retry after persistence interruption",
+        now=NOW,
+    )
+
+    assert result.selection.selected_media_id == "GM-R2"
+    assert result.previous_media.state is GeneratedMediaState.SUPERSEDED
+    assert result.previous_media.governance_history[-1].actor == "human:editor-01"
+    assert (
+        result.previous_media.governance_history[-1].reason
+        == "Revision two accepted as replacement"
+    )
+    assert media_repository.records["GM-R1"].state is GeneratedMediaState.SUPERSEDED
 
 
 def test_candidates_are_returned_in_revision_order_without_deleting_history() -> None:
