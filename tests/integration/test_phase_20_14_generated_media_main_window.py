@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from vscs.application.projects import ProjectService
@@ -42,7 +43,7 @@ def test_generated_media_workspace_is_project_scoped_and_navigable(
     window = application_context.create_main_window()
     qtbot.addWidget(window)  # type: ignore[attr-defined]
 
-    matches = window.navigation.findItems("Generated Media", 0)
+    matches = window.navigation.findItems("Generated Media", Qt.MatchFlag.MatchExactly)
     assert len(matches) == 1
     assert window._generated_media_ui_service() is None
 
