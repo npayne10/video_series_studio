@@ -62,18 +62,24 @@ class JsonProductionTaskRepository:
             ) from exc
         return task
 
+    def list_all(self) -> tuple[ProductionTask, ...]:
+        """Return every persisted task for project-local execution discovery."""
+        if not self.root.exists():
+            return ()
+        return tuple(
+            sorted(
+                (self._read(path) for path in self.root.glob("*.json")),
+                key=lambda item: (item.production_id, item.task_id),
+            )
+        )
+
     def list_for_production(self, production_id: str) -> tuple[ProductionTask, ...]:
         normalized = production_id.strip()
         if not normalized:
             raise ProductionTaskRepositoryError("production_id cannot be blank")
-        if not self.root.exists():
-            return ()
-        tasks = tuple(
-            task
-            for path in sorted(self.root.glob("*.json"))
-            if (task := self._read(path)).production_id == normalized
+        return tuple(
+            task for task in self.list_all() if task.production_id == normalized
         )
-        return tuple(sorted(tasks, key=lambda item: item.task_id))
 
     def _read(self, path: Path) -> ProductionTask:
         try:
@@ -134,9 +140,11 @@ class JsonProductionTaskRepository:
     @staticmethod
     def _from_payload(payload: dict[str, Any]) -> ProductionTask:
         authority_payload = payload["authority"]
-        attempt_payload = payload["attempt_policy"]
-        if not isinstance(authority_payload, dict) or not isinstance(attempt_payload, dict):
-            raise TypeError("authority and attempt_policy must be objects")
+        if not isinstance(authority_payload, dict):
+            raise TypeError("authority payload must be an object")
+        attempt_payload = payload.get("attempt_policy", {})
+        if not isinstance(attempt_payload, dict):
+            raise TypeError("attempt_policy payload must be an object")
         return ProductionTask(
             task_id=str(payload["task_id"]),
             production_id=str(payload["production_id"]),
@@ -153,21 +161,19 @@ class JsonProductionTaskRepository:
                 approved_by=_optional_string(authority_payload.get("approved_by")),
             ),
             capabilities=tuple(
-                ProductionCapability(str(value)) for value in payload["capabilities"]
+                ProductionCapability(str(value)) for value in payload.get("capabilities", [])
             ),
             dependencies=tuple(str(value) for value in payload.get("dependencies", [])),
             required_inputs=tuple(str(value) for value in payload.get("required_inputs", [])),
-            expected_outputs=tuple(str(value) for value in payload["expected_outputs"]),
-            priority=ProductionTaskPriority(int(payload["priority"])),
+            expected_outputs=tuple(str(value) for value in payload.get("expected_outputs", [])),
+            priority=ProductionTaskPriority(int(payload.get("priority", 20))),
             state=ProductionTaskState(str(payload["state"])),
             attempt_policy=ProductionTaskAttemptPolicy(
-                maximum_attempts=int(attempt_payload["maximum_attempts"]),
-                retry_delay_seconds=int(attempt_payload["retry_delay_seconds"]),
+                maximum_attempts=int(attempt_payload.get("maximum_attempts", 3)),
+                retry_delay_seconds=int(attempt_payload.get("retry_delay_seconds", 0)),
             ),
-            provenance=tuple(
-                (str(value[0]), str(value[1])) for value in payload.get("provenance", [])
-            ),
-            metadata=tuple((str(value[0]), str(value[1])) for value in payload.get("metadata", [])),
+            provenance=_pairs(payload.get("provenance", [])),
+            metadata=_pairs(payload.get("metadata", [])),
             created_at=datetime.fromisoformat(str(payload["created_at"])),
         )
 
@@ -177,3 +183,14 @@ def _optional_string(value: object) -> str | None:
         return None
     normalized = str(value).strip()
     return normalized or None
+
+
+def _pairs(value: object) -> tuple[tuple[str, str], ...]:
+    if not isinstance(value, list):
+        raise TypeError("pairs payload must be an array")
+    result: list[tuple[str, str]] = []
+    for item in value:
+        if not isinstance(item, list) or len(item) != 2:
+            raise TypeError("pair entries must contain exactly two values")
+        result.append((str(item[0]), str(item[1])))
+    return tuple(result)
