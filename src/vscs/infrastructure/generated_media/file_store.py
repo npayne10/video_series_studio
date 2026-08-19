@@ -12,11 +12,24 @@ from vscs.domain.generated_media import GeneratedMediaFile
 
 
 class LocalGeneratedMediaFileStore:
-    """Copy provider outputs into a VSCS-managed project media location."""
+    """Copy provider outputs into a VSCS-managed project media location.
 
-    def __init__(self, source_root: Path, project_root: Path) -> None:
+    ``managed_relative_root`` is optional for backward compatibility. When supplied,
+    every ingestion destination is rooted beneath that project-relative directory.
+    This lets the desktop application honour a project Media Output setting without
+    changing the provider-neutral Generated Media ingestion contract.
+    """
+
+    def __init__(
+        self,
+        source_root: Path,
+        project_root: Path,
+        *,
+        managed_relative_root: str | None = None,
+    ) -> None:
         self.source_root = Path(source_root).resolve()
         self.project_root = Path(project_root).resolve()
+        self.managed_relative_root = self._normalize_managed_root(managed_relative_root)
 
     def ingest(
         self, source_relative_path: str, destination_relative_path: str
@@ -24,7 +37,7 @@ class LocalGeneratedMediaFileStore:
         source = self._resolve_relative(self.source_root, source_relative_path, "source")
         destination = self._resolve_relative(
             self.project_root,
-            destination_relative_path,
+            self._managed_destination(destination_relative_path),
             "destination",
         )
         if not source.exists() or not source.is_file():
@@ -70,6 +83,28 @@ class LocalGeneratedMediaFileStore:
             checksum_sha256=source_checksum,
             size_bytes=source_size,
         )
+
+    def _managed_destination(self, destination_relative_path: str) -> str:
+        normalized = destination_relative_path.strip().replace("\\", "/")
+        if not self.managed_relative_root:
+            return normalized
+        return f"{self.managed_relative_root}/{normalized}"
+
+    @staticmethod
+    def _normalize_managed_root(raw_root: str | None) -> str:
+        normalized = (raw_root or "").strip().replace("\\", "/").strip("/")
+        if not normalized:
+            return ""
+        pure = PurePosixPath(normalized)
+        if pure.is_absolute() or ".." in pure.parts or (pure.parts and ":" in pure.parts[0]):
+            raise GeneratedMediaIngestionError(
+                "managed media root must remain relative to the configured project root"
+            )
+        if normalized in {".", ".."}:
+            raise GeneratedMediaIngestionError(
+                "managed media root must name a project subdirectory"
+            )
+        return pure.as_posix()
 
     @staticmethod
     def _resolve_relative(root: Path, raw_path: str, field_name: str) -> Path:
