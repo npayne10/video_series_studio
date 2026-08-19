@@ -2,6 +2,17 @@
 
 from vscs.domain.generated_media import GeneratedMediaKind
 
+from .completion_reconciliation import (
+    ProductionTaskCompletionAssessment,
+    ProductionTaskCompletionEvidence,
+    ProductionTaskCompletionFinding,
+    ProductionTaskCompletionReconciliationError,
+    ProductionTaskCompletionReconciliationResult,
+    ProductionTaskCompletionReconciliationService,
+    ProductionTaskCompletionSeverity,
+    ProductionTaskOutputContractResolver,
+    ProductionTaskOutputRequirement,
+)
 from .governance import (
     GeneratedMediaGovernanceError,
     GeneratedMediaGovernanceIssue,
@@ -75,6 +86,15 @@ __all__ = [
     "GeneratedMediaTechnicalValidationError",
     "GeneratedMediaTechnicalValidationResult",
     "GeneratedMediaTechnicalValidationService",
+    "ProductionTaskCompletionAssessment",
+    "ProductionTaskCompletionEvidence",
+    "ProductionTaskCompletionFinding",
+    "ProductionTaskCompletionReconciliationError",
+    "ProductionTaskCompletionReconciliationResult",
+    "ProductionTaskCompletionReconciliationService",
+    "ProductionTaskCompletionSeverity",
+    "ProductionTaskOutputContractResolver",
+    "ProductionTaskOutputRequirement",
     "ReviewAuthorityType",
     "TechnicalMediaInspector",
     "TechnicalMediaObservation",
