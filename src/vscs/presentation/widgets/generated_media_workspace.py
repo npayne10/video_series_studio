@@ -23,11 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.generated_media import (
-    GeneratedMediaDetailView,
-    GeneratedMediaUiError,
-    GeneratedMediaUiService,
-)
+from vscs.application.generated_media import GeneratedMediaDetailView, GeneratedMediaUiService
+from vscs.domain.generated_media import GeneratedMediaState
 
 
 class GeneratedMediaActionDialog(QDialog):
@@ -55,11 +52,19 @@ class GeneratedMediaActionDialog(QDialog):
         layout.addWidget(buttons)
 
     def values(self) -> tuple[str, str, str]:
-        return self.actor_id.text().strip(), self.display_name.text().strip(), self.reason.toPlainText().strip()
+        return (
+            self.actor_id.text().strip(),
+            self.display_name.text().strip(),
+            self.reason.toPlainText().strip(),
+        )
 
     def _validate(self) -> None:
         if any(not value for value in self.values()):
-            QMessageBox.warning(self, "Human Authority Required", "Actor ID, display name and reason are required.")
+            QMessageBox.warning(
+                self,
+                "Human Authority Required",
+                "Actor ID, display name and reason are required.",
+            )
             return
         self.accept()
 
@@ -164,7 +169,7 @@ class GeneratedMediaWorkspaceWidget(QWidget):
             return
         try:
             items = service.list_for_production(production_id)
-        except Exception as exc:  # UI boundary translates all application failures to operator feedback.
+        except Exception as exc:
             QMessageBox.critical(self, "Generated Media", str(exc))
             return
         for item in items:
@@ -202,15 +207,18 @@ class GeneratedMediaWorkspaceWidget(QWidget):
             QMessageBox.critical(self, "Generated Media", str(exc))
             return
         self._show_detail(detail)
-        self._set_actions_enabled(True)
+        self._update_action_availability(detail)
 
     def _show_detail(self, detail: GeneratedMediaDetailView) -> None:
         media = detail.media
-        technical = dict(media.technical_metadata).get("technical_validation.status", "not-validated")
+        technical = dict(media.technical_metadata).get(
+            "technical_validation.status", "not-validated"
+        )
         selected = detail.selection is not None and detail.selection.selected_media_id == media.media_id
         self.summary.setText(
-            f"{media.media_id} — {media.kind.value} — {media.state.value} — revision {media.revision} — "
-            f"technical {technical} — selected {'yes' if selected else 'no'}"
+            f"{media.media_id} — {media.kind.value} — {media.state.value} — "
+            f"revision {media.revision} — technical {technical} — "
+            f"selected {'yes' if selected else 'no'}"
         )
         self.path_label.setText(f"Managed file: {media.file.relative_path}")
         provenance_lines = [
@@ -235,7 +243,8 @@ class GeneratedMediaWorkspaceWidget(QWidget):
             history_lines.append(f"Selection: {detail.selection.selection_id}")
             history_lines.extend(
                 f"{event.occurred_at.isoformat()}  {event.previous_media_id or '-'} → "
-                f"{event.selected_media_id} r{event.selected_revision}  {event.actor}  {event.reason}"
+                f"{event.selected_media_id} r{event.selected_revision}  "
+                f"{event.actor}  {event.reason}"
                 for event in detail.selection.history
             )
         self.history.setPlainText("\n".join(history_lines) or "No governance history yet.")
@@ -245,6 +254,31 @@ class GeneratedMediaWorkspaceWidget(QWidget):
                 for candidate in detail.candidates
             )
             or "No revision candidates."
+        )
+
+    def _update_action_availability(self, detail: GeneratedMediaDetailView) -> None:
+        media = detail.media
+        technical_passed = (
+            dict(media.technical_metadata)
+            .get("technical_validation.status", "")
+            .strip()
+            .casefold()
+            == "passed"
+        )
+        selected_media_id = detail.selection.selected_media_id if detail.selection else None
+        self.submit_button.setEnabled(
+            media.state is GeneratedMediaState.GENERATED and technical_passed
+        )
+        reviewable = media.state is GeneratedMediaState.UNDER_REVIEW and technical_passed
+        self.approve_button.setEnabled(reviewable)
+        self.reject_button.setEnabled(reviewable)
+        self.select_button.setEnabled(
+            media.state is GeneratedMediaState.APPROVED and detail.selection is None
+        )
+        self.supersede_button.setEnabled(
+            media.state is GeneratedMediaState.APPROVED
+            and detail.selection is not None
+            and selected_media_id != media.media_id
         )
 
     def _run_action(self, action: str) -> None:
@@ -272,7 +306,7 @@ class GeneratedMediaWorkspaceWidget(QWidget):
                 "select": service.select,
                 "supersede": service.supersede_and_select,
             }[action]
-            detail = command(
+            command(
                 self._current_media_id,
                 actor_id=actor_id,
                 display_name=display_name,
@@ -281,8 +315,16 @@ class GeneratedMediaWorkspaceWidget(QWidget):
         except Exception as exc:
             QMessageBox.warning(self, "Generated Media Governance", str(exc))
             return
-        self._show_detail(detail)
+        selected_media_id = self._current_media_id
         self.refresh()
+        self._reselect(selected_media_id)
+
+    def _reselect(self, media_id: str) -> None:
+        for row in range(self.media_table.rowCount()):
+            item = self.media_table.item(row, 0)
+            if item is not None and item.text() == media_id:
+                self.media_table.selectRow(row)
+                return
 
     def _clear_detail(self) -> None:
         self.summary.setText("Select Generated Media to inspect its authority.")
