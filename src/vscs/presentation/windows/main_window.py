@@ -30,6 +30,7 @@ from vscs.application.caps import (
     ProductionProjectionService,
 )
 from vscs.application.generated_media import GeneratedMediaUiService
+from vscs.application.production_execution import ProductionExecutionUiService
 from vscs.application.projects import ProjectError, ProjectService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.generated_media import (
@@ -38,6 +39,7 @@ from vscs.infrastructure.generated_media import (
 )
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
+from vscs.infrastructure.production_execution import LocalComfyUIProductionExecutionBackend
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
@@ -52,6 +54,7 @@ from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 from vscs.presentation.widgets.cap_readiness_widget import install_cap_readiness
 from vscs.presentation.widgets.dashboard import DashboardWidget
 from vscs.presentation.widgets.generated_media_workspace import GeneratedMediaWorkspaceWidget
+from vscs.presentation.widgets.production_execution_workspace import ProductionExecutionWorkspace
 
 
 class MainWindow(QMainWindow):
@@ -67,6 +70,8 @@ class MainWindow(QMainWindow):
         self.assets = services.require(AssetService)
         self.caps = services.require(CAPService)
         self.behaviours = ensure_behaviour_profile_service(services)
+        self._production_execution_project: Path | None = None
+        self._production_execution_ui: ProductionExecutionUiService | None = None
         cap_behaviour_integration = services.get(CAPBehaviourIntegrationService)
         if cap_behaviour_integration is None:
             cap_behaviour_integration = services.register(
@@ -134,6 +139,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction("Assets", lambda: self._select_navigation_item(3))
         view_menu.addAction("Canonical Profiles", lambda: self._select_navigation_item(4))
         view_menu.addAction("Behaviour Profiles", lambda: self._select_navigation_item(5))
+        view_menu.addAction("Production Execution", lambda: self._select_navigation_item(7))
         view_menu.addAction("Generated Media", lambda: self._select_navigation_item(8))
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
@@ -162,7 +168,7 @@ class MainWindow(QMainWindow):
             "Canonical Profiles",
             "Behaviour Profiles",
             "Production Planning",
-            "Render Queue",
+            "Production Execution",
             "Generated Media",
             "Post-Production",
         )
@@ -215,7 +221,10 @@ class MainWindow(QMainWindow):
         )
         self.content_stack.addWidget(self.behaviour_manager)
         self.content_stack.addWidget(self._placeholder_page("Production Planning"))
-        self.content_stack.addWidget(self._placeholder_page("Render Queue"))
+        self.production_execution_workspace = ProductionExecutionWorkspace(
+            self._production_execution_ui_service
+        )
+        self.content_stack.addWidget(self.production_execution_workspace)
         self.generated_media_workspace = GeneratedMediaWorkspaceWidget(
             self._generated_media_ui_service
         )
@@ -255,6 +264,8 @@ class MainWindow(QMainWindow):
             self.cap_manager.refresh()
         elif section == "Behaviour Profiles":
             self.behaviour_manager.refresh()
+        elif section == "Production Execution":
+            self.production_execution_workspace.refresh()
         elif section == "Generated Media":
             self.generated_media_workspace.refresh()
 
@@ -279,6 +290,30 @@ class MainWindow(QMainWindow):
             ),
         )
 
+    def _production_execution_ui_service(self) -> ProductionExecutionUiService | None:
+        project_directory = self.projects.project_directory
+        if project_directory is None:
+            self._production_execution_project = None
+            self._production_execution_ui = None
+            return None
+        resolved = project_directory.resolve(strict=False)
+        if self._production_execution_project == resolved and self._production_execution_ui is not None:
+            return self._production_execution_ui
+        renderer = self.configuration.settings.renderers.get("comfyui")
+        endpoint = (
+            renderer.api_url if renderer is not None and renderer.api_url else self.configuration.settings.environment.comfyui_url
+        )
+        source_output = renderer.output_directory if renderer is not None else None
+        backend = LocalComfyUIProductionExecutionBackend(
+            resolved,
+            endpoint=endpoint,
+            comfyui_output_directory=source_output,
+            managed_media_directory=self.configuration.settings.workspace.media_output_directory,
+        )
+        self._production_execution_project = resolved
+        self._production_execution_ui = ProductionExecutionUiService(backend)
+        return self._production_execution_ui
+
     def _create_project(self) -> None:
         name, accepted = QInputDialog.getText(self, "New Project", "Project name:")
         project_name = name.strip()
@@ -297,6 +332,7 @@ class MainWindow(QMainWindow):
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
+        self._reset_production_execution()
         self._update_project_state()
         self.dashboard.set_active_project(project.name, project_directory)
         self.statusBar().showMessage(f"Created project: {project.name}", 5000)
@@ -315,6 +351,7 @@ class MainWindow(QMainWindow):
         except ProjectError as exc:
             QMessageBox.critical(self, "Project Error", str(exc))
             return
+        self._reset_production_execution()
         self._update_project_state()
         self.dashboard.set_active_project(project.name, project_path)
         self.statusBar().showMessage(f"Opened project: {project.name}", 5000)
@@ -338,17 +375,25 @@ class MainWindow(QMainWindow):
         ):
             return
         self.projects.close()
+        self._reset_production_execution()
         self._update_project_state()
         self.dashboard.clear_active_project()
         self.asset_manager.refresh()
         self.cap_manager.refresh()
         self.behaviour_manager.refresh()
+        self.production_execution_workspace.refresh()
         self.generated_media_workspace.refresh()
         self.statusBar().showMessage("Project closed", 5000)
 
+    def _reset_production_execution(self) -> None:
+        self._production_execution_project = None
+        self._production_execution_ui = None
+
     def _show_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.configuration, self)
-        dialog.exec()
+        if dialog.exec():
+            self._reset_production_execution()
+            self.production_execution_workspace.refresh()
 
     def _show_plugin_manager(self) -> None:
         PluginManagerDialog(self.plugins, self).exec()
@@ -384,6 +429,7 @@ class MainWindow(QMainWindow):
         self.asset_manager.refresh()
         self.cap_manager.refresh()
         self.behaviour_manager.refresh()
+        self.production_execution_workspace.refresh()
         self.generated_media_workspace.refresh()
 
         if active and self.projects.current_project is not None:
