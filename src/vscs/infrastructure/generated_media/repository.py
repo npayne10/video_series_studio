@@ -48,6 +48,9 @@ class JsonGeneratedMediaRepository:
         self._write_atomic(path, payload)
         return media
 
+    def list_all(self) -> tuple[GeneratedMedia, ...]:
+        return self._matching(lambda _media: True)
+
     def list_for_production(self, production_id: str) -> tuple[GeneratedMedia, ...]:
         normalized = self._require_query(production_id, "production_id")
         return self._matching(lambda media: media.scope.production_id == normalized)
