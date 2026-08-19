@@ -55,8 +55,15 @@ from .technical_validation import (
     TechnicalValidationIssue,
     TechnicalValidationSeverity,
 )
+from .ui_service import (
+    GeneratedMediaDetailView,
+    GeneratedMediaListItem,
+    GeneratedMediaUiError,
+    GeneratedMediaUiService,
+)
 
 __all__ = [
+    "GeneratedMediaDetailView",
     "GeneratedMediaFileStore",
     "GeneratedMediaGovernanceError",
     "GeneratedMediaGovernanceIssue",
@@ -67,6 +74,7 @@ __all__ = [
     "GeneratedMediaIngestionResult",
     "GeneratedMediaIngestionService",
     "GeneratedMediaKind",
+    "GeneratedMediaListItem",
     "GeneratedMediaPersistenceService",
     "GeneratedMediaRepository",
     "GeneratedMediaRepositoryError",
@@ -86,6 +94,8 @@ __all__ = [
     "GeneratedMediaTechnicalValidationError",
     "GeneratedMediaTechnicalValidationResult",
     "GeneratedMediaTechnicalValidationService",
+    "GeneratedMediaUiError",
+    "GeneratedMediaUiService",
     "ProductionTaskCompletionAssessment",
     "ProductionTaskCompletionEvidence",
     "ProductionTaskCompletionFinding",
