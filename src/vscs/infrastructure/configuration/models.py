@@ -44,6 +44,7 @@ class RendererSettings(BaseModel):
     enabled: bool = False
     executable_path: Path | None = None
     api_url: str | None = None
+    output_directory: Path | None = None
 
 
 class EnvironmentSettings(BaseModel):
