@@ -40,6 +40,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._service_provider = service_provider
         self._candidates: dict[str, ProductionExecutionCandidate] = {}
         self._selected_task_id: str | None = None
+        self._execution_active = False
 
         guidance = QLabel(
             "Production Planning ends when an approved schedule is ready. This workspace "
@@ -54,6 +55,7 @@ class ProductionExecutionWorkspace(QWidget):
         self.production_package.setPlaceholderText(
             "Select the production package JSON consumed by the ComfyUI production workflow"
         )
+        self.production_package.textChanged.connect(self._update_start_enabled)
         self.browse_package_button = QPushButton("Browse…")
         self.browse_package_button.clicked.connect(self._browse_package)
         package_row.addWidget(QLabel("Production Package"))
@@ -102,6 +104,7 @@ class ProductionExecutionWorkspace(QWidget):
         service = self._service_provider()
         self._candidates.clear()
         self._selected_task_id = None
+        self._execution_active = False
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
@@ -148,7 +151,8 @@ class ProductionExecutionWorkspace(QWidget):
         rows = self.table.selectionModel().selectedRows()
         if not rows:
             self._selected_task_id = None
-            self.start_button.setEnabled(False)
+            self._execution_active = False
+            self._update_start_enabled()
             self.status_button.setEnabled(False)
             return
         task_item = self.table.item(rows[0].row(), 4)
@@ -159,8 +163,9 @@ class ProductionExecutionWorkspace(QWidget):
         if not task_id:
             return
         self._selected_task_id = task_id
+        self._execution_active = False
         candidate = self._candidates[task_id]
-        self.start_button.setEnabled(bool(self.production_package.text().strip()))
+        self._update_start_enabled()
         self.status_button.setEnabled(True)
         self.details.setPlainText(
             "\n".join(
@@ -177,6 +182,13 @@ class ProductionExecutionWorkspace(QWidget):
             )
         )
 
+    def _update_start_enabled(self, _text: str | None = None) -> None:
+        self.start_button.setEnabled(
+            self._selected_task_id is not None
+            and bool(self.production_package.text().strip())
+            and not self._execution_active
+        )
+
     def _browse_package(self) -> None:
         selected, _ = QFileDialog.getOpenFileName(
             self,
@@ -186,7 +198,6 @@ class ProductionExecutionWorkspace(QWidget):
         )
         if selected:
             self.production_package.setText(selected)
-            self.start_button.setEnabled(self._selected_task_id is not None)
 
     def _start(self) -> None:
         if self._selected_task_id is None:
@@ -195,13 +206,18 @@ class ProductionExecutionWorkspace(QWidget):
         if service is None:
             return
         package = Path(self.production_package.text().strip())
+        self._execution_active = True
+        self._update_start_enabled()
         try:
             result = service.start(self._selected_task_id, package)
         except Exception as exc:
+            self._execution_active = False
+            self._update_start_enabled()
             QMessageBox.warning(self, "Start Production", str(exc))
             return
+        self._execution_active = not result.terminal
         self._render_result(result)
-        self.start_button.setEnabled(False)
+        self._update_start_enabled()
         self.status_button.setEnabled(not result.terminal)
 
     def _reconcile(self) -> None:
@@ -215,8 +231,9 @@ class ProductionExecutionWorkspace(QWidget):
         except Exception as exc:
             QMessageBox.warning(self, "Production Execution Status", str(exc))
             return
+        self._execution_active = not result.terminal
         self._render_result(result)
-        self.start_button.setEnabled(False)
+        self._update_start_enabled()
         self.status_button.setEnabled(not result.terminal)
 
     def _render_result(self, result: ProductionExecutionResult) -> None:
