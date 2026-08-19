@@ -57,6 +57,7 @@ from vscs.domain.generated_media import GeneratedMediaKind
 from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
     LocalGeneratedMediaFileStore,
+    ProjectMediaOutputResolver,
 )
 from vscs.infrastructure.production import (
     JsonProductionScheduleRepository,
@@ -107,14 +108,14 @@ class LocalComfyUIProductionExecutionBackend:
             if comfyui_output_directory is not None
             else None
         )
-        self.managed_media_directory = managed_media_directory.strip() or "Media Output"
+        self.managed_media_directory = ProjectMediaOutputResolver.relative_path(
+            self.project_directory,
+            managed_media_directory,
+        )
         self.lease_duration_seconds = lease_duration_seconds
-        self.tasks = JsonProductionTaskRepository(
-            self.project_directory / "production" / "production_tasks"
-        )
-        self.schedules = JsonProductionScheduleRepository(
-            self.project_directory / "production" / "production_schedules"
-        )
+        scheduling_root = self.project_directory / "production" / "scheduling"
+        self.tasks = JsonProductionTaskRepository(scheduling_root / "tasks")
+        self.schedules = JsonProductionScheduleRepository(scheduling_root / "schedules")
         self.execution_jobs = DurableExecutionJobService(
             JsonDurableExecutionJobRepository(
                 self.project_directory / ".vscs" / "provider_executions"
@@ -161,7 +162,9 @@ class LocalComfyUIProductionExecutionBackend:
         production_package: Path,
     ) -> ProductionExecutionResult:
         if task_id in self._active:
-            raise ProductionExecutionError(f"ProductionTask already has an active execution: {task_id}")
+            raise ProductionExecutionError(
+                f"ProductionTask already has an active execution: {task_id}"
+            )
         task = self.tasks.get(task_id)
         if task is None:
             raise ProductionExecutionError(f"ProductionTask not found: {task_id}")
@@ -178,12 +181,11 @@ class LocalComfyUIProductionExecutionBackend:
         candidate = self._candidate(task, entry.resource_id, entry.entry_id)
         source_root = self._require_comfyui_output_directory()
         service, worker_id = self._execution_service(task, entry.resource_id)
-        request = self._render_request(task)
         submission = service.submit(
             queue,
             entry.entry_id,
             worker_id,
-            request,
+            self._render_request(task),
             str(Path(production_package).resolve(strict=False)),
             lease_duration_seconds=self.lease_duration_seconds,
         )
@@ -204,7 +206,11 @@ class LocalComfyUIProductionExecutionBackend:
             handle=submission.handle,
             service=service,
         )
-        result = self._result(candidate, submission.handle, message=f"Provider submitted; source output: {source_root}")
+        result = self._result(
+            candidate,
+            submission.handle,
+            message=f"Provider submitted; source output: {source_root}",
+        )
         self._latest[task.task_id] = result
         return result
 
@@ -220,10 +226,9 @@ class LocalComfyUIProductionExecutionBackend:
             jobs = self.execution_jobs.list_for_task(task_id)
             if jobs:
                 job = jobs[-1]
-                state = self._state(job.state)
                 return ProductionExecutionResult(
                     candidate=self._candidate(task, job.resource_id, job.entry_id),
-                    state=state,
+                    state=self._state(job.state),
                     provider_id=job.provider_id,
                     execution_id=job.execution_id,
                     provider_job_id=job.provider_job_id,
@@ -338,8 +343,10 @@ class LocalComfyUIProductionExecutionBackend:
         else:
             providers.save(registration)
 
-        foundation = self._workflow_foundation()
-        adapter = ComfyUIProviderAdapterFactory().build(registration, foundation)
+        adapter = ComfyUIProviderAdapterFactory().build(
+            registration,
+            self._workflow_foundation(),
+        )
         adapters = ProviderExecutionAdapterRegistry()
         adapters.register(adapter)
         return (
@@ -452,7 +459,6 @@ class LocalComfyUIProductionExecutionBackend:
         entry_id: str,
     ) -> ProductionExecutionCandidate:
         scope = task.shot_id or task.scene_id or task.episode_id
-        label = f"{task.task_type.value.replace('_', ' ').title()} — {scope}"
         return ProductionExecutionCandidate(
             production_id=task.production_id,
             task_id=task.task_id,
@@ -463,7 +469,7 @@ class LocalComfyUIProductionExecutionBackend:
             shot_id=task.shot_id,
             resource_id=resource_id,
             queue_entry_id=entry_id,
-            label=label,
+            label=f"{task.task_type.value.replace('_', ' ').title()} — {scope}",
         )
 
 
