@@ -34,7 +34,9 @@ class MemoryMediaRepository:
         return media
 
     def list_for_production(self, production_id: str) -> tuple[GeneratedMedia, ...]:
-        return tuple(item for item in self.records.values() if item.scope.production_id == production_id)
+        return tuple(
+            item for item in self.records.values() if item.scope.production_id == production_id
+        )
 
     def list_for_episode(self, production_id: str, episode_id: str) -> tuple[GeneratedMedia, ...]:
         return tuple(
@@ -43,14 +45,18 @@ class MemoryMediaRepository:
             if item.scope.episode_id == episode_id
         )
 
-    def list_for_scene(self, production_id: str, episode_id: str, scene_id: str) -> tuple[GeneratedMedia, ...]:
+    def list_for_scene(
+        self, production_id: str, episode_id: str, scene_id: str
+    ) -> tuple[GeneratedMedia, ...]:
         return tuple(
             item
             for item in self.list_for_episode(production_id, episode_id)
             if item.scope.scene_id == scene_id
         )
 
-    def list_for_shot(self, production_id: str, episode_id: str, scene_id: str, shot_id: str) -> tuple[GeneratedMedia, ...]:
+    def list_for_shot(
+        self, production_id: str, episode_id: str, scene_id: str, shot_id: str
+    ) -> tuple[GeneratedMedia, ...]:
         return tuple(
             item
             for item in self.list_for_scene(production_id, episode_id, scene_id)
@@ -59,7 +65,9 @@ class MemoryMediaRepository:
 
     def list_for_task(self, production_task_id: str) -> tuple[GeneratedMedia, ...]:
         return tuple(
-            item for item in self.records.values() if item.scope.production_task_id == production_task_id
+            item
+            for item in self.records.values()
+            if item.scope.production_task_id == production_task_id
         )
 
     def list_for_execution(self, execution_id: str) -> tuple[GeneratedMedia, ...]:
@@ -181,9 +189,7 @@ def test_supersession_requires_later_approved_revision_of_same_intent() -> None:
     service.select("GM-R1", selected_by=_actor(), reason="Initial", now=NOW)
 
     with pytest.raises(GeneratedMediaSelectionError, match="later"):
-        service.supersede_and_select(
-            "GM-R1B", selected_by=_actor(), reason="Not later", now=NOW
-        )
+        service.supersede_and_select("GM-R1B", selected_by=_actor(), reason="Not later", now=NOW)
 
     with pytest.raises(GeneratedMediaSelectionError, match="no current selection"):
         service.supersede_and_select(

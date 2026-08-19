@@ -137,9 +137,7 @@ class JsonGeneratedMediaSelectionRepository:
             previous_raw = item.get("previous_media_id")
             history.append(
                 GeneratedMediaSelectionEvent(
-                    previous_media_id=(
-                        str(previous_raw) if previous_raw is not None else None
-                    ),
+                    previous_media_id=(str(previous_raw) if previous_raw is not None else None),
                     selected_media_id=str(item["selected_media_id"]),
                     selected_revision=int(item["selected_revision"]),
                     actor=str(item["actor"]),
