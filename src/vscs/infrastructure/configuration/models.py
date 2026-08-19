@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path, PurePath
+from pathlib import Path, PurePosixPath
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -123,12 +123,12 @@ class WorkspaceSettings(BaseModel):
         normalized = value.strip().replace("\\", "/")
         if not normalized:
             raise ValueError("Media output directory is required")
-        path = PurePath(normalized)
-        if path.is_absolute() or path.drive or ".." in path.parts:
+        path = PurePosixPath(normalized)
+        if path.is_absolute() or ".." in path.parts or (path.parts and ":" in path.parts[0]):
             raise ValueError("Media output directory must remain inside the current project")
         if normalized in {".", ".."}:
             raise ValueError("Media output directory must name a project subdirectory")
-        return normalized
+        return path.as_posix()
 
 
 class ApplicationSettings(BaseModel):
