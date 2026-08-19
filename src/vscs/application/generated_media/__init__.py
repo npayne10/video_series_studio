@@ -26,6 +26,14 @@ from .review import (
     GeneratedMediaReviewSubmission,
     ReviewAuthorityType,
 )
+from .selection import (
+    GeneratedMediaSelection,
+    GeneratedMediaSelectionError,
+    GeneratedMediaSelectionEvent,
+    GeneratedMediaSelectionRepository,
+    GeneratedMediaSelectionService,
+    GeneratedMediaSupersessionResult,
+)
 from .technical_validation import (
     GeneratedMediaTechnicalRequirements,
     GeneratedMediaTechnicalValidationError,
@@ -57,6 +65,12 @@ __all__ = [
     "GeneratedMediaReviewResult",
     "GeneratedMediaReviewService",
     "GeneratedMediaReviewSubmission",
+    "GeneratedMediaSelection",
+    "GeneratedMediaSelectionError",
+    "GeneratedMediaSelectionEvent",
+    "GeneratedMediaSelectionRepository",
+    "GeneratedMediaSelectionService",
+    "GeneratedMediaSupersessionResult",
     "GeneratedMediaTechnicalRequirements",
     "GeneratedMediaTechnicalValidationError",
     "GeneratedMediaTechnicalValidationResult",
