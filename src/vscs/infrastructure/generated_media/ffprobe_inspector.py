@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path, PurePosixPath
 from typing import Protocol
@@ -74,7 +74,7 @@ class FFprobeGeneratedMediaInspector:
     """Inspect VSCS-managed media using local file integrity plus ffprobe metadata."""
 
     project_root: Path
-    runner: FFprobeRunner = SubprocessFFprobeRunner()
+    runner: FFprobeRunner = field(default_factory=SubprocessFFprobeRunner)
 
     def __post_init__(self) -> None:
         self.project_root = Path(self.project_root).resolve()
@@ -91,8 +91,14 @@ class FFprobeGeneratedMediaInspector:
         if not isinstance(streams_raw, list):
             raise GeneratedMediaTechnicalValidationError("ffprobe streams must be an array")
         streams = [item for item in streams_raw if isinstance(item, dict)]
-        video = next((item for item in streams if str(item.get("codec_type", "")) == "video"), None)
-        audio = next((item for item in streams if str(item.get("codec_type", "")) == "audio"), None)
+        video = next(
+            (item for item in streams if str(item.get("codec_type", "")) == "video"),
+            None,
+        )
+        audio = next(
+            (item for item in streams if str(item.get("codec_type", "")) == "audio"),
+            None,
+        )
         format_raw = payload.get("format", {})
         if not isinstance(format_raw, dict):
             raise GeneratedMediaTechnicalValidationError("ffprobe format must be an object")
@@ -117,7 +123,12 @@ class FFprobeGeneratedMediaInspector:
     def _resolve(self, relative_path: str) -> Path:
         normalized = relative_path.strip().replace("\\", "/")
         pure = PurePosixPath(normalized)
-        if not normalized or pure.is_absolute() or ".." in pure.parts or (pure.parts and ":" in pure.parts[0]):
+        if (
+            not normalized
+            or pure.is_absolute()
+            or ".." in pure.parts
+            or (pure.parts and ":" in pure.parts[0])
+        ):
             raise GeneratedMediaTechnicalValidationError(
                 "Generated Media path must remain project-relative"
             )
@@ -185,7 +196,10 @@ def _frame_rate(video: dict[object, object]) -> float | None:
         ) from exc
 
 
-def _duration(format_raw: dict[object, object], streams: list[dict[object, object]]) -> float | None:
+def _duration(
+    format_raw: dict[object, object],
+    streams: list[dict[object, object]],
+) -> float | None:
     duration = _optional_float(format_raw.get("duration"))
     if duration is not None:
         return duration
