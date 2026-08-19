@@ -111,6 +111,7 @@ class GeneratedMediaIngestionService:
             return GeneratedMediaIngestionResult(existing, created=False)
 
         kind = self._media_kind(output.media_kind)
+        revision = self._next_revision(task, kind)
         destination = self._destination(task, media_id, output.relative_path)
         managed_file = self.file_store.ingest(output.relative_path, destination)
         media = GeneratedMedia(
@@ -135,8 +136,24 @@ class GeneratedMediaIngestionService:
                 attributes=self._provenance_attributes(execution, output),
             ),
             file=managed_file,
+            revision=revision,
         )
         return GeneratedMediaIngestionResult(self.persistence.register(media), created=True)
+
+    def _next_revision(self, task: ProductionTask, kind: GeneratedMediaKind) -> int:
+        candidates = tuple(
+            media
+            for media in self.persistence.list_for_task(task.task_id)
+            if media.scope.production_id == task.production_id
+            and media.scope.episode_id == task.episode_id
+            and media.kind is kind
+        )
+        revisions = tuple(media.revision for media in candidates)
+        if len(set(revisions)) != len(revisions):
+            raise GeneratedMediaIngestionError(
+                "existing Generated Media candidates contain duplicate revisions"
+            )
+        return max(revisions, default=0) + 1
 
     @staticmethod
     def _validate_execution(execution: DurableExecutionJob, task: ProductionTask) -> None:
