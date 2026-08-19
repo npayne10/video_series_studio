@@ -55,11 +55,21 @@ class SettingsDialog(QDialog):
         self.confirm_before_exit = QCheckBox()
         self.confirm_before_exit.setChecked(configuration.settings.workspace.confirm_before_exit)
 
+        self.media_output_directory = QLineEdit(
+            configuration.settings.workspace.media_output_directory
+        )
+        self.media_output_directory.setPlaceholderText("Media Output")
+        self.media_output_directory.setToolTip(
+            "Project-relative folder used for authoritative generated media files. "
+            "Default: Media Output"
+        )
+
         general_form = QFormLayout()
         general_form.addRow("Theme", self.theme_combo)
         general_form.addRow("Maximum recent projects", self.maximum_recent_spin)
         general_form.addRow("Restore last project", self.restore_last_project)
         general_form.addRow("Confirm before exit", self.confirm_before_exit)
+        general_form.addRow("Media output folder", self.media_output_directory)
         general_group = QGroupBox("General")
         general_group.setLayout(general_form)
 
@@ -206,6 +216,15 @@ class SettingsDialog(QDialog):
         settings.maximum_recent_projects = self.maximum_recent_spin.value()
         settings.workspace.restore_last_project = self.restore_last_project.isChecked()
         settings.workspace.confirm_before_exit = self.confirm_before_exit.isChecked()
+        try:
+            settings.workspace.media_output_directory = type(settings.workspace).model_fields[
+                "media_output_directory"
+            ].annotation(self.media_output_directory.text().strip()) if False else self.media_output_directory.text().strip()
+            # Revalidate the nested model so project-boundary rules are applied before saving.
+            settings.workspace = type(settings.workspace).model_validate(settings.workspace.model_dump())
+        except ValueError as exc:
+            QMessageBox.critical(self, "Settings Error", str(exc))
+            return
         settings.recent_projects = settings.recent_projects[: settings.maximum_recent_projects]
         settings.ai.provider = self.ai_provider.currentData()
         settings.ai.openai_model = self.openai_model.text().strip()
@@ -217,6 +236,6 @@ class SettingsDialog(QDialog):
         QMessageBox.information(
             self,
             "Settings Saved",
-            "AI provider changes will take effect the next time VSCS starts.",
+            "Settings were saved. AI provider changes take effect the next time VSCS starts.",
         )
         self.accept()
