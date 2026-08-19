@@ -163,22 +163,28 @@ def _optional_text(value: object) -> str | None:
 
 
 def _optional_int(value: object) -> int | None:
-    if value is None or str(value).strip() in {"", "N/A"}:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized in {"", "N/A"}:
         return None
     try:
-        return int(value)
-    except (TypeError, ValueError) as exc:
+        return int(normalized)
+    except ValueError as exc:
         raise GeneratedMediaTechnicalValidationError(
             f"ffprobe value is not an integer: {value!r}"
         ) from exc
 
 
 def _optional_float(value: object) -> float | None:
-    if value is None or str(value).strip() in {"", "N/A"}:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized in {"", "N/A"}:
         return None
     try:
-        return float(value)
-    except (TypeError, ValueError) as exc:
+        return float(normalized)
+    except ValueError as exc:
         raise GeneratedMediaTechnicalValidationError(
             f"ffprobe value is not numeric: {value!r}"
         ) from exc
