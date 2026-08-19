@@ -21,16 +21,24 @@ from vscs.infrastructure.generated_media import (
 NOW = datetime(2026, 8, 19, 17, 30, tzinfo=UTC)
 
 
-def _media(media_id: str, revision: int) -> GeneratedMedia:
+def _media(
+    media_id: str,
+    revision: int,
+    *,
+    production_id: str = "XORIX",
+    episode_id: str = "EP-001",
+    task_id: str = "PT-20-14-001",
+    shot_id: str = "SHT-001",
+) -> GeneratedMedia:
     return GeneratedMedia(
         media_id=media_id,
         kind=GeneratedMediaKind.VIDEO,
         scope=GeneratedMediaScope(
-            production_id="XORIX",
-            episode_id="EP-001",
-            production_task_id="PT-20-14-001",
+            production_id=production_id,
+            episode_id=episode_id,
+            production_task_id=task_id,
             scene_id="SCN-001",
-            shot_id="SHT-001",
+            shot_id=shot_id,
         ),
         provenance=GeneratedMediaProvenance(
             execution_id=f"PEX-{media_id}",
@@ -81,8 +89,38 @@ def test_workspace_list_exposes_authoritative_media_state(tmp_path: Path) -> Non
 
     assert tuple(item.media_id for item in items) == ("GM-R1", "GM-R2")
     assert tuple(item.revision for item in items) == (1, 2)
+    assert all(item.production_id == "XORIX" for item in items)
+    assert all(item.episode_id == "EP-001" for item in items)
     assert all(item.technical_status == "passed" for item in items)
     assert not any(item.selected for item in items)
+
+
+def test_workspace_list_all_supports_project_discovery_and_readable_task_labels(
+    tmp_path: Path,
+) -> None:
+    service, persistence = _service(tmp_path)
+    persistence.register(_media("GM-XORIX", 1))
+    persistence.register(
+        _media(
+            "GM-DEMO",
+            1,
+            production_id="DEMO",
+            episode_id="EP-009",
+            task_id="PT-VIDEO-GENERATION-12345678",
+            shot_id="SHT-090",
+        )
+    )
+
+    items = service.list_all()
+
+    assert tuple(item.production_id for item in items) == ("DEMO", "XORIX")
+    demo = items[0]
+    assert demo.episode_id == "EP-009"
+    assert demo.task_id == "PT-VIDEO-GENERATION-12345678"
+    assert demo.task_label == "Video — SHT-090 (…12345678)"
+
+    filtered = service.list_filtered(production_id="XORIX", episode_id="EP-001")
+    assert tuple(item.media_id for item in filtered) == ("GM-XORIX",)
 
 
 def test_workspace_review_and_selection_commands_use_governed_services(tmp_path: Path) -> None:
