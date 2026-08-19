@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import ClassVar
 
 from vscs.application.production_tasks import (
     ProductionTask,
@@ -92,7 +93,9 @@ class ProductionTaskCompletionReconciliationResult:
 class ProductionTaskOutputContractResolver:
     """Resolve canonical ProductionTask output contracts without provider knowledge."""
 
-    _KINDS = {kind.value: kind for kind in GeneratedMediaKind}
+    _KINDS: ClassVar[dict[str, GeneratedMediaKind]] = {
+        kind.value: kind for kind in GeneratedMediaKind
+    }
 
     def resolve(self, contract: str) -> ProductionTaskOutputRequirement | None:
         normalized = contract.strip().casefold()
