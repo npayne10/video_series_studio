@@ -17,6 +17,15 @@ from .ingestion import (
 )
 from .persistence import GeneratedMediaPersistenceService
 from .repository import GeneratedMediaRepository, GeneratedMediaRepositoryError
+from .review import (
+    GeneratedMediaReviewActor,
+    GeneratedMediaReviewDecision,
+    GeneratedMediaReviewError,
+    GeneratedMediaReviewResult,
+    GeneratedMediaReviewService,
+    GeneratedMediaReviewSubmission,
+    ReviewAuthorityType,
+)
 from .technical_validation import (
     GeneratedMediaTechnicalRequirements,
     GeneratedMediaTechnicalValidationError,
@@ -42,10 +51,17 @@ __all__ = [
     "GeneratedMediaPersistenceService",
     "GeneratedMediaRepository",
     "GeneratedMediaRepositoryError",
+    "GeneratedMediaReviewActor",
+    "GeneratedMediaReviewDecision",
+    "GeneratedMediaReviewError",
+    "GeneratedMediaReviewResult",
+    "GeneratedMediaReviewService",
+    "GeneratedMediaReviewSubmission",
     "GeneratedMediaTechnicalRequirements",
     "GeneratedMediaTechnicalValidationError",
     "GeneratedMediaTechnicalValidationResult",
     "GeneratedMediaTechnicalValidationService",
+    "ReviewAuthorityType",
     "TechnicalMediaInspector",
     "TechnicalMediaObservation",
     "TechnicalValidationIssue",
