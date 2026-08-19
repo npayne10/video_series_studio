@@ -25,12 +25,27 @@ The presentation layer does not mutate `GeneratedMedia`, governance history, sel
 
 The workspace therefore follows the current project lifecycle and does not create detached global media authority.
 
-### Browsing
+### Browsing and discovery
 
-The workspace browses Generated Media by explicit `production_id`, preserving generic VSCS architecture rather than hard-coding Xorix. The list exposes:
+The workspace is a browser, not an identifier lookup form. Operators are not required to know or type a `production_id` or `ProductionTask` identity.
 
-- media identity;
-- owning ProductionTask;
+The Generated Media repository contract exposes a deterministic `list_all()` query so the application facade can discover the productions represented by authoritative project media without hard-coding Xorix or another production. This query does not alter the Generated Media JSON schema.
+
+The workspace loads all Generated Media for the active project and presents cascading filters:
+
+- Production — `All Productions` plus discovered production identities;
+- Episode — `All Episodes` plus episodes constrained by the selected production;
+- Task — `All Tasks` plus readable task labels constrained by the selected production and episode.
+
+Task labels favor production context such as media kind and shot/scene plus a short stable-ID suffix. The complete `ProductionTask` identity remains available as a tooltip and in the detail panel for auditing.
+
+The main table exposes:
+
+- production;
+- episode;
+- scene;
+- shot;
+- readable task context;
 - media kind;
 - governance state;
 - revision;
@@ -39,11 +54,14 @@ The workspace browses Generated Media by explicit `production_id`, preserving ge
 
 The detail view exposes:
 
+- complete stable media, production, episode, scene, shot and ProductionTask IDs;
 - managed project-relative file path;
 - execution/provider/workflow provenance;
 - immutable Generated Media governance history;
 - immutable selection history;
 - revision candidates for the same production intent.
+
+Refresh re-reads authoritative project persistence, rebuilds the available filter choices, and preserves currently selected filters when those identities still exist.
 
 ### Human governed commands
 
@@ -72,6 +90,8 @@ Live provider controls, queue execution controls, leases, retries, and provider 
 ## Consequences
 
 - Generated Media authority becomes visible and operable from the main VSCS desktop shell.
+- Operators can browse media immediately without knowing internal IDs.
+- Production, episode and task filters are derived from authoritative project media and remain production-generic.
 - Operators can trace media from provider provenance through technical status, review, selection, and supersession history.
 - UI commands cannot bypass the existing human-governed application services.
 - Project closure detaches the workspace from persistence automatically.
@@ -86,6 +106,7 @@ Phase 20.14 does not implement:
 - technical validation execution or profile editing;
 - ProductionTask completion controls;
 - distributed user identity/authentication integration;
+- richer production/episode display names from a future production catalogue;
 - media playback/transcoding infrastructure;
 - delivery/mastering UI;
 - multi-user locking or concurrent review resolution.
