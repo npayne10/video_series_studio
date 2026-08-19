@@ -24,7 +24,12 @@ class GeneratedMediaUiError(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class GeneratedMediaListItem:
     media_id: str
+    production_id: str
+    episode_id: str
+    scene_id: str | None
+    shot_id: str | None
     task_id: str
+    task_label: str
     kind: GeneratedMediaKind
     state: GeneratedMediaState
     revision: int
@@ -55,35 +60,34 @@ class GeneratedMediaUiService:
         self._media_repository_factory = media_repository_factory
         self._selection_repository_factory = selection_repository_factory
 
+    def list_all(self) -> tuple[GeneratedMediaListItem, ...]:
+        """Return every authoritative Generated Media record for project browsing."""
+        return self._list_items(self._persistence().list_all())
+
     def list_for_production(self, production_id: str) -> tuple[GeneratedMediaListItem, ...]:
         normalized = production_id.strip()
         if not normalized:
             raise GeneratedMediaUiError("production_id cannot be blank")
-        persistence = self._persistence()
-        selection_service = self._selection_service(persistence)
-        items: list[GeneratedMediaListItem] = []
-        for media in persistence.list_for_production(normalized):
-            selection = selection_service.get_for_media(media)
-            items.append(
-                GeneratedMediaListItem(
-                    media_id=media.media_id,
-                    task_id=media.scope.production_task_id,
-                    kind=media.kind,
-                    state=media.state,
-                    revision=media.revision,
-                    technical_status=dict(media.technical_metadata).get(
-                        "technical_validation.status", "not-validated"
-                    ),
-                    selected=selection is not None
-                    and selection.selected_media_id == media.media_id,
-                    relative_path=media.file.relative_path,
-                )
-            )
+        return self._list_items(self._persistence().list_for_production(normalized))
+
+    def list_filtered(
+        self,
+        *,
+        production_id: str | None = None,
+        episode_id: str | None = None,
+        task_id: str | None = None,
+    ) -> tuple[GeneratedMediaListItem, ...]:
+        """Filter project Generated Media without exposing repository identifiers as input fields."""
+        items = self.list_all()
+        production = self._optional_filter(production_id)
+        episode = self._optional_filter(episode_id)
+        task = self._optional_filter(task_id)
         return tuple(
-            sorted(
-                items,
-                key=lambda item: (item.task_id, item.kind.value, item.revision, item.media_id),
-            )
+            item
+            for item in items
+            if (production is None or item.production_id == production)
+            and (episode is None or item.episode_id == episode)
+            and (task is None or item.task_id == task)
         )
 
     def detail(self, media_id: str) -> GeneratedMediaDetailView:
@@ -176,6 +180,44 @@ class GeneratedMediaUiService:
         )
         return self._detail_with(persistence, media_id)
 
+    def _list_items(self, media_records: tuple[GeneratedMedia, ...]) -> tuple[GeneratedMediaListItem, ...]:
+        persistence = self._persistence()
+        selection_service = self._selection_service(persistence)
+        items = tuple(
+            GeneratedMediaListItem(
+                media_id=media.media_id,
+                production_id=media.scope.production_id,
+                episode_id=media.scope.episode_id,
+                scene_id=media.scope.scene_id,
+                shot_id=media.scope.shot_id,
+                task_id=media.scope.production_task_id,
+                task_label=self._task_label(media),
+                kind=media.kind,
+                state=media.state,
+                revision=media.revision,
+                technical_status=dict(media.technical_metadata).get(
+                    "technical_validation.status", "not-validated"
+                ),
+                selected=(selection := selection_service.get_for_media(media)) is not None
+                and selection.selected_media_id == media.media_id,
+                relative_path=media.file.relative_path,
+            )
+            for media in media_records
+        )
+        return tuple(
+            sorted(
+                items,
+                key=lambda item: (
+                    item.production_id,
+                    item.episode_id,
+                    item.task_label.casefold(),
+                    item.kind.value,
+                    item.revision,
+                    item.media_id,
+                ),
+            )
+        )
+
     def _detail_with(
         self,
         persistence: GeneratedMediaPersistenceService,
@@ -200,6 +242,20 @@ class GeneratedMediaUiService:
             persistence,
             self._selection_repository_factory(),
         )
+
+    @staticmethod
+    def _task_label(media: GeneratedMedia) -> str:
+        kind = media.kind.value.replace("_", " ").title()
+        location = media.scope.shot_id or media.scope.scene_id or media.scope.episode_id
+        suffix = media.scope.production_task_id[-8:]
+        return f"{kind} — {location} (…{suffix})"
+
+    @staticmethod
+    def _optional_filter(value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
 
     @staticmethod
     def _actor(actor_id: str, display_name: str) -> GeneratedMediaReviewActor:
