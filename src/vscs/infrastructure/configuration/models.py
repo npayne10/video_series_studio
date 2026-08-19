@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -114,6 +114,20 @@ class WorkspaceSettings(BaseModel):
     default_workspace: str = "Dashboard"
     restore_last_project: bool = True
     confirm_before_exit: bool = False
+    media_output_directory: str = "Media Output"
+
+    @field_validator("media_output_directory")
+    @classmethod
+    def validate_media_output_directory(cls, value: str) -> str:
+        normalized = value.strip().replace("\\", "/")
+        if not normalized:
+            raise ValueError("Media output directory is required")
+        path = PurePath(normalized)
+        if path.is_absolute() or path.drive or ".." in path.parts:
+            raise ValueError("Media output directory must remain inside the current project")
+        if normalized in {".", ".."}:
+            raise ValueError("Media output directory must name a project subdirectory")
+        return normalized
 
 
 class ApplicationSettings(BaseModel):
