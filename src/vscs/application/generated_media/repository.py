@@ -22,6 +22,10 @@ class GeneratedMediaRepository(Protocol):
         """Create or replace one authoritative Generated Media record."""
         ...
 
+    def list_all(self) -> tuple[GeneratedMedia, ...]:
+        """Return all Generated Media records in deterministic identity order."""
+        ...
+
     def list_for_production(self, production_id: str) -> tuple[GeneratedMedia, ...]:
         """Return Generated Media for one production in deterministic order."""
         ...
