@@ -66,11 +66,13 @@ on the prior candidate with `replacement_media_id` pointing at the newly selecte
 
 No file or Generated Media record is deleted or overwritten.
 
-### Persistence ordering
+### Persistence ordering and retry recovery
 
 Generated Media selection and Generated Media governance are separate persistence boundaries and there is no cross-repository transaction in the current JSON architecture. During supersession, the new selection is persisted before the old media is marked `SUPERSEDED`.
 
 This ordering intentionally prefers an unambiguous authoritative selection if the second persistence write fails. In that failure case, the former candidate may temporarily remain `APPROVED`, but it is no longer selected. The inverse ordering could leave a `SUPERSEDED` media item still recorded as the authoritative selection, which would be a stronger authority contradiction.
+
+The immutable latest selection event stores the prior media identity, replacement identity, human actor, reason, and timestamp. Retrying `supersede_and_select()` with the already-selected replacement uses that event to complete a missing `APPROVED -> SUPERSEDED` governance write without appending a second selection event or changing the original audit decision.
 
 A future transactional persistence implementation may make these writes atomic without changing the application contract.
 
@@ -98,6 +100,7 @@ Phase 20.12 reuses `GeneratedMediaReviewActor` from Phase 20.11. Provider, autom
 - Approval and selection are separate authorities: approved media is eligible, not automatically selected.
 - One production intent slot has at most one authoritative selected media record.
 - Superseded media remains fully queryable and auditable.
+- A partial cross-repository supersession write can be completed deterministically after retry/restart.
 - Downstream ProductionTask completion may later consume the selected media in Phase 20.13 without guessing among approved candidates.
 
 ## Deliberately deferred
