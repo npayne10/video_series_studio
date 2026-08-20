@@ -109,6 +109,11 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         production_package: Path | None = None,
     ) -> ProductionExecutionResult:
         task = self._require_task(task_id)
+        if self.has_execution(task.task_id):
+            raise ProductionExecutionError(
+                "ProductionTask already has an execution record. Inspect or reconcile that "
+                "execution; direct duplicate starts are not allowed."
+            )
         try:
             if production_package is None:
                 package = self.package_compilation.require_current(task).path
