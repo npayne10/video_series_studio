@@ -156,21 +156,24 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016FinalizingBackend):
         )
         return super()._retry_attempt_history(widened, jobs)
 
+    @staticmethod
     def _queue_with_attempt_history(
-        self,
         queue: ProductionQueue,
         task_id: str,
         attempts: tuple[ProductionQueueAttempt, ...],
     ) -> ProductionQueue:
-        """Carry governed retry authority into the current runtime queue entry."""
-        rebuilt = super()._queue_with_attempt_history(queue, task_id, attempts)
-        task = self._require_task(task_id)
+        """Carry already-authorized retry capacity into the current runtime queue entry."""
+        rebuilt = _Phase2016FinalizingBackend._queue_with_attempt_history(
+            queue,
+            task_id,
+            attempts,
+        )
         entry = rebuilt.entry_for_task(task_id)
         if entry is None:
             raise ProductionExecutionError(
                 f"ProductionTask is not present in current approved queue: {task_id}"
             )
-        effective = task.attempt_policy.maximum_attempts + len(self._matching_authorizations(task))
+        effective = max(entry.maximum_attempts, len(attempts) + 1)
         updated = replace(entry, maximum_attempts=effective)
         return replace(
             rebuilt,
