@@ -12,7 +12,11 @@ from vscs.application.production_execution.retry_override import (
     GovernedRetryOverrideState,
     GovernedRetryOverrideStatus,
 )
-from vscs.application.production_tasks import ProductionQueueAttempt, ProductionTask
+from vscs.application.production_tasks import (
+    ProductionQueue,
+    ProductionQueueAttempt,
+    ProductionTask,
+)
 from vscs.application.provider_execution import DurableExecutionJob, ProviderExecutionState
 
 from .finalizing_backend import (
@@ -151,6 +155,29 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016FinalizingBackend):
             attempt_policy=replace(task.attempt_policy, maximum_attempts=effective),
         )
         return super()._retry_attempt_history(widened, jobs)
+
+    def _queue_with_attempt_history(
+        self,
+        queue: ProductionQueue,
+        task_id: str,
+        attempts: tuple[ProductionQueueAttempt, ...],
+    ) -> ProductionQueue:
+        """Carry governed retry authority into the current runtime queue entry."""
+        rebuilt = super()._queue_with_attempt_history(queue, task_id, attempts)
+        task = self._require_task(task_id)
+        entry = rebuilt.entry_for_task(task_id)
+        if entry is None:
+            raise ProductionExecutionError(
+                f"ProductionTask is not present in current approved queue: {task_id}"
+            )
+        effective = task.attempt_policy.maximum_attempts + len(self._matching_authorizations(task))
+        updated = replace(entry, maximum_attempts=effective)
+        return replace(
+            rebuilt,
+            entries=tuple(
+                updated if item.entry_id == entry.entry_id else item for item in rebuilt.entries
+            ),
+        )
 
     def _matching_authorizations(
         self,
