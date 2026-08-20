@@ -7,7 +7,11 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
-from .profile_scoped_backend import LocalComfyUIProductionExecutionBackend
+from .provider_ready_backend import LocalComfyUIProductionExecutionBackend
+from .provider_ready_package import (
+    ProviderReadyPackageResolutionError,
+    ProviderReadyProductionPackageResolver,
+)
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
@@ -16,4 +20,6 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "ProviderReadyPackageResolutionError",
+    "ProviderReadyProductionPackageResolver",
 ]
