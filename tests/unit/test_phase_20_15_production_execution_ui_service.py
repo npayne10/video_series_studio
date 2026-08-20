@@ -13,7 +13,7 @@ from vscs.application.production_tasks import ProductionTaskState, ProductionTas
 
 
 class RecordingBackend:
-    def __init__(self) -> None:
+    def __init__(self, *, execution_exists: bool = False) -> None:
         self.candidate = ProductionExecutionCandidate(
             production_id="XORIX",
             task_id="PT-20-15-001",
@@ -26,11 +26,16 @@ class RecordingBackend:
             queue_entry_id="PQE-PT-20-15-001",
             label="Video Generation — SHT-001",
         )
+        self.execution_exists = execution_exists
         self.started: tuple[str, Path] | None = None
         self.reconciled: str | None = None
 
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
         return (self.candidate,)
+
+    def has_execution(self, task_id: str) -> bool:
+        assert task_id == self.candidate.task_id
+        return self.execution_exists
 
     def start(
         self,
@@ -84,6 +89,18 @@ def test_ui_service_passes_resolved_package_to_backend(tmp_path: Path) -> None:
 
     assert result.state is ProductionExecutionState.SUBMITTED
     assert backend.started == ("PT-20-15-001", package.resolve())
+
+
+def test_ui_service_blocks_duplicate_execution_start(tmp_path: Path) -> None:
+    backend = RecordingBackend(execution_exists=True)
+    service = ProductionExecutionUiService(backend)
+    package = tmp_path / "package.json"
+    package.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ProductionExecutionError, match="already has an execution record"):
+        service.start("PT-20-15-001", package)
+
+    assert backend.started is None
 
 
 def test_ui_service_reconcile_requires_selected_task() -> None:
