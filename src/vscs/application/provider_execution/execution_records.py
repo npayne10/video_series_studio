@@ -180,7 +180,7 @@ class DurableExecutionJobTracker:
         self._validate_handle(job, handle)
         if job.terminal and handle.state is not job.state:
             raise DurableExecutionJobError("terminal durable execution state cannot be changed")
-        current = now or datetime.now(UTC)
+        current = _monotonic_observation_time(job, now)
         submitted_at = job.submitted_at or handle.submitted_at
         failure_reason = handle.failure_reason
         if handle.state is ProviderExecutionState.FAILED and failure_reason is None:
@@ -225,7 +225,7 @@ class DurableExecutionJobTracker:
         message = reason.strip()
         if not message:
             raise DurableExecutionJobError("submission failure reason cannot be blank")
-        current = now or datetime.now(UTC)
+        current = _monotonic_observation_time(job, now)
         event = DurableExecutionEvent(
             state=ProviderExecutionState.FAILED,
             observed_at=current,
@@ -249,6 +249,15 @@ class DurableExecutionJobTracker:
             raise DurableExecutionJobError("provider handle provider_id does not match durable job")
         if job.provider_job_id is not None and handle.provider_job_id != job.provider_job_id:
             raise DurableExecutionJobError("provider job identity changed during execution")
+
+
+def _monotonic_observation_time(
+    job: DurableExecutionJob,
+    now: datetime | None,
+) -> datetime:
+    """Clamp observations so durable execution history never moves backwards in time."""
+    requested = now or datetime.now(UTC)
+    return max(requested, job.updated_at, job.events[-1].observed_at)
 
 
 def _require_pairs(values: tuple[tuple[str, str], ...], field_name: str) -> None:
