@@ -45,6 +45,13 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         )
         self.input_assurance = ComfyUIV714InputAssurance()
 
+    def has_execution(self, task_id: str) -> bool:
+        """Return whether an active or durable execution exists for the task."""
+        task = self._require_task(task_id)
+        if task.task_id in self._active:
+            return True
+        return bool(self.execution_jobs.list_for_task(task.task_id))
+
     def package_status(
         self,
         task_id: str,
