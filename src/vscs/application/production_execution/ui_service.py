@@ -11,10 +11,7 @@ from vscs.application.production_tasks import ProductionTaskState, ProductionTas
 
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
-from .retry_override import (
-    GovernedRetryOverrideState,
-    GovernedRetryOverrideStatus,
-)
+from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
 from .telemetry import ProductionTelemetrySnapshot
 
 
@@ -162,17 +159,18 @@ class _AuthorizeRetryOperation(Protocol):
 
 
 class ProductionExecutionUiService:
-    """Provider-neutral UI facade; profile scoping is optional and backward compatible."""
+    """Provider-neutral UI facade with optional profile-scoped execution authority."""
 
     def __init__(self, backend: ProductionExecutionBackend) -> None:
         self.backend = backend
+        self._selected_profiles: dict[str, str] = {}
 
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
         return self.backend.candidates()
 
-    def has_execution(self, task_id: str, *, profile: str = "production") -> bool:
+    def has_execution(self, task_id: str, *, profile: str | None = None) -> bool:
         normalized = self._task_id(task_id, "inspecting execution availability")
-        execution_profile = normalize_execution_profile(profile)
+        execution_profile = self._resolve_profile(normalized, profile)
         raw = getattr(self.backend, "has_execution_for_profile", None)
         if raw is not None:
             return cast(_HasExecutionForProfile, raw)(normalized, profile=execution_profile)
@@ -182,10 +180,10 @@ class ProductionExecutionUiService:
         self,
         task_id: str,
         *,
-        profile: str = "production",
+        profile: str | None = None,
     ) -> ProductionTelemetrySnapshot:
         normalized = self._task_id(task_id, "inspecting live production telemetry")
-        execution_profile = normalize_execution_profile(profile)
+        execution_profile = self._resolve_profile(normalized, profile)
         raw = getattr(self.backend, "telemetry_for_profile", None)
         if raw is not None:
             return cast(_TelemetryForProfile, raw)(normalized, profile=execution_profile)
@@ -195,10 +193,10 @@ class ProductionExecutionUiService:
         self,
         task_id: str,
         *,
-        profile: str = "production",
+        profile: str | None = None,
     ) -> GovernedRetryOverrideStatus:
         normalized = self._task_id(task_id, "inspecting retry override authority")
-        execution_profile = normalize_execution_profile(profile)
+        execution_profile = self._resolve_profile(normalized, profile)
         scoped = getattr(self.backend, "retry_override_status_for_profile", None)
         if scoped is not None:
             return cast(_RetryOverrideStatusForProfile, scoped)(
@@ -222,10 +220,10 @@ class ProductionExecutionUiService:
         *,
         authorized_by: str,
         reason: str,
-        profile: str = "production",
+        profile: str | None = None,
     ) -> GovernedRetryOverrideStatus:
         normalized = self._task_id(task_id, "authorizing an additional retry")
-        execution_profile = normalize_execution_profile(profile)
+        execution_profile = self._resolve_profile(normalized, profile)
         scoped = getattr(self.backend, "authorize_retry_for_profile", None)
         if scoped is not None:
             return cast(_AuthorizeRetryForProfile, scoped)(
@@ -253,6 +251,7 @@ class ProductionExecutionUiService:
     ) -> ProductionPackageStatus:
         normalized = self._task_id(task_id, "inspecting its Production Package")
         execution_profile = normalize_execution_profile(profile)
+        self._selected_profiles[normalized] = execution_profile
         status = self.backend.package_status(normalized, profile=execution_profile)
         return self._block_if_execution_exists(normalized, execution_profile, status)
 
@@ -264,6 +263,7 @@ class ProductionExecutionUiService:
     ) -> ProductionPackageStatus:
         normalized = self._task_id(task_id, "compiling its Production Package")
         execution_profile = normalize_execution_profile(profile)
+        self._selected_profiles[normalized] = execution_profile
         status = self.backend.compile_package(normalized, profile=execution_profile)
         return self._block_if_execution_exists(normalized, execution_profile, status)
 
@@ -272,10 +272,10 @@ class ProductionExecutionUiService:
         task_id: str,
         production_package: Path | None = None,
         *,
-        profile: str = "production",
+        profile: str | None = None,
     ) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "starting production")
-        execution_profile = normalize_execution_profile(profile)
+        execution_profile = self._resolve_profile(normalized, profile)
         if self.has_execution(normalized, profile=execution_profile):
             raise ProductionExecutionError(
                 f"{execution_profile.title()} execution is active, successful, or has exhausted "
@@ -301,10 +301,10 @@ class ProductionExecutionUiService:
         self,
         task_id: str,
         *,
-        profile: str = "production",
+        profile: str | None = None,
     ) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "refreshing execution")
-        execution_profile = normalize_execution_profile(profile)
+        execution_profile = self._resolve_profile(normalized, profile)
         scoped = getattr(self.backend, "reconcile_for_profile", None)
         if scoped is not None:
             return cast(_ReconcileForProfile, scoped)(normalized, profile=execution_profile)
@@ -326,6 +326,13 @@ class ProductionExecutionUiService:
                 "successful, or exhausted execution authority."
             ),
         )
+
+    def _resolve_profile(self, task_id: str, profile: str | None) -> str:
+        if profile is not None:
+            normalized = normalize_execution_profile(profile)
+            self._selected_profiles[task_id] = normalized
+            return normalized
+        return self._selected_profiles.get(task_id, "production")
 
     @staticmethod
     def _task_id(task_id: str, action: str) -> str:
