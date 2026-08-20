@@ -1,4 +1,4 @@
-"""Provider-neutral production execution package compilation for Phase 20.15.1."""
+"""Provider-neutral production execution package compilation for Phase 20.15.1a."""
 
 from __future__ import annotations
 
@@ -74,6 +74,7 @@ class CompiledProductionPackage:
     height: int
     frame_count: int
     frames_per_second: int
+    duration_seconds: float
     cfg: float
     ic_lora_strength: float
     seed: int
@@ -84,7 +85,7 @@ class CompiledProductionPackage:
     def to_dict(self) -> dict[str, Any]:
         """Return deterministic JSON-compatible provider-neutral content."""
         return {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "task": {
                 "task_id": self.task_id,
                 "production_id": self.production_id,
@@ -116,6 +117,7 @@ class CompiledProductionPackage:
                 "height": self.height,
                 "frame_count": self.frame_count,
                 "frames_per_second": self.frames_per_second,
+                "duration_seconds": self.duration_seconds,
                 "cfg": self.cfg,
                 "ic_lora_strength": self.ic_lora_strength,
                 "seed": self.seed,
@@ -128,6 +130,25 @@ class CompiledProductionPackage:
 
 class ProductionPackageCompilerService:
     """Compile one approved Phase 19 ProductionPackage for deterministic execution."""
+
+    DEFAULT_NEGATIVE_CONSTRAINTS = (
+        "wrong canonical asset identity",
+        "redesigned canonical asset",
+        "altered canonical geometry",
+        "incorrect canonical scale",
+        "duplicate subjects",
+        "unrequested people or objects",
+        "identity drift",
+        "morphing",
+        "flicker",
+        "unstable lighting",
+        "erratic camera movement",
+        "unrequested jump cut",
+        "cartoon or anime styling",
+        "painterly styling",
+        "low detail",
+        "AI artifacts",
+    )
 
     def compile(
         self,
@@ -150,7 +171,7 @@ class ProductionPackageCompilerService:
 
         normalized_profile = profile.strip().lower() or "production"
         render = self._render_settings(production, normalized_profile)
-        positive_prompt = universal_text
+        positive_prompt = self._positive_prompt(universal_text, production)
         negative_prompt = self._negative_prompt(production.get("style"))
         continuity = self._mapping(production.get("continuity"))
         previous_frame = self._first_text(
@@ -186,6 +207,7 @@ class ProductionPackageCompilerService:
             "authority_fingerprint": task.authority.fingerprint,
             "source_package_fingerprint": source.package_fingerprint,
             "universal_text": universal_text,
+            "positive_prompt": positive_prompt,
             "negative_prompt": negative_prompt,
             "previous_frame": previous_frame,
             "filename_prefix": filename_prefix,
@@ -218,6 +240,7 @@ class ProductionPackageCompilerService:
             height=render["height"],
             frame_count=render["frame_count"],
             frames_per_second=render["frames_per_second"],
+            duration_seconds=render["duration_seconds"],
             cfg=render["cfg"],
             ic_lora_strength=render["ic_lora_strength"],
             seed=seed,
@@ -274,7 +297,7 @@ class ProductionPackageCompilerService:
             raise ProductionPackageCompilationError(
                 f"Unsupported production execution profile: {profile}"
             )
-        width, height, fps, frames, cfg, strength = defaults[profile]
+        width, height, fps, default_frames, cfg, strength = defaults[profile]
         width = cls._positive_int(render, ("width",), width)
         height = cls._positive_int(render, ("height",), height)
         fps = cls._positive_int(
@@ -282,11 +305,27 @@ class ProductionPackageCompilerService:
             ("frames_per_second", "fps"),
             cls._positive_int(shot, ("frames_per_second", "fps"), fps),
         )
-        frames = cls._positive_int(
+        explicit_frames = cls._optional_positive_int(render, ("frame_count", "frames"))
+        if explicit_frames is None:
+            explicit_frames = cls._optional_positive_int(shot, ("frame_count", "frames"))
+        duration = cls._optional_positive_float(
             render,
-            ("frame_count", "frames"),
-            cls._positive_int(shot, ("frame_count", "frames"), frames),
+            ("duration_seconds", "target_runtime_seconds", "runtime_seconds"),
         )
+        if duration is None:
+            duration = cls._optional_positive_float(
+                shot,
+                ("duration_seconds", "target_runtime_seconds", "runtime_seconds"),
+            )
+        if explicit_frames is not None:
+            frames = explicit_frames
+            duration_seconds = frames / fps
+        elif duration is not None:
+            frames = max(1, round(duration * fps))
+            duration_seconds = duration
+        else:
+            frames = default_frames
+            duration_seconds = frames / fps
         cfg = cls._positive_float(render, ("cfg", "guidance_scale"), cfg)
         strength = cls._positive_float(
             render,
@@ -298,14 +337,28 @@ class ProductionPackageCompilerService:
             "height": height,
             "frames_per_second": fps,
             "frame_count": frames,
+            "duration_seconds": duration_seconds,
             "cfg": cfg,
             "ic_lora_strength": strength,
         }
 
-    @staticmethod
-    def _negative_prompt(value: object) -> str:
-        style = ProductionPackageCompilerService._mapping(value)
-        collected: list[str] = []
+    @classmethod
+    def _positive_prompt(cls, universal_text: str, production: dict[str, Any]) -> str:
+        references = cls._list_of_mappings(production.get("canonical_references"))
+        assets = cls._list_of_mappings(production.get("assets"))
+        if not references and not assets:
+            return universal_text
+        preservation = (
+            "Use all supplied canonical visual references as authoritative identity definitions. "
+            "Preserve canonical identity, geometry, scale, materials, markings, wardrobe and other "
+            "declared visual characteristics. Do not redesign, merge or substitute canonical assets."
+        )
+        return f"{preservation}\n{universal_text}"
+
+    @classmethod
+    def _negative_prompt(cls, value: object) -> str:
+        style = cls._mapping(value)
+        collected = list(cls.DEFAULT_NEGATIVE_CONSTRAINTS)
         for key in ("negative_constraints", "avoid", "forbidden", "negative_prompt"):
             raw = style.get(key)
             if isinstance(raw, str) and raw.strip():
@@ -333,20 +386,28 @@ class ProductionPackageCompilerService:
         return None
 
     @staticmethod
-    def _positive_int(value: dict[str, Any], keys: tuple[str, ...], default: int) -> int:
+    def _optional_positive_int(value: dict[str, Any], keys: tuple[str, ...]) -> int | None:
         for key in keys:
             raw = value.get(key)
             if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
                 return raw
-        return default
+        return None
+
+    @classmethod
+    def _positive_int(cls, value: dict[str, Any], keys: tuple[str, ...], default: int) -> int:
+        return cls._optional_positive_int(value, keys) or default
 
     @staticmethod
-    def _positive_float(value: dict[str, Any], keys: tuple[str, ...], default: float) -> float:
+    def _optional_positive_float(value: dict[str, Any], keys: tuple[str, ...]) -> float | None:
         for key in keys:
             raw = value.get(key)
             if isinstance(raw, int | float) and not isinstance(raw, bool) and raw > 0:
                 return float(raw)
-        return default
+        return None
+
+    @classmethod
+    def _positive_float(cls, value: dict[str, Any], keys: tuple[str, ...], default: float) -> float:
+        return cls._optional_positive_float(value, keys) or default
 
     @classmethod
     def _derived_seed(cls, authority_fingerprint: str, profile: str) -> int:
