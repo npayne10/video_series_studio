@@ -16,9 +16,9 @@ def test_missing_declared_continuity_frame_falls_back_to_empty_latent(tmp_path: 
 
     assert contract["declared_start_frame"] == "continuity/SHT-000-final.png"
     assert contract["start_frame"] == ""
-    assert contract["unavailable_start_frame"].endswith("continuity\\SHT-000-final.png") or contract[
-        "unavailable_start_frame"
-    ].endswith("continuity/SHT-000-final.png")
+    assert contract["unavailable_start_frame"].endswith(
+        "continuity\\SHT-000-final.png"
+    ) or contract["unavailable_start_frame"].endswith("continuity/SHT-000-final.png")
     assert contract["delivery"] == "empty_latent"
     assert contract["temporal_start_policy"]["mode"] == "empty_latent"
     assert contract["temporal_start_policy"]["has_explicit_start_frame"] is False
