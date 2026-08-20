@@ -96,7 +96,14 @@ class LocalProductionPackageCompilationService:
                 source_package_id=source_package_id,
                 message="Compiled Production Package matches current approved authority.",
             )
-        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        except (
+            OSError,
+            ValueError,
+            TypeError,
+            KeyError,
+            json.JSONDecodeError,
+            LocalProductionPackageCompilationError,
+        ) as exc:
             return ProductionPackageStatus(
                 task_id=task.task_id,
                 state=ProductionPackageCompilationState.INVALID,

@@ -161,6 +161,8 @@ class ProductionPackageCompilerService:
         )
         composition_plan = {
             "shot_id": source.shot_id,
+            "story_context": self._mapping(production.get("story_context")),
+            "shot": self._mapping(production.get("shot")),
             "assets": self._list_of_mappings(production.get("assets")),
             "canonical_references": self._list_of_mappings(
                 production.get("canonical_references")
@@ -171,6 +173,7 @@ class ProductionPackageCompilerService:
             "action_performance": self._mapping(production.get("action_performance")),
             "continuity": continuity,
             "style": self._mapping(production.get("style")),
+            "dialogue": self._list_of_mappings(production.get("dialogue")),
             "effects": self._list_of_mappings(production.get("effects")),
         }
         seed = self._derived_seed(task.authority.fingerprint, normalized_profile)

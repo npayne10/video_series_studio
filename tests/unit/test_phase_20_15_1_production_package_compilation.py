@@ -23,7 +23,8 @@ from vscs.application.production_tasks import (
     ProductionTaskState,
     ProductionTaskType,
 )
-from vscs.infrastructure.production_execution.package_compilation import (
+from vscs.infrastructure.production_execution import (
+    LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
 
@@ -35,6 +36,7 @@ def _source() -> ProductionPackage:
             "Commander James crosses the Mauritania observation lounge while the camera "
             "tracks laterally. Natural practical lighting remains physically plausible."
         ),
+        "story_context": {"purpose": "Reveal the unexplained signal."},
         "shot": {"frame_count": 240, "fps": 24},
         "action_performance": {
             "temporal_narrative": "James walks from the viewport to the console.",
@@ -70,7 +72,7 @@ def _source() -> ProductionPackage:
                 "no excessive holographic glow",
             ]
         },
-        "dialogue": [],
+        "dialogue": [{"speaker": "James", "text": "There it is again."}],
         "effects": [],
         "canonical_references": [
             {
@@ -94,7 +96,7 @@ def _source() -> ProductionPackage:
             planning_review_id="REVIEW-SHT-001",
             planning_review_fingerprint="review-fingerprint",
         ),
-        story_context={"shot_id": "SHT-001"},
+        story_context=production["story_context"],
         shot=production["shot"],
         assets=tuple(production["assets"]),
         camera=production["camera"],
@@ -103,7 +105,7 @@ def _source() -> ProductionPackage:
         action_performance=production["action_performance"],
         continuity=production["continuity"],
         style=production["style"],
-        dialogue=(),
+        dialogue=tuple(production["dialogue"]),
         effects=(),
         references=tuple(production["canonical_references"]),
         universal_description=universal,
@@ -165,8 +167,11 @@ def test_compiler_carries_governed_camera_lighting_action_continuity_and_referen
     assert compiled.authority_fingerprint == task.authority.fingerprint
     assert compiled.production_authority["camera"]["movement"] == "slow lateral tracking"
     assert compiled.production_authority["lighting"]["profile"] == "Mauritania Bridge Operational"
+    assert compiled.composition_plan["story_context"]["purpose"].startswith("Reveal")
+    assert compiled.composition_plan["shot"]["frame_count"] == 240
     assert compiled.composition_plan["action_performance"]["temporal_narrative"].startswith("James")
     assert compiled.composition_plan["canonical_references"][0]["asset_id"] == "CHR-JAMES"
+    assert compiled.composition_plan["dialogue"][0]["speaker"] == "James"
     assert compiled.previous_approved_final_frame == "continuity/SHT-000-final.png"
     assert compiled.frame_count == 240
     assert compiled.frames_per_second == 24
@@ -205,5 +210,6 @@ def test_local_compilation_persists_authority_bound_package_and_detects_stale_or
 
     raw["width"] = 999
     compiled.path.write_text(json.dumps(raw), encoding="utf-8")
-    with pytest.raises(Exception, match="fingerprint"):
+    assert service.status(task).state is ProductionPackageCompilationState.INVALID
+    with pytest.raises(LocalProductionPackageCompilationError, match="fingerprint"):
         service.validate_file(task, compiled.path)
