@@ -305,9 +305,6 @@ class ProductionPackageCompilerService:
             ("frames_per_second", "fps"),
             cls._positive_int(shot, ("frames_per_second", "fps"), fps),
         )
-        explicit_frames = cls._optional_positive_int(render, ("frame_count", "frames"))
-        if explicit_frames is None:
-            explicit_frames = cls._optional_positive_int(shot, ("frame_count", "frames"))
         duration = cls._optional_positive_float(
             render,
             ("duration_seconds", "target_runtime_seconds", "runtime_seconds"),
@@ -317,12 +314,20 @@ class ProductionPackageCompilerService:
                 shot,
                 ("duration_seconds", "target_runtime_seconds", "runtime_seconds"),
             )
-        if explicit_frames is not None:
-            frames = explicit_frames
-            duration_seconds = frames / fps
-        elif duration is not None:
+        explicit_frames = cls._optional_positive_int(render, ("frame_count", "frames"))
+        if explicit_frames is None:
+            explicit_frames = cls._optional_positive_int(shot, ("frame_count", "frames"))
+
+        # Runtime/duration is the provider-ready timing authority whenever it is present.
+        # Legacy/default frame counts (notably 145) must not silently shorten an approved
+        # 22-second shot to ~6 seconds. Frame count is derived from duration and FPS so the
+        # executable package cannot contain contradictory timing values.
+        if duration is not None:
             frames = max(1, round(duration * fps))
             duration_seconds = duration
+        elif explicit_frames is not None:
+            frames = explicit_frames
+            duration_seconds = frames / fps
         else:
             frames = default_frames
             duration_seconds = frames / fps
