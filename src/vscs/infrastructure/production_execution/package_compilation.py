@@ -18,6 +18,8 @@ from vscs.application.production_execution.package_compilation import (
 from vscs.application.production_package import (
     ProductionPackage,
     ProductionPackageProvenance,
+)
+from vscs.application.production_package import (
     ProductionPackageStatus as CanonicalProductionPackageStatus,
 )
 from vscs.application.production_tasks import ProductionTask
@@ -57,7 +59,9 @@ class LocalProductionPackageCompilationService:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.compiler = ProductionPackageCompilerService()
 
-    def status(self, task: ProductionTask, *, profile: str = "production") -> ProductionPackageStatus:
+    def status(
+        self, task: ProductionTask, *, profile: str = "production"
+    ) -> ProductionPackageStatus:
         path = self._package_path(task, profile)
         if not path.is_file():
             return ProductionPackageStatus(
@@ -113,7 +117,9 @@ class LocalProductionPackageCompilationService:
                 message=f"Compiled Production Package is invalid: {exc}",
             )
 
-    def compile(self, task: ProductionTask, *, profile: str = "production") -> ProductionPackageStatus:
+    def compile(
+        self, task: ProductionTask, *, profile: str = "production"
+    ) -> ProductionPackageStatus:
         source = self._authority_source(task)
         compiled = self.compiler.compile(task, source, profile=profile)
         path = self._package_path(task, compiled.profile)
@@ -279,7 +285,9 @@ class LocalProductionPackageCompilationService:
     def _read_json(path: Path) -> dict[str, Any]:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
-            raise LocalProductionPackageCompilationError("Production Package JSON root is not an object")
+            raise LocalProductionPackageCompilationError(
+                "Production Package JSON root is not an object"
+            )
         return raw
 
     @staticmethod
@@ -335,7 +343,13 @@ class ComfyUIV714InputAssurance:
     LOADER_CLASS = "XorixProductionPackageLoaderV714"
     LOADER_TITLE = "Xorix Production Package — Canonical Composition v7.1.4"
     EXPECTED: tuple[tuple[str, str, int, str, str], ...] = (
-        ("target_description", "target_description", 4, "XorixCanonicalCompositionBuilderV714", "target_description"),
+        (
+            "target_description",
+            "target_description",
+            4,
+            "XorixCanonicalCompositionBuilderV714",
+            "target_description",
+        ),
         ("shot_prompt", "shot_prompt", 5, "CLIPTextEncode", "text"),
         ("negative_prompt", "negative_prompt", 6, "CLIPTextEncode", "text"),
         (

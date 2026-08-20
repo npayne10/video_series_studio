@@ -10,7 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.production_package import ProductionPackage
-from vscs.application.production_tasks import ProductionTask, ProductionTaskState, ProductionTaskType
+from vscs.application.production_tasks import (
+    ProductionTask,
+    ProductionTaskState,
+    ProductionTaskType,
+)
 
 
 class ProductionPackageCompilationError(RuntimeError):
@@ -164,9 +168,7 @@ class ProductionPackageCompilerService:
             "story_context": self._mapping(production.get("story_context")),
             "shot": self._mapping(production.get("shot")),
             "assets": self._list_of_mappings(production.get("assets")),
-            "canonical_references": self._list_of_mappings(
-                production.get("canonical_references")
-            ),
+            "canonical_references": self._list_of_mappings(production.get("canonical_references")),
             "camera": self._mapping(production.get("camera")),
             "lighting": self._mapping(production.get("lighting")),
             "environment": self._mapping(production.get("environment")),
@@ -348,7 +350,7 @@ class ProductionPackageCompilerService:
 
     @classmethod
     def _derived_seed(cls, authority_fingerprint: str, profile: str) -> int:
-        digest = hashlib.sha256(f"{authority_fingerprint}:{profile}".encode("utf-8")).digest()
+        digest = hashlib.sha256(f"{authority_fingerprint}:{profile}".encode()).digest()
         return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
 
     @staticmethod

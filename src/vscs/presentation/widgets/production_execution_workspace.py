@@ -216,9 +216,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._package_status = status
         path = str(status.path) if status.path is not None else "-"
-        self.package_state.setText(
-            f"{status.state.value.upper()} — {status.message} Path: {path}"
-        )
+        self.package_state.setText(f"{status.state.value.upper()} — {status.message} Path: {path}")
         self._update_start_enabled()
 
     def _compile_package(self) -> None:

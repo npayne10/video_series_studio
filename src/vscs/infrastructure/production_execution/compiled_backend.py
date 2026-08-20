@@ -40,9 +40,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             managed_media_directory=managed_media_directory,
             lease_duration_seconds=lease_duration_seconds,
         )
-        self.package_compilation = LocalProductionPackageCompilationService(
-            self.project_directory
-        )
+        self.package_compilation = LocalProductionPackageCompilationService(self.project_directory)
         self.input_assurance = ComfyUIV714InputAssurance()
 
     def has_execution(self, task_id: str) -> bool:
@@ -78,8 +76,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         assurance = self.input_assurance.inspect(workflow_path)
         if not assurance.passed:
             raise ProductionExecutionError(
-                "ComfyUI production workflow input assurance failed: "
-                + "; ".join(assurance.issues)
+                "ComfyUI production workflow input assurance failed: " + "; ".join(assurance.issues)
             )
         try:
             return self.package_compilation.compile(task, profile=profile)
