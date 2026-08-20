@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -125,7 +125,8 @@ class ProductionExecutionUiService:
         profile: str = "production",
     ) -> ProductionPackageStatus:
         normalized = self._task_id(task_id, "inspecting its Production Package")
-        return self.backend.package_status(normalized, profile=profile)
+        status = self.backend.package_status(normalized, profile=profile)
+        return self._block_if_execution_exists(normalized, status)
 
     def compile_package(
         self,
@@ -134,7 +135,8 @@ class ProductionExecutionUiService:
         profile: str = "production",
     ) -> ProductionPackageStatus:
         normalized = self._task_id(task_id, "compiling its Production Package")
-        return self.backend.compile_package(normalized, profile=profile)
+        status = self.backend.compile_package(normalized, profile=profile)
+        return self._block_if_execution_exists(normalized, status)
 
     def start(
         self,
@@ -142,6 +144,11 @@ class ProductionExecutionUiService:
         production_package: Path | None = None,
     ) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "starting production")
+        if self.backend.has_execution(normalized):
+            raise ProductionExecutionError(
+                "ProductionTask already has an execution record. Use Refresh Execution Status "
+                "to inspect it; retry or restart recovery must use governed execution authority."
+            )
         package: Path | None = None
         if production_package is not None:
             package = Path(production_package).expanduser().resolve(strict=False)
@@ -154,6 +161,22 @@ class ProductionExecutionUiService:
     def reconcile(self, task_id: str) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "refreshing execution")
         return self.backend.reconcile(normalized)
+
+    def _block_if_execution_exists(
+        self,
+        task_id: str,
+        status: ProductionPackageStatus,
+    ) -> ProductionPackageStatus:
+        if not self.backend.has_execution(task_id) or not status.executable:
+            return status
+        return replace(
+            status,
+            path=None,
+            message=(
+                f"{status.message} Start blocked because this ProductionTask already has an "
+                "execution record; inspect execution status instead of creating a duplicate attempt."
+            ),
+        )
 
     @staticmethod
     def _task_id(task_id: str, action: str) -> str:
