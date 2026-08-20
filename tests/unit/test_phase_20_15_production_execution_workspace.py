@@ -166,7 +166,9 @@ class WorkspaceBackend:
         )
 
 
-def _compiled_workspace(qtbot, tmp_path: Path) -> tuple[WorkspaceBackend, ProductionExecutionWorkspace]:
+def _compiled_workspace(
+    qtbot, tmp_path: Path
+) -> tuple[WorkspaceBackend, ProductionExecutionWorkspace]:
     backend = WorkspaceBackend(tmp_path / "production_package.json")
     service = ProductionExecutionUiService(backend)
     workspace = ProductionExecutionWorkspace(lambda: service)
