@@ -20,7 +20,7 @@ An authorization:
 - requires a non-blank human identity and reason;
 - is bound to the ProductionTask production ID, task ID, and current authority fingerprint;
 - records the exact additional attempt number being authorized;
-- is persisted under the project `.vscs/provider_executions` authority area;
+- is persisted under the project `.vscs/provider_executions/retry_overrides/authorizations.json` authority store, isolated from durable execution-job JSON documents;
 - never changes, deletes, renumbers, or overwrites prior durable attempts;
 - becomes consumed naturally when the authorized attempt is created;
 - cannot be stacked while an unused authorization already exists.
@@ -30,6 +30,12 @@ The effective execution limit is:
 `configured maximum attempts + valid governed retry authorizations for the current authority fingerprint`.
 
 If the authorized attempt also fails, another explicit human authorization is required before the next attempt.
+
+## Persistence isolation and migration
+
+Durable execution jobs and governed retry authorizations use different schemas and therefore do not share the same JSON scan namespace. Retry authorizations are stored in the dedicated `retry_overrides` subdirectory.
+
+If an earlier Phase 20.16.1 build created `.vscs/provider_executions/retry_overrides.json`, backend construction migrates that legacy document into the dedicated store before the durable execution repository enumerates execution-job documents. Existing authorization IDs are preserved and conflicting duplicate records are rejected rather than silently overwritten.
 
 ## Eligibility
 
@@ -63,4 +69,5 @@ The next attempt retains normal sequential numbering (for example A001–A003 fa
 - Retry limits remain meaningful defaults rather than permanent dead ends.
 - Human operators retain explicit authority for exceptional additional executions.
 - Providers and AI systems cannot silently grant themselves more attempts.
+- Durable execution-job persistence remains schema-isolated from governed retry authorization persistence.
 - The feature does not alter Generated Media approval, selection, ProductionTask completion, or provider recovery authority.
