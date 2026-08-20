@@ -43,6 +43,13 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
             raise ProductionExecutionError(
                 f"Active execution is no longer attached: {task.task_id}"
             )
+        # Phase 20.15 established QueueProviderExecutionService.reconcile() as the public
+        # current-session boundary. Real Phase 20.16 services expose runtime/adapters so the
+        # stricter pre-terminal output gate can keep queue authority RUNNING until outputs are
+        # validated. Older compatible services/test doubles may expose only reconcile(); keep
+        # that accepted contract working instead of reaching through implementation internals.
+        if not hasattr(active.service, "runtime") or not hasattr(active.service, "adapters"):
+            return self._reconcile_via_service_contract(task, active)
         try:
             renewed = active.service.runtime.heartbeat(
                 active.queue,
@@ -94,6 +101,88 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
             return result
 
         result = self._result(active.candidate, refreshed)
+        self._latest[task.task_id] = result
+        return result
+
+    def _reconcile_via_service_contract(
+        self,
+        task: ProductionTask,
+        active: object,
+    ) -> ProductionExecutionResult:
+        """Preserve the accepted Phase 20.15 service-level reconciliation contract."""
+        try:
+            reconciliation = active.service.reconcile(  # type: ignore[attr-defined]
+                active.queue,  # type: ignore[attr-defined]
+                active.candidate.queue_entry_id,  # type: ignore[attr-defined]
+                active.lease_id,  # type: ignore[attr-defined]
+                active.handle,  # type: ignore[attr-defined]
+                lease_duration_seconds=self.lease_duration_seconds,
+            )
+        except Exception as exc:
+            raise ProductionExecutionError(
+                f"Current production reconciliation failed safely: {exc}"
+            ) from exc
+
+        active.queue = reconciliation.queue  # type: ignore[attr-defined]
+        active.handle = reconciliation.handle  # type: ignore[attr-defined]
+        if reconciliation.lease is not None:
+            active.lease_id = reconciliation.lease.lease_id  # type: ignore[attr-defined]
+
+        refreshed = reconciliation.handle
+        if refreshed.state is ProviderExecutionState.COMPLETED:
+            outputs = tuple(reconciliation.outputs)
+            issue = self._current_output_issue(outputs)
+            durable_job = reconciliation.execution_job
+            if issue is not None:
+                if durable_job is None:
+                    result = self._result(
+                        active.candidate,  # type: ignore[attr-defined]
+                        self._provider_fact_as_failed_handle(
+                            self.execution_jobs.require(refreshed.execution_id), issue
+                        ),
+                        message=issue,
+                    )
+                else:
+                    result = self._production_failure_result(task, durable_job, issue)
+                self._finish_current(task.task_id, result)
+                return result
+            if durable_job is None:
+                durable_job = self.execution_jobs.require(refreshed.execution_id)
+            try:
+                ingested = GeneratedMediaIngestionService(
+                    self.media,
+                    LocalGeneratedMediaFileStore(
+                        source_root=self._require_comfyui_output_directory(),
+                        project_root=self.project_directory,
+                        managed_relative_root=self.managed_media_directory,
+                    ),
+                ).ingest_execution_outputs(durable_job, task, outputs)
+            except Exception as exc:
+                message = f"Provider completed but VSCS could not ingest production output: {exc}"
+                result = self._production_failure_result(task, durable_job, message)
+                self._finish_current(task.task_id, result)
+                return result
+            result = self._result(
+                active.candidate,  # type: ignore[attr-defined]
+                refreshed,
+                generated_media_ids=tuple(item.media.media_id for item in ingested),
+                message=(
+                    "Provider completed; output files validated, copied into project media storage, "
+                    "and ingested as authoritative Generated Media."
+                ),
+            )
+            self._finish_current(task.task_id, result)
+            return result
+
+        if refreshed.state in {
+            ProviderExecutionState.FAILED,
+            ProviderExecutionState.CANCELLED,
+        }:
+            result = self._result(active.candidate, refreshed)  # type: ignore[attr-defined]
+            self._finish_current(task.task_id, result)
+            return result
+
+        result = self._result(active.candidate, refreshed)  # type: ignore[attr-defined]
         self._latest[task.task_id] = result
         return result
 
