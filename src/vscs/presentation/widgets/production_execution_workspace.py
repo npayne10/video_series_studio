@@ -175,7 +175,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._selected_task_id = task_id
         self._execution_active = False
         self.compile_package_button.setEnabled(True)
-        self.status_button.setEnabled(True)
+        self._refresh_execution_availability()
         self._refresh_package_status()
         candidate = self._candidates[task_id]
         self._render_candidate(candidate)
@@ -183,6 +183,20 @@ class ProductionExecutionWorkspace(QWidget):
     def _profile_changed(self, _profile: str) -> None:
         if self._selected_task_id is not None:
             self._refresh_package_status()
+
+    def _refresh_execution_availability(self) -> None:
+        if self._selected_task_id is None:
+            self.status_button.setEnabled(False)
+            return
+        service = self._service_provider()
+        if service is None:
+            self.status_button.setEnabled(False)
+            return
+        try:
+            available = service.has_execution(self._selected_task_id)
+        except Exception:
+            available = False
+        self.status_button.setEnabled(available)
 
     def _refresh_package_status(self) -> None:
         if self._selected_task_id is None:
