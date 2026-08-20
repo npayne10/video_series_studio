@@ -7,6 +7,7 @@ from .package_compilation import (
     ProductionPackageCompilerService,
     ProductionPackageStatus,
 )
+from .profiles import ProductionExecutionProfile, normalize_execution_profile
 from .retry_override import (
     GovernedRetryAuthorization,
     GovernedRetryOverrideState,
@@ -35,6 +36,7 @@ __all__ = [
     "ProductionExecutionBackend",
     "ProductionExecutionCandidate",
     "ProductionExecutionError",
+    "ProductionExecutionProfile",
     "ProductionExecutionResult",
     "ProductionExecutionState",
     "ProductionExecutionUiService",
@@ -44,4 +46,5 @@ __all__ = [
     "ProductionPackageStatus",
     "ProductionTelemetrySnapshot",
     "ProductionTelemetryState",
+    "normalize_execution_profile",
 ]
