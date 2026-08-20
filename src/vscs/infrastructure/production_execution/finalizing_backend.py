@@ -40,7 +40,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
     def _reconcile_current_session(self, task: ProductionTask) -> ProductionExecutionResult:
         active = self._active.get(task.task_id)
         if active is None:
-            raise ProductionExecutionError(f"Active execution is no longer attached: {task.task_id}")
+            raise ProductionExecutionError(
+                f"Active execution is no longer attached: {task.task_id}"
+            )
         try:
             renewed = active.service.runtime.heartbeat(
                 active.queue,
@@ -216,7 +218,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
             execution_id=job.execution_id,
             provider_job_id=job.provider_job_id,
             progress=None,
-            generated_media_ids=tuple(item.media_id for item in self.media.list_for_task(task.task_id)),
+            generated_media_ids=tuple(
+                item.media_id for item in self.media.list_for_task(task.task_id)
+            ),
             media_output_directory=self.managed_media_directory,
             message=message,
         )
