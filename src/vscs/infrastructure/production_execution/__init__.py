@@ -1,6 +1,6 @@
 """Infrastructure composition for live Production Execution."""
 
-from .finalizing_backend import LocalComfyUIProductionExecutionBackend
+from .governed_retry_backend import LocalComfyUIProductionExecutionBackend
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
