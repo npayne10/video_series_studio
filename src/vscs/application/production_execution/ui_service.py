@@ -72,6 +72,8 @@ class ProductionExecutionBackend(Protocol):
 
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]: ...
 
+    def has_execution(self, task_id: str) -> bool: ...
+
     def package_status(
         self,
         task_id: str,
@@ -104,6 +106,10 @@ class ProductionExecutionUiService:
 
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
         return self.backend.candidates()
+
+    def has_execution(self, task_id: str) -> bool:
+        normalized = self._task_id(task_id, "inspecting execution availability")
+        return self.backend.has_execution(normalized)
 
     def package_status(
         self,
