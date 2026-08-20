@@ -186,7 +186,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase20161GovernedRetryBackend):
             raise ProductionExecutionError("Retry override requires a non-blank reason.")
         status = self.retry_override_status_for_profile(task.task_id, profile=normalized)
         if not status.eligible or status.next_attempt_number is None:
-            raise ProductionExecutionError(status.message or "Retry override is not currently eligible.")
+            raise ProductionExecutionError(
+                status.message or "Retry override is not currently eligible."
+            )
         authorization = GovernedRetryAuthorization(
             authorization_id=f"GRO-{uuid4().hex.upper()}",
             production_id=task.production_id,
@@ -231,7 +233,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase20161GovernedRetryBackend):
         except LocalProductionPackageCompilationError as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
-        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
+            task.production_id
+        )
         entry = queue.entry_for_task(task.task_id)
         if entry is None:
             raise ProductionExecutionError(
@@ -264,9 +268,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase20161GovernedRetryBackend):
             assert entry is not None
 
         next_global_attempt = len(history) + 1
-        predicted_execution_id = (
-            f"PEX-{queue.queue_id}-{entry.entry_id}-A{next_global_attempt:03d}"
-        )
+        predicted_execution_id = f"PEX-{queue.queue_id}-{entry.entry_id}-A{next_global_attempt:03d}"
         self.execution_profiles.assign(
             predicted_execution_id,
             task.task_id,

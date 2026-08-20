@@ -97,7 +97,9 @@ def _backend(tmp_path: Path) -> tuple[LocalComfyUIProductionExecutionBackend, Pr
     return backend, task
 
 
-def test_legacy_attempts_are_production_and_do_not_consume_preview_or_master(tmp_path: Path) -> None:
+def test_legacy_attempts_are_production_and_do_not_consume_preview_or_master(
+    tmp_path: Path,
+) -> None:
     backend, task = _backend(tmp_path)
     for attempt in range(1, 4):
         backend.execution_jobs.repository.save(_failed_job(task, attempt))

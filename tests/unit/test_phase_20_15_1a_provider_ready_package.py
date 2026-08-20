@@ -7,7 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from vscs.application.production_execution.package_compilation import ProductionPackageCompilerService
+from vscs.application.production_execution.package_compilation import (
+    ProductionPackageCompilerService,
+)
 from vscs.application.production_package import (
     ProductionPackage,
     ProductionPackageProvenance,
@@ -45,9 +47,7 @@ def _source(reference: str, checksum: str) -> ProductionPackage:
                 ],
             }
         ],
-        "canonical_references": [
-            {"asset_id": "CAP-CHR-001", "canonical_reference": reference}
-        ],
+        "canonical_references": [{"asset_id": "CAP-CHR-001", "canonical_reference": reference}],
         "camera": {"shot_size": "medium_close", "movement": "static"},
         "lighting": {"lighting_intent": "low_key", "color_temperature_k": 4300},
         "environment": {"environment_context": "ship_bridge"},

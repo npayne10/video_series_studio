@@ -97,9 +97,7 @@ class ProviderReadyProductionPackageResolver:
             "composition_plan": composition_plan,
         }
 
-    def _resolved_visual_assets(
-        self, compiled: CompiledProductionPackage
-    ) -> list[dict[str, Any]]:
+    def _resolved_visual_assets(self, compiled: CompiledProductionPackage) -> list[dict[str, Any]]:
         raw_assets = compiled.production_authority.get("assets", [])
         assets = raw_assets if isinstance(raw_assets, list) else []
         resolved: list[dict[str, Any]] = []

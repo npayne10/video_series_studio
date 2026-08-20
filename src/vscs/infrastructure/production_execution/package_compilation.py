@@ -217,12 +217,16 @@ class LocalProductionPackageCompilationService:
             )
         timing = raw.get("timing")
         if not isinstance(timing, dict):
-            raise LocalProductionPackageCompilationError("Production Package timing contract is invalid")
+            raise LocalProductionPackageCompilationError(
+                "Production Package timing contract is invalid"
+            )
         fps = timing.get("fps")
         frames = timing.get("frames")
         duration = timing.get("duration_seconds")
         if not isinstance(fps, int) or fps <= 0 or not isinstance(frames, int) or frames <= 0:
-            raise LocalProductionPackageCompilationError("Production Package timing values are invalid")
+            raise LocalProductionPackageCompilationError(
+                "Production Package timing values are invalid"
+            )
         if not isinstance(duration, int | float) or duration <= 0:
             raise LocalProductionPackageCompilationError("Production Package duration is invalid")
         expected_duration = frames / fps

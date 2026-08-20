@@ -20,4 +20,6 @@ def normalize_execution_profile(value: str) -> str:
         return ProductionExecutionProfile(normalized).value
     except ValueError as exc:
         supported = ", ".join(item.value for item in ProductionExecutionProfile)
-        raise ValueError(f"Unsupported production execution profile {value!r}; expected {supported}") from exc
+        raise ValueError(
+            f"Unsupported production execution profile {value!r}; expected {supported}"
+        ) from exc
