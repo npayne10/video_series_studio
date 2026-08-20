@@ -215,7 +215,7 @@ def test_workspace_compiles_package_before_starting_scheduled_work(qtbot, tmp_pa
     assert backend.reconcile_calls == 1
     assert not workspace.status_button.isEnabled()
     assert not workspace._poll_timer.isActive()
-    assert workspace.start_button.isEnabled()
+    assert not workspace.start_button.isEnabled()
     assert "COMPLETED" in workspace.summary.text()
     assert workspace.overall_progress.value() == 100
     assert "GM-20-15-UI-001" in workspace.details.toPlainText()
