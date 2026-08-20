@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from vscs.application.generated_media import GeneratedMediaIngestionService
 from vscs.application.production_execution import (
     ProductionExecutionError,
     ProductionExecutionResult,
+    ProductionExecutionState,
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
+    ProductionTelemetryState,
 )
 from vscs.application.production_execution.recovery import (
     ProductionRestartRecoveryError,
@@ -17,12 +20,14 @@ from vscs.application.production_execution.recovery import (
     RestartRecoveryQueueAdopter,
 )
 from vscs.application.production_tasks import (
+    ProductionQueue,
     ProductionQueueAttempt,
     ProductionQueueCompilerService,
     ProductionTask,
 )
 from vscs.application.provider_execution import (
     DurableExecutionJob,
+    ProviderExecutionHandle,
     ProviderExecutionHandleRestorer,
     ProviderExecutionState,
 )
@@ -31,9 +36,7 @@ from vscs.infrastructure.generated_media import LocalGeneratedMediaFileStore
 from .comfyui_backend import (
     LocalComfyUIProductionExecutionBackend as _Phase2015ComfyUIBackend,
 )
-from .comfyui_backend import (
-    _ActiveExecution,
-)
+from .comfyui_backend import _ActiveExecution
 from .live_telemetry import ComfyUIProductionTelemetryReader
 from .package_compilation import (
     ComfyUIV714InputAssurance,
@@ -73,11 +76,19 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         self._recovered_tasks: set[str] = set()
 
     def has_execution(self, task_id: str) -> bool:
-        """Return whether an active or durable execution exists for the task."""
+        """Return whether an execution currently blocks a fresh governed attempt."""
         task = self._require_task(task_id)
         if task.task_id in self._active:
             return True
-        return bool(self.execution_jobs.list_for_task(task.task_id))
+        jobs = self.execution_jobs.list_for_task(task.task_id)
+        if not jobs:
+            return False
+        if any(not job.terminal for job in jobs):
+            return True
+        latest = max(jobs, key=lambda job: (job.attempt_number, job.updated_at, job.execution_id))
+        if latest.state is ProviderExecutionState.COMPLETED and self.media.list_for_task(task.task_id):
+            return True
+        return latest.attempt_number >= task.attempt_policy.maximum_attempts
 
     def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot:
         """Return live telemetry after recovery or a durable summary before recovery."""
@@ -93,7 +104,23 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             )
         jobs = self.execution_jobs.list_for_task(task.task_id)
         if jobs:
-            return reader.observe_durable(jobs[-1])
+            latest = jobs[-1]
+            snapshot = reader.observe_durable(latest)
+            if (
+                latest.state is ProviderExecutionState.COMPLETED
+                and not self.media.list_for_task(task.task_id)
+            ):
+                return replace(
+                    snapshot,
+                    state=ProductionTelemetryState.FAILED,
+                    progress=None,
+                    stage="Provider completed without recoverable production output",
+                    message=(
+                        "Provider execution reached COMPLETED but no Generated Media or recoverable "
+                        "output exists; VSCS treats the production attempt as failed and retryable."
+                    ),
+                )
+            return snapshot
         raise ProductionExecutionError(f"No execution exists for ProductionTask: {task.task_id}")
 
     def package_status(
@@ -135,11 +162,12 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         *,
         production_package: Path | None = None,
     ) -> ProductionExecutionResult:
+        """Start a first or governed retry attempt from current approved queue authority."""
         task = self._require_task(task_id)
         if self.has_execution(task.task_id):
             raise ProductionExecutionError(
-                "ProductionTask already has an execution record. Inspect or reconcile that "
-                "execution; direct duplicate starts are not allowed."
+                "ProductionTask has an active, successful, or exhausted execution history. "
+                "Inspect execution status before creating another attempt."
             )
         try:
             if production_package is None:
@@ -150,7 +178,57 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 self.package_compilation.validate_file(task, package)
         except LocalProductionPackageCompilationError as exc:
             raise ProductionExecutionError(str(exc)) from exc
-        return super().start(task_id, production_package=package)
+
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
+        entry = queue.entry_for_task(task.task_id)
+        if entry is None:
+            raise ProductionExecutionError(
+                f"ProductionTask is not present in the current approved queue: {task.task_id}"
+            )
+        history = self._retry_attempt_history(
+            task,
+            self.execution_jobs.list_for_queue_entry(queue.queue_id, entry.entry_id),
+        )
+        if history:
+            queue = self._queue_with_attempt_history(queue, task.task_id, history)
+            entry = queue.entry_for_task(task.task_id)
+            assert entry is not None
+
+        candidate = self._candidate(task, entry.resource_id, entry.entry_id)
+        source_root = self._require_comfyui_output_directory()
+        service, worker_id = self._execution_service(task, entry.resource_id)
+        submission = service.submit(
+            queue,
+            entry.entry_id,
+            worker_id,
+            self._render_request(task),
+            str(package.resolve(strict=False)),
+            lease_duration_seconds=self.lease_duration_seconds,
+        )
+        if not submission.submitted or submission.handle is None or submission.lease is None:
+            result = ProductionExecutionResult(
+                candidate=candidate,
+                state=ProductionExecutionState.FAILED,
+                provider_id=submission.provider.provider_id,
+                message=submission.error_message or "Provider submission failed",
+                media_output_directory=self.managed_media_directory,
+            )
+            self._latest[task.task_id] = result
+            return result
+        self._active[task.task_id] = _ActiveExecution(
+            candidate=candidate,
+            queue=submission.queue,
+            lease_id=submission.lease.lease_id,
+            handle=submission.handle,
+            service=service,
+        )
+        result = self._result(
+            candidate,
+            submission.handle,
+            message=f"Provider submitted; source output: {source_root}",
+        )
+        self._latest[task.task_id] = result
+        return result
 
     def reconcile(self, task_id: str) -> ProductionExecutionResult:
         """Reconcile current-session work or recover a detached durable execution."""
@@ -184,7 +262,10 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             return self._durable_result(
                 task,
                 job,
-                message="Durable provider execution is already terminal; no restart adoption is required.",
+                message=(
+                    "Durable provider execution is terminal and unsuccessful. "
+                    "A governed retry is allowed if attempt policy permits."
+                ),
             )
         if job.state is ProviderExecutionState.COMPLETED and media_ids:
             return self._durable_result(
@@ -194,26 +275,73 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             )
         self._validate_recovery_authority(task, job)
         if job.provider_job_id is None:
-            raise ProductionExecutionError(
-                "Durable execution has no provider job identity and cannot be recovered safely."
+            failed = self._fail_nonterminal_job(
+                job,
+                "Durable execution has no provider job identity and produced no recoverable output.",
+            )
+            return self._durable_result(
+                task,
+                failed,
+                message="Execution marked FAILED because no provider job or production output exists.",
             )
 
-        observation = ComfyUIRestartRecoveryProbe(self.endpoint).observe(job.provider_job_id)
+        probe = ComfyUIRestartRecoveryProbe(self.endpoint)
+        observation = probe.observe(job.provider_job_id)
         if observation.presence is ComfyUIRecoveryPresence.UNREACHABLE:
             return self._durable_result(task, job, message=observation.message)
         if observation.presence is ComfyUIRecoveryPresence.NOT_FOUND:
+            if job.terminal:
+                return self._failed_production_result(
+                    task,
+                    job,
+                    observation.message
+                    + " No production output exists; the attempt is failed and may be rerun.",
+                )
+            failed = self._fail_nonterminal_job(
+                job,
+                observation.message + " No production output exists.",
+            )
             return self._durable_result(
                 task,
-                job,
+                failed,
                 message=(
-                    observation.message
-                    + " Execution is orphaned from provider observation; operator review or governed retry is required."
+                    "Provider no longer accounts for the durable prompt and no production output "
+                    "exists. Execution marked FAILED; governed retry is now allowed."
                 ),
             )
+        if observation.presence is ComfyUIRecoveryPresence.FAILED:
+            if job.terminal:
+                return self._failed_production_result(
+                    task,
+                    job,
+                    observation.failure_reason or observation.message,
+                )
+            failed = self._fail_nonterminal_job(
+                job,
+                observation.failure_reason or observation.message,
+            )
+            return self._durable_result(
+                task,
+                failed,
+                message=failed.failure_reason or "Recovered provider execution failed.",
+            )
+        if observation.presence is ComfyUIRecoveryPresence.COMPLETED:
+            issue = self._completed_output_issue(probe, job.provider_job_id)
+            if issue is not None:
+                if job.terminal:
+                    return self._failed_production_result(task, job, issue)
+                failed = self._fail_nonterminal_job(job, issue)
+                return self._durable_result(
+                    task,
+                    failed,
+                    message=(
+                        issue
+                        + " Execution marked FAILED because provider completion without an output "
+                        "is not a successful VSCS production run."
+                    ),
+                )
 
-        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
-            task.production_id
-        )
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
         entry = queue.entry_for_task(task.task_id)
         if entry is None:
             raise ProductionExecutionError(
@@ -233,15 +361,34 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         try:
             handle = adapter.restore_handle(job)
             refreshed = adapter.monitor(handle)
+            if refreshed.state is ProviderExecutionState.COMPLETED:
+                issue = self._completed_output_issue(probe, refreshed.provider_job_id)
+                if issue is not None:
+                    if job.terminal:
+                        return self._failed_production_result(task, job, issue)
+                    failed = self._fail_nonterminal_job(job, issue)
+                    return self._durable_result(task, failed, message=issue)
+            if refreshed.state is ProviderExecutionState.FAILED:
+                failed = self.execution_jobs.observe(job.execution_id, refreshed)
+                return self._durable_result(
+                    task,
+                    failed,
+                    message=failed.failure_reason or "Recovered provider execution failed.",
+                )
+            if refreshed.state is ProviderExecutionState.CANCELLED:
+                cancelled = self.execution_jobs.observe(job.execution_id, refreshed)
+                return self._durable_result(
+                    task,
+                    cancelled,
+                    message="Recovered provider execution is cancelled; governed retry may proceed.",
+                )
             observed_job = self.execution_jobs.observe(job.execution_id, refreshed)
             attempts = self._recovery_attempts(
                 self.execution_jobs.list_for_queue_entry(job.queue_id, job.entry_id),
                 observed_job,
             )
             worker = self._workers.require(worker_id)
-            # Recovery authority must be created in the exact runtime lease manager that will
-            # heartbeat/complete/fail the adopted execution. Do not assume the backend-level
-            # manager and a composed execution service share object identity.
+            # The recovery lease must live in the exact runtime that will heartbeat and finish it.
             adoption = RestartRecoveryQueueAdopter(service.runtime.leases).adopt(
                 queue,
                 task,
@@ -265,11 +412,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             service=service,
         )
         self._recovered_tasks.add(task.task_id)
-        if refreshed.state in {
-            ProviderExecutionState.COMPLETED,
-            ProviderExecutionState.FAILED,
-            ProviderExecutionState.CANCELLED,
-        }:
+        if refreshed.state is ProviderExecutionState.COMPLETED:
             return self._reconcile_recovered(task)
         result = self._result(
             candidate,
@@ -297,7 +440,6 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             )
             adapter = active.service.adapters.require(active.handle.provider_id)
             refreshed = adapter.monitor(active.handle)
-            durable_job = self.execution_jobs.observe(refreshed.execution_id, refreshed)
         except Exception as exc:
             raise ProductionExecutionError(
                 f"Recovered execution reconciliation failed safely: {exc}"
@@ -306,13 +448,23 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         active.lease_id = renewed.lease_id
 
         if refreshed.state is ProviderExecutionState.COMPLETED:
-            outputs = ComfyUIRestartRecoveryProbe(self.endpoint).completed_outputs(
-                refreshed.provider_job_id
-            )
-            if not outputs:
-                raise ProductionExecutionError(
-                    "ComfyUI reports the recovered execution completed but exposes no output files."
+            probe = ComfyUIRestartRecoveryProbe(self.endpoint)
+            issue = self._completed_output_issue(probe, refreshed.provider_job_id)
+            if issue is not None:
+                current_job = self.execution_jobs.require(refreshed.execution_id)
+                failed_job = self._fail_nonterminal_job(current_job, issue)
+                active.queue = active.service.runtime.fail(
+                    active.queue,
+                    active.candidate.queue_entry_id,
+                    active.lease_id,
+                    issue,
                 )
+                failed_handle = self._failed_handle(failed_job, issue)
+                result = self._result(active.candidate, failed_handle, message=issue)
+                self._finish_recovery(task.task_id, result)
+                return result
+            durable_job = self.execution_jobs.observe(refreshed.execution_id, refreshed)
+            outputs = probe.completed_outputs(refreshed.provider_job_id)
             active.queue = active.service.runtime.complete(
                 active.queue,
                 active.candidate.queue_entry_id,
@@ -339,6 +491,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             self._finish_recovery(task.task_id, result)
             return result
 
+        durable_job = self.execution_jobs.observe(refreshed.execution_id, refreshed)
         if refreshed.state is ProviderExecutionState.FAILED:
             active.queue = active.service.runtime.fail(
                 active.queue,
@@ -380,6 +533,65 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         self._active.pop(task_id, None)
         self._recovered_tasks.discard(task_id)
         self._latest[task_id] = result
+
+    def _completed_output_issue(
+        self,
+        probe: ComfyUIRestartRecoveryProbe,
+        provider_job_id: str,
+    ) -> str | None:
+        outputs = probe.completed_outputs(provider_job_id)
+        if not outputs:
+            return "ComfyUI reports completion but exposes no production output files."
+        source_root = self._require_comfyui_output_directory()
+        missing = tuple(
+            output.relative_path
+            for output in outputs
+            if not (source_root / Path(output.relative_path)).is_file()
+        )
+        if missing:
+            return "ComfyUI reports completion but output file(s) do not exist: " + ", ".join(missing)
+        return None
+
+    def _fail_nonterminal_job(self, job: DurableExecutionJob, reason: str) -> DurableExecutionJob:
+        if job.terminal:
+            return job
+        handle = self._failed_handle(job, reason)
+        return self.execution_jobs.observe(job.execution_id, handle)
+
+    @staticmethod
+    def _failed_handle(job: DurableExecutionJob, reason: str) -> ProviderExecutionHandle:
+        if job.provider_job_id is None:
+            raise ProductionExecutionError(
+                "Cannot record a post-submission recovery failure without provider job identity."
+            )
+        return ProviderExecutionHandle(
+            execution_id=job.execution_id,
+            provider_id=job.provider_id,
+            provider_job_id=job.provider_job_id,
+            state=ProviderExecutionState.FAILED,
+            submitted_at=job.submitted_at or job.created_at,
+            progress=job.progress,
+            failure_reason=reason,
+            metadata=job.provider_metadata,
+        )
+
+    def _failed_production_result(
+        self,
+        task: ProductionTask,
+        job: DurableExecutionJob,
+        message: str,
+    ) -> ProductionExecutionResult:
+        return ProductionExecutionResult(
+            candidate=self._candidate(task, job.resource_id, job.entry_id),
+            state=ProductionExecutionState.FAILED,
+            provider_id=job.provider_id,
+            execution_id=job.execution_id,
+            provider_job_id=job.provider_job_id,
+            progress=None,
+            generated_media_ids=(),
+            media_output_directory=self.managed_media_directory,
+            message=message,
+        )
 
     def _validate_recovery_authority(self, task: ProductionTask, job: DurableExecutionJob) -> None:
         if job.production_id != task.production_id or job.task_id != task.task_id:
@@ -450,6 +662,66 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 )
             )
         return tuple(attempts)
+
+    def _retry_attempt_history(
+        self,
+        task: ProductionTask,
+        jobs: tuple[DurableExecutionJob, ...],
+    ) -> tuple[ProductionQueueAttempt, ...]:
+        if not jobs:
+            return ()
+        ordered = tuple(sorted(jobs, key=lambda job: job.attempt_number))
+        numbers = tuple(job.attempt_number for job in ordered)
+        expected = tuple(range(1, len(ordered) + 1))
+        if numbers != expected:
+            raise ProductionExecutionError(
+                "Cannot retry because durable execution attempt history is incomplete or duplicated."
+            )
+        if any(not job.terminal for job in ordered):
+            raise ProductionExecutionError(
+                "Cannot retry while a prior durable execution is still non-terminal."
+            )
+        if len(ordered) >= task.attempt_policy.maximum_attempts:
+            raise ProductionExecutionError(
+                "ProductionTask has exhausted its configured execution attempt policy."
+            )
+        successful_media = bool(self.media.list_for_task(task.task_id))
+        attempts: list[ProductionQueueAttempt] = []
+        for job in ordered:
+            succeeded = job.state is ProviderExecutionState.COMPLETED and successful_media
+            attempts.append(
+                ProductionQueueAttempt(
+                    attempt_number=job.attempt_number,
+                    worker_id=job.worker_id,
+                    started_at=job.submitted_at or job.created_at,
+                    completed_at=job.updated_at,
+                    succeeded=succeeded,
+                    error_message=(
+                        None
+                        if succeeded
+                        else job.failure_reason
+                        or "provider execution produced no authoritative production output"
+                    ),
+                )
+            )
+        return tuple(attempts)
+
+    @staticmethod
+    def _queue_with_attempt_history(
+        queue: ProductionQueue,
+        task_id: str,
+        attempts: tuple[ProductionQueueAttempt, ...],
+    ) -> ProductionQueue:
+        entry = queue.entry_for_task(task_id)
+        if entry is None:
+            raise ProductionExecutionError(
+                f"ProductionTask is not present in current approved queue: {task_id}"
+            )
+        updated = replace(entry, attempts=attempts)
+        return replace(
+            queue,
+            entries=tuple(updated if item.entry_id == entry.entry_id else item for item in queue.entries),
+        )
 
     def _durable_result(
         self,
