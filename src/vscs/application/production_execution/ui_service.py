@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, cast
 
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
@@ -115,6 +115,20 @@ class ProductionExecutionBackend(Protocol):
     def reconcile(self, task_id: str) -> ProductionExecutionResult: ...
 
 
+class _RetryOverrideStatusOperation(Protocol):
+    def __call__(self, task_id: str) -> GovernedRetryOverrideStatus: ...
+
+
+class _AuthorizeRetryOperation(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        authorized_by: str,
+        reason: str,
+    ) -> GovernedRetryOverrideStatus: ...
+
+
 class ProductionExecutionUiService:
     """Provider-neutral UI facade; infrastructure retains live provider composition."""
 
@@ -134,8 +148,8 @@ class ProductionExecutionUiService:
 
     def retry_override_status(self, task_id: str) -> GovernedRetryOverrideStatus:
         normalized = self._task_id(task_id, "inspecting retry override authority")
-        operation = getattr(self.backend, "retry_override_status", None)
-        if operation is None:
+        raw_operation = getattr(self.backend, "retry_override_status", None)
+        if raw_operation is None:
             return GovernedRetryOverrideStatus(
                 GovernedRetryOverrideState.BLOCKED,
                 1,
@@ -143,6 +157,7 @@ class ProductionExecutionUiService:
                 1,
                 message="This execution backend does not support governed retry overrides.",
             )
+        operation = cast(_RetryOverrideStatusOperation, raw_operation)
         return operation(normalized)
 
     def authorize_retry(
@@ -153,11 +168,12 @@ class ProductionExecutionUiService:
         reason: str,
     ) -> GovernedRetryOverrideStatus:
         normalized = self._task_id(task_id, "authorizing an additional retry")
-        operation = getattr(self.backend, "authorize_retry", None)
-        if operation is None:
+        raw_operation = getattr(self.backend, "authorize_retry", None)
+        if raw_operation is None:
             raise ProductionExecutionError(
                 "This execution backend does not support governed retry overrides."
             )
+        operation = cast(_AuthorizeRetryOperation, raw_operation)
         return operation(normalized, authorized_by=authorized_by, reason=reason)
 
     def package_status(
