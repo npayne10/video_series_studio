@@ -10,6 +10,10 @@ from typing import Protocol
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
 from .package_compilation import ProductionPackageStatus
+from .retry_override import (
+    GovernedRetryOverrideState,
+    GovernedRetryOverrideStatus,
+)
 from .telemetry import ProductionTelemetrySnapshot
 
 
@@ -77,6 +81,16 @@ class ProductionExecutionBackend(Protocol):
 
     def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot: ...
 
+    def retry_override_status(self, task_id: str) -> GovernedRetryOverrideStatus: ...
+
+    def authorize_retry(
+        self,
+        task_id: str,
+        *,
+        authorized_by: str,
+        reason: str,
+    ) -> GovernedRetryOverrideStatus: ...
+
     def package_status(
         self,
         task_id: str,
@@ -117,6 +131,34 @@ class ProductionExecutionUiService:
     def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot:
         normalized = self._task_id(task_id, "inspecting live production telemetry")
         return self.backend.telemetry(normalized)
+
+    def retry_override_status(self, task_id: str) -> GovernedRetryOverrideStatus:
+        normalized = self._task_id(task_id, "inspecting retry override authority")
+        operation = getattr(self.backend, "retry_override_status", None)
+        if operation is None:
+            return GovernedRetryOverrideStatus(
+                GovernedRetryOverrideState.BLOCKED,
+                1,
+                0,
+                1,
+                message="This execution backend does not support governed retry overrides.",
+            )
+        return operation(normalized)
+
+    def authorize_retry(
+        self,
+        task_id: str,
+        *,
+        authorized_by: str,
+        reason: str,
+    ) -> GovernedRetryOverrideStatus:
+        normalized = self._task_id(task_id, "authorizing an additional retry")
+        operation = getattr(self.backend, "authorize_retry", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support governed retry overrides."
+            )
+        return operation(normalized, authorized_by=authorized_by, reason=reason)
 
     def package_status(
         self,
