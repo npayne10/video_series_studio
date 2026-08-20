@@ -77,9 +77,7 @@ class JsonProductionTaskRepository:
         normalized = production_id.strip()
         if not normalized:
             raise ProductionTaskRepositoryError("production_id cannot be blank")
-        return tuple(
-            task for task in self.list_all() if task.production_id == normalized
-        )
+        return tuple(task for task in self.list_all() if task.production_id == normalized)
 
     def _read(self, path: Path) -> ProductionTask:
         try:

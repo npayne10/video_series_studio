@@ -68,19 +68,16 @@ class ProductionExecutionResult:
 class ProductionExecutionBackend(Protocol):
     """Infrastructure boundary used by the desktop execution workspace."""
 
-    def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
-        ...
+    def candidates(self) -> tuple[ProductionExecutionCandidate, ...]: ...
 
     def start(
         self,
         task_id: str,
         *,
         production_package: Path,
-    ) -> ProductionExecutionResult:
-        ...
+    ) -> ProductionExecutionResult: ...
 
-    def reconcile(self, task_id: str) -> ProductionExecutionResult:
-        ...
+    def reconcile(self, task_id: str) -> ProductionExecutionResult: ...
 
 
 class ProductionExecutionUiService:

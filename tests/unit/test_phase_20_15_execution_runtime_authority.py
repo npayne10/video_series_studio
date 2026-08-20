@@ -32,9 +32,7 @@ def _task(task_id: str) -> ProductionTask:
     )
 
 
-def test_execution_services_share_worker_and_lease_authority(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_execution_services_share_worker_and_lease_authority(tmp_path: Path, monkeypatch) -> None:
     project = tmp_path / "project"
     source = tmp_path / "comfyui-output"
     project.mkdir()

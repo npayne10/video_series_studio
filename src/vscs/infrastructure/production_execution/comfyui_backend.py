@@ -46,9 +46,9 @@ from vscs.application.rendering import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
+    RendererKind,
     RenderRequest,
     RenderSettings,
-    RendererKind,
 )
 from vscs.application.rendering.workflows import (
     WorkflowCompatibilityValidator,
@@ -76,7 +76,6 @@ from vscs.infrastructure.rendering import (
     ProductionPackageComfyUIAdapter,
     UrllibComfyUITransport,
 )
-
 
 WORKFLOW_ID = "video_production_engine_v7_1_4"
 _PROVIDER_PREFIX = "LOCAL-COMFYUI"
@@ -183,7 +182,9 @@ class LocalComfyUIProductionExecutionBackend:
             raise ProductionExecutionError(
                 "Phase 20.15 live ComfyUI execution currently supports VIDEO_GENERATION tasks"
             )
-        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
+            task.production_id
+        )
         entry = queue.entry_for_task(task.task_id)
         if entry is None:
             raise ProductionExecutionError(

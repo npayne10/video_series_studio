@@ -24,9 +24,10 @@ def test_configured_media_output_remains_project_relative(tmp_path: Path) -> Non
     settings = WorkspaceSettings(media_output_directory=r"Production\Final Media")
 
     assert settings.media_output_directory == "Production/Final Media"
-    assert ProjectMediaOutputResolver.relative_path(
-        tmp_path, settings.media_output_directory
-    ) == "Production/Final Media"
+    assert (
+        ProjectMediaOutputResolver.relative_path(tmp_path, settings.media_output_directory)
+        == "Production/Final Media"
+    )
 
 
 @pytest.mark.parametrize(
@@ -68,9 +69,7 @@ def test_generated_media_file_store_prefixes_configured_media_root(tmp_path: Pat
         "generated_media/XORIX/EP-001/PT-001/GM-001.mp4",
     )
 
-    assert managed.relative_path == (
-        "Media Output/generated_media/XORIX/EP-001/PT-001/GM-001.mp4"
-    )
+    assert managed.relative_path == ("Media Output/generated_media/XORIX/EP-001/PT-001/GM-001.mp4")
     assert (project_root / Path(managed.relative_path)).read_bytes() == b"phase-20.15-media"
     assert source.exists()
     assert source.read_bytes() == b"phase-20.15-media"

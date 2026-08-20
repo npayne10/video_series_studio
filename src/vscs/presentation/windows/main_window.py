@@ -297,11 +297,16 @@ class MainWindow(QMainWindow):
             self._production_execution_ui = None
             return None
         resolved = project_directory.resolve(strict=False)
-        if self._production_execution_project == resolved and self._production_execution_ui is not None:
+        if (
+            self._production_execution_project == resolved
+            and self._production_execution_ui is not None
+        ):
             return self._production_execution_ui
         renderer = self.configuration.settings.renderers.get("comfyui")
         endpoint = (
-            renderer.api_url if renderer is not None and renderer.api_url else self.configuration.settings.environment.comfyui_url
+            renderer.api_url
+            if renderer is not None and renderer.api_url
+            else self.configuration.settings.environment.comfyui_url
         )
         source_output = renderer.output_directory if renderer is not None else None
         backend = LocalComfyUIProductionExecutionBackend(

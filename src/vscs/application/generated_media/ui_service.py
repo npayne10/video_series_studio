@@ -180,7 +180,9 @@ class GeneratedMediaUiService:
         )
         return self._detail_with(persistence, media_id)
 
-    def _list_items(self, media_records: tuple[GeneratedMedia, ...]) -> tuple[GeneratedMediaListItem, ...]:
+    def _list_items(
+        self, media_records: tuple[GeneratedMedia, ...]
+    ) -> tuple[GeneratedMediaListItem, ...]:
         persistence = self._persistence()
         selection_service = self._selection_service(persistence)
         items = tuple(
