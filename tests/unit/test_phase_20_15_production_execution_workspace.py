@@ -15,7 +15,7 @@ from vscs.presentation.widgets.production_execution_workspace import ProductionE
 
 
 class WorkspaceBackend:
-    def __init__(self, package_path: Path) -> None:
+    def __init__(self, package_path: Path, *, execution_exists: bool = False) -> None:
         self.package_path = package_path
         self.package_path.parent.mkdir(parents=True, exist_ok=True)
         self.candidate = ProductionExecutionCandidate(
@@ -31,11 +31,16 @@ class WorkspaceBackend:
             label="Video Generation — SHT-001",
         )
         self.compiled = False
+        self.execution_exists = execution_exists
         self.start_calls = 0
         self.reconcile_calls = 0
 
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
         return (self.candidate,)
+
+    def has_execution(self, task_id: str) -> bool:
+        assert task_id == self.candidate.task_id
+        return self.execution_exists
 
     def package_status(
         self,
@@ -79,6 +84,7 @@ class WorkspaceBackend:
         assert production_package is None
         assert self.compiled
         self.start_calls += 1
+        self.execution_exists = True
         return ProductionExecutionResult(
             candidate=self.candidate,
             state=ProductionExecutionState.SUBMITTED,
@@ -92,6 +98,7 @@ class WorkspaceBackend:
 
     def reconcile(self, task_id: str) -> ProductionExecutionResult:
         assert task_id == self.candidate.task_id
+        assert self.execution_exists
         self.reconcile_calls += 1
         return ProductionExecutionResult(
             candidate=self.candidate,
@@ -119,10 +126,12 @@ def test_workspace_compiles_package_before_starting_scheduled_work(qtbot, tmp_pa
     workspace.table.selectRow(0)
     assert workspace.compile_package_button.isEnabled()
     assert not workspace.start_button.isEnabled()
+    assert not workspace.status_button.isEnabled()
     assert "NOT_COMPILED" in workspace.package_state.text()
 
     qtbot.mouseClick(workspace.compile_package_button, Qt.MouseButton.LeftButton)
     assert workspace.start_button.isEnabled()
+    assert not workspace.status_button.isEnabled()
     assert "COMPILED" in workspace.package_state.text()
 
     qtbot.mouseClick(workspace.start_button, Qt.MouseButton.LeftButton)
@@ -138,3 +147,18 @@ def test_workspace_compiles_package_before_starting_scheduled_work(qtbot, tmp_pa
     assert "COMPLETED" in workspace.summary.text()
     assert "GM-20-15-UI-001" in workspace.details.toPlainText()
     assert "Project Media Output: Media Output" in workspace.details.toPlainText()
+
+
+def test_workspace_enables_status_for_existing_durable_execution(qtbot, tmp_path: Path) -> None:
+    backend = WorkspaceBackend(
+        tmp_path / "production_package.json",
+        execution_exists=True,
+    )
+    service = ProductionExecutionUiService(backend)
+    workspace = ProductionExecutionWorkspace(lambda: service)
+    qtbot.addWidget(workspace)
+
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    assert workspace.status_button.isEnabled()
