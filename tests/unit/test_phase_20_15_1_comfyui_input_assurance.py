@@ -26,6 +26,7 @@ def test_committed_comfyui_workflow_consumes_compiled_production_inputs() -> Non
         "width",
         "height",
         "frame_count",
+        "seed",
         "fps",
         "cfg",
         "ic_lora_strength",
