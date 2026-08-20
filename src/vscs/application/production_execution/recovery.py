@@ -70,8 +70,12 @@ class RestartRecoveryAdoption:
 class RestartRecoveryQueueAdopter:
     """Adopt verified durable provider work into a freshly compiled session queue."""
 
-    def __init__(self, leases: RestartRecoveryLeaseManager) -> None:
-        self.leases = leases
+    def __init__(self, leases: ProductionLeaseManager) -> None:
+        if not isinstance(leases, RestartRecoveryLeaseManager):
+            raise ProductionRestartRecoveryError(
+                "Restart recovery requires a RestartRecoveryLeaseManager"
+            )
+        self.leases: RestartRecoveryLeaseManager = leases
 
     def adopt(
         self,
