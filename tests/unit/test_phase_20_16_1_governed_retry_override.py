@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -141,6 +142,18 @@ def test_human_override_grants_exactly_one_durable_additional_attempt(tmp_path: 
     )
     assert len(history) == 3
 
+    retry_store = (
+        backend.project_directory
+        / ".vscs"
+        / "provider_executions"
+        / "retry_overrides"
+        / "authorizations.json"
+    )
+    assert retry_store.is_file()
+    assert not (
+        backend.project_directory / ".vscs" / "provider_executions" / "retry_overrides.json"
+    ).exists()
+
     restarted = LocalComfyUIProductionExecutionBackend(
         backend.project_directory,
         endpoint="http://127.0.0.1:8188",
@@ -183,3 +196,38 @@ def test_failed_authorized_attempt_requires_new_human_override(tmp_path: Path) -
     assert status.effective_maximum_attempts == 4
     assert status.next_attempt_number == 5
     assert backend.has_execution(task.task_id)
+
+
+def test_legacy_retry_override_store_is_migrated_out_of_execution_job_directory(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    output = tmp_path / "comfyui-output"
+    legacy = project / ".vscs" / "provider_executions" / "retry_overrides.json"
+    legacy.parent.mkdir(parents=True)
+    output.mkdir()
+    legacy.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "authorizations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    backend = LocalComfyUIProductionExecutionBackend(
+        project,
+        endpoint="http://127.0.0.1:8188",
+        comfyui_output_directory=output,
+    )
+
+    assert not legacy.exists()
+    assert (
+        project
+        / ".vscs"
+        / "provider_executions"
+        / "retry_overrides"
+        / "authorizations.json"
+    ).is_file()
+    assert backend.execution_jobs.list_active() == ()
