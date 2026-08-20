@@ -193,13 +193,13 @@ class ProviderReadyProductionPackageResolver:
     def _continuity_contract(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
         start_frame = compiled.previous_approved_final_frame or ""
         resolved_start = ""
+        unavailable_start = ""
         if start_frame and self._looks_like_path(start_frame):
             path = self._resolve_project_path(start_frame)
-            if not path.is_file():
-                raise ProviderReadyPackageResolutionError(
-                    f"Approved continuity frame does not exist: {path}"
-                )
-            resolved_start = str(path)
+            if path.is_file():
+                resolved_start = str(path)
+            else:
+                unavailable_start = str(path)
         has_start = bool(resolved_start)
         policy = {
             "schema_version": "1.0",
@@ -218,7 +218,9 @@ class ProviderReadyProductionPackageResolver:
             "allow_first_resolved_asset": False,
         }
         return {
+            "declared_start_frame": start_frame,
             "start_frame": resolved_start,
+            "unavailable_start_frame": unavailable_start,
             "start_frame_source": "approved_continuity" if has_start else "NONE",
             "delivery": "start_frame" if has_start else "empty_latent",
             "included_in_ic_lora": False,
