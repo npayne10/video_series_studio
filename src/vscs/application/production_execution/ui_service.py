@@ -10,6 +10,7 @@ from typing import Protocol
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
 from .package_compilation import ProductionPackageStatus
+from .telemetry import ProductionTelemetrySnapshot
 
 
 class ProductionExecutionError(RuntimeError):
@@ -74,6 +75,8 @@ class ProductionExecutionBackend(Protocol):
 
     def has_execution(self, task_id: str) -> bool: ...
 
+    def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot: ...
+
     def package_status(
         self,
         task_id: str,
@@ -110,6 +113,10 @@ class ProductionExecutionUiService:
     def has_execution(self, task_id: str) -> bool:
         normalized = self._task_id(task_id, "inspecting execution availability")
         return self.backend.has_execution(normalized)
+
+    def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot:
+        normalized = self._task_id(task_id, "inspecting live production telemetry")
+        return self.backend.telemetry(normalized)
 
     def package_status(
         self,

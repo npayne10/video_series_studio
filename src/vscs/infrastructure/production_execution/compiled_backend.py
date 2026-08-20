@@ -8,12 +8,14 @@ from vscs.application.production_execution import (
     ProductionExecutionError,
     ProductionExecutionResult,
     ProductionPackageStatus,
+    ProductionTelemetrySnapshot,
 )
 from vscs.application.production_tasks import ProductionTask
 
 from .comfyui_backend import (
     LocalComfyUIProductionExecutionBackend as _Phase2015ComfyUIBackend,
 )
+from .live_telemetry import ComfyUIProductionTelemetryReader
 from .package_compilation import (
     ComfyUIV714InputAssurance,
     LocalProductionPackageCompilationError,
@@ -49,6 +51,23 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         if task.task_id in self._active:
             return True
         return bool(self.execution_jobs.list_for_task(task.task_id))
+
+    def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot:
+        """Return current-session live telemetry or a durable non-live summary."""
+        task = self._require_task(task_id)
+        reader = ComfyUIProductionTelemetryReader(self.endpoint)
+        active = self._active.get(task.task_id)
+        if active is not None:
+            return reader.observe_live(
+                active.handle,
+                task_id=task.task_id,
+                resource_id=active.candidate.resource_id,
+                queue_entry_id=active.candidate.queue_entry_id,
+            )
+        jobs = self.execution_jobs.list_for_task(task.task_id)
+        if jobs:
+            return reader.observe_durable(jobs[-1])
+        raise ProductionExecutionError(f"No execution exists for ProductionTask: {task.task_id}")
 
     def package_status(
         self,

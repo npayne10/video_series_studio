@@ -7,6 +7,11 @@ from .package_compilation import (
     ProductionPackageCompilerService,
     ProductionPackageStatus,
 )
+from .telemetry import (
+    ProductionDeviceTelemetry,
+    ProductionTelemetrySnapshot,
+    ProductionTelemetryState,
+)
 from .ui_service import (
     ProductionExecutionBackend,
     ProductionExecutionCandidate,
@@ -18,6 +23,7 @@ from .ui_service import (
 
 __all__ = [
     "CompiledProductionPackage",
+    "ProductionDeviceTelemetry",
     "ProductionExecutionBackend",
     "ProductionExecutionCandidate",
     "ProductionExecutionError",
@@ -28,4 +34,6 @@ __all__ = [
     "ProductionPackageCompilationState",
     "ProductionPackageCompilerService",
     "ProductionPackageStatus",
+    "ProductionTelemetrySnapshot",
+    "ProductionTelemetryState",
 ]
