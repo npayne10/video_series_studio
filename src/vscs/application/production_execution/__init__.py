@@ -7,6 +7,11 @@ from .package_compilation import (
     ProductionPackageCompilerService,
     ProductionPackageStatus,
 )
+from .retry_override import (
+    GovernedRetryAuthorization,
+    GovernedRetryOverrideState,
+    GovernedRetryOverrideStatus,
+)
 from .telemetry import (
     ProductionDeviceTelemetry,
     ProductionTelemetrySnapshot,
@@ -23,6 +28,9 @@ from .ui_service import (
 
 __all__ = [
     "CompiledProductionPackage",
+    "GovernedRetryAuthorization",
+    "GovernedRetryOverrideState",
+    "GovernedRetryOverrideStatus",
     "ProductionDeviceTelemetry",
     "ProductionExecutionBackend",
     "ProductionExecutionCandidate",
