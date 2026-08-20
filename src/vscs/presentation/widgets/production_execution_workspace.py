@@ -319,7 +319,9 @@ class ProductionExecutionWorkspace(QWidget):
             return
         actor = authorized_by.strip()
         if not actor:
-            QMessageBox.warning(self, "Authorize Additional Retry", "Authorizing identity is required.")
+            QMessageBox.warning(
+                self, "Authorize Additional Retry", "Authorizing identity is required."
+            )
             return
         reason, accepted = QInputDialog.getMultiLineText(
             self,

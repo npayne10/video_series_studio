@@ -107,7 +107,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016FinalizingBackend):
             raise ProductionExecutionError("Retry override requires a non-blank reason.")
         status = self.retry_override_status(task.task_id)
         if not status.eligible or status.next_attempt_number is None:
-            raise ProductionExecutionError(status.message or "Retry override is not currently eligible.")
+            raise ProductionExecutionError(
+                status.message or "Retry override is not currently eligible."
+            )
         authorization = GovernedRetryAuthorization(
             authorization_id=f"GRO-{uuid4().hex.upper()}",
             production_id=task.production_id,
@@ -131,7 +133,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016FinalizingBackend):
         if any(not job.terminal for job in jobs):
             return True
         latest = jobs[-1]
-        if latest.state is ProviderExecutionState.COMPLETED and self.media.list_for_task(task.task_id):
+        if latest.state is ProviderExecutionState.COMPLETED and self.media.list_for_task(
+            task.task_id
+        ):
             return True
         effective = task.attempt_policy.maximum_attempts + len(self._matching_authorizations(task))
         return len(jobs) >= effective
@@ -160,7 +164,11 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016FinalizingBackend):
                     if item.production_id == task.production_id
                     and item.authority_fingerprint == task.authority.fingerprint
                 ),
-                key=lambda item: (item.authorized_attempt_number, item.created_at, item.authorization_id),
+                key=lambda item: (
+                    item.authorized_attempt_number,
+                    item.created_at,
+                    item.authorization_id,
+                ),
             )
         )
 

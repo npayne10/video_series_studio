@@ -28,11 +28,7 @@ class LocalGovernedRetryAuthorizationStore:
         normalized = task_id.strip()
         if not normalized:
             return ()
-        return tuple(
-            item
-            for item in self._load()
-            if item.task_id == normalized
-        )
+        return tuple(item for item in self._load() if item.task_id == normalized)
 
     def save(self, authorization: GovernedRetryAuthorization) -> GovernedRetryAuthorization:
         existing = list(self._load())
