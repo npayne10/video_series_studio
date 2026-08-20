@@ -85,7 +85,9 @@ class _Backend:
         self.profile_calls.append(("authorize", profile))
         return self.retry_override_status_for_profile(task_id, profile=profile)
 
-    def package_status(self, task_id: str, *, profile: str = "production") -> ProductionPackageStatus:
+    def package_status(
+        self, task_id: str, *, profile: str = "production"
+    ) -> ProductionPackageStatus:
         self.profile_calls.append(("package", profile))
         return ProductionPackageStatus(
             task_id=task_id,
@@ -95,10 +97,14 @@ class _Backend:
             message="compiled",
         )
 
-    def compile_package(self, task_id: str, *, profile: str = "production") -> ProductionPackageStatus:
+    def compile_package(
+        self, task_id: str, *, profile: str = "production"
+    ) -> ProductionPackageStatus:
         return self.package_status(task_id, profile=profile)
 
-    def start(self, task_id: str, *, production_package: Path | None = None) -> ProductionExecutionResult:
+    def start(
+        self, task_id: str, *, production_package: Path | None = None
+    ) -> ProductionExecutionResult:
         raise AssertionError("profile start path expected")
 
     def start_for_profile(

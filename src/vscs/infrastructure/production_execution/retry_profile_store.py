@@ -39,7 +39,9 @@ class LocalRetryAuthorizationProfileStore:
             / "profiles.json"
         )
 
-    def assign(self, authorization_id: str, task_id: str, profile: str) -> RetryAuthorizationProfile:
+    def assign(
+        self, authorization_id: str, task_id: str, profile: str
+    ) -> RetryAuthorizationProfile:
         assignment = RetryAuthorizationProfile(authorization_id, task_id, profile)
         existing = list(self._load())
         current = next(
