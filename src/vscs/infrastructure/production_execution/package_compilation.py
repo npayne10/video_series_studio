@@ -1,4 +1,4 @@
-"""Local production package compilation and ComfyUI v7.1.4 input assurance."""
+"""Local provider-ready production package compilation and ComfyUI input assurance."""
 
 from __future__ import annotations
 
@@ -23,6 +23,11 @@ from vscs.application.production_package import (
     ProductionPackageStatus as CanonicalProductionPackageStatus,
 )
 from vscs.application.production_tasks import ProductionTask
+
+from .provider_ready_package import (
+    ProviderReadyPackageResolutionError,
+    ProviderReadyProductionPackageResolver,
+)
 
 
 class LocalProductionPackageCompilationError(ProductionPackageCompilationError):
@@ -50,7 +55,7 @@ class ComfyUIInputAssuranceReport:
 
 
 class LocalProductionPackageCompilationService:
-    """Resolve approved authority, compile it, persist it, and reject stale artifacts."""
+    """Resolve approved authority into a provider-ready executable production package."""
 
     SOURCE_FILE = Path("production") / "production_packages.json"
     COMPILED_ROOT = Path("production") / "compiled"
@@ -58,6 +63,7 @@ class LocalProductionPackageCompilationService:
     def __init__(self, project_directory: Path) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.compiler = ProductionPackageCompilerService()
+        self.provider_ready = ProviderReadyProductionPackageResolver(self.project_directory)
 
     def status(
         self, task: ProductionTask, *, profile: str = "production"
@@ -98,7 +104,10 @@ class LocalProductionPackageCompilationService:
                 authority_fingerprint=stored_authority,
                 package_fingerprint=package_fingerprint,
                 source_package_id=source_package_id,
-                message="Compiled Production Package matches current approved authority.",
+                message=(
+                    "Provider-ready Production Package matches current approved authority and "
+                    "all required local canonical references resolve."
+                ),
             )
         except (
             OSError,
@@ -122,8 +131,12 @@ class LocalProductionPackageCompilationService:
     ) -> ProductionPackageStatus:
         source = self._authority_source(task)
         compiled = self.compiler.compile(task, source, profile=profile)
+        try:
+            provider_ready = self.provider_ready.resolve(compiled)
+        except ProviderReadyPackageResolutionError as exc:
+            raise LocalProductionPackageCompilationError(str(exc)) from exc
         path = self._package_path(task, compiled.profile)
-        payload = self._comfyui_payload(compiled)
+        payload = self._comfyui_payload(compiled, provider_ready)
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".tmp")
         temporary.write_text(
@@ -187,12 +200,51 @@ class LocalProductionPackageCompilationService:
             "seed",
             "composition_plan",
             "production_authority",
+            "resolved_visual_assets",
+            "reference_plan",
+            "resolved_render_contract",
+            "timing",
+            "generation",
+            "prompts",
+            "output",
+            "validation_contract",
         )
         missing = tuple(key for key in required if key not in raw)
         if missing:
             raise LocalProductionPackageCompilationError(
-                "Production Package is missing required loader inputs: " + ", ".join(missing)
+                "Production Package is missing required provider-ready inputs: "
+                + ", ".join(missing)
             )
+        timing = raw.get("timing")
+        if not isinstance(timing, dict):
+            raise LocalProductionPackageCompilationError("Production Package timing contract is invalid")
+        fps = timing.get("fps")
+        frames = timing.get("frames")
+        duration = timing.get("duration_seconds")
+        if not isinstance(fps, int) or fps <= 0 or not isinstance(frames, int) or frames <= 0:
+            raise LocalProductionPackageCompilationError("Production Package timing values are invalid")
+        if not isinstance(duration, int | float) or duration <= 0:
+            raise LocalProductionPackageCompilationError("Production Package duration is invalid")
+        expected_duration = frames / fps
+        if abs(float(duration) - expected_duration) > (1.0 / fps):
+            raise LocalProductionPackageCompilationError(
+                "Production Package duration, frame count and fps are inconsistent"
+            )
+        resolved_assets = raw.get("resolved_visual_assets")
+        if not isinstance(resolved_assets, list):
+            raise LocalProductionPackageCompilationError(
+                "Production Package resolved_visual_assets must be an array"
+            )
+        for item in resolved_assets:
+            if not isinstance(item, dict):
+                raise LocalProductionPackageCompilationError(
+                    "Production Package resolved visual asset is invalid"
+                )
+            source = str(item.get("resolved_source_path", "")).strip()
+            if source and not Path(source).is_file():
+                raise LocalProductionPackageCompilationError(
+                    f"Resolved canonical reference no longer exists: {source}"
+                )
 
     def _authority_source(self, task: ProductionTask) -> ProductionPackage:
         if task.shot_id is None:
@@ -232,28 +284,37 @@ class LocalProductionPackageCompilationService:
             / "production_package.json"
         )
 
-    @classmethod
-    def _comfyui_payload(cls, compiled: CompiledProductionPackage) -> dict[str, Any]:
-        """Translate provider-neutral execution authority into the v7.1.4 loader contract."""
+    def _comfyui_payload(
+        self,
+        compiled: CompiledProductionPackage,
+        provider_ready: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Translate approved authority into the provider-ready v7.1.4 loader contract."""
+        output = provider_ready["output"]
+        continuity = provider_ready["continuity_contract"]
         content: dict[str, Any] = {
-            "schema_version": "7.1.4-vscs-1",
+            "schema_version": "7.1.4-vscs-2",
             "profile": compiled.profile,
             "target_description": compiled.universal_text,
             "shot_prompt": compiled.positive_prompt,
             "negative_prompt": compiled.negative_prompt,
-            "previous_approved_final_frame": compiled.previous_approved_final_frame or "",
-            "filename_prefix": compiled.filename_prefix,
+            "previous_approved_final_frame": continuity["start_frame"],
+            "filename_prefix": output["filename_prefix"],
             "width": compiled.width,
             "height": compiled.height,
             "frame_count": compiled.frame_count,
             "fps": compiled.frames_per_second,
+            "duration_seconds": compiled.duration_seconds,
             "cfg": compiled.cfg,
             "ic_lora_strength": compiled.ic_lora_strength,
             "seed": compiled.seed,
-            "composition_plan": compiled.composition_plan,
+            "composition_plan": provider_ready["composition_plan"],
             "production_authority": compiled.production_authority,
+            **{key: value for key, value in provider_ready.items() if key != "composition_plan"},
+            "status": "READY",
+            "blocking_reasons": [],
         }
-        fingerprint = cls._fingerprint(content)
+        fingerprint = self._fingerprint(content)
         content["_vscs_manifest"] = {
             "task_id": compiled.task_id,
             "production_id": compiled.production_id,
@@ -268,7 +329,8 @@ class LocalProductionPackageCompilationService:
             "source_package_fingerprint": compiled.source_package_fingerprint,
             "source_schema_version": compiled.source_schema_version,
             "package_fingerprint": fingerprint,
-            "compiler": "VSCS Phase 20.15.1",
+            "compiler": "VSCS Phase 20.15.1a",
+            "reference_contract": "identity_first_minimal",
         }
         return content
 
@@ -286,7 +348,7 @@ class LocalProductionPackageCompilationService:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
             raise LocalProductionPackageCompilationError(
-                "Production Package JSON root is not an object"
+                "Production Package JSON root must be an object"
             )
         return raw
 
@@ -338,7 +400,7 @@ class LocalProductionPackageCompilationService:
 
 
 class ComfyUIV714InputAssurance:
-    """Prove that governed production-package outputs are wired into the committed workflow."""
+    """Prove governed package values reach their actual committed workflow consumers."""
 
     LOADER_CLASS = "XorixProductionPackageLoaderV714"
     LOADER_TITLE = "Xorix Production Package — Canonical Composition v7.1.4"
@@ -363,6 +425,7 @@ class ComfyUIV714InputAssurance:
         ("width", "width", 9, "EmptyLTXVLatentVideo", "width"),
         ("height", "height", 10, "EmptyLTXVLatentVideo", "height"),
         ("frame_count", "frame_count", 11, "EmptyLTXVLatentVideo", "length"),
+        ("seed", "seed", 12, "RandomNoise", "noise_seed"),
         ("fps", "fps", 13, "LTXVConditioning", "frame_rate"),
         ("cfg", "cfg", 14, "CFGGuider", "cfg"),
         ("ic_lora_strength", "ic_lora_strength", 15, "LTXICLoRALoaderModelOnly", "strength_model"),
@@ -404,8 +467,7 @@ class ComfyUIV714InputAssurance:
                 inputs = node.get("inputs")
                 if not isinstance(inputs, dict):
                     continue
-                value = inputs.get(input_name)
-                if value == [loader_id, index]:
+                if inputs.get(input_name) == [loader_id, index]:
                     consumers.append(node)
             if not consumers:
                 issues.append(
