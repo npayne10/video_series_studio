@@ -10,6 +10,7 @@ from typing import Protocol, cast
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
 from .package_compilation import ProductionPackageStatus
+from .profiles import normalize_execution_profile
 from .retry_override import (
     GovernedRetryOverrideState,
     GovernedRetryOverrideStatus,
@@ -22,8 +23,6 @@ class ProductionExecutionError(RuntimeError):
 
 
 class ProductionExecutionState(StrEnum):
-    """Operator-facing execution state without replacing provider or queue authority."""
-
     READY = "ready"
     PREPARING = "preparing"
     SUBMITTED = "submitted"
@@ -35,8 +34,6 @@ class ProductionExecutionState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class ProductionExecutionCandidate:
-    """One scheduled ProductionTask that can be inspected from the execution workspace."""
-
     production_id: str
     task_id: str
     task_type: ProductionTaskType
@@ -51,8 +48,6 @@ class ProductionExecutionCandidate:
 
 @dataclass(frozen=True, slots=True)
 class ProductionExecutionResult:
-    """Current operator view of one provider execution and ingestion result."""
-
     candidate: ProductionExecutionCandidate
     state: ProductionExecutionState
     provider_id: str | None = None
@@ -73,7 +68,7 @@ class ProductionExecutionResult:
 
 
 class ProductionExecutionBackend(Protocol):
-    """Infrastructure boundary used by the desktop execution workspace."""
+    """Backward-compatible infrastructure boundary used by the desktop workspace."""
 
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]: ...
 
@@ -115,6 +110,43 @@ class ProductionExecutionBackend(Protocol):
     def reconcile(self, task_id: str) -> ProductionExecutionResult: ...
 
 
+class _HasExecutionForProfile(Protocol):
+    def __call__(self, task_id: str, *, profile: str) -> bool: ...
+
+
+class _TelemetryForProfile(Protocol):
+    def __call__(self, task_id: str, *, profile: str) -> ProductionTelemetrySnapshot: ...
+
+
+class _RetryOverrideStatusForProfile(Protocol):
+    def __call__(self, task_id: str, *, profile: str) -> GovernedRetryOverrideStatus: ...
+
+
+class _AuthorizeRetryForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        authorized_by: str,
+        reason: str,
+    ) -> GovernedRetryOverrideStatus: ...
+
+
+class _StartForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        production_package: Path | None = None,
+    ) -> ProductionExecutionResult: ...
+
+
+class _ReconcileForProfile(Protocol):
+    def __call__(self, task_id: str, *, profile: str) -> ProductionExecutionResult: ...
+
+
 class _RetryOverrideStatusOperation(Protocol):
     def __call__(self, task_id: str) -> GovernedRetryOverrideStatus: ...
 
@@ -130,7 +162,7 @@ class _AuthorizeRetryOperation(Protocol):
 
 
 class ProductionExecutionUiService:
-    """Provider-neutral UI facade; infrastructure retains live provider composition."""
+    """Provider-neutral UI facade; profile scoping is optional and backward compatible."""
 
     def __init__(self, backend: ProductionExecutionBackend) -> None:
         self.backend = backend
@@ -138,16 +170,41 @@ class ProductionExecutionUiService:
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
         return self.backend.candidates()
 
-    def has_execution(self, task_id: str) -> bool:
+    def has_execution(self, task_id: str, *, profile: str = "production") -> bool:
         normalized = self._task_id(task_id, "inspecting execution availability")
+        execution_profile = normalize_execution_profile(profile)
+        raw = getattr(self.backend, "has_execution_for_profile", None)
+        if raw is not None:
+            return cast(_HasExecutionForProfile, raw)(normalized, profile=execution_profile)
         return self.backend.has_execution(normalized)
 
-    def telemetry(self, task_id: str) -> ProductionTelemetrySnapshot:
+    def telemetry(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> ProductionTelemetrySnapshot:
         normalized = self._task_id(task_id, "inspecting live production telemetry")
+        execution_profile = normalize_execution_profile(profile)
+        raw = getattr(self.backend, "telemetry_for_profile", None)
+        if raw is not None:
+            return cast(_TelemetryForProfile, raw)(normalized, profile=execution_profile)
         return self.backend.telemetry(normalized)
 
-    def retry_override_status(self, task_id: str) -> GovernedRetryOverrideStatus:
+    def retry_override_status(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> GovernedRetryOverrideStatus:
         normalized = self._task_id(task_id, "inspecting retry override authority")
+        execution_profile = normalize_execution_profile(profile)
+        scoped = getattr(self.backend, "retry_override_status_for_profile", None)
+        if scoped is not None:
+            return cast(_RetryOverrideStatusForProfile, scoped)(
+                normalized,
+                profile=execution_profile,
+            )
         raw_operation = getattr(self.backend, "retry_override_status", None)
         if raw_operation is None:
             return GovernedRetryOverrideStatus(
@@ -157,8 +214,7 @@ class ProductionExecutionUiService:
                 1,
                 message="This execution backend does not support governed retry overrides.",
             )
-        operation = cast(_RetryOverrideStatusOperation, raw_operation)
-        return operation(normalized)
+        return cast(_RetryOverrideStatusOperation, raw_operation)(normalized)
 
     def authorize_retry(
         self,
@@ -166,15 +222,28 @@ class ProductionExecutionUiService:
         *,
         authorized_by: str,
         reason: str,
+        profile: str = "production",
     ) -> GovernedRetryOverrideStatus:
         normalized = self._task_id(task_id, "authorizing an additional retry")
+        execution_profile = normalize_execution_profile(profile)
+        scoped = getattr(self.backend, "authorize_retry_for_profile", None)
+        if scoped is not None:
+            return cast(_AuthorizeRetryForProfile, scoped)(
+                normalized,
+                profile=execution_profile,
+                authorized_by=authorized_by,
+                reason=reason,
+            )
         raw_operation = getattr(self.backend, "authorize_retry", None)
         if raw_operation is None:
             raise ProductionExecutionError(
                 "This execution backend does not support governed retry overrides."
             )
-        operation = cast(_AuthorizeRetryOperation, raw_operation)
-        return operation(normalized, authorized_by=authorized_by, reason=reason)
+        return cast(_AuthorizeRetryOperation, raw_operation)(
+            normalized,
+            authorized_by=authorized_by,
+            reason=reason,
+        )
 
     def package_status(
         self,
@@ -183,8 +252,9 @@ class ProductionExecutionUiService:
         profile: str = "production",
     ) -> ProductionPackageStatus:
         normalized = self._task_id(task_id, "inspecting its Production Package")
-        status = self.backend.package_status(normalized, profile=profile)
-        return self._block_if_execution_exists(normalized, status)
+        execution_profile = normalize_execution_profile(profile)
+        status = self.backend.package_status(normalized, profile=execution_profile)
+        return self._block_if_execution_exists(normalized, execution_profile, status)
 
     def compile_package(
         self,
@@ -193,19 +263,23 @@ class ProductionExecutionUiService:
         profile: str = "production",
     ) -> ProductionPackageStatus:
         normalized = self._task_id(task_id, "compiling its Production Package")
-        status = self.backend.compile_package(normalized, profile=profile)
-        return self._block_if_execution_exists(normalized, status)
+        execution_profile = normalize_execution_profile(profile)
+        status = self.backend.compile_package(normalized, profile=execution_profile)
+        return self._block_if_execution_exists(normalized, execution_profile, status)
 
     def start(
         self,
         task_id: str,
         production_package: Path | None = None,
+        *,
+        profile: str = "production",
     ) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "starting production")
-        if self.backend.has_execution(normalized):
+        execution_profile = normalize_execution_profile(profile)
+        if self.has_execution(normalized, profile=execution_profile):
             raise ProductionExecutionError(
-                "ProductionTask already has an execution record. Use Refresh Execution Status "
-                "to inspect it; retry or restart recovery must use governed execution authority."
+                f"{execution_profile.title()} execution is active, successful, or has exhausted "
+                "its profile-scoped execution authority. Inspect execution status first."
             )
         package: Path | None = None
         if production_package is not None:
@@ -214,25 +288,42 @@ class ProductionExecutionUiService:
                 raise ProductionExecutionError(f"Production package does not exist: {package}")
             if package.suffix.casefold() != ".json":
                 raise ProductionExecutionError("Production package must be a JSON file")
+        scoped = getattr(self.backend, "start_for_profile", None)
+        if scoped is not None:
+            return cast(_StartForProfile, scoped)(
+                normalized,
+                profile=execution_profile,
+                production_package=package,
+            )
         return self.backend.start(normalized, production_package=package)
 
-    def reconcile(self, task_id: str) -> ProductionExecutionResult:
+    def reconcile(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "refreshing execution")
+        execution_profile = normalize_execution_profile(profile)
+        scoped = getattr(self.backend, "reconcile_for_profile", None)
+        if scoped is not None:
+            return cast(_ReconcileForProfile, scoped)(normalized, profile=execution_profile)
         return self.backend.reconcile(normalized)
 
     def _block_if_execution_exists(
         self,
         task_id: str,
+        profile: str,
         status: ProductionPackageStatus,
     ) -> ProductionPackageStatus:
-        if not self.backend.has_execution(task_id) or not status.executable:
+        if not self.has_execution(task_id, profile=profile) or not status.executable:
             return status
         return replace(
             status,
             path=None,
             message=(
-                f"{status.message} Start blocked because this ProductionTask already has an "
-                "execution record; inspect execution status instead of creating a duplicate attempt."
+                f"{status.message} Start blocked for {profile} because this profile has active, "
+                "successful, or exhausted execution authority."
             ),
         )
 
