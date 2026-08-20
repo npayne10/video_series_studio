@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QMessageBox,
     QProgressBar,
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.production_execution import (
+    GovernedRetryOverrideStatus,
     ProductionDeviceTelemetry,
     ProductionExecutionCandidate,
     ProductionExecutionResult,
@@ -48,6 +50,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._selected_task_id: str | None = None
         self._execution_active = False
         self._package_status: ProductionPackageStatus | None = None
+        self._retry_status: GovernedRetryOverrideStatus | None = None
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(self.POLL_INTERVAL_MS)
         self._poll_timer.timeout.connect(self._poll_live_status)
@@ -88,17 +91,23 @@ class ProductionExecutionWorkspace(QWidget):
         self.refresh_button = QPushButton("Refresh Scheduled Work")
         self.start_button = QPushButton("Start Production")
         self.status_button = QPushButton("Refresh Execution Status")
+        self.retry_button = QPushButton("Authorize Additional Retry")
+        self.retry_state = QLabel("Retry Override: -")
+        self.retry_state.setWordWrap(True)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
+        self.retry_button.setEnabled(False)
         self.refresh_button.clicked.connect(self.refresh)
         self.start_button.clicked.connect(self._start)
         self.status_button.clicked.connect(self._reconcile)
+        self.retry_button.clicked.connect(self._authorize_retry)
 
         buttons = QHBoxLayout()
         buttons.addWidget(self.refresh_button)
         buttons.addWidget(self.start_button)
         buttons.addWidget(self.status_button)
-        buttons.addStretch(1)
+        buttons.addWidget(self.retry_button)
+        buttons.addWidget(self.retry_state, 1)
 
         self.monitor_group = QGroupBox("Live Production Monitor")
         monitor = QGridLayout(self.monitor_group)
@@ -167,9 +176,12 @@ class ProductionExecutionWorkspace(QWidget):
         self._selected_task_id = None
         self._execution_active = False
         self._package_status = None
+        self._retry_status = None
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
+        self.retry_button.setEnabled(False)
+        self.retry_state.setText("Retry Override: -")
         self.compile_package_button.setEnabled(False)
         self.package_state.setText("Select a scheduled task.")
         self.details.clear()
@@ -219,7 +231,10 @@ class ProductionExecutionWorkspace(QWidget):
             self._selected_task_id = None
             self._execution_active = False
             self._package_status = None
+            self._retry_status = None
             self.compile_package_button.setEnabled(False)
+            self.retry_button.setEnabled(False)
+            self.retry_state.setText("Retry Override: -")
             self.package_state.setText("Select a scheduled task.")
             self._update_start_enabled()
             self.status_button.setEnabled(False)
@@ -236,6 +251,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._execution_active = False
         self.compile_package_button.setEnabled(True)
         self._refresh_execution_availability()
+        self._refresh_retry_override_status()
         self._refresh_package_status()
         candidate = self._candidates[task_id]
         self._render_candidate(candidate)
@@ -263,6 +279,74 @@ class ProductionExecutionWorkspace(QWidget):
             self._refresh_telemetry()
         else:
             self._reset_monitor()
+
+    def _refresh_retry_override_status(self) -> None:
+        if self._selected_task_id is None:
+            self._retry_status = None
+            self.retry_button.setEnabled(False)
+            self.retry_state.setText("Retry Override: -")
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.retry_override_status(self._selected_task_id)
+        except Exception as exc:
+            self._retry_status = None
+            self.retry_button.setEnabled(False)
+            self.retry_state.setText(f"Retry Override: unavailable — {exc}")
+            return
+        self._retry_status = status
+        self.retry_button.setEnabled(status.eligible)
+        self.retry_state.setText(
+            "Retry Override: "
+            f"{status.state.value.upper()} — attempts {status.attempts_recorded}/"
+            f"{status.effective_maximum_attempts}. {status.message}"
+        )
+
+    def _authorize_retry(self) -> None:
+        if self._selected_task_id is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        authorized_by, accepted = QInputDialog.getText(
+            self,
+            "Authorize Additional Retry",
+            "Authorized by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = authorized_by.strip()
+        if not actor:
+            QMessageBox.warning(self, "Authorize Additional Retry", "Authorizing identity is required.")
+            return
+        reason, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Authorize Additional Retry",
+            "Reason for exceeding the configured retry limit:",
+        )
+        if not accepted:
+            return
+        justification = reason.strip()
+        if not justification:
+            QMessageBox.warning(self, "Authorize Additional Retry", "A retry reason is required.")
+            return
+        try:
+            status = service.authorize_retry(
+                self._selected_task_id,
+                authorized_by=actor,
+                reason=justification,
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Authorize Additional Retry", str(exc))
+            self._refresh_retry_override_status()
+            return
+        self._retry_status = status
+        self.summary.setText(status.message)
+        self._refresh_retry_override_status()
+        self._refresh_execution_availability()
+        self._refresh_package_status()
 
     def _refresh_telemetry(self) -> None:
         if self._selected_task_id is None:
@@ -348,11 +432,13 @@ class ProductionExecutionWorkspace(QWidget):
             result = service.start(self._selected_task_id)
         except Exception as exc:
             self._execution_active = False
+            self._refresh_retry_override_status()
             self._refresh_package_status()
             QMessageBox.warning(self, "Start Production", str(exc))
             return
         self._execution_active = not result.terminal
         self._render_result(result)
+        self._refresh_retry_override_status()
         self._update_start_enabled()
         self.status_button.setEnabled(not result.terminal)
         self._refresh_telemetry()
@@ -384,6 +470,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._execution_active = not result.terminal
         self._render_result(result)
         self._refresh_telemetry()
+        self._refresh_retry_override_status()
         if show_warning:
             self._refresh_package_status()
         self.status_button.setEnabled(not result.terminal)
