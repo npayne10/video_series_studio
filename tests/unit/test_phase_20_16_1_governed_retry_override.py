@@ -13,8 +13,13 @@ from vscs.application.production_execution import (
 from vscs.application.production_tasks import (
     ProductionAuthorityType,
     ProductionCapability,
+    ProductionQueue,
+    ProductionQueueEngine,
+    ProductionQueueEntry,
+    ProductionQueueState,
     ProductionTask,
     ProductionTaskAuthority,
+    ProductionTaskPriority,
     ProductionTaskState,
     ProductionTaskType,
 )
@@ -107,6 +112,29 @@ def _backend(tmp_path: Path) -> tuple[LocalComfyUIProductionExecutionBackend, Pr
     return backend, task
 
 
+def _queue(task: ProductionTask) -> ProductionQueue:
+    return ProductionQueue(
+        queue_id="PQ-20-16-1",
+        production_id=task.production_id,
+        schedule_id="PS-20-16-1",
+        schedule_revision=1,
+        schedule_fingerprint="schedule-fingerprint",
+        entries=(
+            ProductionQueueEntry(
+                entry_id=f"PQE-{task.task_id}",
+                task_id=task.task_id,
+                resource_id="GPU-01",
+                task_type=task.task_type,
+                state=ProductionQueueState.READY,
+                priority=ProductionTaskPriority.NORMAL,
+                maximum_attempts=task.attempt_policy.maximum_attempts,
+                created_at=NOW,
+                updated_at=NOW,
+            ),
+        ),
+    )
+
+
 def test_exhausted_task_requires_human_retry_override(tmp_path: Path) -> None:
     backend, task = _backend(tmp_path)
 
@@ -162,6 +190,32 @@ def test_human_override_grants_exactly_one_durable_additional_attempt(tmp_path: 
     restored = restarted.retry_override_status(task.task_id)
     assert restored.state is GovernedRetryOverrideState.AUTHORIZED
     assert restored.effective_maximum_attempts == 4
+
+
+def test_authorized_retry_widens_runtime_queue_for_a004(tmp_path: Path) -> None:
+    backend, task = _backend(tmp_path)
+    backend.authorize_retry(
+        task.task_id,
+        authorized_by="operator",
+        reason="Authorize A004 after three outputless provider attempts.",
+    )
+    history = backend._retry_attempt_history(
+        task,
+        backend.execution_jobs.list_for_task(task.task_id),
+    )
+
+    queue = backend._queue_with_attempt_history(_queue(task), task.task_id, history)
+    entry = queue.entry_for_task(task.task_id)
+    assert entry is not None
+    assert entry.maximum_attempts == 4
+    assert entry.attempt_count == 3
+
+    queue = ProductionQueueEngine().claim(queue, entry.entry_id, "WORKER-GPU-01", now=NOW)
+    queue = ProductionQueueEngine().start(queue, entry.entry_id, now=NOW)
+    started = queue.entry(entry.entry_id)
+    assert started is not None
+    assert started.attempt_count == 4
+    assert started.attempts[-1].attempt_number == 4
 
 
 def test_unused_override_cannot_be_stacked(tmp_path: Path) -> None:
