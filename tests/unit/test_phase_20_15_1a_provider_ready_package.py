@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
@@ -139,6 +139,24 @@ def test_target_runtime_drives_frame_count_when_no_explicit_frames(tmp_path: Pat
     assert compiled.frame_count == 528
     assert "wrong canonical asset identity" in compiled.negative_prompt
     assert "authoritative identity definitions" in compiled.positive_prompt
+
+
+def test_target_runtime_overrides_stale_explicit_frame_count(tmp_path: Path) -> None:
+    asset = tmp_path / "asset.png"
+    asset.write_bytes(b"canonical")
+    source = _source(str(asset), hashlib.sha256(b"canonical").hexdigest())
+    production = dict(source.universal_description["production"])
+    shot = dict(production["shot"])
+    shot["frame_count"] = 145
+    production["shot"] = shot
+    universal = {"governed": dict(production), "production": production}
+    source = replace(source, shot=shot, universal_description=universal)
+
+    compiled = ProductionPackageCompilerService().compile(_task(source), source)
+
+    assert compiled.frames_per_second == 24
+    assert compiled.duration_seconds == 22
+    assert compiled.frame_count == 528
 
 
 def test_local_compiler_resolves_visual_asset_and_builds_reference_plan(tmp_path: Path) -> None:
