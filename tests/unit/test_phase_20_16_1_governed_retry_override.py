@@ -224,10 +224,6 @@ def test_legacy_retry_override_store_is_migrated_out_of_execution_job_directory(
 
     assert not legacy.exists()
     assert (
-        project
-        / ".vscs"
-        / "provider_executions"
-        / "retry_overrides"
-        / "authorizations.json"
+        project / ".vscs" / "provider_executions" / "retry_overrides" / "authorizations.json"
     ).is_file()
     assert backend.execution_jobs.list_active() == ()
