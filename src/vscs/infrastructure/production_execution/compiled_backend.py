@@ -86,7 +86,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         if any(not job.terminal for job in jobs):
             return True
         latest = max(jobs, key=lambda job: (job.attempt_number, job.updated_at, job.execution_id))
-        if latest.state is ProviderExecutionState.COMPLETED and self.media.list_for_task(task.task_id):
+        if latest.state is ProviderExecutionState.COMPLETED and self.media.list_for_task(
+            task.task_id
+        ):
             return True
         return latest.attempt_number >= task.attempt_policy.maximum_attempts
 
@@ -106,9 +108,8 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         if jobs:
             latest = jobs[-1]
             snapshot = reader.observe_durable(latest)
-            if (
-                latest.state is ProviderExecutionState.COMPLETED
-                and not self.media.list_for_task(task.task_id)
+            if latest.state is ProviderExecutionState.COMPLETED and not self.media.list_for_task(
+                task.task_id
             ):
                 return replace(
                     snapshot,
@@ -179,7 +180,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         except LocalProductionPackageCompilationError as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
-        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
+            task.production_id
+        )
         entry = queue.entry_for_task(task.task_id)
         if entry is None:
             raise ProductionExecutionError(
@@ -341,7 +344,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                     ),
                 )
 
-        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
+            task.production_id
+        )
         entry = queue.entry_for_task(task.task_id)
         if entry is None:
             raise ProductionExecutionError(
@@ -549,7 +554,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             if not (source_root / Path(output.relative_path)).is_file()
         )
         if missing:
-            return "ComfyUI reports completion but output file(s) do not exist: " + ", ".join(missing)
+            return "ComfyUI reports completion but output file(s) do not exist: " + ", ".join(
+                missing
+            )
         return None
 
     def _fail_nonterminal_job(self, job: DurableExecutionJob, reason: str) -> DurableExecutionJob:
@@ -720,7 +727,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         updated = replace(entry, attempts=attempts)
         return replace(
             queue,
-            entries=tuple(updated if item.entry_id == entry.entry_id else item for item in queue.entries),
+            entries=tuple(
+                updated if item.entry_id == entry.entry_id else item for item in queue.entries
+            ),
         )
 
     def _durable_result(
