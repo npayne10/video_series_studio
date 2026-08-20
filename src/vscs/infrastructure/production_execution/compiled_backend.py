@@ -239,7 +239,10 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 observed_job,
             )
             worker = self._workers.require(worker_id)
-            adoption = RestartRecoveryQueueAdopter(self._leases).adopt(
+            # Recovery authority must be created in the exact runtime lease manager that will
+            # heartbeat/complete/fail the adopted execution. Do not assume the backend-level
+            # manager and a composed execution service share object identity.
+            adoption = RestartRecoveryQueueAdopter(service.runtime.leases).adopt(
                 queue,
                 task,
                 worker,
