@@ -1,5 +1,19 @@
 """Infrastructure composition for live Production Execution."""
 
-from .comfyui_backend import LocalComfyUIProductionExecutionBackend
+from .compiled_backend import LocalComfyUIProductionExecutionBackend
+from .package_compilation import (
+    ComfyUIInputAssuranceReport,
+    ComfyUIInputTrace,
+    ComfyUIV714InputAssurance,
+    LocalProductionPackageCompilationError,
+    LocalProductionPackageCompilationService,
+)
 
-__all__ = ["LocalComfyUIProductionExecutionBackend"]
+__all__ = [
+    "ComfyUIInputAssuranceReport",
+    "ComfyUIInputTrace",
+    "ComfyUIV714InputAssurance",
+    "LocalComfyUIProductionExecutionBackend",
+    "LocalProductionPackageCompilationError",
+    "LocalProductionPackageCompilationService",
+]

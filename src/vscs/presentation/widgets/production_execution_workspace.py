@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFileDialog,
+    QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -25,11 +23,12 @@ from vscs.application.production_execution import (
     ProductionExecutionCandidate,
     ProductionExecutionResult,
     ProductionExecutionUiService,
+    ProductionPackageStatus,
 )
 
 
 class ProductionExecutionWorkspace(QWidget):
-    """Start and monitor approved scheduled production without bypassing queue authority."""
+    """Compile, start and monitor approved scheduled production through VSCS authority."""
 
     def __init__(
         self,
@@ -41,26 +40,31 @@ class ProductionExecutionWorkspace(QWidget):
         self._candidates: dict[str, ProductionExecutionCandidate] = {}
         self._selected_task_id: str | None = None
         self._execution_active = False
+        self._package_status: ProductionPackageStatus | None = None
 
         guidance = QLabel(
             "Production Planning ends when an approved schedule is ready. This workspace "
-            "starts the scheduled task through VSCS queue/lease/provider authority. On "
-            "provider completion, outputs are automatically copied into the project media "
-            "output folder and ingested as Generated Media."
+            "compiles the governed Production Package from the selected task's approved "
+            "production authority, validates its ComfyUI input contract, and starts the "
+            "scheduled task through VSCS queue/lease/provider authority. Provider outputs "
+            "are copied into the project media output folder and ingested as Generated Media."
         )
         guidance.setWordWrap(True)
 
         package_row = QHBoxLayout()
-        self.production_package = QLineEdit()
-        self.production_package.setPlaceholderText(
-            "Select the production package JSON consumed by the ComfyUI production workflow"
-        )
-        self.production_package.textChanged.connect(self._update_start_enabled)
-        self.browse_package_button = QPushButton("Browse…")
-        self.browse_package_button.clicked.connect(self._browse_package)
+        self.profile = QComboBox()
+        self.profile.addItems(("production", "preview", "master"))
+        self.profile.currentTextChanged.connect(self._profile_changed)
+        self.package_state = QLabel("Select a scheduled task.")
+        self.package_state.setWordWrap(True)
+        self.compile_package_button = QPushButton("Compile Production Package")
+        self.compile_package_button.setEnabled(False)
+        self.compile_package_button.clicked.connect(self._compile_package)
+        package_row.addWidget(QLabel("Profile"))
+        package_row.addWidget(self.profile)
         package_row.addWidget(QLabel("Production Package"))
-        package_row.addWidget(self.production_package, 1)
-        package_row.addWidget(self.browse_package_button)
+        package_row.addWidget(self.package_state, 1)
+        package_row.addWidget(self.compile_package_button)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -105,9 +109,12 @@ class ProductionExecutionWorkspace(QWidget):
         self._candidates.clear()
         self._selected_task_id = None
         self._execution_active = False
+        self._package_status = None
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
+        self.compile_package_button.setEnabled(False)
+        self.package_state.setText("Select a scheduled task.")
         self.details.clear()
         if service is None:
             self.summary.setText("Open a project to inspect scheduled production work.")
@@ -152,6 +159,9 @@ class ProductionExecutionWorkspace(QWidget):
         if not rows:
             self._selected_task_id = None
             self._execution_active = False
+            self._package_status = None
+            self.compile_package_button.setEnabled(False)
+            self.package_state.setText("Select a scheduled task.")
             self._update_start_enabled()
             self.status_button.setEnabled(False)
             return
@@ -164,40 +174,70 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._selected_task_id = task_id
         self._execution_active = False
-        candidate = self._candidates[task_id]
-        self._update_start_enabled()
+        self.compile_package_button.setEnabled(True)
         self.status_button.setEnabled(True)
-        self.details.setPlainText(
-            "\n".join(
-                (
-                    f"Task ID: {candidate.task_id}",
-                    f"Type: {candidate.task_type.value}",
-                    f"Production: {candidate.production_id}",
-                    f"Episode: {candidate.episode_id}",
-                    f"Scene: {candidate.scene_id or '-'}",
-                    f"Shot: {candidate.shot_id or '-'}",
-                    f"Scheduled Resource: {candidate.resource_id}",
-                    f"Queue Entry: {candidate.queue_entry_id}",
-                )
-            )
-        )
+        self._refresh_package_status()
+        candidate = self._candidates[task_id]
+        self._render_candidate(candidate)
 
-    def _update_start_enabled(self, _text: str | None = None) -> None:
+    def _profile_changed(self, _profile: str) -> None:
+        if self._selected_task_id is not None:
+            self._refresh_package_status()
+
+    def _refresh_package_status(self) -> None:
+        if self._selected_task_id is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.package_status(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self._package_status = None
+            self.package_state.setText(f"Unable to inspect package: {exc}")
+            self._update_start_enabled()
+            return
+        self._package_status = status
+        path = str(status.path) if status.path is not None else "-"
+        self.package_state.setText(
+            f"{status.state.value.upper()} — {status.message} Path: {path}"
+        )
+        self._update_start_enabled()
+
+    def _compile_package(self) -> None:
+        if self._selected_task_id is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.compile_package(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Compile Production Package", str(exc))
+            self._refresh_package_status()
+            return
+        self._package_status = status
+        self.package_state.setText(
+            f"{status.state.value.upper()} — {status.message} Path: {status.path or '-'}"
+        )
+        self.summary.setText(
+            f"Production Package compiled for {self._candidates[self._selected_task_id].label}."
+        )
+        self._update_start_enabled()
+
+    def _update_start_enabled(self) -> None:
         self.start_button.setEnabled(
             self._selected_task_id is not None
-            and bool(self.production_package.text().strip())
+            and self._package_status is not None
+            and self._package_status.executable
             and not self._execution_active
         )
-
-    def _browse_package(self) -> None:
-        selected, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select Production Package",
-            self.production_package.text().strip() or str(Path.home()),
-            "JSON files (*.json)",
-        )
-        if selected:
-            self.production_package.setText(selected)
 
     def _start(self) -> None:
         if self._selected_task_id is None:
@@ -205,14 +245,13 @@ class ProductionExecutionWorkspace(QWidget):
         service = self._service_provider()
         if service is None:
             return
-        package = Path(self.production_package.text().strip())
         self._execution_active = True
         self._update_start_enabled()
         try:
-            result = service.start(self._selected_task_id, package)
+            result = service.start(self._selected_task_id)
         except Exception as exc:
             self._execution_active = False
-            self._update_start_enabled()
+            self._refresh_package_status()
             QMessageBox.warning(self, "Start Production", str(exc))
             return
         self._execution_active = not result.terminal
@@ -233,8 +272,28 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._execution_active = not result.terminal
         self._render_result(result)
-        self._update_start_enabled()
+        self._refresh_package_status()
         self.status_button.setEnabled(not result.terminal)
+
+    def _render_candidate(self, candidate: ProductionExecutionCandidate) -> None:
+        status = self._package_status
+        package_text = status.state.value if status is not None else "unknown"
+        self.details.setPlainText(
+            "\n".join(
+                (
+                    f"Task ID: {candidate.task_id}",
+                    f"Type: {candidate.task_type.value}",
+                    f"Production: {candidate.production_id}",
+                    f"Episode: {candidate.episode_id}",
+                    f"Scene: {candidate.scene_id or '-'}",
+                    f"Shot: {candidate.shot_id or '-'}",
+                    f"Scheduled Resource: {candidate.resource_id}",
+                    f"Queue Entry: {candidate.queue_entry_id}",
+                    f"Production Package: {package_text}",
+                    f"Profile: {self.profile.currentText()}",
+                )
+            )
+        )
 
     def _render_result(self, result: ProductionExecutionResult) -> None:
         progress = "-" if result.progress is None else f"{result.progress * 100:.1f}%"
