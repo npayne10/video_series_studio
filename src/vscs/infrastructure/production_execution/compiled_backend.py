@@ -29,8 +29,10 @@ from vscs.application.provider_execution import (
 from vscs.infrastructure.generated_media import LocalGeneratedMediaFileStore
 
 from .comfyui_backend import (
-    _ActiveExecution,
     LocalComfyUIProductionExecutionBackend as _Phase2015ComfyUIBackend,
+)
+from .comfyui_backend import (
+    _ActiveExecution,
 )
 from .live_telemetry import ComfyUIProductionTelemetryReader
 from .package_compilation import (
@@ -173,7 +175,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
             )
         jobs = self.execution_jobs.list_for_task(task.task_id)
         if not jobs:
-            raise ProductionExecutionError(f"No durable execution exists for ProductionTask: {task_id}")
+            raise ProductionExecutionError(
+                f"No durable execution exists for ProductionTask: {task_id}"
+            )
         job = jobs[-1]
         media_ids = tuple(item.media_id for item in self.media.list_for_task(task.task_id))
         if job.state in {ProviderExecutionState.FAILED, ProviderExecutionState.CANCELLED}:
@@ -207,7 +211,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 ),
             )
 
-        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(task.production_id)
+        queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
+            task.production_id
+        )
         entry = queue.entry_for_task(task.task_id)
         if entry is None:
             raise ProductionExecutionError(

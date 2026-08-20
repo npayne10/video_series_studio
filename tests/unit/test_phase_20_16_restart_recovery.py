@@ -120,7 +120,9 @@ def test_restart_adoption_uses_fresh_recovery_lease_identity() -> None:
     assert recovered.attempts == attempts
     assert recovered.claimed_by == worker.worker_id
     assert adoption.lease.lease_id.startswith("PRLEASE-")
-    assert adoption.lease.lease_id != f"PLEASE-{queue.queue_id}-PQE-{task.task_id}-{worker.worker_id}"
+    assert (
+        adoption.lease.lease_id != f"PLEASE-{queue.queue_id}-PQE-{task.task_id}-{worker.worker_id}"
+    )
 
 
 class _RecoveryClient:
@@ -169,7 +171,9 @@ def test_comfyui_recovery_probe_classifies_running_and_completed_outputs() -> No
     assert outputs[0].media_kind == "production_video"
 
 
-def _persist_schedule(backend: LocalComfyUIProductionExecutionBackend, task: ProductionTask) -> None:
+def _persist_schedule(
+    backend: LocalComfyUIProductionExecutionBackend, task: ProductionTask
+) -> None:
     schedule = ProductionSchedule(
         production_id=task.production_id,
         assignments=(
@@ -268,7 +272,11 @@ class _Adapter:
             execution_id=handle.execution_id,
             provider_id=handle.provider_id,
             provider_job_id=handle.provider_job_id,
-            state=(ProviderExecutionState.COMPLETED if self.terminal else ProviderExecutionState.RUNNING),
+            state=(
+                ProviderExecutionState.COMPLETED
+                if self.terminal
+                else ProviderExecutionState.RUNNING
+            ),
             submitted_at=handle.submitted_at,
             progress=1.0 if self.terminal else 0.5,
             metadata=handle.metadata,
@@ -339,8 +347,12 @@ def test_backend_reattaches_running_durable_execution_with_new_session_lease(
         ProductionQueueRuntimeService(backend.tasks, backend._workers, leases=backend._leases),
         adapter,
     )
-    monkeypatch.setattr(backend, "_execution_service", lambda _task, _resource: (service, "WORKER-GPU-01"))
-    monkeypatch.setattr(compiled_module, "ComfyUIRestartRecoveryProbe", lambda _endpoint: _Probe(False))
+    monkeypatch.setattr(
+        backend, "_execution_service", lambda _task, _resource: (service, "WORKER-GPU-01")
+    )
+    monkeypatch.setattr(
+        compiled_module, "ComfyUIRestartRecoveryProbe", lambda _endpoint: _Probe(False)
+    )
 
     result = backend.reconcile(task.task_id)
 
@@ -371,7 +383,9 @@ def test_backend_reconciles_completed_durable_execution_and_ingests_output(
         ProductionQueueRuntimeService(backend.tasks, backend._workers, leases=backend._leases),
         adapter,
     )
-    monkeypatch.setattr(backend, "_execution_service", lambda _task, _resource: (service, "WORKER-GPU-01"))
+    monkeypatch.setattr(
+        backend, "_execution_service", lambda _task, _resource: (service, "WORKER-GPU-01")
+    )
     monkeypatch.setattr(
         compiled_module,
         "ComfyUIRestartRecoveryProbe",

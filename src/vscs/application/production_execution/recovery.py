@@ -49,8 +49,7 @@ class RestartRecoveryLeaseManager(ProductionLeaseManager):
         recovery = replace(
             provisional,
             lease_id=(
-                f"PRLEASE-{queue.queue_id}-{entry.entry_id}-{worker_id}-"
-                f"{uuid4().hex.upper()}"
+                f"PRLEASE-{queue.queue_id}-{entry.entry_id}-{worker_id}-{uuid4().hex.upper()}"
             ),
         )
         # ProductionLeaseManager deliberately owns an in-memory map. A recovery lease is
