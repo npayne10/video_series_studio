@@ -59,7 +59,8 @@ class ProductionExecutionWorkspace(QWidget):
             "Production Planning ends when an approved schedule is ready. This workspace "
             "compiles the governed Production Package from the selected task's approved "
             "production authority, validates its ComfyUI input contract, and starts the "
-            "scheduled task through VSCS queue/lease/provider authority. Provider outputs "
+            "scheduled task through VSCS queue/lease/provider authority. Preview, Production "
+            "and Master each have independent execution-attempt authority. Provider outputs "
             "are copied into the project media output folder and ingested as Generated Media."
         )
         guidance.setWordWrap(True)
@@ -250,15 +251,23 @@ class ProductionExecutionWorkspace(QWidget):
         self._selected_task_id = task_id
         self._execution_active = False
         self.compile_package_button.setEnabled(True)
+        self._refresh_package_status()
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
-        self._refresh_package_status()
         candidate = self._candidates[task_id]
         self._render_candidate(candidate)
 
     def _profile_changed(self, _profile: str) -> None:
-        if self._selected_task_id is not None:
-            self._refresh_package_status()
+        if self._selected_task_id is None:
+            return
+        self._poll_timer.stop()
+        self._execution_active = False
+        self._refresh_package_status()
+        self._refresh_execution_availability()
+        self._refresh_retry_override_status()
+        candidate = self._candidates.get(self._selected_task_id)
+        if candidate is not None:
+            self._render_candidate(candidate)
 
     def _refresh_execution_availability(self) -> None:
         if self._selected_task_id is None:
@@ -271,7 +280,10 @@ class ProductionExecutionWorkspace(QWidget):
             self._reset_monitor()
             return
         try:
-            available = service.has_execution(self._selected_task_id)
+            available = service.has_execution(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
         except Exception:
             available = False
         self.status_button.setEnabled(available)
@@ -289,19 +301,22 @@ class ProductionExecutionWorkspace(QWidget):
         service = self._service_provider()
         if service is None:
             return
+        profile = self.profile.currentText()
         try:
-            status = service.retry_override_status(self._selected_task_id)
+            status = service.retry_override_status(
+                self._selected_task_id,
+                profile=profile,
+            )
         except Exception as exc:
             self._retry_status = None
             self.retry_button.setEnabled(False)
-            self.retry_state.setText(f"Retry Override: unavailable — {exc}")
+            self.retry_state.setText(f"{profile.title()} Retry: unavailable — {exc}")
             return
         self._retry_status = status
         self.retry_button.setEnabled(status.eligible)
         self.retry_state.setText(
-            "Retry Override: "
-            f"{status.state.value.upper()} — attempts {status.attempts_recorded}/"
-            f"{status.effective_maximum_attempts}. {status.message}"
+            f"{profile.title()} Retry: {status.state.value.upper()} — profile attempts "
+            f"{status.attempts_recorded}/{status.effective_maximum_attempts}. {status.message}"
         )
 
     def _authorize_retry(self) -> None:
@@ -310,9 +325,10 @@ class ProductionExecutionWorkspace(QWidget):
         service = self._service_provider()
         if service is None:
             return
+        profile = self.profile.currentText()
         authorized_by, accepted = QInputDialog.getText(
             self,
-            "Authorize Additional Retry",
+            f"Authorize Additional {profile.title()} Retry",
             "Authorized by (human operator):",
         )
         if not accepted:
@@ -320,13 +336,15 @@ class ProductionExecutionWorkspace(QWidget):
         actor = authorized_by.strip()
         if not actor:
             QMessageBox.warning(
-                self, "Authorize Additional Retry", "Authorizing identity is required."
+                self,
+                "Authorize Additional Retry",
+                "Authorizing identity is required.",
             )
             return
         reason, accepted = QInputDialog.getMultiLineText(
             self,
-            "Authorize Additional Retry",
-            "Reason for exceeding the configured retry limit:",
+            f"Authorize Additional {profile.title()} Retry",
+            f"Reason for exceeding the configured {profile} retry limit:",
         )
         if not accepted:
             return
@@ -339,6 +357,7 @@ class ProductionExecutionWorkspace(QWidget):
                 self._selected_task_id,
                 authorized_by=actor,
                 reason=justification,
+                profile=profile,
             )
         except Exception as exc:
             QMessageBox.warning(self, "Authorize Additional Retry", str(exc))
@@ -357,7 +376,10 @@ class ProductionExecutionWorkspace(QWidget):
         if service is None:
             return
         try:
-            snapshot = service.telemetry(self._selected_task_id)
+            snapshot = service.telemetry(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
         except Exception as exc:
             self.monitor_note.setText(f"Telemetry unavailable: {exc}")
             return
@@ -412,6 +434,8 @@ class ProductionExecutionWorkspace(QWidget):
         self.summary.setText(
             f"Production Package compiled for {self._candidates[self._selected_task_id].label}."
         )
+        self._refresh_execution_availability()
+        self._refresh_retry_override_status()
         self._update_start_enabled()
 
     def _update_start_enabled(self) -> None:
@@ -431,7 +455,10 @@ class ProductionExecutionWorkspace(QWidget):
         self._execution_active = True
         self._update_start_enabled()
         try:
-            result = service.start(self._selected_task_id)
+            result = service.start(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
         except Exception as exc:
             self._execution_active = False
             self._refresh_retry_override_status()
@@ -461,7 +488,10 @@ class ProductionExecutionWorkspace(QWidget):
         if service is None:
             return
         try:
-            result = service.reconcile(self._selected_task_id)
+            result = service.reconcile(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
         except Exception as exc:
             if show_warning:
                 QMessageBox.warning(self, "Production Execution Status", str(exc))
@@ -510,6 +540,7 @@ class ProductionExecutionWorkspace(QWidget):
             "\n".join(
                 (
                     f"Task ID: {result.candidate.task_id}",
+                    f"Profile: {self.profile.currentText()}",
                     f"Provider: {result.provider_id or '-'}",
                     f"Execution ID: {result.execution_id or '-'}",
                     f"Provider Job: {result.provider_job_id or '-'}",
