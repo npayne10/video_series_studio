@@ -1,6 +1,5 @@
 """Infrastructure composition for live Production Execution."""
 
-from .governed_retry_backend import LocalComfyUIProductionExecutionBackend
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
@@ -8,6 +7,7 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
+from .profile_scoped_backend import LocalComfyUIProductionExecutionBackend
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
