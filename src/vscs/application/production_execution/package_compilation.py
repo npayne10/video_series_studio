@@ -1,4 +1,4 @@
-"""Provider-neutral production execution package compilation for Phase 20.15.1a."""
+"""Provider-neutral production execution package compilation for Phase 20.15.1b."""
 
 from __future__ import annotations
 
@@ -9,6 +9,9 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.prompt_distillation import (
+    ProductionPromptDistillationService,
+)
 from vscs.application.production_package import ProductionPackage
 from vscs.application.production_tasks import (
     ProductionTask,
@@ -83,9 +86,8 @@ class CompiledProductionPackage:
     package_fingerprint: str
 
     def to_dict(self) -> dict[str, Any]:
-        """Return deterministic JSON-compatible provider-neutral content."""
         return {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "task": {
                 "task_id": self.task_id,
                 "production_id": self.production_id,
@@ -131,24 +133,8 @@ class CompiledProductionPackage:
 class ProductionPackageCompilerService:
     """Compile one approved Phase 19 ProductionPackage for deterministic execution."""
 
-    DEFAULT_NEGATIVE_CONSTRAINTS = (
-        "wrong canonical asset identity",
-        "redesigned canonical asset",
-        "altered canonical geometry",
-        "incorrect canonical scale",
-        "duplicate subjects",
-        "unrequested people or objects",
-        "identity drift",
-        "morphing",
-        "flicker",
-        "unstable lighting",
-        "erratic camera movement",
-        "unrequested jump cut",
-        "cartoon or anime styling",
-        "painterly styling",
-        "low detail",
-        "AI artifacts",
-    )
+    def __init__(self) -> None:
+        self.prompt_distiller = ProductionPromptDistillationService()
 
     def compile(
         self,
@@ -171,8 +157,14 @@ class ProductionPackageCompilerService:
 
         normalized_profile = profile.strip().lower() or "production"
         render = self._render_settings(production, normalized_profile)
-        positive_prompt = self._positive_prompt(universal_text, production)
-        negative_prompt = self._negative_prompt(production.get("style"))
+        distilled = self.prompt_distiller.distill(
+            production,
+            universal_text=universal_text,
+            fps=render["frames_per_second"],
+            duration_seconds=render["duration_seconds"],
+        )
+        positive_prompt = distilled.positive
+        negative_prompt = distilled.negative
         continuity = self._mapping(production.get("continuity"))
         previous_frame = self._first_text(
             continuity,
@@ -317,11 +309,6 @@ class ProductionPackageCompilerService:
         explicit_frames = cls._optional_positive_int(render, ("frame_count", "frames"))
         if explicit_frames is None:
             explicit_frames = cls._optional_positive_int(shot, ("frame_count", "frames"))
-
-        # Runtime/duration is the provider-ready timing authority whenever it is present.
-        # Legacy/default frame counts (notably 145) must not silently shorten an approved
-        # 22-second shot to ~6 seconds. Frame count is derived from duration and FPS so the
-        # executable package cannot contain contradictory timing values.
         if duration is not None:
             frames = max(1, round(duration * fps))
             duration_seconds = duration
@@ -346,31 +333,6 @@ class ProductionPackageCompilerService:
             "cfg": cfg,
             "ic_lora_strength": strength,
         }
-
-    @classmethod
-    def _positive_prompt(cls, universal_text: str, production: dict[str, Any]) -> str:
-        references = cls._list_of_mappings(production.get("canonical_references"))
-        assets = cls._list_of_mappings(production.get("assets"))
-        if not references and not assets:
-            return universal_text
-        preservation = (
-            "Use all supplied canonical visual references as authoritative identity definitions. "
-            "Preserve canonical identity, geometry, scale, materials, markings, wardrobe and other "
-            "declared visual characteristics. Do not redesign, merge or substitute canonical assets."
-        )
-        return f"{preservation}\n{universal_text}"
-
-    @classmethod
-    def _negative_prompt(cls, value: object) -> str:
-        style = cls._mapping(value)
-        collected = list(cls.DEFAULT_NEGATIVE_CONSTRAINTS)
-        for key in ("negative_constraints", "avoid", "forbidden", "negative_prompt"):
-            raw = style.get(key)
-            if isinstance(raw, str) and raw.strip():
-                collected.append(raw.strip())
-            elif isinstance(raw, list):
-                collected.extend(str(item).strip() for item in raw if str(item).strip())
-        return "; ".join(dict.fromkeys(collected))
 
     @staticmethod
     def _mapping(value: object) -> dict[str, Any]:
