@@ -2,7 +2,8 @@
 
 Structured production authority remains the source of truth. This module converts
 that authority into concise model-facing language without serialising raw JSON into
-the text-conditioning path.
+the text-conditioning path. Encoder-facing text is deliberately bounded so provider
+text encoders do not receive unbounded authority prose.
 """
 
 from __future__ import annotations
@@ -25,10 +26,21 @@ class DistilledPromptSet:
     continuity: str
     dialogue: str
     shot_summary: str
+    positive_character_budget: int
+    positive_character_count: int
+    positive_compacted: bool
+    negative_character_budget: int
+    negative_character_count: int
+    negative_compacted: bool
 
 
 class ProductionPromptDistillationService:
     """Compile governed structured production intent into clean cinematic prose."""
+
+    # LTX/Gemma text encoding is a provider resource boundary. The structured package
+    # remains complete, but encoder-facing prose must stay deterministic and bounded.
+    MAX_POSITIVE_PROMPT_CHARACTERS = 2000
+    MAX_NEGATIVE_PROMPT_CHARACTERS = 800
 
     DEFAULT_NEGATIVE_CONSTRAINTS = (
         "wrong canonical asset identity",
@@ -80,24 +92,38 @@ class ProductionPromptDistillationService:
         dialogue_text = self._dialogue_prompt(shot, action, dialogue)
         constraints = self._constraints(shot, environment, camera, lighting)
         style_text = self._style_prompt(style)
+        timing_text = f"Target runtime {duration_seconds:g} seconds at {fps} fps."
 
-        sections = [
+        # Priority order is intentional. If the encoder budget is reached, lower-priority
+        # descriptive prose is omitted while governed identity, shot intent, action,
+        # environment, camera, constraints and timing remain represented first.
+        required_sections = (
             "Create one continuous uninterrupted cinematic shot.",
             shot_summary,
             identity_text,
             action_text,
             environment_text,
             camera_text,
+            constraints,
+            timing_text,
+        )
+        optional_sections = (
+            dialogue_text,
             lighting_text,
             continuity_text,
-            dialogue_text,
-            constraints,
             style_text,
-            f"Target runtime {duration_seconds:g} seconds at {fps} fps.",
-        ]
-        positive = " ".join(section.strip() for section in sections if section.strip())
-        positive = " ".join(positive.split())
-        negative = self._negative_prompt(style, shot, environment)
+        )
+        positive, positive_compacted = self._bounded_sections(
+            required_sections,
+            optional_sections,
+            self.MAX_POSITIVE_PROMPT_CHARACTERS,
+        )
+        negative_raw = self._negative_prompt(style, shot, environment)
+        negative, negative_compacted = self._bounded_text(
+            negative_raw,
+            self.MAX_NEGATIVE_PROMPT_CHARACTERS,
+        )
+
         return DistilledPromptSet(
             positive=positive,
             negative=negative,
@@ -109,7 +135,94 @@ class ProductionPromptDistillationService:
             continuity=continuity_text,
             dialogue=dialogue_text,
             shot_summary=shot_summary,
+            positive_character_budget=self.MAX_POSITIVE_PROMPT_CHARACTERS,
+            positive_character_count=len(positive),
+            positive_compacted=positive_compacted,
+            negative_character_budget=self.MAX_NEGATIVE_PROMPT_CHARACTERS,
+            negative_character_count=len(negative),
+            negative_compacted=negative_compacted,
         )
+
+    @classmethod
+    def _bounded_sections(
+        cls,
+        required: tuple[str, ...],
+        optional: tuple[str, ...],
+        budget: int,
+    ) -> tuple[str, bool]:
+        required_clean = [cls._encoder_safe_text(value) for value in required if value.strip()]
+        optional_clean = [cls._encoder_safe_text(value) for value in optional if value.strip()]
+        full = " ".join(required_clean + optional_clean)
+        full = " ".join(full.split())
+        if len(full) <= budget:
+            return full, False
+
+        selected: list[str] = []
+        # Required sections may be compacted but are never silently displaced by optional prose.
+        remaining_required = len(required_clean)
+        for section in required_clean:
+            remaining_required -= 1
+            reserved = remaining_required * 80
+            available = budget - len(" ".join(selected)) - reserved
+            if selected:
+                available -= 1
+            if available <= 0:
+                break
+            selected.append(cls._truncate_at_boundary(section, available))
+
+        for section in optional_clean:
+            current = " ".join(selected)
+            available = budget - len(current) - (1 if current else 0)
+            if available < 80:
+                break
+            if len(section) <= available:
+                selected.append(section)
+
+        bounded = " ".join(selected)
+        bounded = " ".join(bounded.split())
+        if len(bounded) > budget:
+            bounded = cls._truncate_at_boundary(bounded, budget)
+        return bounded, True
+
+    @classmethod
+    def _bounded_text(cls, value: str, budget: int) -> tuple[str, bool]:
+        safe = cls._encoder_safe_text(value)
+        if len(safe) <= budget:
+            return safe, False
+        return cls._truncate_at_boundary(safe, budget), True
+
+    @staticmethod
+    def _truncate_at_boundary(value: str, limit: int) -> str:
+        if len(value) <= limit:
+            return value
+        if limit <= 3:
+            return value[:limit]
+        candidate = value[: limit - 3].rstrip()
+        boundary = max(
+            candidate.rfind(". "),
+            candidate.rfind("; "),
+            candidate.rfind(", "),
+            candidate.rfind(" "),
+        )
+        if boundary >= max(40, len(candidate) // 2):
+            candidate = candidate[:boundary].rstrip(" .;,")
+        return candidate + "..."
+
+    @staticmethod
+    def _encoder_safe_text(value: str) -> str:
+        replacements = str.maketrans(
+            {
+                "\u2018": "'",
+                "\u2019": "'",
+                "\u201c": '"',
+                "\u201d": '"',
+                "\u2013": "-",
+                "\u2014": "-",
+                "\u2026": "...",
+                "\u00a0": " ",
+            }
+        )
+        return " ".join(value.translate(replacements).split())
 
     @staticmethod
     def _clean_universal_text(value: str) -> str:
@@ -143,9 +256,9 @@ class ProductionPromptDistillationService:
                 labels.append(label.rstrip("."))
         names = ", ".join(dict.fromkeys(labels))
         base = (
-            "Use all supplied canonical visual references as authoritative identity definitions. "
-            "Preserve exact canonical identity, geometry, scale, materials, markings, wardrobe and "
-            "other declared visual characteristics. Do not redesign, merge or substitute canonical assets."
+            "Use supplied canonical visual references as authoritative identity definitions. "
+            "Preserve exact canonical identity, geometry, scale, materials, markings and wardrobe. "
+            "Do not redesign, merge or substitute canonical assets."
         )
         return f"{base} Required canonical subjects: {names}." if names else base
 
@@ -229,9 +342,9 @@ class ProductionPromptDistillationService:
         )
         parts: list[str] = []
         if opening:
-            parts.append(f"Begin with {opening}")
+            parts.append(f"Begin with {opening.rstrip('. ')}")
         if closing:
-            parts.append(f"End with {closing}")
+            parts.append(f"End with {closing.rstrip('. ')}")
         return "Continuity: " + "; ".join(parts) + "." if parts else ""
 
     @classmethod
