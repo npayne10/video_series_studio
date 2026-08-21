@@ -113,7 +113,9 @@ class ProviderReadyProductionPackageResolver:
             asset_id = str(raw.get("asset_id", "")).strip()
             category = str(raw.get("category", "")).strip().lower()
             reference = self._primary_reference(raw)
-            reference_fingerprint, expected_file_checksum = self._reference_integrity(raw, reference)
+            reference_fingerprint, expected_file_checksum = self._reference_integrity(
+                raw, reference
+            )
             item: dict[str, Any] = {
                 "asset_id": asset_id,
                 "category": category,
