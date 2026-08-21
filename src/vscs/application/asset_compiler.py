@@ -39,7 +39,7 @@ class AssetCompilerService:
     """Compile governed Shot Asset bindings into canonical production Asset intent."""
 
     FILE_NAME = "asset_compilation.json"
-    SCHEMA_VERSION = "1.1"
+    SCHEMA_VERSION = "1.2"
 
     def __init__(
         self,
@@ -184,15 +184,7 @@ class AssetCompilerService:
     def _normalize_resolution(
         cls, resolution: dict[str, Any], binding: dict[str, Any]
     ) -> dict[str, Any]:
-        """Normalize Phase 19.3 resolution contracts for Phase 19.4 consumers.
-
-        Planning Integration serializes ``AssetResolutionResult`` with nested
-        ``asset`` and ``references`` members. Earlier Phase 19.4 code expected the
-        legacy flat ``asset_id`` and ``canonical_reference`` fields. Preserve the
-        authoritative nested resolution while exposing deterministic compatibility
-        fields so Production Package reference indexing and provider compilation can
-        carry approved canonical imagery forward.
-        """
+        """Normalize Phase 19.3 resolution contracts for Phase 19.4 consumers."""
         normalized = dict(resolution)
         asset_id = cls._asset_id(normalized, binding)
         if asset_id:
@@ -245,13 +237,21 @@ class AssetCompilerService:
                 ).strip()
                 if not file_path:
                     continue
+                reference_fingerprint = str(
+                    item.get("reference_fingerprint") or item.get("checksum") or ""
+                ).strip()
+                file_checksum = str(item.get("file_checksum") or "").strip()
                 references.append(
                     {
                         "reference_id": str(item.get("reference_id", "")),
                         "file_path": file_path,
                         "reference_type": str(item.get("reference_type", "")),
                         "role": str(item.get("role", "")),
-                        "checksum": str(item.get("checksum", "")),
+                        "reference_fingerprint": reference_fingerprint,
+                        "file_checksum": file_checksum,
+                        # Legacy compatibility: checksum has always represented
+                        # governed reference metadata, not physical file bytes.
+                        "checksum": reference_fingerprint,
                     }
                 )
         if references:
@@ -264,6 +264,8 @@ class AssetCompilerService:
                     "file_path": legacy,
                     "reference_type": "",
                     "role": "primary",
+                    "reference_fingerprint": "",
+                    "file_checksum": "",
                     "checksum": "",
                 },
             )
