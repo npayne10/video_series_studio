@@ -243,7 +243,15 @@ class CanonicalResolutionService:
         )
 
     def _binding(self, reference: CanonicalReference) -> CanonicalReferenceBinding:
-        project_directory = self.caps.assets.projects.project_directory
+        project_directory = None
+        try:
+            project_directory = self.caps.assets.projects.project_directory
+        except AttributeError:
+            # Canonical metadata resolution must remain usable with lightweight
+            # service implementations that do not expose the desktop project graph.
+            # Physical integrity is optional here and enforced again when a provider-
+            # ready package has an actual project directory and canonical file.
+            pass
         return CanonicalReferenceBinding(
             str(reference.id),
             reference.title,
