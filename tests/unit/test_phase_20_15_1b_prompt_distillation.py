@@ -116,3 +116,57 @@ def test_distillation_preserves_governed_constraints_without_json_dump() -> None
     assert "Do not imply any threat has been confirmed." in distilled.positive
     assert "Do not add atmospheric haze" in distilled.positive
     assert distilled.shot_summary.startswith("Show the Iron Horizon bridge")
+
+
+def test_encoder_facing_prompt_is_bounded_and_preserves_priority_authority() -> None:
+    production = _production()
+    shot = production["shot"]
+    assert isinstance(shot, dict)
+    shot["shot_constraints"] = [
+        "Keep the setting on the Iron Horizon bridge.",
+        "Do not imply any threat has been confirmed.",
+        *(f"Governed additional constraint {index}: " + ("detail " * 60) for index in range(12)),
+    ]
+    action = production["action_performance"]
+    assert isinstance(action, dict)
+    action["spoken_content"] = (
+        "Sandra must report to James: \u201cCommander, I have something unusual.\u201d "
+        "James may ask: \u201cHow unusual?\u201d"
+    )
+
+    distilled = ProductionPromptDistillationService().distill(
+        production,
+        universal_text="Structured authority remains in the package.",
+        fps=24,
+        duration_seconds=22,
+    )
+
+    assert distilled.positive_compacted is True
+    assert distilled.positive_character_count <= distilled.positive_character_budget
+    assert distilled.positive_character_budget == 2000
+    assert "Commander James Spence" in distilled.positive
+    assert "Sandra Crawford" in distilled.positive
+    assert "Action and performance:" in distilled.positive
+    assert "Camera:" in distilled.positive
+    assert "Environment:" in distilled.positive
+    assert "Target runtime 22 seconds at 24 fps." in distilled.positive
+
+
+def test_encoder_facing_prompt_normalizes_typographic_punctuation() -> None:
+    production = _production()
+    action = production["action_performance"]
+    assert isinstance(action, dict)
+    action["temporal_narrative"] = "Sandra\u2019s report \u2014 James answers \u201cUnderstood.\u201d"
+
+    distilled = ProductionPromptDistillationService().distill(
+        production,
+        universal_text="Structured authority remains in the package.",
+        fps=24,
+        duration_seconds=22,
+    )
+
+    assert "\u2019" not in distilled.positive
+    assert "\u2014" not in distilled.positive
+    assert "\u201c" not in distilled.positive
+    assert "\u201d" not in distilled.positive
+    assert "Sandra's report - James answers \"Understood.\"" in distilled.positive
