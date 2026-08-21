@@ -86,13 +86,19 @@ class ProviderReadyProductionPackageResolver:
             "output": output,
             "continuity_contract": continuity,
             "validation_contract": {
+                "reference_integrity": {
+                    "reference_fingerprint": "canonical reference metadata/model authority",
+                    "file_checksum": "SHA-256 of physical canonical reference file bytes",
+                    "legacy_checksum_semantics": "reference_fingerprint",
+                },
                 "reject_if": [
                     "Canonical asset identity is not preserved.",
                     "Canonical geometry, scale, materials, markings or wardrobe are redesigned.",
                     "Required canonical references are substituted, merged or ignored.",
+                    "A declared canonical file_checksum does not match the physical reference file.",
                     "An unrequested subject or object becomes a primary visual element.",
                     "Camera or lighting contradicts approved production authority.",
-                ]
+                ],
             },
             "composition_plan": composition_plan,
         }
@@ -107,12 +113,15 @@ class ProviderReadyProductionPackageResolver:
             asset_id = str(raw.get("asset_id", "")).strip()
             category = str(raw.get("category", "")).strip().lower()
             reference = self._primary_reference(raw)
+            reference_fingerprint, expected_file_checksum = self._reference_integrity(raw, reference)
             item: dict[str, Any] = {
                 "asset_id": asset_id,
                 "category": category,
                 "role": str(raw.get("role", "")).strip(),
                 "requirement": str(raw.get("requirement", "")).strip(),
                 "project_relative_path": reference or "",
+                "reference_fingerprint": reference_fingerprint,
+                "authority_file_checksum": expected_file_checksum,
             }
             if reference and self._looks_like_path(reference):
                 resolved_path = self._resolve_project_path(reference)
@@ -121,17 +130,31 @@ class ProviderReadyProductionPackageResolver:
                         f"Canonical reference does not exist for {asset_id or 'asset'}: "
                         f"{resolved_path}"
                     )
-                expected_checksum = self._reference_checksum(raw, reference)
-                actual_checksum = self._sha256(resolved_path)
-                if expected_checksum and actual_checksum.casefold() != expected_checksum.casefold():
+                actual_file_checksum = self._sha256(resolved_path)
+                if (
+                    expected_file_checksum
+                    and actual_file_checksum.casefold() != expected_file_checksum.casefold()
+                ):
                     raise ProviderReadyPackageResolutionError(
-                        f"Canonical reference checksum mismatch for {asset_id}: {resolved_path}"
+                        f"Canonical reference file checksum mismatch for {asset_id}: {resolved_path}"
                     )
                 item["resolved_source_path"] = str(resolved_path)
-                item["checksum"] = actual_checksum
+                item["file_checksum"] = actual_file_checksum
+                item["file_checksum_verified"] = bool(expected_file_checksum)
+                item["file_checksum_source"] = (
+                    "approved-production-authority"
+                    if expected_file_checksum
+                    else "provider-ready-resolution"
+                )
+                # Deprecated compatibility alias. In provider-ready output only,
+                # checksum means physical file SHA-256. New consumers must use file_checksum.
+                item["checksum"] = actual_file_checksum
                 item["provider_access"] = "local_absolute_path"
             else:
                 item["resolved_source_path"] = ""
+                item["file_checksum"] = ""
+                item["file_checksum_verified"] = False
+                item["file_checksum_source"] = "none"
                 item["checksum"] = ""
                 item["provider_access"] = "metadata_only"
             resolved.append(item)
@@ -155,6 +178,8 @@ class ProviderReadyProductionPackageResolver:
                         "asset_id": asset_id,
                         "category": category,
                         "image": resolved_path,
+                        "reference_fingerprint": str(item.get("reference_fingerprint", "")),
+                        "file_checksum": str(item.get("file_checksum", "")),
                         "delivery": "ic_lora",
                         "weight": 1.0,
                     }
@@ -165,12 +190,14 @@ class ProviderReadyProductionPackageResolver:
                         "asset_id": asset_id,
                         "category": category,
                         "image": resolved_path,
+                        "reference_fingerprint": str(item.get("reference_fingerprint", "")),
+                        "file_checksum": str(item.get("file_checksum", "")),
                         "delivery": "prompt_metadata",
                     }
                 )
         maximum = max(1, len(identity_references)) if identity_references else 1
         return {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "mode": "identity_first_minimal",
             "identity_references": identity_references,
             "metadata_assets": metadata_assets,
@@ -282,10 +309,12 @@ class ProviderReadyProductionPackageResolver:
         return None
 
     @staticmethod
-    def _reference_checksum(asset: dict[str, Any], reference: str) -> str | None:
+    def _reference_integrity(asset: dict[str, Any], reference: str | None) -> tuple[str, str]:
+        if not reference:
+            return "", ""
         references = asset.get("canonical_references")
         if not isinstance(references, list):
-            return None
+            return "", ""
         normalized = reference.replace("/", "\\").casefold()
         for raw in references:
             if not isinstance(raw, dict):
@@ -293,9 +322,12 @@ class ProviderReadyProductionPackageResolver:
             path = str(raw.get("file_path", "")).replace("/", "\\").casefold()
             if path != normalized:
                 continue
-            checksum = str(raw.get("checksum", "")).strip()
-            return checksum or None
-        return None
+            reference_fingerprint = str(
+                raw.get("reference_fingerprint") or raw.get("checksum") or ""
+            ).strip()
+            file_checksum = str(raw.get("file_checksum") or "").strip()
+            return reference_fingerprint, file_checksum
+        return "", ""
 
     @staticmethod
     def _looks_like_path(value: str) -> bool:
