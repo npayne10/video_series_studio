@@ -156,7 +156,9 @@ def test_encoder_facing_prompt_normalizes_typographic_punctuation() -> None:
     production = _production()
     action = production["action_performance"]
     assert isinstance(action, dict)
-    action["temporal_narrative"] = "Sandra\u2019s report \u2014 James answers \u201cUnderstood.\u201d"
+    action["temporal_narrative"] = (
+        "Sandra\u2019s report \u2014 James answers \u201cUnderstood.\u201d"
+    )
 
     distilled = ProductionPromptDistillationService().distill(
         production,
@@ -169,4 +171,4 @@ def test_encoder_facing_prompt_normalizes_typographic_punctuation() -> None:
     assert "\u2014" not in distilled.positive
     assert "\u201c" not in distilled.positive
     assert "\u201d" not in distilled.positive
-    assert "Sandra's report - James answers \"Understood.\"" in distilled.positive
+    assert 'Sandra\'s report - James answers "Understood."' in distilled.positive
