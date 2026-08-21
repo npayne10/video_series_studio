@@ -1,13 +1,17 @@
-"""Provider-ready production package resolution for Phase 20.15.1a."""
+"""Provider-ready production package resolution for Phase 20.15.1b."""
 
 from __future__ import annotations
 
 import hashlib
+import json
 from copy import deepcopy
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
+from vscs.application.production_execution.prompt_distillation import (
+    ProductionPromptDistillationService,
+)
 
 
 class ProviderReadyPackageResolutionError(ValueError):
@@ -21,9 +25,9 @@ class ProviderReadyProductionPackageResolver:
 
     def __init__(self, project_directory: Path) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
+        self.prompt_distiller = ProductionPromptDistillationService()
 
     def resolve(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
-        """Return provider-ready sections without changing approved production authority."""
         resolved_visual_assets = self._resolved_visual_assets(compiled)
         reference_plan = self._reference_plan(resolved_visual_assets, compiled)
         resolved_profiles = self._resolved_profiles(compiled)
@@ -65,6 +69,47 @@ class ProviderReadyProductionPackageResolver:
         composition_plan["profile_prompt_instructions"] = profile_prompt_instructions
         composition_plan["temporal_start_policy"] = continuity["temporal_start_policy"]
         composition_plan["provider_ready"] = True
+
+        distilled = self.prompt_distiller.distill(
+            compiled.production_authority,
+            universal_text=compiled.universal_text,
+            fps=compiled.frames_per_second,
+            duration_seconds=compiled.duration_seconds,
+        )
+        workflow_inputs = {
+            "schema_version": "1.0",
+            "compiled_positive_prompt": compiled.positive_prompt,
+            "compiled_negative_prompt": compiled.negative_prompt,
+            "compiled_identity_prompt": distilled.identity,
+            "compiled_environment_prompt": distilled.environment,
+            "compiled_camera_prompt": distilled.camera,
+            "compiled_lighting_prompt": distilled.lighting,
+            "compiled_action_prompt": distilled.action,
+            "compiled_continuity_prompt": distilled.continuity,
+            "compiled_dialogue_text": distilled.dialogue,
+            "shot_summary": distilled.shot_summary,
+            "seed": compiled.seed,
+            "fps": compiled.frames_per_second,
+            "frame_count": compiled.frame_count,
+            "width": compiled.width,
+            "height": compiled.height,
+            "cfg": compiled.cfg,
+            "ic_lora_strength": compiled.ic_lora_strength,
+            "filename_prefix": output_prefix,
+            "reference_plan_json": json.dumps(
+                reference_plan,
+                sort_keys=True,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+            "continuity_image_path": continuity["start_frame"],
+            "composition_plan_json": json.dumps(
+                composition_plan,
+                sort_keys=True,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+        }
         return {
             "resolved_visual_assets": resolved_visual_assets,
             "resolved_production_profiles": resolved_profiles,
@@ -82,10 +127,25 @@ class ProviderReadyProductionPackageResolver:
             "prompts": {
                 "positive": compiled.positive_prompt,
                 "negative": compiled.negative_prompt,
+                "identity": distilled.identity,
+                "environment": distilled.environment,
+                "camera": distilled.camera,
+                "lighting": distilled.lighting,
+                "action": distilled.action,
+                "continuity": distilled.continuity,
+                "dialogue": distilled.dialogue,
+                "shot_summary": distilled.shot_summary,
             },
+            "workflow_inputs": workflow_inputs,
             "output": output,
             "continuity_contract": continuity,
             "validation_contract": {
+                "prompt_contract": {
+                    "structured_authority_is_source_of_truth": True,
+                    "raw_json_in_text_conditioning": False,
+                    "workflow_inputs_are_provider_interface": True,
+                    "legacy_v714_top_level_fields_are_compatibility_projections": True,
+                },
                 "reference_integrity": {
                     "reference_fingerprint": "canonical reference metadata/model authority",
                     "file_checksum": "SHA-256 of physical canonical reference file bytes",
@@ -96,6 +156,7 @@ class ProviderReadyProductionPackageResolver:
                     "Canonical geometry, scale, materials, markings or wardrobe are redesigned.",
                     "Required canonical references are substituted, merged or ignored.",
                     "A declared canonical file_checksum does not match the physical reference file.",
+                    "Raw structured authority JSON is inserted into model-facing text conditioning.",
                     "An unrequested subject or object becomes a primary visual element.",
                     "Camera or lighting contradicts approved production authority.",
                 ],
@@ -148,8 +209,6 @@ class ProviderReadyProductionPackageResolver:
                     if expected_file_checksum
                     else "provider-ready-resolution"
                 )
-                # Deprecated compatibility alias. In provider-ready output only,
-                # checksum means physical file SHA-256. New consumers must use file_checksum.
                 item["checksum"] = actual_file_checksum
                 item["provider_access"] = "local_absolute_path"
             else:
