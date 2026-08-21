@@ -6,6 +6,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from vscs.domain.assets import AssetCategory, AssetStatus
@@ -85,13 +86,19 @@ class ResolvedCAPBinding:
 
 @dataclass(frozen=True, slots=True)
 class ResolvedReferenceBinding:
-    """Approved canonical reference exposed through a stable string identity."""
+    """Approved canonical reference with separate authority and file integrity identities."""
 
     reference_id: str
     file_path: str
     reference_type: str
     role: str
-    checksum: str
+    reference_fingerprint: str
+    file_checksum: str = ""
+
+    @property
+    def checksum(self) -> str:
+        """Backward-compatible alias for the reference metadata fingerprint."""
+        return self.reference_fingerprint
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,12 +144,12 @@ class AssetResolutionResult:
             self.asset.asset_id,
             self.asset.checksum,
             self.cap.checksum if self.cap is not None else "",
-            tuple(reference.checksum for reference in self.references),
+            tuple(reference.reference_fingerprint for reference in self.references),
         )
 
 
 def stable_model_checksum(value: Any) -> str:
-    """Return a deterministic checksum for a Pydantic or mapping-like model."""
+    """Return a deterministic fingerprint for a Pydantic or mapping-like model."""
     if hasattr(value, "model_dump"):
         raw = value.model_dump(mode="json")
     elif isinstance(value, dict):
@@ -150,6 +157,24 @@ def stable_model_checksum(value: Any) -> str:
     else:
         raise TypeError("value must support model_dump() or be a dictionary")
     return _checksum(raw)
+
+
+def canonical_reference_file_checksum(
+    project_directory: Path | None,
+    file_path: str | Path,
+) -> str:
+    """Return SHA-256 of canonical reference bytes when the physical file is available."""
+    if project_directory is None:
+        return ""
+    reference_path = Path(file_path)
+    path = reference_path if reference_path.is_absolute() else project_directory / reference_path
+    if not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(65536), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _checksum(value: Any) -> str:
