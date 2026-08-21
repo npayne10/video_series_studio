@@ -24,6 +24,7 @@ from .models import (
     AssetResolutionDiagnostic,
     AssetResolutionSeverity,
     ResolvedCAPBinding,
+    canonical_reference_file_checksum,
     stable_model_checksum,
 )
 
@@ -58,7 +59,7 @@ class CanonicalResolutionRequest:
 
 @dataclass(frozen=True, slots=True)
 class CanonicalReferenceBinding:
-    """Approved, immutable reference selected for production use."""
+    """Approved immutable reference with separate authority and file identities."""
 
     reference_id: str
     title: str
@@ -68,12 +69,18 @@ class CanonicalReferenceBinding:
     version: str
     description: str
     notes: str
-    checksum: str
+    reference_fingerprint: str
+    file_checksum: str = ""
+
+    @property
+    def checksum(self) -> str:
+        """Backward-compatible alias for the reference metadata fingerprint."""
+        return self.reference_fingerprint
 
 
 @dataclass(frozen=True, slots=True)
 class CanonicalDependencyFingerprint:
-    """Combined checksum for a CAP and its selected references."""
+    """Combined checksum for a CAP and its selected reference authority."""
 
     asset_id: str
     cap_checksum: str
@@ -116,7 +123,7 @@ class CanonicalResolutionResult:
         return CanonicalDependencyFingerprint(
             self.request.asset_id,
             self.cap.checksum,
-            tuple(reference.checksum for reference in self.references),
+            tuple(reference.reference_fingerprint for reference in self.references),
         )
 
 
@@ -235,8 +242,8 @@ class CanonicalResolutionService:
             tuple(diagnostics),
         )
 
-    @staticmethod
-    def _binding(reference: CanonicalReference) -> CanonicalReferenceBinding:
+    def _binding(self, reference: CanonicalReference) -> CanonicalReferenceBinding:
+        project_directory = self.caps.assets.projects.project_directory
         return CanonicalReferenceBinding(
             str(reference.id),
             reference.title,
@@ -247,6 +254,7 @@ class CanonicalResolutionService:
             reference.description,
             reference.notes,
             stable_model_checksum(reference),
+            canonical_reference_file_checksum(project_directory, reference.file_path),
         )
 
     @staticmethod
