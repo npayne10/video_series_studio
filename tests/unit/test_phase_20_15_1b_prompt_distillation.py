@@ -77,9 +77,9 @@ def _production() -> dict[str, object]:
 
 def test_distills_structured_authority_into_clean_cinematic_prompt() -> None:
     raw = (
-        "SHOT: {\"title\": \"Nine Days in Xorix Orbit\"}\n"
-        "ACTION & PERFORMANCE: {\"spoken_content\": \"Commander\"}\n"
-        "ASSETS: [{\"asset_id\": \"CAP-CHR-001\"}]"
+        'SHOT: {"title": "Nine Days in Xorix Orbit"}\n'
+        'ACTION & PERFORMANCE: {"spoken_content": "Commander"}\n'
+        'ASSETS: [{"asset_id": "CAP-CHR-001"}]'
     )
 
     distilled = ProductionPromptDistillationService().distill(
@@ -91,7 +91,7 @@ def test_distills_structured_authority_into_clean_cinematic_prompt() -> None:
 
     assert "SHOT:" not in distilled.positive
     assert "ASSETS:" not in distilled.positive
-    assert "{\"" not in distilled.positive
+    assert '{"' not in distilled.positive
     assert "Commander James Spence" in distilled.positive
     assert "Sandra Crawford" in distilled.positive
     assert "Xorix" in distilled.positive
