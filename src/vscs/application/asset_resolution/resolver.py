@@ -27,6 +27,7 @@ from .models import (
     ResolvedAssetBinding,
     ResolvedCAPBinding,
     ResolvedReferenceBinding,
+    canonical_reference_file_checksum,
     stable_model_checksum,
 )
 
@@ -127,6 +128,7 @@ class AssetResolutionService:
 
         reference_bindings: tuple[ResolvedReferenceBinding, ...] = ()
         if cap_found:
+            project_directory = self.assets.projects.project_directory
             if self.production_projections is not None:
                 production_references = self.production_projections.project(
                     asset.asset_id
@@ -142,6 +144,10 @@ class AssetResolutionService:
                             else reference.family.value
                         ),
                         stable_model_checksum(reference),
+                        canonical_reference_file_checksum(
+                            project_directory,
+                            reference.file_path,
+                        ),
                     )
                     for reference in production_references
                 )
@@ -160,6 +166,10 @@ class AssetResolutionService:
                         reference.reference_type.value,
                         reference.role.value,
                         stable_model_checksum(reference),
+                        canonical_reference_file_checksum(
+                            project_directory,
+                            reference.file_path,
+                        ),
                     )
                     for reference in sorted(approved, key=lambda item: item.id)
                 )
