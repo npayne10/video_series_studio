@@ -29,7 +29,20 @@ from vscs.infrastructure.production_execution.package_compilation import (
 )
 
 
-def _source(reference: str, checksum: str) -> ProductionPackage:
+def _source(
+    reference: str,
+    reference_fingerprint: str,
+    *,
+    file_checksum: str = "",
+) -> ProductionPackage:
+    reference_record = {
+        "file_path": reference,
+        "reference_fingerprint": reference_fingerprint,
+        "file_checksum": file_checksum,
+        # Legacy alias remains metadata authority, never physical file integrity.
+        "checksum": reference_fingerprint,
+        "role": "primary",
+    }
     production = {
         "universal_text": "James and Sandra work on the bridge with Xorix visible ahead.",
         "shot": {
@@ -42,9 +55,7 @@ def _source(reference: str, checksum: str) -> ProductionPackage:
                 "category": "character",
                 "role": "Commander James Spence",
                 "canonical_reference": reference,
-                "canonical_references": [
-                    {"file_path": reference, "checksum": checksum, "role": "primary"}
-                ],
+                "canonical_references": [reference_record],
             }
         ],
         "canonical_references": [{"asset_id": "CAP-CHR-001", "canonical_reference": reference}],
@@ -130,7 +141,7 @@ def _write_source(project: Path, source: ProductionPackage) -> None:
 def test_target_runtime_drives_frame_count_when_no_explicit_frames(tmp_path: Path) -> None:
     asset = tmp_path / "asset.png"
     asset.write_bytes(b"canonical")
-    source = _source(str(asset), hashlib.sha256(b"canonical").hexdigest())
+    source = _source(str(asset), "reference-metadata-fingerprint")
 
     compiled = ProductionPackageCompilerService().compile(_task(source), source)
 
@@ -144,7 +155,7 @@ def test_target_runtime_drives_frame_count_when_no_explicit_frames(tmp_path: Pat
 def test_target_runtime_overrides_stale_explicit_frame_count(tmp_path: Path) -> None:
     asset = tmp_path / "asset.png"
     asset.write_bytes(b"canonical")
-    source = _source(str(asset), hashlib.sha256(b"canonical").hexdigest())
+    source = _source(str(asset), "reference-metadata-fingerprint")
     production = dict(source.universal_description["production"])
     shot = dict(production["shot"])
     shot["frame_count"] = 145
@@ -165,8 +176,12 @@ def test_local_compiler_resolves_visual_asset_and_builds_reference_plan(tmp_path
     asset.parent.mkdir(parents=True)
     asset.write_bytes(b"canonical-james")
     relative = "assets/characters/CAP-CHR-001-Master-V1.png"
-    checksum = hashlib.sha256(b"canonical-james").hexdigest()
-    source = _source(relative, checksum)
+    file_checksum = hashlib.sha256(b"canonical-james").hexdigest()
+    source = _source(
+        relative,
+        "reference-metadata-fingerprint",
+        file_checksum=file_checksum,
+    )
     task = _task(source)
     _write_source(project, source)
 
@@ -176,9 +191,12 @@ def test_local_compiler_resolves_visual_asset_and_builds_reference_plan(tmp_path
     raw = json.loads(status.path.read_text(encoding="utf-8"))
     resolved = raw["resolved_visual_assets"][0]
     assert Path(resolved["resolved_source_path"]) == asset.resolve(strict=False)
-    assert resolved["checksum"] == checksum
+    assert resolved["reference_fingerprint"] == "reference-metadata-fingerprint"
+    assert resolved["file_checksum"] == file_checksum
+    assert resolved["file_checksum_verified"] is True
     assert raw["reference_plan"]["identity_references"][0]["asset_id"] == "CAP-CHR-001"
     assert raw["reference_plan"]["identity_references"][0]["delivery"] == "ic_lora"
+    assert raw["reference_plan"]["identity_references"][0]["file_checksum"] == file_checksum
     assert raw["timing"] == {"duration_seconds": 22.0, "fps": 24, "frames": 528}
     assert raw["generation"]["seed"] == raw["seed"]
     assert raw["output"]["filename_prefix"] == raw["filename_prefix"]
@@ -186,12 +204,36 @@ def test_local_compiler_resolves_visual_asset_and_builds_reference_plan(tmp_path
     assert raw["_vscs_manifest"]["compiler"] == "VSCS Phase 20.15.1a"
 
 
+def test_local_compiler_allows_legacy_metadata_checksum_without_false_file_mismatch(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    asset = project / "assets" / "characters" / "CAP-CHR-001-Master-V1.png"
+    asset.parent.mkdir(parents=True)
+    asset.write_bytes(b"canonical-james")
+    relative = "assets/characters/CAP-CHR-001-Master-V1.png"
+    source = _source(relative, "5acbc8f7-legacy-reference-fingerprint")
+    task = _task(source)
+    _write_source(project, source)
+
+    status = LocalProductionPackageCompilationService(project).compile(task)
+
+    assert status.path is not None
+    raw = json.loads(status.path.read_text(encoding="utf-8"))
+    resolved = raw["resolved_visual_assets"][0]
+    assert resolved["reference_fingerprint"] == "5acbc8f7-legacy-reference-fingerprint"
+    assert resolved["authority_file_checksum"] == ""
+    assert resolved["file_checksum"] == hashlib.sha256(b"canonical-james").hexdigest()
+    assert resolved["file_checksum_verified"] is False
+    assert resolved["file_checksum_source"] == "provider-ready-resolution"
+
+
 def test_local_compiler_blocks_missing_required_canonical_reference(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
     source = _source(
         "assets/characters/CAP-CHR-001-Master-V1.png",
-        hashlib.sha256(b"missing").hexdigest(),
+        "reference-metadata-fingerprint",
     )
     task = _task(source)
     _write_source(project, source)
@@ -200,17 +242,18 @@ def test_local_compiler_blocks_missing_required_canonical_reference(tmp_path: Pa
         LocalProductionPackageCompilationService(project).compile(task)
 
 
-def test_local_compiler_blocks_canonical_checksum_mismatch(tmp_path: Path) -> None:
+def test_local_compiler_blocks_declared_file_checksum_mismatch(tmp_path: Path) -> None:
     project = tmp_path / "project"
     asset = project / "assets" / "characters" / "CAP-CHR-001-Master-V1.png"
     asset.parent.mkdir(parents=True)
     asset.write_bytes(b"canonical-james")
     source = _source(
         "assets/characters/CAP-CHR-001-Master-V1.png",
-        hashlib.sha256(b"different").hexdigest(),
+        "reference-metadata-fingerprint",
+        file_checksum=hashlib.sha256(b"different").hexdigest(),
     )
     task = _task(source)
     _write_source(project, source)
 
-    with pytest.raises(LocalProductionPackageCompilationError, match="checksum mismatch"):
+    with pytest.raises(LocalProductionPackageCompilationError, match="file checksum mismatch"):
         LocalProductionPackageCompilationService(project).compile(task)
