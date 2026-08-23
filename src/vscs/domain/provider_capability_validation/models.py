@@ -12,6 +12,7 @@ class ValidationOutcome(StrEnum):
 
     NOT_RUN = "not_run"
     PASS = "pass"
+    PARTIAL = "partial"
     FAIL = "fail"
     BLOCKED = "blocked"
 
@@ -155,9 +156,8 @@ class CapabilityValidationSession:
         if self.human_decision is HumanDecision.PENDING:
             if self.decision_actor or self.decision_reason or self.decided_at:
                 raise ValueError("pending decision cannot contain decision authority metadata")
-        else:
-            if not self.decision_actor or not self.decision_reason or self.decided_at is None:
-                raise ValueError("human decision requires actor, reason and decided_at")
+        elif not self.decision_actor or not self.decision_reason or self.decided_at is None:
+            raise ValueError("human decision requires actor, reason and decided_at")
 
     def with_result(
         self,
