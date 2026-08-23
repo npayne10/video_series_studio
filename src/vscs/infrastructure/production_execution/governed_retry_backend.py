@@ -156,7 +156,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016FinalizingBackend):
         )
         return super()._retry_attempt_history(widened, jobs)
 
-    def _queue_with_attempt_history(
+    def _queue_with_attempt_history(  # type: ignore[override]
         self,
         queue: ProductionQueue,
         task_id: str,
