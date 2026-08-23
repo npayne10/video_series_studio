@@ -32,6 +32,9 @@ from vscs.presentation.widgets.cap_reference_regeneration import (
 from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
     install_semantic_image_evaluation,
 )
+from vscs.presentation.widgets.provider_capability_validation_install import (
+    install_provider_capability_validation_workspace,
+)
 
 cap_manager_module.CAPManagerWidget = PreviewCAPManagerWidget
 install_cap_asset_reference_sync()
@@ -91,6 +94,7 @@ def main() -> int:
         )
 
     window = context.create_main_window()
+    install_provider_capability_validation_workspace(window)
     window.show()
     exit_code = application.exec()
     if context.logger is not None:
