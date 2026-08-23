@@ -49,6 +49,10 @@ class ProviderCapabilityValidationService:
         if not self._packs:
             raise ValueError("at least one capability-validation pack is required")
 
+    @property
+    def media_repository(self) -> GeneratedMediaRepository:
+        return self._media_repository
+
     def available_packs(self) -> tuple[ProviderCapabilityValidationPack, ...]:
         return tuple(sorted(self._packs.values(), key=lambda item: item.pack_id))
 
@@ -176,6 +180,8 @@ class ProviderCapabilityValidationService:
             return ValidationOutcome.BLOCKED
         if ValidationOutcome.FAIL in outcomes:
             return ValidationOutcome.FAIL
+        if ValidationOutcome.PARTIAL in outcomes:
+            return ValidationOutcome.PARTIAL
         return ValidationOutcome.PASS
 
     @staticmethod
@@ -192,13 +198,21 @@ class ProviderCapabilityValidationService:
         ):
             return CapabilityRecommendation.INSUFFICIENT_EVIDENCE
         if any(
-            by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL for scenario in required
+            by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL
+            for scenario in required
         ):
             return CapabilityRecommendation.NOT_RECOMMENDED
-        optional_failures = any(
-            not scenario.required and by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL
+        if any(
+            by_id[scenario.scenario_id].outcome is ValidationOutcome.PARTIAL
+            for scenario in required
+        ):
+            return CapabilityRecommendation.CONDITIONAL
+        optional_non_pass = any(
+            not scenario.required
+            and by_id[scenario.scenario_id].outcome
+            in (ValidationOutcome.PARTIAL, ValidationOutcome.FAIL)
             for scenario in pack.scenarios
         )
-        if optional_failures:
+        if optional_non_pass:
             return CapabilityRecommendation.CONDITIONAL
         return CapabilityRecommendation.RECOMMENDED
