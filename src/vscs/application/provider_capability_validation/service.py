@@ -192,13 +192,11 @@ class ProviderCapabilityValidationService:
         ):
             return CapabilityRecommendation.INSUFFICIENT_EVIDENCE
         if any(
-            by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL
-            for scenario in required
+            by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL for scenario in required
         ):
             return CapabilityRecommendation.NOT_RECOMMENDED
         optional_failures = any(
-            not scenario.required
-            and by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL
+            not scenario.required and by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL
             for scenario in pack.scenarios
         )
         if optional_failures:

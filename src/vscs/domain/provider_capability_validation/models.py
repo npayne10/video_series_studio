@@ -120,9 +120,8 @@ class ScenarioResult:
         criterion_ids = [result.criterion_id for result in self.criterion_results]
         if len(set(criterion_ids)) != len(criterion_ids):
             raise ValueError("criterion result IDs must be unique")
-        if (
-            self.outcome is not ValidationOutcome.NOT_RUN
-            and (not self.recorded_by or self.recorded_at is None)
+        if self.outcome is not ValidationOutcome.NOT_RUN and (
+            not self.recorded_by or self.recorded_at is None
         ):
             raise ValueError("recorded result requires recorded_by and recorded_at")
 

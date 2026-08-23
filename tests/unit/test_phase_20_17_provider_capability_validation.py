@@ -39,11 +39,7 @@ class _SessionRepository:
         return tuple(self.values[key] for key in sorted(self.values))
 
     def list_for_provider(self, provider_id: str) -> tuple[CapabilityValidationSession, ...]:
-        return tuple(
-            session
-            for session in self.list_all()
-            if session.provider_id == provider_id
-        )
+        return tuple(session for session in self.list_all() if session.provider_id == provider_id)
 
 
 @dataclass

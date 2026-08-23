@@ -119,9 +119,7 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             self.table.setRowCount(0)
             self._set_session_actions(False)
             return
-        pack = next(
-            item for item in service.available_packs() if item.pack_id == session.pack_id
-        )
+        pack = next(item for item in service.available_packs() if item.pack_id == session.pack_id)
         results = {result.scenario_id: result for result in session.scenario_results}
         self.table.setRowCount(0)
         for scenario in pack.scenarios:
@@ -139,10 +137,14 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 combo = QComboBox()
                 for outcome in ValidationOutcome:
                     combo.addItem(outcome.value.replace("_", " ").title(), outcome.value)
-                combo.setCurrentIndex(combo.findData(criteria[criterion.criterion_id].outcome.value))
+                combo.setCurrentIndex(
+                    combo.findData(criteria[criterion.criterion_id].outcome.value)
+                )
                 self.table.setCellWidget(row, 2, combo)
                 self.table.setItem(row, 3, QTableWidgetItem(", ".join(result.evidence_media_ids)))
-                self.table.setItem(row, 4, QTableWidgetItem(criteria[criterion.criterion_id].notes or ""))
+                self.table.setItem(
+                    row, 4, QTableWidgetItem(criteria[criterion.criterion_id].notes or "")
+                )
         self.summary.setText(
             f"Session {session.session_id} — recommendation: {session.recommendation.value} — "
             f"human decision: {session.human_decision.value}"
@@ -157,7 +159,9 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         session_id = self.session_id.text().strip()
         pack_id = self.pack.currentData()
         if not provider_id or not session_id or not pack_id:
-            QMessageBox.warning(self, "Capability Validation", "Provider, session and pack are required.")
+            QMessageBox.warning(
+                self, "Capability Validation", "Provider, session and pack are required."
+            )
             return
         try:
             service.start_session(
@@ -177,7 +181,9 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             return
         selected = self.table.selectionModel().selectedRows()
         if not selected:
-            QMessageBox.warning(self, "Capability Validation", "Select a scenario criterion row first.")
+            QMessageBox.warning(
+                self, "Capability Validation", "Select a scenario criterion row first."
+            )
             return
         row = selected[0].row()
         scenario_item = self.table.item(row, 0)
@@ -193,9 +199,10 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         scenario_notes: list[str] = []
         for current_row in range(self.table.rowCount()):
             current_scenario = self.table.item(current_row, 0)
-            if current_scenario is None or str(
-                current_scenario.data(Qt.ItemDataRole.UserRole)
-            ) != scenario_id:
+            if (
+                current_scenario is None
+                or str(current_scenario.data(Qt.ItemDataRole.UserRole)) != scenario_id
+            ):
                 continue
             criterion_item = self.table.item(current_row, 1)
             combo = self.table.cellWidget(current_row, 2)
@@ -215,9 +222,7 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 scenario_notes.append(notes)
             if evidence_item is not None:
                 evidence.update(
-                    value.strip()
-                    for value in evidence_item.text().split(",")
-                    if value.strip()
+                    value.strip() for value in evidence_item.text().split(",") if value.strip()
                 )
         try:
             service.record_scenario(

@@ -57,9 +57,7 @@ class JsonCapabilityValidationRepository:
         normalized = provider_id.strip()
         if not normalized:
             raise CapabilityValidationRepositoryError("provider_id cannot be blank")
-        return tuple(
-            session for session in self.list_all() if session.provider_id == normalized
-        )
+        return tuple(session for session in self.list_all() if session.provider_id == normalized)
 
     def _path(self, session_id: str) -> Path:
         normalized = session_id.strip()
