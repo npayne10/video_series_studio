@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from shutil import copy2
+from typing import ClassVar
 from uuid import uuid4
 
 from vscs.application.generated_media import GeneratedMediaRepository
@@ -27,7 +28,9 @@ class ValidationEvidenceIngestionResult:
 class ValidationEvidenceIngestionService:
     """Copy externally rendered validation evidence into governed VSCS Generated Media."""
 
-    _SUPPORTED_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".png", ".jpg", ".jpeg"}
+    _SUPPORTED_EXTENSIONS: ClassVar[frozenset[str]] = frozenset(
+        {".mp4", ".mov", ".mkv", ".webm", ".png", ".jpg", ".jpeg"}
+    )
 
     def __init__(
         self,
