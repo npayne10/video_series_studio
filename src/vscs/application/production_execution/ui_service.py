@@ -278,8 +278,9 @@ class ProductionExecutionUiService:
         execution_profile = self._resolve_profile(normalized, profile)
         if self.has_execution(normalized, profile=execution_profile):
             raise ProductionExecutionError(
-                f"{execution_profile.title()} execution is active, successful, or has exhausted "
-                "its profile-scoped execution authority. Inspect execution status first."
+                f"ProductionTask already has an execution record for the {execution_profile} "
+                "profile that is active, successful, or has exhausted its profile-scoped "
+                "execution authority. Inspect execution status first."
             )
         package: Path | None = None
         if production_package is not None:
