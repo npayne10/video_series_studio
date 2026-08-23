@@ -27,9 +27,7 @@ def test_phase_20_17_json_repository_round_trip(tmp_path) -> None:
             ScenarioResult(
                 scenario_id="text-to-video-baseline",
                 outcome=ValidationOutcome.PASS,
-                criterion_results=(
-                    CriterionResult("prompt-adherence", ValidationOutcome.PASS),
-                ),
+                criterion_results=(CriterionResult("prompt-adherence", ValidationOutcome.PASS),),
                 evidence_media_ids=("GM-001",),
                 recorded_by="validator-1",
                 recorded_at=recorded_at,

@@ -158,7 +158,9 @@ class CapabilityValidationSession:
             if not self.decision_actor or not self.decision_reason or self.decided_at is None:
                 raise ValueError("human decision requires actor, reason and decided_at")
 
-    def with_result(self, result: ScenarioResult, recommendation: CapabilityRecommendation) -> CapabilityValidationSession:
+    def with_result(
+        self, result: ScenarioResult, recommendation: CapabilityRecommendation
+    ) -> CapabilityValidationSession:
         results = tuple(
             result if current.scenario_id == result.scenario_id else current
             for current in self.scenario_results
@@ -174,7 +176,9 @@ class CapabilityValidationSession:
             updated_at=datetime.now(UTC),
         )
 
-    def with_decision(self, decision: HumanDecision, actor: str, reason: str) -> CapabilityValidationSession:
+    def with_decision(
+        self, decision: HumanDecision, actor: str, reason: str
+    ) -> CapabilityValidationSession:
         if decision is HumanDecision.PENDING:
             raise ValueError("explicit decision must be approved or rejected")
         _require_text(actor, "actor")
