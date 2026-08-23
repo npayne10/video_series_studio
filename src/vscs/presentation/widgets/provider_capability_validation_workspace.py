@@ -52,7 +52,7 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         self.provider_id = QLineEdit()
         self.session_id = QLineEdit()
         self.pack = QComboBox()
-        self.start_button = QPushButton("Start Validation")
+        self.start_button = QPushButton("Start / Resume Validation")
         self.start_button.clicked.connect(self._start)
         start_form = QFormLayout()
         start_form.addRow("Provider ID", self.provider_id)
@@ -135,7 +135,11 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 f"{pack.provider_family} / {pack.capability_id} / {pack.version}", pack.pack_id
             )
         if self._session_id is None:
-            self.summary.setText("Start a validation session to capture governed evidence.")
+            self.table.setRowCount(0)
+            self.summary.setText(
+                "Enter an existing Session ID and click Start / Resume Validation, "
+                "or enter a new Session ID to create one."
+            )
             self._set_session_actions(False)
             return
         session = service.get(self._session_id)
@@ -144,6 +148,11 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             self.table.setRowCount(0)
             self._set_session_actions(False)
             return
+        self.provider_id.setText(session.provider_id)
+        self.session_id.setText(session.session_id)
+        pack_index = self.pack.findData(session.pack_id)
+        if pack_index >= 0:
+            self.pack.setCurrentIndex(pack_index)
         pack = next(item for item in service.available_packs() if item.pack_id == session.pack_id)
         results = {result.scenario_id: result for result in session.scenario_results}
         self.table.setRowCount(0)
@@ -188,6 +197,29 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 self, "Capability Validation", "Provider, session and pack are required."
             )
             return
+
+        existing = service.get(session_id)
+        if existing is not None:
+            if existing.provider_id != provider_id:
+                QMessageBox.critical(
+                    self,
+                    "Capability Validation",
+                    f"Session {session_id} belongs to provider {existing.provider_id}, "
+                    f"not {provider_id}.",
+                )
+                return
+            if existing.pack_id != str(pack_id):
+                QMessageBox.critical(
+                    self,
+                    "Capability Validation",
+                    f"Session {session_id} uses validation pack {existing.pack_id}, "
+                    f"not {pack_id}.",
+                )
+                return
+            self._session_id = session_id
+            self.refresh()
+            return
+
         try:
             service.start_session(
                 session_id=session_id, provider_id=provider_id, pack_id=str(pack_id)
@@ -325,10 +357,12 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                     notes=notes or None,
                 )
             )
+            if evidence_item:
+                evidence.update(
+                    value.strip() for value in evidence_item.text().split(",") if value.strip()
+                )
             if notes:
                 scenario_notes.append(notes)
-            if evidence_item:
-                evidence.update(v.strip() for v in evidence_item.text().split(",") if v.strip())
         try:
             service.record_scenario(
                 session_id=self._session_id,
@@ -351,12 +385,17 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         reason = self.decision_reason.toPlainText().strip()
         if not actor or not reason:
             QMessageBox.warning(
-                self, "Capability Validation", "Human actor ID and decision reason are required."
+                self,
+                "Capability Validation",
+                "Human actor ID and decision reason are required.",
             )
             return
         try:
             service.decide(
-                session_id=self._session_id, decision=decision, actor=actor, reason=reason
+                session_id=self._session_id,
+                decision=decision,
+                actor=actor,
+                reason=reason,
             )
         except Exception as exc:
             QMessageBox.critical(self, "Capability Validation", str(exc))
@@ -364,11 +403,8 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         self.refresh()
 
     def _set_session_actions(self, enabled: bool) -> None:
-        for button in (
-            self.record_button,
-            self.approve_button,
-            self.reject_button,
-            self.select_evidence_button,
-            self.ingest_evidence_button,
-        ):
-            button.setEnabled(enabled)
+        self.select_evidence_button.setEnabled(enabled)
+        self.ingest_evidence_button.setEnabled(enabled)
+        self.record_button.setEnabled(enabled)
+        self.approve_button.setEnabled(enabled)
+        self.reject_button.setEnabled(enabled)
