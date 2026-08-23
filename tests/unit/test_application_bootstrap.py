@@ -88,11 +88,13 @@ def test_bootstrap_creates_real_main_window_without_event_loop(
 
     assert isinstance(window, MainWindow)
     assert window.services is context.services
-    assert window.navigation.count() == 10
+    assert window.navigation.count() == 11
     assert window.navigation.item(5).text() == "Behaviour Profiles"
     assert window.navigation.item(8).text() == "Generated Media"
+    assert window.navigation.item(9).text() == "Provider Validation"
+    assert window.navigation.item(10).text() == "Post-Production"
     assert window.navigation.currentItem().text() == "Dashboard"
-    assert window.content_stack.count() == 10
+    assert window.content_stack.count() == 11
     assert window.statusBar().currentMessage() == "No project open"
     assert not window.save_project_action.isEnabled()
     assert not window.behaviour_manager.new_button.isEnabled()
