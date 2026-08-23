@@ -26,7 +26,11 @@ from vscs.application.provider_capability_validation import (
     ProviderCapabilityValidationService,
     ValidationEvidenceIngestionService,
 )
-from vscs.domain.provider_capability_validation import CriterionResult, HumanDecision, ValidationOutcome
+from vscs.domain.provider_capability_validation import (
+    CriterionResult,
+    HumanDecision,
+    ValidationOutcome,
+)
 
 
 class ProviderCapabilityValidationWorkspace(QWidget):
@@ -35,7 +39,8 @@ class ProviderCapabilityValidationWorkspace(QWidget):
     def __init__(
         self,
         service_provider: Callable[[], ProviderCapabilityValidationService | None],
-        evidence_service_provider: Callable[[], ValidationEvidenceIngestionService | None] | None = None,
+        evidence_service_provider: Callable[[], ValidationEvidenceIngestionService | None]
+        | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -157,10 +162,14 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 combo = QComboBox()
                 for outcome in ValidationOutcome:
                     combo.addItem(outcome.value.replace("_", " ").title(), outcome.value)
-                combo.setCurrentIndex(combo.findData(criteria[criterion.criterion_id].outcome.value))
+                combo.setCurrentIndex(
+                    combo.findData(criteria[criterion.criterion_id].outcome.value)
+                )
                 self.table.setCellWidget(row, 2, combo)
                 self.table.setItem(row, 3, QTableWidgetItem(", ".join(result.evidence_media_ids)))
-                self.table.setItem(row, 4, QTableWidgetItem(criteria[criterion.criterion_id].notes or ""))
+                self.table.setItem(
+                    row, 4, QTableWidgetItem(criteria[criterion.criterion_id].notes or "")
+                )
         self.summary.setText(
             f"Session {session.session_id} — recommendation: {session.recommendation.value} — "
             f"human decision: {session.human_decision.value}"
@@ -175,10 +184,14 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         session_id = self.session_id.text().strip()
         pack_id = self.pack.currentData()
         if not provider_id or not session_id or not pack_id:
-            QMessageBox.warning(self, "Capability Validation", "Provider, session and pack are required.")
+            QMessageBox.warning(
+                self, "Capability Validation", "Provider, session and pack are required."
+            )
             return
         try:
-            service.start_session(session_id=session_id, provider_id=provider_id, pack_id=str(pack_id))
+            service.start_session(
+                session_id=session_id, provider_id=provider_id, pack_id=str(pack_id)
+            )
         except Exception as exc:
             QMessageBox.critical(self, "Capability Validation", str(exc))
             return
@@ -188,7 +201,9 @@ class ProviderCapabilityValidationWorkspace(QWidget):
     def _selected_context(self) -> tuple[str, str] | None:
         rows = self.table.selectionModel().selectedRows()
         if not rows:
-            QMessageBox.warning(self, "Capability Validation", "Select a scenario criterion row first.")
+            QMessageBox.warning(
+                self, "Capability Validation", "Select a scenario criterion row first."
+            )
             return None
         row = rows[0].row()
         scenario = self.table.item(row, 0)
@@ -235,7 +250,9 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         )
         context = self._selected_context()
         if evidence_service is None or context is None:
-            QMessageBox.warning(self, "Capability Validation", "Validation evidence ingestion is unavailable.")
+            QMessageBox.warning(
+                self, "Capability Validation", "Validation evidence ingestion is unavailable."
+            )
             return
         if self._selected_evidence_file is None:
             QMessageBox.warning(self, "Capability Validation", "Select an evidence file first.")
@@ -265,7 +282,10 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         self.evidence_media_id.setText(media_id)
         for row in range(self.table.rowCount()):
             scenario_item = self.table.item(row, 0)
-            if scenario_item is None or str(scenario_item.data(Qt.ItemDataRole.UserRole)) != scenario_id:
+            if (
+                scenario_item is None
+                or str(scenario_item.data(Qt.ItemDataRole.UserRole)) != scenario_id
+            ):
                 continue
             item = self.table.item(row, 3)
             values = {v.strip() for v in (item.text() if item else "").split(",") if v.strip()}
@@ -330,10 +350,14 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         actor = self.actor.text().strip()
         reason = self.decision_reason.toPlainText().strip()
         if not actor or not reason:
-            QMessageBox.warning(self, "Capability Validation", "Human actor ID and decision reason are required.")
+            QMessageBox.warning(
+                self, "Capability Validation", "Human actor ID and decision reason are required."
+            )
             return
         try:
-            service.decide(session_id=self._session_id, decision=decision, actor=actor, reason=reason)
+            service.decide(
+                session_id=self._session_id, decision=decision, actor=actor, reason=reason
+            )
         except Exception as exc:
             QMessageBox.critical(self, "Capability Validation", str(exc))
             return

@@ -198,8 +198,7 @@ class ProviderCapabilityValidationService:
         ):
             return CapabilityRecommendation.INSUFFICIENT_EVIDENCE
         if any(
-            by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL
-            for scenario in required
+            by_id[scenario.scenario_id].outcome is ValidationOutcome.FAIL for scenario in required
         ):
             return CapabilityRecommendation.NOT_RECOMMENDED
         if any(
