@@ -32,6 +32,7 @@ from vscs.application.caps import (
 from vscs.application.generated_media import GeneratedMediaUiService
 from vscs.application.production_execution import ProductionExecutionUiService
 from vscs.application.projects import ProjectError, ProjectService
+from vscs.application.provider_capability_validation import ProviderCapabilityValidationService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
@@ -40,6 +41,10 @@ from vscs.infrastructure.generated_media import (
 from vscs.infrastructure.logging import LoggingService
 from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.production_execution import LocalComfyUIProductionExecutionBackend
+from vscs.infrastructure.provider_capability_validation import (
+    JsonCapabilityValidationRepository,
+    wan22_video_validation_pack,
+)
 from vscs.infrastructure.services import ApplicationServices
 from vscs.presentation.dialogs.plugin_manager_dialog import PluginManagerDialog
 from vscs.presentation.dialogs.settings_dialog import SettingsDialog
@@ -55,6 +60,9 @@ from vscs.presentation.widgets.cap_readiness_widget import install_cap_readiness
 from vscs.presentation.widgets.dashboard import DashboardWidget
 from vscs.presentation.widgets.generated_media_workspace import GeneratedMediaWorkspaceWidget
 from vscs.presentation.widgets.production_execution_workspace import ProductionExecutionWorkspace
+from vscs.presentation.widgets.provider_capability_validation_workspace import (
+    ProviderCapabilityValidationWorkspace,
+)
 
 
 class MainWindow(QMainWindow):
@@ -141,6 +149,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction("Behaviour Profiles", lambda: self._select_navigation_item(5))
         view_menu.addAction("Production Execution", lambda: self._select_navigation_item(7))
         view_menu.addAction("Generated Media", lambda: self._select_navigation_item(8))
+        view_menu.addAction("Provider Validation", lambda: self._select_navigation_item(9))
         tools_menu = self.menuBar().addMenu("&Tools")
         tools_menu.addAction(self.settings_action)
         tools_menu.addAction(self.plugin_manager_action)
@@ -170,6 +179,7 @@ class MainWindow(QMainWindow):
             "Production Planning",
             "Production Execution",
             "Generated Media",
+            "Provider Validation",
             "Post-Production",
         )
         for section in sections:
@@ -229,6 +239,10 @@ class MainWindow(QMainWindow):
             self._generated_media_ui_service
         )
         self.content_stack.addWidget(self.generated_media_workspace)
+        self.provider_validation_workspace = ProviderCapabilityValidationWorkspace(
+            self._provider_capability_validation_service
+        )
+        self.content_stack.addWidget(self.provider_validation_workspace)
         self.content_stack.addWidget(self._placeholder_page("Post-Production"))
         self.setCentralWidget(self.content_stack)
         self.navigation.setCurrentRow(0)
@@ -268,6 +282,8 @@ class MainWindow(QMainWindow):
             self.production_execution_workspace.refresh()
         elif section == "Generated Media":
             self.generated_media_workspace.refresh()
+        elif section == "Provider Validation":
+            self.provider_validation_workspace.refresh()
 
     def _select_navigation_item(self, row: int) -> None:
         self.navigation.setCurrentRow(row)
@@ -288,6 +304,19 @@ class MainWindow(QMainWindow):
             selection_repository_factory=lambda: JsonGeneratedMediaSelectionRepository(
                 root / "generated_media_selections"
             ),
+        )
+
+    def _provider_capability_validation_service(
+        self,
+    ) -> ProviderCapabilityValidationService | None:
+        project_directory = self.projects.project_directory
+        if project_directory is None:
+            return None
+        root = project_directory / ".vscs"
+        return ProviderCapabilityValidationService(
+            JsonCapabilityValidationRepository(root / "provider_capability_validation"),
+            JsonGeneratedMediaRepository(root / "generated_media"),
+            (wan22_video_validation_pack(),),
         )
 
     def _production_execution_ui_service(self) -> ProductionExecutionUiService | None:
@@ -388,6 +417,7 @@ class MainWindow(QMainWindow):
         self.behaviour_manager.refresh()
         self.production_execution_workspace.refresh()
         self.generated_media_workspace.refresh()
+        self.provider_validation_workspace.refresh()
         self.statusBar().showMessage("Project closed", 5000)
 
     def _reset_production_execution(self) -> None:
@@ -436,6 +466,7 @@ class MainWindow(QMainWindow):
         self.behaviour_manager.refresh()
         self.production_execution_workspace.refresh()
         self.generated_media_workspace.refresh()
+        self.provider_validation_workspace.refresh()
 
         if active and self.projects.current_project is not None:
             project = self.projects.current_project
