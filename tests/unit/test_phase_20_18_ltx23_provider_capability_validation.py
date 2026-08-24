@@ -162,14 +162,51 @@ def test_phase_20_18_workspace_lists_and_starts_ltx23_pack(qtbot) -> None:
         "ltx / video-generation.ltx-2.3 / 1.0",
     }
 
-    workspace.provider_id.setText("ltx23-local")
-    workspace.session_id.setText("LTX23-VAL-UI")
     workspace.pack.setCurrentIndex(workspace.pack.findData("ltx-2.3-video-v1"))
+    workspace.provider_id.setEditText("ltx23-local")
+    workspace.session_id.setEditText("LTX23-VAL-UI")
     workspace.start_button.click()
 
     assert workspace.table.rowCount() == 15
     assert "Session LTX23-VAL-UI" in workspace.summary.text()
     assert service.get("LTX23-VAL-UI") is not None
+
+
+def test_phase_20_18_workspace_discovers_existing_sessions_by_pack_and_provider(qtbot) -> None:
+    service = _service()
+    service.start_session(
+        session_id="LTX23-VAL-001",
+        provider_id="ltx23-local",
+        pack_id="ltx-2.3-video-v1",
+    )
+    service.start_session(
+        session_id="LTX23-VAL-002",
+        provider_id="ltx23-lab",
+        pack_id="ltx-2.3-video-v1",
+    )
+    service.start_session(
+        session_id="WAN22-VAL-001",
+        provider_id="wan22-local",
+        pack_id="wan-2.2-video-v1",
+    )
+    workspace = ProviderCapabilityValidationWorkspace(lambda: service)
+    qtbot.addWidget(workspace)
+
+    workspace.pack.setCurrentIndex(workspace.pack.findData("ltx-2.3-video-v1"))
+
+    providers = {workspace.provider_id.itemText(index) for index in range(workspace.provider_id.count())}
+    assert providers == {"ltx23-local", "ltx23-lab"}
+    assert "wan22-local" not in providers
+
+    workspace.provider_id.setCurrentText("ltx23-local")
+    sessions = {workspace.session_id.itemText(index) for index in range(workspace.session_id.count())}
+    assert sessions == {"LTX23-VAL-001"}
+
+    workspace.session_id.setCurrentText("LTX23-VAL-001")
+    workspace.start_button.click()
+
+    assert workspace.table.rowCount() == 15
+    assert "Session LTX23-VAL-001" in workspace.summary.text()
 
 
 def test_phase_20_18_ltx23_session_can_be_completed_and_approved() -> None:
