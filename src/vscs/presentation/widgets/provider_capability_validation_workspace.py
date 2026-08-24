@@ -289,7 +289,9 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             self.session_id.clear()
             for session in sessions:
                 self.session_id.addItem(session.session_id, session.session_id)
-            if current_session and any(session.session_id == current_session for session in sessions):
+            if current_session and any(
+                session.session_id == current_session for session in sessions
+            ):
                 self._set_combo_text(self.session_id, current_session)
             elif sessions:
                 self.session_id.setCurrentIndex(0)
