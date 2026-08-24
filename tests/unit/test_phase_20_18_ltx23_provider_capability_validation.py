@@ -194,12 +194,16 @@ def test_phase_20_18_workspace_discovers_existing_sessions_by_pack_and_provider(
 
     workspace.pack.setCurrentIndex(workspace.pack.findData("ltx-2.3-video-v1"))
 
-    providers = {workspace.provider_id.itemText(index) for index in range(workspace.provider_id.count())}
+    providers = {
+        workspace.provider_id.itemText(index) for index in range(workspace.provider_id.count())
+    }
     assert providers == {"ltx23-local", "ltx23-lab"}
     assert "wan22-local" not in providers
 
     workspace.provider_id.setCurrentText("ltx23-local")
-    sessions = {workspace.session_id.itemText(index) for index in range(workspace.session_id.count())}
+    sessions = {
+        workspace.session_id.itemText(index) for index in range(workspace.session_id.count())
+    }
     assert sessions == {"LTX23-VAL-001"}
 
     workspace.session_id.setCurrentText("LTX23-VAL-001")

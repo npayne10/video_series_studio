@@ -191,7 +191,9 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 combo = QComboBox()
                 for outcome in ValidationOutcome:
                     combo.addItem(outcome.value.replace("_", " ").title(), outcome.value)
-                combo.setCurrentIndex(combo.findData(criteria[criterion.criterion_id].outcome.value))
+                combo.setCurrentIndex(
+                    combo.findData(criteria[criterion.criterion_id].outcome.value)
+                )
                 self.table.setCellWidget(row, 2, combo)
                 self.table.setItem(row, 3, QTableWidgetItem(", ".join(result.evidence_media_ids)))
                 self.table.setItem(
