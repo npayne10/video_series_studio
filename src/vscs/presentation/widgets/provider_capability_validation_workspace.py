@@ -48,10 +48,18 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         self._evidence_service_provider = evidence_service_provider
         self._session_id: str | None = None
         self._selected_evidence_file: Path | None = None
+        self._refreshing_selectors = False
 
-        self.provider_id = QLineEdit()
-        self.session_id = QLineEdit()
+        self.provider_id = QComboBox()
+        self.provider_id.setEditable(True)
+        self.provider_id.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.session_id = QComboBox()
+        self.session_id.setEditable(True)
+        self.session_id.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.pack = QComboBox()
+        self.pack.currentIndexChanged.connect(self._validation_pack_changed)
+        self.provider_id.currentTextChanged.connect(self._provider_changed)
+        self.session_id.currentIndexChanged.connect(self._session_selection_changed)
         self.start_button = QPushButton("Start / Resume Validation")
         self.start_button.clicked.connect(self._start)
         start_form = QFormLayout()
@@ -124,21 +132,33 @@ class ProviderCapabilityValidationWorkspace(QWidget):
 
     def refresh(self) -> None:
         service = self._service_provider()
+        selected_pack = self.pack.currentData()
+        self._refreshing_selectors = True
         self.pack.clear()
         if service is None:
+            self.provider_id.clear()
+            self.session_id.clear()
             self.table.setRowCount(0)
             self.summary.setText("Open a project to validate provider capability.")
             self._set_session_actions(False)
+            self._refreshing_selectors = False
             return
         for pack in service.available_packs():
             self.pack.addItem(
                 f"{pack.provider_family} / {pack.capability_id} / {pack.version}", pack.pack_id
             )
+        if selected_pack is not None:
+            selected_index = self.pack.findData(selected_pack)
+            if selected_index >= 0:
+                self.pack.setCurrentIndex(selected_index)
+        self._refreshing_selectors = False
+        self._populate_known_sessions()
+
         if self._session_id is None:
             self.table.setRowCount(0)
             self.summary.setText(
-                "Enter an existing Session ID and click Start / Resume Validation, "
-                "or enter a new Session ID to create one."
+                "Choose a validation pack, then select an existing Provider ID and Session ID, "
+                "or enter new IDs to create a validation session."
             )
             self._set_session_actions(False)
             return
@@ -148,8 +168,8 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             self.table.setRowCount(0)
             self._set_session_actions(False)
             return
-        self.provider_id.setText(session.provider_id)
-        self.session_id.setText(session.session_id)
+        self._set_combo_text(self.provider_id, session.provider_id)
+        self._set_combo_text(self.session_id, session.session_id)
         pack_index = self.pack.findData(session.pack_id)
         if pack_index >= 0:
             self.pack.setCurrentIndex(pack_index)
@@ -171,9 +191,7 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 combo = QComboBox()
                 for outcome in ValidationOutcome:
                     combo.addItem(outcome.value.replace("_", " ").title(), outcome.value)
-                combo.setCurrentIndex(
-                    combo.findData(criteria[criterion.criterion_id].outcome.value)
-                )
+                combo.setCurrentIndex(combo.findData(criteria[criterion.criterion_id].outcome.value))
                 self.table.setCellWidget(row, 2, combo)
                 self.table.setItem(row, 3, QTableWidgetItem(", ".join(result.evidence_media_ids)))
                 self.table.setItem(
@@ -185,12 +203,98 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         )
         self._set_session_actions(True)
 
+    def _validation_pack_changed(self) -> None:
+        if self._refreshing_selectors:
+            return
+        self._session_id = None
+        self.table.setRowCount(0)
+        self._set_session_actions(False)
+        self._populate_known_sessions()
+
+    def _provider_changed(self) -> None:
+        if self._refreshing_selectors:
+            return
+        self._session_id = None
+        self.table.setRowCount(0)
+        self._set_session_actions(False)
+        self._populate_session_ids_for_provider()
+
+    def _session_selection_changed(self, index: int) -> None:
+        if self._refreshing_selectors or index < 0:
+            return
+        service = self._service_provider()
+        session_id = self.session_id.itemData(index)
+        if service is None or not session_id:
+            return
+        session = service.get(str(session_id))
+        if session is None:
+            return
+        self._set_combo_text(self.provider_id, session.provider_id)
+
+    def _populate_known_sessions(self) -> None:
+        service = self._service_provider()
+        pack_id = self.pack.currentData()
+        if service is None or pack_id is None:
+            return
+        current_provider = self.provider_id.currentText().strip()
+        matching_sessions = tuple(
+            session for session in service.list_all() if session.pack_id == str(pack_id)
+        )
+        providers = sorted({session.provider_id for session in matching_sessions})
+        self._refreshing_selectors = True
+        self.provider_id.clear()
+        self.provider_id.addItems(providers)
+        self._refreshing_selectors = False
+        if current_provider and current_provider in providers:
+            self._set_combo_text(self.provider_id, current_provider)
+        elif providers:
+            self.provider_id.setCurrentIndex(0)
+        else:
+            self.provider_id.setEditText("")
+        self._populate_session_ids_for_provider()
+
+    def _populate_session_ids_for_provider(self) -> None:
+        service = self._service_provider()
+        pack_id = self.pack.currentData()
+        provider_id = self.provider_id.currentText().strip()
+        if service is None or pack_id is None:
+            return
+        current_session = self.session_id.currentText().strip()
+        sessions = sorted(
+            (
+                session
+                for session in service.list_all()
+                if session.pack_id == str(pack_id)
+                and (not provider_id or session.provider_id == provider_id)
+            ),
+            key=lambda session: session.session_id,
+        )
+        self._refreshing_selectors = True
+        self.session_id.clear()
+        for session in sessions:
+            self.session_id.addItem(session.session_id, session.session_id)
+        self._refreshing_selectors = False
+        if current_session and any(session.session_id == current_session for session in sessions):
+            self._set_combo_text(self.session_id, current_session)
+        elif sessions:
+            self.session_id.setCurrentIndex(0)
+        else:
+            self.session_id.setEditText("")
+
+    @staticmethod
+    def _set_combo_text(combo: QComboBox, value: str) -> None:
+        index = combo.findText(value)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+        else:
+            combo.setEditText(value)
+
     def _start(self) -> None:
         service = self._service_provider()
         if service is None:
             return
-        provider_id = self.provider_id.text().strip()
-        session_id = self.session_id.text().strip()
+        provider_id = self.provider_id.currentText().strip()
+        session_id = self.session_id.currentText().strip()
         pack_id = self.pack.currentData()
         if not provider_id or not session_id or not pack_id:
             QMessageBox.warning(
