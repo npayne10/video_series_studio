@@ -43,6 +43,7 @@ from vscs.infrastructure.plugins import PluginManager
 from vscs.infrastructure.production_execution import LocalComfyUIProductionExecutionBackend
 from vscs.infrastructure.provider_capability_validation import (
     JsonCapabilityValidationRepository,
+    ltx23_video_validation_pack,
     wan22_video_validation_pack,
 )
 from vscs.infrastructure.services import ApplicationServices
@@ -316,7 +317,7 @@ class MainWindow(QMainWindow):
         return ProviderCapabilityValidationService(
             JsonCapabilityValidationRepository(root / "provider_capability_validation"),
             JsonGeneratedMediaRepository(root / "generated_media"),
-            (wan22_video_validation_pack(),),
+            (wan22_video_validation_pack(), ltx23_video_validation_pack()),
         )
 
     def _production_execution_ui_service(self) -> ProductionExecutionUiService | None:
