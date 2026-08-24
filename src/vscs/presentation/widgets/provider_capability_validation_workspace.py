@@ -212,8 +212,7 @@ class ProviderCapabilityValidationWorkspace(QWidget):
                 QMessageBox.critical(
                     self,
                     "Capability Validation",
-                    f"Session {session_id} uses validation pack {existing.pack_id}, "
-                    f"not {pack_id}.",
+                    f"Session {session_id} uses validation pack {existing.pack_id}, not {pack_id}.",
                 )
                 return
             self._session_id = session_id
