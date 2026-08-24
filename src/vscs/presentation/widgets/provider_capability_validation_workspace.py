@@ -168,11 +168,15 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             self.table.setRowCount(0)
             self._set_session_actions(False)
             return
-        self._set_combo_text(self.provider_id, session.provider_id)
-        self._set_combo_text(self.session_id, session.session_id)
-        pack_index = self.pack.findData(session.pack_id)
-        if pack_index >= 0:
-            self.pack.setCurrentIndex(pack_index)
+        self._refreshing_selectors = True
+        try:
+            self._set_combo_text(self.provider_id, session.provider_id)
+            self._set_combo_text(self.session_id, session.session_id)
+            pack_index = self.pack.findData(session.pack_id)
+            if pack_index >= 0:
+                self.pack.setCurrentIndex(pack_index)
+        finally:
+            self._refreshing_selectors = False
         pack = next(item for item in service.available_packs() if item.pack_id == session.pack_id)
         results = {result.scenario_id: result for result in session.scenario_results}
         self.table.setRowCount(0)
@@ -231,7 +235,12 @@ class ProviderCapabilityValidationWorkspace(QWidget):
         session = service.get(str(session_id))
         if session is None:
             return
-        self._set_combo_text(self.provider_id, session.provider_id)
+        previous_refreshing = self._refreshing_selectors
+        self._refreshing_selectors = True
+        try:
+            self._set_combo_text(self.provider_id, session.provider_id)
+        finally:
+            self._refreshing_selectors = previous_refreshing
 
     def _populate_known_sessions(self) -> None:
         service = self._service_provider()
@@ -243,17 +252,20 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             session for session in service.list_all() if session.pack_id == str(pack_id)
         )
         providers = sorted({session.provider_id for session in matching_sessions})
+        previous_refreshing = self._refreshing_selectors
         self._refreshing_selectors = True
-        self.provider_id.clear()
-        self.provider_id.addItems(providers)
-        self._refreshing_selectors = False
-        if current_provider and current_provider in providers:
-            self._set_combo_text(self.provider_id, current_provider)
-        elif providers:
-            self.provider_id.setCurrentIndex(0)
-        else:
-            self.provider_id.setEditText("")
-        self._populate_session_ids_for_provider()
+        try:
+            self.provider_id.clear()
+            self.provider_id.addItems(providers)
+            if current_provider and current_provider in providers:
+                self._set_combo_text(self.provider_id, current_provider)
+            elif providers:
+                self.provider_id.setCurrentIndex(0)
+            else:
+                self.provider_id.setEditText("")
+            self._populate_session_ids_for_provider()
+        finally:
+            self._refreshing_selectors = previous_refreshing
 
     def _populate_session_ids_for_provider(self) -> None:
         service = self._service_provider()
@@ -271,17 +283,20 @@ class ProviderCapabilityValidationWorkspace(QWidget):
             ),
             key=lambda session: session.session_id,
         )
+        previous_refreshing = self._refreshing_selectors
         self._refreshing_selectors = True
-        self.session_id.clear()
-        for session in sessions:
-            self.session_id.addItem(session.session_id, session.session_id)
-        self._refreshing_selectors = False
-        if current_session and any(session.session_id == current_session for session in sessions):
-            self._set_combo_text(self.session_id, current_session)
-        elif sessions:
-            self.session_id.setCurrentIndex(0)
-        else:
-            self.session_id.setEditText("")
+        try:
+            self.session_id.clear()
+            for session in sessions:
+                self.session_id.addItem(session.session_id, session.session_id)
+            if current_session and any(session.session_id == current_session for session in sessions):
+                self._set_combo_text(self.session_id, current_session)
+            elif sessions:
+                self.session_id.setCurrentIndex(0)
+            else:
+                self.session_id.setEditText("")
+        finally:
+            self._refreshing_selectors = previous_refreshing
 
     @staticmethod
     def _set_combo_text(combo: QComboBox, value: str) -> None:
