@@ -22,6 +22,9 @@ from vscs.infrastructure.provider_capability_validation import (
     ltx23_video_validation_pack,
     wan22_video_validation_pack,
 )
+from vscs.presentation.widgets.provider_capability_validation_workspace import (
+    ProviderCapabilityValidationWorkspace,
+)
 
 
 @dataclass
@@ -112,6 +115,14 @@ def _pass_results(scenario_id: str) -> tuple[CriterionResult, ...]:
     )
 
 
+def _service() -> ProviderCapabilityValidationService:
+    return ProviderCapabilityValidationService(
+        _SessionRepository(),
+        _MediaRepository(),
+        (wan22_video_validation_pack(), ltx23_video_validation_pack()),
+    )
+
+
 def test_phase_20_18_registers_comparable_wan22_and_ltx23_packs() -> None:
     wan = wan22_video_validation_pack()
     ltx = ltx23_video_validation_pack()
@@ -135,15 +146,30 @@ def test_phase_20_18_registers_comparable_wan22_and_ltx23_packs() -> None:
 
 
 def test_phase_20_18_service_exposes_both_provider_validation_packs() -> None:
-    service = ProviderCapabilityValidationService(
-        _SessionRepository(),
-        _MediaRepository(),
-        (wan22_video_validation_pack(), ltx23_video_validation_pack()),
-    )
-
-    packs = service.available_packs()
+    packs = _service().available_packs()
 
     assert {pack.pack_id for pack in packs} == {"wan-2.2-video-v1", "ltx-2.3-video-v1"}
+
+
+def test_phase_20_18_workspace_lists_and_starts_ltx23_pack(qtbot) -> None:
+    service = _service()
+    workspace = ProviderCapabilityValidationWorkspace(lambda: service)
+    qtbot.addWidget(workspace)
+
+    labels = {workspace.pack.itemText(index) for index in range(workspace.pack.count())}
+    assert labels == {
+        "wan / video-generation.wan-2.2 / 1.0",
+        "ltx / video-generation.ltx-2.3 / 1.0",
+    }
+
+    workspace.provider_id.setText("ltx23-local")
+    workspace.session_id.setText("LTX23-VAL-UI")
+    workspace.pack.setCurrentIndex(workspace.pack.findData("ltx-2.3-video-v1"))
+    workspace.start_button.click()
+
+    assert workspace.table.rowCount() == 15
+    assert "Session LTX23-VAL-UI" in workspace.summary.text()
+    assert service.get("LTX23-VAL-UI") is not None
 
 
 def test_phase_20_18_ltx23_session_can_be_completed_and_approved() -> None:
