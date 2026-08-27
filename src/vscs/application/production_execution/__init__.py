@@ -8,6 +8,11 @@ from .package_compilation import (
     ProductionPackageStatus,
 )
 from .profiles import ProductionExecutionProfile, normalize_execution_profile
+from .reference_plan_rendering import (
+    ReferencePlanRenderBinding,
+    ReferencePlanRenderBindingError,
+    ReferencePlanRenderRequestBinder,
+)
 from .retry_override import (
     GovernedRetryAuthorization,
     GovernedRetryOverrideState,
@@ -46,5 +51,8 @@ __all__ = [
     "ProductionPackageStatus",
     "ProductionTelemetrySnapshot",
     "ProductionTelemetryState",
+    "ReferencePlanRenderBinding",
+    "ReferencePlanRenderBindingError",
+    "ReferencePlanRenderRequestBinder",
     "normalize_execution_profile",
 ]
