@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from math import isclose
 from typing import Mapping, Protocol
@@ -64,6 +64,19 @@ class CropRisk(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+
+# Frame-state references are provider inputs whose pixel canvas defines the shot itself.
+# They must match the requested video frame exactly. Supporting identity/environment
+# references may retain provider-approved same-aspect dimensions.
+_EXACT_TARGET_DIMENSION_ROLES = frozenset(
+    {
+        ReferenceRole.SCENE_COMPOSITION_ANCHOR,
+        ReferenceRole.CONTINUITY_ANCHOR,
+        ReferenceRole.START_FRAME_REFERENCE,
+        ReferenceRole.END_FRAME_REFERENCE,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +246,11 @@ class ProviderReadyReferenceResolver:
                     )
                 )
                 continue
+
+            # Priority is a shot-level governance decision. A reusable catalog record may
+            # have a softer default, but the active role request is authoritative for the
+            # resolved shot plan and provider-binding consequences.
+            reference = replace(reference, priority=request.priority)
             selected.append(reference)
             diagnostics.extend(self._validate_reference(reference, target, request.priority))
 
@@ -255,7 +273,9 @@ class ProviderReadyReferenceResolver:
     ) -> tuple[ShotReference, ...]:
         if request.preferred_reference_id:
             preferred = supplied_by_id.get(request.preferred_reference_id)
-            return () if preferred is None else (preferred,)
+            if preferred is None or preferred.role is not request.role:
+                return ()
+            return (preferred,)
         if request.asset_id is None:
             return tuple(
                 reference
@@ -275,16 +295,19 @@ class ProviderReadyReferenceResolver:
         if not candidates:
             return None
 
-        def score(reference: ShotReference) -> tuple[int, int, int, int]:
+        def score(reference: ShotReference) -> tuple[int, int, int, int, int, int]:
             aspect_ok = ProviderReadyReferenceResolver._aspect_matches(reference, target)
-            exact_dimensions = reference.width == target.width and reference.height == target.height
+            exact_dimensions = ProviderReadyReferenceResolver._dimensions_match(reference, target)
             profile_ok = not reference.provider_profiles or target.profile_id in reference.provider_profiles
             complete = reference.coverage.full_required_asset_visible
+            identity_visible = reference.coverage.identity_visible
             return (
                 int(reference.provider_ready),
-                int(aspect_ok and exact_dimensions),
+                int(exact_dimensions),
+                int(aspect_ok),
                 int(profile_ok),
                 int(complete),
+                int(identity_visible),
             )
 
         return max(candidates, key=score)
@@ -295,6 +318,10 @@ class ProviderReadyReferenceResolver:
         if aspect is None:
             return False
         return isclose(aspect, target.aspect_ratio, rel_tol=target.aspect_tolerance)
+
+    @staticmethod
+    def _dimensions_match(reference: ShotReference, target: ReferenceTarget) -> bool:
+        return reference.width == target.width and reference.height == target.height
 
     def _validate_reference(
         self,
@@ -328,6 +355,20 @@ class ProviderReadyReferenceResolver:
                     priority,
                     "REFERENCE_DIMENSIONS_UNKNOWN",
                     f"Reference '{reference.reference_id}' has no usable dimensions.",
+                    reference.reference_id,
+                )
+            )
+        elif (
+            reference.role in _EXACT_TARGET_DIMENSION_ROLES
+            and not self._dimensions_match(reference, target)
+        ):
+            findings.append(
+                self._diagnostic(
+                    priority,
+                    "REFERENCE_DIMENSIONS_MISMATCH",
+                    f"Frame anchor '{reference.reference_id}' must match target dimensions "
+                    f"exactly ({target.width}x{target.height}); got "
+                    f"{reference.width}x{reference.height}.",
                     reference.reference_id,
                 )
             )
