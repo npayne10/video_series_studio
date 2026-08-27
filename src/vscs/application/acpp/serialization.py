@@ -19,6 +19,16 @@ from .models import (
     RenderSpecification,
     SeedPolicy,
 )
+from .reference_roles import (
+    ReferenceClass,
+    ReferenceCoverage,
+    ReferencePlan,
+    ReferencePriority,
+    ReferenceRole,
+    ReferenceSubjectType,
+    ReferenceTarget,
+    ShotReference,
+)
 
 
 class ACPPSerializationError(ValueError):
@@ -66,7 +76,7 @@ class ACPPSerializer:
     @staticmethod
     def to_dict(package: ClipProductionPackage) -> dict[str, Any]:
         """Convert a package to JSON-compatible primitives."""
-        return {
+        payload: dict[str, Any] = {
             "schema_version": package.schema_version,
             "identity": {
                 "clip_id": package.identity.clip_id,
@@ -126,6 +136,9 @@ class ACPPSerializer:
             "dependencies": list(package.dependencies),
             "metadata": dict(package.metadata),
         }
+        if package.reference_plan is not None:
+            payload["reference_plan"] = _reference_plan_to_dict(package.reference_plan)
+        return payload
 
     @staticmethod
     def from_dict(raw: dict[str, Any]) -> ClipProductionPackage:
@@ -137,6 +150,7 @@ class ACPPSerializer:
         audio = raw["audio"]
         output = raw["output"]
         assets = raw.get("assets", [])
+        reference_plan_raw = raw.get("reference_plan")
         return ClipProductionPackage(
             identity=ClipIdentity(
                 clip_id=str(identity["clip_id"]),
@@ -204,7 +218,108 @@ class ACPPSerializer:
             schema_version=str(raw.get("schema_version", "1.0")),
             dependencies=tuple(str(value) for value in raw.get("dependencies", [])),
             metadata={str(key): str(value) for key, value in raw.get("metadata", {}).items()},
+            reference_plan=(
+                None
+                if reference_plan_raw is None
+                else _reference_plan_from_dict(reference_plan_raw)
+            ),
         )
+
+
+def _reference_plan_to_dict(plan: ReferencePlan) -> dict[str, Any]:
+    return {
+        "schema_version": plan.schema_version,
+        "target": {
+            "width": plan.target.width,
+            "height": plan.target.height,
+            "profile_id": plan.target.profile_id,
+            "provider_id": plan.target.provider_id,
+            "aspect_tolerance": plan.target.aspect_tolerance,
+        },
+        "references": [
+            {
+                "reference_id": reference.reference_id,
+                "asset_id": reference.asset_id,
+                "role": reference.role.value,
+                "reference_class": reference.reference_class.value,
+                "priority": reference.priority.value,
+                "subject_type": reference.subject_type.value,
+                "source_path": reference.source_path,
+                "canonical_source_id": reference.canonical_source_id,
+                "label": reference.label,
+                "width": reference.width,
+                "height": reference.height,
+                "provider_ready": reference.provider_ready,
+                "provider_profiles": list(reference.provider_profiles),
+                "coverage": {
+                    "framing_type": reference.coverage.framing_type,
+                    "coverage": reference.coverage.coverage,
+                    "required_features_visible": reference.coverage.required_features_visible,
+                    "identity_visible": reference.coverage.identity_visible,
+                    "full_required_asset_visible": reference.coverage.full_required_asset_visible,
+                },
+                "reference_fingerprint": reference.reference_fingerprint,
+                "file_checksum": reference.file_checksum,
+                "contains_subjects": list(reference.contains_subjects),
+                "contains_props": list(reference.contains_props),
+                "contains_environments": list(reference.contains_environments),
+            }
+            for reference in plan.references
+        ],
+    }
+
+
+def _reference_plan_from_dict(raw: Any) -> ReferencePlan:
+    if not isinstance(raw, dict):
+        raise TypeError("reference_plan must be an object")
+    target = raw["target"]
+    references = raw.get("references", [])
+    return ReferencePlan(
+        schema_version=str(raw.get("schema_version", "1.0")),
+        target=ReferenceTarget(
+            width=int(target["width"]),
+            height=int(target["height"]),
+            profile_id=str(target["profile_id"]),
+            provider_id=_optional_text(target.get("provider_id")),
+            aspect_tolerance=float(target.get("aspect_tolerance", 0.03)),
+        ),
+        references=tuple(_shot_reference_from_dict(reference) for reference in references),
+    )
+
+
+def _shot_reference_from_dict(raw: Any) -> ShotReference:
+    if not isinstance(raw, dict):
+        raise TypeError("reference entry must be an object")
+    coverage = raw.get("coverage", {})
+    return ShotReference(
+        reference_id=str(raw["reference_id"]),
+        asset_id=_optional_text(raw.get("asset_id")),
+        role=ReferenceRole(str(raw["role"])),
+        reference_class=ReferenceClass(str(raw["reference_class"])),
+        priority=ReferencePriority(str(raw["priority"])),
+        subject_type=ReferenceSubjectType(str(raw["subject_type"])),
+        source_path=str(raw["source_path"]),
+        canonical_source_id=_optional_text(raw.get("canonical_source_id")),
+        label=str(raw.get("label", "")),
+        width=int(raw.get("width", 0)),
+        height=int(raw.get("height", 0)),
+        provider_ready=bool(raw.get("provider_ready", False)),
+        provider_profiles=tuple(str(value) for value in raw.get("provider_profiles", [])),
+        coverage=ReferenceCoverage(
+            framing_type=str(coverage.get("framing_type", "unknown")),
+            coverage=str(coverage.get("coverage", "unknown")),
+            required_features_visible=bool(coverage.get("required_features_visible", True)),
+            identity_visible=bool(coverage.get("identity_visible", True)),
+            full_required_asset_visible=bool(coverage.get("full_required_asset_visible", True)),
+        ),
+        reference_fingerprint=_optional_text(raw.get("reference_fingerprint")),
+        file_checksum=_optional_text(raw.get("file_checksum")),
+        contains_subjects=tuple(str(value) for value in raw.get("contains_subjects", [])),
+        contains_props=tuple(str(value) for value in raw.get("contains_props", [])),
+        contains_environments=tuple(
+            str(value) for value in raw.get("contains_environments", [])
+        ),
+    )
 
 
 def _optional_text(value: object) -> str | None:
