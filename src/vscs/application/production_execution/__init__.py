@@ -1,5 +1,11 @@
 """Operator-facing Production Execution application boundary."""
 
+from .functional_acceptance import (
+    LiveShotFunctionalAcceptanceError,
+    LiveShotFunctionalAcceptanceReconciliation,
+    LiveShotFunctionalAcceptanceService,
+    LiveShotFunctionalAcceptanceSubmission,
+)
 from .package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
@@ -37,6 +43,10 @@ __all__ = [
     "GovernedRetryAuthorization",
     "GovernedRetryOverrideState",
     "GovernedRetryOverrideStatus",
+    "LiveShotFunctionalAcceptanceError",
+    "LiveShotFunctionalAcceptanceReconciliation",
+    "LiveShotFunctionalAcceptanceService",
+    "LiveShotFunctionalAcceptanceSubmission",
     "ProductionDeviceTelemetry",
     "ProductionExecutionBackend",
     "ProductionExecutionCandidate",
