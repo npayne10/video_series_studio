@@ -77,9 +77,7 @@ def test_application_service_attaches_resolved_reference_plan() -> None:
             full_required_asset_visible=True,
         ),
     )
-    service = ReferencePlanApplicationService(
-        ProviderReadyReferenceResolver(_Catalog(reference))
-    )
+    service = ReferencePlanApplicationService(ProviderReadyReferenceResolver(_Catalog(reference)))
 
     result = service.resolve_package(
         _package(),

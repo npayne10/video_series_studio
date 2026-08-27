@@ -120,8 +120,7 @@ def test_supporting_identity_reference_can_use_provider_approved_same_aspect_siz
 
     assert result.passed
     assert not any(
-        diagnostic.code == "REFERENCE_DIMENSIONS_MISMATCH"
-        for diagnostic in result.diagnostics
+        diagnostic.code == "REFERENCE_DIMENSIONS_MISMATCH" for diagnostic in result.diagnostics
     )
 
 
@@ -146,10 +145,7 @@ def test_preferred_reference_must_fulfil_requested_role() -> None:
     )
 
     assert not result.passed
-    assert any(
-        diagnostic.code == "REFERENCE_ROLE_UNRESOLVED"
-        for diagnostic in result.diagnostics
-    )
+    assert any(diagnostic.code == "REFERENCE_ROLE_UNRESOLVED" for diagnostic in result.diagnostics)
 
 
 def test_role_request_priority_governs_provider_binding() -> None:
@@ -182,6 +178,5 @@ def test_role_request_priority_governs_provider_binding() -> None:
     assert result.plan.references[0].priority is ReferencePriority.REQUIRED
     assert not result.passed
     assert any(
-        diagnostic.code == "PROVIDER_REQUIRED_ROLE_UNSUPPORTED"
-        for diagnostic in result.diagnostics
+        diagnostic.code == "PROVIDER_REQUIRED_ROLE_UNSUPPORTED" for diagnostic in result.diagnostics
     )

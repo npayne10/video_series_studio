@@ -316,9 +316,7 @@ def _shot_reference_from_dict(raw: Any) -> ShotReference:
         file_checksum=_optional_text(raw.get("file_checksum")),
         contains_subjects=tuple(str(value) for value in raw.get("contains_subjects", [])),
         contains_props=tuple(str(value) for value in raw.get("contains_props", [])),
-        contains_environments=tuple(
-            str(value) for value in raw.get("contains_environments", [])
-        ),
+        contains_environments=tuple(str(value) for value in raw.get("contains_environments", [])),
     )
 
 

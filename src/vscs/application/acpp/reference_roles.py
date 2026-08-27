@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from math import isclose
-from typing import Mapping, Protocol
+from typing import Protocol
 
 
 class ReferenceRole(StrEnum):
@@ -201,8 +202,7 @@ class ReferenceResolutionResult:
 class ReferenceCatalog(Protocol):
     """Look up candidate shot references for one canonical asset."""
 
-    def references_for_asset(self, asset_id: str) -> tuple[ShotReference, ...]:
-        ...
+    def references_for_asset(self, asset_id: str) -> tuple[ShotReference, ...]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -278,9 +278,7 @@ class ProviderReadyReferenceResolver:
             return (preferred,)
         if request.asset_id is None:
             return tuple(
-                reference
-                for reference in supplied_by_id.values()
-                if reference.role is request.role
+                reference for reference in supplied_by_id.values() if reference.role is request.role
             )
         return tuple(
             reference
@@ -298,7 +296,9 @@ class ProviderReadyReferenceResolver:
         def score(reference: ShotReference) -> tuple[int, int, int, int, int, int]:
             aspect_ok = ProviderReadyReferenceResolver._aspect_matches(reference, target)
             exact_dimensions = ProviderReadyReferenceResolver._dimensions_match(reference, target)
-            profile_ok = not reference.provider_profiles or target.profile_id in reference.provider_profiles
+            profile_ok = (
+                not reference.provider_profiles or target.profile_id in reference.provider_profiles
+            )
             complete = reference.coverage.full_required_asset_visible
             identity_visible = reference.coverage.identity_visible
             return (
@@ -358,9 +358,8 @@ class ProviderReadyReferenceResolver:
                     reference.reference_id,
                 )
             )
-        elif (
-            reference.role in _EXACT_TARGET_DIMENSION_ROLES
-            and not self._dimensions_match(reference, target)
+        elif reference.role in _EXACT_TARGET_DIMENSION_ROLES and not self._dimensions_match(
+            reference, target
         ):
             findings.append(
                 self._diagnostic(
@@ -391,11 +390,15 @@ class ProviderReadyReferenceResolver:
                     reference.reference_id,
                 )
             )
-        if reference.role in {
-            ReferenceRole.PRIMARY_IDENTITY,
-            ReferenceRole.SECONDARY_IDENTITY,
-            ReferenceRole.GROUP_IDENTITY,
-        } and not reference.coverage.identity_visible:
+        if (
+            reference.role
+            in {
+                ReferenceRole.PRIMARY_IDENTITY,
+                ReferenceRole.SECONDARY_IDENTITY,
+                ReferenceRole.GROUP_IDENTITY,
+            }
+            and not reference.coverage.identity_visible
+        ):
             findings.append(
                 self._diagnostic(
                     priority,
@@ -447,7 +450,10 @@ class ProviderReadyReferenceResolver:
         fallback = None
         if unsupported_required:
             composition = plan.by_role(ReferenceRole.SCENE_COMPOSITION_ANCHOR)
-            if composition and ReferenceRole.SCENE_COMPOSITION_ANCHOR in capabilities.supported_roles:
+            if (
+                composition
+                and ReferenceRole.SCENE_COMPOSITION_ANCHOR in capabilities.supported_roles
+            ):
                 fallback = "scene_composition_anchor"
                 diagnostics.append(
                     ReferenceResolutionDiagnostic(

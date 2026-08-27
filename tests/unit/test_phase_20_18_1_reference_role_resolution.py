@@ -115,9 +115,7 @@ def test_exact_profile_provider_ready_reference_resolves() -> None:
         asset_id="CAP-CHR-001",
         role=ReferenceRole.PRIMARY_IDENTITY,
     )
-    result = ProviderReadyReferenceResolver(
-        _Catalog({"CAP-CHR-001": (james,)})
-    ).resolve(
+    result = ProviderReadyReferenceResolver(_Catalog({"CAP-CHR-001": (james,)})).resolve(
         target=_target(),
         requests=(
             ReferenceRoleRequest(
@@ -140,9 +138,7 @@ def test_required_aspect_mismatch_blocks_resolution() -> None:
         width=1024,
         height=1536,
     )
-    result = ProviderReadyReferenceResolver(
-        _Catalog({"CAP-CHR-001": (portrait,)})
-    ).resolve(
+    result = ProviderReadyReferenceResolver(_Catalog({"CAP-CHR-001": (portrait,)})).resolve(
         target=_target(),
         requests=(
             ReferenceRoleRequest(
@@ -168,9 +164,7 @@ def test_missing_full_asset_coverage_blocks_required_reference() -> None:
         role=ReferenceRole.PRIMARY_IDENTITY,
         full_required_asset_visible=False,
     )
-    result = ProviderReadyReferenceResolver(
-        _Catalog({"CAP-CHR-001": (cropped,)})
-    ).resolve(
+    result = ProviderReadyReferenceResolver(_Catalog({"CAP-CHR-001": (cropped,)})).resolve(
         target=_target(),
         requests=(
             ReferenceRoleRequest(
@@ -183,8 +177,7 @@ def test_missing_full_asset_coverage_blocks_required_reference() -> None:
 
     assert not result.passed
     assert any(
-        diagnostic.code == "REFERENCE_EXTRAPOLATION_RISK"
-        for diagnostic in result.diagnostics
+        diagnostic.code == "REFERENCE_EXTRAPOLATION_RISK" for diagnostic in result.diagnostics
     )
 
 
@@ -335,8 +328,7 @@ def test_unsupported_required_role_uses_scene_composition_fallback() -> None:
     assert result.provider_binding is not None
     assert result.provider_binding.fallback_strategy == "scene_composition_anchor"
     assert any(
-        diagnostic.code == "PROVIDER_REFERENCE_FALLBACK"
-        for diagnostic in result.diagnostics
+        diagnostic.code == "PROVIDER_REFERENCE_FALLBACK" for diagnostic in result.diagnostics
     )
 
 
@@ -346,9 +338,7 @@ def test_unsupported_required_role_without_fallback_blocks_execution() -> None:
         asset_id="CAP-CHR-001",
         role=ReferenceRole.PRIMARY_IDENTITY,
     )
-    result = ProviderReadyReferenceResolver(
-        _Catalog({"CAP-CHR-001": (james,)})
-    ).resolve(
+    result = ProviderReadyReferenceResolver(_Catalog({"CAP-CHR-001": (james,)})).resolve(
         target=_target(),
         requests=(
             ReferenceRoleRequest(
@@ -366,8 +356,7 @@ def test_unsupported_required_role_without_fallback_blocks_execution() -> None:
 
     assert not result.passed
     assert any(
-        diagnostic.code == "PROVIDER_REQUIRED_ROLE_UNSUPPORTED"
-        for diagnostic in result.diagnostics
+        diagnostic.code == "PROVIDER_REQUIRED_ROLE_UNSUPPORTED" for diagnostic in result.diagnostics
     )
 
 
@@ -411,8 +400,7 @@ def test_provider_reference_limit_is_enforced() -> None:
 
     assert not result.passed
     assert any(
-        diagnostic.code == "PROVIDER_REFERENCE_LIMIT_EXCEEDED"
-        for diagnostic in result.diagnostics
+        diagnostic.code == "PROVIDER_REFERENCE_LIMIT_EXCEEDED" for diagnostic in result.diagnostics
     )
 
 
