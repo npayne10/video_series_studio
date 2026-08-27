@@ -151,6 +151,37 @@ The Xorix Streaming Series will serve as the mandatory end-to-end reference prod
 
 ---
 
+## ADR-006 — Governed provider-ready reference roles
+
+**Status:** Accepted  
+**Date:** 2026-08-27
+
+### Context
+
+Phase 20.18 validation demonstrated that an approved canonical reference can still be unsuitable for direct video generation. A portrait reference supplied to a landscape video workflow forced provider preprocessing to crop or extrapolate unseen content, materially degrading subject identity and design continuity. Complex shots may also require several independent sources of visual authority: composition, character identity, environment, furniture, props, continuity state, and start/end targets.
+
+### Decision
+
+VSCS will distinguish canonical master authority from provider-ready reference suitability. Shot references must be explicitly role-bound, suitability-validated against the target generation profile, and mapped to provider workflow inputs through provider-edge capability declarations.
+
+Required shot content must be visible in at least one required governed reference. The system must not silently depend on a provider to invent unseen canonical content. Multi-reference plans remain provider-neutral in the VSCS core; provider-specific binding limits and fallback strategies remain at the provider/infrastructure edge.
+
+### Alternatives considered
+
+- Treat every approved canonical image as directly provider-ready. Rejected because approval does not guarantee suitable framing, aspect ratio, dimensions, or asset coverage.
+- Store only one start image per shot. Rejected because complex multi-subject production requires multiple independent sources of canonical authority.
+- Embed provider-specific reference fields directly into the core production package. Rejected because it would violate provider neutrality and make future providers harder to integrate.
+
+### Consequences
+
+- Production packages may carry a governed multi-reference plan.
+- Provider-ready derivatives remain traceable to canonical masters.
+- Required aspect/framing/coverage failures can block provider execution before generation.
+- Providers may bind references directly or use an explicit governed fallback, but required authority may not be silently discarded.
+- Provider adapters must declare their supported reference roles and reference-count constraints.
+
+---
+
 ## ADR template
 
 Use this template for future decisions:
