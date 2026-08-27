@@ -24,7 +24,7 @@ class LTX23VideoStudioInputResolver(MetadataComfyUIInputResolver):
     """Resolve multi-reference VSCS metadata into typed LTX workflow inputs."""
 
     def resolve(self, request: RenderRequest) -> dict[WorkflowInputKind, object]:
-        values = super().resolve(request)
+        values = MetadataComfyUIInputResolver.resolve(self, request)
         raw_references = request.metadata.get("reference_images", "").strip()
         if raw_references:
             try:
