@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .reference_roles import ReferencePlan
 
 
 class AssetBindingRole(StrEnum):
@@ -140,3 +144,4 @@ class ClipProductionPackage:
     schema_version: str = "1.0"
     dependencies: tuple[str, ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
+    reference_plan: ReferencePlan | None = None
