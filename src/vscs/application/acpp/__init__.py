@@ -36,6 +36,10 @@ from .prompt_compiler import (
     PromptContributionCatalog,
 )
 from .protocols import ClipPackageSerializer, ClipPackageValidator
+from .reference_plan_service import (
+    ReferencePlanApplicationResult,
+    ReferencePlanApplicationService,
+)
 from .reference_roles import (
     CropRisk,
     ProviderReadyReferenceResolver,
@@ -142,6 +146,8 @@ __all__ = [
     "ReferenceClass",
     "ReferenceCoverage",
     "ReferencePlan",
+    "ReferencePlanApplicationResult",
+    "ReferencePlanApplicationService",
     "ReferencePriority",
     "ReferenceResolutionDiagnostic",
     "ReferenceResolutionResult",
