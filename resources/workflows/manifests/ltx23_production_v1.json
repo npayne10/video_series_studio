@@ -125,7 +125,7 @@
   "extra": [
     [
       "profile_purpose",
-      "High-quality continuity-aware production generation"
+      "Governed high-quality continuity-aware Video Studio production generation"
     ],
     [
       "video_model_family",
@@ -142,8 +142,8 @@
   ],
   "metadata": {
     "author": "VSCS",
-    "description": "Reference ComfyUI manifest for high-quality LTX 2.3 Production renders.",
-    "display_name": "LTX 2.3 Production",
+    "description": "Primary governed ComfyUI manifest for the LTX-2.3 Video Studio Production workflow used by Phase 20.18.2 live functional acceptance.",
+    "display_name": "LTX-2.3 Video Studio Production",
     "manifest_version": "1.0",
     "renderer": "comfyui",
     "workflow_id": "ltx23_production_v1",
@@ -185,6 +185,7 @@
     "ltx",
     "video",
     "production",
+    "video-studio",
     "reference"
   ],
   "workflow_file": "workflows/ltx23_production_v1_api.json"
