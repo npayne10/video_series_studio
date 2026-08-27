@@ -15,7 +15,6 @@ from .comfyui import (
     MetadataComfyUIInputResolver,
 )
 
-
 LTX23_VIDEO_STUDIO_WORKFLOW_ID = "ltx23_production_v1"
 LTX23_VIDEO_STUDIO_DISPLAY_NAME = "LTX-2.3 Video Studio Production"
 
@@ -58,10 +57,7 @@ class LTX23VideoStudioDeploymentValidator:
         if path != root and root not in path.parents:
             return ("LTX 2.3 workflow path escapes the configured workflow root",)
         if not path.is_file():
-            return (
-                "LTX-2.3 Video Studio Production API workflow is not installed at "
-                f"{path}",
-            )
+            return (f"LTX-2.3 Video Studio Production API workflow is not installed at {path}",)
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:

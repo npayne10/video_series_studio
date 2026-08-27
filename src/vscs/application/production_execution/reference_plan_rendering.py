@@ -155,9 +155,7 @@ class ReferencePlanRenderRequestBinder:
             request=request,
             start_reference_id=start.reference_id if start is not None else None,
             end_reference_id=end.reference_id if end is not None else None,
-            supporting_reference_ids=tuple(
-                reference.reference_id for reference in supporting
-            ),
+            supporting_reference_ids=tuple(reference.reference_id for reference in supporting),
         )
 
     @staticmethod

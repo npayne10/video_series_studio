@@ -25,6 +25,8 @@ from .ltx23_video_studio import (
 )
 
 __all__ = [
+    "LTX23_VIDEO_STUDIO_DISPLAY_NAME",
+    "LTX23_VIDEO_STUDIO_WORKFLOW_ID",
     "ComfyUIAdapter",
     "ComfyUIAdapterError",
     "ComfyUIClient",
@@ -33,8 +35,6 @@ __all__ = [
     "ComfyUILiveAdapterError",
     "ComfyUITransport",
     "ComfyUIWorkflowCompiler",
-    "LTX23_VIDEO_STUDIO_DISPLAY_NAME",
-    "LTX23_VIDEO_STUDIO_WORKFLOW_ID",
     "LTX23VideoStudioDeploymentValidator",
     "LTX23VideoStudioInputResolver",
     "LiveComfyUIAdapter",
