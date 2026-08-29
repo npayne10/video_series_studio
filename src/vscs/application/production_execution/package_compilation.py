@@ -16,6 +16,11 @@ from vscs.application.production_tasks import (
     ProductionTaskType,
 )
 
+from .governed_reference_compilation import (
+    GovernedReferenceCompilationError,
+    GovernedReferenceCompiler,
+)
+
 
 class ProductionPackageCompilationError(RuntimeError):
     """Raised when approved production authority cannot be compiled safely."""
@@ -80,10 +85,11 @@ class CompiledProductionPackage:
     composition_plan: dict[str, Any]
     production_authority: dict[str, Any]
     package_fingerprint: str
+    reference_plan: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return deterministic JSON-compatible provider-neutral content."""
-        return {
+        payload = {
             "schema_version": "1.0",
             "task": {
                 "task_id": self.task_id,
@@ -124,10 +130,16 @@ class CompiledProductionPackage:
             "production_authority": self.production_authority,
             "package_fingerprint": self.package_fingerprint,
         }
+        if self.reference_plan is not None:
+            payload["reference_plan"] = self.reference_plan
+        return payload
 
 
 class ProductionPackageCompilerService:
     """Compile one approved Phase 19 ProductionPackage for deterministic execution."""
+
+    def __init__(self, *, reference_root: Path | None = None) -> None:
+        self.reference_compiler = GovernedReferenceCompiler(reference_root)
 
     def compile(
         self,
@@ -150,6 +162,21 @@ class ProductionPackageCompilerService:
 
         normalized_profile = profile.strip().lower() or "production"
         render = self._render_settings(production, normalized_profile)
+        try:
+            governed_references = self.reference_compiler.compile(
+                production.get("reference_plan"),
+                width=render["width"],
+                height=render["height"],
+                profile=normalized_profile,
+            )
+        except GovernedReferenceCompilationError as exc:
+            raise ProductionPackageCompilationError(
+                f"Governed reference compilation failed: {exc}"
+            ) from exc
+        reference_plan = (
+            governed_references.to_dict() if governed_references is not None else None
+        )
+
         positive_prompt = universal_text
         negative_prompt = self._negative_prompt(production.get("style"))
         continuity = self._mapping(production.get("continuity"))
@@ -178,6 +205,9 @@ class ProductionPackageCompilerService:
             "dialogue": self._list_of_mappings(production.get("dialogue")),
             "effects": self._list_of_mappings(production.get("effects")),
         }
+        if reference_plan is not None:
+            composition_plan["reference_plan"] = reference_plan
+
         seed = self._derived_seed(task.authority.fingerprint, normalized_profile)
         filename_prefix = f"{task.production_id}/{task.episode_id}/{task.task_id}"
         base = {
@@ -193,6 +223,7 @@ class ProductionPackageCompilerService:
             "seed": seed,
             "composition_plan": composition_plan,
             "production_authority": production,
+            "reference_plan": reference_plan,
         }
         package_fingerprint = self._fingerprint(base)
         return CompiledProductionPackage(
@@ -224,6 +255,7 @@ class ProductionPackageCompilerService:
             composition_plan=composition_plan,
             production_authority=production,
             package_fingerprint=package_fingerprint,
+            reference_plan=reference_plan,
         )
 
     @classmethod
