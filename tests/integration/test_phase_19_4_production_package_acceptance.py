@@ -191,3 +191,39 @@ def test_upstream_package_change_invalidates_previous_phase_19_4_acceptance(
     assert acceptance.assess("SHT-001").status is AcceptanceStatus.NOT_READY
     assert not review.execution_authorized("SHT-001")
     assert not review.validation_confirmed("SHT-001")
+
+
+def test_revalidation_survives_acceptance_assessment_and_allows_reapproval(
+    tmp_path: Path,
+) -> None:
+    packages, review, acceptance = _pipeline(tmp_path)
+    review.validate("SHT-001")
+    review.approve("SHT-001", reviewed_by="Acceptance Tester")
+
+    packages.value = replace(
+        packages.value,
+        package_id="PP-SHT-001-PROVIDER-V2",
+        package_fingerprint="package-v2",
+    )
+    assert acceptance.assess("SHT-001").status is AcceptanceStatus.NOT_READY
+    assert not review.validation_confirmed("SHT-001")
+
+    validation = review.validate("SHT-001")
+    assert validation.validation_passed
+    assert review.validation_confirmed("SHT-001")
+
+    # Production Review rendering performs an acceptance assessment before the
+    # Approve for Production action. That read must not destroy fresh validation.
+    reassessed = acceptance.assess("SHT-001")
+    assert reassessed.status is AcceptanceStatus.NOT_READY
+    assert review.validation_confirmed("SHT-001")
+
+    persisted = review.current_review("SHT-001")
+    assert persisted is not None
+    assert persisted.status is ReviewStatus.STALE
+    assert persisted.validation_passed
+    assert review.validation_confirmed("SHT-001")
+
+    approved = review.approve("SHT-001", reviewed_by="Acceptance Tester")
+    assert approved.status is ReviewStatus.APPROVED
+    assert acceptance.require_accepted("SHT-001").status is AcceptanceStatus.ACCEPTED

@@ -335,11 +335,20 @@ class ProductionPackageReviewService:
         fresh = self.inspect(shot_id, provider_id)
         if review.dependency_fingerprint == fresh.dependency_fingerprint:
             return review
-        self._validated_fingerprints.pop((fresh.shot_id, fresh.provider_id), None)
+
+        key = (fresh.shot_id, fresh.provider_id)
+        validated_fingerprint = self._validated_fingerprints.get(key)
+        current_validation_confirmed = (
+            fresh.validation_passed
+            and validated_fingerprint == fresh.dependency_fingerprint
+        )
+        if validated_fingerprint is not None and not current_validation_confirmed:
+            self._validated_fingerprints.pop(key, None)
+
         return replace(
             review,
             status=ReviewStatus.STALE,
-            validation_passed=False,
+            validation_passed=current_validation_confirmed,
         )
 
     def execution_authorized(self, shot_id: str, provider_id: str = "comfyui") -> bool:
