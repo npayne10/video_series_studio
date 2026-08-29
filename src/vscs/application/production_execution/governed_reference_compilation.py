@@ -388,7 +388,9 @@ def _boolean(value: object, default: bool) -> bool:
 
 
 def _positive_int(value: object, default: int) -> int:
-    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else default
+    return (
+        value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else default
+    )
 
 
 def _positive_float(value: object, default: float) -> float:

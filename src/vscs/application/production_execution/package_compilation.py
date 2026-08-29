@@ -173,9 +173,7 @@ class ProductionPackageCompilerService:
             raise ProductionPackageCompilationError(
                 f"Governed reference compilation failed: {exc}"
             ) from exc
-        reference_plan = (
-            governed_references.to_dict() if governed_references is not None else None
-        )
+        reference_plan = governed_references.to_dict() if governed_references is not None else None
 
         positive_prompt = universal_text
         negative_prompt = self._negative_prompt(production.get("style"))

@@ -4,7 +4,6 @@ import hashlib
 import json
 import struct
 import zlib
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -280,9 +279,7 @@ def test_xpc_preserves_multi_reference_roles_and_order(tmp_path: Path) -> None:
 
 
 def test_xpc_blocks_missing_real_reference_file(tmp_path: Path) -> None:
-    source = _source(
-        _plan(_reference("REF-JAMES", "primary_identity", "references/not-there.png"))
-    )
+    source = _source(_plan(_reference("REF-JAMES", "primary_identity", "references/not-there.png")))
 
     with pytest.raises(ProductionPackageCompilationError, match="REFERENCE_FILE_MISSING"):
         ProductionPackageCompilerService(reference_root=tmp_path).compile(_task(source), source)
@@ -316,6 +313,7 @@ def test_local_xpc_persists_compiled_governed_reference_evidence(tmp_path: Path)
     assert raw["reference_plan"]["status"] == "passed"
     assert raw["reference_plan"]["references"][0]["width"] == 1280
     assert raw["reference_plan"]["references"][0]["height"] == 720
-    assert raw["reference_plan"]["references"][0]["file_checksum"] == hashlib.sha256(
-        image.read_bytes()
-    ).hexdigest()
+    assert (
+        raw["reference_plan"]["references"][0]["file_checksum"]
+        == hashlib.sha256(image.read_bytes()).hexdigest()
+    )
