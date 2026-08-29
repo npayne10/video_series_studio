@@ -10,6 +10,10 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from vscs.application.governed_reference_plan_source import (
+    GovernedReferencePlanSource,
+    PersistedGovernedReferencePlanSource,
+)
 from vscs.application.production_package import (
     ProductionPackage,
     ProductionPackageService,
@@ -44,7 +48,7 @@ class UniversalProductionDescriptionCompilerService:
     """Compile all governed Shot authority into one provider-neutral production description."""
 
     FILE_NAME = "universal_production_description_compilation.json"
-    SCHEMA_VERSION = "1.3"
+    SCHEMA_VERSION = "1.4"
     REQUIRED_UPSTREAM = (
         ("action_performance_complete", "Action & Performance"),
         ("assets_complete", "Assets"),
@@ -90,9 +94,15 @@ class UniversalProductionDescriptionCompilerService:
         }
     )
 
-    def __init__(self, projects: ProjectService, packages: ProductionPackageService) -> None:
+    def __init__(
+        self,
+        projects: ProjectService,
+        packages: ProductionPackageService,
+        reference_plans: GovernedReferencePlanSource | None = None,
+    ) -> None:
         self.projects = projects
         self.packages = packages
+        self.reference_plans = reference_plans or PersistedGovernedReferencePlanSource(projects)
 
     @property
     def draft_file(self) -> Path:
@@ -278,23 +288,22 @@ class UniversalProductionDescriptionCompilerService:
         derived: ProductionPackage = append_derived(current, data)
         return derived
 
-    @classmethod
-    def _build_description(cls, package: ProductionPackage) -> dict[str, Any]:
-        action = cls._section(package.action_performance)
-        camera = cls._section(package.camera)
-        lighting = cls._section(package.lighting)
-        continuity = cls._section(package.continuity)
-        style = cls._section(package.style)
-        assets = [cls._section(item) for item in package.assets]
+    def _build_description(self, package: ProductionPackage) -> dict[str, Any]:
+        action = self._section(package.action_performance)
+        camera = self._section(package.camera)
+        lighting = self._section(package.lighting)
+        continuity = self._section(package.continuity)
+        style = self._section(package.style)
+        assets = [self._section(item) for item in package.assets]
         description = {
             "current_shot_id": package.shot_id,
-            "story_context": cls._detached(package.story_context),
-            "shot": cls._detached(package.shot),
+            "story_context": self._detached(package.story_context),
+            "shot": self._detached(package.shot),
             "action_performance": action,
             "assets": assets,
             "camera": camera,
             "lighting": lighting,
-            "environment": cls._detached(package.environment),
+            "environment": self._detached(package.environment),
             "continuity": continuity,
             "style": style,
             "dialogue": [dict(item) for item in package.dialogue],
@@ -303,35 +312,39 @@ class UniversalProductionDescriptionCompilerService:
             "source_policy": "approved-production-authority-only",
             "provider_neutral": True,
         }
-        description["consistency_findings"] = list(cls._consistency_findings(description))
-        description["universal_text"] = cls._universal_text(description)
+        reference_plan = self.reference_plans.reference_plan_for_shot(package.shot_id)
+        if reference_plan is not None:
+            description["reference_plan"] = self._detached(reference_plan)
+        description["consistency_findings"] = list(self._consistency_findings(description))
+        description["universal_text"] = self._universal_text(description)
         return description
 
     @classmethod
     def _compile_description(cls, description: dict[str, Any]) -> dict[str, Any]:
         governed = cls._detached(description)
-        return {
-            "governed": governed,
-            "production": {
-                "current_shot_id": governed.get("current_shot_id", ""),
-                "universal_text": governed.get("universal_text", ""),
-                "story_context": governed.get("story_context", {}),
-                "shot": governed.get("shot", {}),
-                "action_performance": governed.get("action_performance", {}),
-                "assets": governed.get("assets", []),
-                "camera": governed.get("camera", {}),
-                "lighting": governed.get("lighting", {}),
-                "environment": governed.get("environment", {}),
-                "continuity": governed.get("continuity", {}),
-                "style": governed.get("style", {}),
-                "dialogue": governed.get("dialogue", []),
-                "effects": governed.get("effects", []),
-                "canonical_references": governed.get("canonical_references", []),
-                "consistency_findings": governed.get("consistency_findings", []),
-                "source_policy": governed.get("source_policy", ""),
-                "provider_neutral": True,
-            },
+        production = {
+            "current_shot_id": governed.get("current_shot_id", ""),
+            "universal_text": governed.get("universal_text", ""),
+            "story_context": governed.get("story_context", {}),
+            "shot": governed.get("shot", {}),
+            "action_performance": governed.get("action_performance", {}),
+            "assets": governed.get("assets", []),
+            "camera": governed.get("camera", {}),
+            "lighting": governed.get("lighting", {}),
+            "environment": governed.get("environment", {}),
+            "continuity": governed.get("continuity", {}),
+            "style": governed.get("style", {}),
+            "dialogue": governed.get("dialogue", []),
+            "effects": governed.get("effects", []),
+            "canonical_references": governed.get("canonical_references", []),
+            "consistency_findings": governed.get("consistency_findings", []),
+            "source_policy": governed.get("source_policy", ""),
+            "provider_neutral": True,
         }
+        reference_plan = governed.get("reference_plan")
+        if isinstance(reference_plan, dict):
+            production["reference_plan"] = cls._detached(reference_plan)
+        return {"governed": governed, "production": production}
 
     @staticmethod
     def _validate(value: dict[str, Any]) -> None:
@@ -348,22 +361,22 @@ class UniversalProductionDescriptionCompilerService:
                 "Universal Production Description has no governed production content"
             )
 
-    @classmethod
-    def _dependency_fingerprint(cls, package: ProductionPackage) -> str:
+    def _dependency_fingerprint(self, package: ProductionPackage) -> str:
         payload = {
-            "schema_version": cls.SCHEMA_VERSION,
-            "story_context": cls._detached(package.story_context),
-            "shot": cls._detached(package.shot),
-            "action_performance": cls._detached(package.action_performance),
-            "assets": [cls._detached(item) for item in package.assets],
-            "camera": cls._detached(package.camera),
-            "lighting": cls._detached(package.lighting),
-            "environment": cls._detached(package.environment),
-            "continuity": cls._detached(package.continuity),
-            "style": cls._detached(package.style),
+            "schema_version": self.SCHEMA_VERSION,
+            "story_context": self._detached(package.story_context),
+            "shot": self._detached(package.shot),
+            "action_performance": self._detached(package.action_performance),
+            "assets": [self._detached(item) for item in package.assets],
+            "camera": self._detached(package.camera),
+            "lighting": self._detached(package.lighting),
+            "environment": self._detached(package.environment),
+            "continuity": self._detached(package.continuity),
+            "style": self._detached(package.style),
             "dialogue": [dict(item) for item in package.dialogue],
             "effects": [dict(item) for item in package.effects],
             "references": [dict(item) for item in package.references],
+            "reference_plan": self.reference_plans.reference_plan_for_shot(package.shot_id),
         }
         canonical = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
