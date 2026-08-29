@@ -199,7 +199,7 @@ class ProductionPackageWorkspace(QWidget):
 
         self.asset_table = QTableWidget(0, 5, asset_group)
         self.asset_table.setHorizontalHeaderLabels(
-            ("Binding", "Asset", "Role", "Requirement", "Canonical Reference")
+            ("Binding", "Asset", "Role", "Requirement", "Canonical References")
         )
         self.asset_table.horizontalHeader().setStretchLastSection(True)
         self.asset_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -397,7 +397,7 @@ class ProductionPackageWorkspace(QWidget):
                 "Review the canonical resolutions and mark it Ready when complete."
             )
         self.asset_create_button.setEnabled(False)
-        self.asset_refresh_button.setEnabled(stale and not ready)
+        self.asset_refresh_button.setEnabled(not ready)
         self.asset_save_button.setEnabled(not stale and not ready)
         self.asset_ready_button.setEnabled(not stale and not ready)
         self.asset_draft_button.setEnabled(ready)
@@ -417,10 +417,32 @@ class ProductionPackageWorkspace(QWidget):
                 str(resolution.get("asset_id") or binding.get("asset_id") or ""),
                 str(binding.get("role", "")),
                 str(binding.get("requirement", "")),
-                str(resolution.get("canonical_reference") or ""),
+                self._canonical_reference_text(resolution),
             )
             for column, value in enumerate(values):
                 self.asset_table.setItem(row, column, QTableWidgetItem(value))
+
+    @staticmethod
+    def _canonical_reference_text(resolution: dict[str, Any]) -> str:
+        """Render current canonical reference authority from legacy or multi-reference contracts."""
+        raw_references = resolution.get("canonical_references")
+        if not isinstance(raw_references, list | tuple):
+            raw_references = resolution.get("references")
+        rendered: list[str] = []
+        if isinstance(raw_references, list | tuple):
+            for item in raw_references:
+                if not isinstance(item, dict):
+                    continue
+                path = str(item.get("file_path") or item.get("canonical_reference") or "").strip()
+                if not path:
+                    continue
+                role = str(item.get("role", "")).strip()
+                text = f"{role}: {path}" if role else path
+                if text not in rendered:
+                    rendered.append(text)
+        if rendered:
+            return "; ".join(rendered)
+        return str(resolution.get("canonical_reference") or "")
 
     def _create(self) -> None:
         if self._selected_shot_id is None:
