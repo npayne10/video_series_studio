@@ -88,15 +88,20 @@ class AssetCompilerService:
         return draft
 
     def rebase_to_current_package(self, shot_id: str) -> AssetCompilationDraft:
-        """Refresh stale governed Asset inputs while preserving human production notes."""
+        """Refresh governed Asset inputs while preserving human production notes.
+
+        An explicit operator refresh is authoritative even when the approved planning
+        fingerprint has not changed. Canonical reference metadata can change within
+        the current Production Package (for example after reference remediation), so
+        returning early on ``source_fingerprint`` alone can leave the Asset Draft and
+        UI showing stale reference paths.
+        """
         current = self._require_draft(shot_id)
         if current.status is AssetCompilationStatus.READY:
             raise AssetCompilerError(
                 "Ready Asset compilation must return to Draft before refreshing its source"
             )
         package = self.packages.require_current_package(current.shot_id)
-        if current.source_fingerprint == package.source_fingerprint:
-            return current
         updated = replace(
             current,
             source_package_id=package.package_id,
