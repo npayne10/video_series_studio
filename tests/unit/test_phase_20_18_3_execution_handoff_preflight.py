@@ -47,7 +47,11 @@ class _PreflightBackend:
         *,
         profile: str = "production",
     ) -> ProductionPackageStatus:
-        path = self.package_path if self.package_state is ProductionPackageCompilationState.COMPILED else None
+        path = (
+            self.package_path
+            if self.package_state is ProductionPackageCompilationState.COMPILED
+            else None
+        )
         return ProductionPackageStatus(
             task_id=task_id,
             state=self.package_state,
@@ -87,9 +91,15 @@ def test_approved_scheduled_handoff_requires_package_before_ready(tmp_path: Path
     assert not preflight.ready
     assert preflight.package_status is not None
     assert preflight.package_status.state is ProductionPackageCompilationState.NOT_COMPILED
-    assert any(check.code == "schedule.current_approved_queue" and check.passed for check in preflight.checks)
+    assert any(
+        check.code == "schedule.current_approved_queue" and check.passed
+        for check in preflight.checks
+    )
     assert any(check.code == "task.ready" and check.passed for check in preflight.checks)
-    assert any(check.code == "package.current_executable" and not check.passed for check in preflight.checks)
+    assert any(
+        check.code == "package.current_executable" and not check.passed
+        for check in preflight.checks
+    )
 
 
 def test_compiled_current_package_completes_preflight(tmp_path: Path) -> None:
@@ -126,7 +136,10 @@ def test_existing_profile_execution_is_visible_in_preflight(tmp_path: Path) -> N
 
     assert preflight.state is ProductionExecutionPreflightState.EXECUTION_EXISTS
     assert not preflight.ready
-    assert any(check.code == "execution.new_attempt_available" and not check.passed for check in preflight.checks)
+    assert any(
+        check.code == "execution.new_attempt_available" and not check.passed
+        for check in preflight.checks
+    )
 
 
 def test_workspace_exposes_handoff_preflight_and_package_transition(

@@ -339,8 +339,7 @@ class ProductionPackageReviewService:
         key = (fresh.shot_id, fresh.provider_id)
         validated_fingerprint = self._validated_fingerprints.get(key)
         current_validation_confirmed = (
-            fresh.validation_passed
-            and validated_fingerprint == fresh.dependency_fingerprint
+            fresh.validation_passed and validated_fingerprint == fresh.dependency_fingerprint
         )
         if validated_fingerprint is not None and not current_validation_confirmed:
             self._validated_fingerprints.pop(key, None)
