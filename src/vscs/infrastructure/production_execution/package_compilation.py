@@ -57,7 +57,7 @@ class LocalProductionPackageCompilationService:
 
     def __init__(self, project_directory: Path) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
-        self.compiler = ProductionPackageCompilerService()
+        self.compiler = ProductionPackageCompilerService(reference_root=self.project_directory)
 
     def status(
         self, task: ProductionTask, *, profile: str = "production"
@@ -253,6 +253,8 @@ class LocalProductionPackageCompilationService:
             "composition_plan": compiled.composition_plan,
             "production_authority": compiled.production_authority,
         }
+        if compiled.reference_plan is not None:
+            content["reference_plan"] = compiled.reference_plan
         fingerprint = cls._fingerprint(content)
         content["_vscs_manifest"] = {
             "task_id": compiled.task_id,
@@ -268,7 +270,7 @@ class LocalProductionPackageCompilationService:
             "source_package_fingerprint": compiled.source_package_fingerprint,
             "source_schema_version": compiled.source_schema_version,
             "package_fingerprint": fingerprint,
-            "compiler": "VSCS Phase 20.15.1",
+            "compiler": "VSCS Phase 20.18.2",
         }
         return content
 
