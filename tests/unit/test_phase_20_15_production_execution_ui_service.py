@@ -8,6 +8,8 @@ from vscs.application.production_execution import (
     ProductionExecutionResult,
     ProductionExecutionState,
     ProductionExecutionUiService,
+    ProductionPackageCompilationState,
+    ProductionPackageStatus,
 )
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
@@ -36,6 +38,21 @@ class RecordingBackend:
     def has_execution(self, task_id: str) -> bool:
         assert task_id == self.candidate.task_id
         return self.execution_exists
+
+    def package_status(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> ProductionPackageStatus:
+        assert task_id == self.candidate.task_id
+        return ProductionPackageStatus(
+            task_id=task_id,
+            state=ProductionPackageCompilationState.COMPILED,
+            profile=profile,
+            path=Path("production-package.json"),
+            message="compiled",
+        )
 
     def start(
         self,
@@ -97,7 +114,7 @@ def test_ui_service_blocks_duplicate_execution_start(tmp_path: Path) -> None:
     package = tmp_path / "package.json"
     package.write_text("{}", encoding="utf-8")
 
-    with pytest.raises(ProductionExecutionError, match="already has an execution record"):
+    with pytest.raises(ProductionExecutionError, match="preflight is execution-exists"):
         service.start("PT-20-15-001", package)
 
     assert backend.started is None

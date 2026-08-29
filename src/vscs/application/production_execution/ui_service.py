@@ -9,7 +9,10 @@ from typing import Protocol, cast
 
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
-from .package_compilation import ProductionPackageStatus
+from .package_compilation import (
+    ProductionPackageCompilationState,
+    ProductionPackageStatus,
+)
 from .profiles import normalize_execution_profile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
 from .telemetry import ProductionTelemetrySnapshot
@@ -29,6 +32,15 @@ class ProductionExecutionState(StrEnum):
     CANCELLED = "cancelled"
 
 
+class ProductionExecutionPreflightState(StrEnum):
+    """Operator-visible Scheduling -> Production Execution handoff state."""
+
+    READY = "ready"
+    PACKAGE_REQUIRED = "package-required"
+    BLOCKED = "blocked"
+    EXECUTION_EXISTS = "execution-exists"
+
+
 @dataclass(frozen=True, slots=True)
 class ProductionExecutionCandidate:
     production_id: str
@@ -41,6 +53,31 @@ class ProductionExecutionCandidate:
     resource_id: str
     queue_entry_id: str
     label: str
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionExecutionPreflightCheck:
+    """One deterministic, non-mutating handoff/preflight check."""
+
+    code: str
+    passed: bool
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionExecutionPreflight:
+    """Current preflight result for one approved scheduled execution candidate."""
+
+    candidate: ProductionExecutionCandidate
+    profile: str
+    state: ProductionExecutionPreflightState
+    package_status: ProductionPackageStatus | None
+    checks: tuple[ProductionExecutionPreflightCheck, ...]
+    message: str
+
+    @property
+    def ready(self) -> bool:
+        return self.state is ProductionExecutionPreflightState.READY
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +205,175 @@ class ProductionExecutionUiService:
     def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
         return self.backend.candidates()
 
+    def preflight(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> ProductionExecutionPreflight:
+        """Assess one approved scheduled candidate without mutating execution authority."""
+        normalized = self._task_id(task_id, "running Production Execution preflight")
+        execution_profile = normalize_execution_profile(profile)
+        self._selected_profiles[normalized] = execution_profile
+        candidate = next(
+            (item for item in self.backend.candidates() if item.task_id == normalized),
+            None,
+        )
+        if candidate is None:
+            raise ProductionExecutionError(
+                "ProductionTask is not present in the current approved Production Execution queue: "
+                f"{normalized}"
+            )
+
+        checks = [
+            ProductionExecutionPreflightCheck(
+                "schedule.current_approved_queue",
+                True,
+                "Task is present in the current approved schedule queue.",
+            ),
+            ProductionExecutionPreflightCheck(
+                "task.video_generation",
+                candidate.task_type is ProductionTaskType.VIDEO_GENERATION,
+                (
+                    "Task type is VIDEO_GENERATION."
+                    if candidate.task_type is ProductionTaskType.VIDEO_GENERATION
+                    else f"Task type {candidate.task_type.value} is not supported by this execution queue."
+                ),
+            ),
+            ProductionExecutionPreflightCheck(
+                "task.ready",
+                candidate.task_state is ProductionTaskState.READY,
+                (
+                    "ProductionTask is READY."
+                    if candidate.task_state is ProductionTaskState.READY
+                    else f"ProductionTask state is {candidate.task_state.value}; READY is required."
+                ),
+            ),
+            ProductionExecutionPreflightCheck(
+                "schedule.resource_assigned",
+                bool(candidate.resource_id.strip()),
+                (
+                    f"Scheduled resource is {candidate.resource_id}."
+                    if candidate.resource_id.strip()
+                    else "Current approved schedule has no execution resource assignment."
+                ),
+            ),
+            ProductionExecutionPreflightCheck(
+                "schedule.queue_entry",
+                bool(candidate.queue_entry_id.strip()),
+                (
+                    f"Approved queue entry is {candidate.queue_entry_id}."
+                    if candidate.queue_entry_id.strip()
+                    else "Current approved schedule has no queue entry for this task."
+                ),
+            ),
+        ]
+        if not all(check.passed for check in checks):
+            return ProductionExecutionPreflight(
+                candidate,
+                execution_profile,
+                ProductionExecutionPreflightState.BLOCKED,
+                None,
+                tuple(checks),
+                "Scheduling handoff is blocked. Resolve the failed preflight checks upstream.",
+            )
+
+        try:
+            package_status = self.backend.package_status(
+                normalized,
+                profile=execution_profile,
+            )
+        except Exception as exc:
+            checks.append(
+                ProductionExecutionPreflightCheck(
+                    "package.inspectable",
+                    False,
+                    f"Production Package cannot be inspected: {exc}",
+                )
+            )
+            return ProductionExecutionPreflight(
+                candidate,
+                execution_profile,
+                ProductionExecutionPreflightState.BLOCKED,
+                None,
+                tuple(checks),
+                "Production Package preflight failed.",
+            )
+
+        if package_status.state is ProductionPackageCompilationState.NOT_COMPILED:
+            checks.append(
+                ProductionExecutionPreflightCheck(
+                    "package.current_executable",
+                    False,
+                    "Production Package has not been compiled for this profile yet.",
+                )
+            )
+            return ProductionExecutionPreflight(
+                candidate,
+                execution_profile,
+                ProductionExecutionPreflightState.PACKAGE_REQUIRED,
+                package_status,
+                tuple(checks),
+                "Approved scheduled work is handed off; compile the Production Package to complete preflight.",
+            )
+
+        if not package_status.executable:
+            checks.append(
+                ProductionExecutionPreflightCheck(
+                    "package.current_executable",
+                    False,
+                    f"Production Package is {package_status.state.value}: {package_status.message}",
+                )
+            )
+            return ProductionExecutionPreflight(
+                candidate,
+                execution_profile,
+                ProductionExecutionPreflightState.BLOCKED,
+                package_status,
+                tuple(checks),
+                "Production Package is not current and executable for the selected profile.",
+            )
+
+        checks.append(
+            ProductionExecutionPreflightCheck(
+                "package.current_executable",
+                True,
+                "Production Package is current and executable for the selected profile.",
+            )
+        )
+        if self.has_execution(normalized, profile=execution_profile):
+            checks.append(
+                ProductionExecutionPreflightCheck(
+                    "execution.new_attempt_available",
+                    False,
+                    "This profile already has active, successful, or exhausted execution authority.",
+                )
+            )
+            return ProductionExecutionPreflight(
+                candidate,
+                execution_profile,
+                ProductionExecutionPreflightState.EXECUTION_EXISTS,
+                package_status,
+                tuple(checks),
+                "A new production start is not available; inspect the existing execution status.",
+            )
+
+        checks.append(
+            ProductionExecutionPreflightCheck(
+                "execution.new_attempt_available",
+                True,
+                "No existing execution blocks a new governed attempt for this profile.",
+            )
+        )
+        return ProductionExecutionPreflight(
+            candidate,
+            execution_profile,
+            ProductionExecutionPreflightState.READY,
+            package_status,
+            tuple(checks),
+            "Preflight passed. This approved scheduled task is ready for Production Execution.",
+        )
+
     def has_execution(self, task_id: str, *, profile: str | None = None) -> bool:
         normalized = self._task_id(task_id, "inspecting execution availability")
         execution_profile = self._resolve_profile(normalized, profile)
@@ -276,6 +482,11 @@ class ProductionExecutionUiService:
     ) -> ProductionExecutionResult:
         normalized = self._task_id(task_id, "starting production")
         execution_profile = self._resolve_profile(normalized, profile)
+        preflight = self.preflight(normalized, profile=execution_profile)
+        if not preflight.ready:
+            raise ProductionExecutionError(
+                f"Production Execution preflight is {preflight.state.value}: {preflight.message}"
+            )
         if self.has_execution(normalized, profile=execution_profile):
             raise ProductionExecutionError(
                 f"ProductionTask already has an execution record for the {execution_profile} "
