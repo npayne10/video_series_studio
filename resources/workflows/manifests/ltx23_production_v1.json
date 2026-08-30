@@ -5,7 +5,7 @@
     "image_to_video",
     "start_frame",
     "reference_images",
-    "multiple_reference_images",
+    "governed_multi_reference_fallback",
     "loras",
     "seed_control",
     "resume"
@@ -26,6 +26,10 @@
     [
       "governed_reference_resolution",
       "VSCSReferenceResolverV720"
+    ],
+    [
+      "provider_visual_input_limit",
+      "1"
     ]
   ],
   "lip_sync_modes": [
