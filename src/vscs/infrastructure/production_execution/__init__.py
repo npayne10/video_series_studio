@@ -1,5 +1,9 @@
 """Infrastructure composition for live Production Execution."""
 
+from .ltx23_v721_backend import (
+    LTX23V721DeploymentAssurance,
+    LocalComfyUIProductionExecutionBackend,
+)
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
@@ -7,12 +11,12 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
-from .stale_reconciliation_backend import LocalComfyUIProductionExecutionBackend
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
     "ComfyUIInputTrace",
     "ComfyUIV714InputAssurance",
+    "LTX23V721DeploymentAssurance",
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
