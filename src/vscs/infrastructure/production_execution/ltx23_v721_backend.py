@@ -94,9 +94,13 @@ class LTX23V721DeploymentAssurance:
                         "v7.2.1 production package path must remain blank in the checked-in workflow"
                     )
                 if inputs.get("profile_override") != "from_package":
-                    issues.append("v7.2.1 profile override must be sourced from the production package")
+                    issues.append(
+                        "v7.2.1 profile override must be sourced from the production package"
+                    )
                 if inputs.get("strict_validation") is not True:
-                    issues.append("v7.2.1 production package loader strict validation must remain enabled")
+                    issues.append(
+                        "v7.2.1 production package loader strict validation must remain enabled"
+                    )
 
         resolver = self._matching_node(
             raw,
@@ -108,7 +112,9 @@ class LTX23V721DeploymentAssurance:
             if not isinstance(inputs, dict):
                 issues.append("v7.2.1 governed reference resolver inputs must be an object")
             elif inputs.get("strict_validation") is not True:
-                issues.append("v7.2.1 governed reference resolver strict validation must remain enabled")
+                issues.append(
+                    "v7.2.1 governed reference resolver strict validation must remain enabled"
+                )
         return tuple(issues)
 
     @classmethod

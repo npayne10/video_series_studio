@@ -1,8 +1,8 @@
 """Infrastructure composition for live Production Execution."""
 
 from .ltx23_v721_backend import (
-    LTX23V721DeploymentAssurance,
     LocalComfyUIProductionExecutionBackend,
+    LTX23V721DeploymentAssurance,
 )
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
