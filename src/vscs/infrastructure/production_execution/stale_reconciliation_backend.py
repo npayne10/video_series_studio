@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from vscs.application.production_execution import ProductionExecutionResult
+from pathlib import Path
+
+from vscs.application.production_execution import (
+    GovernedRetryOverrideStatus,
+    ProductionExecutionResult,
+)
 
 from .profile_scoped_backend import (
     LocalComfyUIProductionExecutionBackend as _ProfileScopedProductionExecutionBackend,
@@ -10,14 +15,41 @@ from .profile_scoped_backend import (
 
 
 class LocalComfyUIProductionExecutionBackend(_ProfileScopedProductionExecutionBackend):
-    """Repair impossible stale history before profile-scoped reconciliation.
+    """Repair impossible stale history before profile-scoped authority decisions.
 
     A durable execution cannot still be active if a later governed attempt for the same
-    ProductionTask already exists. Explicit status reconciliation therefore records any
-    such superseded non-terminal attempts as FAILED while preserving their durable history.
-    The newest attempt is never changed by this repair and remains subject to normal
-    provider/restart recovery.
+    ProductionTask already exists. Status evaluation and execution entry points therefore
+    repair any such superseded non-terminal attempts as FAILED while preserving their
+    durable history. The newest attempt is never changed by this repair and remains subject
+    to normal provider/restart recovery.
     """
+
+    def has_execution_for_profile(self, task_id: str, *, profile: str) -> bool:
+        self._fail_superseded_nonterminal_jobs(task_id)
+        return super().has_execution_for_profile(task_id, profile=profile)
+
+    def retry_override_status_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> GovernedRetryOverrideStatus:
+        self._fail_superseded_nonterminal_jobs(task_id)
+        return super().retry_override_status_for_profile(task_id, profile=profile)
+
+    def start_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        production_package: Path | None = None,
+    ) -> ProductionExecutionResult:
+        self._fail_superseded_nonterminal_jobs(task_id)
+        return super().start_for_profile(
+            task_id,
+            profile=profile,
+            production_package=production_package,
+        )
 
     def reconcile_for_profile(self, task_id: str, *, profile: str) -> ProductionExecutionResult:
         task = self._require_task(task_id)
@@ -38,7 +70,7 @@ class LocalComfyUIProductionExecutionBackend(_ProfileScopedProductionExecutionBa
                 (
                     f"Durable execution A{job.attempt_number:03d} was still non-terminal even "
                     f"though later governed execution A{latest_attempt:03d} already exists. "
-                    "Explicit Production Execution reconciliation marked the superseded attempt "
-                    "FAILED so durable retry authority reflects the actual execution history."
+                    "VSCS reconciliation marked the superseded attempt FAILED so durable retry "
+                    "authority reflects the actual execution history."
                 ),
             )
