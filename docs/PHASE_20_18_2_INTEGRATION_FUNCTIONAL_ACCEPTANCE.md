@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implementation complete; awaiting local static/automated validation, UI-functional validation, live-provider acceptance, full regression, and explicit owner acceptance.**
+**v7.2.1 Production Engine integration implemented; awaiting local static/automated validation, ComfyUI custom-node deployment validation, UI-functional validation, live-provider acceptance, full regression, and explicit owner acceptance.**
 
 ## 1. Purpose
 
@@ -49,15 +49,19 @@ Compiled Production Package
         ↓
 Provider-Ready ReferencePlan
         ↓
-ReferencePlanRenderRequestBinder
+v7.2.1 Provider Package Binding
         ↓
 Universal RenderRequest
         ↓
-LTX-2.3 Video Studio provider-edge input resolution
-        ↓
 QueueProviderExecutionService
         ↓
-Live ComfyUI provider adapter
+ProductionPackageComfyUIAdapter
+        ↓
+LTX-2.3 Video Studio v7.2.1 workflow
+        ↓
+VSCSProductionPackageLoaderV720
+        ↓
+VSCSReferenceResolverV720
         ↓
 ComfyUI execution / monitoring / output retrieval
         ↓
@@ -67,6 +71,8 @@ GeneratedMediaIngestionService
         ↓
 Authoritative Generated Media
 ```
+
+The universal `RenderRequest` remains provider-neutral. The compiled Production Package path is attached only at the provider-execution boundary and injected into the unique governed v7.2.1 package-loader node immediately before ComfyUI submission.
 
 ## 4. Provider-Ready Reference Gate
 
@@ -82,44 +88,81 @@ For Phase 20.18.2 acceptance:
 - a scene-composition/start reference is selected explicitly from governed roles;
 - supporting identity/environment/prop/furniture references remain traceable by role.
 
-The start-reference priority is:
+The governed start-reference priority remains:
 
 1. `start_frame_reference`
 2. `scene_composition_anchor`
 3. `continuity_anchor`
 4. `primary_identity`
 
-This supports both a simple one-character I2V shot and a complex multi-character scene where a frame-zero scene composition is the primary conditioning image and character/environment references provide supporting authority.
+The v7.2.1 provider resolver treats an explicit `start_frame_reference` as the temporal start frame. Other governed roles remain visual-reference authority and are resolved according to the provider's single-image IC-LoRA constraint.
 
-## 5. Multi-Reference LTX 2.3 Binding
+## 5. v7.2.1 Governed Reference Binding
 
-The LTX 2.3 manifest already declares `reference_images` and `multiple_reference_images` capability. Phase 20.18.2 adds provider-edge decoding of the governed reference list so the manifest compiler receives a typed list of image paths rather than an opaque metadata string.
+The committed LTX 2.3 workflow is package-driven. Node `107` (`VSCSProductionPackageLoaderV720`) receives the compiled Production Package path, and Node `108` (`VSCSReferenceResolverV720`) resolves the provider reference and optional start frame.
 
-For a representative James/Cheryl/Ros scene, the expected conceptual mapping is:
+The VSCS package compiler preserves the provider-neutral governed `references` array for provenance and additionally emits a v7.2.1 `bindings` array. Each binding carries:
 
-```text
-scene_composition_anchor → start_frame
-James primary_identity   → reference_images[]
-Cheryl secondary_identity → reference_images[]
-Ros secondary_identity   → reference_images[]
-room environment_reference → reference_images[] when supported/required
-```
+- governed `reference_id`, `asset_id`, and role;
+- an absolute provider-usable image path;
+- explicit `required` authority derived from VSCS reference priority;
+- provider-ready state;
+- coarse governed coverage facts and required coverage;
+- canonical-source and derivative provenance;
+- reference fingerprint/checksum where available.
 
-The complete role manifest remains attached to the universal request metadata for traceability.
+The v7.2.1 workflow has one provider IC-LoRA image input. It therefore follows the governed fallback sequence supported by the supplied resolver:
+
+1. provider helper when explicitly supplied;
+2. governed `scene_composition_anchor`;
+3. one required visual reference directly;
+4. one optional visual reference when no required visual exists;
+5. block multiple required visual references when no governed helper/scene anchor exists.
+
+Multiple required references are never silently discarded. The expected blocking code for an unresolved multi-reference provider constraint is `PROVIDER_MULTI_REFERENCE_HELPER_REQUIRED`.
+
+An explicit `start_frame_reference` is bound separately from the provider visual image and drives temporal continuity without replacing identity/reference conditioning.
 
 ## 6. Live Workflow Deployment Requirement
 
-The repository intentionally does **not** fabricate or substitute a placeholder ComfyUI graph for the production workflow.
-
-Before live acceptance, the exact production workflow that has been proven interactively in ComfyUI must be exported in **ComfyUI API workflow format** and installed at:
+The supplied **Video Production Engine v7.2.1** API workflow is committed at:
 
 `resources/workflows/workflows/ltx23_production_v1_api.json`
 
-The deployment validator blocks/reports live readiness when this file is missing, invalid JSON, empty, or outside the governed workflow root.
+The associated manifest is:
 
-This ensures the live acceptance test evaluates the real **LTX-2.3 Video Studio Production** workflow rather than a synthetic test graph.
+`resources/workflows/manifests/ltx23_production_v1.json`
 
-## 7. Generated Media Authority
+The workflow intentionally keeps Node 107's `production_package` input blank in source control. `QueueProviderExecutionService` attaches the selected compiled Production Package path to the universal request at submission, and `ProductionPackageComfyUIAdapter` injects it into Node 107 at the provider edge. Machine-specific package paths are therefore never committed to the workflow.
+
+The deployment assurance blocks package compilation when the committed workflow is missing, invalid, has a hard-coded package path, or no longer contains exactly one semantic v7.2.1 package loader and governed reference resolver.
+
+The local ComfyUI installation must also contain the supplied `ComfyUI-VSCS-Production-v720` custom-node package and expose:
+
+- `VSCSProductionPackageLoaderV720`;
+- `VSCSReferenceResolverV720`.
+
+This ComfyUI deployment remains a local provider prerequisite and must be validated before live acceptance.
+
+## 7. v7.2.1 Production Package Contract
+
+New Phase 20.18.2 compiled packages use schema marker `7.2.1-vscs-1` while retaining the existing VSCS compilation manifest and deterministic package fingerprint.
+
+For the v7.2.1 loader, the package also contains an `acpp` section carrying the governed execution values consumed by the supplied workflow, including:
+
+- positive and negative prompts;
+- production profile;
+- width and height;
+- frame count and FPS;
+- CFG;
+- IC-LoRA model/reference strength;
+- seed;
+- output filename prefix;
+- governed ReferencePlan.
+
+The existing top-level VSCS fields remain present for compatibility and provenance. The package fingerprint is recomputed after the v7.2.1 provider contract is assembled.
+
+## 8. Generated Media Authority
 
 Provider completion is not the end of the acceptance chain.
 
@@ -136,7 +179,7 @@ This preserves the project principle:
 
 > **PROVIDERS PRODUCE OUTPUTS. VSCS OWNS GENERATED MEDIA.**
 
-## 8. Existing UI Used for Functional Acceptance
+## 9. Existing UI Used for Functional Acceptance
 
 The existing **Production Execution** workspace remains the operator-facing execution surface. It already provides:
 
@@ -153,24 +196,29 @@ Generated results are reviewed through the existing **Generated Media** workspac
 
 Phase 20.18.2 deliberately integrates into these established surfaces rather than creating a temporary acceptance-only UI.
 
-## 9. Automated Acceptance Coverage
+## 10. Automated Acceptance Coverage
 
 Focused tests cover:
 
-- complex multi-reference plan → LTX RenderRequest binding;
+- the committed v7.2.1 workflow and manifest contract;
+- the package loader path remaining blank in source control;
+- presence of the governed reference resolver;
+- v7.2.1 provider package generation;
+- governed `source_path` → absolute provider `path` translation;
+- required-priority → `required=true` translation;
+- provider-ready and coverage authority preservation;
+- explicit `start_frame_reference` preservation;
+- package fingerprint refresh after v7.2.1 binding;
+- complex multi-reference governance and fallback/blocking regression coverage;
 - 1280 × 720 target preservation;
-- composition-anchor selection as start frame;
-- supporting James/Cheryl/Ros identity-reference preservation;
 - mismatched plan/video dimensions blocked;
 - incomplete/full-asset extrapolation risk blocked;
-- LTX multi-reference metadata decoded into typed workflow inputs;
-- missing real Video Studio API workflow detected;
 - governed request reaches provider-execution boundary;
 - completed provider output is passed to Generated Media ingestion.
 
 Phase 20.18.1 reference-role tests remain regression requirements.
 
-## 10. Acceptance Classes
+## 11. Acceptance Classes
 
 ### Static Acceptance
 
@@ -188,48 +236,52 @@ Phase 20.18.1 reference-role tests remain regression requirements.
 
 Using a representative approved scheduled video task:
 
-1. open **Production Execution**;
-2. click **Refresh Scheduled Work**;
-3. select the production video task;
-4. select the **production** profile;
-5. click **Compile Production Package**;
-6. verify the package is executable and the correct Shot/Task/Resource are shown;
-7. click **Start Production**;
-8. verify **Live Production Monitor** shows the selected provider and a real ComfyUI prompt/job;
-9. use **Refresh Execution Status** or allow automatic polling until terminal state;
-10. verify successful outputs appear in **Generated Media** with provider/task provenance.
+1. install/verify the v7.2.0 VSCS custom nodes in the active ComfyUI instance;
+2. open **Production Execution**;
+3. click **Refresh Scheduled Work**;
+4. select the production video task;
+5. select the **production** profile;
+6. click **Compile Production Package**;
+7. verify the package is executable and the correct Shot/Task/Resource are shown;
+8. inspect the compiled package and confirm schema `7.2.1-vscs-1`, `acpp`, governed `reference_plan.references`, and provider `reference_plan.bindings` are present;
+9. click **Start Production** only after the workflow/custom-node checks above pass;
+10. verify **Live Production Monitor** shows the selected provider and a real ComfyUI prompt/job;
+11. use **Refresh Execution Status** or allow automatic polling until terminal state;
+12. verify successful outputs appear in **Generated Media** with provider/task provenance.
 
 ### Live Provider Acceptance
 
-The live test must use the real LTX 2.3 provider and the deployed **LTX-2.3 Video Studio Production** API workflow. Mocks/dry-run execution cannot satisfy this acceptance class.
+The live test must use the real LTX 2.3 provider and the deployed **LTX-2.3 Video Studio Production v7.2.1** API workflow. Mocks/dry-run execution cannot satisfy this acceptance class.
 
-At minimum, one valid 1280 × 720 provider-ready single-character I2V shot must complete successfully and register Generated Media.
+At minimum, one valid 1280 × 720 provider-ready single-character Commander James Spence I2V shot must complete successfully and register Generated Media.
 
-A multi-reference shot should then be exercised where the deployed workflow supports the declared multiple-reference input.
+A previous-final-frame continuity case and a multi-character scene-composition-anchor/helper case must then be exercised as required by the v7.2.1 acceptance suite.
 
 ### Negative Functional Acceptance
 
 Before provider submission, demonstrate that:
 
 - a portrait/mismatched reference plan cannot be submitted for the governed 1280 × 720 target;
-- an incomplete reference that requires extrapolation of required asset content is blocked.
+- an incomplete reference that requires extrapolation of required asset content is blocked;
+- multiple required visual references without a governed scene anchor/helper are blocked instead of silently reduced.
 
 ### Full Regression
 
 The full pytest suite must pass with zero introduced regression.
 
-## 11. No New ADR Required
+## 12. No New ADR Required
 
 No new architectural decision is introduced by this phase. The implementation realizes the already accepted governed reference-role decision and composes the existing provider-execution and Generated Media authority boundaries.
 
-## 12. Closure Criteria
+## 13. Closure Criteria
 
 Phase 20.18.2 may close only when all of the following are true:
 
 - Static acceptance passes locally.
 - Focused automated acceptance passes locally.
 - Relevant regression tests pass locally.
-- The real LTX-2.3 Video Studio Production API workflow is deployed.
+- The real LTX-2.3 Video Studio Production v7.2.1 API workflow is deployed.
+- The supplied v7.2.0 VSCS custom nodes are installed and load cleanly in ComfyUI.
 - UI-functional acceptance passes.
 - At least one live LTX 2.3 Shot completes through VSCS.
 - Retrieved output is registered as Generated Media.
