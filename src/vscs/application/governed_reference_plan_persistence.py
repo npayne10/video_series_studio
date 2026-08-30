@@ -97,7 +97,9 @@ class GovernedReferencePlanPersistenceService:
         for index, item in enumerate(identity_raw):
             if not isinstance(item, dict):
                 continue
-            role = ReferenceRole.PRIMARY_IDENTITY if index == 0 else ReferenceRole.SECONDARY_IDENTITY
+            role = (
+                ReferenceRole.PRIMARY_IDENTITY if index == 0 else ReferenceRole.SECONDARY_IDENTITY
+            )
             reference = self._legacy_reference(
                 item,
                 role=role,
@@ -214,7 +216,10 @@ class GovernedReferencePlanPersistenceService:
                 "provider_id": plan.target.provider_id,
                 "aspect_tolerance": plan.target.aspect_tolerance,
             },
-            "references": [GovernedReferencePlanPersistenceService._reference_payload(item) for item in plan.references],
+            "references": [
+                GovernedReferencePlanPersistenceService._reference_payload(item)
+                for item in plan.references
+            ],
             "diagnostics": [
                 {
                     "severity": item.severity.value,

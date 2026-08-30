@@ -122,9 +122,7 @@ class PersistedGovernedReferencePlanSource:
         payload = self._load_store()
         records = payload.get("governed_reference_plans", [])
         if not isinstance(records, list):
-            raise GovernedReferencePlanSourceError(
-                "governed_reference_plans must be a JSON array"
-            )
+            raise GovernedReferencePlanSourceError("governed_reference_plans must be a JSON array")
         for item in records:
             if not isinstance(item, dict):
                 continue
