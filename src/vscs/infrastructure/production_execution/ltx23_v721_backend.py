@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Any
 
 from vscs.application.production_execution import (
+    CompiledProductionPackage,
     ProductionExecutionError,
     ProductionPackageStatus,
 )
@@ -22,7 +24,10 @@ from vscs.infrastructure.rendering import (
     ProductionPackageComfyUIAdapter,
 )
 
-from .package_compilation import LocalProductionPackageCompilationError
+from .package_compilation import (
+    LocalProductionPackageCompilationError,
+    LocalProductionPackageCompilationService,
+)
 from .stale_reconciliation_backend import (
     LocalComfyUIProductionExecutionBackend as _Phase20182ProductionExecutionBackend,
 )
@@ -34,6 +39,7 @@ LTX23_V721_PACKAGE_LOADER_CLASS = "VSCSProductionPackageLoaderV720"
 LTX23_V721_PACKAGE_LOADER_TITLE = "VSCS Production Package — Governed References v7.2.1"
 LTX23_V721_REFERENCE_RESOLVER_CLASS = "VSCSReferenceResolverV720"
 LTX23_V721_REFERENCE_RESOLVER_TITLE = "VSCS Governed Reference Resolver v7.2.0"
+_IDENTITY_ROLES = frozenset({"primary_identity", "secondary_identity", "group_identity"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,8 +148,158 @@ class LTX23V721DeploymentAssurance:
         return matches[0] if len(matches) == 1 else None
 
 
+class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCompilationService):
+    """Emit the v7.2.1 package contract without weakening governed reference authority."""
+
+    def _comfyui_payload(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
+        content = super()._comfyui_payload(compiled)
+        content["schema_version"] = "7.2.1-vscs-1"
+        content["status"] = "READY"
+        content["positive_prompt"] = compiled.positive_prompt
+        content["acpp"] = {
+            "metadata": {"id": compiled.source_package_id},
+            "timing": {
+                "frames": compiled.frame_count,
+                "fps": compiled.frames_per_second,
+            },
+            "generation": {
+                "render_profile": compiled.profile,
+                "width": compiled.width,
+                "height": compiled.height,
+                "cfg": compiled.cfg,
+                "ic_lora_model_strength": compiled.ic_lora_strength,
+                "reference_guide_strength": compiled.ic_lora_strength,
+                "seed": compiled.seed,
+                "audio_mode": "generated_reference",
+            },
+            "prompts": {
+                "positive": compiled.positive_prompt,
+                "negative": compiled.negative_prompt,
+            },
+            "story": {
+                "opening_state": "",
+                "primary_action": compiled.universal_text,
+                "performance": "",
+                "environmental_motion": "",
+                "ending_state": "",
+            },
+            "output": {"filename_prefix": compiled.filename_prefix},
+        }
+        if compiled.reference_plan is not None:
+            content["reference_plan"] = self._provider_reference_plan(compiled.reference_plan)
+        self._refresh_manifest_fingerprint(content)
+        return content
+
+    def _provider_reference_plan(self, raw_plan: object) -> dict[str, Any]:
+        if not isinstance(raw_plan, dict):
+            raise LocalProductionPackageCompilationError(
+                "Governed ReferencePlan must be an object before v7.2.1 provider binding"
+            )
+        references = raw_plan.get("references")
+        if not isinstance(references, list) or not references:
+            raise LocalProductionPackageCompilationError(
+                "Governed ReferencePlan has no references for v7.2.1 provider binding"
+            )
+        plan = dict(raw_plan)
+        plan["schema_version"] = "2.0"
+        plan["provider"] = "ltx-2.3"
+        plan["legacy_synthesized"] = False
+        plan["bindings"] = [self._provider_reference_binding(item) for item in references]
+        return plan
+
+    def _provider_reference_binding(self, raw: object) -> dict[str, Any]:
+        if not isinstance(raw, dict):
+            raise LocalProductionPackageCompilationError(
+                "Governed ReferencePlan reference entries must be objects"
+            )
+        reference_id = str(raw.get("reference_id") or "").strip()
+        source_path = str(raw.get("source_path") or "").strip()
+        if not reference_id or not source_path:
+            raise LocalProductionPackageCompilationError(
+                "Governed reference requires reference_id and source_path for v7.2.1 binding"
+            )
+        path = Path(source_path).expanduser()
+        if not path.is_absolute():
+            path = self.project_directory / path
+        path = path.resolve(strict=False)
+        if not path.is_file():
+            raise LocalProductionPackageCompilationError(
+                f"Governed provider reference file does not exist: {path}"
+            )
+
+        role = str(raw.get("role") or "").strip()
+        required = str(raw.get("priority") or "").strip().lower() == "required"
+        coverage_raw = raw.get("coverage")
+        coverage_detail = dict(coverage_raw) if isinstance(coverage_raw, dict) else {}
+        coverage: list[str] = []
+        if coverage_detail.get("required_features_visible") is True:
+            coverage.append("required_features")
+        if coverage_detail.get("full_required_asset_visible") is True:
+            coverage.append("full_required_asset")
+        if coverage_detail.get("identity_visible") is True:
+            coverage.append("identity")
+
+        required_coverage: list[str] = []
+        if required:
+            required_coverage.extend(("required_features", "full_required_asset"))
+            if role in _IDENTITY_ROLES:
+                required_coverage.append("identity")
+
+        return {
+            "reference_id": reference_id,
+            "asset_id": str(raw.get("asset_id") or ""),
+            "role": role,
+            "path": str(path),
+            "required": required,
+            "provider_ready": raw.get("provider_ready"),
+            "coverage": coverage,
+            "required_coverage": required_coverage,
+            "canonical_source": str(raw.get("canonical_source_id") or ""),
+            "derivative_type": str(raw.get("reference_class") or ""),
+            "notes": str(raw.get("label") or ""),
+            "reference_fingerprint": raw.get("reference_fingerprint"),
+            "file_checksum": raw.get("file_checksum"),
+            "width": raw.get("width"),
+            "height": raw.get("height"),
+            "vscs_priority": raw.get("priority"),
+            "vscs_coverage": coverage_detail,
+        }
+
+    @classmethod
+    def _refresh_manifest_fingerprint(cls, content: dict[str, Any]) -> None:
+        manifest = content.get("_vscs_manifest")
+        if not isinstance(manifest, dict):
+            raise LocalProductionPackageCompilationError(
+                "Production Package has no VSCS compilation manifest"
+            )
+        payload = dict(content)
+        payload.pop("_vscs_manifest", None)
+        manifest["package_fingerprint"] = cls._fingerprint(payload)
+        manifest["compiler"] = "VSCS Phase 20.18.2 / LTX-2.3 v7.2.1"
+
+
 class LocalComfyUIProductionExecutionBackend(_Phase20182ProductionExecutionBackend):
     """Execute governed Production Packages through the approved LTX v7.2.1 workflow."""
+
+    def __init__(
+        self,
+        project_directory: Path,
+        *,
+        endpoint: str,
+        comfyui_output_directory: Path | None,
+        managed_media_directory: str = "Media Output",
+        lease_duration_seconds: float = 120.0,
+    ) -> None:
+        super().__init__(
+            project_directory,
+            endpoint=endpoint,
+            comfyui_output_directory=comfyui_output_directory,
+            managed_media_directory=managed_media_directory,
+            lease_duration_seconds=lease_duration_seconds,
+        )
+        self.package_compilation = LocalLTX23V721ProductionPackageCompilationService(
+            self.project_directory
+        )
 
     @staticmethod
     def _workflow_root() -> Path:
