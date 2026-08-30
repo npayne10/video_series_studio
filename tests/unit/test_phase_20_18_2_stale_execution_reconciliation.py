@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -117,7 +118,7 @@ def test_retry_status_reconciles_superseded_nonterminal_attempt_and_unblocks_ret
     repaired = backend.execution_jobs.require(jobs[1].execution_id)
     assert repaired.state is ProviderExecutionState.FAILED
     assert repaired.failure_reason is not None
-    assert "later governed execution A004 already exists" in repaired.failure_reason
+    assert "newer governed durable execution A004" in repaired.failure_reason
 
 
 def test_retry_status_keeps_latest_nonterminal_attempt_blocking(tmp_path: Path) -> None:
@@ -148,3 +149,31 @@ def test_execution_gate_reconciles_superseded_nonterminal_history(tmp_path: Path
     assert backend.has_execution_for_profile(task.task_id, profile="production")
     repaired = backend.execution_jobs.require(jobs[1].execution_id)
     assert repaired.state is ProviderExecutionState.FAILED
+
+
+def test_duplicate_latest_attempt_repairs_only_older_nonterminal_record(tmp_path: Path) -> None:
+    backend, task = _backend(tmp_path)
+    older = _job(task, 4, ProviderExecutionState.RUNNING)
+    newer_base = _job(task, 4, ProviderExecutionState.FAILED)
+    newer_time = older.updated_at + timedelta(minutes=1)
+    newer = replace(
+        newer_base,
+        execution_id=f"{newer_base.execution_id}-RECONCILED",
+        lease_id="PLEASE-004-RECONCILED",
+        provider_job_id="prompt-004-reconciled",
+        created_at=newer_time,
+        updated_at=newer_time,
+        submitted_at=newer_time,
+    )
+    backend.execution_jobs.repository.save(older)
+    backend.execution_jobs.repository.save(newer)
+
+    backend._fail_superseded_nonterminal_jobs(task.task_id)
+
+    repaired = backend.execution_jobs.require(older.execution_id)
+    preserved = backend.execution_jobs.require(newer.execution_id)
+    assert repaired.state is ProviderExecutionState.FAILED
+    assert repaired.failure_reason is not None
+    assert newer.execution_id in repaired.failure_reason
+    assert preserved.state is ProviderExecutionState.FAILED
+    assert preserved.failure_reason == "attempt 4 failed"
