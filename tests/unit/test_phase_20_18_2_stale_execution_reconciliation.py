@@ -156,14 +156,21 @@ def test_duplicate_latest_attempt_repairs_only_older_nonterminal_record(tmp_path
     older = _job(task, 4, ProviderExecutionState.RUNNING)
     newer_base = _job(task, 4, ProviderExecutionState.FAILED)
     newer_time = older.updated_at + timedelta(minutes=1)
+    newer_provider_job_id = "prompt-004-reconciled"
+    newer_event = replace(
+        newer_base.events[-1],
+        observed_at=newer_time,
+        provider_job_id=newer_provider_job_id,
+    )
     newer = replace(
         newer_base,
         execution_id=f"{newer_base.execution_id}-RECONCILED",
         lease_id="PLEASE-004-RECONCILED",
-        provider_job_id="prompt-004-reconciled",
+        provider_job_id=newer_provider_job_id,
         created_at=newer_time,
         updated_at=newer_time,
         submitted_at=newer_time,
+        events=(newer_event,),
     )
     backend.execution_jobs.repository.save(older)
     backend.execution_jobs.repository.save(newer)
