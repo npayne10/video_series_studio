@@ -7,7 +7,7 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
-from .profile_scoped_backend import LocalComfyUIProductionExecutionBackend
+from .stale_reconciliation_backend import LocalComfyUIProductionExecutionBackend
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
