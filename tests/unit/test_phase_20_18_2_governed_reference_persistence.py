@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import struct
 import zlib
 from pathlib import Path
+
+import pytest
 
 from vscs.application.acpp import (
     ProviderReadyReferenceResolver,
@@ -19,6 +22,7 @@ from vscs.application.governed_reference_plan_persistence import (
     GovernedReferencePlanPersistenceService,
 )
 from vscs.application.governed_reference_plan_source import (
+    GovernedReferencePlanSourceError,
     PersistedGovernedReferencePlanSource,
 )
 from vscs.application.production_execution.package_compilation import (
@@ -167,6 +171,34 @@ def test_governed_reference_store_uses_production_authority_path(tmp_path: Path)
     assert store.store_file.is_file()
     assert not (tmp_path / "story" / "acpp").exists()
     assert store.reference_plan_for_shot("ep-001-scn-001-sht-001") == plan
+
+
+def test_legacy_compiled_authority_blocks_silent_reference_plan_omission(tmp_path: Path) -> None:
+    legacy_path = (
+        tmp_path
+        / "production"
+        / "compiled"
+        / "production"
+        / "PT-VIDEO-GENERATION-001"
+        / "production_package.json"
+    )
+    legacy_path.parent.mkdir(parents=True)
+    legacy_path.write_text(
+        json.dumps(
+            {
+                "task": {"shot_id": "EP-001-SCN-001-SHT-001"},
+                "reference_plan": {
+                    "schema_version": "1.1",
+                    "identity_references": [],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    store = PersistedGovernedReferencePlanSource(_Projects(tmp_path))  # type: ignore[arg-type]
+
+    with pytest.raises(GovernedReferencePlanSourceError, match="Explicit governed migration"):
+        store.reference_plan_for_shot("EP-001-SCN-001-SHT-001")
 
 
 def test_legacy_migration_corrects_roles_without_promoting_provider_readiness(
