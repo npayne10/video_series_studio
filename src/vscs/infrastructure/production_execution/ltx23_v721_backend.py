@@ -35,6 +35,7 @@ from .stale_reconciliation_backend import (
 LTX23_V721_WORKFLOW_ID = "ltx23_production_v1"
 LTX23_V721_WORKFLOW_FILE = "workflows/ltx23_production_v1_api.json"
 LTX23_V721_MANIFEST_FILE = "ltx23_production_v1.json"
+LTX23_V721_PACKAGE_SCHEMA = "7.2.1-vscs-1"
 LTX23_V721_PACKAGE_LOADER_CLASS = "VSCSProductionPackageLoaderV720"
 LTX23_V721_PACKAGE_LOADER_TITLE = "VSCS Production Package — Governed References v7.2.1"
 LTX23_V721_REFERENCE_RESOLVER_CLASS = "VSCSReferenceResolverV720"
@@ -151,9 +152,19 @@ class LTX23V721DeploymentAssurance:
 class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCompilationService):
     """Emit the v7.2.1 package contract without weakening governed reference authority."""
 
+    def validate_file(self, task: ProductionTask, path: Path) -> None:
+        super().validate_file(task, path)
+        raw = self._read_json(path)
+        schema_version = str(raw.get("schema_version") or "")
+        if schema_version != LTX23_V721_PACKAGE_SCHEMA:
+            raise LocalProductionPackageCompilationError(
+                "Production Package is not compiled for LTX-2.3 v7.2.1; "
+                "recompile it before starting production"
+            )
+
     def _comfyui_payload(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
         content = super()._comfyui_payload(compiled)
-        content["schema_version"] = "7.2.1-vscs-1"
+        content["schema_version"] = LTX23_V721_PACKAGE_SCHEMA
         content["status"] = "READY"
         content["positive_prompt"] = compiled.positive_prompt
         content["acpp"] = {
