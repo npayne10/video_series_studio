@@ -97,7 +97,7 @@ def _backend(tmp_path: Path) -> tuple[LocalComfyUIProductionExecutionBackend, Pr
     return backend, task
 
 
-def test_refresh_reconciliation_fails_superseded_nonterminal_attempt_and_unblocks_retry(
+def test_retry_status_reconciles_superseded_nonterminal_attempt_and_unblocks_retry(
     tmp_path: Path,
 ) -> None:
     backend, task = _backend(tmp_path)
@@ -110,31 +110,41 @@ def test_refresh_reconciliation_fails_superseded_nonterminal_attempt_and_unblock
     for job in jobs:
         backend.execution_jobs.repository.save(job)
 
-    before = backend.retry_override_status_for_profile(task.task_id, profile="production")
-    assert before.state is GovernedRetryOverrideState.BLOCKED
-    assert before.attempts_recorded == 4
+    status = backend.retry_override_status_for_profile(task.task_id, profile="production")
 
-    result = backend.reconcile_for_profile(task.task_id, profile="production")
-
-    assert result.state.value == "failed"
+    assert status.state is GovernedRetryOverrideState.ELIGIBLE
+    assert status.attempts_recorded == 4
     repaired = backend.execution_jobs.require(jobs[1].execution_id)
     assert repaired.state is ProviderExecutionState.FAILED
     assert repaired.failure_reason is not None
     assert "later governed execution A004 already exists" in repaired.failure_reason
 
-    after = backend.retry_override_status_for_profile(task.task_id, profile="production")
-    assert after.state is GovernedRetryOverrideState.ELIGIBLE
-    assert after.attempts_recorded == 4
 
-
-def test_stale_reconciliation_never_changes_latest_nonterminal_attempt(tmp_path: Path) -> None:
+def test_retry_status_keeps_latest_nonterminal_attempt_blocking(tmp_path: Path) -> None:
     backend, task = _backend(tmp_path)
     backend.execution_jobs.repository.save(_job(task, 1, ProviderExecutionState.FAILED))
     latest = _job(task, 2, ProviderExecutionState.RUNNING)
     backend.execution_jobs.repository.save(latest)
 
-    backend._fail_superseded_nonterminal_jobs(task.task_id)
+    status = backend.retry_override_status_for_profile(task.task_id, profile="production")
 
+    assert status.state is GovernedRetryOverrideState.BLOCKED
     preserved = backend.execution_jobs.require(latest.execution_id)
     assert preserved.state is ProviderExecutionState.RUNNING
     assert preserved.failure_reason is None
+
+
+def test_execution_gate_reconciles_superseded_nonterminal_history(tmp_path: Path) -> None:
+    backend, task = _backend(tmp_path)
+    jobs = (
+        _job(task, 1, ProviderExecutionState.FAILED),
+        _job(task, 2, ProviderExecutionState.RUNNING),
+        _job(task, 3, ProviderExecutionState.FAILED),
+        _job(task, 4, ProviderExecutionState.FAILED),
+    )
+    for job in jobs:
+        backend.execution_jobs.repository.save(job)
+
+    assert backend.has_execution_for_profile(task.task_id, profile="production")
+    repaired = backend.execution_jobs.require(jobs[1].execution_id)
+    assert repaired.state is ProviderExecutionState.FAILED
