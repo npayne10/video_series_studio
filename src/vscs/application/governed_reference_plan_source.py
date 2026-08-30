@@ -42,16 +42,22 @@ class PersistedGovernedReferencePlanSource:
         self.serializer = serializer or ACPPSerializer()
 
     @property
-    def store_file(self) -> Path:
+    def project_directory(self) -> Path:
         if self.projects.project_directory is None:
             raise ProjectNotOpenError("No VSCS project is currently open")
-        return self.projects.project_directory / "production" / self.FILE_NAME
+        return self.projects.project_directory
+
+    @property
+    def store_file(self) -> Path:
+        return self.project_directory / "production" / self.FILE_NAME
 
     @property
     def legacy_package_directory(self) -> Path:
-        if self.projects.project_directory is None:
-            raise ProjectNotOpenError("No VSCS project is currently open")
-        return self.projects.project_directory / "story" / self.LEGACY_DIRECTORY_NAME
+        return self.project_directory / "story" / self.LEGACY_DIRECTORY_NAME
+
+    @property
+    def compiled_package_directory(self) -> Path:
+        return self.project_directory / "production" / "compiled"
 
     def reference_plan_for_shot(self, shot_id: str) -> dict[str, Any] | None:
         normalized = shot_id.strip().upper()
@@ -60,7 +66,16 @@ class PersistedGovernedReferencePlanSource:
         persisted = self._persisted_reference_plan(normalized)
         if persisted is not None:
             return persisted
-        return self._legacy_reference_plan(normalized)
+        legacy = self._legacy_reference_plan(normalized)
+        if legacy is not None:
+            return legacy
+        if self._has_legacy_compiled_reference_authority(normalized):
+            raise GovernedReferencePlanSourceError(
+                f"Legacy reference authority exists for {normalized}, but no Phase 20.18.1 "
+                "governed reference plan has been persisted. Explicit governed migration "
+                "and provider-ready validation are required before UPD compilation."
+            )
+        return None
 
     def save_reference_plan(
         self,
@@ -147,6 +162,34 @@ class PersistedGovernedReferencePlanSource:
                 f"Persisted governed reference plan for {shot_id} is invalid"
             )
         return dict(payload)
+
+    def _has_legacy_compiled_reference_authority(self, shot_id: str) -> bool:
+        directory = self.compiled_package_directory
+        if not directory.is_dir():
+            return False
+        for path in sorted(directory.glob("*/*/*.json")):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(raw, dict):
+                continue
+            reference_plan = raw.get("reference_plan")
+            if not isinstance(reference_plan, dict):
+                continue
+            if str(reference_plan.get("schema_version") or "") != "1.1":
+                continue
+            task = raw.get("task")
+            task_shot_id = ""
+            if isinstance(task, dict):
+                task_shot_id = str(task.get("shot_id") or "").strip().upper()
+            composition = raw.get("composition_plan")
+            composition_shot_id = ""
+            if isinstance(composition, dict):
+                composition_shot_id = str(composition.get("shot_id") or "").strip().upper()
+            if shot_id in {task_shot_id, composition_shot_id}:
+                return True
+        return False
 
     def _load_store(self) -> dict[str, Any]:
         path = self.store_file
