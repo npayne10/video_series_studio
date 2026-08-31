@@ -172,11 +172,26 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         sources: list[str] = []
         legacy_fallbacks: list[str] = []
 
+        draft = self.universal_compiler.draft(shot_id) if shot_id else None
+        approval_lookup = getattr(self.universal_compiler, "approval_provenance", None)
+        if draft is not None and callable(approval_lookup):
+            try:
+                approval = approval_lookup(shot_id)
+            except (OSError, RuntimeError, ValueError):
+                approval = None
+            if approval is not None:
+                approved_by = str(getattr(approval, "approved_by", "") or "").strip()
+                if approved_by:
+                    sources.append("current READY UPD approval provenance")
+
         package = self.packages.current_package(shot_id) if shot_id else None
         if package is not None:
+            universal_description = getattr(package, "universal_description", None)
+            universal_sources = _nested_governed_sources(universal_description)
             package_sources = (
+                *universal_sources,
                 getattr(package, "production_review", None),
-                getattr(package, "universal_description", None),
+                universal_description,
                 getattr(package, "validation", None),
                 getattr(package, "story_context", None),
                 getattr(package, "shot", None),
@@ -189,14 +204,15 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
                 _first_governed_value(package_sources, ("episode_id",))
             )
             scene_id = _canonical_scene_id(_first_governed_value(package_sources, ("scene_id",)))
-            approved_by = _first_governed_value(
-                package_sources,
-                (
-                    "production_review_approved_by",
-                    "authority_approved_by",
-                    "approved_by",
-                ),
-            )
+            if not approved_by:
+                approved_by = _first_governed_value(
+                    package_sources,
+                    (
+                        "production_review_approved_by",
+                        "authority_approved_by",
+                        "approved_by",
+                    ),
+                )
             revision_value = _first_governed_value(
                 package_sources,
                 ("upd_authority_revision", "authority_revision", "upd_revision"),
@@ -422,6 +438,28 @@ def _canonical_scene_id(value: str) -> str:
 def _approved_production_reviewer(self: Any, shot_id: str) -> str:
     if not shot_id:
         return ""
+
+    legacy_service = getattr(self, "production_review_service", None)
+    if legacy_service is not None:
+        current_review = getattr(legacy_service, "current_review", None)
+        if callable(current_review):
+            try:
+                review = current_review(shot_id, "production")
+            except (OSError, RuntimeError, TypeError, ValueError):
+                review = None
+            if review is not None:
+                status = str(
+                    getattr(getattr(review, "status", None), "value", "")
+                ).strip().lower()
+                if status in {"approved", "approved-for-production"}:
+                    reviewer = str(
+                        getattr(review, "reviewed_by", "")
+                        or getattr(review, "reviewer", "")
+                        or ""
+                    ).strip()
+                    if reviewer:
+                        return reviewer
+
     service = getattr(self, "production_review", None)
     if service is None:
         return ""
@@ -435,9 +473,22 @@ def _approved_production_reviewer(self: Any, shot_id: str) -> str:
     if review is None:
         return ""
     status = str(getattr(getattr(review, "status", None), "value", "")).strip().lower()
-    if status != "approved":
+    if status not in {"approved", "approved-for-production"}:
         return ""
-    return str(getattr(review, "reviewer", "") or "").strip()
+    return str(
+        getattr(review, "reviewer", "") or getattr(review, "reviewed_by", "") or ""
+    ).strip()
+
+
+def _nested_governed_sources(source: Any) -> tuple[dict[str, Any], ...]:
+    if not isinstance(source, dict):
+        return ()
+    nested: list[dict[str, Any]] = []
+    for key in ("approval", "production", "governed"):
+        value = source.get(key)
+        if isinstance(value, dict):
+            nested.append(value)
+    return tuple(nested)
 
 
 def _first_governed_value(sources: Iterable[Any], keys: tuple[str, ...]) -> str:
