@@ -12,6 +12,8 @@ from vscs.application.governed_reference_plan_source import PersistedGovernedRef
 from vscs.application.production_package import (
     ProductionPackage,
     ProductionPackageProvenance,
+)
+from vscs.application.production_package import (
     ProductionPackageStatus as CanonicalProductionPackageStatus,
 )
 from vscs.application.production_tasks import (
@@ -222,9 +224,7 @@ def test_ready_upd_reference_dependency_is_refreshed_before_task_authority_check
 
     assert refreshed.package_id != before.package_id
     production = refreshed.universal_description["production"]
-    assert production["reference_plan"]["references"][0]["reference_id"] == (
-        "REF-JAMES-16X9"
-    )
+    assert production["reference_plan"]["references"][0]["reference_id"] == ("REF-JAMES-16X9")
 
     with pytest.raises(
         LocalProductionPackageCompilationError,

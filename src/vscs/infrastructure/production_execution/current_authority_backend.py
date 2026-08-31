@@ -34,6 +34,8 @@ from vscs.application.universal_production_description_compiler import (
 
 from .ltx23_v721_backend import (
     LocalComfyUIProductionExecutionBackend as _LTX23V721Backend,
+)
+from .ltx23_v721_backend import (
     LocalLTX23V721ProductionPackageCompilationService,
 )
 from .package_compilation import LocalProductionPackageCompilationError
@@ -80,7 +82,9 @@ class _CurrentProductionPackageStore:
     def require_current_package(self, shot_id: str) -> ProductionPackage:
         return self.materialize(shot_id)
 
-    def _append_derived(self, current: ProductionPackage, data: dict[str, Any]) -> ProductionPackage:
+    def _append_derived(
+        self, current: ProductionPackage, data: dict[str, Any]
+    ) -> ProductionPackage:
         payload = dict(data)
         payload.pop("package_id", None)
         payload.pop("package_fingerprint", None)
