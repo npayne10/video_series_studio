@@ -239,9 +239,6 @@ def install_universal_approval_provenance() -> None:
                 "reviewed_authority_fingerprint": approval.reviewed_authority_fingerprint,
             }
             compiled["approval"] = approval_payload
-            # Direct compatibility fields keep existing downstream governed-value
-            # resolution deterministic while approval consumers migrate to the
-            # structured payload.
             compiled["approved_by"] = approval.approved_by
             compiled["approved_at"] = approval.approved_at
         return self._derive(
