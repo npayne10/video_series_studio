@@ -110,12 +110,8 @@ class UniversalProductionDescriptionApprovalStore:
         self._write(retained)
 
     @classmethod
-    def reviewed_authority_fingerprint(
-        cls, draft: UniversalProductionDescriptionDraft
-    ) -> str:
-        description = json.loads(
-            json.dumps(draft.description_value(), sort_keys=True, default=str)
-        )
+    def reviewed_authority_fingerprint(cls, draft: UniversalProductionDescriptionDraft) -> str:
+        description = json.loads(json.dumps(draft.description_value(), sort_keys=True, default=str))
         if not isinstance(description, dict):
             raise UniversalProductionDescriptionCompilerError(
                 "Universal Production Description value is not a JSON object"
