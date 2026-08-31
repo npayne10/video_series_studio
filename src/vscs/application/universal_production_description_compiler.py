@@ -269,9 +269,7 @@ class UniversalProductionDescriptionCompilerService:
         return updated
 
     @classmethod
-    def _same_reviewed_authority(
-        cls, previous: dict[str, Any], refreshed: dict[str, Any]
-    ) -> bool:
+    def _same_reviewed_authority(cls, previous: dict[str, Any], refreshed: dict[str, Any]) -> bool:
         """Compare reviewed UPD authority while excluding governed-reference dependency data."""
         return cls._without_reference_dependency(previous) == cls._without_reference_dependency(
             refreshed

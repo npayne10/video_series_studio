@@ -63,7 +63,9 @@ def _png_dimensions(path: Path) -> tuple[int, int]:
 
 
 def _legacy_plan(project: Path, task_id: str) -> dict[str, Any]:
-    package = project / "production" / "compiled" / "production" / task_id / "production_package.json"
+    package = (
+        project / "production" / "compiled" / "production" / task_id / "production_package.json"
+    )
     if not package.is_file():
         raise RuntimeError(f"Legacy Production package not found: {package}")
     payload = json.loads(package.read_text(encoding="utf-8"))
