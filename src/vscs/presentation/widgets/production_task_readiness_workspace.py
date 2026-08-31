@@ -102,11 +102,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             return None
         task_id = item.text().strip()
         return next(
-            (
-                task
-                for task in self._persisted_tasks_for_selected_shot()
-                if task.task_id == task_id
-            ),
+            (task for task in self._persisted_tasks_for_selected_shot() if task.task_id == task_id),
             None,
         )
 
