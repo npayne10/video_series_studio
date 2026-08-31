@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from .graph import ProductionTaskGraphIntegrationService, ProductionTaskGraphRefreshResult
 from .lifecycle import ProductionTaskLifecycleService
-from .models import ProductionTask
+from .models import ProductionTask, ProductionTaskState
 from .production_queue import ProductionQueue, ProductionQueueCompilerService
 from .production_readiness import (
     ProductionReadinessAssessment,
@@ -84,6 +84,68 @@ class ProductionSchedulingUiService:
         return self._task_repository().list_for_production(
             self._require_production_id(production_id)
         )
+
+    def supersede_task(
+        self,
+        task_id: str,
+        *,
+        replacement_task_id: str,
+        reason: str,
+    ) -> ProductionTask:
+        """Supersede obsolete task authority only when a valid replacement is persisted."""
+        normalized_task_id = task_id.strip()
+        normalized_replacement_id = replacement_task_id.strip()
+        if not normalized_task_id or not normalized_replacement_id:
+            raise ProductionSchedulingUiError(
+                "Task and replacement task identities are required for supersession"
+            )
+        if normalized_task_id == normalized_replacement_id:
+            raise ProductionSchedulingUiError("A ProductionTask cannot supersede itself")
+
+        repository = self._task_repository()
+        lifecycle = ProductionTaskLifecycleService(repository)
+        obsolete = repository.get(normalized_task_id)
+        replacement = repository.get(normalized_replacement_id)
+        if obsolete is None:
+            raise ProductionSchedulingUiError(f"ProductionTask not found: {normalized_task_id}")
+        if replacement is None:
+            raise ProductionSchedulingUiError(
+                f"Replacement ProductionTask not found: {normalized_replacement_id}"
+            )
+        if (
+            obsolete.production_id != replacement.production_id
+            or obsolete.shot_id != replacement.shot_id
+            or obsolete.task_type is not replacement.task_type
+            or obsolete.authority.authority_id != replacement.authority.authority_id
+        ):
+            raise ProductionSchedulingUiError(
+                "Supersession requires replacement authority for the same production, Shot, "
+                "task type and governed UPD identity"
+            )
+        if obsolete.authority.fingerprint == replacement.authority.fingerprint:
+            raise ProductionSchedulingUiError(
+                "Supersession requires a replacement compiled from different UPD authority"
+            )
+        if replacement.state in {
+            ProductionTaskState.CANCELLED,
+            ProductionTaskState.COMPLETED,
+            ProductionTaskState.SUPERSEDED,
+        }:
+            raise ProductionSchedulingUiError(
+                f"Replacement ProductionTask is not active authority: {replacement.state.value}"
+            )
+        if not reason.strip():
+            raise ProductionSchedulingUiError("Supersession requires a governed reason")
+
+        try:
+            updated, _transition = lifecycle.transition(
+                obsolete.task_id,
+                ProductionTaskState.SUPERSEDED,
+                reason=reason.strip(),
+            )
+        except ValueError as exc:
+            raise ProductionSchedulingUiError(str(exc)) from exc
+        return updated
 
     def register_resource(self, resource: ProductionResource) -> ProductionResource:
         self._resources[resource.resource_id] = resource
