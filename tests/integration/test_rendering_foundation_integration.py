@@ -26,7 +26,6 @@ from vscs.application.rendering import (
     VoicePackageReference,
     WorkflowCompatibilityValidator,
     WorkflowDiagnosticsFormatter,
-    WorkflowInputKind,
     WorkflowManifest,
     WorkflowManifestLoader,
     WorkflowRegistry,
@@ -187,41 +186,21 @@ def test_preview_foundation_compiles_submits_and_cancels_dry_run(
     assert adapter.cancel(job).status is RenderJobStatus.CANCELLED
 
 
-def test_production_injects_continuity_and_canonical_assets(
+def test_production_manifest_declares_governed_package_binding_contract(
     tmp_path: Path,
 ) -> None:
     registry, _result = _discover_foundation(tmp_path)
     manifest = registry.require("ltx23_production_v1")
-    continuity_reference = ContinuityPackageReference(
-        package_id="CONT-001",
-        previous_frame_id="FRAME-PREVIOUS",
-        next_frame_id="FRAME-NEXT",
-    )
-    assets = AssetPackageReference(
-        asset_ids=("SHP-IRON-HORIZON",),
-        canonical_reference_ids=("REF-IRON-HORIZON-EXT",),
-        lora_ids=("Licon-MSR",),
-    )
-    request = _request(
-        manifest.workflow_id,
-        QualityLevel.PRODUCTION,
-        continuity=continuity_reference,
-        assets=assets,
-    )
-    compiled = _adapter(tmp_path, registry).compile_request(request)
-    prompt = compiled.payload["prompt"]
+    extra = dict(manifest.extra)
+    requirement_ids = {item.identifier for item in manifest.requirements}
 
-    assert manifest.binding_for(WorkflowInputKind.START_FRAME) is not None
-    assert manifest.binding_for(WorkflowInputKind.END_FRAME) is not None
-    assert manifest.binding_for(WorkflowInputKind.REFERENCE_IMAGES) is not None
-    assert manifest.binding_for(WorkflowInputKind.LORA) is not None
-
-    values = json.dumps(prompt)
-    assert "continuity/previous-final.png" in values
-    assert "continuity/next-start.png" in values
-    assert "references/iron-horizon-approved.png" in values
-    assert "Licon-MSR" in values
-    assert compiled.payload["extra_data"]["quality_level"] == "production"
+    assert manifest.bindings == ()
+    assert manifest.metadata.workflow_version == "7.2.1"
+    assert extra["binding_mode"] == "production_package_v7_2_1"
+    assert extra["governed_reference_resolution"] == "VSCSReferenceResolverV720"
+    assert extra["provider_visual_input_limit"] == "1"
+    assert "ComfyUI-VSCS-Production-v720" in requirement_ids
+    assert "LTX-2.3 Ingredients IC-LoRA" in requirement_ids
 
 
 def test_compatibility_reports_resources_continuity_voice_and_lip_sync(
