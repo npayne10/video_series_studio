@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
@@ -175,23 +175,13 @@ def test_authority_selection_never_falls_back_to_historical_matching_package(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     service = CurrentAuthorityLTX23V721ProductionPackageCompilationService(tmp_path)
-    historical = _base_package(package_id="PP-SHT-001-HISTORICAL")
-    historical = ProductionPackage(
-        **{
-            **asdict(historical),
-            "provenance": historical.provenance,
-            "status": historical.status,
-            "universal_description": {"production": {"universal_text": "historical"}},
-        }
+    historical = replace(
+        _base_package(package_id="PP-SHT-001-HISTORICAL"),
+        universal_description={"production": {"universal_text": "historical"}},
     )
-    current = _base_package(package_id="PP-SHT-001-CURRENT")
-    current = ProductionPackage(
-        **{
-            **asdict(current),
-            "provenance": current.provenance,
-            "status": current.status,
-            "universal_description": {"production": {"universal_text": "current"}},
-        }
+    current = replace(
+        _base_package(package_id="PP-SHT-001-CURRENT"),
+        universal_description={"production": {"universal_text": "current"}},
     )
     old_fingerprint = service.compiler.authority_fingerprint(historical)
     monkeypatch.setattr(service, "_refresh_current_ready_upd", lambda _task: current)
@@ -225,18 +215,19 @@ def test_ready_upd_reference_dependency_is_refreshed_before_task_authority_check
         _plan(),
         provenance={"source": "test"},
     )
-    old_task = _task(
-        CurrentAuthorityLTX23V721ProductionPackageCompilationService(
-            tmp_path
-        ).compiler.authority_fingerprint(before)
-    )
-    service = CurrentAuthorityLTX23V721ProductionPackageCompilationService(tmp_path)
+    compiler = CurrentAuthorityLTX23V721ProductionPackageCompilationService(tmp_path)
+    old_task = _task(compiler.compiler.authority_fingerprint(before))
 
-    refreshed = service._refresh_current_ready_upd(old_task)
+    refreshed = compiler._refresh_current_ready_upd(old_task)
 
     assert refreshed.package_id != before.package_id
     production = refreshed.universal_description["production"]
-    assert production["reference_plan"]["references"][0]["reference_id"] == "REF-JAMES-16X9"
+    assert production["reference_plan"]["references"][0]["reference_id"] == (
+        "REF-JAMES-16X9"
+    )
 
-    with pytest.raises(LocalProductionPackageCompilationError, match="approved UPD authority is stale"):
-        service._authority_source(old_task)
+    with pytest.raises(
+        LocalProductionPackageCompilationError,
+        match="approved UPD authority is stale",
+    ):
+        compiler._authority_source(old_task)
