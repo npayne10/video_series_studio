@@ -69,7 +69,9 @@ def test_reference_manifests_load_and_declare_expected_profiles() -> None:
     assert preview.metadata.renderer is RendererKind.COMFYUI
     assert production.metadata.renderer is RendererKind.COMFYUI
     assert preview.binding_for(WorkflowInputKind.POSITIVE_PROMPT) is not None
-    assert production.binding_for(WorkflowInputKind.END_FRAME) is not None
+    assert production.bindings == ()
+    assert dict(production.extra)["binding_mode"] == "production_package_v7_2_1"
+    assert dict(production.extra)["governed_reference_resolution"] == "VSCSReferenceResolverV720"
 
 
 def test_reference_manifests_pass_compatibility_with_declared_resources() -> None:
@@ -77,11 +79,13 @@ def test_reference_manifests_pass_compatibility_with_declared_resources() -> Non
     validator = WorkflowCompatibilityValidator()
     installed = InstalledWorkflowResources(
         video_models=frozenset({"ltx-2.3"}),
+        loras=frozenset({"LTX-2.3 Ingredients IC-LoRA"}),
         custom_nodes=frozenset(
             {
                 "ComfyUI-LTXVideo",
                 "Licon-MSR",
                 "VSCS-Temporal-Refinement",
+                "ComfyUI-VSCS-Production-v720",
             }
         ),
     )
@@ -98,7 +102,6 @@ def test_reference_manifests_pass_compatibility_with_declared_resources() -> Non
             "ltx23_production_v1",
             QualityLevel.PRODUCTION,
             previous_frame_id="FRAME-PREVIOUS",
-            next_frame_id="FRAME-NEXT",
         ),
         production,
         installed=installed,
