@@ -448,14 +448,10 @@ def _approved_production_reviewer(self: Any, shot_id: str) -> str:
             except (OSError, RuntimeError, TypeError, ValueError):
                 review = None
             if review is not None:
-                status = str(
-                    getattr(getattr(review, "status", None), "value", "")
-                ).strip().lower()
+                status = str(getattr(getattr(review, "status", None), "value", "")).strip().lower()
                 if status in {"approved", "approved-for-production"}:
                     reviewer = str(
-                        getattr(review, "reviewed_by", "")
-                        or getattr(review, "reviewer", "")
-                        or ""
+                        getattr(review, "reviewed_by", "") or getattr(review, "reviewer", "") or ""
                     ).strip()
                     if reviewer:
                         return reviewer
@@ -475,9 +471,7 @@ def _approved_production_reviewer(self: Any, shot_id: str) -> str:
     status = str(getattr(getattr(review, "status", None), "value", "")).strip().lower()
     if status not in {"approved", "approved-for-production"}:
         return ""
-    return str(
-        getattr(review, "reviewer", "") or getattr(review, "reviewed_by", "") or ""
-    ).strip()
+    return str(getattr(review, "reviewer", "") or getattr(review, "reviewed_by", "") or "").strip()
 
 
 def _nested_governed_sources(source: Any) -> tuple[dict[str, Any], ...]:
