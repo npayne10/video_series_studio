@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from PySide6.QtWidgets import QLabel, QMessageBox, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from vscs.application.production_tasks import ProductionTask, ProductionTaskState
 
@@ -38,10 +38,17 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             "Preserve the selected obsolete ProductionTask as durable provenance while marking "
             "it Superseded by the replacement compiled from the current READY UPD authority."
         )
+        self.production_task_actions = QWidget(group)
+        self.production_task_actions.setObjectName("production_task_actions")
+        action_layout = QHBoxLayout(self.production_task_actions)
+        action_layout.setContentsMargins(0, 0, 0, 0)
+        action_layout.addWidget(self.production_task_refresh_readiness_button)
+        action_layout.addWidget(self.production_task_supersede_button)
+        action_layout.addStretch(1)
+
         table_index = layout.indexOf(self.production_task_table)
         layout.insertWidget(table_index, self.production_task_readiness_status)
-        layout.insertWidget(table_index + 1, self.production_task_refresh_readiness_button)
-        layout.insertWidget(table_index + 2, self.production_task_supersede_button)
+        layout.insertWidget(table_index + 1, self.production_task_actions)
         self.production_task_refresh_readiness_button.clicked.connect(
             self._production_task_refresh_readiness
         )
