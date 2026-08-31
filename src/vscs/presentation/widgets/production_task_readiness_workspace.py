@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QMessageBox, QPushButton, QVBoxLayout
 
 from vscs.application.production_tasks import ProductionTask, ProductionTaskState
 
@@ -22,7 +22,8 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         original_init(self, *args, **kwargs)
         group = self.production_task_table.parentWidget()
         layout = group.layout()
-        if not isinstance(layout, QVBoxLayout):
+        actions_layout = getattr(self, "production_task_actions_layout", None)
+        if not isinstance(layout, QVBoxLayout) or actions_layout is None:
             return
 
         self.production_task_readiness_status = QLabel("", group)
@@ -42,17 +43,22 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             "and supersede it only when a governed replacement compiled from current READY UPD "
             "authority exists."
         )
-        self.production_task_actions = QWidget(group)
-        self.production_task_actions.setObjectName("production_task_actions")
-        action_layout = QHBoxLayout(self.production_task_actions)
-        action_layout.setContentsMargins(0, 0, 0, 0)
-        action_layout.addWidget(self.production_task_refresh_readiness_button)
-        action_layout.addWidget(self.production_task_supersede_button)
-        action_layout.addStretch(1)
+
+        # Anchor readiness/supersession actions in the compiler's existing visible
+        # action row rather than injecting another child container around the table.
+        # This toolbar already renders Compile Production Tasks reliably in the UI.
+        insertion_index = max(actions_layout.count() - 1, 0)
+        actions_layout.insertWidget(
+            insertion_index,
+            self.production_task_refresh_readiness_button,
+        )
+        actions_layout.insertWidget(
+            insertion_index + 1,
+            self.production_task_supersede_button,
+        )
 
         table_index = layout.indexOf(self.production_task_table)
         layout.insertWidget(table_index, self.production_task_readiness_status)
-        layout.insertWidget(table_index + 1, self.production_task_actions)
         self.production_task_refresh_readiness_button.clicked.connect(
             self._production_task_refresh_readiness
         )
@@ -176,10 +182,6 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         if not hasattr(self, "production_task_supersede_button"):
             return
         _selected, _replacement, blocker = self._production_task_supersession_context()
-        # Keep the governed action visibly available. Some application styles make
-        # disabled QPushButtons effectively invisible, which hides the lifecycle
-        # capability from operators. Eligibility remains enforced by the command
-        # handler and application service; the tooltip/status explains any blocker.
         self.production_task_supersede_button.setVisible(True)
         self.production_task_supersede_button.setEnabled(True)
         if blocker:
@@ -234,9 +236,6 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         requested_production_id = str(editor.text() if editor is not None else "").strip()
         original_refresh_tasks(self)
 
-        # Base ProductionPackageWorkspace construction invokes refresh() before the
-        # Phase 19.6.2 ProductionTask controls and Phase 19.6.11 scheduling facade
-        # have been created. The wrapper must remain inert during that early pass.
         if (
             not hasattr(self, "production_task_table")
             or not hasattr(self, "production_task_production_id")
