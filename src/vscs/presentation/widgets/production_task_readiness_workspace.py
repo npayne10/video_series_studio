@@ -34,9 +34,13 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         self.production_task_supersede_button = QPushButton("Supersede Obsolete Task", group)
         self.production_task_supersede_button.setObjectName("production_task_supersede_button")
+        self.production_task_supersede_button.setMinimumWidth(210)
+        self.production_task_supersede_button.setMinimumHeight(28)
+        self.production_task_supersede_button.setVisible(True)
         self.production_task_supersede_button.setToolTip(
-            "Preserve the selected obsolete ProductionTask as durable provenance while marking "
-            "it Superseded by the replacement compiled from the current READY UPD authority."
+            "Select an obsolete ProductionTask row. VSCS will preserve it as durable provenance "
+            "and supersede it only when a governed replacement compiled from current READY UPD "
+            "authority exists."
         )
         self.production_task_actions = QWidget(group)
         self.production_task_actions.setObjectName("production_task_actions")
@@ -172,7 +176,12 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         if not hasattr(self, "production_task_supersede_button"):
             return
         _selected, _replacement, blocker = self._production_task_supersession_context()
-        self.production_task_supersede_button.setEnabled(not blocker)
+        # Keep the governed action visibly available. Some application styles make
+        # disabled QPushButtons effectively invisible, which hides the lifecycle
+        # capability from operators. Eligibility remains enforced by the command
+        # handler and application service; the tooltip/status explains any blocker.
+        self.production_task_supersede_button.setVisible(True)
+        self.production_task_supersede_button.setEnabled(True)
         if blocker:
             self.production_task_supersede_button.setToolTip(blocker)
         else:
@@ -184,6 +193,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         selected, replacement, blocker = self._production_task_supersession_context()
         if blocker or selected is None or replacement is None:
             self.production_task_readiness_status.setText(blocker)
+            QMessageBox.information(self, "ProductionTask Supersession", blocker)
             return
         answer = QMessageBox.question(
             self,
