@@ -114,12 +114,12 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         self.production_task_context_source.setWordWrap(True)
         group_layout.addWidget(self.production_task_context_source)
 
-        actions = QHBoxLayout()
+        self.production_task_actions_layout = QHBoxLayout()
         self.compile_production_tasks_button = QPushButton("Compile Production Tasks", group)
         self.compile_production_tasks_button.setObjectName("compile_production_tasks_button")
-        actions.addWidget(self.compile_production_tasks_button)
-        actions.addStretch(1)
-        group_layout.addLayout(actions)
+        self.production_task_actions_layout.addWidget(self.compile_production_tasks_button)
+        self.production_task_actions_layout.addStretch(1)
+        group_layout.addLayout(self.production_task_actions_layout)
 
         self.production_task_table = QTableWidget(0, 9, group)
         self.production_task_table.setObjectName("production_task_table")
@@ -402,66 +402,50 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
     workspace_type._production_task_compiler_workspace_installed = True
 
 
-def _first_governed_value(sources: Iterable[Any], keys: tuple[str, ...]) -> str:
-    for source in sources:
-        value = _nested_governed_value(source, keys)
-        if value:
-            return value
-    return ""
-
-
-def _nested_governed_value(value: Any, keys: tuple[str, ...]) -> str:
-    if isinstance(value, dict):
-        for key in keys:
-            candidate = value.get(key)
-            if candidate is not None and not isinstance(candidate, dict | list | tuple):
-                text = str(candidate).strip()
-                if text:
-                    return text
-        for nested in value.values():
-            found = _nested_governed_value(nested, keys)
-            if found:
-                return found
-    elif isinstance(value, list | tuple):
-        for nested in value:
-            found = _nested_governed_value(nested, keys)
-            if found:
-                return found
-    return ""
-
-
-def _approved_production_reviewer(workspace: Any, shot_id: str) -> str:
-    service = getattr(workspace, "production_review_service", None)
-    if service is None or not shot_id:
-        return ""
-    selector = getattr(workspace, "provider_selector", None)
-    provider_id = "comfyui"
-    if selector is not None:
-        provider_id = str(selector.currentData() or "comfyui").strip().lower()
-    try:
-        review = service.current_review(shot_id, provider_id)
-    except (RuntimeError, ValueError):
-        return ""
-    if review is None:
-        return ""
-    status = getattr(getattr(review, "status", None), "value", "")
-    if status != "approved-for-production":
-        return ""
-    return str(getattr(review, "reviewed_by", "") or "").strip()
+def _shot_hierarchy(shot_id: str) -> tuple[str, str] | None:
+    match = _SHOT_HIERARCHY_PATTERN.fullmatch(shot_id.strip().upper())
+    if match is None:
+        return None
+    return match.group("episode"), match.group("scene")
 
 
 def _canonical_episode_id(value: str) -> str:
-    match = _EPISODE_ID_PATTERN.search(value.strip())
-    return match.group(0).upper() if match is not None else ""
+    match = _EPISODE_ID_PATTERN.search(value.strip().upper())
+    return match.group(0) if match is not None else ""
 
 
 def _canonical_scene_id(value: str) -> str:
-    match = _SCENE_ID_PATTERN.search(value.strip())
-    return match.group(0).upper() if match is not None else ""
+    match = _SCENE_ID_PATTERN.search(value.strip().upper())
+    return match.group(0) if match is not None else ""
 
 
-def _shot_hierarchy(shot_id: str) -> tuple[str, str] | None:
-    match = _SHOT_HIERARCHY_PATTERN.fullmatch(shot_id.strip())
-    if match is None:
-        return None
-    return match.group("episode").upper(), match.group("scene").upper()
+def _approved_production_reviewer(self: Any, shot_id: str) -> str:
+    if not shot_id:
+        return ""
+    service = getattr(self, "production_review", None)
+    if service is None:
+        return ""
+    latest_review = getattr(service, "latest_review", None)
+    if not callable(latest_review):
+        return ""
+    try:
+        review = latest_review(shot_id)
+    except (OSError, RuntimeError, ValueError):
+        return ""
+    if review is None:
+        return ""
+    status = str(getattr(getattr(review, "status", None), "value", "")).strip().lower()
+    if status != "approved":
+        return ""
+    return str(getattr(review, "reviewer", "") or "").strip()
+
+
+def _first_governed_value(sources: Iterable[Any], keys: tuple[str, ...]) -> str:
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        for key in keys:
+            value = source.get(key)
+            if value is not None and str(value).strip():
+                return str(value).strip()
+    return ""
