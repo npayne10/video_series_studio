@@ -233,6 +233,8 @@ class UniversalProductionDescriptionCompilerService:
                 "Only Ready Universal Production Description may be compiled"
             )
         if not self.is_current(draft):
+            draft = self._refresh_ready_reference_dependency(draft)
+        if not self.is_current(draft):
             raise UniversalProductionDescriptionCompilerError(
                 "Universal Production Description is stale and cannot be compiled"
             )
@@ -245,6 +247,41 @@ class UniversalProductionDescriptionCompilerService:
             self._compile_description(description),
             production_notes=draft.production_notes,
         )
+
+    def _refresh_ready_reference_dependency(
+        self, draft: UniversalProductionDescriptionDraft
+    ) -> UniversalProductionDescriptionDraft:
+        """Refresh a READY UPD only when governed references are the sole changed dependency."""
+        package = self.packages.require_current_package(draft.shot_id)
+        refreshed_description = self._build_description(package)
+        if not self._same_reviewed_authority(draft.description_value(), refreshed_description):
+            raise UniversalProductionDescriptionCompilerError(
+                "Ready Universal Production Description is stale against changed production "
+                "authority and must return to Draft before refreshing"
+            )
+        updated = replace(
+            draft,
+            source_package_id=package.package_id,
+            dependency_fingerprint=self._dependency_fingerprint(package),
+            description=refreshed_description,
+        )
+        self._replace(updated)
+        return updated
+
+    @classmethod
+    def _same_reviewed_authority(
+        cls, previous: dict[str, Any], refreshed: dict[str, Any]
+    ) -> bool:
+        """Compare reviewed UPD authority while excluding governed-reference dependency data."""
+        return cls._without_reference_dependency(previous) == cls._without_reference_dependency(
+            refreshed
+        )
+
+    @classmethod
+    def _without_reference_dependency(cls, value: dict[str, Any]) -> dict[str, Any]:
+        detached = cls._detached(value)
+        detached.pop("reference_plan", None)
+        return detached
 
     def _require_upstream_ready(self, shot_id: str) -> None:
         missing = self.missing_prerequisites(shot_id)
