@@ -40,7 +40,7 @@
     "author": "VSCS",
     "description": "Primary governed ComfyUI manifest for the LTX-2.3 Video Studio Production Engine v7.2.1 used by Phase 20.18.2 live functional acceptance. Provider inputs are sourced from the compiled VSCS production package through the governed v7.2.1 package loader and reference resolver.",
     "display_name": "LTX-2.3 Video Studio Production",
-    "manifest_version": "1.1",
+    "manifest_version": "1.0",
     "renderer": "comfyui",
     "workflow_id": "ltx23_production_v1",
     "workflow_version": "7.2.1"
