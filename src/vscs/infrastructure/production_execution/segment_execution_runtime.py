@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -59,7 +60,9 @@ class SegmentExecutionStore:
     ) -> tuple[SegmentExecutionRecord, ...]:
         existing = self.list_for_package(task_id, package_fingerprint)
         if existing:
-            return existing
+            if all(record.state == "PLANNED" for record in existing):
+                return existing
+            self._archive_current_history(task_id, package_fingerprint, existing)
         records = tuple(
             SegmentExecutionRecord(
                 task_id=task_id,
@@ -110,3 +113,39 @@ class SegmentExecutionStore:
     def package_directory(self, task_id: str, package_fingerprint: str) -> Path:
         identity = hashlib.sha256(f"{task_id}:{package_fingerprint}".encode()).hexdigest()[:16]
         return self.root / task_id / identity
+
+    def history_directories(self, task_id: str, package_fingerprint: str) -> tuple[Path, ...]:
+        history = self.package_directory(task_id, package_fingerprint) / "history"
+        if not history.is_dir():
+            return ()
+        return tuple(sorted(path for path in history.iterdir() if path.is_dir()))
+
+    def _archive_current_history(
+        self,
+        task_id: str,
+        package_fingerprint: str,
+        records: tuple[SegmentExecutionRecord, ...],
+    ) -> None:
+        directory = self.package_directory(task_id, package_fingerprint)
+        execution_ids = {
+            record.provider_execution_id
+            for record in records
+            if record.provider_execution_id is not None
+        }
+        if len(execution_ids) == 1:
+            label = next(iter(execution_ids))
+        else:
+            label = max((record.updated_at for record in records), default="unbound")
+        identity = hashlib.sha256(label.encode()).hexdigest()[:16]
+        history_root = directory / "history"
+        history_root.mkdir(parents=True, exist_ok=True)
+        destination = history_root / identity
+        suffix = 1
+        while destination.exists():
+            destination = history_root / f"{identity}-{suffix:02d}"
+            suffix += 1
+        destination.mkdir(parents=True)
+        for path in tuple(directory.iterdir()):
+            if path.name == "history":
+                continue
+            shutil.move(str(path), str(destination / path.name))
