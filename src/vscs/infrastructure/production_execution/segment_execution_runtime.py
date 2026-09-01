@@ -105,5 +105,7 @@ class SegmentExecutionStore:
         return path
 
     def _package_directory(self, task_id: str, package_fingerprint: str) -> Path:
-        identity = hashlib.sha256(f"{task_id}:{package_fingerprint}".encode("utf-8")).hexdigest()[:16]
+        identity = hashlib.sha256(f"{task_id}:{package_fingerprint}".encode("utf-8")).hexdigest()[
+            :16
+        ]
         return self.root / task_id / identity
