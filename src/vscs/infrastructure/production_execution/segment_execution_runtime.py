@@ -23,13 +23,16 @@ class SegmentExecutionRecord:
     state: str
     provider_execution_id: str | None = None
     provider_prompt_id: str | None = None
+    render_job_id: str | None = None
+    render_request_id: str | None = None
+    submitted_at: str | None = None
     continuity_input_path: str | None = None
     output_path: str | None = None
     final_frame_path: str | None = None
     error_message: str | None = None
     updated_at: str = ""
 
-    def with_state(self, state: str, **changes: object) -> "SegmentExecutionRecord":
+    def with_state(self, state: str, **changes: object) -> SegmentExecutionRecord:
         return replace(
             self,
             state=state,
@@ -79,7 +82,7 @@ class SegmentExecutionStore:
     def list_for_package(
         self, task_id: str, package_fingerprint: str
     ) -> tuple[SegmentExecutionRecord, ...]:
-        directory = self._package_directory(task_id, package_fingerprint)
+        directory = self.package_directory(task_id, package_fingerprint)
         if not directory.is_dir():
             return ()
         records: list[SegmentExecutionRecord] = []
@@ -93,7 +96,7 @@ class SegmentExecutionStore:
         return tuple(sorted(records, key=lambda item: item.segment_index))
 
     def save(self, record: SegmentExecutionRecord) -> Path:
-        directory = self._package_directory(record.task_id, record.package_fingerprint)
+        directory = self.package_directory(record.task_id, record.package_fingerprint)
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / f"{record.segment_id}.json"
         temporary = path.with_suffix(".json.tmp")
@@ -104,8 +107,6 @@ class SegmentExecutionStore:
         temporary.replace(path)
         return path
 
-    def _package_directory(self, task_id: str, package_fingerprint: str) -> Path:
-        identity = hashlib.sha256(f"{task_id}:{package_fingerprint}".encode("utf-8")).hexdigest()[
-            :16
-        ]
+    def package_directory(self, task_id: str, package_fingerprint: str) -> Path:
+        identity = hashlib.sha256(f"{task_id}:{package_fingerprint}".encode()).hexdigest()[:16]
         return self.root / task_id / identity
