@@ -39,6 +39,7 @@ from .ltx23_v721_backend import (
     LocalLTX23V721ProductionPackageCompilationService,
 )
 from .package_compilation import LocalProductionPackageCompilationError
+from .provider_reference_helper import GovernedProviderReferenceHelperBuilder
 
 
 class _ProjectDirectoryView:
@@ -141,6 +142,10 @@ class CurrentAuthorityLTX23V721ProductionPackageCompilationService(
     LocalLTX23V721ProductionPackageCompilationService
 ):
     """Compile only from the current READY UPD and never from matching history."""
+
+    def _provider_reference_plan(self, raw_plan: object) -> dict[str, Any]:
+        plan = super()._provider_reference_plan(raw_plan)
+        return GovernedProviderReferenceHelperBuilder(self.project_directory).ensure_helper(plan)
 
     def _authority_source(self, task: ProductionTask) -> ProductionPackage:
         source = self._refresh_current_ready_upd(task)
