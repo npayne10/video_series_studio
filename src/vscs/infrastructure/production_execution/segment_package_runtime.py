@@ -20,7 +20,7 @@ class SegmentPackageMaterializationError(RuntimeError):
 
 
 class SegmentPackageMaterializer:
-    """Create deterministic per-segment packages under durable execution storage."""
+    """Create immutable fingerprinted per-segment package derivatives."""
 
     ROOT = Path(".vscs") / "provider_executions" / "segments"
 
@@ -129,11 +129,14 @@ class SegmentPackageMaterializer:
         manifest["provider_segment_id"] = segment_id
         payload = dict(content)
         payload.pop("_vscs_manifest", None)
-        manifest["package_fingerprint"] = _fingerprint(payload)
+        segment_fingerprint = _fingerprint(payload)
+        manifest["package_fingerprint"] = segment_fingerprint
 
         directory = self._package_directory(task_id, parent_fingerprint) / "packages"
         directory.mkdir(parents=True, exist_ok=True)
-        path = directory / f"{segment_id}.json"
+        path = directory / f"{segment_id}-{segment_fingerprint[:12].upper()}.json"
+        if path.is_file():
+            return path
         temporary = path.with_suffix(".json.tmp")
         temporary.write_text(
             json.dumps(content, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
