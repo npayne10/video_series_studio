@@ -295,6 +295,7 @@ class ProductionPackageCompilerService:
     def _render_settings(cls, production: dict[str, Any], profile: str) -> dict[str, Any]:
         render = cls._mapping(production.get("render"))
         shot = cls._mapping(production.get("shot"))
+        action_performance = cls._mapping(production.get("action_performance"))
         defaults = {
             "preview": (1280, 720, 24, 145, 1.0, 0.85),
             "production": (1280, 720, 24, 145, 1.0, 1.0),
@@ -304,7 +305,7 @@ class ProductionPackageCompilerService:
             raise ProductionPackageCompilationError(
                 f"Unsupported production execution profile: {profile}"
             )
-        width, height, fps, frames, cfg, strength = defaults[profile]
+        width, height, fps, default_frames, cfg, strength = defaults[profile]
         width = cls._positive_int(render, ("width",), width)
         height = cls._positive_int(render, ("height",), height)
         fps = cls._positive_int(
@@ -312,11 +313,28 @@ class ProductionPackageCompilerService:
             ("frames_per_second", "fps"),
             cls._positive_int(shot, ("frames_per_second", "fps"), fps),
         )
-        frames = cls._positive_int(
-            render,
-            ("frame_count", "frames"),
-            cls._positive_int(shot, ("frame_count", "frames"), frames),
-        )
+
+        explicit_frames = cls._optional_positive_int(render, ("frame_count", "frames"))
+        if explicit_frames is None:
+            explicit_frames = cls._optional_positive_int(shot, ("frame_count", "frames"))
+        if explicit_frames is not None:
+            frames = explicit_frames
+        else:
+            runtime_seconds = cls._optional_positive_float(
+                shot,
+                ("target_runtime_seconds", "runtime_seconds", "duration_seconds"),
+            )
+            if runtime_seconds is None:
+                runtime_seconds = cls._optional_positive_float(
+                    action_performance,
+                    ("target_runtime_seconds", "runtime_seconds", "duration_seconds"),
+                )
+            frames = (
+                max(1, round(runtime_seconds * fps))
+                if runtime_seconds is not None
+                else default_frames
+            )
+
         cfg = cls._positive_float(render, ("cfg", "guidance_scale"), cfg)
         strength = cls._positive_float(
             render,
@@ -364,19 +382,29 @@ class ProductionPackageCompilerService:
 
     @staticmethod
     def _positive_int(value: dict[str, Any], keys: tuple[str, ...], default: int) -> int:
+        resolved = ProductionPackageCompilerService._optional_positive_int(value, keys)
+        return resolved if resolved is not None else default
+
+    @staticmethod
+    def _optional_positive_int(value: dict[str, Any], keys: tuple[str, ...]) -> int | None:
         for key in keys:
             raw = value.get(key)
             if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
                 return raw
-        return default
+        return None
 
     @staticmethod
     def _positive_float(value: dict[str, Any], keys: tuple[str, ...], default: float) -> float:
+        resolved = ProductionPackageCompilerService._optional_positive_float(value, keys)
+        return resolved if resolved is not None else default
+
+    @staticmethod
+    def _optional_positive_float(value: dict[str, Any], keys: tuple[str, ...]) -> float | None:
         for key in keys:
             raw = value.get(key)
             if isinstance(raw, int | float) and not isinstance(raw, bool) and raw > 0:
                 return float(raw)
-        return default
+        return None
 
     @classmethod
     def _derived_seed(cls, authority_fingerprint: str, profile: str) -> int:
