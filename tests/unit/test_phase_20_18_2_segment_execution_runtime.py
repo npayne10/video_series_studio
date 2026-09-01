@@ -41,7 +41,25 @@ def test_segment_execution_store_initializes_durable_records(tmp_path: Path) -> 
     assert store.list_for_package("PT-TEST", "package-fingerprint") == records
 
 
-def test_segment_execution_store_reuses_existing_history(tmp_path: Path) -> None:
+def test_segment_execution_store_reuses_clean_planned_records(tmp_path: Path) -> None:
+    store = SegmentExecutionStore(tmp_path)
+    records = store.initialize(
+        task_id="PT-TEST",
+        package_fingerprint="package-fingerprint",
+        segments=_segments(),
+    )
+
+    reloaded = store.initialize(
+        task_id="PT-TEST",
+        package_fingerprint="package-fingerprint",
+        segments=_segments(),
+    )
+
+    assert reloaded == records
+    assert store.history_directories("PT-TEST", "package-fingerprint") == ()
+
+
+def test_segment_execution_store_archives_prior_attempt_before_retry(tmp_path: Path) -> None:
     store = SegmentExecutionStore(tmp_path)
     records = store.initialize(
         task_id="PT-TEST",
@@ -50,18 +68,26 @@ def test_segment_execution_store_reuses_existing_history(tmp_path: Path) -> None
     )
     first = records[0].with_state(
         "COMPLETED",
-        provider_execution_id="PE-001",
+        provider_execution_id="PEX-ATTEMPT-001",
         output_path="segment-1.mp4",
         final_frame_path="segment-1-final.png",
     )
+    second = records[1].with_state(
+        "FAILED",
+        provider_execution_id="PEX-ATTEMPT-001",
+        error_message="provider failed",
+    )
     store.save(first)
+    store.save(second)
 
-    reloaded = store.initialize(
+    retry = store.initialize(
         task_id="PT-TEST",
         package_fingerprint="package-fingerprint",
         segments=_segments(),
     )
 
-    assert reloaded[0].state == "COMPLETED"
-    assert reloaded[0].output_path == "segment-1.mp4"
-    assert reloaded[1].state == "PLANNED"
+    assert all(record.state == "PLANNED" for record in retry)
+    history = store.history_directories("PT-TEST", "package-fingerprint")
+    assert len(history) == 1
+    assert (history[0] / "SEG-001.json").is_file()
+    assert (history[0] / "SEG-002.json").is_file()
