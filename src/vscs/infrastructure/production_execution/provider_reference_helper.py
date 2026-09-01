@@ -62,7 +62,11 @@ class GovernedProviderReferenceHelperBuilder:
         enriched["bindings"] = enriched_bindings
 
         references_raw = enriched.get("references")
-        references = [dict(item) for item in references_raw if isinstance(item, dict)] if isinstance(references_raw, list) else []
+        references = (
+            [dict(item) for item in references_raw if isinstance(item, dict)]
+            if isinstance(references_raw, list)
+            else []
+        )
         references.append(self._reference_record(helper, required))
         enriched["references"] = references
         enriched["provider_helper"] = self._helper_status(helper, required, generated=True)
@@ -95,7 +99,9 @@ class GovernedProviderReferenceHelperBuilder:
             try:
                 count = len(required)
                 for index, binding in enumerate(required):
-                    source_path = Path(str(binding.get("path") or "")).expanduser().resolve(strict=False)
+                    source_path = (
+                        Path(str(binding.get("path") or "")).expanduser().resolve(strict=False)
+                    )
                     source = QImage(str(source_path))
                     if source.isNull():
                         raise LocalProductionPackageCompilationError(
@@ -176,9 +182,7 @@ class GovernedProviderReferenceHelperBuilder:
                 )
 
     @staticmethod
-    def _reference_record(
-        helper: dict[str, Any], required: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def _reference_record(helper: dict[str, Any], required: list[dict[str, Any]]) -> dict[str, Any]:
         return {
             "reference_id": helper["reference_id"],
             "role": "scene_composition_anchor",
