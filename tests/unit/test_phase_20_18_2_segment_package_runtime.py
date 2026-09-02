@@ -65,9 +65,7 @@ def _segment(index: int, segment_id: str, seed: int) -> dict[str, object]:
         "frame_count": 176,
         "seed": seed,
         "continuity_input": (
-            "governed_initial_reference"
-            if index == 1
-            else "previous_segment_final_frame"
+            "governed_initial_reference" if index == 1 else "previous_segment_final_frame"
         ),
     }
 

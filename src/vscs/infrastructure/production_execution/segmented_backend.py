@@ -8,6 +8,7 @@ continuity anchor, and assemble one final governed GeneratedMedia artifact.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -41,7 +42,7 @@ from .current_authority_backend import (
 from .package_compilation import LocalProductionPackageCompilationError
 from .provider_segmentation import GovernedProviderSegmentationPlanner
 from .segment_execution_runtime import SegmentExecutionRecord, SegmentExecutionStore
-from .segment_media_runtime import SegmentMediaRuntime, SegmentMediaRuntimeError
+from .segment_media_runtime import SegmentMediaRuntime
 from .segment_package_runtime import (
     SegmentPackageMaterializationError,
     SegmentPackageMaterializer,
@@ -151,7 +152,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("Production Package has no VSCS compilation manifest.")
         package_fingerprint = str(manifest.get("package_fingerprint") or "").strip()
         if not package_fingerprint:
-            raise ProductionExecutionError("Production Package manifest has no package fingerprint.")
+            raise ProductionExecutionError(
+                "Production Package manifest has no package fingerprint."
+            )
 
         queue = ProductionQueueCompilerService(self.schedules, self.tasks).compile(
             task.production_id
@@ -384,12 +387,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
 
         try:
             outputs = active.adapter.fetch_outputs(refreshed)
-            video_output, video_path = self._segment_video_output(outputs)
+            _video_output, video_path = self._segment_video_output(outputs)
             record = self._current_segment_record(active)
-            frame_directory = self.segment_executions.package_directory(
-                task.task_id,
-                active.parent_package_fingerprint,
-            ) / "frames"
+            frame_directory = (
+                self.segment_executions.package_directory(
+                    task.task_id,
+                    active.parent_package_fingerprint,
+                )
+                / "frames"
+            )
             final_frame = SegmentMediaRuntime().capture_final_frame(
                 video_path,
                 frame_count=record.frame_count,
@@ -483,7 +489,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 task.task_id,
                 active.parent_package_fingerprint,
             )
-            if len(records) != segment_count or any(record.state != "COMPLETED" for record in records):
+            if len(records) != segment_count or any(
+                record.state != "COMPLETED" for record in records
+            ):
                 raise ProductionExecutionError(
                     "Segment assembly requires every planned segment to be COMPLETED."
                 )
@@ -614,11 +622,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             base_request.render,
             width=int(parent.get("width", base_request.render.width)),
             height=int(parent.get("height", base_request.render.height)),
-            frames_per_second=int(parent.get("frames_per_second", base_request.render.frames_per_second)),
+            frames_per_second=int(
+                parent.get("frames_per_second", base_request.render.frames_per_second)
+            ),
             frame_count=frame_count,
             seed=seed,
         )
-        output = replace(base_request.output, filename_stem=f"{base_request.output.filename_stem}-{segment_id}")
+        output = replace(
+            base_request.output, filename_stem=f"{base_request.output.filename_stem}-{segment_id}"
+        )
         metadata = dict(base_request.metadata)
         metadata["production_package"] = str(package_path.resolve(strict=False))
         metadata["provider_segment_id"] = segment_id
@@ -648,7 +660,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         root = self._require_comfyui_output_directory().resolve(strict=False)
         path = (root / output.relative_path).resolve(strict=False)
         if path != root and root not in path.parents:
-            raise ProductionExecutionError("Provider segment output escapes the configured ComfyUI output root.")
+            raise ProductionExecutionError(
+                "Provider segment output escapes the configured ComfyUI output root."
+            )
         if not path.is_file():
             raise ProductionExecutionError(f"Provider segment video does not exist: {path}")
         return output, path
@@ -691,15 +705,13 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         segment_number: int,
         message: str,
     ) -> ProductionExecutionResult:
-        try:
+        with contextlib.suppress(Exception):
             active.service.runtime.fail(
                 active.queue,
                 active.candidate.queue_entry_id,
                 active.lease_id,
                 message,
             )
-        except Exception:
-            pass
         failed_parent = self._parent_handle(
             active.handle,
             execution_id=active.context.execution_id,
@@ -709,10 +721,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             segment_count=len(active.segments),
             failure_reason=message,
         )
-        try:
+        with contextlib.suppress(Exception):
             self.execution_jobs.observe(active.context.execution_id, failed_parent)
-        except Exception:
-            pass
         records = self.segment_executions.list_for_package(
             active.context.task_id,
             active.parent_package_fingerprint,

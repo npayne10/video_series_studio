@@ -89,9 +89,7 @@ class SegmentMediaRuntime:
                 "Segmented assembly requires at least two provider segment videos"
             )
         if expected_frame_count <= 0 or expected_frames_per_second <= 0:
-            raise SegmentMediaRuntimeError(
-                "Governed assembly frame count and FPS must be positive"
-            )
+            raise SegmentMediaRuntimeError("Governed assembly frame count and FPS must be positive")
         resolved = tuple(Path(path).expanduser().resolve(strict=False) for path in segment_paths)
         missing = tuple(str(path) for path in resolved if not path.is_file())
         if missing:
@@ -205,4 +203,6 @@ class SegmentMediaRuntime:
             )
         except (OSError, subprocess.SubprocessError) as exc:
             command = " ".join(args[:2])
-            raise SegmentMediaRuntimeError(f"Segment media command failed ({command}): {exc}") from exc
+            raise SegmentMediaRuntimeError(
+                f"Segment media command failed ({command}): {exc}"
+            ) from exc
