@@ -71,6 +71,9 @@ def test_ltx23_production_manifest_is_package_driven_and_parseable() -> None:
     assert manifest.workflow_file == LTX23_V721_WORKFLOW_FILE
     assert manifest.bindings == ()
     assert dict(manifest.extra)["binding_mode"] == "production_package_v7_2_1"
+    assert dict(manifest.extra)["governed_reference_resolution"] == "VSCSMultiReferenceResolverV721"
+    assert dict(manifest.extra)["provider_visual_input_limit"] == "3"
+    assert "governed_multi_reference" in manifest.capabilities
 
 
 def test_exported_production_backend_builds_v721_package_adapter(tmp_path: Path) -> None:
@@ -215,3 +218,16 @@ def test_deployment_assurance_rejects_missing_governed_reference_resolver(tmp_pa
     issues = LTX23V721DeploymentAssurance(workflow_root).inspect()
 
     assert any("governed reference resolver" in issue for issue in issues)
+
+
+def test_deployment_assurance_rejects_broken_multi_reference_guide_chain(tmp_path: Path) -> None:
+    workflow_root = tmp_path / "resources" / "workflows"
+    workflow_path = workflow_root / LTX23_V721_WORKFLOW_FILE
+    workflow_path.parent.mkdir(parents=True)
+    raw = json.loads((WORKFLOW_ROOT / LTX23_V721_WORKFLOW_FILE).read_text(encoding="utf-8"))
+    raw["109"]["inputs"]["latent"] = ["103", 0]
+    workflow_path.write_text(json.dumps(raw), encoding="utf-8")
+
+    issues = LTX23V721DeploymentAssurance(workflow_root).inspect()
+
+    assert any("latent chain is broken" in issue for issue in issues)
