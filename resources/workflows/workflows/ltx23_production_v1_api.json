@@ -192,11 +192,11 @@
     "class_type": "LTXVCropGuides",
     "inputs": {
       "positive": [
-        "9",
+        "110",
         0
       ],
       "negative": [
-        "9",
+        "110",
         1
       ],
       "latent": [
