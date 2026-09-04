@@ -35,11 +35,11 @@ from .stale_reconciliation_backend import (
 LTX23_V721_WORKFLOW_ID = "ltx23_production_v1"
 LTX23_V721_WORKFLOW_FILE = "workflows/ltx23_production_v1_api.json"
 LTX23_V721_MANIFEST_FILE = "ltx23_production_v1.json"
-LTX23_V721_PACKAGE_SCHEMA = "7.2.1-vscs-1"
+LTX23_V721_PACKAGE_SCHEMA = "7.2.1-vscs-2"
 LTX23_V721_PACKAGE_LOADER_CLASS = "VSCSProductionPackageLoaderV720"
 LTX23_V721_PACKAGE_LOADER_TITLE = "VSCS Production Package — Governed References v7.2.1"
-LTX23_V721_REFERENCE_RESOLVER_CLASS = "VSCSReferenceResolverV720"
-LTX23_V721_REFERENCE_RESOLVER_TITLE = "VSCS Governed Reference Resolver v7.2.0"
+LTX23_V721_REFERENCE_RESOLVER_CLASS = "VSCSMultiReferenceResolverV721"
+LTX23_V721_REFERENCE_RESOLVER_TITLE = "VSCS Governed Multi-Reference Resolver v7.2.1"
 _IDENTITY_ROLES = frozenset({"primary_identity", "secondary_identity", "group_identity"})
 
 
