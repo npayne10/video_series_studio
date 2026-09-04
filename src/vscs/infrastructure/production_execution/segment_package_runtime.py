@@ -1,9 +1,9 @@
 """Materialize governed provider-segment Production Package derivatives.
 
 The parent Production Package remains the only Shot authority. Segment packages are
-provider-execution derivatives that narrow frame count/seed/output identity and, for
-segments after the first, bind the previous segment final frame as the provider
-scene-composition continuity anchor without removing the original governed references.
+provider-execution derivatives that narrow frame count/seed/output identity. Segments
+after the first add a separate continuity input while preserving every original
+governed LTX Ingredients reference unchanged.
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ class SegmentPackageMaterializer:
         output["filename_prefix"] = f"{base_prefix}/segments/{segment_id}"
 
         content["provider_segment"] = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "segment_id": segment_id,
             "index": index,
             "start_frame": int(segment.get("start_frame", 0)),
@@ -121,7 +121,7 @@ class SegmentPackageMaterializer:
         }
 
         if continuity_input_path is not None:
-            self._bind_continuity_anchor(content, Path(continuity_input_path))
+            self._bind_continuity_input(content, Path(continuity_input_path))
 
         manifest = content.get("_vscs_manifest")
         assert isinstance(manifest, dict)
@@ -145,7 +145,7 @@ class SegmentPackageMaterializer:
         temporary.replace(path)
         return path
 
-    def _bind_continuity_anchor(self, content: dict[str, Any], path: Path) -> None:
+    def _bind_continuity_input(self, content: dict[str, Any], path: Path) -> None:
         resolved = path.expanduser().resolve(strict=False)
         if not resolved.is_file():
             raise SegmentPackageMaterializationError(
@@ -157,40 +157,24 @@ class SegmentPackageMaterializer:
             raise SegmentPackageMaterializationError(
                 "Segment continuity requires a provider ReferencePlan"
             )
-        bindings = plan.get("bindings")
-        if not isinstance(bindings, list):
+        multi = plan.get("provider_multi_reference")
+        if not isinstance(multi, dict) or multi.get("mode") != "ltx_ingredients_iclora":
             raise SegmentPackageMaterializationError(
-                "Provider ReferencePlan has no bindings for continuity"
+                "Segment continuity requires the LTX Ingredients multi-reference contract"
             )
-        anchors = [
-            item
-            for item in bindings
-            if isinstance(item, dict) and item.get("role") == "scene_composition_anchor"
-        ]
-        if len(anchors) != 1:
+        references = multi.get("references")
+        if not isinstance(references, list) or not references:
             raise SegmentPackageMaterializationError(
-                "Provider ReferencePlan must contain exactly one scene_composition_anchor "
-                "before segmented continuity binding"
+                "LTX Ingredients multi-reference contract has no governed references"
             )
-        anchor = anchors[0]
-        original_reference_id = str(anchor.get("reference_id") or "")
-        anchor["path"] = str(resolved)
-        anchor["file_checksum"] = checksum
-        anchor["reference_fingerprint"] = checksum
-        anchor["provider_ready"] = True
-        anchor["required"] = True
-        anchor["derivative_type"] = "provider_specific_helper"
-        anchor["notes"] = "Previous provider segment final frame continuity anchor"
-        anchor["segment_continuity"] = True
-        anchor["source_provider_helper_reference_id"] = original_reference_id
 
-        provider_helper = plan.get("provider_helper")
-        if not isinstance(provider_helper, dict):
-            provider_helper = {}
-            plan["provider_helper"] = provider_helper
-        provider_helper["status"] = "segment_continuity"
-        provider_helper["continuity_input_path"] = str(resolved)
-        provider_helper["continuity_input_checksum"] = checksum
+        multi["continuity"] = {
+            "role": "previous_segment_final_frame",
+            "path": str(resolved),
+            "file_checksum": checksum,
+            "reference_fingerprint": checksum,
+            "provider_ready": True,
+        }
 
     def _package_directory(self, task_id: str, package_fingerprint: str) -> Path:
         identity = hashlib.sha256(f"{task_id}:{package_fingerprint}".encode()).hexdigest()[:16]
