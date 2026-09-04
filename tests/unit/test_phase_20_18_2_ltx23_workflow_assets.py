@@ -49,6 +49,8 @@ def test_ltx23_workflow_chains_three_governed_ingredients_guides() -> None:
     assert workflow["37"]["inputs"]["positive"] == ["110", 0]
     assert workflow["37"]["inputs"]["negative"] == ["110", 1]
     assert workflow["23"]["inputs"]["video_latent"] == ["110", 2]
+    assert workflow["17"]["inputs"]["positive"] == ["110", 0]
+    assert workflow["17"]["inputs"]["negative"] == ["110", 1]
 
 
 def test_segment_continuity_is_separate_from_governed_reference_guides() -> None:
