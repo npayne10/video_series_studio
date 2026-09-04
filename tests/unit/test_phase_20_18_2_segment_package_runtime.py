@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 from pathlib import Path
 
@@ -11,11 +10,40 @@ from vscs.infrastructure.production_execution.segment_package_runtime import (
 
 
 def _parent(tmp_path: Path) -> dict:
-    helper = tmp_path / "helper.png"
-    helper.write_bytes(b"provider-helper")
-    checksum = hashlib.sha256(helper.read_bytes()).hexdigest()
+    james = tmp_path / "james.png"
+    sandra = tmp_path / "sandra.png"
+    xorix = tmp_path / "xorix.png"
+    james.write_bytes(b"james")
+    sandra.write_bytes(b"sandra")
+    xorix.write_bytes(b"xorix")
+    references = [
+        {
+            "slot": 1,
+            "reference_id": "REF-JAMES",
+            "role": "primary_identity",
+            "path": str(james),
+            "required": True,
+            "provider_ready": True,
+        },
+        {
+            "slot": 2,
+            "reference_id": "REF-SANDRA",
+            "role": "secondary_identity",
+            "path": str(sandra),
+            "required": True,
+            "provider_ready": True,
+        },
+        {
+            "slot": 3,
+            "reference_id": "REF-XORIX",
+            "role": "environment_reference",
+            "path": str(xorix),
+            "required": True,
+            "provider_ready": True,
+        },
+    ]
     return {
-        "schema_version": "7.2.1-vscs-1",
+        "schema_version": "7.2.1-vscs-2",
         "frame_count": 528,
         "frames_per_second": 24,
         "seed": 1000,
@@ -27,23 +55,23 @@ def _parent(tmp_path: Path) -> dict:
         "reference_plan": {
             "bindings": [
                 {
-                    "reference_id": "REF-JAMES",
-                    "role": "primary_identity",
-                    "path": str(tmp_path / "james.png"),
-                    "required": True,
-                },
-                {
-                    "reference_id": "HELPER-001",
-                    "role": "scene_composition_anchor",
-                    "path": str(helper),
+                    "reference_id": item["reference_id"],
+                    "role": item["role"],
+                    "path": item["path"],
                     "required": True,
                     "provider_ready": True,
-                    "file_checksum": checksum,
-                    "reference_fingerprint": checksum,
-                    "derivative_type": "provider_specific_helper",
-                },
+                }
+                for item in references
             ],
-            "provider_helper": {"status": "generated"},
+            "provider_multi_reference": {
+                "schema_version": "1.0",
+                "enabled": True,
+                "mode": "ltx_ingredients_iclora",
+                "collapsed_scene_anchor": False,
+                "reference_count": 3,
+                "references": references,
+                "continuity": None,
+            },
         },
         "provider_execution_plan": {
             "mode": "segmented",
@@ -90,10 +118,13 @@ def test_segment_package_narrows_provider_runtime_without_mutating_parent(tmp_pa
     assert payload["provider_segment"]["parent_package_fingerprint"] == "parent-fingerprint"
     assert payload["_vscs_manifest"]["parent_package_fingerprint"] == "parent-fingerprint"
     assert payload["_vscs_manifest"]["package_fingerprint"] != "parent-fingerprint"
+    assert payload["reference_plan"]["provider_multi_reference"]["continuity"] is None
     assert "SEG-001" in path.name
 
 
-def test_next_segment_rebinds_only_provider_helper_to_previous_final_frame(tmp_path: Path) -> None:
+def test_next_segment_adds_continuity_without_mutating_governed_references(
+    tmp_path: Path,
+) -> None:
     parent = _parent(tmp_path)
     original = copy.deepcopy(parent)
     final_frame = tmp_path / "seg-001-final.png"
@@ -107,16 +138,17 @@ def test_next_segment_rebinds_only_provider_helper_to_previous_final_frame(tmp_p
         continuity_input_path=str(final_frame),
     )
     payload = json.loads(path.read_text(encoding="utf-8"))
-    bindings = payload["reference_plan"]["bindings"]
-    identity = next(item for item in bindings if item["role"] == "primary_identity")
-    helper = next(item for item in bindings if item["role"] == "scene_composition_anchor")
 
     assert parent == original
-    assert identity == original["reference_plan"]["bindings"][0]
-    assert helper["path"] == str(final_frame.resolve(strict=False))
-    assert helper["segment_continuity"] is True
-    assert helper["source_provider_helper_reference_id"] == "HELPER-001"
-    assert payload["reference_plan"]["provider_helper"]["status"] == "segment_continuity"
+    assert payload["reference_plan"]["bindings"] == original["reference_plan"]["bindings"]
+    assert (
+        payload["reference_plan"]["provider_multi_reference"]["references"]
+        == original["reference_plan"]["provider_multi_reference"]["references"]
+    )
+    continuity = payload["reference_plan"]["provider_multi_reference"]["continuity"]
+    assert continuity["role"] == "previous_segment_final_frame"
+    assert continuity["path"] == str(final_frame.resolve(strict=False))
+    assert continuity["provider_ready"] is True
 
 
 def test_different_continuity_frames_create_immutable_distinct_packages(tmp_path: Path) -> None:
