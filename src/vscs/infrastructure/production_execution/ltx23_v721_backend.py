@@ -115,6 +115,7 @@ class LTX23V721DeploymentAssurance:
                 issues.append(
                     "v7.2.1 governed reference resolver strict validation must remain enabled"
                 )
+        self._inspect_multi_reference_wiring(raw, issues)
         return tuple(issues)
 
     @classmethod
@@ -137,6 +138,44 @@ class LTX23V721DeploymentAssurance:
         ]
         if len(matches) != 1:
             issues.append(f"v7.2.1 {label} must resolve to exactly one semantic workflow node")
+
+    @staticmethod
+    def _inspect_multi_reference_wiring(
+        workflow: dict[str, object],
+        issues: list[str],
+    ) -> None:
+        expected = {
+            "9": (["108", 0], ["108", 3], None),
+            "109": (["108", 1], ["108", 4], ["9", 2]),
+            "110": (["108", 2], ["108", 5], ["109", 2]),
+        }
+        for node_id, (image, strength, latent) in expected.items():
+            node = workflow.get(node_id)
+            inputs = node.get("inputs") if isinstance(node, dict) else None
+            if not isinstance(inputs, dict) or node.get("class_type") != "LTXAddVideoICLoRAGuide":
+                issues.append(
+                    f"v7.2.1 governed multi-reference guide node {node_id} is missing"
+                )
+                continue
+            if inputs.get("image") != image or inputs.get("strength") != strength:
+                issues.append(
+                    f"v7.2.1 governed multi-reference guide node {node_id} is miswired"
+                )
+            if latent is not None and inputs.get("latent") != latent:
+                issues.append(
+                    f"v7.2.1 governed multi-reference guide node {node_id} latent chain is broken"
+                )
+        continuity = workflow.get("103")
+        continuity_inputs = (
+            continuity.get("inputs") if isinstance(continuity, dict) else None
+        )
+        if not isinstance(continuity_inputs, dict) or (
+            continuity_inputs.get("image") != ["108", 6]
+            or continuity_inputs.get("bypass") != ["108", 7]
+        ):
+            issues.append(
+                "v7.2.1 segment continuity must remain separate from governed reference guides"
+            )
 
     @staticmethod
     def _matching_node(
