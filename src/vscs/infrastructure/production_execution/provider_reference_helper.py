@@ -85,6 +85,7 @@ class GovernedProviderReferenceHelperBuilder:
                     "reference_id": str(item.get("reference_id") or ""),
                     "asset_id": str(item.get("asset_id") or ""),
                     "role": str(item.get("role") or ""),
+                    "label": str(item.get("notes") or item.get("asset_id") or ""),
                     "path": str(item.get("path") or ""),
                     "required": True,
                     "provider_ready": item.get("provider_ready") is True,
