@@ -197,9 +197,9 @@ def test_production_manifest_declares_governed_package_binding_contract(
     assert manifest.bindings == ()
     assert manifest.metadata.workflow_version == "7.2.1"
     assert extra["binding_mode"] == "production_package_v7_2_1"
-    assert extra["governed_reference_resolution"] == "VSCSReferenceResolverV720"
-    assert extra["provider_visual_input_limit"] == "1"
-    assert "ComfyUI-VSCS-Production-v720" in requirement_ids
+    assert extra["governed_reference_resolution"] == "VSCSMultiReferenceResolverV721"
+    assert extra["provider_visual_input_limit"] == "3"
+    assert "ComfyUI-VSCS-Production-v721" in requirement_ids
     assert "LTX-2.3 Ingredients IC-LoRA" in requirement_ids
 
 
