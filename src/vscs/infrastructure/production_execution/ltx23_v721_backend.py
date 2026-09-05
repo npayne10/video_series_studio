@@ -153,22 +153,16 @@ class LTX23V721DeploymentAssurance:
             node = workflow.get(node_id)
             inputs = node.get("inputs") if isinstance(node, dict) else None
             if not isinstance(inputs, dict) or node.get("class_type") != "LTXAddVideoICLoRAGuide":
-                issues.append(
-                    f"v7.2.1 governed multi-reference guide node {node_id} is missing"
-                )
+                issues.append(f"v7.2.1 governed multi-reference guide node {node_id} is missing")
                 continue
             if inputs.get("image") != image or inputs.get("strength") != strength:
-                issues.append(
-                    f"v7.2.1 governed multi-reference guide node {node_id} is miswired"
-                )
+                issues.append(f"v7.2.1 governed multi-reference guide node {node_id} is miswired")
             if latent is not None and inputs.get("latent") != latent:
                 issues.append(
                     f"v7.2.1 governed multi-reference guide node {node_id} latent chain is broken"
                 )
         continuity = workflow.get("103")
-        continuity_inputs = (
-            continuity.get("inputs") if isinstance(continuity, dict) else None
-        )
+        continuity_inputs = continuity.get("inputs") if isinstance(continuity, dict) else None
         if not isinstance(continuity_inputs, dict) or (
             continuity_inputs.get("image") != ["108", 6]
             or continuity_inputs.get("bypass") != ["108", 7]

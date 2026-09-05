@@ -45,8 +45,7 @@ class GovernedProviderReferenceHelperBuilder:
         bindings = [
             dict(item)
             for item in bindings_raw
-            if isinstance(item, dict)
-            and str(item.get("role") or "") not in _LEGACY_HELPER_ROLES
+            if isinstance(item, dict) and str(item.get("role") or "") not in _LEGACY_HELPER_ROLES
         ]
         required = [item for item in bindings if item.get("required") is True]
         if not required:
