@@ -61,8 +61,69 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             frame_count=compiled.frame_count,
             frames_per_second=compiled.frames_per_second,
             seed=compiled.seed,
+            width=compiled.width,
+            height=compiled.height,
         )
+        content = self._apply_provider_role_authority(content)
         self._refresh_manifest_fingerprint(content)
+        return content
+
+    @staticmethod
+    def _apply_provider_role_authority(content: dict[str, Any]) -> dict[str, Any]:
+        plan = content.get("reference_plan")
+        if not isinstance(plan, dict):
+            return content
+        multi = plan.get("provider_multi_reference")
+        if not isinstance(multi, dict):
+            return content
+        references = multi.get("references")
+        if not isinstance(references, list):
+            return content
+
+        role_lines: list[str] = []
+        for raw in references:
+            if not isinstance(raw, dict):
+                continue
+            role = str(raw.get("role") or "").strip()
+            label = str(raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or "").strip()
+            if not role or not label:
+                continue
+            role_lines.append(f"{role}: {label}")
+        if not role_lines:
+            return content
+
+        authority = (
+            "GOVERNED REFERENCE ROLE AUTHORITY. Treat each reference as a separate named visual "
+            "authority; do not merge, swap, duplicate, or substitute identities. "
+            + " | ".join(role_lines)
+            + ". Compose one coherent cinematic scene from the shot description. "
+            "Do not display the reference images as panels or cutaways. "
+            "Do not invent spoken dialogue or voices; authoritative dialogue/audio is supplied "
+            "by the VSCS audio pipeline."
+        )
+        positive = str(content.get("positive_prompt") or "").strip()
+        content["positive_prompt"] = f"{authority} {positive}".strip()
+        negative = str(content.get("negative_prompt") or "").strip()
+        audio_negative = (
+            "generated speech, invented dialogue, unscripted voice, identity swap, duplicated "
+            "character, merged identity, contact sheet, split screen, tiled references"
+        )
+        content["negative_prompt"] = (
+            f"{negative}, {audio_negative}".strip(", ") if negative else audio_negative
+        )
+        acpp = content.get("acpp")
+        if isinstance(acpp, dict):
+            prompts = acpp.get("prompts")
+            if isinstance(prompts, dict):
+                prompts["positive"] = content["positive_prompt"]
+                prompts["negative"] = content["negative_prompt"]
+            generation = acpp.get("generation")
+            if isinstance(generation, dict):
+                generation["audio_mode"] = "silent_visual_authority"
+        content["provider_dialogue_policy"] = {
+            "mode": "no_generated_dialogue",
+            "authoritative_audio_source": "vscs_audio_pipeline",
+        }
         return content
 
 
