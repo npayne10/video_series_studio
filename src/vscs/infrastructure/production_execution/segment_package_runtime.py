@@ -95,10 +95,8 @@ class SegmentPackageMaterializer:
             height_raw = provider_geometry.get("height")
             if isinstance(width_raw, int) and width_raw > 0:
                 provider_width = width_raw
-                content["width"] = provider_width
             if isinstance(height_raw, int) and height_raw > 0:
                 provider_height = height_raw
-                content["height"] = provider_height
 
         acpp = content.get("acpp")
         if not isinstance(acpp, dict):
@@ -113,10 +111,6 @@ class SegmentPackageMaterializer:
                 "Production Package ACPP has no generation object"
             )
         generation["seed"] = seed
-        if provider_width is not None:
-            generation["width"] = provider_width
-        if provider_height is not None:
-            generation["height"] = provider_height
         output = acpp.get("output")
         if not isinstance(output, dict):
             output = {}
