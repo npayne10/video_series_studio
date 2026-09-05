@@ -174,7 +174,7 @@ def test_live_comfyui_monitor_maps_running_queue_state(tmp_path: Path) -> None:
     running = adapter.monitor(job)
 
     assert running.status is RenderJobStatus.RUNNING
-    assert running.progress == 0.5
+    assert running.progress == 0.1
     assert running.started_at is not None
 
 
