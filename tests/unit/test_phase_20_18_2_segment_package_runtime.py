@@ -117,9 +117,9 @@ def test_segment_package_narrows_provider_runtime_without_mutating_parent(tmp_pa
     assert payload["seed"] == 1000
     assert payload["acpp"]["generation"]["seed"] == 1000
     assert payload["width"] == 1280
-    assert payload["height"] == 704
+    assert payload["height"] == 720
     assert payload["acpp"]["generation"]["width"] == 1280
-    assert payload["acpp"]["generation"]["height"] == 704
+    assert payload["acpp"]["generation"]["height"] == 720
     assert payload["provider_segment"]["provider_width"] == 1280
     assert payload["provider_segment"]["provider_height"] == 704
     assert payload["provider_segment"]["parent_package_fingerprint"] == "parent-fingerprint"
