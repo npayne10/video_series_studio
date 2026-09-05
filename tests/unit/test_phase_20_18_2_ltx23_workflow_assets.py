@@ -12,7 +12,7 @@ def test_ltx23_workflow_uses_expected_ingredients_lora_path() -> None:
     node = workflow["10"]
     assert node["class_type"] == "LTXICLoRALoaderModelOnly"
     assert (
-        node["inputs"]["lora_name"] == "LTX-2.3\\\\ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors"
+        node["inputs"]["lora_name"] == "LTX-2.3\\ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors"
     )
 
 
