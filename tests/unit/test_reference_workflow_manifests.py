@@ -71,7 +71,9 @@ def test_reference_manifests_load_and_declare_expected_profiles() -> None:
     assert preview.binding_for(WorkflowInputKind.POSITIVE_PROMPT) is not None
     assert production.bindings == ()
     assert dict(production.extra)["binding_mode"] == "production_package_v7_2_1"
-    assert dict(production.extra)["governed_reference_resolution"] == "VSCSMultiReferenceResolverV721"
+    assert (
+        dict(production.extra)["governed_reference_resolution"] == "VSCSMultiReferenceResolverV721"
+    )
 
 
 def test_reference_manifests_pass_compatibility_with_declared_resources() -> None:
