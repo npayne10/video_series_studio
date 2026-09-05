@@ -46,10 +46,12 @@ def _parent(tmp_path: Path) -> dict:
         "schema_version": "7.2.1-vscs-2",
         "frame_count": 528,
         "frames_per_second": 24,
+        "width": 1280,
+        "height": 720,
         "seed": 1000,
         "acpp": {
             "timing": {"frames": 528, "fps": 24},
-            "generation": {"seed": 1000},
+            "generation": {"seed": 1000, "width": 1280, "height": 720},
             "output": {"filename_prefix": "VSCS/EP-001/PT-TEST"},
         },
         "reference_plan": {
