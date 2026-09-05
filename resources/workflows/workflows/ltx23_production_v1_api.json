@@ -64,12 +64,12 @@
     "class_type": "EmptyLTXVLatentVideo",
     "inputs": {
       "width": [
-        "107",
-        8
+        "111",
+        0
       ],
       "height": [
-        "107",
-        9
+        "111",
+        1
       ],
       "length": [
         "107",
@@ -526,6 +526,23 @@
     },
     "_meta": {
       "title": "Governed IC-LoRA Guide — Environment"
+    }
+  },
+  "111": {
+    "class_type": "VSCSProviderGeometryV721",
+    "inputs": {
+      "governed_width": [
+        "107",
+        8
+      ],
+      "governed_height": [
+        "107",
+        9
+      ],
+      "alignment": 32
+    },
+    "_meta": {
+      "title": "VSCS Provider Geometry Adapter v7.2.1"
     }
   }
 }
