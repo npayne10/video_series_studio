@@ -19,10 +19,20 @@ class SegmentAssemblyResult:
     output_path: Path
     frame_count: int
     frames_per_second: float
+    width: int
+    height: int
+
+
+@dataclass(frozen=True, slots=True)
+class SegmentVideoInfo:
+    frame_count: int
+    frames_per_second: float
+    width: int
+    height: int
 
 
 class SegmentMediaRuntime:
-    """Use FFmpeg/FFprobe for exact continuity-frame capture and lossless concatenation."""
+    """Use FFmpeg/FFprobe for continuity capture and normalized governed assembly."""
 
     def __init__(
         self,
@@ -83,6 +93,10 @@ class SegmentMediaRuntime:
         destination: Path,
         expected_frame_count: int,
         expected_frames_per_second: int,
+        overlap_trim_frames: int = 0,
+        tail_trim_frames: int = 0,
+        expected_width: int | None = None,
+        expected_height: int | None = None,
     ) -> SegmentAssemblyResult:
         if len(segment_paths) < 2:
             raise SegmentMediaRuntimeError(
@@ -90,6 +104,9 @@ class SegmentMediaRuntime:
             )
         if expected_frame_count <= 0 or expected_frames_per_second <= 0:
             raise SegmentMediaRuntimeError("Governed assembly frame count and FPS must be positive")
+        if overlap_trim_frames < 0 or tail_trim_frames < 0:
+            raise SegmentMediaRuntimeError("Assembly trim values cannot be negative")
+
         resolved = tuple(Path(path).expanduser().resolve(strict=False) for path in segment_paths)
         missing = tuple(str(path) for path in resolved if not path.is_file())
         if missing:
@@ -97,49 +114,116 @@ class SegmentMediaRuntime:
                 "Cannot assemble missing provider segment video(s): " + ", ".join(missing)
             )
 
+        infos = tuple(self.inspect_video_info(path) for path in resolved)
+        for index, info in enumerate(infos, start=1):
+            if abs(info.frames_per_second - expected_frames_per_second) > 0.01:
+                raise SegmentMediaRuntimeError(
+                    f"Provider SEG-{index:03d} FPS does not match governed FPS: "
+                    f"expected {expected_frames_per_second}, observed "
+                    f"{info.frames_per_second:.6f}"
+                )
+        effective_total = sum(info.frame_count for info in infos) - overlap_trim_frames
+        if effective_total < expected_frame_count:
+            raise SegmentMediaRuntimeError(
+                "Provider segment media is too short after continuity-overlap removal: "
+                f"needs {expected_frame_count} frames, has {effective_total}"
+            )
+        if effective_total - tail_trim_frames < expected_frame_count:
+            raise SegmentMediaRuntimeError(
+                "Configured provider tail trim would remove governed frame authority"
+            )
+
         target = Path(destination).expanduser().resolve(strict=False)
         target.parent.mkdir(parents=True, exist_ok=True)
-        concat_file = target.with_suffix(".concat.txt")
-        concat_file.write_text(
-            "".join(f"file '{self._concat_escape(path)}'\n" for path in resolved),
-            encoding="utf-8",
+        width = expected_width or infos[0].width
+        height = expected_height or infos[0].height
+        if width <= 0 or height <= 0:
+            raise SegmentMediaRuntimeError("Governed output width and height must be positive")
+
+        args: list[str] = [
+            self.ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+        ]
+        for path in resolved:
+            args.extend(("-i", str(path)))
+
+        filters: list[str] = []
+        labels: list[str] = []
+        for index, info in enumerate(infos):
+            start = 0 if index == 0 else 1
+            if start >= info.frame_count:
+                raise SegmentMediaRuntimeError(
+                    f"Provider SEG-{index + 1:03d} has no frame after continuity trim"
+                )
+            label = f"v{index}"
+            filters.append(
+                f"[{index}:v]trim=start_frame={start},setpts=PTS-STARTPTS[{label}]"
+            )
+            labels.append(f"[{label}]")
+        filters.append(
+            "".join(labels)
+            + f"concat=n={len(labels)}:v=1:a=0,"
+            + f"trim=end_frame={expected_frame_count},setpts=PTS-STARTPTS,"
+            + f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            + f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black[vout]"
         )
-        try:
-            self._run(
-                self.ffmpeg,
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(concat_file),
-                "-c",
-                "copy",
+        args.extend(
+            (
+                "-filter_complex",
+                ";".join(filters),
+                "-map",
+                "[vout]",
+                "-r",
+                str(expected_frames_per_second),
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "medium",
+                "-crf",
+                "18",
+                "-pix_fmt",
+                "yuv420p",
                 str(target),
             )
-        finally:
-            concat_file.unlink(missing_ok=True)
+        )
+        self._run(*args)
 
         if not target.is_file() or target.stat().st_size <= 0:
             raise SegmentMediaRuntimeError(f"FFmpeg did not create assembled media: {target}")
-        frame_count, fps = self.inspect_video(target)
-        if frame_count != expected_frame_count:
+        info = self.inspect_video_info(target)
+        if info.frame_count != expected_frame_count:
             raise SegmentMediaRuntimeError(
                 "Assembled provider media does not preserve governed frame count: "
-                f"expected {expected_frame_count}, observed {frame_count}"
+                f"expected {expected_frame_count}, observed {info.frame_count}"
             )
-        if abs(fps - expected_frames_per_second) > 0.01:
+        if abs(info.frames_per_second - expected_frames_per_second) > 0.01:
             raise SegmentMediaRuntimeError(
                 "Assembled provider media does not preserve governed FPS: "
-                f"expected {expected_frames_per_second}, observed {fps:.6f}"
+                f"expected {expected_frames_per_second}, observed "
+                f"{info.frames_per_second:.6f}"
             )
-        return SegmentAssemblyResult(target, frame_count, fps)
+        if info.width != width or info.height != height:
+            raise SegmentMediaRuntimeError(
+                "Assembled provider media does not restore governed geometry: "
+                f"expected {width}x{height}, observed {info.width}x{info.height}"
+            )
+        return SegmentAssemblyResult(
+            target,
+            info.frame_count,
+            info.frames_per_second,
+            info.width,
+            info.height,
+        )
 
     def inspect_video(self, path: Path) -> tuple[int, float]:
+        info = self.inspect_video_info(path)
+        return info.frame_count, info.frames_per_second
+
+    def inspect_video_info(self, path: Path) -> SegmentVideoInfo:
         source = Path(path).expanduser().resolve(strict=False)
         completed = self._run(
             self.ffprobe,
@@ -149,7 +233,7 @@ class SegmentMediaRuntime:
             "-select_streams",
             "v:0",
             "-show_entries",
-            "stream=nb_read_frames,avg_frame_rate",
+            "stream=nb_read_frames,avg_frame_rate,width,height",
             "-of",
             "json",
             str(source),
@@ -161,15 +245,13 @@ class SegmentMediaRuntime:
             frame_count = int(stream["nb_read_frames"])
             numerator, denominator = str(stream["avg_frame_rate"]).split("/", 1)
             fps = float(numerator) / float(denominator)
+            width = int(stream["width"])
+            height = int(stream["height"])
         except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError) as exc:
             raise SegmentMediaRuntimeError(
-                f"FFprobe did not return usable frame/FPS metadata for {source}"
+                f"FFprobe did not return usable frame/FPS/geometry metadata for {source}"
             ) from exc
-        return frame_count, fps
-
-    @staticmethod
-    def _concat_escape(path: Path) -> str:
-        return str(path).replace("'", "'\\''")
+        return SegmentVideoInfo(frame_count, fps, width, height)
 
     @staticmethod
     def _resolve_executable(configured: str | None, default_name: str) -> str:
@@ -199,7 +281,7 @@ class SegmentMediaRuntime:
                 check=True,
                 text=True,
                 capture_output=capture_output,
-                timeout=180,
+                timeout=300,
             )
         except (OSError, subprocess.SubprocessError) as exc:
             command = " ".join(args[:2])
