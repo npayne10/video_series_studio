@@ -159,9 +159,7 @@ class SegmentMediaRuntime:
                     f"Provider SEG-{index + 1:03d} has no frame after continuity trim"
                 )
             label = f"v{index}"
-            filters.append(
-                f"[{index}:v]trim=start_frame={start},setpts=PTS-STARTPTS[{label}]"
-            )
+            filters.append(f"[{index}:v]trim=start_frame={start},setpts=PTS-STARTPTS[{label}]")
             labels.append(f"[{label}]")
         filters.append(
             "".join(labels)

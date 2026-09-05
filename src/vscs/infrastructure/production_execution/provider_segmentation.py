@@ -63,9 +63,7 @@ class GovernedProviderSegmentationPlanner:
             overlap_trim_frames = 0
             tail_trim_frames = 0
         else:
-            segment_count, provider_frames, tail_trim_frames = self._segmented_frames(
-                frame_count
-            )
+            segment_count, provider_frames, tail_trim_frames = self._segmented_frames(frame_count)
             overlap_trim_frames = segment_count - 1
 
         governed_frames = self._balanced(frame_count, segment_count)
@@ -100,9 +98,8 @@ class GovernedProviderSegmentationPlanner:
         segmented = segment_count > 1
         provider_width = self._aligned_dimension(width) if width is not None else None
         provider_height = self._aligned_dimension(height) if height is not None else None
-        geometry_changed = (
-            (width is not None and provider_width != width)
-            or (height is not None and provider_height != height)
+        geometry_changed = (width is not None and provider_width != width) or (
+            height is not None and provider_height != height
         )
         return {
             "schema_version": self.SCHEMA_VERSION,
@@ -166,8 +163,7 @@ class GovernedProviderSegmentationPlanner:
                 base_units, extra_units = divmod(units, segment_count)
                 provider_frames = tuple(
                     self.policy.frame_offset
-                    + self.policy.frame_modulus
-                    * (base_units + (1 if index < extra_units else 0))
+                    + self.policy.frame_modulus * (base_units + (1 if index < extra_units else 0))
                     for index in range(segment_count)
                 )
                 if all(

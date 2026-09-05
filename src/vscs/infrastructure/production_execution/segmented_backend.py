@@ -85,7 +85,9 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             if not isinstance(raw, dict):
                 continue
             role = str(raw.get("role") or "").strip()
-            label = str(raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or "").strip()
+            label = str(
+                raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or ""
+            ).strip()
             if not role or not label:
                 continue
             role_lines.append(f"{role}: {label}")
@@ -598,9 +600,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 destination=assembly_path,
                 expected_frame_count=expected_frames,
                 expected_frames_per_second=expected_fps,
-                overlap_trim_frames=int(
-                    assembly_plan.get("continuity_overlap_trim_frames", 0)
-                ),
+                overlap_trim_frames=int(assembly_plan.get("continuity_overlap_trim_frames", 0)),
                 tail_trim_frames=int(assembly_plan.get("tail_trim_frames", 0)),
                 expected_width=(
                     int(assembly_plan["restore_width"])
