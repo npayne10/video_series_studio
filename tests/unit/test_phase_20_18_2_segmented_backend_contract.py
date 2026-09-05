@@ -51,6 +51,7 @@ def test_segmented_package_enforces_reference_roles_and_no_generated_dialogue() 
     )
 
     assert "Commander James Spence approved identity" in result["positive_prompt"]
+    assert result["shot_prompt"] == result["positive_prompt"]
     assert "Sandra Crawford approved identity" in result["positive_prompt"]
     assert "Xorix approved environment" in result["positive_prompt"]
     assert "Do not invent spoken dialogue or voices" in result["positive_prompt"]
