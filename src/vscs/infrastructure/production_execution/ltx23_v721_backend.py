@@ -191,8 +191,7 @@ class LTX23V721DeploymentAssurance:
         latent = workflow.get("8")
         latent_inputs = latent.get("inputs") if isinstance(latent, dict) else None
         if not isinstance(latent_inputs, dict) or (
-            latent_inputs.get("width") != ["111", 0]
-            or latent_inputs.get("height") != ["111", 1]
+            latent_inputs.get("width") != ["111", 0] or latent_inputs.get("height") != ["111", 1]
         ):
             issues.append(
                 "v7.2.1 LTX latent geometry must be sourced from the provider geometry adapter"
