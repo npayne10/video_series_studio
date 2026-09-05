@@ -140,7 +140,7 @@ def test_v721_package_maps_governed_reference_authority_without_silent_weakening
 
     payload = service._comfyui_payload(_compiled(plan))
 
-    assert payload["schema_version"] == "7.2.1-vscs-1"
+    assert payload["schema_version"] == "7.2.1-vscs-2"
     assert payload["status"] == "READY"
     assert payload["acpp"]["prompts"]["positive"] == payload["shot_prompt"]
     assert payload["acpp"]["generation"]["width"] == 1280
