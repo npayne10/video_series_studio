@@ -432,16 +432,29 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             return self._fail_segmented(active, task, current_number, message)
 
         if refreshed.state is not ProviderExecutionState.COMPLETED:
-            cumulative = (active.current_segment_index + refreshed.progress) / segment_count
+            child_progress = min(max(refreshed.progress, 0.0), 0.9)
+            cumulative = (active.current_segment_index + child_progress) / segment_count
+            parent_handle = self._parent_handle(
+                refreshed,
+                execution_id=active.context.execution_id,
+                provider_job_id=active.parent_provider_job_id,
+                state=ProviderExecutionState.RUNNING,
+                progress=min(0.95, cumulative),
+                segment_count=segment_count,
+            )
+            self.execution_jobs.observe(active.context.execution_id, parent_handle)
             result = ProductionExecutionResult(
                 candidate=active.candidate,
                 state=self._state(refreshed.state),
                 provider_id=active.provider_id,
                 execution_id=active.context.execution_id,
                 provider_job_id=refreshed.provider_job_id,
-                progress=min(0.999, cumulative),
+                progress=min(0.95, cumulative),
                 media_output_directory=self.managed_media_directory,
-                message=f"Rendering SEG-{current_number:03d}/{segment_count}.",
+                message=(
+                    f"Rendering SEG-{current_number:03d}/{segment_count}; "
+                    "provider progress is coarse, VSCS progress is segment-weighted."
+                ),
             )
             self._latest[task.task_id] = result
             return result
@@ -450,6 +463,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             outputs = active.adapter.fetch_outputs(refreshed)
             _video_output, video_path = self._segment_video_output(outputs)
             record = self._current_segment_record(active)
+            media_runtime = SegmentMediaRuntime()
+            observed = media_runtime.inspect_video_info(video_path)
             frame_directory = (
                 self.segment_executions.package_directory(
                     task.task_id,
@@ -457,9 +472,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 )
                 / "frames"
             )
-            final_frame = SegmentMediaRuntime().capture_final_frame(
+            final_frame = media_runtime.capture_final_frame(
                 video_path,
-                frame_count=record.frame_count,
+                frame_count=observed.frame_count,
                 destination=frame_directory / f"{record.segment_id}-final.png",
             )
             completed_record = record.with_state(
@@ -467,6 +482,10 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 output_path=str(video_path),
                 final_frame_path=str(final_frame),
                 provider_prompt_id=refreshed.provider_job_id,
+                observed_frame_count=observed.frame_count,
+                observed_frames_per_second=observed.frames_per_second,
+                observed_width=observed.width,
+                observed_height=observed.height,
             )
             self.segment_executions.save(completed_record)
         except Exception as exc:
@@ -568,11 +587,30 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             plan = active.parent_package["provider_execution_plan"]
             expected_frames = int(plan["governed_frame_count"])
             expected_fps = int(plan["frames_per_second"])
+            assembly_plan = plan.get("assembly")
+            if not isinstance(assembly_plan, dict):
+                raise ProductionExecutionError(
+                    "Segmented provider execution plan has no assembly contract."
+                )
             assembly = SegmentMediaRuntime().assemble(
                 segment_paths,
                 destination=assembly_path,
                 expected_frame_count=expected_frames,
                 expected_frames_per_second=expected_fps,
+                overlap_trim_frames=int(
+                    assembly_plan.get("continuity_overlap_trim_frames", 0)
+                ),
+                tail_trim_frames=int(assembly_plan.get("tail_trim_frames", 0)),
+                expected_width=(
+                    int(assembly_plan["restore_width"])
+                    if assembly_plan.get("restore_width") is not None
+                    else None
+                ),
+                expected_height=(
+                    int(assembly_plan["restore_height"])
+                    if assembly_plan.get("restore_height") is not None
+                    else None
+                ),
             )
         except Exception as exc:
             return self._fail_segmented(
@@ -610,6 +648,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 ("segment_count", str(segment_count)),
                 ("governed_frame_count", str(assembly.frame_count)),
                 ("governed_fps", str(int(assembly.frames_per_second))),
+                ("governed_width", str(assembly.width)),
+                ("governed_height", str(assembly.height)),
+                ("provider_audio_stripped", "true"),
                 ("parent_package_fingerprint", active.parent_package_fingerprint),
             ),
         )
