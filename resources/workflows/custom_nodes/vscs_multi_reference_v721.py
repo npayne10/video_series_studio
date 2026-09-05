@@ -165,3 +165,42 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "VSCSMultiReferenceResolverV721": "VSCS Governed Multi-Reference Resolver v7.2.1",
 }
+
+
+class VSCSProviderGeometryV721:
+    @classmethod
+    def INPUT_TYPES(cls) -> dict[str, Any]:
+        return {
+            "required": {
+                "governed_width": ("INT", {"forceInput": True}),
+                "governed_height": ("INT", {"forceInput": True}),
+                "alignment": ("INT", {"default": 32, "min": 1, "max": 512}),
+            }
+        }
+
+    RETURN_TYPES = ("INT", "INT")
+    RETURN_NAMES = ("provider_width", "provider_height")
+    FUNCTION = "resolve"
+    CATEGORY = "VSCS/Production"
+
+    def resolve(
+        self,
+        governed_width: int,
+        governed_height: int,
+        alignment: int,
+    ) -> tuple[int, int]:
+        if governed_width <= 0 or governed_height <= 0:
+            raise ValueError("Governed production geometry must be positive")
+        if alignment <= 0:
+            raise ValueError("Provider geometry alignment must be positive")
+        width = governed_width - (governed_width % alignment)
+        height = governed_height - (governed_height % alignment)
+        if width <= 0 or height <= 0:
+            raise ValueError("Provider-aligned production geometry must be positive")
+        return width, height
+
+
+NODE_CLASS_MAPPINGS["VSCSProviderGeometryV721"] = VSCSProviderGeometryV721
+NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderGeometryV721"] = (
+    "VSCS Provider Geometry Adapter v7.2.1"
+)
