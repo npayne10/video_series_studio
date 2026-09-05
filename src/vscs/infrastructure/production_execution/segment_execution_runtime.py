@@ -30,6 +30,10 @@ class SegmentExecutionRecord:
     continuity_input_path: str | None = None
     output_path: str | None = None
     final_frame_path: str | None = None
+    observed_frame_count: int | None = None
+    observed_frames_per_second: float | None = None
+    observed_width: int | None = None
+    observed_height: int | None = None
     error_message: str | None = None
     updated_at: str = ""
 
