@@ -87,6 +87,19 @@ class SegmentPackageMaterializer:
         content["frame_count"] = frame_count
         content["seed"] = seed
 
+        provider_geometry = plan.get("provider_geometry")
+        provider_width = None
+        provider_height = None
+        if isinstance(provider_geometry, dict):
+            width_raw = provider_geometry.get("width")
+            height_raw = provider_geometry.get("height")
+            if isinstance(width_raw, int) and width_raw > 0:
+                provider_width = width_raw
+                content["width"] = provider_width
+            if isinstance(height_raw, int) and height_raw > 0:
+                provider_height = height_raw
+                content["height"] = provider_height
+
         acpp = content.get("acpp")
         if not isinstance(acpp, dict):
             raise SegmentPackageMaterializationError("Production Package has no ACPP object")
@@ -100,6 +113,10 @@ class SegmentPackageMaterializer:
                 "Production Package ACPP has no generation object"
             )
         generation["seed"] = seed
+        if provider_width is not None:
+            generation["width"] = provider_width
+        if provider_height is not None:
+            generation["height"] = provider_height
         output = acpp.get("output")
         if not isinstance(output, dict):
             output = {}
@@ -114,7 +131,11 @@ class SegmentPackageMaterializer:
             "start_frame": int(segment.get("start_frame", 0)),
             "end_frame": int(segment.get("end_frame", frame_count - 1)),
             "frame_count": frame_count,
+            "provider_frame_count": int(segment.get("provider_frame_count", frame_count)),
+            "governed_frame_count": int(segment.get("governed_frame_count", frame_count)),
             "seed": seed,
+            "provider_width": provider_width,
+            "provider_height": provider_height,
             "parent_package_fingerprint": parent_fingerprint,
             "continuity_input": str(segment.get("continuity_input") or ""),
             "continuity_input_path": continuity_input_path,
