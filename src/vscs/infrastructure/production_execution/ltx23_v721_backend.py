@@ -116,6 +116,7 @@ class LTX23V721DeploymentAssurance:
                     "v7.2.1 governed reference resolver strict validation must remain enabled"
                 )
         self._inspect_multi_reference_wiring(raw, issues)
+        self._inspect_provider_geometry_wiring(raw, issues)
         return tuple(issues)
 
     @classmethod
@@ -169,6 +170,32 @@ class LTX23V721DeploymentAssurance:
         ):
             issues.append(
                 "v7.2.1 segment continuity must remain separate from governed reference guides"
+            )
+
+    @staticmethod
+    def _inspect_provider_geometry_wiring(
+        workflow: dict[str, object],
+        issues: list[str],
+    ) -> None:
+        node = workflow.get("111")
+        inputs = node.get("inputs") if isinstance(node, dict) else None
+        if not isinstance(inputs, dict) or node.get("class_type") != "VSCSProviderGeometryV721":
+            issues.append("v7.2.1 provider geometry adapter node 111 is missing")
+            return
+        if (
+            inputs.get("governed_width") != ["107", 8]
+            or inputs.get("governed_height") != ["107", 9]
+            or inputs.get("alignment") != 32
+        ):
+            issues.append("v7.2.1 provider geometry adapter is miswired")
+        latent = workflow.get("8")
+        latent_inputs = latent.get("inputs") if isinstance(latent, dict) else None
+        if not isinstance(latent_inputs, dict) or (
+            latent_inputs.get("width") != ["111", 0]
+            or latent_inputs.get("height") != ["111", 1]
+        ):
+            issues.append(
+                "v7.2.1 LTX latent geometry must be sourced from the provider geometry adapter"
             )
 
     @staticmethod
