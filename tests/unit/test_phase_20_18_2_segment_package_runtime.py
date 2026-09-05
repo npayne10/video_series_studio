@@ -77,6 +77,7 @@ def _parent(tmp_path: Path) -> dict:
             "mode": "segmented",
             "governed_frame_count": 528,
             "frames_per_second": 24,
+            "provider_geometry": {"width": 1280, "height": 704, "alignment": 32},
             "segments": [],
         },
         "_vscs_manifest": {"package_fingerprint": "parent-fingerprint"},
@@ -115,6 +116,12 @@ def test_segment_package_narrows_provider_runtime_without_mutating_parent(tmp_pa
     assert payload["acpp"]["timing"]["frames"] == 176
     assert payload["seed"] == 1000
     assert payload["acpp"]["generation"]["seed"] == 1000
+    assert payload["width"] == 1280
+    assert payload["height"] == 704
+    assert payload["acpp"]["generation"]["width"] == 1280
+    assert payload["acpp"]["generation"]["height"] == 704
+    assert payload["provider_segment"]["provider_width"] == 1280
+    assert payload["provider_segment"]["provider_height"] == 704
     assert payload["provider_segment"]["parent_package_fingerprint"] == "parent-fingerprint"
     assert payload["_vscs_manifest"]["parent_package_fingerprint"] == "parent-fingerprint"
     assert payload["_vscs_manifest"]["package_fingerprint"] != "parent-fingerprint"
