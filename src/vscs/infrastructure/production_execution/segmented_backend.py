@@ -103,6 +103,7 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
         )
         positive = str(content.get("positive_prompt") or "").strip()
         content["positive_prompt"] = f"{authority} {positive}".strip()
+        content["shot_prompt"] = content["positive_prompt"]
         negative = str(content.get("negative_prompt") or "").strip()
         audio_negative = (
             "generated speech, invented dialogue, unscripted voice, identity swap, duplicated "
