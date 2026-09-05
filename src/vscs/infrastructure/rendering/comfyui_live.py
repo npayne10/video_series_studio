@@ -226,15 +226,15 @@ class LiveComfyUIAdapter(RenderAdapter):
         queue = self.client.queue()
         if _queue_contains(queue.get("queue_running", []), prompt_id):
             if job.status is RenderJobStatus.RUNNING:
-                return replace(job, progress=max(job.progress, 0.5))
+                return replace(job, progress=max(job.progress, 0.1))
             if job.status is RenderJobStatus.QUEUED:
                 return job.transition(
                     RenderJobStatus.PREPARING,
                     started_at=job.started_at or datetime.now(UTC),
                     progress=max(job.progress, 0.1),
-                ).transition(RenderJobStatus.RUNNING, progress=max(job.progress, 0.5))
+                ).transition(RenderJobStatus.RUNNING, progress=max(job.progress, 0.1))
             if job.status is RenderJobStatus.PREPARING:
-                return job.transition(RenderJobStatus.RUNNING, progress=max(job.progress, 0.5))
+                return job.transition(RenderJobStatus.RUNNING, progress=max(job.progress, 0.1))
             return job
         if _queue_contains(queue.get("queue_pending", []), prompt_id):
             return job
