@@ -43,6 +43,12 @@ def test_ltx23_workflow_chains_three_governed_ingredients_guides() -> None:
     assert workflow["23"]["inputs"]["video_latent"] == ["110", 2]
     assert workflow["17"]["inputs"]["positive"] == ["110", 0]
     assert workflow["17"]["inputs"]["negative"] == ["110", 1]
+    assert workflow["111"]["class_type"] == "VSCSProviderGeometryV721"
+    assert workflow["111"]["inputs"]["governed_width"] == ["107", 8]
+    assert workflow["111"]["inputs"]["governed_height"] == ["107", 9]
+    assert workflow["111"]["inputs"]["alignment"] == 32
+    assert workflow["8"]["inputs"]["width"] == ["111", 0]
+    assert workflow["8"]["inputs"]["height"] == ["111", 1]
 
 
 def test_segment_continuity_is_separate_from_governed_reference_guides() -> None:
@@ -66,3 +72,4 @@ def test_multi_reference_resolver_is_shipped_as_deployable_custom_node() -> None
     assert "VSCSMultiReferenceResolverV721" in content
     assert '"provider_multi_reference"' in content
     assert "NODE_CLASS_MAPPINGS" in content
+    assert "VSCSProviderGeometryV721" in content
