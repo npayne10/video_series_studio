@@ -104,6 +104,12 @@ class VSCSMultiReferenceResolverV721:
         if primary_record is None:
             raise ValueError("VSCS multi-reference contract cannot resolve a primary reference")
 
+        continuity_raw = contract.get("continuity")
+        has_continuity = (
+            isinstance(continuity_raw, dict)
+            and bool(str(continuity_raw.get("path") or "").strip())
+        )
+
         primary = self._load_image(primary_record)
         images: list[torch.Tensor] = []
         strengths: list[float] = []
@@ -113,10 +119,25 @@ class VSCSMultiReferenceResolverV721:
                 strengths.append(0.0)
             else:
                 images.append(self._load_image(record))
-                strengths.append(float(reference_guide_strength))
+                weight_key = "continuation_weight" if has_continuity else "weight"
+                raw_weight = record.get(weight_key, record.get("weight", 1.0))
+                try:
+                    weight = float(raw_weight)
+                except (TypeError, ValueError):
+                    if strict_validation:
+                        raise ValueError(
+                            f"Governed LTX reference has invalid {weight_key}: {raw_weight!r}"
+                        )
+                    weight = 1.0
+                if not 0.0 <= weight <= 1.0:
+                    if strict_validation:
+                        raise ValueError(
+                            f"Governed LTX reference {weight_key} must be between 0 and 1"
+                        )
+                    weight = min(max(weight, 0.0), 1.0)
+                strengths.append(float(reference_guide_strength) * weight)
 
-        continuity_raw = contract.get("continuity")
-        if isinstance(continuity_raw, dict) and str(continuity_raw.get("path") or "").strip():
+        if has_continuity:
             continuity = self._load_image(continuity_raw)
             continuity_bypass = False
         else:
@@ -158,12 +179,65 @@ class VSCSMultiReferenceResolverV721:
         return torch.from_numpy(array)[None, ...]
 
 
+class VSCSContinuityPromptV721:
+    @classmethod
+    def INPUT_TYPES(cls) -> dict[str, Any]:
+        return {
+            "required": {
+                "shot_prompt": ("STRING", {"forceInput": True}),
+                "reference_plan_json": ("STRING", {"forceInput": True}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("conditioned_shot_prompt",)
+    FUNCTION = "compose"
+    CATEGORY = "VSCS/Production"
+
+    def compose(self, shot_prompt: str, reference_plan_json: str) -> tuple[str]:
+        plan = VSCSMultiReferenceResolverV721._decode_plan(reference_plan_json)
+        contract = plan.get("provider_multi_reference")
+        if not isinstance(contract, dict):
+            return (shot_prompt,)
+
+        references = contract.get("references")
+        role_text: list[str] = []
+        if isinstance(references, list):
+            for raw in references:
+                if not isinstance(raw, dict):
+                    continue
+                role = str(raw.get("role") or "").strip()
+                label = str(
+                    raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or ""
+                ).strip()
+                if role and label:
+                    role_text.append(f"{role}={label}")
+
+        continuity = contract.get("continuity")
+        has_continuity = (
+            isinstance(continuity, dict)
+            and bool(str(continuity.get("path") or "").strip())
+        )
+        prefix = (
+            "Continue the exact same cinematic shot from the supplied previous-segment final "
+            "frame. Preserve camera position, lens, framing, people, wardrobe, lighting, "
+            "environment, spatial relationships and action direction. Do not restart, re-stage "
+            "or introduce new people. "
+            if has_continuity
+            else "Begin one coherent cinematic shot from the governed scene description. "
+        )
+        roles = "Reference roles: " + "; ".join(role_text) + ". " if role_text else ""
+        return (f"{prefix}{roles}{shot_prompt}".strip(),)
+
+
 NODE_CLASS_MAPPINGS = {
     "VSCSMultiReferenceResolverV721": VSCSMultiReferenceResolverV721,
+    "VSCSContinuityPromptV721": VSCSContinuityPromptV721,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "VSCSMultiReferenceResolverV721": "VSCS Governed Multi-Reference Resolver v7.2.1",
+    "VSCSContinuityPromptV721": "VSCS Continuity Prompt Authority v7.2.1",
 }
 
 
