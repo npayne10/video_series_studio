@@ -66,12 +66,17 @@ def _parent(tmp_path: Path) -> dict:
                 for item in references
             ],
             "provider_multi_reference": {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "enabled": True,
                 "mode": "ltx_ingredients_iclora",
                 "collapsed_scene_anchor": False,
                 "reference_count": 3,
                 "references": references,
+                "continuity_policy": {
+                    "mode": "previous_segment_final_frame",
+                    "authority": "strong",
+                    "prompt_mode": "continue_exact_same_shot",
+                },
                 "continuity": None,
             },
         },
@@ -158,6 +163,8 @@ def test_next_segment_adds_continuity_without_mutating_governed_references(
     assert continuity["role"] == "previous_segment_final_frame"
     assert continuity["path"] == str(final_frame.resolve(strict=False))
     assert continuity["provider_ready"] is True
+    assert continuity["authority"] == "strong"
+    assert continuity["prompt_mode"] == "continue_exact_same_shot"
 
 
 def test_different_continuity_frames_create_immutable_distinct_packages(tmp_path: Path) -> None:
