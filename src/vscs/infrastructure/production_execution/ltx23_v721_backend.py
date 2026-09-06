@@ -116,6 +116,7 @@ class LTX23V721DeploymentAssurance:
                     "v7.2.1 governed reference resolver strict validation must remain enabled"
                 )
         self._inspect_multi_reference_wiring(raw, issues)
+        self._inspect_continuity_prompt_wiring(raw, issues)
         self._inspect_provider_geometry_wiring(raw, issues)
         return tuple(issues)
 
@@ -170,6 +171,28 @@ class LTX23V721DeploymentAssurance:
         ):
             issues.append(
                 "v7.2.1 segment continuity must remain separate from governed reference guides"
+            )
+
+    @staticmethod
+    def _inspect_continuity_prompt_wiring(
+        workflow: dict[str, object],
+        issues: list[str],
+    ) -> None:
+        node = workflow.get("112")
+        inputs = node.get("inputs") if isinstance(node, dict) else None
+        if not isinstance(inputs, dict) or node.get("class_type") != "VSCSContinuityPromptV721":
+            issues.append("v7.2.1 continuity prompt authority node 112 is missing")
+            return
+        if (
+            inputs.get("shot_prompt") != ["107", 5]
+            or inputs.get("reference_plan_json") != ["107", 20]
+        ):
+            issues.append("v7.2.1 continuity prompt authority node 112 is miswired")
+        prompt = workflow.get("5")
+        prompt_inputs = prompt.get("inputs") if isinstance(prompt, dict) else None
+        if not isinstance(prompt_inputs, dict) or prompt_inputs.get("text") != ["112", 0]:
+            issues.append(
+                "v7.2.1 shot prompt must be sourced from continuity prompt authority"
             )
 
     @staticmethod
