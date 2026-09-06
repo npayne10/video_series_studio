@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from vscs.infrastructure.production_execution.segmented_backend import (
     LocalComfyUIProductionExecutionBackend,
     SegmentedLTX23V721ProductionPackageCompilationService,
@@ -58,3 +60,13 @@ def test_segmented_package_enforces_reference_roles_and_no_generated_dialogue() 
     assert "generated speech" in result["negative_prompt"]
     assert result["acpp"]["generation"]["audio_mode"] == "silent_visual_authority"
     assert result["provider_dialogue_policy"]["mode"] == "no_generated_dialogue"
+
+
+def test_segmented_backend_releases_provider_memory_before_next_segment() -> None:
+    source = inspect.getsource(LocalComfyUIProductionExecutionBackend.reconcile_for_profile)
+
+    release = source.index("active.adapter.free_models_and_memory()")
+    materialize = source.index("next_package = self.segment_packages.materialize(")
+    submit = source.index("next_handle, next_request = self._submit_segment(")
+
+    assert release < materialize < submit
