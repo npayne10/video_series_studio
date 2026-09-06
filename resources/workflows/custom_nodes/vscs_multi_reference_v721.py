@@ -211,7 +211,15 @@ class VSCSContinuityPromptV721:
                     raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or ""
                 ).strip()
                 if role and label:
-                    role_text.append(f"{role}={label}")
+                    if role == "environment_reference":
+                        role_text.append(
+                            f"{role}={label} (supporting appearance reference only; "
+                            "do not use as foreground composition or replace the governed set)"
+                        )
+                    else:
+                        role_text.append(
+                            f"{role}={label} (preserve this person's identity)"
+                        )
 
         continuity = contract.get("continuity")
         has_continuity = (
@@ -227,7 +235,12 @@ class VSCSContinuityPromptV721:
             else "Begin one coherent cinematic shot from the governed scene description. "
         )
         roles = "Reference roles: " + "; ".join(role_text) + ". " if role_text else ""
-        return (f"{prefix}{roles}{shot_prompt}".strip(),)
+        composition = (
+            "Identity references control who the people are, not where they are placed. "
+            "Environment references control appearance only and must remain subordinate to the "
+            "governed shot description and continuity frame. "
+        )
+        return (f"{prefix}{roles}{composition}{shot_prompt}".strip(),)
 
 
 NODE_CLASS_MAPPINGS = {
