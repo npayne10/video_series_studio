@@ -183,12 +183,22 @@ class SegmentPackageMaterializer:
                 "LTX Ingredients multi-reference contract has no governed references"
             )
 
+        policy = multi.get("continuity_policy")
+        if not isinstance(policy, dict):
+            policy = {
+                "mode": "previous_segment_final_frame",
+                "authority": "strong",
+                "prompt_mode": "continue_exact_same_shot",
+            }
+            multi["continuity_policy"] = policy
         multi["continuity"] = {
             "role": "previous_segment_final_frame",
             "path": str(resolved),
             "file_checksum": checksum,
             "reference_fingerprint": checksum,
             "provider_ready": True,
+            "authority": str(policy.get("authority") or "strong"),
+            "prompt_mode": str(policy.get("prompt_mode") or "continue_exact_same_shot"),
         }
 
     def _package_directory(self, task_id: str, package_fingerprint: str) -> Path:
