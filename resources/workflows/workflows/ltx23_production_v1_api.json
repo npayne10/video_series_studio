@@ -16,8 +16,8 @@
         0
       ],
       "text": [
-        "107",
-        5
+        "112",
+        0
       ]
     },
     "_meta": {
@@ -543,6 +543,22 @@
     },
     "_meta": {
       "title": "VSCS Provider Geometry Adapter v7.2.1"
+    }
+  },
+  "112": {
+    "class_type": "VSCSContinuityPromptV721",
+    "inputs": {
+      "shot_prompt": [
+        "107",
+        5
+      ],
+      "reference_plan_json": [
+        "107",
+        20
+      ]
+    },
+    "_meta": {
+      "title": "VSCS Continuity Prompt Authority v7.2.1"
     }
   }
 }
