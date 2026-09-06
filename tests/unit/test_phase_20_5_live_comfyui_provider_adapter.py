@@ -73,6 +73,8 @@ class FakeComfyUITransport:
                     if not (isinstance(item, list) and len(item) >= 2 and item[1] in delete)
                 ]
             return {}
+        if method == "POST" and path == "/free":
+            return {}
         raise AssertionError(f"Unexpected ComfyUI request: {method} {path}")
 
 
@@ -252,3 +254,15 @@ def test_live_comfyui_refuses_global_interrupt_for_running_prompt(tmp_path: Path
         adapter.cancel(running)
 
     assert all(path != "/interrupt" for _method, path, _payload in transport.calls)
+
+
+def test_live_comfyui_can_release_models_and_memory_between_segments(tmp_path: Path) -> None:
+    adapter, transport = _live_adapter(tmp_path)
+
+    adapter.free_models_and_memory()
+
+    assert (
+        "POST",
+        "/free",
+        {"unload_models": True, "free_memory": True},
+    ) in transport.calls
