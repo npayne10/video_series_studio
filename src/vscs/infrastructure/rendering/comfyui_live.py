@@ -174,6 +174,14 @@ class ComfyUIClient:
             raise ValueError("prompt_id cannot be blank")
         self.transport.request("POST", "/queue", {"delete": [normalized]})
 
+    def free_models_and_memory(self) -> None:
+        """Ask ComfyUI to unload resident models and release provider memory."""
+        self.transport.request(
+            "POST",
+            "/free",
+            {"unload_models": True, "free_memory": True},
+        )
+
 
 @dataclass(slots=True)
 class LiveComfyUIAdapter(RenderAdapter):
@@ -265,6 +273,10 @@ class LiveComfyUIAdapter(RenderAdapter):
             RenderJobStatus.CANCELLED,
             finished_at=datetime.now(UTC),
         )
+
+    def free_models_and_memory(self) -> None:
+        """Release ComfyUI model residency between governed provider segments."""
+        self.client.free_models_and_memory()
 
     def fetch_outputs(self, job: RenderJob) -> tuple[RenderOutput, ...]:
         """Discover completed ComfyUI files without creating Generated Media authority."""
