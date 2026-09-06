@@ -21,6 +21,18 @@ _ROLE_ORDER = {
     "group_identity": 2,
     "environment_reference": 3,
 }
+_ROLE_WEIGHT = {
+    "primary_identity": 1.0,
+    "secondary_identity": 0.9,
+    "group_identity": 0.9,
+    "environment_reference": 0.25,
+}
+_CONTINUATION_ROLE_WEIGHT = {
+    "primary_identity": 0.65,
+    "secondary_identity": 0.60,
+    "group_identity": 0.60,
+    "environment_reference": 0.05,
+}
 
 
 class GovernedProviderReferenceHelperBuilder:
@@ -74,7 +86,7 @@ class GovernedProviderReferenceHelperBuilder:
 
         enriched.pop("provider_helper", None)
         enriched["provider_multi_reference"] = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "enabled": True,
             "mode": "ltx_ingredients_iclora",
             "collapsed_scene_anchor": False,
@@ -87,6 +99,15 @@ class GovernedProviderReferenceHelperBuilder:
                     "role": str(item.get("role") or ""),
                     "label": str(item.get("notes") or item.get("asset_id") or ""),
                     "path": str(item.get("path") or ""),
+                    "weight": _ROLE_WEIGHT.get(str(item.get("role") or ""), 0.5),
+                    "continuation_weight": _CONTINUATION_ROLE_WEIGHT.get(
+                        str(item.get("role") or ""), 0.25
+                    ),
+                    "conditioning_path": (
+                        "environment"
+                        if str(item.get("role") or "") == "environment_reference"
+                        else "identity"
+                    ),
                     "required": True,
                     "provider_ready": item.get("provider_ready") is True,
                     "file_checksum": item.get("file_checksum"),
@@ -94,6 +115,11 @@ class GovernedProviderReferenceHelperBuilder:
                 }
                 for index, item in enumerate(ordered, start=1)
             ],
+            "continuity_policy": {
+                "mode": "previous_segment_final_frame",
+                "authority": "strong",
+                "prompt_mode": "continue_exact_same_shot",
+            },
             "continuity": None,
         }
         return enriched
