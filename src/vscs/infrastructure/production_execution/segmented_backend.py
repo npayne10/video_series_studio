@@ -503,6 +503,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             next_index = active.current_segment_index + 1
             next_segment = active.segments[next_index]
             try:
+                active.adapter.free_models_and_memory()
                 next_package = self.segment_packages.materialize(
                     parent=active.parent_package,
                     task_id=task.task_id,
@@ -560,8 +561,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 progress=progress,
                 media_output_directory=self.managed_media_directory,
                 message=(
-                    f"SEG-{current_number:03d} completed; submitted "
-                    f"SEG-{next_index + 1:03d}/{segment_count} with previous final-frame continuity."
+                    f"SEG-{current_number:03d} completed; ComfyUI models/memory were "
+                    f"released, then SEG-{next_index + 1:03d}/{segment_count} was submitted "
+                    "with previous final-frame continuity."
                 ),
             )
             self._latest[task.task_id] = result
