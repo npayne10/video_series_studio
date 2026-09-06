@@ -79,6 +79,22 @@ def test_multiple_required_references_remain_separate_and_emit_provider_contract
         "secondary_identity",
         "environment_reference",
     ]
+    assert [item["weight"] for item in contract["references"]] == [1.0, 0.9, 0.25]
+    assert [item["continuation_weight"] for item in contract["references"]] == [
+        0.65,
+        0.60,
+        0.05,
+    ]
+    assert [item["conditioning_path"] for item in contract["references"]] == [
+        "identity",
+        "identity",
+        "environment",
+    ]
+    assert contract["continuity_policy"] == {
+        "mode": "previous_segment_final_frame",
+        "authority": "strong",
+        "prompt_mode": "continue_exact_same_shot",
+    }
     assert contract["continuity"] is None
     assert not (tmp_path / "production" / "provider_reference_helpers").exists()
 
