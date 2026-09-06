@@ -120,6 +120,15 @@ class RenderProviderExecutionAdapter(ProviderExecutionAdapter):
         cancelled = self.adapter.cancel(job)
         return self._handle(handle.execution_id, cancelled)
 
+    def free_models_and_memory(self) -> None:
+        """Release provider model residency when the underlying adapter supports it."""
+        release = getattr(self.adapter, "free_models_and_memory", None)
+        if not callable(release):
+            raise RenderProviderExecutionError(
+                "render adapter does not support explicit provider memory release"
+            )
+        release()
+
     def fetch_outputs(self, handle: ProviderExecutionHandle) -> tuple[ProviderExecutionOutput, ...]:
         job = self._require_job(handle)
         outputs = self.adapter.fetch_outputs(job)
