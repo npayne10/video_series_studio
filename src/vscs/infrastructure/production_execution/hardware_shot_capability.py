@@ -55,7 +55,7 @@ def capability_for_vram(
         status = "validated"
         source = "phase-20.18.2-live-rtx4060-8gb"
     else:
-        vram_class = max(9, int(round(gib)))
+        vram_class = max(9, round(gib))
         maximum_seconds = 7.0
         status = "conservative-until-validated"
         source = "phase-20.18.2-safe-fallback"
