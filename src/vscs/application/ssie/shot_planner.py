@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import ceil
 from enum import StrEnum
+from math import ceil
 
 from .models import Scene, SceneTransition, ShotPlan, ShotPurpose
 
@@ -300,9 +300,7 @@ class RuleBasedShotPlanner:
         del pacing
         target = scene.estimated_duration_seconds / shot_count
         if target > self.config.maximum_shot_duration_seconds:
-            raise ValueError(
-                "Shot count is insufficient for the active hardware duration ceiling"
-            )
+            raise ValueError("Shot count is insufficient for the active hardware duration ceiling")
         duration = max(self.config.minimum_shot_duration_seconds, target)
         return (round(duration, 3),) * shot_count
 

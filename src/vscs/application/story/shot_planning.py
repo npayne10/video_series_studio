@@ -44,7 +44,7 @@ class HardwareAwareShotReplanResult:
     previous_shot_count: int
     new_shot_count: int
     archive_path: Path | None
-    shots: tuple["ShotPlan", ...]
+    shots: tuple[ShotPlan, ...]
 
 
 class ShotPlanStatus(StrEnum):
@@ -81,9 +81,7 @@ class GovernedShotPlanningService:
     SCHEMA_VERSION = "1.1"
     HISTORY_DIRECTORY = "shot_plan_history"
     DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS = 7
-    HARDWARE_CAPABILITY_FILE = (
-        Path(".vscs") / "provider_executions" / "hardware_capability.json"
-    )
+    HARDWARE_CAPABILITY_FILE = Path(".vscs") / "provider_executions" / "hardware_capability.json"
 
     def __init__(
         self,
@@ -172,9 +170,7 @@ class GovernedShotPlanningService:
                 "replacement_shot_count": proposal.proposed_shot_count,
             },
         )
-        remaining = tuple(
-            plan for plan in self.list_plans() if plan.scene_id != proposal.scene_id
-        )
+        remaining = tuple(plan for plan in self.list_plans() if plan.scene_id != proposal.scene_id)
         self._write((*remaining, *proposal.proposed_shots))
         return HardwareAwareShotReplanResult(
             scene_id=proposal.scene_id,
@@ -375,10 +371,7 @@ class GovernedShotPlanningService:
         limit = self.hardware_shot_limit_seconds()
         shot_count = max(1, ceil(scene.target_runtime_seconds / limit))
         base, remainder = divmod(scene.target_runtime_seconds, shot_count)
-        runtimes = tuple(
-            base + (1 if index < remainder else 0)
-            for index in range(shot_count)
-        )
+        runtimes = tuple(base + (1 if index < remainder else 0) for index in range(shot_count))
         if any(runtime > limit or runtime <= 0 for runtime in runtimes):
             raise GovernedShotPlanningError(
                 "Unable to distribute Scene runtime within the active hardware Shot limit"
@@ -404,14 +397,16 @@ class GovernedShotPlanningService:
                     f"{scene.production_objective}"
                 )
                 action = f"Resolve the final required story beat: {event}"
-                continuity_in = f"Continue directly from {self._shot_id(scene.scene_id, index - 1)}."
+                continuity_in = (
+                    f"Continue directly from {self._shot_id(scene.scene_id, index - 1)}."
+                )
             else:
                 title = f"Story Beat {index:03d}"
                 purpose = f"Advance the ordered Scene story through: {event}"
-                action = (
-                    f"Show the required story event as a distinct cinematic beat: {event}"
+                action = f"Show the required story event as a distinct cinematic beat: {event}"
+                continuity_in = (
+                    f"Continue directly from {self._shot_id(scene.scene_id, index - 1)}."
                 )
-                continuity_in = f"Continue directly from {self._shot_id(scene.scene_id, index - 1)}."
 
             continuity_out = (
                 scene.continuity_out
@@ -453,10 +448,7 @@ class GovernedShotPlanningService:
             raise ProjectNotOpenError("No VSCS project is currently open")
         safe_scene_id = scene_id.replace("/", "-").replace("\\", "-")
         directory = (
-            self.projects.project_directory
-            / "planning"
-            / self.HISTORY_DIRECTORY
-            / safe_scene_id
+            self.projects.project_directory / "planning" / self.HISTORY_DIRECTORY / safe_scene_id
         )
         directory.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")

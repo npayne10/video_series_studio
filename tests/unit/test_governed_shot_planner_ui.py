@@ -209,12 +209,8 @@ def test_replan_button_archives_and_replaces_scene_after_human_confirmation(
     assert all(shot.status.value == "draft" for shot in current)
     assert any(
         path.is_file()
-        for path in (
-            tmp_path
-            / "Demo"
-            / "planning"
-            / "shot_plan_history"
-            / scene.scene_id
-        ).glob("*.json")
+        for path in (tmp_path / "Demo" / "planning" / "shot_plan_history" / scene.scene_id).glob(
+            "*.json"
+        )
     )
     context.shutdown()

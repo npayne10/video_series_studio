@@ -47,9 +47,7 @@ class ShotPlanningService:
     FILE_NAME = "shots.json"
     HISTORY_DIRECTORY = "shot_history"
     DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS = 7.0
-    HARDWARE_CAPABILITY_FILE = (
-        Path(".vscs") / "provider_executions" / "hardware_capability.json"
-    )
+    HARDWARE_CAPABILITY_FILE = Path(".vscs") / "provider_executions" / "hardware_capability.json"
 
     def __init__(self, projects: ProjectService) -> None:
         self.projects = projects
@@ -172,9 +170,7 @@ class ShotPlanningService:
             "gpu_name": "Not yet observed",
             "vram_class_gb": 8,
             "validated_maximum_shot_seconds": self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS,
-            "governed_maximum_frame_count": int(
-                self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS * 24
-            ),
+            "governed_maximum_frame_count": int(self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS * 24),
             "provider_maximum_frame_count": 169,
             "validation_status": "conservative-safe-default",
             "source": "phase-20.18.2-safe-default",
@@ -193,9 +189,7 @@ class ShotPlanningService:
         """Replace one scene's current Shots from story authority using hardware limits."""
         limit = self.hardware_shot_limit_seconds()
         planner = RuleBasedScenePlanner(
-            shot_planner=RuleBasedShotPlanner(
-                ShotPlannerConfig.for_hardware_limit(limit)
-            )
+            shot_planner=RuleBasedShotPlanner(ShotPlannerConfig.for_hardware_limit(limit))
         )
         plan = planner.plan_scene(scene)
         generated = self._production_shots_from_plan(plan.shots, scene.dialogue)
@@ -210,9 +204,7 @@ class ShotPlanningService:
             },
         )
 
-        all_shots = tuple(
-            shot for shot in self.list_shots() if shot.scene_id != scene.scene_id
-        )
+        all_shots = tuple(shot for shot in self.list_shots() if shot.scene_id != scene.scene_id)
         self._write((*all_shots, *generated))
         return HardwareAwareSceneReplanResult(
             scene_id=scene.scene_id,
@@ -239,9 +231,7 @@ class ShotPlanningService:
                 ShotPurpose.ACTION,
             }
         ]
-        dialogue_by_index: dict[int, list[str]] = {
-            index: [] for index in dialogue_indices
-        }
+        dialogue_by_index: dict[int, list[str]] = {index: [] for index in dialogue_indices}
         if dialogue_indices:
             for line_index, line in enumerate(dialogue):
                 target = dialogue_indices[line_index % len(dialogue_indices)]
@@ -276,9 +266,7 @@ class ShotPlanningService:
                 description=item.description,
                 purpose=item.purpose,
                 shot_size=camera.shot_size if camera is not None else ShotSize.MEDIUM,
-                camera_movement=(
-                    camera.movement if camera is not None else CameraMovement.STATIC
-                ),
+                camera_movement=(camera.movement if camera is not None else CameraMovement.STATIC),
                 lens_family=camera.lens_family if camera is not None else LensFamily.NORMAL,
                 camera_profile_id=item.camera_profile_id,
                 lighting_profile_id=item.lighting_profile_id,
@@ -286,8 +274,7 @@ class ShotPlanningService:
                     lighting.mood if lighting is not None else LightingMood.NATURALISTIC
                 ),
                 estimated_duration_seconds=float(
-                    item.estimated_duration_seconds
-                    or self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS
+                    item.estimated_duration_seconds or self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS
                 ),
                 continuity_from_shot_id=previous_shot_id,
                 continuity_notes=continuity_notes,
@@ -315,10 +302,7 @@ class ShotPlanningService:
             raise ProjectNotOpenError("No VSCS project is currently open")
         safe_scene_id = scene_id.replace("/", "-").replace("\\", "-")
         directory = (
-            self.projects.project_directory
-            / "story"
-            / self.HISTORY_DIRECTORY
-            / safe_scene_id
+            self.projects.project_directory / "story" / self.HISTORY_DIRECTORY / safe_scene_id
         )
         directory.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
