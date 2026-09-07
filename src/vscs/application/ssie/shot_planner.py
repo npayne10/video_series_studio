@@ -34,7 +34,7 @@ class ShotPlannerConfig:
 
     maximum_shots: int = 12
     minimum_shot_duration_seconds: float = 2.0
-    maximum_shot_duration_seconds: float = 15.0
+    maximum_shot_duration_seconds: float = 7.0
     include_reaction_shots: bool = True
     include_revelation_inserts: bool = True
     include_transition_shots: bool = True
