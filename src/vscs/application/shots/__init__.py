@@ -1,9 +1,10 @@
 """Persistent shot-planning application services."""
 
 from .models import ProductionShot, ShotPlanningStatus, build_shot_id
-from .service import ShotPlanningError, ShotPlanningService
+from .service import HardwareAwareSceneReplanResult, ShotPlanningError, ShotPlanningService
 
 __all__ = [
+    "HardwareAwareSceneReplanResult",
     "ProductionShot",
     "ShotPlanningError",
     "ShotPlanningService",
