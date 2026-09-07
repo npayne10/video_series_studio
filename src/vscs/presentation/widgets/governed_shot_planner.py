@@ -57,6 +57,7 @@ class ShotPlanEditorDialog(QDialog):
         inherited_constraints: tuple[str, ...],
         plan: ShotPlan | None = None,
         parent: QWidget | None = None,
+        maximum_runtime_seconds: int | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("shotPlanEditorDialog")
@@ -72,7 +73,11 @@ class ShotPlanEditorDialog(QDialog):
         self.purpose_edit = QPlainTextEdit(plan.narrative_purpose if plan else "", self)
         self.objective_edit = QPlainTextEdit(plan.production_objective if plan else "", self)
         self.runtime_spin = QSpinBox(self)
-        self.runtime_spin.setRange(1, max(1, scene.target_runtime_seconds))
+        runtime_ceiling = min(
+            scene.target_runtime_seconds,
+            maximum_runtime_seconds or scene.target_runtime_seconds,
+        )
+        self.runtime_spin.setRange(1, max(1, runtime_ceiling))
         self.runtime_spin.setValue(
             plan.target_runtime_seconds if plan else min(5, scene.target_runtime_seconds)
         )
@@ -203,6 +208,11 @@ class GovernedShotPlannerDialog(QDialog):
         self.budget_label.setObjectName("shotPlannerRuntimeBudget")
         root.addWidget(self.budget_label)
 
+        self.hardware_label = QLabel(self)
+        self.hardware_label.setObjectName("shotPlannerHardwareCapability")
+        self.hardware_label.setWordWrap(True)
+        root.addWidget(self.hardware_label)
+
         guidance = QLabel(
             "Shot Plans define narrative and production intent only. Asset resolution, camera, lighting and "
             "environment implementation remain downstream specialist responsibilities.",
@@ -212,6 +222,8 @@ class GovernedShotPlannerDialog(QDialog):
         root.addWidget(guidance)
 
         toolbar = QHBoxLayout()
+        self.replan_button = QPushButton("Re-plan Scene from Story", self)
+        self.replan_button.setObjectName("hardwareAwareSceneReplan")
         self.new_button = QPushButton("New Shot", self)
         self.edit_button = QPushButton("Edit", self)
         self.delete_button = QPushButton("Delete Draft", self)
@@ -220,6 +232,7 @@ class GovernedShotPlannerDialog(QDialog):
         self.up_button = QPushButton("Move Up", self)
         self.down_button = QPushButton("Move Down", self)
         for button in (
+            self.replan_button,
             self.new_button,
             self.edit_button,
             self.delete_button,
@@ -255,6 +268,7 @@ class GovernedShotPlannerDialog(QDialog):
         close_buttons.rejected.connect(self.reject)
         root.addWidget(close_buttons)
 
+        self.replan_button.clicked.connect(self._replan_from_story)
         self.new_button.clicked.connect(self._new)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
@@ -281,6 +295,17 @@ class GovernedShotPlannerDialog(QDialog):
             if current_ready
             else "Upstream Scene is not production-ready. Existing Shot Plans remain visible but cannot advance."
         )
+        capability = self.service.hardware_capability()
+        limit = self.service.hardware_shot_limit_seconds()
+        gpu_name = str(capability.get("gpu_name") or "Unknown GPU")
+        vram_class = capability.get("vram_class_gb")
+        status = str(capability.get("validation_status") or "unknown")
+        self.hardware_label.setText(
+            f"Hardware-aware planning: {gpu_name}"
+            + (f" • {vram_class} GB class" if vram_class is not None else "")
+            + f" • maximum governed Shot {limit}s • {status}"
+        )
+
         allocated = self.service.allocated_runtime_seconds(self.scene_id)
         remaining = self.service.remaining_runtime_seconds(self.scene_id)
         self.budget_label.setText(
@@ -350,6 +375,7 @@ class GovernedShotPlannerDialog(QDialog):
         draft = shot is not None and shot.status is ShotPlanStatus.DRAFT
         ready = shot is not None and shot.status is ShotPlanStatus.READY
         current = shot is not None and self.service.is_upstream_current(shot)
+        self.replan_button.setEnabled(scene_ready)
         self.new_button.setEnabled(scene_ready)
         self.edit_button.setEnabled(scene_ready and draft)
         self.delete_button.setEnabled(draft)
