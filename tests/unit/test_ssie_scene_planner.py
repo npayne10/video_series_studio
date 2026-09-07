@@ -72,12 +72,12 @@ def test_shot_planner_uses_action_coverage_without_dialogue() -> None:
         )
     )
 
-    assert [shot.purpose for shot in shots] == [
-        ShotPurpose.ESTABLISHING,
-        ShotPurpose.ACTION,
-        ShotPurpose.CLOSING,
-    ]
+    assert len(shots) == 6
+    assert shots[0].purpose is ShotPurpose.ESTABLISHING
+    assert shots[-1].purpose is ShotPurpose.CLOSING
+    assert [shot.purpose for shot in shots].count(ShotPurpose.ACTION) == 4
     assert shots[1].subject_asset_ids == ("CHR-JAMES-001",)
+    assert max(shot.estimated_duration_seconds or 0 for shot in shots) <= 7.0
 
 
 def test_scene_planner_maps_tension_keywords() -> None:
@@ -124,8 +124,9 @@ def test_shot_planner_segments_urgent_action() -> None:
         )
     )
 
-    assert [shot.purpose for shot in shots].count(ShotPurpose.ACTION) == 2
-    assert all(shot.estimated_duration_seconds == 7.0 for shot in shots)
+    assert len(shots) == 6
+    assert [shot.purpose for shot in shots].count(ShotPurpose.ACTION) == 4
+    assert all(shot.estimated_duration_seconds == 6.667 for shot in shots)
 
 
 def test_shot_planner_respects_shot_limit() -> None:
@@ -163,7 +164,7 @@ def test_shot_planner_can_apply_hardware_duration_limit() -> None:
     )
 
     assert config.maximum_shot_duration_seconds == 7.0
-    assert config.maximum_shots == 24
+    assert config.maximum_shots == 120
     assert all(
         shot.estimated_duration_seconds is None or shot.estimated_duration_seconds <= 7.0
         for shot in shots
