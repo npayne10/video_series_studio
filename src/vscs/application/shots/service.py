@@ -132,12 +132,6 @@ class ShotPlanningService:
             raise ValueError("Shot description is required")
         if shot.estimated_duration_seconds <= 0:
             raise ValueError("Shot duration must be greater than zero")
-        limit = self.hardware_shot_limit_seconds()
-        if shot.estimated_duration_seconds > limit:
-            raise ValueError(
-                f"Shot duration {shot.estimated_duration_seconds:.2f}s exceeds the active "
-                f"hardware-aware limit of {limit:.2f}s. Re-plan the scene or shorten the Shot."
-            )
         shots = {item.shot_id: item for item in self.list_shots()}
         shots[shot.shot_id] = shot
         self._write(tuple(shots.values()))
