@@ -113,6 +113,8 @@ from .service import StoryService, StoryServiceError
 from .shot_planning import (
     GovernedShotPlanningError,
     GovernedShotPlanningService,
+    HardwareAwareShotReplanProposal,
+    HardwareAwareShotReplanResult,
     ShotPlan,
     ShotPlanStatus,
 )
@@ -152,6 +154,8 @@ __all__ = [
     "GovernedPlanningReviewService",
     "GovernedShotPlanningError",
     "GovernedShotPlanningService",
+    "HardwareAwareShotReplanProposal",
+    "HardwareAwareShotReplanResult",
     "IntegratedPlanningPackage",
     "IterativeScenePlanningService",
     "KeyDirection",
