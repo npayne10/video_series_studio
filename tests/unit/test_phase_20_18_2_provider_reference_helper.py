@@ -91,9 +91,9 @@ def test_multiple_required_references_remain_separate_and_emit_provider_contract
         "environment",
     ]
     assert contract["continuity_policy"] == {
-        "mode": "previous_segment_final_frame",
+        "mode": "previous_approved_shot_final_frame",
         "authority": "strong",
-        "prompt_mode": "continue_exact_same_shot",
+        "prompt_mode": "preserve_shot_to_shot_continuity",
     }
     assert contract["continuity"] is None
     assert not (tmp_path / "production" / "provider_reference_helpers").exists()
@@ -136,3 +136,29 @@ def test_more_than_three_required_references_are_rejected(tmp_path: Path) -> Non
 
     with pytest.raises(LocalProductionPackageCompilationError, match="at most three"):
         GovernedProviderReferenceHelperBuilder(tmp_path).ensure_helper(plan)
+
+
+def test_start_frame_reference_becomes_shot_to_shot_continuity_not_visual_slot(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    continuity = _binding(
+        "REF-PREVIOUS-SHOT",
+        "SHT-PREVIOUS",
+        "start_frame_reference",
+        tmp_path / "previous-shot-final.png",
+    )
+    plan["bindings"].append(continuity)
+
+    result = GovernedProviderReferenceHelperBuilder(tmp_path).ensure_helper(plan)
+    contract = result["provider_multi_reference"]
+
+    assert contract["reference_count"] == 3
+    assert [item["role"] for item in contract["references"]] == [
+        "primary_identity",
+        "secondary_identity",
+        "environment_reference",
+    ]
+    assert contract["continuity"]["role"] == "previous_approved_shot_final_frame"
+    assert contract["continuity"]["path"] == continuity["path"]
+    assert contract["continuity"]["prompt_mode"] == "preserve_shot_to_shot_continuity"
