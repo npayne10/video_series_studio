@@ -142,6 +142,7 @@ def test_shot_planner_respects_shot_limit() -> None:
             transition_in=SceneTransition.CUT,
             summary="The officers review the mission plan.",
             required_asset_ids=(),
+            estimated_duration_seconds=20.0,
         )
     )
 
