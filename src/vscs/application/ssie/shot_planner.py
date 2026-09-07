@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import ceil
 from enum import StrEnum
 
 from .models import Scene, SceneTransition, ShotPlan, ShotPurpose
@@ -32,7 +33,7 @@ class PacingProfile(StrEnum):
 class ShotPlannerConfig:
     """Constraints and optional grammar features for shot planning."""
 
-    maximum_shots: int = 12
+    maximum_shots: int = 120
     minimum_shot_duration_seconds: float = 2.0
     maximum_shot_duration_seconds: float = 7.0
     include_reaction_shots: bool = True
@@ -44,7 +45,7 @@ class ShotPlannerConfig:
         cls,
         maximum_shot_duration_seconds: float,
         *,
-        maximum_shots: int = 24,
+        maximum_shots: int = 120,
     ) -> ShotPlannerConfig:
         """Create planning constraints from a validated provider hardware limit."""
         return cls(
@@ -93,6 +94,7 @@ class RuleBasedShotPlanner:
     def plan_shots(self, scene: Scene) -> tuple[ShotPlan, ...]:
         analysis = self.analyse_scene(scene)
         specs = self._build_grammar(scene, analysis)
+        specs = self._expand_for_hardware_runtime(scene, specs)
         specs = self._limit_specs(specs)
         durations = self._allocate_durations(scene, len(specs), analysis.pacing)
         required_assets = self._ordered_unique(
@@ -227,6 +229,57 @@ class RuleBasedShotPlanner:
             )
         ]
 
+    def _expand_for_hardware_runtime(
+        self,
+        scene: Scene,
+        specs: list[_ShotSpec],
+    ) -> list[_ShotSpec]:
+        """Add intentional editorial coverage until the scene fits the Shot duration ceiling."""
+        duration = scene.estimated_duration_seconds
+        if duration is None:
+            return specs
+        required = ceil(duration / self.config.maximum_shot_duration_seconds)
+        if required <= len(specs):
+            return specs
+        if required > self.config.maximum_shots:
+            raise ValueError(
+                f"Scene requires at least {required} Shots to remain within the "
+                f"{self.config.maximum_shot_duration_seconds:.2f}s hardware limit, "
+                f"but maximum_shots is {self.config.maximum_shots}."
+            )
+
+        opening = specs[0]
+        closing = specs[-1]
+        body = list(specs[1:-1])
+        candidates = body or [opening]
+        participant_ids = scene.participant_asset_ids
+        expansion_index = 0
+        while 2 + len(body) < required:
+            template = candidates[expansion_index % len(candidates)]
+            beat_number = len(body) + 1
+            if scene.dialogue:
+                subjects = (
+                    (participant_ids[expansion_index % len(participant_ids)],)
+                    if participant_ids
+                    else template.subjects
+                )
+                description = (
+                    f"Dialogue coverage beat {beat_number}: continue the scene's ordered "
+                    "conversation with a distinct editorial angle, preserving eyelines, "
+                    "identity, geography, and the current narrative objective."
+                )
+                purpose = ShotPurpose.COVERAGE
+            else:
+                subjects = template.subjects or participant_ids
+                description = (
+                    f"Visual action beat {beat_number}: advance the scene action as a distinct "
+                    "editorial shot while preserving geography, continuity, and narrative intent."
+                )
+                purpose = ShotPurpose.ACTION
+            body.append(_ShotSpec(purpose, description, subjects))
+            expansion_index += 1
+        return [opening, *body, closing]
+
     def _limit_specs(self, specs: list[_ShotSpec]) -> list[_ShotSpec]:
         if len(specs) <= self.config.maximum_shots:
             return specs
@@ -244,15 +297,13 @@ class RuleBasedShotPlanner:
         if scene.estimated_duration_seconds is None:
             return (None,) * shot_count
 
+        del pacing
         target = scene.estimated_duration_seconds / shot_count
-        if pacing is PacingProfile.URGENT:
-            target *= 0.85
-        elif pacing is PacingProfile.DELIBERATE:
-            target *= 1.1
-        duration = min(
-            self.config.maximum_shot_duration_seconds,
-            max(self.config.minimum_shot_duration_seconds, target),
-        )
+        if target > self.config.maximum_shot_duration_seconds:
+            raise ValueError(
+                "Shot count is insufficient for the active hardware duration ceiling"
+            )
+        duration = max(self.config.minimum_shot_duration_seconds, target)
         return (round(duration, 3),) * shot_count
 
     @staticmethod
