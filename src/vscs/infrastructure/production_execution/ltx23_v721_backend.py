@@ -119,6 +119,7 @@ class LTX23V721DeploymentAssurance:
         self._inspect_continuity_prompt_wiring(raw, issues)
         self._inspect_provider_geometry_wiring(raw, issues)
         self._inspect_provider_frame_count_wiring(raw, issues)
+        self._inspect_governed_output_normalizer_wiring(raw, issues)
         return tuple(issues)
 
     @classmethod
@@ -246,6 +247,33 @@ class LTX23V721DeploymentAssurance:
         if not isinstance(audio_inputs, dict) or audio_inputs.get("frames_number") != ["113", 0]:
             issues.append(
                 "v7.2.1 LTX audio frame count must be sourced from provider frame-count adapter"
+            )
+
+    @staticmethod
+    def _inspect_governed_output_normalizer_wiring(
+        workflow: dict[str, object],
+        issues: list[str],
+    ) -> None:
+        node = workflow.get("114")
+        inputs = node.get("inputs") if isinstance(node, dict) else None
+        if (
+            not isinstance(inputs, dict)
+            or node.get("class_type") != "VSCSGovernedOutputNormalizerV721"
+        ):
+            issues.append("v7.2.1 governed output normalizer node 114 is missing")
+            return
+        if (
+            inputs.get("images") != ["38", 0]
+            or inputs.get("governed_width") != ["107", 8]
+            or inputs.get("governed_height") != ["107", 9]
+            or inputs.get("governed_frame_count") != ["107", 10]
+        ):
+            issues.append("v7.2.1 governed output normalizer node 114 is miswired")
+        video = workflow.get("19")
+        video_inputs = video.get("inputs") if isinstance(video, dict) else None
+        if not isinstance(video_inputs, dict) or video_inputs.get("images") != ["114", 0]:
+            issues.append(
+                "v7.2.1 CreateVideo must consume governed-normalized provider output"
             )
 
     @staticmethod
