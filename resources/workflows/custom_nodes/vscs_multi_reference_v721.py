@@ -254,6 +254,39 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 }
 
 
+
+class VSCSProviderFrameCountV721:
+    @classmethod
+    def INPUT_TYPES(cls) -> dict[str, Any]:
+        return {
+            "required": {
+                "governed_frame_count": ("INT", {"forceInput": True}),
+                "frame_modulus": ("INT", {"default": 8, "min": 1, "max": 64}),
+                "frame_offset": ("INT", {"default": 1, "min": 0, "max": 63}),
+            }
+        }
+
+    RETURN_TYPES = ("INT",)
+    RETURN_NAMES = ("provider_frame_count",)
+    FUNCTION = "resolve"
+    CATEGORY = "VSCS/Production"
+
+    def resolve(
+        self,
+        governed_frame_count: int,
+        frame_modulus: int,
+        frame_offset: int,
+    ) -> tuple[int]:
+        if governed_frame_count <= 0:
+            raise ValueError("Governed frame count must be positive")
+        if frame_modulus <= 0:
+            raise ValueError("Provider frame modulus must be positive")
+        candidate = governed_frame_count
+        while (candidate - frame_offset) % frame_modulus != 0:
+            candidate += 1
+        return (candidate,)
+
+
 class VSCSProviderGeometryV721:
     @classmethod
     def INPUT_TYPES(cls) -> dict[str, Any]:
@@ -288,6 +321,10 @@ class VSCSProviderGeometryV721:
 
 
 NODE_CLASS_MAPPINGS["VSCSProviderGeometryV721"] = VSCSProviderGeometryV721
+NODE_CLASS_MAPPINGS["VSCSProviderFrameCountV721"] = VSCSProviderFrameCountV721
 NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderGeometryV721"] = (
     "VSCS Provider Geometry Adapter v7.2.1"
+)
+NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderFrameCountV721"] = (
+    "VSCS Provider Frame Count Adapter v7.2.1"
 )
