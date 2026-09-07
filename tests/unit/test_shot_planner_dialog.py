@@ -60,7 +60,7 @@ def test_shot_planner_creates_ready_shot(
     dialog.description_edit.setPlainText(
         "A wide view establishes the Mauritania bridge and active crew."
     )
-    dialog.duration_spin.setValue(8.0)
+    dialog.duration_spin.setValue(7.0)
     form_shot = dialog._shot_from_form()
     assert isinstance(form_shot.purpose, ShotPurpose)
     assert isinstance(form_shot.shot_size, ShotSize)
@@ -73,7 +73,7 @@ def test_shot_planner_creates_ready_shot(
     shot = service.list_shots("EP-001-SCN-001")[0]
     assert shot.title == "Bridge establishing"
     assert shot.status is ShotPlanningStatus.READY
-    assert shot.estimated_duration_seconds == 8.0
+    assert shot.estimated_duration_seconds == 7.0
     context.shutdown()
 
 
