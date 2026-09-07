@@ -72,8 +72,8 @@
         1
       ],
       "length": [
-        "107",
-        10
+        "113",
+        0
       ],
       "batch_size": 1
     },
@@ -264,8 +264,8 @@
         0
       ],
       "frames_number": [
-        "107",
-        10
+        "113",
+        0
       ],
       "frame_rate": [
         "107",
@@ -559,6 +559,20 @@
     },
     "_meta": {
       "title": "VSCS Continuity Prompt Authority v7.2.1"
+    }
+  },
+  "113": {
+    "class_type": "VSCSProviderFrameCountV721",
+    "inputs": {
+      "governed_frame_count": [
+        "107",
+        10
+      ],
+      "frame_modulus": 8,
+      "frame_offset": 1
+    },
+    "_meta": {
+      "title": "VSCS Provider Frame Count Adapter v7.2.1"
     }
   }
 }
