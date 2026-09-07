@@ -182,3 +182,58 @@ def test_legacy_shots_remain_visible_but_outside_governed_storage(tmp_path: Path
     assert references[0].shot_id.endswith("SHT-007")
     assert shots.list_plans(scene_id=scene.scene_id) == ()
     context.shutdown()
+
+
+def test_hardware_aware_replan_covers_full_scene_with_short_governed_shots(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=180,
+    )
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert proposal.maximum_shot_runtime_seconds == 7
+    assert proposal.proposed_shot_count == 26
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 180
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
+    assert all(shot.status is ShotPlanStatus.DRAFT for shot in proposal.proposed_shots)
+    assert proposal.proposed_shots[0].title.startswith("Establish")
+    assert proposal.proposed_shots[-1].title.startswith("Close")
+    context.shutdown()
+
+
+def test_hardware_aware_replan_archives_previous_governed_authority(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=60,
+    )
+    previous = _create(shots, scene.scene_id, runtime=5)
+    shots.mark_ready(previous.shot_id)
+
+    result = shots.apply_hardware_aware_replan(scene.scene_id)
+
+    assert result.previous_shot_count == 1
+    assert result.new_shot_count == 9
+    assert result.archive_path is not None
+    assert result.archive_path.is_file()
+    archived = result.archive_path.read_text(encoding="utf-8")
+    assert previous.shot_id in archived
+    assert "hardware-aware-scene-replan" in archived
+    current = shots.list_plans(scene_id=scene.scene_id)
+    assert len(current) == 9
+    assert sum(shot.target_runtime_seconds for shot in current) == 60
+    assert all(shot.status is ShotPlanStatus.DRAFT for shot in current)
+    context.shutdown()
+
+
+def test_governed_manual_shot_runtime_rejects_active_hardware_limit(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(tmp_path)
+
+    with pytest.raises(GovernedShotPlanningError, match="hardware-aware Shot limit"):
+        _create(shots, scene.scene_id, runtime=8)
+    context.shutdown()
