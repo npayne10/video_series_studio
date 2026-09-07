@@ -32,7 +32,7 @@ class HardwareAwareShotReplanProposal:
     current_shot_count: int
     proposed_shot_count: int
     scene_runtime_seconds: int
-    proposed_shots: tuple["ShotPlan", ...]
+    proposed_shots: tuple[ShotPlan, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +114,7 @@ class GovernedShotPlanningService:
                 if isinstance(capability, dict):
                     return dict(capability)
             except (OSError, json.JSONDecodeError, TypeError, ValueError):
-                pass
+                capability = None
         return {
             "provider": "ltx-2.3",
             "gpu_name": "Not yet observed",
