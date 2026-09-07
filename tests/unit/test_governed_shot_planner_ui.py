@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QComboBox, QPlainTextEdit, QScrollArea
+from PySide6.QtWidgets import QComboBox, QMessageBox, QPlainTextEdit, QScrollArea
 
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
@@ -136,4 +136,85 @@ def test_governed_shot_planner_shows_budget_governance_and_legacy_rows(
     assert not dialog.edit_button.isEnabled()
     assert not dialog.delete_button.isEnabled()
     assert not dialog.ready_button.isEnabled()
+    context.shutdown()
+
+
+def test_governed_shot_planner_exposes_hardware_aware_replanning(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    context, shots, _legacy, scene = _planning(tmp_path)
+    dialog = GovernedShotPlannerDialog(shots, scene)
+    qtbot.addWidget(dialog)
+    dialog.show()
+
+    assert dialog.replan_button.objectName() == "hardwareAwareSceneReplan"
+    assert dialog.replan_button.isEnabled()
+    assert "maximum governed Shot 7s" in dialog.hardware_label.text()
+    context.shutdown()
+
+
+def test_shot_editor_caps_manual_runtime_to_hardware_limit(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    context, _shots, _legacy, scene = _planning(tmp_path)
+    dialog = ShotPlanEditorDialog(
+        scene,
+        scene.scene_constraints,
+        maximum_runtime_seconds=7,
+    )
+    qtbot.addWidget(dialog)
+
+    assert dialog.runtime_spin.maximum() == 7
+    context.shutdown()
+
+
+def test_replan_button_archives_and_replaces_scene_after_human_confirmation(
+    qtbot,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    context, shots, _legacy, scene = _planning(tmp_path)
+    previous = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Legacy governed shot",
+        narrative_purpose="Old long-form planning assumption.",
+        production_objective="Old objective.",
+        target_runtime_seconds=5,
+        required_action="Old action.",
+    )
+    shots.mark_ready(previous.shot_id)
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Ok,
+    )
+
+    dialog = GovernedShotPlannerDialog(shots, scene)
+    qtbot.addWidget(dialog)
+    dialog.show()
+    dialog.replan_button.click()
+
+    current = shots.list_plans(scene_id=scene.scene_id)
+    assert len(current) == 9
+    assert sum(shot.target_runtime_seconds for shot in current) == 60
+    assert all(shot.status.value == "draft" for shot in current)
+    assert any(
+        path.is_file()
+        for path in (
+            tmp_path
+            / "Demo"
+            / "planning"
+            / "shot_plan_history"
+            / scene.scene_id
+        ).glob("*.json")
+    )
     context.shutdown()
