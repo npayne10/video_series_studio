@@ -226,14 +226,27 @@ class VSCSContinuityPromptV721:
             isinstance(continuity, dict)
             and bool(str(continuity.get("path") or "").strip())
         )
-        prefix = (
-            "Continue the exact same cinematic shot from the supplied previous-segment final "
-            "frame. Preserve camera position, lens, framing, people, wardrobe, lighting, "
-            "environment, spatial relationships and action direction. Do not restart, re-stage "
-            "or introduce new people. "
-            if has_continuity
-            else "Begin one coherent cinematic shot from the governed scene description. "
+        prompt_mode = (
+            str(continuity.get("prompt_mode") or "").strip()
+            if isinstance(continuity, dict)
+            else ""
         )
+        if has_continuity and prompt_mode == "preserve_shot_to_shot_continuity":
+            prefix = (
+                "Use the supplied previous approved Shot final frame as visual continuity "
+                "authority for identity, wardrobe, environment, lighting state and spatial "
+                "orientation. Obey the new governed Shot description and camera direction; "
+                "do not force the previous framing or pretend this is the same continuous shot. "
+            )
+        elif has_continuity:
+            prefix = (
+                "Continue the exact same cinematic shot from the supplied previous-segment final "
+                "frame. Preserve camera position, lens, framing, people, wardrobe, lighting, "
+                "environment, spatial relationships and action direction. Do not restart, re-stage "
+                "or introduce new people. "
+            )
+        else:
+            prefix = "Begin one coherent cinematic shot from the governed scene description. "
         roles = "Reference roles: " + "; ".join(role_text) + ". " if role_text else ""
         composition = (
             "Identity references control who the people are, not where they are placed. "
