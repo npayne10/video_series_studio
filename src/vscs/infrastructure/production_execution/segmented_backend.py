@@ -40,7 +40,12 @@ from .current_authority_backend import (
     LocalComfyUIProductionExecutionBackend as _CurrentAuthorityBackend,
 )
 from .package_compilation import LocalProductionPackageCompilationError
-from .provider_segmentation import GovernedProviderSegmentationPlanner
+from .hardware_shot_capability import (
+    HardwareShotCapability,
+    HardwareShotCapabilityError,
+    LocalComfyUIHardwareCapabilityResolver,
+    capability_for_vram,
+)
 from .segment_execution_runtime import SegmentExecutionRecord, SegmentExecutionStore
 from .segment_media_runtime import SegmentMediaRuntime
 from .segment_package_runtime import (
@@ -53,17 +58,80 @@ _VIDEO_KINDS = frozenset({"video", "preview_video", "production_video", "lip_syn
 
 
 class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompiler):
-    """Emit a deterministic provider execution plan beside governed render authority."""
+    """Hardware-aware one-Shot compiler; historical class name preserves composition seams."""
+
+    def __init__(self, project_directory: Path) -> None:
+        super().__init__(project_directory)
+        self._hardware_capability = capability_for_vram(
+            8 * 1024**3,
+            gpu_name="unobserved-safe-default",
+        )
+
+    def set_hardware_capability(self, capability: HardwareShotCapability) -> None:
+        self._hardware_capability = capability
+
+    def validate_file(self, task: object, path: Path) -> None:
+        super().validate_file(task, path)  # type: ignore[arg-type]
+        raw = self._read_json(path)
+        policy = raw.get("hardware_shot_policy")
+        plan = raw.get("provider_execution_plan")
+        if not isinstance(policy, dict) or policy.get("mode") != "one_shot_per_provider_job":
+            raise LocalProductionPackageCompilationError(
+                "Production Package predates hardware-aware governed Shot execution; recompile it."
+            )
+        if not isinstance(plan, dict) or plan.get("mode") != "monolithic":
+            raise LocalProductionPackageCompilationError(
+                "Hidden provider segmentation is retired for Phase 20.18.2; recompile the Shot."
+            )
 
     def _comfyui_payload(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
+        capability = self._hardware_capability
+        if compiled.frames_per_second != capability.frames_per_second:
+            raise LocalProductionPackageCompilationError(
+                "Hardware-aware LTX Shot capability is validated at "
+                f"{capability.frames_per_second} fps, got {compiled.frames_per_second} fps."
+            )
+        if compiled.frame_count > capability.governed_maximum_frame_count:
+            duration = compiled.frame_count / compiled.frames_per_second
+            raise LocalProductionPackageCompilationError(
+                f"Governed Shot is {duration:.3f}s ({compiled.frame_count} frames), exceeding "
+                f"the validated {capability.validated_maximum_shot_seconds:.1f}s "
+                f"({capability.governed_maximum_frame_count} frames) limit for "
+                f"{capability.gpu_name} / {capability.vram_class_gb} GB class. "
+                "Re-plan the scene as multiple independent cinematic Shots; hidden provider "
+                "segmentation and reassembly are retired."
+            )
+
+        provider_frame_count = compiled.frame_count
+        while (provider_frame_count - 1) % 8 != 0:
+            provider_frame_count += 1
+
         content = super()._comfyui_payload(compiled)
-        content["provider_execution_plan"] = GovernedProviderSegmentationPlanner().plan(
-            frame_count=compiled.frame_count,
-            frames_per_second=compiled.frames_per_second,
-            seed=compiled.seed,
-            width=compiled.width,
-            height=compiled.height,
-        )
+        content["hardware_shot_policy"] = {
+            "schema_version": "1.0",
+            "mode": "one_shot_per_provider_job",
+            "provider": capability.provider,
+            "gpu_name": capability.gpu_name,
+            "total_vram_bytes": capability.total_vram_bytes,
+            "vram_class_gb": capability.vram_class_gb,
+            "validation_status": capability.validation_status,
+            "validated_maximum_shot_seconds": capability.validated_maximum_shot_seconds,
+            "governed_maximum_frame_count": capability.governed_maximum_frame_count,
+            "source": capability.source,
+        }
+        content["provider_execution_plan"] = {
+            "schema_version": "2.0",
+            "provider": capability.provider,
+            "mode": "monolithic",
+            "hardware_aware": True,
+            "hidden_segmentation": False,
+            "segment_count": 1,
+            "governed_frame_count": compiled.frame_count,
+            "provider_frame_count": provider_frame_count,
+            "frames_per_second": compiled.frames_per_second,
+            "governed_duration_seconds": compiled.frame_count / compiled.frames_per_second,
+            "assembly": {"required": False, "mode": "none"},
+        }
         content = self._apply_provider_role_authority(content)
         self._refresh_manifest_fingerprint(content)
         return content
@@ -172,9 +240,28 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         self.package_compilation = SegmentedLTX23V721ProductionPackageCompilationService(
             self.project_directory
         )
+        self.hardware_capabilities = LocalComfyUIHardwareCapabilityResolver(
+            self.project_directory,
+            endpoint,
+        )
         self.segment_packages = SegmentPackageMaterializer(self.project_directory)
         self.segment_executions = SegmentExecutionStore(self.project_directory)
         self._segmented_active: dict[str, _ActiveSegmentedExecution] = {}
+
+    def compile_package(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ):
+        try:
+            capability = self.hardware_capabilities.resolve()
+        except HardwareShotCapabilityError as exc:
+            raise ProductionExecutionError(
+                "Cannot establish hardware-aware Shot capability before compilation: " + str(exc)
+            ) from exc
+        self.package_compilation.set_hardware_capability(capability)
+        return super().compile_package(task_id, profile=profile)
 
     def start_for_profile(
         self,
