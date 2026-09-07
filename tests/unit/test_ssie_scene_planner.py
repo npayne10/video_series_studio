@@ -150,6 +150,27 @@ def test_shot_planner_respects_shot_limit() -> None:
     assert [shot.sequence_number for shot in shots] == [1, 2, 3, 4]
 
 
+def test_shot_planner_can_apply_hardware_duration_limit() -> None:
+    config = ShotPlannerConfig.for_hardware_limit(7.0)
+    planner = RuleBasedShotPlanner(config)
+
+    shots = planner.plan_shots(
+        _scene(
+            estimated_duration_seconds=90.0,
+            transition_in=SceneTransition.CUT,
+            required_asset_ids=(),
+        )
+    )
+
+    assert config.maximum_shot_duration_seconds == 7.0
+    assert config.maximum_shots == 24
+    assert all(
+        shot.estimated_duration_seconds is None
+        or shot.estimated_duration_seconds <= 7.0
+        for shot in shots
+    )
+
+
 def test_shot_planner_validates_configuration() -> None:
     with pytest.raises(ValueError, match="maximum_shots"):
         ShotPlannerConfig(maximum_shots=1)
