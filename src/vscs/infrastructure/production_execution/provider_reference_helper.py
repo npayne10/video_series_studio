@@ -15,6 +15,9 @@ from typing import Any
 from .package_compilation import LocalProductionPackageCompilationError
 
 _LEGACY_HELPER_ROLES = frozenset({"scene_composition_anchor", "provider_helper_reference"})
+_CONTINUITY_ROLES = frozenset(
+    {"start_frame_reference", "continuity_reference", "previous_shot_final_frame"}
+)
 _ROLE_ORDER = {
     "primary_identity": 0,
     "secondary_identity": 1,
@@ -60,17 +63,31 @@ class GovernedProviderReferenceHelperBuilder:
             if isinstance(item, dict) and str(item.get("role") or "") not in _LEGACY_HELPER_ROLES
         ]
         required = [item for item in bindings if item.get("required") is True]
-        if not required:
+        continuity_binding = next(
+            (
+                item
+                for item in bindings
+                if str(item.get("role") or "") in _CONTINUITY_ROLES
+                and item.get("provider_ready") is True
+            ),
+            None,
+        )
+        visual_required = [
+            item
+            for item in required
+            if str(item.get("role") or "") not in _CONTINUITY_ROLES
+        ]
+        if not visual_required:
             raise LocalProductionPackageCompilationError(
                 "LTX provider reference contract requires at least one governed reference"
             )
-        if len(required) > 3:
+        if len(visual_required) > 3:
             raise LocalProductionPackageCompilationError(
                 "LTX Ingredients production workflow supports at most three required governed "
                 "references per shot"
             )
 
-        ordered = sorted(required, key=self._reference_sort_key)
+        ordered = sorted(visual_required, key=self._reference_sort_key)
         enriched = dict(plan)
         enriched["bindings"] = bindings
 
@@ -116,11 +133,23 @@ class GovernedProviderReferenceHelperBuilder:
                 for index, item in enumerate(ordered, start=1)
             ],
             "continuity_policy": {
-                "mode": "previous_segment_final_frame",
+                "mode": "previous_approved_shot_final_frame",
                 "authority": "strong",
-                "prompt_mode": "continue_exact_same_shot",
+                "prompt_mode": "preserve_shot_to_shot_continuity",
             },
-            "continuity": None,
+            "continuity": (
+                {
+                    "role": "previous_approved_shot_final_frame",
+                    "path": str(continuity_binding.get("path") or ""),
+                    "file_checksum": continuity_binding.get("file_checksum"),
+                    "reference_fingerprint": continuity_binding.get("reference_fingerprint"),
+                    "provider_ready": True,
+                    "authority": "strong",
+                    "prompt_mode": "preserve_shot_to_shot_continuity",
+                }
+                if continuity_binding is not None
+                else None
+            ),
         }
         return enriched
 
