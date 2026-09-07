@@ -287,6 +287,80 @@ class VSCSProviderFrameCountV721:
         return (candidate,)
 
 
+class VSCSGovernedOutputNormalizerV721:
+    @classmethod
+    def INPUT_TYPES(cls) -> dict[str, Any]:
+        return {
+            "required": {
+                "images": ("IMAGE", {"forceInput": True}),
+                "governed_width": ("INT", {"forceInput": True}),
+                "governed_height": ("INT", {"forceInput": True}),
+                "governed_frame_count": ("INT", {"forceInput": True}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("governed_images",)
+    FUNCTION = "normalize"
+    CATEGORY = "VSCS/Production"
+
+    def normalize(
+        self,
+        images: torch.Tensor,
+        governed_width: int,
+        governed_height: int,
+        governed_frame_count: int,
+    ) -> tuple[torch.Tensor]:
+        if images.ndim != 4:
+            raise ValueError("Decoded video IMAGE tensor must be BHWC")
+        if governed_width <= 0 or governed_height <= 0 or governed_frame_count <= 0:
+            raise ValueError("Governed output dimensions and frame count must be positive")
+        if images.shape[0] < governed_frame_count:
+            raise ValueError(
+                "Provider output contains fewer frames than governed Shot authority"
+            )
+
+        images = images[:governed_frame_count]
+        source_height = int(images.shape[1])
+        source_width = int(images.shape[2])
+        if source_width == governed_width and source_height == governed_height:
+            return (images,)
+
+        scale = min(
+            governed_width / source_width,
+            governed_height / source_height,
+        )
+        scaled_width = max(1, min(governed_width, round(source_width * scale)))
+        scaled_height = max(1, min(governed_height, round(source_height * scale)))
+        channels_first = images.permute(0, 3, 1, 2)
+        resized = torch.nn.functional.interpolate(
+            channels_first,
+            size=(scaled_height, scaled_width),
+            mode="bilinear",
+            align_corners=False,
+        ).permute(0, 2, 3, 1)
+
+        output = torch.zeros(
+            (
+                governed_frame_count,
+                governed_height,
+                governed_width,
+                int(images.shape[3]),
+            ),
+            dtype=resized.dtype,
+            device=resized.device,
+        )
+        top = (governed_height - scaled_height) // 2
+        left = (governed_width - scaled_width) // 2
+        output[
+            :,
+            top : top + scaled_height,
+            left : left + scaled_width,
+            :,
+        ] = resized
+        return (output,)
+
+
 class VSCSProviderGeometryV721:
     @classmethod
     def INPUT_TYPES(cls) -> dict[str, Any]:
@@ -322,9 +396,13 @@ class VSCSProviderGeometryV721:
 
 NODE_CLASS_MAPPINGS["VSCSProviderGeometryV721"] = VSCSProviderGeometryV721
 NODE_CLASS_MAPPINGS["VSCSProviderFrameCountV721"] = VSCSProviderFrameCountV721
+NODE_CLASS_MAPPINGS["VSCSGovernedOutputNormalizerV721"] = VSCSGovernedOutputNormalizerV721
 NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderGeometryV721"] = (
     "VSCS Provider Geometry Adapter v7.2.1"
 )
 NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderFrameCountV721"] = (
     "VSCS Provider Frame Count Adapter v7.2.1"
+)
+NODE_DISPLAY_NAME_MAPPINGS["VSCSGovernedOutputNormalizerV721"] = (
+    "VSCS Governed Output Normalizer v7.2.1"
 )
