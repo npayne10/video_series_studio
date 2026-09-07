@@ -620,15 +620,10 @@ class GovernedShotPlanningService:
             raise GovernedShotPlanningError(f"{label} is required")
         return normalized
 
-    def _runtime(self, value: int) -> int:
+    @staticmethod
+    def _runtime(value: int) -> int:
         if value <= 0:
             raise GovernedShotPlanningError("Target runtime must be greater than zero")
-        limit = self.hardware_shot_limit_seconds()
-        if value > limit:
-            raise GovernedShotPlanningError(
-                f"Target runtime {value}s exceeds the active hardware-aware Shot limit "
-                f"of {limit}s. Re-plan the Scene or shorten the Shot."
-            )
         return value
 
     @staticmethod
