@@ -246,3 +246,18 @@ def test_deployment_assurance_rejects_broken_continuity_prompt_authority(
     issues = LTX23V721DeploymentAssurance(workflow_root).inspect()
 
     assert any("continuity prompt authority" in issue for issue in issues)
+
+
+def test_deployment_assurance_rejects_broken_provider_frame_count_adapter(
+    tmp_path: Path,
+) -> None:
+    workflow_root = tmp_path / "resources" / "workflows"
+    workflow_path = workflow_root / LTX23_V721_WORKFLOW_FILE
+    workflow_path.parent.mkdir(parents=True)
+    raw = json.loads((WORKFLOW_ROOT / LTX23_V721_WORKFLOW_FILE).read_text(encoding="utf-8"))
+    raw["8"]["inputs"]["length"] = ["107", 10]
+    workflow_path.write_text(json.dumps(raw), encoding="utf-8")
+
+    issues = LTX23V721DeploymentAssurance(workflow_root).inspect()
+
+    assert any("provider frame-count adapter" in issue for issue in issues)
