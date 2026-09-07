@@ -39,6 +39,20 @@ class ShotPlannerConfig:
     include_revelation_inserts: bool = True
     include_transition_shots: bool = True
 
+    @classmethod
+    def for_hardware_limit(
+        cls,
+        maximum_shot_duration_seconds: float,
+        *,
+        maximum_shots: int = 24,
+    ) -> "ShotPlannerConfig":
+        """Create planning constraints from a validated provider hardware limit."""
+        return cls(
+            maximum_shots=maximum_shots,
+            minimum_shot_duration_seconds=2.0,
+            maximum_shot_duration_seconds=maximum_shot_duration_seconds,
+        )
+
     def __post_init__(self) -> None:
         if self.maximum_shots < 2:
             raise ValueError("maximum_shots must be at least 2")
