@@ -19,7 +19,25 @@ if (-not (Test-Path $ComfyUIRoot -PathType Container)) {
 New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 Copy-Item -Force $source $target
 
-Write-Host "Installed VSCSMultiReferenceResolverV721:"
+$requiredClasses = @(
+    "VSCSMultiReferenceResolverV721",
+    "VSCSContinuityPromptV721",
+    "VSCSProviderGeometryV721",
+    "VSCSProviderFrameCountV721",
+    "VSCSGovernedOutputNormalizerV721"
+)
+$installed = Get-Content $target -Raw
+foreach ($className in $requiredClasses) {
+    if ($installed -notmatch [regex]::Escape($className)) {
+        throw "Deployed VSCS custom node is missing required class: $className"
+    }
+}
+
+Write-Host "Installed Phase 20.18.2 VSCS LTX provider nodes:"
+foreach ($className in $requiredClasses) {
+    Write-Host "  $className"
+}
+Write-Host "Target:"
 Write-Host "  $target"
 Write-Host ""
 Write-Host "Restart ComfyUI before live production validation."
