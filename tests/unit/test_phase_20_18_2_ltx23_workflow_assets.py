@@ -53,6 +53,12 @@ def test_ltx23_workflow_chains_three_governed_ingredients_guides() -> None:
     assert workflow["112"]["inputs"]["shot_prompt"] == ["107", 5]
     assert workflow["112"]["inputs"]["reference_plan_json"] == ["107", 20]
     assert workflow["5"]["inputs"]["text"] == ["112", 0]
+    assert workflow["113"]["class_type"] == "VSCSProviderFrameCountV721"
+    assert workflow["113"]["inputs"]["governed_frame_count"] == ["107", 10]
+    assert workflow["113"]["inputs"]["frame_modulus"] == 8
+    assert workflow["113"]["inputs"]["frame_offset"] == 1
+    assert workflow["8"]["inputs"]["length"] == ["113", 0]
+    assert workflow["22"]["inputs"]["frames_number"] == ["113", 0]
 
 
 def test_segment_continuity_is_separate_from_governed_reference_guides() -> None:
@@ -78,5 +84,6 @@ def test_multi_reference_resolver_is_shipped_as_deployable_custom_node() -> None
     assert "NODE_CLASS_MAPPINGS" in content
     assert "VSCSProviderGeometryV721" in content
     assert "VSCSContinuityPromptV721" in content
+    assert "VSCSProviderFrameCountV721" in content
     assert '"continuation_weight"' in content
     assert "Continue the exact same cinematic shot" in content
