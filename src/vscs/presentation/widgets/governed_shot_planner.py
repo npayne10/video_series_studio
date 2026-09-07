@@ -388,14 +388,76 @@ class GovernedShotPlannerDialog(QDialog):
             governed and row >= 0 and row < len(self.service.list_plans(scene_id=self.scene_id)) - 1
         )
 
+    def _replan_from_story(self) -> None:
+        scene = self.service.scenes.plan(self.scene_id)
+        if scene is None or not self.service.scenes.is_production_ready(scene):
+            return
+        try:
+            proposal = self.service.propose_hardware_aware_replan(self.scene_id)
+        except GovernedShotPlanningError as exc:
+            QMessageBox.warning(self, "Hardware-Aware Scene Replanning", str(exc))
+            return
+
+        preview_titles = "\n".join(
+            f"  {shot.sequence_number:03d} — {shot.title} — {shot.target_runtime_seconds}s"
+            for shot in proposal.proposed_shots[:8]
+        )
+        if proposal.proposed_shot_count > 8:
+            preview_titles += (
+                f"\n  ... {proposal.proposed_shot_count - 8} additional governed Shots"
+            )
+        answer = QMessageBox.question(
+            self,
+            "Re-plan Scene from Story",
+            (
+                f"Rebuild {proposal.scene_id} from current Ready Scene/story authority?\n\n"
+                f"Hardware: {proposal.hardware_label}\n"
+                f"Maximum Shot runtime: {proposal.maximum_shot_runtime_seconds}s\n"
+                f"Scene runtime: {proposal.scene_runtime_seconds}s\n"
+                f"Current governed Shots: {proposal.current_shot_count}\n"
+                f"Proposed governed Shots: {proposal.proposed_shot_count}\n\n"
+                "The current Shot Plan will be archived before replacement. "
+                "The new Shots will be Draft so they can be reviewed before downstream planning.\n\n"
+                f"Preview:\n{preview_titles}"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer is not QMessageBox.StandardButton.Yes:
+            return
+        try:
+            result = self.service.apply_hardware_aware_replan(self.scene_id)
+        except GovernedShotPlanningError as exc:
+            QMessageBox.warning(self, "Hardware-Aware Scene Replanning", str(exc))
+            return
+
+        archive = str(result.archive_path) if result.archive_path is not None else "No prior plan"
+        QMessageBox.information(
+            self,
+            "Hardware-Aware Scene Replanning",
+            (
+                f"Replanned {result.scene_id} into {result.new_shot_count} governed Shots, "
+                f"each no longer than {result.maximum_shot_runtime_seconds}s.\n\n"
+                f"Archived prior Shot Plan: {archive}"
+            ),
+        )
+        self.refresh()
+
     def _new(self) -> None:
         scene = self.service.scenes.plan(self.scene_id)
         if scene is None or not self.service.scenes.is_production_ready(scene):
             return
-        dialog = ShotPlanEditorDialog(scene, scene.scene_constraints, parent=self)
+        dialog = ShotPlanEditorDialog(
+            scene,
+            scene.scene_constraints,
+            parent=self,
+            maximum_runtime_seconds=self.service.hardware_shot_limit_seconds(),
+        )
         dialog.sequence_spin.setValue(self.service.next_sequence_number(self.scene_id))
         remaining = self.service.remaining_runtime_seconds(self.scene_id)
-        dialog.runtime_spin.setMaximum(max(1, remaining))
+        dialog.runtime_spin.setMaximum(
+            max(1, min(remaining, self.service.hardware_shot_limit_seconds()))
+        )
         dialog.runtime_spin.setValue(min(5, max(1, remaining)))
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
@@ -424,11 +486,19 @@ class GovernedShotPlannerDialog(QDialog):
         scene = self.service.scenes.plan(self.scene_id)
         if shot is None or scene is None or shot.status is not ShotPlanStatus.DRAFT:
             return
-        dialog = ShotPlanEditorDialog(scene, scene.scene_constraints, shot, self)
+        dialog = ShotPlanEditorDialog(
+            scene,
+            scene.scene_constraints,
+            shot,
+            self,
+            maximum_runtime_seconds=self.service.hardware_shot_limit_seconds(),
+        )
         remaining = (
             self.service.remaining_runtime_seconds(self.scene_id) + shot.target_runtime_seconds
         )
-        dialog.runtime_spin.setMaximum(max(1, remaining))
+        dialog.runtime_spin.setMaximum(
+            max(1, min(remaining, self.service.hardware_shot_limit_seconds()))
+        )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         values = dialog.values()
