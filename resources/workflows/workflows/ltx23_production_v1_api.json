@@ -212,7 +212,7 @@
     "class_type": "CreateVideo",
     "inputs": {
       "images": [
-        "38",
+        "114",
         0
       ],
       "audio": [
@@ -573,6 +573,30 @@
     },
     "_meta": {
       "title": "VSCS Provider Frame Count Adapter v7.2.1"
+    }
+  },
+  "114": {
+    "class_type": "VSCSGovernedOutputNormalizerV721",
+    "inputs": {
+      "images": [
+        "38",
+        0
+      ],
+      "governed_width": [
+        "107",
+        8
+      ],
+      "governed_height": [
+        "107",
+        9
+      ],
+      "governed_frame_count": [
+        "107",
+        10
+      ]
+    },
+    "_meta": {
+      "title": "VSCS Governed Output Normalizer v7.2.1"
     }
   }
 }
