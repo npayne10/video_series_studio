@@ -1,5 +1,11 @@
 """Infrastructure composition for live Production Execution."""
 
+from .hardware_shot_capability import (
+    HardwareShotCapability,
+    HardwareShotCapabilityError,
+    LocalComfyUIHardwareCapabilityResolver,
+    capability_for_vram,
+)
 from .ltx23_v721_backend import LTX23V721DeploymentAssurance
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
@@ -12,6 +18,10 @@ from .segmented_backend import LocalComfyUIProductionExecutionBackend
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
+    "HardwareShotCapability",
+    "HardwareShotCapabilityError",
+    "LocalComfyUIHardwareCapabilityResolver",
+    "capability_for_vram",
     "ComfyUIInputTrace",
     "ComfyUIV714InputAssurance",
     "LTX23V721DeploymentAssurance",
