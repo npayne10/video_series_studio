@@ -18,14 +18,14 @@ from .segmented_backend import LocalComfyUIProductionExecutionBackend
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
-    "HardwareShotCapability",
-    "HardwareShotCapabilityError",
-    "LocalComfyUIHardwareCapabilityResolver",
-    "capability_for_vram",
     "ComfyUIInputTrace",
     "ComfyUIV714InputAssurance",
+    "HardwareShotCapability",
+    "HardwareShotCapabilityError",
     "LTX23V721DeploymentAssurance",
+    "LocalComfyUIHardwareCapabilityResolver",
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "capability_for_vram",
 ]

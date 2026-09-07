@@ -165,8 +165,7 @@ def test_shot_planner_can_apply_hardware_duration_limit() -> None:
     assert config.maximum_shot_duration_seconds == 7.0
     assert config.maximum_shots == 24
     assert all(
-        shot.estimated_duration_seconds is None
-        or shot.estimated_duration_seconds <= 7.0
+        shot.estimated_duration_seconds is None or shot.estimated_duration_seconds <= 7.0
         for shot in shots
     )
 

@@ -73,9 +73,7 @@ class GovernedProviderReferenceHelperBuilder:
             None,
         )
         visual_required = [
-            item
-            for item in required
-            if str(item.get("role") or "") not in _CONTINUITY_ROLES
+            item for item in required if str(item.get("role") or "") not in _CONTINUITY_ROLES
         ]
         if not visual_required:
             raise LocalProductionPackageCompilationError(

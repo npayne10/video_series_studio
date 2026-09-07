@@ -45,7 +45,7 @@ class ShotPlannerConfig:
         maximum_shot_duration_seconds: float,
         *,
         maximum_shots: int = 24,
-    ) -> "ShotPlannerConfig":
+    ) -> ShotPlannerConfig:
         """Create planning constraints from a validated provider hardware limit."""
         return cls(
             maximum_shots=maximum_shots,

@@ -39,13 +39,13 @@ from .current_authority_backend import (
 from .current_authority_backend import (
     LocalComfyUIProductionExecutionBackend as _CurrentAuthorityBackend,
 )
-from .package_compilation import LocalProductionPackageCompilationError
 from .hardware_shot_capability import (
     HardwareShotCapability,
     HardwareShotCapabilityError,
     LocalComfyUIHardwareCapabilityResolver,
     capability_for_vram,
 )
+from .package_compilation import LocalProductionPackageCompilationError
 from .segment_execution_runtime import SegmentExecutionRecord, SegmentExecutionStore
 from .segment_media_runtime import SegmentMediaRuntime
 from .segment_package_runtime import (

@@ -272,9 +272,7 @@ class LTX23V721DeploymentAssurance:
         video = workflow.get("19")
         video_inputs = video.get("inputs") if isinstance(video, dict) else None
         if not isinstance(video_inputs, dict) or video_inputs.get("images") != ["114", 0]:
-            issues.append(
-                "v7.2.1 CreateVideo must consume governed-normalized provider output"
-            )
+            issues.append("v7.2.1 CreateVideo must consume governed-normalized provider output")
 
     @staticmethod
     def _matching_node(

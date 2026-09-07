@@ -63,7 +63,6 @@ def test_segmented_package_enforces_reference_roles_and_no_generated_dialogue() 
 def test_phase_20_18_2_backend_uses_hardware_capability_before_compilation() -> None:
     assert "compile_package" in LocalComfyUIProductionExecutionBackend.__dict__
     assert (
-        "set_hardware_capability"
-        in SegmentedLTX23V721ProductionPackageCompilationService.__dict__
+        "set_hardware_capability" in SegmentedLTX23V721ProductionPackageCompilationService.__dict__
     )
     assert "validate_file" in SegmentedLTX23V721ProductionPackageCompilationService.__dict__

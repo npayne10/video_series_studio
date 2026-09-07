@@ -11,7 +11,6 @@ from vscs.infrastructure.production_execution.hardware_shot_capability import (
     LocalComfyUIHardwareCapabilityResolver,
     capability_for_vram,
 )
-
 from vscs.infrastructure.production_execution.package_compilation import (
     LocalProductionPackageCompilationError,
 )
@@ -97,7 +96,7 @@ def test_resolver_extracts_comfyui_vram_and_persists_project_snapshot(
     }
 
     class _Response:
-        def __enter__(self) -> "_Response":
+        def __enter__(self) -> _Response:
             return self
 
         def __exit__(self, *args: object) -> None:
@@ -118,12 +117,7 @@ def test_resolver_extracts_comfyui_vram_and_persists_project_snapshot(
     capability = resolver.resolve()
 
     assert capability.vram_class_gb == 8
-    snapshot = (
-        tmp_path
-        / ".vscs"
-        / "provider_executions"
-        / "hardware_capability.json"
-    )
+    snapshot = tmp_path / ".vscs" / "provider_executions" / "hardware_capability.json"
     stored = json.loads(snapshot.read_text(encoding="utf-8"))
     assert stored["capability"]["gpu_name"] == "NVIDIA GeForce RTX 4060"
     assert stored["capability"]["validated_maximum_shot_seconds"] == 7.0
