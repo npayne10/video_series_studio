@@ -74,6 +74,9 @@ def test_ltx23_production_manifest_is_package_driven_and_parseable() -> None:
     assert dict(manifest.extra)["governed_reference_resolution"] == "VSCSMultiReferenceResolverV721"
     assert dict(manifest.extra)["provider_visual_input_limit"] == "3"
     assert "governed_multi_reference" in manifest.capabilities
+    assert "hardware_aware_one_shot" in manifest.capabilities
+    assert dict(manifest.extra)["shot_execution_mode"] == "one_shot_per_provider_job"
+    assert dict(manifest.extra)["provider_frame_adaptation"] == "VSCSProviderFrameCountV721"
 
 
 def test_exported_production_backend_builds_v721_package_adapter(tmp_path: Path) -> None:
