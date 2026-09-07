@@ -118,6 +118,7 @@ class LTX23V721DeploymentAssurance:
         self._inspect_multi_reference_wiring(raw, issues)
         self._inspect_continuity_prompt_wiring(raw, issues)
         self._inspect_provider_geometry_wiring(raw, issues)
+        self._inspect_provider_frame_count_wiring(raw, issues)
         return tuple(issues)
 
     @classmethod
@@ -216,6 +217,35 @@ class LTX23V721DeploymentAssurance:
         ):
             issues.append(
                 "v7.2.1 LTX latent geometry must be sourced from the provider geometry adapter"
+            )
+
+    @staticmethod
+    def _inspect_provider_frame_count_wiring(
+        workflow: dict[str, object],
+        issues: list[str],
+    ) -> None:
+        node = workflow.get("113")
+        inputs = node.get("inputs") if isinstance(node, dict) else None
+        if not isinstance(inputs, dict) or node.get("class_type") != "VSCSProviderFrameCountV721":
+            issues.append("v7.2.1 provider frame-count adapter node 113 is missing")
+            return
+        if (
+            inputs.get("governed_frame_count") != ["107", 10]
+            or inputs.get("frame_modulus") != 8
+            or inputs.get("frame_offset") != 1
+        ):
+            issues.append("v7.2.1 provider frame-count adapter is miswired")
+        latent = workflow.get("8")
+        latent_inputs = latent.get("inputs") if isinstance(latent, dict) else None
+        audio = workflow.get("22")
+        audio_inputs = audio.get("inputs") if isinstance(audio, dict) else None
+        if not isinstance(latent_inputs, dict) or latent_inputs.get("length") != ["113", 0]:
+            issues.append(
+                "v7.2.1 LTX latent frame count must be sourced from provider frame-count adapter"
+            )
+        if not isinstance(audio_inputs, dict) or audio_inputs.get("frames_number") != ["113", 0]:
+            issues.append(
+                "v7.2.1 LTX audio frame count must be sourced from provider frame-count adapter"
             )
 
     @staticmethod
