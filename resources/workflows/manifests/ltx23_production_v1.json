@@ -8,7 +8,8 @@
     "loras",
     "seed_control",
     "resume",
-    "governed_multi_reference"
+    "governed_multi_reference",
+    "hardware_aware_one_shot"
   ],
   "extra": [
     [
@@ -30,6 +31,14 @@
     [
       "provider_visual_input_limit",
       "3"
+    ],
+    [
+      "shot_execution_mode",
+      "one_shot_per_provider_job"
+    ],
+    [
+      "provider_frame_adaptation",
+      "VSCSProviderFrameCountV721"
     ]
   ],
   "lip_sync_modes": [
@@ -38,7 +47,7 @@
   ],
   "metadata": {
     "author": "VSCS",
-    "description": "Primary governed ComfyUI manifest for the LTX-2.3 Video Studio Production Engine v7.2.1 used by Phase 20.18.2 live functional acceptance. Governed visual references remain separate and are chained through the LTX Ingredients IC-LoRA path; segment continuity is a distinct input.",
+    "description": "Primary governed ComfyUI manifest for the LTX-2.3 Video Studio Production Engine v7.2.1 used by Phase 20.18.2 live functional acceptance. Governed visual references remain separate through the LTX Ingredients IC-LoRA path. Each governed Shot is hardware-bounded and executes as one normal provider job; hidden provider segmentation and reassembly are retired.",
     "display_name": "LTX-2.3 Video Studio Production",
     "manifest_version": "1.0",
     "renderer": "comfyui",
