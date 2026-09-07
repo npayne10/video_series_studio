@@ -229,11 +229,16 @@ def test_hardware_aware_replan_archives_previous_governed_authority(
     context.shutdown()
 
 
-def test_governed_manual_shot_runtime_rejects_active_hardware_limit(
+def test_existing_or_accepted_long_shot_authority_can_be_replanned_for_hardware(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(tmp_path)
 
-    with pytest.raises(GovernedShotPlanningError, match="hardware-aware Shot limit"):
-        _create(shots, scene.scene_id, runtime=8)
+    accepted = _create(shots, scene.scene_id, runtime=8)
+    assert accepted.target_runtime_seconds == 8
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
     context.shutdown()
