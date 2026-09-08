@@ -184,7 +184,7 @@ class GovernedAssetResolutionService:
         """Infer reviewable Shot asset requirements without creating governed bindings."""
         shot = self._require_ready_shot(shot_id)
         scene = self.shots.scenes.plan(shot.scene_id)
-        scene_text = self._scene_shot_text(shot)
+        scene_text = self._scene_shot_text(shot, scene)
         deterministic = self._deterministic_requirements(shot, scene_text)
         proposals = list(deterministic)
 
@@ -299,7 +299,21 @@ class GovernedAssetResolutionService:
         return tuple(proposals)
 
     @staticmethod
-    def _scene_shot_text(shot: ShotPlan) -> str:
+    def _scene_shot_text(shot: ShotPlan, scene: Any) -> str:
+        scene_values: tuple[str, ...] = ()
+        if scene is not None:
+            scene_values = tuple(
+                str(value)
+                for value in (
+                    getattr(scene, "title", ""),
+                    getattr(scene, "story_scope", ""),
+                    getattr(scene, "production_objective", ""),
+                    getattr(scene, "setting_requirement", ""),
+                    *getattr(scene, "required_events", ()),
+                    *getattr(scene, "scene_constraints", ()),
+                )
+                if value
+            )
         return " ".join(
             value
             for value in (
@@ -311,6 +325,7 @@ class GovernedAssetResolutionService:
                 shot.continuity_in,
                 shot.continuity_out,
                 *shot.shot_constraints,
+                *scene_values,
             )
             if value
         )
@@ -703,6 +718,7 @@ class GovernedAssetResolutionService:
             "production_objective": shot.production_objective,
             "target_runtime_seconds": shot.target_runtime_seconds,
             "required_action": shot.required_action,
+            "coverage_role": shot.coverage_role.value,
             "dialogue_requirement": shot.dialogue_requirement,
             "continuity_in": shot.continuity_in,
             "continuity_out": shot.continuity_out,
