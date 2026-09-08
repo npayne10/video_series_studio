@@ -189,7 +189,7 @@ class GovernedAssetResolutionService:
         shot = self._require_ready_shot(shot_id)
         scene = self.shots.scenes.plan(shot.scene_id)
         scene_text = self._scene_shot_text(shot, scene)
-        deterministic = self._deterministic_requirements(shot, scene_text)
+        deterministic = self._deterministic_requirements(shot, scene, scene_text)
         proposals = list(deterministic)
 
         if (
@@ -208,6 +208,13 @@ class GovernedAssetResolutionService:
                 if proposal.shot_id.strip().upper() == shot.shot_id
             )
 
+        proposals = list(
+            self._enforce_shot_local_character_precedence(
+                tuple(proposals),
+                shot,
+                scene,
+            )
+        )
         classified = tuple(self._classify_proposal_role(proposal, shot) for proposal in proposals)
         deduplicated = self._deduplicate_proposals(classified)
         without_placeholders = self._suppress_story_placeholders(deduplicated)
@@ -260,6 +267,7 @@ class GovernedAssetResolutionService:
     def _deterministic_requirements(
         self,
         shot: ShotPlan,
+        scene: Any,
         scene_text: str,
     ) -> tuple[ShotAssetRequirementProposal, ...]:
         """Extract explicit canonical asset mentions from governed Shot/Scene authority."""
@@ -272,13 +280,31 @@ class GovernedAssetResolutionService:
                 continue
             shot_evidence = self._asset_evidence(item, shot_text)
             scene_evidence = self._asset_evidence(item, normalized_text)
-            evidence = shot_evidence or scene_evidence
+            persistent_scene_evidence = (
+                scene_evidence
+                if item.category is AssetCategory.CHARACTER
+                and self._scene_persistently_requires_asset(item, scene)
+                else None
+            )
+            evidence = (
+                shot_evidence
+                if item.category is AssetCategory.CHARACTER
+                else shot_evidence or scene_evidence
+            )
+            if item.category is AssetCategory.CHARACTER and evidence is None:
+                evidence = persistent_scene_evidence
             if evidence is None:
                 continue
             confidence, rationale = evidence
             if shot_evidence is None:
                 confidence = min(confidence, 0.88)
-                rationale = f"Scene-context support only. {rationale}"
+                if item.category is AssetCategory.CHARACTER:
+                    rationale = (
+                        "Explicit Scene persistence constraint requires this character in every "
+                        f"Shot. {rationale}"
+                    )
+                else:
+                    rationale = f"Scene-context support only. {rationale}"
             strict = self.resolver.resolve(
                 AssetResolutionRequest(
                     item.asset_id,
@@ -314,6 +340,88 @@ class GovernedAssetResolutionService:
                 )
             )
         return tuple(proposals)
+
+    @classmethod
+    def _enforce_shot_local_character_precedence(
+        cls,
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+        shot: ShotPlan,
+        scene: Any,
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        """Reject Scene-only character leakage from deterministic or AI inference."""
+        kept: list[ShotAssetRequirementProposal] = []
+        for proposal in proposals:
+            if proposal.expected_category is not AssetCategory.CHARACTER:
+                kept.append(proposal)
+                continue
+            name = proposal.matched_asset_name.strip()
+            if name and cls._character_explicit_in_shot(name, shot):
+                kept.append(proposal)
+                continue
+            if name and cls._scene_persistently_requires_name(name, scene):
+                kept.append(proposal)
+                continue
+            if not name and cls._unresolved_character_supported_by_shot(proposal, shot):
+                kept.append(proposal)
+        return tuple(kept)
+
+    @classmethod
+    def _character_explicit_in_shot(cls, name: str, shot: ShotPlan) -> bool:
+        aliases = cls._character_aliases(name)
+        shot_text = cls._normalize_text(cls._shot_only_text(shot))
+        return any(f" {alias} " in f" {shot_text} " for alias in aliases)
+
+    @classmethod
+    def _unresolved_character_supported_by_shot(
+        cls,
+        proposal: ShotAssetRequirementProposal,
+        shot: ShotPlan,
+    ) -> bool:
+        proposal_text = cls._normalize_text(
+            " ".join((proposal.role, proposal.requirement, proposal.rationale))
+        )
+        shot_text = cls._normalize_text(cls._shot_only_text(shot))
+        proposal_tokens = {
+            token for token in proposal_text.split() if len(token) >= 4
+        }
+        shot_tokens = {
+            token for token in shot_text.split() if len(token) >= 4
+        }
+        return bool(proposal_tokens.intersection(shot_tokens))
+
+    @classmethod
+    def _scene_persistently_requires_asset(cls, item: Any, scene: Any) -> bool:
+        if scene is None:
+            return False
+        return cls._scene_persistently_requires_name(item.name, scene) or any(
+            cls._persistent_constraint_matches(constraint, item.asset_id)
+            for constraint in getattr(scene, "scene_constraints", ())
+        )
+
+    @classmethod
+    def _scene_persistently_requires_name(cls, name: str, scene: Any) -> bool:
+        if scene is None:
+            return False
+        return any(
+            cls._persistent_constraint_matches(constraint, name)
+            for constraint in getattr(scene, "scene_constraints", ())
+        )
+
+    @classmethod
+    def _persistent_constraint_matches(cls, constraint: str, subject: str) -> bool:
+        normalized = cls._normalize_text(constraint)
+        subject_text = cls._normalize_text(subject)
+        prefixes = (
+            "persistent character ",
+            "persistent asset ",
+            "always present character ",
+            "always present asset ",
+        )
+        return bool(subject_text) and any(
+            normalized.startswith(prefix)
+            and f" {subject_text} " in f" {normalized} "
+            for prefix in prefixes
+        )
 
     @staticmethod
     def _semantic_inference_needed(
