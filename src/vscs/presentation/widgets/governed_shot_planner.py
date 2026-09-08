@@ -245,7 +245,7 @@ class GovernedShotPlannerDialog(QDialog):
         toolbar.addStretch(1)
         root.addLayout(toolbar)
 
-        self.table = QTableWidget(0, 7, self)
+        self.table = QTableWidget(0, 8, self)
         self.table.setObjectName("governedShotPlannerTable")
         self.table.setHorizontalHeaderLabels(
             [
@@ -253,6 +253,7 @@ class GovernedShotPlannerDialog(QDialog):
                 "Title",
                 "Runtime",
                 "Status",
+                "Coverage Role",
                 "Narrative Purpose",
                 "Required Action",
                 "Objective",
@@ -327,6 +328,7 @@ class GovernedShotPlannerDialog(QDialog):
                 plan.title,
                 self._runtime_label(plan.target_runtime_seconds),
                 status,
+                plan.coverage_role.value.replace("_", " ").title(),
                 plan.narrative_purpose,
                 plan.required_action,
                 plan.production_objective,
@@ -344,6 +346,7 @@ class GovernedShotPlannerDialog(QDialog):
                 shot.title,
                 self._runtime_label(round(shot.estimated_duration_seconds)),
                 "Legacy / Inactive",
+                "Unspecified",
                 shot.description,
                 "Reference only",
                 "Migrate explicitly before authoritative planning",
