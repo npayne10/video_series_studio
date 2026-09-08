@@ -12,6 +12,9 @@ from .asset_resolver import (
     GovernedAssetResolutionError,
     GovernedAssetResolutionService,
     ShotAssetBinding,
+    ShotAssetInferenceSource,
+    ShotAssetRequirementProposal,
+    ShotAssetSemanticInferenceProvider,
 )
 from .bootstrap import (
     register_episode_planning,
@@ -180,6 +183,9 @@ __all__ = [
     "ScenePlanningService",
     "ScreenDirection",
     "ShotAssetBinding",
+    "ShotAssetInferenceSource",
+    "ShotAssetRequirementProposal",
+    "ShotAssetSemanticInferenceProvider",
     "ShotPlan",
     "ShotPlanStatus",
     "ShotSize",
