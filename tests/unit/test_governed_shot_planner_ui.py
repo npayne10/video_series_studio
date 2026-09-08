@@ -214,3 +214,36 @@ def test_replan_button_archives_and_replaces_scene_after_human_confirmation(
         )
     )
     context.shutdown()
+
+
+def test_replan_confirmation_uses_button_value_equality(
+    qtbot,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    context, shots, _legacy, scene = _planning(tmp_path)
+
+    class _YesEquivalent:
+        def __eq__(self, other: object) -> bool:
+            return other == QMessageBox.StandardButton.Yes
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: _YesEquivalent(),
+    )
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Ok,
+    )
+
+    dialog = GovernedShotPlannerDialog(shots, scene)
+    qtbot.addWidget(dialog)
+    dialog.show()
+    dialog.replan_button.click()
+
+    current = shots.list_plans(scene_id=scene.scene_id)
+    assert len(current) == 9
+    assert sum(shot.target_runtime_seconds for shot in current) == 60
+    context.shutdown()
