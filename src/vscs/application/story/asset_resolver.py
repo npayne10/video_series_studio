@@ -553,6 +553,18 @@ class GovernedAssetResolutionService:
                 f"Explicit canonical asset name '{item.name}' occurs in governed Shot text.",
             )
 
+        if item.category is AssetCategory.CHARACTER:
+            aliases = self._character_aliases(item.name)
+            title_free_name = aliases[0] if aliases else ""
+            if title_free_name and f" {title_free_name} " in f" {normalized_text} ":
+                return (
+                    0.97,
+                    (
+                        f"Governed Shot text matches canonical character '{item.name}' "
+                        f"without rank/title as '{title_free_name}'."
+                    ),
+                )
+
         significant_tags = tuple(
             tag for tag in (self._normalize_text(value) for value in item.tags) if len(tag) >= 4
         )
