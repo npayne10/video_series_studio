@@ -904,14 +904,9 @@ def test_character_inference_matches_canonical_name_without_rank_title(
     shots.mark_ready(updated.shot_id)
 
     proposals = service.infer_requirements(updated.shot_id, include_ai=False)
-    sandra = next(
-        proposal
-        for proposal in proposals
-        if proposal.matched_asset_id == "CAP-CHR-003"
-    )
+    sandra = next(proposal for proposal in proposals if proposal.matched_asset_id == "CAP-CHR-003")
 
     assert sandra.matched_asset_name == "Captain Sandra Crawford"
     assert sandra.role == "Dialogue Speaker"
     assert "without rank/title" in sandra.rationale
     context.shutdown()
-
