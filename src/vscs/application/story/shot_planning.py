@@ -561,7 +561,12 @@ class GovernedShotPlanningService:
                         coverage_role=role,
                         dialogue_requirement=(
                             source.dialogue_requirement
-                            if role is CinematicCoverageRole.DIALOGUE_DELIVERY
+                            if self._carries_dialogue(
+                                source,
+                                role,
+                                piece_index,
+                                piece_count,
+                            )
                             else ""
                         ),
                         continuity_in=(
@@ -598,6 +603,20 @@ class GovernedShotPlanningService:
                 f"requires {scene.target_runtime_seconds}s"
             )
         return tuple(output)
+
+    @staticmethod
+    def _carries_dialogue(
+        source: ShotPlan,
+        role: CinematicCoverageRole,
+        index: int,
+        count: int,
+    ) -> bool:
+        """Carry governed dialogue exactly once, including two-Shot semantic beats."""
+        if not source.dialogue_requirement.strip():
+            return False
+        if role is CinematicCoverageRole.DIALOGUE_DELIVERY:
+            return True
+        return count == 2 and index == 2 and role is CinematicCoverageRole.RESOLVE
 
     @staticmethod
     def _coverage_role(
