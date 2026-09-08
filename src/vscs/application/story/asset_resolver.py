@@ -643,9 +643,15 @@ class GovernedAssetResolutionService:
             normalized = cls._normalize_text(sentence)
             if not normalized:
                 continue
-            if any(f" {alias} " in f" {normalized} " for alias in aliases) and any(
-                f" {verb} " in f" {normalized} " for verb in speech_verbs
-            ):
+            words = normalized.split()
+            verb_positions = [
+                index for index, word in enumerate(words) if word in speech_verbs
+            ]
+            if not verb_positions:
+                continue
+            first_verb = min(verb_positions)
+            subject_text = " ".join(words[:first_verb])
+            if any(f" {alias} " in f" {subject_text} " for alias in aliases):
                 return True
         return False
 
