@@ -316,11 +316,9 @@ class GovernedAssetResolutionService:
             return True
         if coverage == "dialogue_delivery" and AssetCategory.CHARACTER not in categories:
             return True
-        if coverage == "detail_insert" and not categories.intersection(
+        return coverage == "detail_insert" and not categories.intersection(
             {AssetCategory.PROP, AssetCategory.TECHNOLOGY}
-        ):
-            return True
-        return False
+        )
 
     def _canonicalize_ai_proposal(
         self,
