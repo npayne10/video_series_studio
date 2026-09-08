@@ -158,7 +158,7 @@ class ShotPlanningService:
                 if isinstance(capability, dict):
                     return dict(capability)
             except (OSError, json.JSONDecodeError, TypeError, ValueError):
-                capability = None
+                pass
         return {
             "provider": "ltx-2.3",
             "gpu_name": "Not yet observed",
