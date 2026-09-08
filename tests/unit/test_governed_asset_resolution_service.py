@@ -872,4 +872,3 @@ def test_dialogue_speaker_prefers_required_action_over_optional_dialogue_listene
     assert by_asset["CAP-CHR-003"].role == "Dialogue Speaker"
     assert by_asset["CAP-CHR-001"].role == "Supporting Character"
     context.shutdown()
-
