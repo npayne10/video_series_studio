@@ -312,10 +312,7 @@ def test_semantic_hardware_replan_prefers_richer_archived_narrative_authority(
     assert proposal.semantic_source.startswith("archived:")
     assert proposal.semantic_source_shot_count == 3
     assert proposal.proposed_shot_count == 9
-    assert any(
-        shot.title.startswith("Sandra Finds the Signal")
-        for shot in proposal.proposed_shots
-    )
+    assert any(shot.title.startswith("Sandra Finds the Signal") for shot in proposal.proposed_shots)
     assert any(
         shot.dialogue_requirement == "Commander, I have something unusual."
         for shot in proposal.proposed_shots

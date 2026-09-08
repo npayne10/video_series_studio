@@ -390,8 +390,7 @@ class GovernedShotPlanningService:
             (source, plans)
             for source, plans in candidates
             if plans
-            and sum(plan.target_runtime_seconds for plan in plans)
-            == scene.target_runtime_seconds
+            and sum(plan.target_runtime_seconds for plan in plans) == scene.target_runtime_seconds
         ]
         if not valid:
             return ("scene-authority-fallback", self._scene_semantic_fallback(scene))
@@ -412,10 +411,7 @@ class GovernedShotPlanningService:
             raise ProjectNotOpenError("No VSCS project is currently open")
         safe_scene_id = scene_id.replace("/", "-").replace("\\", "-")
         directory = (
-            self.projects.project_directory
-            / "planning"
-            / self.HISTORY_DIRECTORY
-            / safe_scene_id
+            self.projects.project_directory / "planning" / self.HISTORY_DIRECTORY / safe_scene_id
         )
         if not directory.is_dir():
             return ()
@@ -427,11 +423,7 @@ class GovernedShotPlanningService:
                 shots = raw.get("shots", [])
                 if not isinstance(shots, list):
                     continue
-                plans = tuple(
-                    self._from_dict(item)
-                    for item in shots
-                    if isinstance(item, dict)
-                )
+                plans = tuple(self._from_dict(item) for item in shots if isinstance(item, dict))
             except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
                 continue
             if plans:
@@ -516,10 +508,7 @@ class GovernedShotPlanningService:
         for source in semantic_source:
             piece_count = max(1, ceil(source.target_runtime_seconds / limit))
             base, remainder = divmod(source.target_runtime_seconds, piece_count)
-            runtimes = tuple(
-                base + (1 if index < remainder else 0)
-                for index in range(piece_count)
-            )
+            runtimes = tuple(base + (1 if index < remainder else 0) for index in range(piece_count))
             if any(runtime <= 0 or runtime > limit for runtime in runtimes):
                 raise GovernedShotPlanningError(
                     f"Unable to decompose semantic Shot {source.shot_id} within "
@@ -528,11 +517,7 @@ class GovernedShotPlanningService:
 
             for piece_index, runtime in enumerate(runtimes, start=1):
                 shot_id = self._shot_id(scene.scene_id, sequence)
-                previous_id = (
-                    self._shot_id(scene.scene_id, sequence - 1)
-                    if sequence > 1
-                    else None
-                )
+                previous_id = self._shot_id(scene.scene_id, sequence - 1) if sequence > 1 else None
                 next_id = self._shot_id(scene.scene_id, sequence + 1)
                 output.append(
                     ShotPlan(
@@ -574,10 +559,7 @@ class GovernedShotPlanningService:
                         shot_constraints=self._values(
                             (
                                 *source.shot_constraints,
-                                (
-                                    f"Hardware-aware Shot runtime must not exceed "
-                                    f"{limit} seconds."
-                                ),
+                                (f"Hardware-aware Shot runtime must not exceed {limit} seconds."),
                                 (
                                     f"Preserve semantic source Shot {source.shot_id}: "
                                     f"{source.title}."
