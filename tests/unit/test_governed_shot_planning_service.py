@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -241,4 +242,119 @@ def test_existing_or_accepted_long_shot_authority_can_be_replanned_for_hardware(
 
     assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
+    context.shutdown()
+
+
+def test_semantic_hardware_replan_prefers_richer_archived_narrative_authority(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=60,
+    )
+    semantic = (
+        shots.create(
+            scene_id=scene.scene_id,
+            sequence_number=1,
+            title="Bridge and Xorix",
+            narrative_purpose="Establish the bridge and Xorix in orbit.",
+            production_objective="Orient the audience.",
+            target_runtime_seconds=20,
+            required_action="Show the bridge team with Xorix beyond the forward display.",
+        ),
+        shots.create(
+            scene_id=scene.scene_id,
+            sequence_number=2,
+            title="Sandra Finds the Signal",
+            narrative_purpose="Reveal Sandra isolating a weak repeating transmission.",
+            production_objective="Introduce the anomaly.",
+            target_runtime_seconds=20,
+            required_action="Sandra studies the signal and calls James over.",
+            dialogue_requirement="Commander, I have something unusual.",
+        ),
+        shots.create(
+            scene_id=scene.scene_id,
+            sequence_number=3,
+            title="The Empty Moon",
+            narrative_purpose="Establish why the signal should not exist.",
+            production_objective="End on the contradiction.",
+            target_runtime_seconds=20,
+            required_action="James confirms the source is the supposedly empty moon.",
+        ),
+    )
+    archive = shots._archive_scene_plans(
+        scene.scene_id,
+        semantic,
+        metadata={"reason": "pre-hardware-semantic-authority"},
+    )
+    assert archive is not None
+
+    generic = tuple(
+        replace(
+            item,
+            shot_id=f"{scene.scene_id}-SHT-{index:03d}",
+            sequence_number=index,
+            title=f"Story Beat {index:03d}",
+            narrative_purpose="Advance the Scene story.",
+            required_action="Show the required story event.",
+            target_runtime_seconds=7 if index < 9 else 4,
+            dialogue_requirement="",
+        )
+        for index, item in enumerate(
+            (semantic * 3)[:9],
+            start=1,
+        )
+    )
+    shots._write(generic)
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert proposal.semantic_source.startswith("archived:")
+    assert proposal.semantic_source_shot_count == 3
+    assert proposal.proposed_shot_count == 9
+    assert any(
+        shot.title.startswith("Sandra Finds the Signal")
+        for shot in proposal.proposed_shots
+    )
+    assert any(
+        shot.dialogue_requirement == "Commander, I have something unusual."
+        for shot in proposal.proposed_shots
+    )
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
+    context.shutdown()
+
+
+def test_semantic_decomposition_preserves_each_source_beat_without_dialogue_duplication(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=14,
+    )
+    source = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Sandra Reports the Pattern",
+        narrative_purpose="Let Sandra explain the repeating signal.",
+        production_objective="Move the mystery into active investigation.",
+        target_runtime_seconds=14,
+        required_action="Sandra turns from the display and reports the forty-seven second pattern.",
+        dialogue_requirement="Commander, I have something unusual.",
+        continuity_in="Sandra is already studying the signal.",
+        continuity_out="James moves toward her station.",
+    )
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert proposal.semantic_source == "current-governed-plan"
+    assert proposal.proposed_shot_count == 2
+    first, second = proposal.proposed_shots
+    assert first.title == f"{source.title} — Establish"
+    assert second.title == f"{source.title} — Resolve"
+    assert first.continuity_in == source.continuity_in
+    assert second.continuity_out == source.continuity_out
+    assert [shot.dialogue_requirement for shot in proposal.proposed_shots].count(
+        source.dialogue_requirement
+    ) == 1
     context.shutdown()
