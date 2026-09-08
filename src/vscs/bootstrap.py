@@ -64,12 +64,17 @@ from vscs.application.rendering import (
     default_quality_profiles,
 )
 from vscs.application.shots import ShotPlanningService
-from vscs.application.story import StoryService, register_story_approval
+from vscs.application.story import (
+    ShotAssetSemanticInferenceProvider,
+    StoryService,
+    register_story_approval,
+)
 from vscs.application.story_analysis import register_story_analysis
 from vscs.infrastructure.ai import (
     AICredentialStore,
     CAPGenerationProvider,
     OpenAICAPGenerationProvider,
+    OpenAIShotAssetRequirementProvider,
     TemplateCAPGenerationProvider,
 )
 from vscs.infrastructure.configuration import (
@@ -183,6 +188,9 @@ def build_application_context(
     database = services.register(DatabaseManager, DatabaseManager())
     projects = services.register(ProjectService, ProjectService(configuration, database))
     services.register(AutomationProposalService, AutomationProposalService(projects))
+    shot_asset_provider = _shot_asset_provider(configuration, selected.mode)
+    if shot_asset_provider is not None:
+        services.register(ShotAssetSemanticInferenceProvider, shot_asset_provider)
     stories = services.register(StoryService, StoryService(projects))
     register_story_approval(services)
     register_story_analysis(services)
@@ -369,6 +377,30 @@ def _recovery_path(
     else:
         root = configuration.settings.environment.config_root
     return root / "recovery" / "batch_compilation.json"
+
+
+def _shot_asset_provider(
+    configuration: ConfigurationService,
+    mode: StartupMode,
+) -> ShotAssetSemanticInferenceProvider | None:
+    if mode is StartupMode.TEST:
+        return None
+    settings = configuration.settings.ai
+    if settings.provider is not AIProvider.OPENAI:
+        return None
+    try:
+        api_key = AICredentialStore().get_openai_api_key()
+    except Exception:
+        api_key = ""
+    if not api_key:
+        return None
+    try:
+        return OpenAIShotAssetRequirementProvider(
+            api_key=api_key,
+            model=settings.openai_model,
+        )
+    except (RuntimeError, ValueError):
+        return None
 
 
 def _cap_provider(
