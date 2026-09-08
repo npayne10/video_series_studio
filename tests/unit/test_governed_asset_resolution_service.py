@@ -619,3 +619,164 @@ def test_environment_family_keeps_distinct_location_environment_and_visible_plan
 
     assert {"CAP-LOC-008", "CAP-ENV-004", "CAP-PLN-002"}.issubset(ids)
     context.shutdown()
+
+
+def _refresh_shot_after_scene_change(shots, shot):
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title=draft.title,
+        narrative_purpose=draft.narrative_purpose,
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=draft.required_action,
+        dialogue_requirement=draft.dialogue_requirement,
+        continuity_in=draft.continuity_in,
+        continuity_out=draft.continuity_out,
+        shot_constraints=draft.shot_constraints,
+    )
+    return shots.mark_ready(updated.shot_id)
+
+
+def test_character_inference_uses_shot_local_authority_not_general_scene_presence(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    for asset_id, name in (
+        ("CAP-CHR-001", "Commander James Spence"),
+        ("CAP-CHR-002", "Captain Cheryl Draker"),
+        ("CAP-CHR-003", "Sandra Crawford"),
+    ):
+        _approved_named_asset(
+            context,
+            tmp_path,
+            asset_id=asset_id,
+            name=name,
+            category=AssetCategory.CHARACTER,
+        )
+
+    scene = shots.scenes.plan(shot.scene_id)
+    assert scene is not None
+    scene = shots.scenes.return_to_draft(scene.scene_id)
+    scene = shots.scenes.update(
+        scene.scene_id,
+        title=scene.title,
+        story_scope=(
+            "Sandra Crawford reports an unusual signal to Commander James Spence. "
+            "Captain Cheryl Draker is elsewhere in the broader Scene."
+        ),
+        production_objective=scene.production_objective,
+        target_runtime_seconds=scene.target_runtime_seconds,
+        setting_requirement=scene.setting_requirement,
+        required_events=scene.required_events,
+        continuity_in=scene.continuity_in,
+        continuity_out=scene.continuity_out,
+        scene_constraints=scene.scene_constraints,
+    )
+    shots.scenes.mark_ready(scene.scene_id)
+
+    draft = shots.return_to_draft(shot.shot_id)
+    shot = shots.update(
+        draft.shot_id,
+        title="Nine Days in Xorix Orbit — Dialogue",
+        narrative_purpose="Sandra reports the unusual signal to James.",
+        production_objective="Introduce the first anomaly.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=(
+            "Sandra Crawford looks up from the control station and reports something "
+            "unusual to Commander James Spence."
+        ),
+        dialogue_requirement="Commander, I have something unusual.",
+        continuity_in="Sandra Crawford is already studying the control display.",
+        continuity_out="Commander James Spence turns toward Sandra Crawford.",
+        shot_constraints=(),
+    )
+    shot = shots.mark_ready(shot.shot_id)
+
+    proposals = service.infer_requirements(shot.shot_id, include_ai=False)
+    by_asset = {proposal.matched_asset_id: proposal for proposal in proposals}
+
+    assert by_asset["CAP-CHR-003"].role == "Dialogue Speaker"
+    assert by_asset["CAP-CHR-001"].role == "Supporting Character"
+    assert "CAP-CHR-002" not in by_asset
+    context.shutdown()
+
+
+def test_explicit_scene_persistence_constraint_can_carry_character_into_every_shot(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-CHR-002",
+        name="Captain Cheryl Draker",
+        category=AssetCategory.CHARACTER,
+    )
+
+    scene = shots.scenes.plan(shot.scene_id)
+    assert scene is not None
+    scene = shots.scenes.return_to_draft(scene.scene_id)
+    scene = shots.scenes.update(
+        scene.scene_id,
+        title=scene.title,
+        story_scope="Captain Cheryl Draker remains on the bridge throughout.",
+        production_objective=scene.production_objective,
+        target_runtime_seconds=scene.target_runtime_seconds,
+        setting_requirement=scene.setting_requirement,
+        required_events=scene.required_events,
+        continuity_in=scene.continuity_in,
+        continuity_out=scene.continuity_out,
+        scene_constraints=("persistent character: Captain Cheryl Draker",),
+    )
+    shots.scenes.mark_ready(scene.scene_id)
+
+    shot = _refresh_shot_after_scene_change(shots, shot)
+    proposals = service.infer_requirements(shot.shot_id, include_ai=False)
+    cheryl = next(
+        proposal for proposal in proposals if proposal.matched_asset_id == "CAP-CHR-002"
+    )
+
+    assert cheryl.role == "Supporting Character"
+    assert "Explicit Scene persistence constraint" in cheryl.rationale
+    context.shutdown()
+
+
+def test_ai_character_proposal_is_rejected_when_supported_only_by_scene_context(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-CHR-002",
+        name="Captain Cheryl Draker",
+        category=AssetCategory.CHARACTER,
+    )
+
+    class _SceneLeakAI:
+        provider_name = "test-ai"
+        model_name = "scene-leak-test"
+
+        def infer_requirements(self, *, shot, scene_text, deterministic):
+            return (
+                ShotAssetRequirementProposal(
+                    proposal_id=f"{shot.shot_id}-AI-CHR-001",
+                    shot_id=shot.shot_id,
+                    role="Supporting Character",
+                    requirement="Captain Cheryl Draker is present in the Scene.",
+                    expected_category=AssetCategory.CHARACTER,
+                    matched_asset_id="CAP-CHR-002",
+                    matched_asset_name="Captain Cheryl Draker",
+                    confidence=0.91,
+                    source=ShotAssetInferenceSource.AI_SEMANTIC,
+                    rationale="Mentioned in Scene context only.",
+                    canonical_status="resolved",
+                ),
+            )
+
+    service.semantic_provider = _SceneLeakAI()
+    proposals = service.infer_requirements(shot.shot_id)
+
+    assert all(proposal.matched_asset_id != "CAP-CHR-002" for proposal in proposals)
+    context.shutdown()
