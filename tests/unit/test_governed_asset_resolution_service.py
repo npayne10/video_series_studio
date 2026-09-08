@@ -872,3 +872,46 @@ def test_dialogue_speaker_prefers_required_action_over_optional_dialogue_listene
     assert by_asset["CAP-CHR-003"].role == "Dialogue Speaker"
     assert by_asset["CAP-CHR-001"].role == "Supporting Character"
     context.shutdown()
+
+
+def test_character_inference_matches_canonical_name_without_rank_title(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-CHR-003",
+        name="Captain Sandra Crawford",
+        category=AssetCategory.CHARACTER,
+    )
+
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Nine Days in Xorix Orbit — Dialogue",
+        narrative_purpose="Sandra Crawford reports an unusual signal.",
+        production_objective="Keep Sandra Crawford at the control station.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=(
+            "Sandra Crawford looks up from the control station and reports something unusual."
+        ),
+        dialogue_requirement='Sandra must report: "Commander, I have something unusual."',
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    sandra = next(
+        proposal
+        for proposal in proposals
+        if proposal.matched_asset_id == "CAP-CHR-003"
+    )
+
+    assert sandra.matched_asset_name == "Captain Sandra Crawford"
+    assert sandra.role == "Dialogue Speaker"
+    assert "without rank/title" in sandra.rationale
+    context.shutdown()
+
