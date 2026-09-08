@@ -140,6 +140,55 @@ def _approved_ship(context, tmp_path: Path, asset_id: str = "CAP-SHP-IRON-HORIZO
     return asset_id
 
 
+def _approved_named_asset(
+    context,
+    tmp_path: Path,
+    *,
+    asset_id: str,
+    name: str,
+    category: AssetCategory,
+) -> str:
+    assets = context.services.require(AssetService)
+    assets.create(
+        AssetCreate(
+            asset_id=asset_id,
+            name=name,
+            category=category,
+            description=f"Canonical {category.value} asset for {name}.",
+            status=AssetStatus.APPROVED,
+        )
+    )
+    caps = context.services.require(CAPService)
+    cap = caps.create(
+        CAPCreate(
+            asset_id=asset_id,
+            title=name,
+            version="1.0",
+            status=CAPStatus.APPROVED,
+            canonical_description=f"Canonical production identity for {name}.",
+            visual_identity=f"Approved visual identity for {name}.",
+            production_notes="Preserve approved canonical identity.",
+        )
+    )
+    reference_path = tmp_path / "Demo" / "references" / f"{asset_id}.png"
+    reference_path.parent.mkdir(parents=True, exist_ok=True)
+    reference_path.write_bytes(b"reference")
+    references = context.services.require(CanonicalReferenceService)
+    created = references.create(
+        asset_id,
+        CanonicalReferenceCreate(
+            cap_id=cap.id,
+            reference_type=CanonicalReferenceType.IMAGE,
+            role=CanonicalReferenceRole.PRIMARY,
+            title=f"{name} primary",
+            file_path=reference_path,
+        ),
+    )
+    candidate = references.mark_candidate(created.id)
+    references.approve(candidate.id, "Neill")
+    return asset_id
+
+
 def _binding(
     service: GovernedAssetResolutionService,
     shot_id: str,
@@ -398,4 +447,177 @@ def test_optional_ai_is_not_called_when_deterministic_canonical_match_is_suffici
     proposals = service.infer_requirements(updated.shot_id)
 
     assert any(proposal.matched_asset_id == "CAP-SHP-IRON-HORIZON" for proposal in proposals)
+    context.shutdown()
+
+
+def test_inference_suppresses_story_placeholder_when_canonical_asset_covers_same_entity(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-PLN-002",
+        name="Xorix",
+        category=AssetCategory.PLANET,
+    )
+    context.services.require(AssetService).create(
+        AssetCreate(
+            asset_id="STORY-LOC-B6E569C147",
+            name="Xorix system",
+            category=AssetCategory.LOCATION,
+            description="Story-derived placeholder location.",
+            status=AssetStatus.APPROVED,
+        )
+    )
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Xorix Reveal",
+        narrative_purpose="Show Xorix beyond the bridge.",
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="Xorix remains visible on the forward display.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+
+    assert any(proposal.matched_asset_id == "CAP-PLN-002" for proposal in proposals)
+    assert all(
+        proposal.matched_asset_id != "STORY-LOC-B6E569C147" for proposal in proposals
+    )
+    context.shutdown()
+
+
+def test_inference_classifies_dialogue_speaker_and_supporting_character(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-CHR-002",
+        name="Captain Cheryl Draker",
+        category=AssetCategory.CHARACTER,
+    )
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-CHR-001",
+        name="Commander James Spence",
+        category=AssetCategory.CHARACTER,
+    )
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Put It Through — Dialogue",
+        narrative_purpose="Let the bridge hear the signal.",
+        production_objective="Move the anomaly into direct investigation.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=(
+            "Captain Cheryl Draker orders the signal put through. "
+            "Commander James Spence watches the display."
+        ),
+        dialogue_requirement="Put it through.",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    by_asset = {proposal.matched_asset_id: proposal for proposal in proposals}
+
+    assert by_asset["CAP-CHR-002"].role == "Dialogue Speaker"
+    assert by_asset["CAP-CHR-001"].role == "Supporting Character"
+    context.shutdown()
+
+
+def test_inference_uses_specific_production_role_labels_for_asset_categories(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    for asset_id, name, category in (
+        ("CAP-LOC-008", "Bridge", AssetCategory.LOCATION),
+        ("CAP-ENV-004", "Xorix Orbit", AssetCategory.ENVIRONMENT),
+        ("CAP-PLN-002", "Xorix", AssetCategory.PLANET),
+        ("CAP-SHP-002", "Iron Horizon", AssetCategory.SHIP),
+        ("CAP-TEC-001", "Signal Display", AssetCategory.TECHNOLOGY),
+    ):
+        _approved_named_asset(
+            context,
+            tmp_path,
+            asset_id=asset_id,
+            name=name,
+            category=category,
+        )
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Signal Display in Xorix Orbit",
+        narrative_purpose="Show the signal detail on the Bridge.",
+        production_objective="Preserve the Iron Horizon bridge context.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=(
+            "On the Bridge of the Iron Horizon, show the Signal Display with Xorix visible "
+            "while the ship remains in Xorix Orbit."
+        ),
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    roles = {proposal.matched_asset_id: proposal.role for proposal in proposals}
+
+    assert roles["CAP-LOC-008"] == "Location"
+    assert roles["CAP-ENV-004"] == "Environment Context"
+    assert roles["CAP-PLN-002"] == "Visible Planet"
+    assert roles["CAP-SHP-002"] == "Vehicle/Ship"
+    assert roles["CAP-TEC-001"] == "Prop/Technology"
+    context.shutdown()
+
+
+def test_environment_family_keeps_distinct_location_environment_and_visible_planet(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    for asset_id, name, category in (
+        ("CAP-LOC-008", "Iron Horizon Bridge", AssetCategory.LOCATION),
+        ("CAP-ENV-004", "Xorix Orbit", AssetCategory.ENVIRONMENT),
+        ("CAP-PLN-002", "Xorix", AssetCategory.PLANET),
+    ):
+        _approved_named_asset(
+            context,
+            tmp_path,
+            asset_id=asset_id,
+            name=name,
+            category=category,
+        )
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Bridge Over Xorix",
+        narrative_purpose="Establish the Iron Horizon Bridge in Xorix Orbit.",
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="Show Xorix from the Iron Horizon Bridge while in Xorix Orbit.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    ids = {proposal.matched_asset_id for proposal in proposals}
+
+    assert {"CAP-LOC-008", "CAP-ENV-004", "CAP-PLN-002"}.issubset(ids)
     context.shutdown()
