@@ -326,24 +326,30 @@ class GovernedAssetResolutionService:
         """Match an AI proposal against current XPD/CAP truth without inventing canon."""
         if proposal.matched_asset_id:
             return proposal
-        query = " ".join(
-            value
-            for value in (
-                proposal.matched_asset_name,
-                proposal.requirement,
-                proposal.role,
-            )
-            if value
-        )
-        result = self.browser.browse(
-            AssetBrowserFilter(
-                query=query,
-                categories=frozenset({proposal.expected_category}),
+        query = self._normalize_text(
+            " ".join(
+                value
+                for value in (
+                    proposal.matched_asset_name,
+                    proposal.requirement,
+                    proposal.role,
+                )
+                if value
             )
         )
-        if len(result.items) != 1:
+        candidates = []
+        for item in self.browser.browse(
+            AssetBrowserFilter(categories=frozenset({proposal.expected_category}))
+        ).items:
+            evidence = self._asset_evidence(item, query)
+            if evidence is not None:
+                candidates.append((evidence[0], item))
+        if not candidates:
             return proposal
-        item = result.items[0]
+        candidates.sort(key=lambda pair: (-pair[0], pair[1].asset_id))
+        top_score, item = candidates[0]
+        if len(candidates) > 1 and candidates[1][0] == top_score:
+            return proposal
         strict = self.resolver.resolve(
             AssetResolutionRequest(
                 item.asset_id,
