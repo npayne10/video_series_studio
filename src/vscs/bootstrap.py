@@ -74,9 +74,9 @@ from vscs.infrastructure.ai import (
     AICredentialStore,
     CAPGenerationProvider,
     OpenAICAPGenerationProvider,
-    OpenAIShotAssetRequirementProvider,
     TemplateCAPGenerationProvider,
 )
+from vscs.infrastructure.ai.shot_asset_provider import OpenAIShotAssetRequirementProvider
 from vscs.infrastructure.configuration import (
     AIProvider,
     ConfigurationService,
