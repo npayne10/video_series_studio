@@ -247,3 +247,35 @@ def test_replan_confirmation_uses_button_value_equality(
     assert len(current) == 9
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     context.shutdown()
+
+
+def test_governed_shot_planner_displays_cinematic_coverage_role_column(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    context, shots, _legacy, scene = _planning(tmp_path)
+    shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Signal Beat",
+        narrative_purpose="Reveal a repeating signal.",
+        production_objective="Advance the mystery.",
+        target_runtime_seconds=60,
+        required_action="Sandra studies the signal while James observes.",
+    )
+    shots.apply_hardware_aware_replan(scene.scene_id)
+
+    dialog = GovernedShotPlannerDialog(shots, scene)
+    qtbot.addWidget(dialog)
+    dialog.show()
+
+    assert dialog.table.columnCount() == 8
+    assert dialog.table.horizontalHeaderItem(4).text() == "Coverage Role"
+    roles = {
+        dialog.table.item(row, 4).text()
+        for row in range(dialog.table.rowCount())
+    }
+    assert "Establishing" in roles
+    assert "Resolve" in roles
+    assert "Detail Insert" in roles or "Primary Subject" in roles
+    context.shutdown()
