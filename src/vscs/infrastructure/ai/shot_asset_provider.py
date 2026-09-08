@@ -61,13 +61,16 @@ class OpenAIShotAssetRequirementProvider(ShotAssetSemanticInferenceProvider):
         scene_text: str,
         deterministic: tuple[ShotAssetRequirementProposal, ...],
     ) -> tuple[ShotAssetRequirementProposal, ...]:
-        deterministic_summary = "\n".join(
-            (
-                f"- {proposal.expected_category.value}: {proposal.matched_asset_name or proposal.requirement} "
-                f"({proposal.canonical_status})"
+        deterministic_summary = (
+            "\n".join(
+                (
+                    f"- {proposal.expected_category.value}: {proposal.matched_asset_name or proposal.requirement} "
+                    f"({proposal.canonical_status})"
+                )
+                for proposal in deterministic
             )
-            for proposal in deterministic
-        ) or "(none)"
+            or "(none)"
+        )
 
         instructions = (
             "You are the VSCS Shot Asset Requirement inference layer. Propose only production "
@@ -131,6 +134,6 @@ class OpenAIShotAssetRequirementProvider(ShotAssetSemanticInferenceProvider):
             (
                 f"{shot_id}|{index}|{requirement.role}|"
                 f"{requirement.expected_category.value}|{requirement.requirement}"
-            ).encode("utf-8")
+            ).encode()
         ).hexdigest()
         return f"{shot_id}-AI-AST-{digest[:10].upper()}"

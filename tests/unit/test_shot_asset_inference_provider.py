@@ -34,9 +34,7 @@ class _Client:
 
 
 def test_openai_shot_asset_provider_returns_proposals_without_creating_canon() -> None:
-    provider = OpenAIShotAssetRequirementProvider.__new__(
-        OpenAIShotAssetRequirementProvider
-    )
+    provider = OpenAIShotAssetRequirementProvider.__new__(OpenAIShotAssetRequirementProvider)
     provider._client = _Client()
     provider.model_name = "test-model"
 

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-from abc import ABC, abstractmethod
 import json
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from pathlib import Path
@@ -369,8 +369,7 @@ class GovernedAssetResolutionService:
             matched_asset_name=item.name,
             canonical_status=strict.status.value,
             rationale=(
-                proposal.rationale
-                + f" Canonically matched AI requirement to {item.asset_id}."
+                proposal.rationale + f" Canonically matched AI requirement to {item.asset_id}."
             ).strip(),
         )
 
@@ -409,8 +408,9 @@ class GovernedAssetResolutionService:
     @staticmethod
     def _normalize_text(value: str) -> str:
         return " ".join(
-            "".join(character.casefold() if character.isalnum() else " " for character in value)
-            .split()
+            "".join(
+                character.casefold() if character.isalnum() else " " for character in value
+            ).split()
         )
 
     def _asset_evidence(
@@ -420,12 +420,13 @@ class GovernedAssetResolutionService:
     ) -> tuple[float, str] | None:
         name = self._normalize_text(item.name)
         if name and f" {name} " in f" {normalized_text} ":
-            return (1.0, f"Explicit canonical asset name '{item.name}' occurs in governed Shot text.")
+            return (
+                1.0,
+                f"Explicit canonical asset name '{item.name}' occurs in governed Shot text.",
+            )
 
         significant_tags = tuple(
-            tag
-            for tag in (self._normalize_text(value) for value in item.tags)
-            if len(tag) >= 4
+            tag for tag in (self._normalize_text(value) for value in item.tags) if len(tag) >= 4
         )
         matched_tags = tuple(
             tag for tag in significant_tags if f" {tag} " in f" {normalized_text} "
@@ -433,8 +434,7 @@ class GovernedAssetResolutionService:
         if matched_tags:
             return (
                 0.82,
-                "Governed Shot text matches canonical asset tag(s): "
-                + ", ".join(matched_tags),
+                "Governed Shot text matches canonical asset tag(s): " + ", ".join(matched_tags),
             )
 
         asset_tokens = tuple(
@@ -467,9 +467,7 @@ class GovernedAssetResolutionService:
         asset_id: str,
         category: AssetCategory,
     ) -> str:
-        digest = hashlib.sha256(
-            f"{shot_id}|{asset_id}|{category.value}".encode("utf-8")
-        ).hexdigest()
+        digest = hashlib.sha256(f"{shot_id}|{asset_id}|{category.value}".encode()).hexdigest()
         return f"{shot_id}-AIR-{digest[:10].upper()}"
 
     @staticmethod
