@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,8 @@ from vscs.application.story import (
     GovernedAssetResolutionError,
     GovernedAssetResolutionService,
     GovernedShotPlanningService,
+    ShotAssetInferenceSource,
+    ShotAssetRequirementProposal,
     ScenePlanningService,
     StoryLifecycleService,
     StoryService,
@@ -258,4 +261,141 @@ def test_shot_change_marks_asset_binding_stale(tmp_path: Path) -> None:
     assert stale is not None
     assert not service.is_upstream_current(stale)
     assert not service.is_production_ready(stale)
+    context.shutdown()
+
+
+def test_inference_extracts_explicit_shot_asset_and_matches_current_canonical_authority(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    asset_id = _approved_ship(context, tmp_path)
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Iron Horizon Establish",
+        narrative_purpose="Establish the Iron Horizon in Xorix orbit.",
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="The Iron Horizon crosses frame above Xorix.",
+        dialogue_requirement=draft.dialogue_requirement,
+        continuity_in=draft.continuity_in,
+        continuity_out=draft.continuity_out,
+        shot_constraints=draft.shot_constraints,
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+
+    matched = next(proposal for proposal in proposals if proposal.matched_asset_id == asset_id)
+    assert matched.expected_category is AssetCategory.SHIP
+    assert matched.source is ShotAssetInferenceSource.CANONICAL_MATCH
+    assert matched.confidence == 1.0
+    assert matched.canonical_status == "resolved"
+    assert "Explicit canonical asset name" in matched.rationale
+    context.shutdown()
+
+
+def test_inferred_requirements_materialize_only_as_draft_bindings(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    asset_id = _approved_ship(context, tmp_path)
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Iron Horizon Establish",
+        narrative_purpose="Establish the Iron Horizon.",
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="The Iron Horizon crosses frame.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    updated = shots.mark_ready(updated.shot_id)
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+
+    created = service.apply_inferred_requirements(updated.shot_id, proposals)
+
+    assert created
+    assert all(binding.status is AssetBindingStatus.DRAFT for binding in created)
+    assert any(binding.asset_id == asset_id for binding in created)
+    assert not service.shot_ready(updated.shot_id)
+    context.shutdown()
+
+
+def test_optional_ai_inference_runs_only_when_deterministic_requirements_are_insufficient(
+    tmp_path: Path,
+) -> None:
+    context, _shots, service, shot = _planning(tmp_path)
+
+    class _AIProvider:
+        provider_name = "test-ai"
+        model_name = "semantic-test"
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def infer_requirements(self, *, shot, scene_text, deterministic):
+            self.calls += 1
+            assert shot.shot_id
+            assert scene_text
+            assert deterministic == ()
+            return (
+                ShotAssetRequirementProposal(
+                    proposal_id=f"{shot.shot_id}-AI-001",
+                    shot_id=shot.shot_id,
+                    role="Information-bearing Shot element",
+                    requirement="Signal display is required to show the repeating pattern.",
+                    expected_category=AssetCategory.TECHNOLOGY,
+                    confidence=0.78,
+                    source=ShotAssetInferenceSource.AI_SEMANTIC,
+                    rationale="Semantic inference from the governed required action.",
+                    canonical_status="unresolved",
+                ),
+            )
+
+    provider = _AIProvider()
+    service.semantic_provider = provider
+
+    proposals = service.infer_requirements(shot.shot_id)
+
+    assert provider.calls == 1
+    assert len(proposals) == 1
+    assert proposals[0].source is ShotAssetInferenceSource.AI_SEMANTIC
+    assert proposals[0].matched_asset_id == ""
+    created = service.apply_inferred_requirements(shot.shot_id, proposals)
+    assert len(created) == 1
+    assert created[0].asset_id == ""
+    assert created[0].status is AssetBindingStatus.DRAFT
+    context.shutdown()
+
+
+def test_optional_ai_is_not_called_when_deterministic_canonical_match_is_sufficient(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_ship(context, tmp_path)
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = replace(
+        draft,
+        title="Iron Horizon",
+        required_action="Iron Horizon crosses frame.",
+    )
+    shots._replace(updated)
+    shots.mark_ready(updated.shot_id)
+
+    class _UnexpectedAI:
+        provider_name = "test-ai"
+        model_name = "should-not-run"
+
+        def infer_requirements(self, **_kwargs):
+            raise AssertionError("AI should not run when deterministic matching is sufficient")
+
+    service.semantic_provider = _UnexpectedAI()
+
+    proposals = service.infer_requirements(updated.shot_id)
+
+    assert any(proposal.matched_asset_id == "CAP-SHP-IRON-HORIZON" for proposal in proposals)
     context.shutdown()
