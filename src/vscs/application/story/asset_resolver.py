@@ -188,14 +188,18 @@ class GovernedAssetResolutionService:
         deterministic = self._deterministic_requirements(shot, scene_text)
         proposals = list(deterministic)
 
-        if include_ai and self.semantic_provider is not None:
+        if (
+            include_ai
+            and self.semantic_provider is not None
+            and self._semantic_inference_needed(shot, deterministic)
+        ):
             inferred = self.semantic_provider.infer_requirements(
                 shot=shot,
                 scene_text=scene_text,
                 deterministic=deterministic,
             )
             proposals.extend(
-                proposal
+                self._canonicalize_ai_proposal(proposal)
                 for proposal in inferred
                 if proposal.shot_id.strip().upper() == shot.shot_id
             )
@@ -297,6 +301,69 @@ class GovernedAssetResolutionService:
                 )
             )
         return tuple(proposals)
+
+    @staticmethod
+    def _semantic_inference_needed(
+        shot: ShotPlan,
+        deterministic: tuple[ShotAssetRequirementProposal, ...],
+    ) -> bool:
+        categories = {proposal.expected_category for proposal in deterministic}
+        coverage = getattr(getattr(shot, "coverage_role", None), "value", "")
+        if not deterministic:
+            return True
+        if coverage == "dialogue_delivery" and AssetCategory.CHARACTER not in categories:
+            return True
+        if coverage == "detail_insert" and not categories.intersection(
+            {AssetCategory.PROP, AssetCategory.TECHNOLOGY}
+        ):
+            return True
+        return False
+
+    def _canonicalize_ai_proposal(
+        self,
+        proposal: ShotAssetRequirementProposal,
+    ) -> ShotAssetRequirementProposal:
+        """Match an AI proposal against current XPD/CAP truth without inventing canon."""
+        if proposal.matched_asset_id:
+            return proposal
+        query = " ".join(
+            value
+            for value in (
+                proposal.matched_asset_name,
+                proposal.requirement,
+                proposal.role,
+            )
+            if value
+        )
+        result = self.browser.browse(
+            AssetBrowserFilter(
+                query=query,
+                categories=frozenset({proposal.expected_category}),
+            )
+        )
+        if len(result.items) != 1:
+            return proposal
+        item = result.items[0]
+        strict = self.resolver.resolve(
+            AssetResolutionRequest(
+                item.asset_id,
+                expected_category=item.category,
+                require_approved_asset=True,
+                require_cap=True,
+                require_approved_cap=True,
+                require_approved_references=True,
+            )
+        )
+        return replace(
+            proposal,
+            matched_asset_id=item.asset_id,
+            matched_asset_name=item.name,
+            canonical_status=strict.status.value,
+            rationale=(
+                proposal.rationale
+                + f" Canonically matched AI requirement to {item.asset_id}."
+            ).strip(),
+        )
 
     @staticmethod
     def _scene_shot_text(shot: ShotPlan, scene: Any) -> str:
