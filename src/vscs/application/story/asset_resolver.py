@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
@@ -207,7 +208,9 @@ class GovernedAssetResolutionService:
                 if proposal.shot_id.strip().upper() == shot.shot_id
             )
 
-        return self._deduplicate_proposals(tuple(proposals))
+        deduplicated = self._deduplicate_proposals(tuple(proposals))
+        without_placeholders = self._suppress_story_placeholders(deduplicated)
+        return self._collapse_environment_overlaps(without_placeholders)
 
     def apply_inferred_requirements(
         self,
@@ -262,13 +265,19 @@ class GovernedAssetResolutionService:
         items = self.browser.browse().items
         proposals: list[ShotAssetRequirementProposal] = []
         normalized_text = self._normalize_text(scene_text)
+        shot_text = self._normalize_text(self._shot_only_text(shot))
         for item in items:
             if item.category in SPECIALIST_CATEGORIES:
                 continue
-            evidence = self._asset_evidence(item, normalized_text)
+            shot_evidence = self._asset_evidence(item, shot_text)
+            scene_evidence = self._asset_evidence(item, normalized_text)
+            evidence = shot_evidence or scene_evidence
             if evidence is None:
                 continue
             confidence, rationale = evidence
+            if shot_evidence is None:
+                confidence = min(confidence, 0.88)
+                rationale = f"Scene-context support only. {rationale}"
             strict = self.resolver.resolve(
                 AssetResolutionRequest(
                     item.asset_id,
@@ -289,7 +298,7 @@ class GovernedAssetResolutionService:
                 ShotAssetRequirementProposal(
                     proposal_id=self._proposal_id(shot.shot_id, item.asset_id, item.category),
                     shot_id=shot.shot_id,
-                    role=self._inferred_role(item.category, shot),
+                    role=self._inferred_role(item, shot, shot_evidence is not None),
                     requirement=(
                         f"{item.name} is required by the governed Shot/Scene contract and "
                         "must remain canonically identifiable where visible."
@@ -372,6 +381,23 @@ class GovernedAssetResolutionService:
         )
 
     @staticmethod
+    def _shot_only_text(shot: ShotPlan) -> str:
+        return " ".join(
+            value
+            for value in (
+                shot.title,
+                shot.narrative_purpose,
+                shot.production_objective,
+                shot.required_action,
+                shot.dialogue_requirement,
+                shot.continuity_in,
+                shot.continuity_out,
+                *shot.shot_constraints,
+            )
+            if value
+        )
+
+    @staticmethod
     def _scene_shot_text(shot: ShotPlan, scene: Any) -> str:
         scene_values: tuple[str, ...] = ()
         if scene is not None:
@@ -446,18 +472,95 @@ class GovernedAssetResolutionService:
             return (0.72, f"Governed Shot text matches canonical asset identity {item.asset_id}.")
         return None
 
-    @staticmethod
-    def _inferred_role(category: AssetCategory, shot: ShotPlan) -> str:
-        label = category.value.replace("_", " ").title()
-        coverage = getattr(shot, "coverage_role", None)
-        coverage_value = getattr(coverage, "value", "")
-        if category is AssetCategory.CHARACTER and coverage_value == "dialogue_delivery":
-            return "Governed dialogue character"
-        if category in {AssetCategory.LOCATION, AssetCategory.ENVIRONMENT}:
-            return "Shot environment"
+    @classmethod
+    def _inferred_role(
+        cls,
+        item: Any,
+        shot: ShotPlan,
+        explicit_in_shot: bool,
+    ) -> str:
+        category = item.category
+        if category is AssetCategory.CHARACTER:
+            return (
+                "Dialogue Speaker"
+                if cls._character_is_dialogue_speaker(item.name, shot)
+                else "Supporting Character"
+            )
+        if category is AssetCategory.LOCATION:
+            return "Location"
+        if category is AssetCategory.ENVIRONMENT:
+            return "Environment Context"
+        if category is AssetCategory.PLANET:
+            return "Visible Planet" if explicit_in_shot else "Planetary Context"
+        if category in {AssetCategory.SHIP, AssetCategory.VEHICLE}:
+            return "Vehicle/Ship"
         if category in {AssetCategory.PROP, AssetCategory.TECHNOLOGY}:
-            return "Information-bearing Shot element"
-        return f"Required {label}"
+            return "Prop/Technology"
+        if category is AssetCategory.UNIFORM:
+            return "Wardrobe/Uniform"
+        if category is AssetCategory.EFFECT:
+            return "Effect"
+        if category is AssetCategory.AUDIO:
+            return "Audio"
+        return "Other Production Asset"
+
+    @classmethod
+    def _character_is_dialogue_speaker(cls, name: str, shot: ShotPlan) -> bool:
+        if not shot.dialogue_requirement.strip():
+            return False
+        aliases = cls._character_aliases(name)
+        dialogue = cls._normalize_text(shot.dialogue_requirement)
+        if any(f" {alias} " in f" {dialogue} " for alias in aliases):
+            return True
+
+        speech_verbs = (
+            "says",
+            "said",
+            "asks",
+            "asked",
+            "reports",
+            "reported",
+            "states",
+            "stated",
+            "orders",
+            "ordered",
+            "replies",
+            "replied",
+            "answers",
+            "answered",
+            "tells",
+            "told",
+            "warns",
+            "warned",
+            "calls",
+            "called",
+        )
+        for sentence in re.split(r"[.!?]+", shot.required_action):
+            normalized = cls._normalize_text(sentence)
+            if not normalized:
+                continue
+            if any(f" {alias} " in f" {normalized} " for alias in aliases) and any(
+                f" {verb} " in f" {normalized} " for verb in speech_verbs
+            ):
+                return True
+        return False
+
+    @classmethod
+    def _character_aliases(cls, name: str) -> tuple[str, ...]:
+        title_tokens = {"captain", "commander", "major", "doctor", "dr", "ambassador"}
+        tokens = tuple(
+            token
+            for token in cls._normalize_text(name).split()
+            if token not in title_tokens
+        )
+        aliases: list[str] = []
+        full = " ".join(tokens)
+        if full:
+            aliases.append(full)
+        for token in tokens:
+            if len(token) >= 4 and token not in aliases:
+                aliases.append(token)
+        return tuple(aliases)
 
     @staticmethod
     def _proposal_id(
@@ -492,6 +595,168 @@ class GovernedAssetResolutionService:
                 ),
             )
         )
+
+    @classmethod
+    def _suppress_story_placeholders(
+        cls,
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        """Drop story-derived placeholders when stronger canonical authority covers the same need."""
+        canonical = tuple(
+            proposal
+            for proposal in proposals
+            if proposal.matched_asset_id
+            and not cls._is_placeholder_asset_id(proposal.matched_asset_id)
+            and proposal.source is ShotAssetInferenceSource.CANONICAL_MATCH
+        )
+        kept: list[ShotAssetRequirementProposal] = []
+        for proposal in proposals:
+            if not cls._is_placeholder_asset_id(proposal.matched_asset_id):
+                kept.append(proposal)
+                continue
+            if any(cls._semantically_overlaps(proposal, stronger) for stronger in canonical):
+                continue
+            kept.append(proposal)
+        return tuple(kept)
+
+    @classmethod
+    def _collapse_environment_overlaps(
+        cls,
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        """Keep the smallest useful location/environment set while preserving distinct production roles."""
+        family = {
+            AssetCategory.LOCATION,
+            AssetCategory.ENVIRONMENT,
+            AssetCategory.PLANET,
+        }
+        non_family = [proposal for proposal in proposals if proposal.expected_category not in family]
+        family_items = [proposal for proposal in proposals if proposal.expected_category in family]
+        selected: list[ShotAssetRequirementProposal] = []
+
+        for proposal in sorted(
+            family_items,
+            key=lambda item: (
+                -cls._proposal_strength(item),
+                cls._environment_specificity(item.expected_category),
+                item.matched_asset_name.casefold(),
+            ),
+        ):
+            duplicate = next(
+                (
+                    existing
+                    for existing in selected
+                    if existing.expected_category is proposal.expected_category
+                    and cls._semantically_overlaps(existing, proposal)
+                ),
+                None,
+            )
+            if duplicate is None:
+                selected.append(proposal)
+                continue
+            if cls._proposal_strength(proposal) > cls._proposal_strength(duplicate):
+                selected.remove(duplicate)
+                selected.append(proposal)
+
+        combined = (*non_family, *selected)
+        return tuple(
+            sorted(
+                combined,
+                key=lambda proposal: (
+                    cls._role_order(proposal.role),
+                    proposal.expected_category.value,
+                    proposal.matched_asset_name.casefold(),
+                    proposal.requirement.casefold(),
+                ),
+            )
+        )
+
+    @staticmethod
+    def _environment_specificity(category: AssetCategory) -> int:
+        return {
+            AssetCategory.LOCATION: 0,
+            AssetCategory.ENVIRONMENT: 1,
+            AssetCategory.PLANET: 2,
+        }.get(category, 9)
+
+    @staticmethod
+    def _proposal_strength(proposal: ShotAssetRequirementProposal) -> float:
+        status_bonus = 0.25 if proposal.canonical_status == "resolved" else 0.0
+        canonical_bonus = (
+            0.15 if proposal.source is ShotAssetInferenceSource.CANONICAL_MATCH else 0.0
+        )
+        placeholder_penalty = (
+            0.35
+            if GovernedAssetResolutionService._is_placeholder_asset_id(
+                proposal.matched_asset_id
+            )
+            else 0.0
+        )
+        return proposal.confidence + status_bonus + canonical_bonus - placeholder_penalty
+
+    @staticmethod
+    def _is_placeholder_asset_id(asset_id: str) -> bool:
+        normalized = asset_id.strip().upper()
+        return normalized.startswith(("STORY-", "AUTO-", "TEMP-", "TMP-"))
+
+    @classmethod
+    def _semantically_overlaps(
+        cls,
+        left: ShotAssetRequirementProposal,
+        right: ShotAssetRequirementProposal,
+    ) -> bool:
+        left_tokens = cls._semantic_tokens(left.matched_asset_name or left.requirement)
+        right_tokens = cls._semantic_tokens(right.matched_asset_name or right.requirement)
+        if not left_tokens or not right_tokens:
+            return False
+        shared = left_tokens.intersection(right_tokens)
+        return bool(shared) and (
+            len(shared) >= min(len(left_tokens), len(right_tokens))
+            or any(len(token) >= 5 for token in shared)
+        )
+
+    @classmethod
+    def _semantic_tokens(cls, value: str) -> set[str]:
+        stopwords = {
+            "the",
+            "and",
+            "for",
+            "with",
+            "from",
+            "shot",
+            "scene",
+            "required",
+            "visible",
+            "context",
+            "system",
+            "orbit",
+            "bridge",
+            "environment",
+            "location",
+        }
+        return {
+            token
+            for token in cls._normalize_text(value).split()
+            if len(token) >= 4 and token not in stopwords
+        }
+
+    @staticmethod
+    def _role_order(role: str) -> int:
+        order = {
+            "Dialogue Speaker": 0,
+            "Supporting Character": 1,
+            "Location": 2,
+            "Environment Context": 3,
+            "Visible Planet": 4,
+            "Planetary Context": 5,
+            "Vehicle/Ship": 6,
+            "Prop/Technology": 7,
+            "Wardrobe/Uniform": 8,
+            "Effect": 9,
+            "Audio": 10,
+            "Other Production Asset": 11,
+        }
+        return order.get(role, 99)
 
     def available_assets(self, category: AssetCategory) -> tuple[tuple[str, str], ...]:
         """Return deterministic project asset choices for one production category."""
