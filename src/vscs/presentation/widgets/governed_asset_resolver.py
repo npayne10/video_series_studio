@@ -331,7 +331,11 @@ class GovernedAssetResolverDialog(QDialog):
             resolution_status = "Unbound"
             if resolution is not None:
                 resolution_status = resolution.status.value.title()
-                if binding.asset_id and not self.service.is_asset_current(binding):
+                if (
+                    resolution.status is AssetResolutionStatus.RESOLVED
+                    and binding.asset_id
+                    and not self.service.is_asset_current(binding)
+                ):
                     resolution_status += " / Changed"
             governance = binding.status.value.title()
             if not self.service.is_upstream_current(binding):
