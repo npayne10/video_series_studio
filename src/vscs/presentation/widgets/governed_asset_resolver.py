@@ -29,6 +29,7 @@ from vscs.application.story import (
     GovernedAssetResolutionError,
     GovernedAssetResolutionService,
     ShotAssetBinding,
+    ShotAssetRequirementProposal,
     ShotPlan,
 )
 from vscs.domain.assets import AssetCategory
@@ -229,6 +230,11 @@ class GovernedAssetResolverDialog(QDialog):
         self.summary_label.setObjectName("assetResolverSummary")
         root.addWidget(self.summary_label)
 
+        self.inference_label = QLabel(self)
+        self.inference_label.setObjectName("assetResolverInferenceSummary")
+        self.inference_label.setWordWrap(True)
+        root.addWidget(self.inference_label)
+
         guidance = QLabel(
             "Declare the production assets required by this Shot and bind each requirement to an existing "
             "approved project asset. This phase does not author new assets, camera plans or lighting plans.",
@@ -238,6 +244,8 @@ class GovernedAssetResolverDialog(QDialog):
         root.addWidget(guidance)
 
         toolbar = QHBoxLayout()
+        self.analyze_button = QPushButton("Analyze Requirements", self)
+        self.analyze_button.setObjectName("analyzeShotAssetRequirements")
         self.new_button = QPushButton("New Requirement", self)
         self.edit_button = QPushButton("Edit", self)
         self.delete_button = QPushButton("Delete Draft", self)
@@ -246,6 +254,7 @@ class GovernedAssetResolverDialog(QDialog):
         self.up_button = QPushButton("Move Up", self)
         self.down_button = QPushButton("Move Down", self)
         for button in (
+            self.analyze_button,
             self.new_button,
             self.edit_button,
             self.delete_button,
@@ -282,6 +291,7 @@ class GovernedAssetResolverDialog(QDialog):
         close_buttons.rejected.connect(self.reject)
         root.addWidget(close_buttons)
 
+        self.analyze_button.clicked.connect(self._analyze_requirements)
         self.new_button.clicked.connect(self._new)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
@@ -291,7 +301,9 @@ class GovernedAssetResolverDialog(QDialog):
         self.down_button.clicked.connect(lambda: self._move(1))
         self.table.itemSelectionChanged.connect(self._update_actions)
         self.table.itemDoubleClicked.connect(lambda _item: self._edit())
+        self._inference_proposals: tuple[ShotAssetRequirementProposal, ...] = ()
         self.refresh()
+        self._refresh_inference_summary()
 
     def refresh(self) -> None:
         """Reload current governed bindings and dependency readiness."""
@@ -361,6 +373,7 @@ class GovernedAssetResolverDialog(QDialog):
         binding = self._selected()
         draft = binding is not None and binding.status is AssetBindingStatus.DRAFT
         ready = binding is not None and binding.status is AssetBindingStatus.READY
+        self.analyze_button.setEnabled(shot_ready)
         self.new_button.setEnabled(shot_ready)
         self.edit_button.setEnabled(shot_ready and draft)
         self.delete_button.setEnabled(draft)
@@ -372,6 +385,106 @@ class GovernedAssetResolverDialog(QDialog):
             binding is not None
             and row >= 0
             and row < len(self.service.list_bindings(shot_id=self.shot_id)) - 1
+        )
+
+    def _refresh_inference_summary(self) -> None:
+        shot = self.service.shots.plan(self.shot_id)
+        if shot is None or not self.service.shots.is_production_ready(shot):
+            self._inference_proposals = ()
+            self.inference_label.setText(
+                "Automated requirement analysis is unavailable until the governed Shot is Ready."
+            )
+            return
+        try:
+            proposals = self.service.infer_requirements(self.shot_id)
+        except GovernedAssetResolutionError as exc:
+            self._inference_proposals = ()
+            self.inference_label.setText(f"Automated requirement analysis unavailable — {exc}")
+            return
+        self._inference_proposals = proposals
+        matched = sum(1 for proposal in proposals if proposal.matched)
+        unresolved = len(proposals) - matched
+        ai_enabled = self.service.semantic_provider is not None
+        self.inference_label.setText(
+            f"Automated analysis: {len(proposals)} requirement proposal(s) • "
+            f"{matched} canonical match(es) • {unresolved} unresolved • "
+            f"AI semantic inference {'enabled' if ai_enabled else 'not configured'}. "
+            "Use Analyze Requirements to review proposals before creating Draft bindings."
+        )
+
+    def _analyze_requirements(self) -> None:
+        shot = self.service.shots.plan(self.shot_id)
+        if shot is None or not self.service.shots.is_production_ready(shot):
+            return
+        try:
+            proposals = self.service.infer_requirements(self.shot_id)
+        except GovernedAssetResolutionError as exc:
+            QMessageBox.warning(self, "Automated Asset Requirement Inference", str(exc))
+            return
+        self._inference_proposals = proposals
+        if not proposals:
+            QMessageBox.information(
+                self,
+                "Automated Asset Requirement Inference",
+                (
+                    "No asset requirements could be established from deterministic Shot/Scene "
+                    "authority and current canonical XPD/CAP matches. "
+                    + (
+                        "AI semantic inference also returned no proposals."
+                        if self.service.semantic_provider is not None
+                        else "No AI semantic inference provider is configured; add requirements "
+                        "manually or configure an AI proposal provider."
+                    )
+                ),
+            )
+            self._refresh_inference_summary()
+            return
+
+        preview = "\n".join(self._proposal_line(proposal) for proposal in proposals[:12])
+        if len(proposals) > 12:
+            preview += f"\n... {len(proposals) - 12} additional proposal(s)"
+        answer = QMessageBox.question(
+            self,
+            "Automated Asset Requirement Inference",
+            (
+                f"VSCS inferred {len(proposals)} requirement proposal(s) for {self.shot_id}.\n\n"
+                f"{preview}\n\n"
+                "Create these as Draft governed bindings? No binding will be marked Ready; "
+                "you can edit or reject each binding before approval."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            self._refresh_inference_summary()
+            return
+        try:
+            created = self.service.apply_inferred_requirements(self.shot_id, proposals)
+        except GovernedAssetResolutionError as exc:
+            QMessageBox.warning(self, "Automated Asset Requirement Inference", str(exc))
+            return
+        QMessageBox.information(
+            self,
+            "Automated Asset Requirement Inference",
+            (
+                f"Created {len(created)} Draft asset binding(s). "
+                "Review canonical matches and unresolved requirements before marking Ready."
+            ),
+        )
+        self.refresh()
+        self._refresh_inference_summary()
+
+    @staticmethod
+    def _proposal_line(proposal: ShotAssetRequirementProposal) -> str:
+        asset = (
+            f"{proposal.matched_asset_id} — {proposal.matched_asset_name}"
+            if proposal.matched
+            else "UNRESOLVED"
+        )
+        return (
+            f"• {proposal.role} | {proposal.expected_category.value} | {asset} | "
+            f"{proposal.source.value} {proposal.confidence:.0%} | "
+            f"{proposal.canonical_status}"
         )
 
     def _new(self) -> None:
@@ -433,7 +546,7 @@ class GovernedAssetResolverDialog(QDialog):
             f"Delete draft {binding.binding_id}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-        if answer is not QMessageBox.StandardButton.Yes:
+        if answer != QMessageBox.StandardButton.Yes:
             return
         try:
             self.service.delete(binding.binding_id)
