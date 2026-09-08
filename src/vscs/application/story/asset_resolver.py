@@ -208,7 +208,10 @@ class GovernedAssetResolutionService:
                 if proposal.shot_id.strip().upper() == shot.shot_id
             )
 
-        deduplicated = self._deduplicate_proposals(tuple(proposals))
+        classified = tuple(
+            self._classify_proposal_role(proposal, shot) for proposal in proposals
+        )
+        deduplicated = self._deduplicate_proposals(classified)
         without_placeholders = self._suppress_story_placeholders(deduplicated)
         return self._collapse_environment_overlaps(without_placeholders)
 
@@ -595,6 +598,57 @@ class GovernedAssetResolutionService:
                 ),
             )
         )
+
+    @classmethod
+    def _classify_proposal_role(
+        cls,
+        proposal: ShotAssetRequirementProposal,
+        shot: ShotPlan,
+    ) -> ShotAssetRequirementProposal:
+        category = proposal.expected_category
+        if category is AssetCategory.CHARACTER:
+            explicit_speaker = (
+                proposal.matched_asset_name
+                and cls._character_is_dialogue_speaker(proposal.matched_asset_name, shot)
+            )
+            semantic_speaker = (
+                bool(shot.dialogue_requirement.strip())
+                and any(
+                    token in proposal.role.casefold()
+                    for token in ("speaker", "dialogue", "speaking")
+                )
+            )
+            role = "Dialogue Speaker" if explicit_speaker or semantic_speaker else "Supporting Character"
+        elif category is AssetCategory.LOCATION:
+            role = "Location"
+        elif category is AssetCategory.ENVIRONMENT:
+            role = "Environment Context"
+        elif category is AssetCategory.PLANET:
+            role = (
+                "Visible Planet"
+                if proposal.matched_asset_name
+                and cls._asset_name_in_shot(proposal.matched_asset_name, shot)
+                else "Planetary Context"
+            )
+        elif category in {AssetCategory.SHIP, AssetCategory.VEHICLE}:
+            role = "Vehicle/Ship"
+        elif category in {AssetCategory.PROP, AssetCategory.TECHNOLOGY}:
+            role = "Prop/Technology"
+        elif category is AssetCategory.UNIFORM:
+            role = "Wardrobe/Uniform"
+        elif category is AssetCategory.EFFECT:
+            role = "Effect"
+        elif category is AssetCategory.AUDIO:
+            role = "Audio"
+        else:
+            role = "Other Production Asset"
+        return replace(proposal, role=role)
+
+    @classmethod
+    def _asset_name_in_shot(cls, name: str, shot: ShotPlan) -> bool:
+        normalized_name = cls._normalize_text(name)
+        normalized_shot = cls._normalize_text(cls._shot_only_text(shot))
+        return bool(normalized_name) and f" {normalized_name} " in f" {normalized_shot} "
 
     @classmethod
     def _suppress_story_placeholders(
