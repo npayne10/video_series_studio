@@ -7,7 +7,6 @@ from vscs.infrastructure.ai.provider import (
     CAPGenerationProvider,
     TemplateCAPGenerationProvider,
 )
-from vscs.infrastructure.ai.shot_asset_provider import OpenAIShotAssetRequirementProvider
 from vscs.infrastructure.ai.story_analysis_provider import (
     OpenAIStoryAIAnalysisProvider,
     TemplateStoryAIAnalysisProvider,
@@ -19,7 +18,6 @@ __all__ = (
     "CAPGenerationProvider",
     "CredentialStorageError",
     "OpenAICAPGenerationProvider",
-    "OpenAIShotAssetRequirementProvider",
     "OpenAIStoryAIAnalysisProvider",
     "TemplateCAPGenerationProvider",
     "TemplateStoryAIAnalysisProvider",
