@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+from abc import ABC, abstractmethod
 import json
 from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 from vscs.application.asset_resolution import (
     AssetBrowserFilter,
@@ -56,19 +57,21 @@ class ShotAssetRequirementProposal:
         return bool(self.matched_asset_id)
 
 
-class ShotAssetSemanticInferenceProvider(Protocol):
+class ShotAssetSemanticInferenceProvider(ABC):
     """Optional AI boundary for requirements deterministic analysis could not establish."""
 
     provider_name: str
     model_name: str
 
+    @abstractmethod
     def infer_requirements(
         self,
         *,
         shot: ShotPlan,
         scene_text: str,
         deterministic: tuple[ShotAssetRequirementProposal, ...],
-    ) -> tuple[ShotAssetRequirementProposal, ...]: ...
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        """Return proposal-only requirements for unresolved semantic coverage gaps."""
 
 
 class AssetBindingStatus(StrEnum):
