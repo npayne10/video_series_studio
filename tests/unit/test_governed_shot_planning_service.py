@@ -430,3 +430,34 @@ def test_semantic_cinematic_coverage_persists_role_backward_compatibly(
     restored = shots.list_plans(scene_id=scene.scene_id)[0]
     assert restored.coverage_role is CinematicCoverageRole.PROGRESSION
     context.shutdown()
+
+
+def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=14,
+    )
+    source = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Sandra Reports",
+        narrative_purpose="Sandra reports the anomaly.",
+        production_objective="Move the investigation forward.",
+        target_runtime_seconds=14,
+        required_action="Sandra turns from the display and reports the signal.",
+        dialogue_requirement="Commander, I have something unusual.",
+    )
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+    first, second = proposal.proposed_shots
+
+    assert first.coverage_role is CinematicCoverageRole.ESTABLISHING
+    assert second.coverage_role is CinematicCoverageRole.RESOLVE
+    assert first.dialogue_requirement == ""
+    assert second.dialogue_requirement == source.dialogue_requirement
+    assert [shot.dialogue_requirement for shot in proposal.proposed_shots].count(
+        source.dialogue_requirement
+    ) == 1
+    context.shutdown()
