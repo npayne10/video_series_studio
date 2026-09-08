@@ -423,7 +423,7 @@ class GovernedShotPlannerDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if answer is not QMessageBox.StandardButton.Yes:
+        if answer != QMessageBox.StandardButton.Yes:
             return
         try:
             result = self.service.apply_hardware_aware_replan(self.scene_id)
@@ -530,7 +530,7 @@ class GovernedShotPlannerDialog(QDialog):
             f"Delete draft {shot.shot_id}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-        if answer is not QMessageBox.StandardButton.Yes:
+        if answer != QMessageBox.StandardButton.Yes:
             return
         try:
             self.service.delete(shot.shot_id)
