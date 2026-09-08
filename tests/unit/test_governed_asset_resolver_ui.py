@@ -149,4 +149,3 @@ def test_partial_draft_binding_is_not_mislabelled_as_changed(qtbot) -> None:
 
     assert dialog.table.item(0, 5).text() == "Partial"
     assert dialog.table.item(0, 6).text() == "Draft"
-
