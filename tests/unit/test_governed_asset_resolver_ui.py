@@ -5,9 +5,16 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any, cast
 
-from vscs.application.story import ShotPlan
+from vscs.application.story import (
+    ShotAssetInferenceSource,
+    ShotAssetRequirementProposal,
+    ShotPlan,
+)
 from vscs.domain.assets import AssetCategory
-from vscs.presentation.widgets.governed_asset_resolver import AssetBindingEditorDialog
+from vscs.presentation.widgets.governed_asset_resolver import (
+    AssetBindingEditorDialog,
+    GovernedAssetResolverDialog,
+)
 
 
 def _shot() -> ShotPlan:
@@ -45,3 +52,61 @@ def test_asset_editor_excludes_camera_lighting_and_reference_categories(qtbot) -
     assert AssetCategory.REFERENCE not in categories
     assert str(dialog.asset_combo.currentData() or "") == ""
     assert "Unbound" in dialog.readiness_label.text()
+
+
+def test_asset_resolver_exposes_automated_requirement_analysis_and_human_apply(
+    qtbot,
+    monkeypatch,
+) -> None:
+    shot = _shot()
+    proposal = ShotAssetRequirementProposal(
+        proposal_id=f"{shot.shot_id}-AIR-001",
+        shot_id=shot.shot_id,
+        role="Required Ship",
+        requirement="Iron Horizon is required by the governed Shot.",
+        expected_category=AssetCategory.SHIP,
+        matched_asset_id="CAP-SHP-IRON-HORIZON",
+        matched_asset_name="Iron Horizon",
+        confidence=1.0,
+        source=ShotAssetInferenceSource.CANONICAL_MATCH,
+        rationale="Explicit canonical asset name occurs in governed Shot text.",
+        canonical_status="resolved",
+    )
+    applied: list[tuple[ShotAssetRequirementProposal, ...]] = []
+
+    service = cast(
+        Any,
+        SimpleNamespace(
+            shots=SimpleNamespace(
+                plan=lambda _shot_id: shot,
+                is_production_ready=lambda _shot: True,
+            ),
+            semantic_provider=None,
+            list_bindings=lambda **_kwargs: (),
+            infer_requirements=lambda _shot_id: (proposal,),
+            apply_inferred_requirements=lambda _shot_id, proposals: (
+                applied.append(proposals) or (SimpleNamespace(),)
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "vscs.presentation.widgets.governed_asset_resolver.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "vscs.presentation.widgets.governed_asset_resolver.QMessageBox.information",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Ok,
+    )
+
+    dialog = GovernedAssetResolverDialog(service, shot)
+    qtbot.addWidget(dialog)
+    dialog.show()
+
+    assert dialog.analyze_button.objectName() == "analyzeShotAssetRequirements"
+    assert dialog.analyze_button.isEnabled()
+    assert "1 canonical match" in dialog.inference_label.text()
+    assert "AI semantic inference not configured" in dialog.inference_label.text()
+
+    dialog.analyze_button.click()
+
+    assert applied == [(proposal,)]
