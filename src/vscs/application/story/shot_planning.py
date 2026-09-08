@@ -32,6 +32,8 @@ class HardwareAwareShotReplanProposal:
     current_shot_count: int
     proposed_shot_count: int
     scene_runtime_seconds: int
+    semantic_source: str
+    semantic_source_shot_count: int
     proposed_shots: tuple[ShotPlan, ...]
 
 
@@ -139,7 +141,8 @@ class GovernedShotPlanningService:
     ) -> HardwareAwareShotReplanProposal:
         """Build a replacement plan without mutating current Shot authority."""
         scene = self._require_ready_scene(scene_id)
-        proposed = self._hardware_aware_shots(scene)
+        source_kind, semantic_source = self._semantic_source_plans(scene)
+        proposed = self._semantic_hardware_decomposition(scene, semantic_source)
         capability = self.hardware_capability()
         gpu = str(capability.get("gpu_name") or "Unknown GPU")
         vram = capability.get("vram_class_gb")
@@ -151,6 +154,8 @@ class GovernedShotPlanningService:
             current_shot_count=len(self.list_plans(scene_id=scene.scene_id)),
             proposed_shot_count=len(proposed),
             scene_runtime_seconds=scene.target_runtime_seconds,
+            semantic_source=source_kind,
+            semantic_source_shot_count=len(semantic_source),
             proposed_shots=proposed,
         )
 
@@ -168,6 +173,9 @@ class GovernedShotPlanningService:
                 "hardware_capability": self.hardware_capability(),
                 "maximum_shot_runtime_seconds": proposal.maximum_shot_runtime_seconds,
                 "replacement_shot_count": proposal.proposed_shot_count,
+                "semantic_source": proposal.semantic_source,
+                "semantic_source_shot_count": proposal.semantic_source_shot_count,
+                "decomposition_strategy": "semantic-hardware-aware-v1",
             },
         )
         remaining = tuple(plan for plan in self.list_plans() if plan.scene_id != proposal.scene_id)
@@ -367,73 +375,267 @@ class GovernedShotPlanningService:
         self._write(remaining)
         return True
 
-    def _hardware_aware_shots(self, scene: ScenePlan) -> tuple[ShotPlan, ...]:
-        limit = self.hardware_shot_limit_seconds()
-        shot_count = max(1, ceil(scene.target_runtime_seconds / limit))
-        base, remainder = divmod(scene.target_runtime_seconds, shot_count)
-        runtimes = tuple(base + (1 if index < remainder else 0) for index in range(shot_count))
-        if any(runtime > limit or runtime <= 0 for runtime in runtimes):
-            raise GovernedShotPlanningError(
-                "Unable to distribute Scene runtime within the active hardware Shot limit"
-            )
+    def _semantic_source_plans(
+        self,
+        scene: ScenePlan,
+    ) -> tuple[str, tuple[ShotPlan, ...]]:
+        """Choose the richest preserved semantic Shot authority for hardware decomposition."""
+        candidates: list[tuple[str, tuple[ShotPlan, ...]]] = []
+        current = self.list_plans(scene_id=scene.scene_id)
+        if current:
+            candidates.append(("current-governed-plan", current))
+        candidates.extend(self._archived_scene_plan_candidates(scene.scene_id))
 
-        events = scene.required_events or (scene.production_objective,)
-        scene_hash = self._scene_contract_hash(scene)
-        plans: list[ShotPlan] = []
-        for index, runtime in enumerate(runtimes, start=1):
-            event = events[(index - 1) % len(events)]
-            if index == 1:
-                title = f"Establish — {scene.title}"
-                purpose = (
-                    f"Establish {scene.setting_requirement} and orient the audience to "
-                    f"{scene.story_scope}"
+        valid = [
+            (source, plans)
+            for source, plans in candidates
+            if plans
+            and sum(plan.target_runtime_seconds for plan in plans)
+            == scene.target_runtime_seconds
+        ]
+        if not valid:
+            return ("scene-authority-fallback", self._scene_semantic_fallback(scene))
+
+        return max(
+            valid,
+            key=lambda item: (
+                self._semantic_density(item[1]),
+                -len(item[1]),
+            ),
+        )
+
+    def _archived_scene_plan_candidates(
+        self,
+        scene_id: str,
+    ) -> tuple[tuple[str, tuple[ShotPlan, ...]], ...]:
+        if self.projects.project_directory is None:
+            raise ProjectNotOpenError("No VSCS project is currently open")
+        safe_scene_id = scene_id.replace("/", "-").replace("\\", "-")
+        directory = (
+            self.projects.project_directory
+            / "planning"
+            / self.HISTORY_DIRECTORY
+            / safe_scene_id
+        )
+        if not directory.is_dir():
+            return ()
+
+        candidates: list[tuple[str, tuple[ShotPlan, ...]]] = []
+        for path in sorted(directory.glob("*.json"), reverse=True):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                shots = raw.get("shots", [])
+                if not isinstance(shots, list):
+                    continue
+                plans = tuple(
+                    self._from_dict(item)
+                    for item in shots
+                    if isinstance(item, dict)
                 )
-                action = f"Establish the scene state before progressing into: {event}"
-                continuity_in = scene.continuity_in
-            elif index == shot_count:
-                title = f"Close — {scene.title}"
-                purpose = (
-                    f"Complete the scene objective and prepare the editorial transition: "
-                    f"{scene.production_objective}"
-                )
-                action = f"Resolve the final required story beat: {event}"
-                continuity_in = (
-                    f"Continue directly from {self._shot_id(scene.scene_id, index - 1)}."
-                )
+            except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+                continue
+            if plans:
+                candidates.append((f"archived:{path.name}", plans))
+        return tuple(candidates)
+
+    @staticmethod
+    def _semantic_density(plans: tuple[ShotPlan, ...]) -> float:
+        """Score narrative specificity while strongly penalising generic generated beat labels."""
+        if not plans:
+            return 0.0
+        generic_titles = 0
+        substantive_titles: set[str] = set()
+        purposes: set[str] = set()
+        actions: set[str] = set()
+        dialogue = 0
+        for plan in plans:
+            title = plan.title.strip()
+            lowered = title.casefold()
+            if (
+                lowered.startswith("story beat ")
+                or lowered.startswith("establish —")
+                or lowered.startswith("close —")
+            ):
+                generic_titles += 1
             else:
-                title = f"Story Beat {index:03d}"
-                purpose = f"Advance the ordered Scene story through: {event}"
-                action = f"Show the required story event as a distinct cinematic beat: {event}"
-                continuity_in = (
-                    f"Continue directly from {self._shot_id(scene.scene_id, index - 1)}."
+                substantive_titles.add(lowered)
+            purposes.add(plan.narrative_purpose.strip().casefold())
+            actions.add(plan.required_action.strip().casefold())
+            dialogue += int(bool(plan.dialogue_requirement.strip()))
+        score = (
+            len(substantive_titles) * 5
+            + len(purposes) * 2
+            + len(actions) * 2
+            + dialogue
+            - generic_titles * 3
+        )
+        return score / len(plans)
+
+    def _scene_semantic_fallback(self, scene: ScenePlan) -> tuple[ShotPlan, ...]:
+        """Build semantic beats only when no complete governed or archived Shot authority exists."""
+        events = scene.required_events or (scene.production_objective,)
+        event_count = len(events)
+        base, remainder = divmod(scene.target_runtime_seconds, event_count)
+        scene_hash = self._scene_contract_hash(scene)
+        return tuple(
+            ShotPlan(
+                shot_id=self._shot_id(scene.scene_id, index),
+                scene_id=scene.scene_id,
+                sequence_number=index,
+                title=f"{scene.title} — {event[:48]}",
+                narrative_purpose=f"Advance the Scene through the required event: {event}",
+                production_objective=scene.production_objective,
+                target_runtime_seconds=base + (1 if index <= remainder else 0),
+                required_action=f"Present the required story event: {event}",
+                continuity_in=(
+                    scene.continuity_in
+                    if index == 1
+                    else f"Continue from semantic beat {index - 1}."
+                ),
+                continuity_out=(
+                    scene.continuity_out
+                    if index == event_count
+                    else f"Continue into semantic beat {index + 1}."
+                ),
+                scene_contract_hash=scene_hash,
+                status=ShotPlanStatus.DRAFT,
+            )
+            for index, event in enumerate(events, start=1)
+        )
+
+    def _semantic_hardware_decomposition(
+        self,
+        scene: ScenePlan,
+        semantic_source: tuple[ShotPlan, ...],
+    ) -> tuple[ShotPlan, ...]:
+        """Split each semantic Shot beat into intentional short editorial Shots."""
+        limit = self.hardware_shot_limit_seconds()
+        scene_hash = self._scene_contract_hash(scene)
+        output: list[ShotPlan] = []
+        sequence = 1
+        for source in semantic_source:
+            piece_count = max(1, ceil(source.target_runtime_seconds / limit))
+            base, remainder = divmod(source.target_runtime_seconds, piece_count)
+            runtimes = tuple(
+                base + (1 if index < remainder else 0)
+                for index in range(piece_count)
+            )
+            if any(runtime <= 0 or runtime > limit for runtime in runtimes):
+                raise GovernedShotPlanningError(
+                    f"Unable to decompose semantic Shot {source.shot_id} within "
+                    f"the active {limit}s hardware limit"
                 )
 
-            continuity_out = (
-                scene.continuity_out
-                if index == shot_count
-                else f"Continue into {self._shot_id(scene.scene_id, index + 1)}."
-            )
-            plans.append(
-                ShotPlan(
-                    shot_id=self._shot_id(scene.scene_id, index),
-                    scene_id=scene.scene_id,
-                    sequence_number=index,
-                    title=title,
-                    narrative_purpose=purpose,
-                    production_objective=scene.production_objective,
-                    target_runtime_seconds=runtime,
-                    required_action=action,
-                    dialogue_requirement="",
-                    continuity_in=continuity_in,
-                    continuity_out=continuity_out,
-                    shot_constraints=(
-                        f"Hardware-aware Shot runtime must not exceed {limit} seconds.",
-                    ),
-                    scene_contract_hash=scene_hash,
-                    status=ShotPlanStatus.DRAFT,
+            for piece_index, runtime in enumerate(runtimes, start=1):
+                shot_id = self._shot_id(scene.scene_id, sequence)
+                previous_id = (
+                    self._shot_id(scene.scene_id, sequence - 1)
+                    if sequence > 1
+                    else None
                 )
+                next_id = self._shot_id(scene.scene_id, sequence + 1)
+                output.append(
+                    ShotPlan(
+                        shot_id=shot_id,
+                        scene_id=scene.scene_id,
+                        sequence_number=sequence,
+                        title=self._decomposed_title(
+                            source.title,
+                            piece_index,
+                            piece_count,
+                        ),
+                        narrative_purpose=self._decomposed_purpose(
+                            source.narrative_purpose,
+                            piece_index,
+                            piece_count,
+                        ),
+                        production_objective=source.production_objective,
+                        target_runtime_seconds=runtime,
+                        required_action=self._decomposed_action(
+                            source.required_action,
+                            piece_index,
+                            piece_count,
+                        ),
+                        dialogue_requirement=(
+                            source.dialogue_requirement
+                            if self._dialogue_piece(piece_index, piece_count)
+                            else ""
+                        ),
+                        continuity_in=(
+                            source.continuity_in
+                            if piece_index == 1
+                            else f"Continue directly from {previous_id}."
+                        ),
+                        continuity_out=(
+                            source.continuity_out
+                            if piece_index == piece_count
+                            else f"Continue into {next_id}."
+                        ),
+                        shot_constraints=self._values(
+                            (
+                                *source.shot_constraints,
+                                (
+                                    f"Hardware-aware Shot runtime must not exceed "
+                                    f"{limit} seconds."
+                                ),
+                                (
+                                    f"Preserve semantic source Shot {source.shot_id}: "
+                                    f"{source.title}."
+                                ),
+                            )
+                        ),
+                        scene_contract_hash=scene_hash,
+                        status=ShotPlanStatus.DRAFT,
+                    )
+                )
+                sequence += 1
+
+        total = sum(plan.target_runtime_seconds for plan in output)
+        if total != scene.target_runtime_seconds:
+            raise GovernedShotPlanningError(
+                f"Semantic hardware decomposition produced {total}s but Scene authority "
+                f"requires {scene.target_runtime_seconds}s"
             )
-        return tuple(plans)
+        return tuple(output)
+
+    @staticmethod
+    def _decomposed_title(title: str, index: int, count: int) -> str:
+        if count == 1:
+            return title
+        if index == 1:
+            suffix = "Establish"
+        elif index == count:
+            suffix = "Resolve"
+        else:
+            coverage = ("Detail", "Reaction", "Coverage", "Progression", "Response")
+            suffix = coverage[(index - 2) % len(coverage)]
+        return f"{title} — {suffix}"
+
+    @staticmethod
+    def _decomposed_purpose(purpose: str, index: int, count: int) -> str:
+        if count == 1:
+            return purpose
+        if index == 1:
+            return f"Establish the semantic beat: {purpose}"
+        if index == count:
+            return f"Resolve the semantic beat: {purpose}"
+        return f"Advance the semantic beat with distinct editorial coverage: {purpose}"
+
+    @staticmethod
+    def _decomposed_action(action: str, index: int, count: int) -> str:
+        if count == 1:
+            return action
+        if index == 1:
+            return f"Begin the beat action: {action}"
+        if index == count:
+            return f"Complete the beat action: {action}"
+        return f"Continue the beat action from a distinct cinematic angle: {action}"
+
+    @staticmethod
+    def _dialogue_piece(index: int, count: int) -> bool:
+        if count <= 1:
+            return True
+        return index == min(2, count)
 
     def _archive_scene_plans(
         self,
