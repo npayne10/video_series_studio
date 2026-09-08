@@ -743,7 +743,7 @@ def test_explicit_scene_persistence_constraint_can_carry_character_into_every_sh
 def test_ai_character_proposal_is_rejected_when_supported_only_by_scene_context(
     tmp_path: Path,
 ) -> None:
-    context, shots, service, shot = _planning(tmp_path)
+    context, _shots, service, shot = _planning(tmp_path)
     _approved_named_asset(
         context,
         tmp_path,
