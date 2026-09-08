@@ -644,9 +644,7 @@ class GovernedAssetResolutionService:
             if not normalized:
                 continue
             words = normalized.split()
-            verb_positions = [
-                index for index, word in enumerate(words) if word in speech_verbs
-            ]
+            verb_positions = [index for index, word in enumerate(words) if word in speech_verbs]
             if not verb_positions:
                 continue
             first_verb = min(verb_positions)
