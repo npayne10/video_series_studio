@@ -67,8 +67,11 @@ AI output remains proposal-only. Unmatched AI requirements remain explicitly
 unresolved. AI proposals are rematched deterministically against current XPD before
 human review; ambiguous matches stay unresolved rather than creating or guessing canon.
 
-No AI provider is required for deterministic operation. The UI reports whether semantic
-AI inference is configured.
+No AI provider is required for deterministic operation. When VSCS Settings selects
+OpenAI and a valid OpenAI API key is available from secure credential storage, the
+composition root registers `OpenAIShotAssetRequirementProvider` automatically using the
+configured OpenAI model. Test mode and non-OpenAI configurations remain deterministic.
+The UI reports whether semantic AI inference is configured.
 
 ## Human governance
 
