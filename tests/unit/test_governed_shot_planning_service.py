@@ -199,8 +199,8 @@ def test_hardware_aware_replan_covers_full_scene_with_short_governed_shots(
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 180
     assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
     assert all(shot.status is ShotPlanStatus.DRAFT for shot in proposal.proposed_shots)
-    assert proposal.proposed_shots[0].title.startswith("Establish")
-    assert proposal.proposed_shots[-1].title.startswith("Close")
+    assert proposal.proposed_shots[0].title.endswith("— Establish")
+    assert proposal.proposed_shots[-1].title.endswith("— Resolve")
     context.shutdown()
 
 
