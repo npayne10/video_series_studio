@@ -8,7 +8,10 @@ from vscs.application.shots import ShotPlanningService
 from vscs.infrastructure.services import ApplicationServices
 
 from .approval import StoryApprovalService
-from .asset_resolver import GovernedAssetResolutionService
+from .asset_resolver import (
+    GovernedAssetResolutionService,
+    ShotAssetSemanticInferenceProvider,
+)
 from .camera_planning import GovernedCameraPlanningService
 from .environment_planning import GovernedEnvironmentPlanningService
 from .episode_planning import EpisodePlanningService
@@ -108,6 +111,7 @@ def register_governed_asset_resolution(
         register_governed_shot_planning(services),
         services.require(AssetResolutionService),
         services.require(AssetBrowserService),
+        services.get(ShotAssetSemanticInferenceProvider),
     )
     return services.register(GovernedAssetResolutionService, resolver)
 
