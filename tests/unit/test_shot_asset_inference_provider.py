@@ -64,3 +64,11 @@ def test_openai_shot_asset_provider_returns_proposals_without_creating_canon() -
     assert proposal.matched_asset_id == ""
     assert proposal.canonical_status == "unresolved"
     assert proposal.confidence == 0.84
+
+
+
+def test_ai_package_does_not_reexport_shot_asset_provider_and_recreate_story_cycle() -> None:
+    import vscs.infrastructure.ai as ai_package
+
+    assert "OpenAIShotAssetRequirementProvider" not in ai_package.__all__
+    assert not hasattr(ai_package, "OpenAIShotAssetRequirementProvider")
