@@ -10,6 +10,7 @@ import pytest
 from vscs.application.projects import ProjectService
 from vscs.application.shots import ProductionShot, ShotPlanningService
 from vscs.application.story import (
+    CinematicCoverageRole,
     EpisodePlanningService,
     GovernedShotPlanningError,
     GovernedShotPlanningService,
@@ -354,4 +355,81 @@ def test_semantic_decomposition_preserves_each_source_beat_without_dialogue_dupl
     assert [shot.dialogue_requirement for shot in proposal.proposed_shots].count(
         source.dialogue_requirement
     ) == 1
+    context.shutdown()
+
+
+def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=28,
+    )
+    source = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Weak Repeating Signal",
+        narrative_purpose="Convey Sandra's analysis of the repeating transmission.",
+        production_objective="Establish that the signal comes from the outer moon.",
+        target_runtime_seconds=28,
+        required_action=(
+            "Sandra studies the repeating signal while James follows her analysis "
+            "and the display shows the forty-seven second pattern."
+        ),
+        dialogue_requirement="Commander, I have something unusual.",
+    )
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+    children = proposal.proposed_shots
+
+    assert len(children) == 4
+    assert [shot.coverage_role for shot in children] == [
+        CinematicCoverageRole.ESTABLISHING,
+        CinematicCoverageRole.DIALOGUE_DELIVERY,
+        CinematicCoverageRole.DETAIL_INSERT,
+        CinematicCoverageRole.RESOLVE,
+    ]
+    assert children[0].title == f"{source.title} — Establish"
+    assert children[1].title == f"{source.title} — Dialogue"
+    assert children[2].title == f"{source.title} — Detail"
+    assert children[3].title == f"{source.title} — Resolve"
+    assert len({shot.required_action for shot in children}) == 4
+    assert "Do not invent additional spoken content" in children[1].required_action
+    assert "information-bearing visual detail" in children[2].required_action
+    assert [shot.dialogue_requirement for shot in children].count(
+        source.dialogue_requirement
+    ) == 1
+    assert all(
+        f"Cinematic coverage role: {shot.coverage_role.value}."
+        in shot.shot_constraints
+        for shot in children
+    )
+    context.shutdown()
+
+
+def test_semantic_cinematic_coverage_persists_role_backward_compatibly(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=7,
+    )
+    created = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Single Beat",
+        narrative_purpose="Advance one compact beat.",
+        production_objective="Keep the beat concise.",
+        target_runtime_seconds=7,
+        required_action="James crosses to Sandra's station.",
+    )
+
+    assert created.coverage_role is CinematicCoverageRole.UNSPECIFIED
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+    assert proposal.proposed_shots[0].coverage_role is CinematicCoverageRole.PROGRESSION
+
+    shots.apply_hardware_aware_replan(scene.scene_id)
+    restored = shots.list_plans(scene_id=scene.scene_id)[0]
+    assert restored.coverage_role is CinematicCoverageRole.PROGRESSION
     context.shutdown()
