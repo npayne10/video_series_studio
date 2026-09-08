@@ -488,9 +488,7 @@ def test_inference_suppresses_story_placeholder_when_canonical_asset_covers_same
     proposals = service.infer_requirements(updated.shot_id, include_ai=False)
 
     assert any(proposal.matched_asset_id == "CAP-PLN-002" for proposal in proposals)
-    assert all(
-        proposal.matched_asset_id != "STORY-LOC-B6E569C147" for proposal in proposals
-    )
+    assert all(proposal.matched_asset_id != "STORY-LOC-B6E569C147" for proposal in proposals)
     context.shutdown()
 
 

@@ -208,9 +208,7 @@ class GovernedAssetResolutionService:
                 if proposal.shot_id.strip().upper() == shot.shot_id
             )
 
-        classified = tuple(
-            self._classify_proposal_role(proposal, shot) for proposal in proposals
-        )
+        classified = tuple(self._classify_proposal_role(proposal, shot) for proposal in proposals)
         deduplicated = self._deduplicate_proposals(classified)
         without_placeholders = self._suppress_story_placeholders(deduplicated)
         return self._collapse_environment_overlaps(without_placeholders)
@@ -552,9 +550,7 @@ class GovernedAssetResolutionService:
     def _character_aliases(cls, name: str) -> tuple[str, ...]:
         title_tokens = {"captain", "commander", "major", "doctor", "dr", "ambassador"}
         tokens = tuple(
-            token
-            for token in cls._normalize_text(name).split()
-            if token not in title_tokens
+            token for token in cls._normalize_text(name).split() if token not in title_tokens
         )
         aliases: list[str] = []
         full = " ".join(tokens)
@@ -607,18 +603,17 @@ class GovernedAssetResolutionService:
     ) -> ShotAssetRequirementProposal:
         category = proposal.expected_category
         if category is AssetCategory.CHARACTER:
-            explicit_speaker = (
-                proposal.matched_asset_name
-                and cls._character_is_dialogue_speaker(proposal.matched_asset_name, shot)
+            explicit_speaker = proposal.matched_asset_name and cls._character_is_dialogue_speaker(
+                proposal.matched_asset_name, shot
             )
-            semantic_speaker = (
-                bool(shot.dialogue_requirement.strip())
-                and any(
-                    token in proposal.role.casefold()
-                    for token in ("speaker", "dialogue", "speaking")
-                )
+            semantic_speaker = bool(shot.dialogue_requirement.strip()) and any(
+                token in proposal.role.casefold() for token in ("speaker", "dialogue", "speaking")
             )
-            role = "Dialogue Speaker" if explicit_speaker or semantic_speaker else "Supporting Character"
+            role = (
+                "Dialogue Speaker"
+                if explicit_speaker or semantic_speaker
+                else "Supporting Character"
+            )
         elif category is AssetCategory.LOCATION:
             role = "Location"
         elif category is AssetCategory.ENVIRONMENT:
@@ -684,7 +679,9 @@ class GovernedAssetResolutionService:
             AssetCategory.ENVIRONMENT,
             AssetCategory.PLANET,
         }
-        non_family = [proposal for proposal in proposals if proposal.expected_category not in family]
+        non_family = [
+            proposal for proposal in proposals if proposal.expected_category not in family
+        ]
         family_items = [proposal for proposal in proposals if proposal.expected_category in family]
         selected: list[ShotAssetRequirementProposal] = []
 
@@ -741,9 +738,7 @@ class GovernedAssetResolutionService:
         )
         placeholder_penalty = (
             0.35
-            if GovernedAssetResolutionService._is_placeholder_asset_id(
-                proposal.matched_asset_id
-            )
+            if GovernedAssetResolutionService._is_placeholder_asset_id(proposal.matched_asset_id)
             else 0.0
         )
         return proposal.confidence + status_bonus + canonical_bonus - placeholder_penalty
