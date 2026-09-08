@@ -111,6 +111,7 @@ from .planning_review import (
 from .scene_planning import ScenePlan, ScenePlanningError, ScenePlanStatus
 from .service import StoryService, StoryServiceError
 from .shot_planning import (
+    CinematicCoverageRole,
     GovernedShotPlanningError,
     GovernedShotPlanningService,
     HardwareAwareShotReplanProposal,
@@ -131,6 +132,7 @@ __all__ = [
     "AssetBindingStatus",
     "AtmosphereState",
     "CameraAngle",
+    "CinematicCoverageRole",
     "CameraMovement",
     "CameraPlan",
     "CameraPlanStatus",
