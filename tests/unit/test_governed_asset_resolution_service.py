@@ -733,9 +733,7 @@ def test_explicit_scene_persistence_constraint_can_carry_character_into_every_sh
 
     shot = _refresh_shot_after_scene_change(shots, shot)
     proposals = service.infer_requirements(shot.shot_id, include_ai=False)
-    cheryl = next(
-        proposal for proposal in proposals if proposal.matched_asset_id == "CAP-CHR-002"
-    )
+    cheryl = next(proposal for proposal in proposals if proposal.matched_asset_id == "CAP-CHR-002")
 
     assert cheryl.role == "Supporting Character"
     assert "Explicit Scene persistence constraint" in cheryl.rationale

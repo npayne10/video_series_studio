@@ -381,12 +381,8 @@ class GovernedAssetResolutionService:
             " ".join((proposal.role, proposal.requirement, proposal.rationale))
         )
         shot_text = cls._normalize_text(cls._shot_only_text(shot))
-        proposal_tokens = {
-            token for token in proposal_text.split() if len(token) >= 4
-        }
-        shot_tokens = {
-            token for token in shot_text.split() if len(token) >= 4
-        }
+        proposal_tokens = {token for token in proposal_text.split() if len(token) >= 4}
+        shot_tokens = {token for token in shot_text.split() if len(token) >= 4}
         return bool(proposal_tokens.intersection(shot_tokens))
 
     @classmethod
@@ -418,8 +414,7 @@ class GovernedAssetResolutionService:
             "always present asset ",
         )
         return bool(subject_text) and any(
-            normalized.startswith(prefix)
-            and f" {subject_text} " in f" {normalized} "
+            normalized.startswith(prefix) and f" {subject_text} " in f" {normalized} "
             for prefix in prefixes
         )
 
