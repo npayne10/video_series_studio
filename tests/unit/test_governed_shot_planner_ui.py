@@ -271,10 +271,7 @@ def test_governed_shot_planner_displays_cinematic_coverage_role_column(
 
     assert dialog.table.columnCount() == 8
     assert dialog.table.horizontalHeaderItem(4).text() == "Coverage Role"
-    roles = {
-        dialog.table.item(row, 4).text()
-        for row in range(dialog.table.rowCount())
-    }
+    roles = {dialog.table.item(row, 4).text() for row in range(dialog.table.rowCount())}
     assert "Establishing" in roles
     assert "Resolve" in roles
     assert "Detail Insert" in roles or "Primary Subject" in roles

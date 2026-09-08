@@ -396,12 +396,9 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
     assert len({shot.required_action for shot in children}) == 4
     assert "Do not invent additional spoken content" in children[1].required_action
     assert "information-bearing visual detail" in children[2].required_action
-    assert [shot.dialogue_requirement for shot in children].count(
-        source.dialogue_requirement
-    ) == 1
+    assert [shot.dialogue_requirement for shot in children].count(source.dialogue_requirement) == 1
     assert all(
-        f"Cinematic coverage role: {shot.coverage_role.value}."
-        in shot.shot_constraints
+        f"Cinematic coverage role: {shot.coverage_role.value}." in shot.shot_constraints
         for shot in children
     )
     context.shutdown()
