@@ -415,6 +415,8 @@ class GovernedShotPlannerDialog(QDialog):
                 f"Maximum Shot runtime: {proposal.maximum_shot_runtime_seconds}s\n"
                 f"Scene runtime: {proposal.scene_runtime_seconds}s\n"
                 f"Current governed Shots: {proposal.current_shot_count}\n"
+                f"Semantic source: {proposal.semantic_source} "
+                f"({proposal.semantic_source_shot_count} narrative beats)\n"
                 f"Proposed governed Shots: {proposal.proposed_shot_count}\n\n"
                 "The current Shot Plan will be archived before replacement. "
                 "The new Shots will be Draft so they can be reviewed before downstream planning.\n\n"
