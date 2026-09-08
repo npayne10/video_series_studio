@@ -49,6 +49,20 @@ class HardwareAwareShotReplanResult:
     shots: tuple[ShotPlan, ...]
 
 
+class CinematicCoverageRole(StrEnum):
+    """Editorial role assigned to a hardware-decomposed governed Shot."""
+
+    UNSPECIFIED = "unspecified"
+    ESTABLISHING = "establishing"
+    PRIMARY_SUBJECT = "primary_subject"
+    SECONDARY_SUBJECT = "secondary_subject"
+    DETAIL_INSERT = "detail_insert"
+    DIALOGUE_DELIVERY = "dialogue_delivery"
+    REACTION = "reaction"
+    PROGRESSION = "progression"
+    RESOLVE = "resolve"
+
+
 class ShotPlanStatus(StrEnum):
     """Minimal governance state for specialist production planning."""
 
@@ -68,6 +82,7 @@ class ShotPlan:
     production_objective: str
     target_runtime_seconds: int
     required_action: str
+    coverage_role: CinematicCoverageRole = CinematicCoverageRole.UNSPECIFIED
     dialogue_requirement: str = ""
     continuity_in: str = ""
     continuity_out: str = ""
@@ -175,7 +190,7 @@ class GovernedShotPlanningService:
                 "replacement_shot_count": proposal.proposed_shot_count,
                 "semantic_source": proposal.semantic_source,
                 "semantic_source_shot_count": proposal.semantic_source_shot_count,
-                "decomposition_strategy": "semantic-hardware-aware-v1",
+                "decomposition_strategy": "semantic-cinematic-coverage-v1",
             },
         )
         remaining = tuple(plan for plan in self.list_plans() if plan.scene_id != proposal.scene_id)
@@ -519,6 +534,11 @@ class GovernedShotPlanningService:
                 shot_id = self._shot_id(scene.scene_id, sequence)
                 previous_id = self._shot_id(scene.scene_id, sequence - 1) if sequence > 1 else None
                 next_id = self._shot_id(scene.scene_id, sequence + 1)
+                role = self._coverage_role(
+                    source,
+                    piece_index,
+                    piece_count,
+                )
                 output.append(
                     ShotPlan(
                         shot_id=shot_id,
@@ -526,24 +546,22 @@ class GovernedShotPlanningService:
                         sequence_number=sequence,
                         title=self._decomposed_title(
                             source.title,
-                            piece_index,
-                            piece_count,
+                            role,
                         ),
                         narrative_purpose=self._decomposed_purpose(
                             source.narrative_purpose,
-                            piece_index,
-                            piece_count,
+                            role,
                         ),
                         production_objective=source.production_objective,
                         target_runtime_seconds=runtime,
                         required_action=self._decomposed_action(
                             source.required_action,
-                            piece_index,
-                            piece_count,
+                            role,
                         ),
+                        coverage_role=role,
                         dialogue_requirement=(
                             source.dialogue_requirement
-                            if self._dialogue_piece(piece_index, piece_count)
+                            if role is CinematicCoverageRole.DIALOGUE_DELIVERY
                             else ""
                         ),
                         continuity_in=(
@@ -564,6 +582,7 @@ class GovernedShotPlanningService:
                                     f"Preserve semantic source Shot {source.shot_id}: "
                                     f"{source.title}."
                                 ),
+                                f"Cinematic coverage role: {role.value}.",
                             )
                         ),
                         scene_contract_hash=scene_hash,
@@ -581,43 +600,149 @@ class GovernedShotPlanningService:
         return tuple(output)
 
     @staticmethod
-    def _decomposed_title(title: str, index: int, count: int) -> str:
-        if count == 1:
-            return title
-        if index == 1:
-            suffix = "Establish"
-        elif index == count:
-            suffix = "Resolve"
-        else:
-            coverage = ("Detail", "Reaction", "Coverage", "Progression", "Response")
-            suffix = coverage[(index - 2) % len(coverage)]
-        return f"{title} — {suffix}"
-
-    @staticmethod
-    def _decomposed_purpose(purpose: str, index: int, count: int) -> str:
-        if count == 1:
-            return purpose
-        if index == 1:
-            return f"Establish the semantic beat: {purpose}"
-        if index == count:
-            return f"Resolve the semantic beat: {purpose}"
-        return f"Advance the semantic beat with distinct editorial coverage: {purpose}"
-
-    @staticmethod
-    def _decomposed_action(action: str, index: int, count: int) -> str:
-        if count == 1:
-            return action
-        if index == 1:
-            return f"Begin the beat action: {action}"
-        if index == count:
-            return f"Complete the beat action: {action}"
-        return f"Continue the beat action from a distinct cinematic angle: {action}"
-
-    @staticmethod
-    def _dialogue_piece(index: int, count: int) -> bool:
+    def _coverage_role(
+        source: ShotPlan,
+        index: int,
+        count: int,
+    ) -> CinematicCoverageRole:
         if count <= 1:
-            return True
-        return index == min(2, count)
+            return (
+                CinematicCoverageRole.DIALOGUE_DELIVERY
+                if source.dialogue_requirement.strip()
+                else CinematicCoverageRole.PROGRESSION
+            )
+        if index == 1:
+            return CinematicCoverageRole.ESTABLISHING
+        if index == count:
+            return CinematicCoverageRole.RESOLVE
+        if source.dialogue_requirement.strip() and index == min(2, count - 1):
+            return CinematicCoverageRole.DIALOGUE_DELIVERY
+
+        interior = index - 2
+        if count >= 5:
+            roles = (
+                CinematicCoverageRole.PRIMARY_SUBJECT,
+                CinematicCoverageRole.DETAIL_INSERT,
+                CinematicCoverageRole.REACTION,
+                CinematicCoverageRole.SECONDARY_SUBJECT,
+                CinematicCoverageRole.PROGRESSION,
+            )
+        elif count == 4:
+            roles = (
+                CinematicCoverageRole.PRIMARY_SUBJECT,
+                CinematicCoverageRole.DETAIL_INSERT,
+            )
+        elif count == 3:
+            roles = (CinematicCoverageRole.DETAIL_INSERT,)
+        else:
+            roles = (CinematicCoverageRole.PROGRESSION,)
+        return roles[interior % len(roles)]
+
+    @staticmethod
+    def _coverage_label(role: CinematicCoverageRole) -> str:
+        return {
+            CinematicCoverageRole.UNSPECIFIED: "Coverage",
+            CinematicCoverageRole.ESTABLISHING: "Establish",
+            CinematicCoverageRole.PRIMARY_SUBJECT: "Primary Subject",
+            CinematicCoverageRole.SECONDARY_SUBJECT: "Secondary Subject",
+            CinematicCoverageRole.DETAIL_INSERT: "Detail",
+            CinematicCoverageRole.DIALOGUE_DELIVERY: "Dialogue",
+            CinematicCoverageRole.REACTION: "Reaction",
+            CinematicCoverageRole.PROGRESSION: "Progression",
+            CinematicCoverageRole.RESOLVE: "Resolve",
+        }[role]
+
+    @classmethod
+    def _decomposed_title(
+        cls,
+        title: str,
+        role: CinematicCoverageRole,
+    ) -> str:
+        return f"{title} — {cls._coverage_label(role)}"
+
+    @staticmethod
+    def _decomposed_purpose(
+        purpose: str,
+        role: CinematicCoverageRole,
+    ) -> str:
+        templates = {
+            CinematicCoverageRole.ESTABLISHING: (
+                "Establish the geography, participants and visual state required by this "
+                f"semantic beat: {purpose}"
+            ),
+            CinematicCoverageRole.PRIMARY_SUBJECT: (
+                "Concentrate on the principal subject or action carrying this semantic beat: "
+                f"{purpose}"
+            ),
+            CinematicCoverageRole.SECONDARY_SUBJECT: (
+                "Cover the secondary participant or complementary action that advances this "
+                f"semantic beat: {purpose}"
+            ),
+            CinematicCoverageRole.DETAIL_INSERT: (
+                "Reveal an information-bearing visual detail or insert that materially advances "
+                f"this semantic beat: {purpose}"
+            ),
+            CinematicCoverageRole.DIALOGUE_DELIVERY: (
+                "Present the governed dialogue delivery while preserving the narrative purpose "
+                f"of this semantic beat: {purpose}"
+            ),
+            CinematicCoverageRole.REACTION: (
+                "Show the immediate character response or consequence created by this semantic "
+                f"beat: {purpose}"
+            ),
+            CinematicCoverageRole.PROGRESSION: (
+                "Advance the visible action without repeating the establishing composition: "
+                f"{purpose}"
+            ),
+            CinematicCoverageRole.RESOLVE: (
+                "Resolve the semantic beat and create a clean editorial handoff to the next "
+                f"Shot: {purpose}"
+            ),
+            CinematicCoverageRole.UNSPECIFIED: purpose,
+        }
+        return templates[role]
+
+    @staticmethod
+    def _decomposed_action(
+        action: str,
+        role: CinematicCoverageRole,
+    ) -> str:
+        templates = {
+            CinematicCoverageRole.ESTABLISHING: (
+                "Establish the full spatial relationship and initial state for: "
+                f"{action} Do not spend this Shot on a close reaction or insert."
+            ),
+            CinematicCoverageRole.PRIMARY_SUBJECT: (
+                "Isolate the principal subject performing or driving the beat action: "
+                f"{action} Avoid repeating the wide establishing composition."
+            ),
+            CinematicCoverageRole.SECONDARY_SUBJECT: (
+                "Shift attention to the secondary participant or complementary action within: "
+                f"{action} Preserve eyelines and scene geography."
+            ),
+            CinematicCoverageRole.DETAIL_INSERT: (
+                "Show a specific information-bearing visual detail, display, object, hand action "
+                f"or environmental cue that advances: {action} Do not repeat the master view."
+            ),
+            CinematicCoverageRole.DIALOGUE_DELIVERY: (
+                "Frame the speaker delivering the governed dialogue while the physical action "
+                f"continues consistently with: {action} Do not invent additional spoken content."
+            ),
+            CinematicCoverageRole.REACTION: (
+                "Show the immediate reaction or decision caused by the preceding action in: "
+                f"{action} Preserve identity, orientation and established screen direction."
+            ),
+            CinematicCoverageRole.PROGRESSION: (
+                "Advance the beat with a visibly new stage of the action in: "
+                f"{action} Do not simply restage the previous Shot."
+            ),
+            CinematicCoverageRole.RESOLVE: (
+                "Complete the required beat action and leave the visual state ready for the next "
+                f"Shot: {action} Avoid introducing new story information."
+            ),
+            CinematicCoverageRole.UNSPECIFIED: action,
+        }
+        return templates[role]
 
     def _archive_scene_plans(
         self,
@@ -747,6 +872,7 @@ class GovernedShotPlanningService:
     def _to_dict(plan: ShotPlan) -> dict[str, Any]:
         raw = asdict(plan)
         raw["status"] = plan.status.value
+        raw["coverage_role"] = plan.coverage_role.value
         raw["shot_constraints"] = list(plan.shot_constraints)
         return raw
 
@@ -761,6 +887,9 @@ class GovernedShotPlanningService:
             production_objective=str(raw["production_objective"]),
             target_runtime_seconds=int(raw["target_runtime_seconds"]),
             required_action=str(raw["required_action"]),
+            coverage_role=CinematicCoverageRole(
+                str(raw.get("coverage_role", CinematicCoverageRole.UNSPECIFIED.value))
+            ),
             dialogue_requirement=str(raw.get("dialogue_requirement", "")),
             continuity_in=str(raw.get("continuity_in", "")),
             continuity_out=str(raw.get("continuity_out", "")),
