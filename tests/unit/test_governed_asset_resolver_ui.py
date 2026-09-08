@@ -5,6 +5,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any, cast
 
+from PySide6.QtWidgets import QMessageBox
+
 from vscs.application.story import (
     ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
