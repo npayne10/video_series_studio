@@ -613,9 +613,6 @@ class GovernedAssetResolutionService:
         if not shot.dialogue_requirement.strip():
             return False
         aliases = cls._character_aliases(name)
-        dialogue = cls._normalize_text(shot.dialogue_requirement)
-        if any(f" {alias} " in f" {dialogue} " for alias in aliases):
-            return True
 
         speech_verbs = (
             "says",
@@ -639,6 +636,7 @@ class GovernedAssetResolutionService:
             "calls",
             "called",
         )
+        action_contains_speech = False
         for sentence in re.split(r"[.!?]+", shot.required_action):
             normalized = cls._normalize_text(sentence)
             if not normalized:
@@ -647,11 +645,17 @@ class GovernedAssetResolutionService:
             verb_positions = [index for index, word in enumerate(words) if word in speech_verbs]
             if not verb_positions:
                 continue
+            action_contains_speech = True
             first_verb = min(verb_positions)
             subject_text = " ".join(words[:first_verb])
             if any(f" {alias} " in f" {subject_text} " for alias in aliases):
                 return True
-        return False
+
+        if action_contains_speech:
+            return False
+
+        dialogue = cls._normalize_text(shot.dialogue_requirement)
+        return any(f" {alias} " in f" {dialogue} " for alias in aliases)
 
     @classmethod
     def _character_aliases(cls, name: str) -> tuple[str, ...]:
