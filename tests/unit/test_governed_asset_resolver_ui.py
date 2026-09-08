@@ -7,7 +7,9 @@ from typing import Any, cast
 
 from PySide6.QtWidgets import QMessageBox
 
+from vscs.application.asset_resolution import AssetResolutionStatus
 from vscs.application.story import (
+    AssetBindingStatus,
     ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
     ShotPlan,
@@ -112,3 +114,39 @@ def test_asset_resolver_exposes_automated_requirement_analysis_and_human_apply(
     dialog.analyze_button.click()
 
     assert applied == [(proposal,)]
+
+
+def test_partial_draft_binding_is_not_mislabelled_as_changed(qtbot) -> None:
+    shot = _shot()
+    binding = SimpleNamespace(
+        binding_id=f"{shot.shot_id}-AST-001",
+        role="Location",
+        expected_category=AssetCategory.LOCATION,
+        requirement="Bridge is required.",
+        asset_id="CAP-LOC-008",
+        notes="",
+        status=AssetBindingStatus.DRAFT,
+    )
+    service = cast(
+        Any,
+        SimpleNamespace(
+            shots=SimpleNamespace(
+                plan=lambda _shot_id: shot,
+                is_production_ready=lambda _shot: True,
+            ),
+            semantic_provider=None,
+            list_bindings=lambda **_kwargs: (binding,),
+            infer_requirements=lambda _shot_id: (),
+            resolution=lambda _binding: SimpleNamespace(status=AssetResolutionStatus.PARTIAL),
+            is_asset_current=lambda _binding: False,
+            is_upstream_current=lambda _binding: True,
+            is_production_ready=lambda _binding: False,
+        ),
+    )
+
+    dialog = GovernedAssetResolverDialog(service, shot)
+    qtbot.addWidget(dialog)
+
+    assert dialog.table.item(0, 5).text() == "Partial"
+    assert dialog.table.item(0, 6).text() == "Draft"
+
