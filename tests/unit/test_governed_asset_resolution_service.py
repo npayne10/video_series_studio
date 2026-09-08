@@ -820,3 +820,56 @@ def test_dialogue_speaker_classification_does_not_promote_listener_after_speech_
     assert by_asset["CAP-CHR-003"].role == "Dialogue Speaker"
     assert by_asset["CAP-CHR-001"].role == "Supporting Character"
     context.shutdown()
+
+
+def test_dialogue_speaker_prefers_required_action_over_optional_dialogue_listener(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    for asset_id, name in (
+        ("CAP-CHR-001", "Commander James Spence"),
+        ("CAP-CHR-003", "Sandra Crawford"),
+    ):
+        _approved_named_asset(
+            context,
+            tmp_path,
+            asset_id=asset_id,
+            name=name,
+            category=AssetCategory.CHARACTER,
+        )
+
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Nine Days in Xorix Orbit — Dialogue",
+        narrative_purpose=(
+            "Present the governed dialogue delivery while preserving the narrative purpose "
+            "of this semantic beat."
+        ),
+        production_objective=(
+            "Show Sandra Crawford at the control station and Commander James Spence present."
+        ),
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=(
+            "Frame the speaker delivering the governed dialogue while the physical action "
+            "continues consistently with: Sandra Crawford looks up from the control station "
+            "and reports something unusual to Commander James Spence. "
+            "Do not invent additional spoken content."
+        ),
+        dialogue_requirement=(
+            'Sandra must report to James: "Commander, I have something unusual." '
+            'James may ask: "How unusual?"'
+        ),
+        continuity_in="Continue directly from the preceding Shot.",
+        continuity_out="Continue into the next Shot.",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    by_asset = {proposal.matched_asset_id: proposal for proposal in proposals}
+
+    assert by_asset["CAP-CHR-003"].role == "Dialogue Speaker"
+    assert by_asset["CAP-CHR-001"].role == "Supporting Character"
+    context.shutdown()
+
