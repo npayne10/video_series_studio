@@ -778,3 +778,45 @@ def test_ai_character_proposal_is_rejected_when_supported_only_by_scene_context(
 
     assert all(proposal.matched_asset_id != "CAP-CHR-002" for proposal in proposals)
     context.shutdown()
+
+
+def test_dialogue_speaker_classification_does_not_promote_listener_after_speech_verb(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    for asset_id, name in (
+        ("CAP-CHR-001", "Commander James Spence"),
+        ("CAP-CHR-003", "Sandra Crawford"),
+    ):
+        _approved_named_asset(
+            context,
+            tmp_path,
+            asset_id=asset_id,
+            name=name,
+            category=AssetCategory.CHARACTER,
+        )
+
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Nine Days in Xorix Orbit — Dialogue",
+        narrative_purpose="Sandra reports the unusual signal to James.",
+        production_objective="Introduce the first anomaly.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=(
+            "Sandra Crawford looks up from the control station and reports something "
+            "unusual to Commander James Spence."
+        ),
+        dialogue_requirement="Commander, I have something unusual.",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    by_asset = {proposal.matched_asset_id: proposal for proposal in proposals}
+
+    assert by_asset["CAP-CHR-003"].role == "Dialogue Speaker"
+    assert by_asset["CAP-CHR-001"].role == "Supporting Character"
+    context.shutdown()
