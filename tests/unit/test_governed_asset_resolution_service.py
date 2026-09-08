@@ -477,7 +477,7 @@ def test_inference_suppresses_story_placeholder_when_canonical_asset_covers_same
         narrative_purpose="Show Xorix beyond the bridge.",
         production_objective=draft.production_objective,
         target_runtime_seconds=draft.target_runtime_seconds,
-        required_action="Xorix remains visible on the forward display.",
+        required_action="The Xorix system remains visible on the forward display.",
         dialogue_requirement="",
         continuity_in="",
         continuity_out="",
