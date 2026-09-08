@@ -7,7 +7,7 @@ import json
 from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from vscs.application.asset_resolution import (
     AssetBrowserFilter,
@@ -25,6 +25,50 @@ from .shot_planning import GovernedShotPlanningService, ShotPlan
 
 class GovernedAssetResolutionError(RuntimeError):
     """Raised when governed Shot asset resolution cannot be processed safely."""
+
+
+class ShotAssetInferenceSource(StrEnum):
+    """Origin of one proposed Shot asset requirement."""
+
+    DETERMINISTIC = "deterministic"
+    CANONICAL_MATCH = "canonical_match"
+    AI_SEMANTIC = "ai_semantic"
+
+
+@dataclass(frozen=True, slots=True)
+class ShotAssetRequirementProposal:
+    """Reviewable proposal; never governed binding authority by itself."""
+
+    proposal_id: str
+    shot_id: str
+    role: str
+    requirement: str
+    expected_category: AssetCategory
+    matched_asset_id: str = ""
+    matched_asset_name: str = ""
+    confidence: float = 0.0
+    source: ShotAssetInferenceSource = ShotAssetInferenceSource.DETERMINISTIC
+    rationale: str = ""
+    canonical_status: str = "unresolved"
+
+    @property
+    def matched(self) -> bool:
+        return bool(self.matched_asset_id)
+
+
+class ShotAssetSemanticInferenceProvider(Protocol):
+    """Optional AI boundary for requirements deterministic analysis could not establish."""
+
+    provider_name: str
+    model_name: str
+
+    def infer_requirements(
+        self,
+        *,
+        shot: ShotPlan,
+        scene_text: str,
+        deterministic: tuple[ShotAssetRequirementProposal, ...],
+    ) -> tuple[ShotAssetRequirementProposal, ...]: ...
 
 
 class AssetBindingStatus(StrEnum):
@@ -72,11 +116,13 @@ class GovernedAssetResolutionService:
         shots: GovernedShotPlanningService,
         resolver: AssetResolutionService,
         browser: AssetBrowserService,
+        semantic_provider: ShotAssetSemanticInferenceProvider | None = None,
     ) -> None:
         self.projects = projects
         self.shots = shots
         self.resolver = resolver
         self.browser = browser
+        self.semantic_provider = semantic_provider
 
     @property
     def planning_file(self) -> Path:
@@ -127,6 +173,237 @@ class GovernedAssetResolutionService:
                 default=0,
             )
             + 1
+        )
+
+    def infer_requirements(
+        self,
+        shot_id: str,
+        *,
+        include_ai: bool = True,
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        """Infer reviewable Shot asset requirements without creating governed bindings."""
+        shot = self._require_ready_shot(shot_id)
+        scene = self.shots.scenes.plan(shot.scene_id)
+        scene_text = self._scene_shot_text(shot)
+        deterministic = self._deterministic_requirements(shot, scene_text)
+        proposals = list(deterministic)
+
+        if include_ai and self.semantic_provider is not None:
+            inferred = self.semantic_provider.infer_requirements(
+                shot=shot,
+                scene_text=scene_text,
+                deterministic=deterministic,
+            )
+            proposals.extend(
+                proposal
+                for proposal in inferred
+                if proposal.shot_id.strip().upper() == shot.shot_id
+            )
+
+        return self._deduplicate_proposals(tuple(proposals))
+
+    def apply_inferred_requirements(
+        self,
+        shot_id: str,
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+    ) -> tuple[ShotAssetBinding, ...]:
+        """Human-approved materialization of inference proposals as Draft bindings."""
+        shot = self._require_ready_shot(shot_id)
+        existing = self.list_bindings(shot_id=shot.shot_id)
+        existing_keys = {
+            (binding.expected_category, binding.asset_id, binding.requirement.casefold())
+            for binding in existing
+        }
+        created: list[ShotAssetBinding] = []
+        sequence = self.next_sequence_number(shot.shot_id)
+        for proposal in proposals:
+            if proposal.shot_id.strip().upper() != shot.shot_id:
+                raise GovernedAssetResolutionError(
+                    "Asset requirement proposal belongs to another Shot"
+                )
+            self._validate_category(proposal.expected_category)
+            key = (
+                proposal.expected_category,
+                proposal.matched_asset_id.strip().upper(),
+                proposal.requirement.casefold(),
+            )
+            if key in existing_keys:
+                continue
+            binding = self.create(
+                shot_id=shot.shot_id,
+                sequence_number=sequence,
+                role=proposal.role,
+                requirement=proposal.requirement,
+                expected_category=proposal.expected_category,
+                asset_id=proposal.matched_asset_id,
+                notes=(
+                    f"Inferred via {proposal.source.value}; confidence "
+                    f"{proposal.confidence:.2f}. {proposal.rationale}"
+                ).strip(),
+            )
+            created.append(binding)
+            existing_keys.add(key)
+            sequence += 1
+        return tuple(created)
+
+    def _deterministic_requirements(
+        self,
+        shot: ShotPlan,
+        scene_text: str,
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        """Extract explicit canonical asset mentions from governed Shot/Scene authority."""
+        items = self.browser.browse().items
+        proposals: list[ShotAssetRequirementProposal] = []
+        normalized_text = self._normalize_text(scene_text)
+        for item in items:
+            if item.category in SPECIALIST_CATEGORIES:
+                continue
+            evidence = self._asset_evidence(item, normalized_text)
+            if evidence is None:
+                continue
+            confidence, rationale = evidence
+            strict = self.resolver.resolve(
+                AssetResolutionRequest(
+                    item.asset_id,
+                    expected_category=item.category,
+                    require_approved_asset=True,
+                    require_cap=True,
+                    require_approved_cap=True,
+                    require_approved_references=True,
+                )
+            )
+            canonical_status = strict.status.value
+            source = (
+                ShotAssetInferenceSource.CANONICAL_MATCH
+                if strict.status is AssetResolutionStatus.RESOLVED
+                else ShotAssetInferenceSource.DETERMINISTIC
+            )
+            proposals.append(
+                ShotAssetRequirementProposal(
+                    proposal_id=self._proposal_id(shot.shot_id, item.asset_id, item.category),
+                    shot_id=shot.shot_id,
+                    role=self._inferred_role(item.category, shot),
+                    requirement=(
+                        f"{item.name} is required by the governed Shot/Scene contract and "
+                        "must remain canonically identifiable where visible."
+                    ),
+                    expected_category=item.category,
+                    matched_asset_id=item.asset_id,
+                    matched_asset_name=item.name,
+                    confidence=confidence,
+                    source=source,
+                    rationale=rationale,
+                    canonical_status=canonical_status,
+                )
+            )
+        return tuple(proposals)
+
+    @staticmethod
+    def _scene_shot_text(shot: ShotPlan) -> str:
+        return " ".join(
+            value
+            for value in (
+                shot.title,
+                shot.narrative_purpose,
+                shot.production_objective,
+                shot.required_action,
+                shot.dialogue_requirement,
+                shot.continuity_in,
+                shot.continuity_out,
+                *shot.shot_constraints,
+            )
+            if value
+        )
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        return " ".join(
+            "".join(character.casefold() if character.isalnum() else " " for character in value)
+            .split()
+        )
+
+    def _asset_evidence(
+        self,
+        item: Any,
+        normalized_text: str,
+    ) -> tuple[float, str] | None:
+        name = self._normalize_text(item.name)
+        if name and f" {name} " in f" {normalized_text} ":
+            return (1.0, f"Explicit canonical asset name '{item.name}' occurs in governed Shot text.")
+
+        significant_tags = tuple(
+            tag
+            for tag in (self._normalize_text(value) for value in item.tags)
+            if len(tag) >= 4
+        )
+        matched_tags = tuple(
+            tag for tag in significant_tags if f" {tag} " in f" {normalized_text} "
+        )
+        if matched_tags:
+            return (
+                0.82,
+                "Governed Shot text matches canonical asset tag(s): "
+                + ", ".join(matched_tags),
+            )
+
+        asset_tokens = tuple(
+            token
+            for token in self._normalize_text(item.asset_id).split()
+            if len(token) >= 4 and not token.isdigit()
+        )
+        if asset_tokens and all(
+            f" {token} " in f" {normalized_text} " for token in asset_tokens[-2:]
+        ):
+            return (0.72, f"Governed Shot text matches canonical asset identity {item.asset_id}.")
+        return None
+
+    @staticmethod
+    def _inferred_role(category: AssetCategory, shot: ShotPlan) -> str:
+        label = category.value.replace("_", " ").title()
+        coverage = getattr(shot, "coverage_role", None)
+        coverage_value = getattr(coverage, "value", "")
+        if category is AssetCategory.CHARACTER and coverage_value == "dialogue_delivery":
+            return "Governed dialogue character"
+        if category in {AssetCategory.LOCATION, AssetCategory.ENVIRONMENT}:
+            return "Shot environment"
+        if category in {AssetCategory.PROP, AssetCategory.TECHNOLOGY}:
+            return "Information-bearing Shot element"
+        return f"Required {label}"
+
+    @staticmethod
+    def _proposal_id(
+        shot_id: str,
+        asset_id: str,
+        category: AssetCategory,
+    ) -> str:
+        digest = hashlib.sha256(
+            f"{shot_id}|{asset_id}|{category.value}".encode("utf-8")
+        ).hexdigest()
+        return f"{shot_id}-AIR-{digest[:10].upper()}"
+
+    @staticmethod
+    def _deduplicate_proposals(
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+    ) -> tuple[ShotAssetRequirementProposal, ...]:
+        best: dict[tuple[AssetCategory, str, str], ShotAssetRequirementProposal] = {}
+        for proposal in proposals:
+            key = (
+                proposal.expected_category,
+                proposal.matched_asset_id.strip().upper(),
+                proposal.requirement.casefold(),
+            )
+            current = best.get(key)
+            if current is None or proposal.confidence > current.confidence:
+                best[key] = proposal
+        return tuple(
+            sorted(
+                best.values(),
+                key=lambda proposal: (
+                    proposal.expected_category.value,
+                    proposal.matched_asset_name.casefold(),
+                    proposal.requirement.casefold(),
+                ),
+            )
         )
 
     def available_assets(self, category: AssetCategory) -> tuple[tuple[str, str], ...]:
