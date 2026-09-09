@@ -238,3 +238,33 @@ def test_previous_shot_change_makes_draft_stale_and_refresh_preserves_notes(tmp_
         refreshed.continuity_value()["previous_closing_state"]
         == "Previous now closes at tactical station."
     )
+
+
+def test_explicit_previous_shot_reference_is_preserved_when_previous_package_is_unavailable(
+    tmp_path: Path,
+) -> None:
+    service, packages = _service(tmp_path)
+    packages.planning = _Planning(("SHT-002",))
+    packages.values["SHT-002"] = replace(
+        packages.values["SHT-002"],
+        shot={
+            "shot_id": "SHT-002",
+            "continuity_in": "Continue directly from EP-001-SCN-001-SHT-001.",
+            "continuity_out": "Continue into EP-001-SCN-001-SHT-003.",
+        },
+        action_performance={
+            "opening_state": "Continue directly from EP-001-SCN-001-SHT-001.",
+            "closing_state": "Continue into EP-001-SCN-001-SHT-003.",
+        },
+    )
+
+    draft = service.create_from_current_package("SHT-002")
+    continuity = draft.continuity_value()
+
+    assert draft.previous_shot_id == "EP-001-SCN-001-SHT-001"
+    assert continuity["previous_shot_id"] == "EP-001-SCN-001-SHT-001"
+    assert continuity["inheritance_mode"] == "explicit-previous-shot-unavailable"
+    assert continuity["previous_closing_state"] == ""
+    assert len(continuity["continuity_conflicts"]) == 1
+    assert "has no current Production Package" in continuity["continuity_conflicts"][0]
+
