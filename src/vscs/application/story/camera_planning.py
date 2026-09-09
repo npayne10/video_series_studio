@@ -179,11 +179,30 @@ class GovernedCameraPlanningService:
             focal_length = 28
             composition = "prioritise readable spatial geography, scale and subject placement"
             focus_strategy = "maintain readable, physically plausible depth across the environment and primary subject"
+
+        if any(term in text for term in ("run", "walk", "fly", "move", "cross", "approach")):
+            movement = CameraMovement.TRACK
+            if shot_size is ShotSize.MEDIUM:
+                shot_size = ShotSize.WIDE
+                lens_family = LensFamily.WIDE
+                focal_length = 35
+            movement_notes = (
+                "track at a stable speed matched to subject motion; avoid impossible acceleration"
+            )
+
+        # Governed dialogue is stronger framing authority than broad setting/motion
+        # keywords. Preserve any genuinely motivated movement, but keep the speaker
+        # readable rather than widening a dialogue-delivery Shot into a master view.
         if shot.dialogue_requirement.strip():
             shot_size = ShotSize.MEDIUM_CLOSE
             lens_family = LensFamily.NORMAL
             focal_length = 50
             composition = "preserve eye-line, conversational screen direction and natural headroom"
+            focus_strategy = (
+                "hold the dialogue speaker in primary focus with physically plausible "
+                "depth separation from supporting subjects and environment"
+            )
+
         if any(term in text for term in ("reaction", "realises", "recognises")):
             shot_size = ShotSize.CLOSE_UP
             movement = CameraMovement.PUSH_IN
@@ -191,17 +210,6 @@ class GovernedCameraPlanningService:
             focal_length = 85
             composition = "prioritise the reaction without distorting facial perspective"
             movement_notes = "use a slow physically motivated push-in without abrupt acceleration"
-        if any(
-            term in text for term in ("run", "walk", "fly", "move", "cross", "approach", "action")
-        ):
-            movement = CameraMovement.TRACK
-            if shot_size in {ShotSize.MEDIUM, ShotSize.MEDIUM_CLOSE}:
-                shot_size = ShotSize.WIDE
-                lens_family = LensFamily.WIDE
-                focal_length = 35
-            movement_notes = (
-                "track at a stable speed matched to subject motion; avoid impossible acceleration"
-            )
 
         return CameraPlan(
             camera_plan_id=self._camera_plan_id(shot.shot_id),
