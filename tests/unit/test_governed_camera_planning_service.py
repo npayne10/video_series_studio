@@ -12,11 +12,11 @@ from vscs.application.story import (
     CameraPlanStatus,
     GovernedCameraPlanningError,
     GovernedCameraPlanningService,
+    LensFamily,
     ShotAssetBinding,
     ShotPlan,
     ShotPlanStatus,
     ShotSize,
-    LensFamily,
 )
 from vscs.domain.assets import AssetCategory
 
@@ -267,4 +267,3 @@ def test_dialogue_suggestion_keeps_speaker_readable_despite_generic_action_text(
     assert plan.lens_family is LensFamily.NORMAL
     assert plan.focal_length_mm == 50
     assert "dialogue speaker" in plan.focus_strategy.lower()
-
