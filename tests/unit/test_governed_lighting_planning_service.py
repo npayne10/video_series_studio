@@ -232,3 +232,37 @@ def test_ready_lighting_plan_is_immutable_until_returned_to_draft(tmp_path: Path
     refreshed = _refresh_draft(service, ready.shot_id)
     assert refreshed.status is LightingPlanStatus.DRAFT
     assert service.delete(ready.shot_id)
+
+
+def test_dialogue_lighting_ignores_negated_threat_constraint(
+    tmp_path: Path,
+) -> None:
+    shot = replace(
+        _shot(dialogue='Sandra must report: "Commander, I have something unusual."'),
+        title="Nine Days in Xorix Orbit — Dialogue",
+        narrative_purpose=(
+            "Present the governed dialogue delivery while preserving the orbital context."
+        ),
+        production_objective=(
+            "Show the bridge environment with Xorix visible while Sandra reports to James."
+        ),
+        required_action=(
+            "Sandra Crawford looks up from the control station and reports something unusual "
+            "to Commander James Spence."
+        ),
+        shot_constraints=(
+            "Keep the setting on the Iron Horizon bridge.",
+            "Do not imply any threat has been confirmed.",
+        ),
+    )
+    service, _shots, _assets, _camera_service = _service(tmp_path, shot)
+
+    plan = service.suggested_plan(shot.shot_id)
+
+    assert plan.lighting_intent is LightingIntent.PRACTICAL_MOTIVATED
+    assert plan.color_temperature_k == 4300
+    assert plan.fill_level_percent == 50
+    assert plan.exposure_intent is ExposureIntent.BALANCED
+    assert "practical sources" in plan.source_strategy.lower()
+    assert "dialogue faces" in plan.shadow_strategy.lower()
+
