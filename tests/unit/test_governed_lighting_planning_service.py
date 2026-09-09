@@ -265,4 +265,3 @@ def test_dialogue_lighting_ignores_negated_threat_constraint(
     assert plan.exposure_intent is ExposureIntent.BALANCED
     assert "practical sources" in plan.source_strategy.lower()
     assert "dialogue faces" in plan.shadow_strategy.lower()
-
