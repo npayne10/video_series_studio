@@ -94,13 +94,23 @@ class ContinuityCompilerService:
         if self.draft(normalized) is not None:
             raise ContinuityCompilerError(f"Continuity compilation already exists for {normalized}")
         package = self.packages.current_package(normalized) or self.packages.materialize(normalized)
-        previous = self._previous_package(normalized)
+        previous_id = self._referenced_previous_shot_id(package)
+        previous = self._previous_package(normalized, referenced_shot_id=previous_id)
+        resolved_previous_id = previous.shot_id if previous else previous_id
         draft = ContinuityCompilationDraft(
             shot_id=normalized,
             source_package_id=package.package_id,
-            dependency_fingerprint=self._dependency_fingerprint(package, previous),
-            previous_shot_id=previous.shot_id if previous else "",
-            continuity=self._build_continuity(package, previous),
+            dependency_fingerprint=self._dependency_fingerprint(
+                package,
+                previous,
+                referenced_previous_shot_id=resolved_previous_id,
+            ),
+            previous_shot_id=resolved_previous_id,
+            continuity=self._build_continuity(
+                package,
+                previous,
+                referenced_previous_shot_id=resolved_previous_id,
+            ),
         )
         self._write((*self.list_drafts(), draft))
         return draft
@@ -112,16 +122,26 @@ class ContinuityCompilerService:
                 "Ready Continuity compilation must return to Draft before refreshing its source"
             )
         package = self.packages.require_current_package(current.shot_id)
-        previous = self._previous_package(current.shot_id)
-        fingerprint = self._dependency_fingerprint(package, previous)
+        previous_id = self._referenced_previous_shot_id(package)
+        previous = self._previous_package(current.shot_id, referenced_shot_id=previous_id)
+        resolved_previous_id = previous.shot_id if previous else previous_id
+        fingerprint = self._dependency_fingerprint(
+            package,
+            previous,
+            referenced_previous_shot_id=resolved_previous_id,
+        )
         if fingerprint == current.dependency_fingerprint:
             return current
         updated = replace(
             current,
             source_package_id=package.package_id,
             dependency_fingerprint=fingerprint,
-            previous_shot_id=previous.shot_id if previous else "",
-            continuity=self._build_continuity(package, previous),
+            previous_shot_id=resolved_previous_id,
+            continuity=self._build_continuity(
+                package,
+                previous,
+                referenced_previous_shot_id=resolved_previous_id,
+            ),
         )
         self._replace(updated)
         return updated
@@ -161,8 +181,16 @@ class ContinuityCompilerService:
         package = self.packages.current_package(draft.shot_id)
         if package is None:
             return False
+        referenced_previous_id = self._referenced_previous_shot_id(package)
+        previous = self._previous_package(
+            draft.shot_id,
+            referenced_shot_id=referenced_previous_id,
+        )
+        resolved_previous_id = previous.shot_id if previous else referenced_previous_id
         return draft.dependency_fingerprint == self._dependency_fingerprint(
-            package, self._previous_package(draft.shot_id)
+            package,
+            previous,
+            referenced_previous_shot_id=resolved_previous_id,
         )
 
     def compile(self, shot_id: str) -> ProductionPackage:
@@ -203,7 +231,11 @@ class ContinuityCompilerService:
 
     @classmethod
     def _build_continuity(
-        cls, package: ProductionPackage, previous: ProductionPackage | None
+        cls,
+        package: ProductionPackage,
+        previous: ProductionPackage | None,
+        *,
+        referenced_previous_shot_id: str = "",
     ) -> dict[str, Any]:
         opening = (
             cls._action_value(package, "opening_state")
@@ -229,6 +261,11 @@ class ContinuityCompilerService:
             opening_resolution = "series-entry"
 
         conflicts: list[str] = []
+        if referenced_previous_shot_id and previous is None:
+            conflicts.append(
+                f"Explicit previous Shot {referenced_previous_shot_id} has no current Production "
+                "Package; inherited closing state cannot yet be verified."
+            )
         if (
             opening
             and previous_closing
@@ -238,9 +275,10 @@ class ContinuityCompilerService:
             conflicts.append(
                 "Current opening state differs from the previous Shot closing state; user review required."
             )
+        previous_shot_id = previous.shot_id if previous else referenced_previous_shot_id
         return {
             "current_shot_id": package.shot_id,
-            "previous_shot_id": previous.shot_id if previous else "",
+            "previous_shot_id": previous_shot_id,
             "previous_closing_state": previous_closing,
             "current_opening_state": opening,
             "effective_opening_state": effective_opening,
@@ -260,7 +298,15 @@ class ContinuityCompilerService:
             "current_lighting_continuity": cls._section_value(package.lighting, "continuity_notes"),
             "environment": cls._detached(package.environment),
             "continuity_conflicts": conflicts,
-            "inheritance_mode": "previous-shot-closing-state" if previous else "series-entry",
+            "inheritance_mode": (
+                "previous-shot-closing-state"
+                if previous
+                else (
+                    "explicit-previous-shot-unavailable"
+                    if referenced_previous_shot_id
+                    else "series-entry"
+                )
+            ),
         }
 
     @classmethod
@@ -295,7 +341,16 @@ class ContinuityCompilerService:
         if "effective_opening_state" not in value or "current_closing_state" not in value:
             raise ContinuityCompilerError("Continuity authority is incomplete")
 
-    def _previous_package(self, shot_id: str) -> ProductionPackage | None:
+    def _previous_package(
+        self,
+        shot_id: str,
+        *,
+        referenced_shot_id: str = "",
+    ) -> ProductionPackage | None:
+        if referenced_shot_id:
+            referenced = self.packages.current_package(referenced_shot_id)
+            if referenced is not None:
+                return referenced
         planning = self.packages.planning
         current_ids = sorted(
             {item.shot_id for item in planning.list_packages() if planning.is_current(item)}
@@ -307,13 +362,27 @@ class ContinuityCompilerService:
         return self.packages.current_package(current_ids[index - 1]) if index else None
 
     @classmethod
+    def _referenced_previous_shot_id(cls, package: ProductionPackage) -> str:
+        opening = (
+            cls._action_value(package, "opening_state")
+            or str(package.shot.get("continuity_in", "")).strip()
+        )
+        match = re.search(r"\b(?:[A-Z0-9]+-)*SHT-\d+\b", opening, flags=re.IGNORECASE)
+        return match.group(0).upper() if match else ""
+
+    @classmethod
     def _dependency_fingerprint(
-        cls, package: ProductionPackage, previous: ProductionPackage | None
+        cls,
+        package: ProductionPackage,
+        previous: ProductionPackage | None,
+        *,
+        referenced_previous_shot_id: str = "",
     ) -> str:
         payload = {
             "compiler_schema_version": cls.SCHEMA_VERSION,
             "current": cls._dependency_payload(package),
             "previous": cls._dependency_payload(previous) if previous else None,
+            "referenced_previous_shot_id": referenced_previous_shot_id,
         }
         canonical = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
