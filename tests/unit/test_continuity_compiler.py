@@ -267,4 +267,3 @@ def test_explicit_previous_shot_reference_is_preserved_when_previous_package_is_
     assert continuity["previous_closing_state"] == ""
     assert len(continuity["continuity_conflicts"]) == 1
     assert "has no current Production Package" in continuity["continuity_conflicts"][0]
-
