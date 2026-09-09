@@ -344,3 +344,37 @@ def test_ready_environment_is_immutable_and_rejects_impossible_vacuum_weather(
     refreshed = _refresh_draft(service, ready.shot_id)
     assert refreshed.status is EnvironmentPlanStatus.DRAFT
     assert service.delete(ready.shot_id)
+
+
+def test_shot_local_bridge_environment_overrides_scene_orbit(
+    tmp_path: Path,
+) -> None:
+    service, _scenes, shots, _assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        title="Nine Days in Xorix Orbit — Dialogue",
+        narrative_purpose="Present Sandra's dialogue on the Iron Horizon bridge.",
+        production_objective=(
+            "Show the bridge environment with Xorix visible on the forward display."
+        ),
+        required_action=(
+            "Sandra Crawford looks up from the control station and reports something unusual "
+            "to Commander James Spence."
+        ),
+        dialogue_requirement='Sandra must report: "Commander, I have something unusual."',
+        shot_constraints=("Keep the setting on the Iron Horizon bridge.",),
+    )
+
+    plan = service.suggested_plan(shots.shot.shot_id)
+
+    assert plan.environment_context is EnvironmentContext.INTERIOR
+    assert plan.time_context is TimeContext.ARTIFICIAL_CYCLE
+    assert plan.atmosphere_state is AtmosphereState.CONTROLLED
+    assert plan.weather_state is WeatherState.NONE
+    assert plan.pressure_kpa is None
+    assert "interior" in plan.surface_state.lower()
+    assert "shot-local interior" in " ".join(plan.environment_constraints).lower()
+
