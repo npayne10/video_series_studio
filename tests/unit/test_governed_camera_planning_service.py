@@ -8,6 +8,7 @@ import pytest
 
 from vscs.application.story import (
     AssetBindingStatus,
+    CameraMovement,
     CameraPlanStatus,
     GovernedCameraPlanningError,
     GovernedCameraPlanningService,
@@ -15,6 +16,7 @@ from vscs.application.story import (
     ShotPlan,
     ShotPlanStatus,
     ShotSize,
+    LensFamily,
 )
 from vscs.domain.assets import AssetCategory
 
@@ -239,3 +241,30 @@ def test_ready_camera_plan_is_immutable_until_returned_to_draft(tmp_path: Path) 
     draft = service.return_to_draft(plan.shot_id)
     assert draft.status is CameraPlanStatus.DRAFT
     assert service.delete(plan.shot_id)
+
+
+def test_dialogue_suggestion_keeps_speaker_readable_despite_generic_action_text(
+    tmp_path: Path,
+) -> None:
+    shot = replace(
+        _shot(dialogue='Sandra must report: "Commander, I have something unusual."'),
+        title="Nine Days in Xorix Orbit — Dialogue",
+        production_objective=(
+            "Show the bridge environment with Xorix visible while Sandra Crawford reports."
+        ),
+        required_action=(
+            "Frame the speaker delivering the governed dialogue while the physical action "
+            "continues consistently with: Sandra Crawford looks up from the control station "
+            "and reports something unusual to Commander James Spence."
+        ),
+    )
+    service, _shots, _assets = _service(tmp_path, shot)
+
+    plan = service.suggested_plan(shot.shot_id)
+
+    assert plan.shot_size is ShotSize.MEDIUM_CLOSE
+    assert plan.movement is CameraMovement.STATIC
+    assert plan.lens_family is LensFamily.NORMAL
+    assert plan.focal_length_mm == 50
+    assert "dialogue speaker" in plan.focus_strategy.lower()
+
