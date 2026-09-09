@@ -377,4 +377,3 @@ def test_shot_local_bridge_environment_overrides_scene_orbit(
     assert plan.pressure_kpa is None
     assert "interior" in plan.surface_state.lower()
     assert "shot-local interior" in " ".join(plan.environment_constraints).lower()
-
