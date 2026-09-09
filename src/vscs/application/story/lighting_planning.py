@@ -151,6 +151,10 @@ class GovernedLightingPlanningService:
     def suggested_plan(self, shot_id: str) -> LightingPlan:
         """Return deterministic conservative lighting defaults without persisting them."""
         shot, camera = self._require_ready_context(shot_id)
+        # Creative lighting suggestions are derived from positive Shot narrative
+        # authority. Shot constraints are guardrails and commonly contain negated
+        # concepts (for example, "do not imply any threat"); they must not be
+        # interpreted as affirmative mood or lighting cues.
         text = " ".join(
             (
                 shot.title,
@@ -158,7 +162,6 @@ class GovernedLightingPlanningService:
                 shot.production_objective,
                 shot.required_action,
                 shot.dialogue_requirement,
-                " ".join(shot.shot_constraints),
             )
         ).lower()
 
@@ -191,6 +194,14 @@ class GovernedLightingPlanningService:
             temperature = 4300
             fill = 50
             exposure = ExposureIntent.BALANCED
+            source_strategy = (
+                "motivate the key from practical sources justified by the governed setting; "
+                "keep dialogue faces naturally readable without decorative or unmotivated glow"
+            )
+            shadow_strategy = (
+                "use soft controlled modelling on dialogue faces while preserving believable "
+                "depth and environmental contrast"
+            )
             readability = (
                 "maintain natural facial readability and eye detail without glamour lighting"
             )
