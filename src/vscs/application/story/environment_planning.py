@@ -154,16 +154,36 @@ class GovernedEnvironmentPlanningService:
         """Return deterministic conservative environment defaults without persisting them."""
         shot, scene, camera, lighting = self._require_ready_context(shot_id)
         setting_text = scene.setting_requirement.lower()
-        text = " ".join(
+        shot_text = " ".join(
             (
-                scene.setting_requirement,
                 shot.title,
                 shot.narrative_purpose,
                 shot.production_objective,
                 shot.required_action,
-                " ".join(shot.shot_constraints),
+                shot.dialogue_requirement,
             )
         ).lower()
+        # Positive environment inference uses Scene + Shot narrative authority.
+        # Shot constraints are guardrails and may contain negated environmental
+        # concepts, so they must not be treated as affirmative state evidence.
+        text = " ".join((scene.setting_requirement, shot_text)).lower()
+        local_interior = any(
+            term in shot_text
+            for term in (
+                " bridge",
+                "bridge ",
+                "control station",
+                "corridor",
+                "cabin",
+                "ready room",
+                "observation lounge",
+                "quarters",
+                "medical bay",
+                "engineering bay",
+                "hangar",
+                "interior",
+            )
+        )
 
         context = EnvironmentContext.INTERIOR
         time_context = TimeContext.ARTIFICIAL_CYCLE
@@ -180,7 +200,23 @@ class GovernedEnvironmentPlanningService:
             "Do not invent environmental physics, weather or atmospheric properties not established by canon."
         ]
 
-        if any(term in setting_text for term in ("orbit", "orbital", "vacuum", "space exterior")):
+        if local_interior:
+            context = EnvironmentContext.INTERIOR
+            time_context = TimeContext.ARTIFICIAL_CYCLE
+            atmosphere = AtmosphereState.CONTROLLED
+            weather = WeatherState.NONE
+            surface_state = (
+                "stable engineered interior surfaces appropriate to the governed local setting"
+            )
+            motion = (
+                "no environmental motion beyond explicitly established interior, vehicle or "
+                "system effects"
+            )
+            constraints.append(
+                "Preserve the Shot-local interior environment even when the wider Scene context "
+                "is orbital, atmospheric or exterior."
+            )
+        elif any(term in setting_text for term in ("orbit", "orbital", "vacuum", "space exterior")):
             context = EnvironmentContext.ORBITAL_SPACE
             time_context = TimeContext.NOT_APPLICABLE
             atmosphere = AtmosphereState.VACUUM
