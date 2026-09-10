@@ -5,12 +5,14 @@ from .production_package_review_workspace import (
 )
 from .production_planning_performance import install_production_planning_performance
 from .production_planning_profiler import install_production_planning_profiler
+from .scheduling_review_reset import install_scheduling_review_reset
 from .story_analysis_workspace import StoryAnalysisWorkspaceDialog, StoryGraphView
 from .story_intelligence_dashboard import StoryIntelligenceDashboardDialog
 
 install_production_package_review_workspace()
 install_production_planning_performance()
 install_production_planning_profiler()
+install_scheduling_review_reset()
 
 __all__ = [
     "StoryAnalysisWorkspaceDialog",
