@@ -105,6 +105,36 @@ def test_persisted_task_is_reloaded_into_production_tasks_table(
     assert second_workspace.production_task_table.item(0, 0).text() == "PT-READINESS-001"
 
 
+def test_compile_persists_task_and_refreshes_readiness_immediately(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
+) -> None:
+    projects = application_context.services.require(ProjectService)
+    projects.create(tmp_path / "Project", name="Project")
+    window = application_context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    workspace = window.production_package_workspace
+    _scope_workspace(workspace)
+
+    workspace._refresh_production_task_context = lambda: None
+    workspace._production_task_blocker = lambda: ""
+    workspace._production_task_context = lambda: object()
+    workspace.production_task_compiler.compile_shot = lambda _shot, _context: (_task(),)
+
+    workspace._compile_production_tasks()
+
+    persisted = workspace.production_scheduling.tasks("PROD-READINESS")
+    assert len(persisted) == 1
+    assert persisted[0].task_id == "PT-READINESS-001"
+    assert workspace.production_task_refresh_readiness_button.isEnabled()
+    assert (
+        "Authoritative persisted ProductionTask state: planned"
+        in workspace.production_task_readiness_status.text()
+    )
+
+
 def test_refresh_task_readiness_updates_authoritative_state_and_table(
     qtbot: object,
     qapp: QApplication,
