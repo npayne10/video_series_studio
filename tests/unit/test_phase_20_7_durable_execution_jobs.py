@@ -113,6 +113,75 @@ def test_provider_observations_persist_job_identity_and_history(tmp_path) -> Non
     assert service.list_active() == ()
 
 
+def test_provider_transitions_remain_durable_across_service_rebuilds(tmp_path) -> None:
+    root = tmp_path / "executions"
+    first = DurableExecutionJobService(JsonDurableExecutionJobRepository(root))
+    prepared = first.prepare(
+        _context(),
+        "LOCAL-COMFYUI-01",
+        render_request_id="REQ-001",
+        workflow_id="video_production_engine_v7_1_4",
+        now=NOW,
+    )
+    first.observe(
+        prepared.execution_id,
+        _handle(ProviderExecutionState.QUEUED),
+        now=NOW + timedelta(seconds=1),
+    )
+
+    second = DurableExecutionJobService(JsonDurableExecutionJobRepository(root))
+    running = second.observe(
+        prepared.execution_id,
+        _handle(ProviderExecutionState.RUNNING, progress=0.5),
+        now=NOW + timedelta(seconds=2),
+    )
+    assert running.state is ProviderExecutionState.RUNNING
+
+    third = DurableExecutionJobService(JsonDurableExecutionJobRepository(root))
+    restored = third.require(prepared.execution_id)
+    assert restored.state is ProviderExecutionState.RUNNING
+    assert restored.progress == 0.5
+    assert [event.state for event in restored.events] == [
+        ProviderExecutionState.PREPARING,
+        ProviderExecutionState.QUEUED,
+        ProviderExecutionState.RUNNING,
+    ]
+
+    completed = third.observe(
+        prepared.execution_id,
+        _handle(ProviderExecutionState.COMPLETED, progress=1.0),
+        now=NOW + timedelta(seconds=3),
+    )
+    restarted = DurableExecutionJobService(JsonDurableExecutionJobRepository(root))
+    assert restarted.require(prepared.execution_id) == completed
+    assert restarted.list_active() == ()
+
+
+def test_task_history_uses_durable_update_time_for_duplicate_attempts(tmp_path) -> None:
+    root = tmp_path / "executions"
+    service = DurableExecutionJobService(JsonDurableExecutionJobRepository(root))
+    earlier = service.prepare(
+        _context(execution_id="PEX-Z-DUPLICATE-A001"),
+        "LOCAL-COMFYUI-01",
+        render_request_id="REQ-EARLIER",
+        workflow_id="video_production_engine_v7_1_4",
+        now=NOW,
+    )
+    later = service.prepare(
+        _context(execution_id="PEX-A-DUPLICATE-A001"),
+        "LOCAL-COMFYUI-01",
+        render_request_id="REQ-LATER",
+        workflow_id="video_production_engine_v7_1_4",
+        now=NOW + timedelta(minutes=1),
+    )
+
+    restarted = JsonDurableExecutionJobRepository(root)
+    history = restarted.list_for_task("PT-001")
+
+    assert history == (earlier, later)
+    assert history[-1].updated_at > history[0].updated_at
+
+
 def test_submission_failure_is_durable_without_provider_job_id(tmp_path) -> None:
     service = DurableExecutionJobService(JsonDurableExecutionJobRepository(tmp_path / "executions"))
     prepared = service.prepare(

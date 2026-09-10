@@ -7,6 +7,7 @@ import os
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 from vscs.application.provider_execution.execution_records import (
@@ -72,7 +73,12 @@ class JsonDurableExecutionJobRepository:
         return tuple(
             sorted(
                 matching,
-                key=lambda job: (job.task_id, job.attempt_number, job.execution_id),
+                key=lambda job: (
+                    job.task_id,
+                    job.attempt_number,
+                    job.updated_at,
+                    job.execution_id,
+                ),
             )
         )
 
@@ -106,15 +112,26 @@ class JsonDurableExecutionJobRepository:
 
     def _write_atomic(self, path: Path, payload: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary: Path | None = None
         try:
-            temporary.write_text(
-                json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            with NamedTemporaryFile(
+                "w",
                 encoding="utf-8",
-            )
+                dir=path.parent,
+                delete=False,
+                prefix=f".{path.name}.",
+                suffix=".tmp",
+            ) as stream:
+                stream.write(
+                    json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+                )
+                stream.flush()
+                os.fsync(stream.fileno())
+                temporary = Path(stream.name)
             os.replace(temporary, path)
         except OSError as exc:
-            temporary.unlink(missing_ok=True)
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
             raise DurableExecutionJobRepositoryError(
                 f"Unable to persist durable execution job {path}: {exc}"
             ) from exc
