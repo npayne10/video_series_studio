@@ -17,6 +17,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     workspace_type: Any = workspace_class
     original_init = workspace_type.__init__
     original_refresh_tasks = workspace_type._refresh_production_tasks
+    original_compile_tasks = workspace_type._compile_production_tasks
 
     def readiness_init(self: Any, *args: Any, **kwargs: Any) -> None:
         original_init(self, *args, **kwargs)
@@ -267,6 +268,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_refresh_readiness_button.setEnabled(enabled)
         self._refresh_production_task_supersession_eligibility()
 
+    def readiness_compile_tasks(self: Any) -> None:
+        original_compile_tasks(self)
+        self._refresh_production_tasks()
+
     def _production_task_refresh_readiness(self: Any) -> None:
         production_id = self.production_task_production_id.text().strip()
         if not production_id:
@@ -299,5 +304,6 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     )
     workspace_type._production_task_supersede_obsolete = _production_task_supersede_obsolete
     workspace_type._refresh_production_tasks = readiness_refresh_tasks
+    workspace_type._compile_production_tasks = readiness_compile_tasks
     workspace_type._production_task_refresh_readiness = _production_task_refresh_readiness
     workspace_type._production_task_readiness_workspace_installed = True
