@@ -68,7 +68,7 @@ class JsonDurableExecutionJobRepository:
     ) -> tuple[DurableExecutionJob, ...]:
         if not self.root.exists():
             return ()
-        jobs = tuple(self._read(path) for path in sorted(self.root.glob("*.json")))
+        jobs = tuple(self._read(path) for path in self._execution_paths())
         matching = tuple(job for job in jobs if predicate(job))
         return tuple(
             sorted(
@@ -81,6 +81,28 @@ class JsonDurableExecutionJobRepository:
                 ),
             )
         )
+
+    def _execution_paths(self) -> tuple[Path, ...]:
+        """Return execution documents without consuming sibling runtime metadata.
+
+        The provider execution runtime deliberately shares this directory with metadata such as
+        hardware_capability.json. Production execution identities are PEX-prefixed. The structural
+        fallback keeps the repository usable for explicitly saved non-PEX test/extension identities
+        while still refusing to treat unrelated JSON documents as execution history.
+        """
+        paths: list[Path] = []
+        for path in sorted(self.root.glob("*.json")):
+            if path.stem.startswith("PEX-") or self._declares_execution_job(path):
+                paths.append(path)
+        return tuple(paths)
+
+    @staticmethod
+    def _declares_execution_job(path: Path) -> bool:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            return False
+        return isinstance(payload, dict) and "execution_job" in payload
 
     def _read(self, path: Path) -> DurableExecutionJob:
         try:
