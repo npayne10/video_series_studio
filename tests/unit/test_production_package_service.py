@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import pytest
@@ -105,12 +105,89 @@ def test_action_performance_derivation_preserves_foundation_and_history(tmp_path
 
     assert derived.package_id != foundation.package_id
     assert derived.action_performance == compiled
+    assert derived.dialogue == ()
     assert derived.camera == foundation.camera
     assert derived.provider_outputs == {}
     assert derived.validation["action_performance_complete"] is True
     assert service.current_package("SHT-001") == derived
     assert repeated == derived
     assert len(service.list_packages(shot_id="SHT-001")) == 2
+
+
+def test_action_performance_derivation_preserves_reviewed_spoken_content(tmp_path: Path) -> None:
+    service, _planning = _service(tmp_path)
+    service.materialize("SHT-001")
+    spoken_content = (
+        "Sandra must report to James: “Commander, I have something unusual.” "
+        "James may ask: “How unusual?”"
+    )
+    compiled = {
+        "temporal_narrative": "Sandra reports the anomaly to James.",
+        "spoken_content": spoken_content,
+        "source": "human-reviewed-action-performance",
+        "provider_neutral": True,
+    }
+
+    derived = service.derive_action_performance("SHT-001", compiled)
+    expected_dialogue = (
+        {
+            "spoken_content": spoken_content,
+            "source": "human-reviewed-action-performance",
+            "provider_neutral": True,
+        },
+    )
+
+    assert derived.dialogue == expected_dialogue
+    assert service.list_packages(shot_id="SHT-001")[-1].dialogue == expected_dialogue
+    assert service.derive_action_performance("SHT-001", compiled) == derived
+
+
+def test_action_performance_derivation_repairs_legacy_empty_dialogue(tmp_path: Path) -> None:
+    service, _planning = _service(tmp_path)
+    foundation = service.materialize("SHT-001")
+    spoken_content = 'Sandra: "Commander, I have something unusual."'
+    compiled = {
+        "temporal_narrative": "Sandra reports the anomaly to James.",
+        "spoken_content": spoken_content,
+        "source": "human-reviewed-action-performance",
+        "provider_neutral": True,
+    }
+    legacy_data = asdict(foundation)
+    legacy_data.pop("package_id", None)
+    legacy_data.pop("package_fingerprint", None)
+    legacy_data["action_performance"] = dict(compiled)
+    legacy_data["dialogue"] = []
+    legacy_validation = dict(foundation.validation)
+    legacy_validation["action_performance_complete"] = True
+    legacy_data["validation"] = legacy_validation
+    legacy = service._append_derived(foundation, legacy_data)
+
+    repaired = service.derive_action_performance("SHT-001", compiled)
+
+    assert legacy.dialogue == ()
+    assert repaired.package_id != legacy.package_id
+    assert repaired.dialogue == (
+        {
+            "spoken_content": spoken_content,
+            "source": "human-reviewed-action-performance",
+            "provider_neutral": True,
+        },
+    )
+
+
+def test_action_performance_derivation_keeps_silent_shot_dialogue_empty(tmp_path: Path) -> None:
+    service, _planning = _service(tmp_path)
+    service.materialize("SHT-001")
+    compiled = {
+        "temporal_narrative": "The ship crosses frame without dialogue.",
+        "spoken_content": "",
+        "source": "human-reviewed-action-performance",
+        "provider_neutral": True,
+    }
+
+    derived = service.derive_action_performance("SHT-001", compiled)
+
+    assert derived.dialogue == ()
 
 
 def test_new_integrated_planning_preserves_package_history(tmp_path: Path) -> None:
