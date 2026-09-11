@@ -151,12 +151,28 @@ class ProductionPackageService:
     ) -> ProductionPackage:
         """Append a deterministic package revision containing Action & Performance output."""
         current = self.require_current_package(shot_id)
-        if current.action_performance == compiled:
+        spoken_content = compiled.get("spoken_content")
+        dialogue = (
+            (
+                {
+                    "spoken_content": spoken_content,
+                    "source": str(
+                        compiled.get("source", "human-reviewed-action-performance")
+                    ).strip()
+                    or "human-reviewed-action-performance",
+                    "provider_neutral": True,
+                },
+            )
+            if isinstance(spoken_content, str) and spoken_content.strip()
+            else ()
+        )
+        if current.action_performance == compiled and current.dialogue == dialogue:
             return current
         data = asdict(current)
         data.pop("package_id", None)
         data.pop("package_fingerprint", None)
         data["action_performance"] = dict(compiled)
+        data["dialogue"] = [dict(item) for item in dialogue]
         validation = dict(current.validation)
         validation["action_performance_complete"] = True
         data["validation"] = validation
