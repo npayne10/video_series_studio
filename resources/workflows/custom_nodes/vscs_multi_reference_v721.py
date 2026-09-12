@@ -105,9 +105,8 @@ class VSCSMultiReferenceResolverV721:
             raise ValueError("VSCS multi-reference contract cannot resolve a primary reference")
 
         continuity_raw = contract.get("continuity")
-        has_continuity = (
-            isinstance(continuity_raw, dict)
-            and bool(str(continuity_raw.get("path") or "").strip())
+        has_continuity = isinstance(continuity_raw, dict) and bool(
+            str(continuity_raw.get("path") or "").strip()
         )
 
         primary = self._load_image(primary_record)
@@ -220,14 +219,11 @@ class VSCSContinuityPromptV721:
                         role_text.append(f"{role}={label} (preserve this person's identity)")
 
         continuity = contract.get("continuity")
-        has_continuity = (
-            isinstance(continuity, dict)
-            and bool(str(continuity.get("path") or "").strip())
+        has_continuity = isinstance(continuity, dict) and bool(
+            str(continuity.get("path") or "").strip()
         )
         prompt_mode = (
-            str(continuity.get("prompt_mode") or "").strip()
-            if isinstance(continuity, dict)
-            else ""
+            str(continuity.get("prompt_mode") or "").strip() if isinstance(continuity, dict) else ""
         )
         if has_continuity and prompt_mode == "preserve_shot_to_shot_continuity":
             prefix = (
@@ -326,9 +322,7 @@ class VSCSGovernedOutputNormalizerV721:
         if governed_width <= 0 or governed_height <= 0 or governed_frame_count <= 0:
             raise ValueError("Governed output dimensions and frame count must be positive")
         if images.shape[0] < governed_frame_count:
-            raise ValueError(
-                "Provider output contains fewer frames than governed Shot authority"
-            )
+            raise ValueError("Provider output contains fewer frames than governed Shot authority")
 
         images = images[:governed_frame_count]
         source_height = int(images.shape[1])
@@ -407,9 +401,7 @@ class VSCSProviderGeometryV721:
 NODE_CLASS_MAPPINGS["VSCSProviderGeometryV721"] = VSCSProviderGeometryV721
 NODE_CLASS_MAPPINGS["VSCSProviderFrameCountV721"] = VSCSProviderFrameCountV721
 NODE_CLASS_MAPPINGS["VSCSGovernedOutputNormalizerV721"] = VSCSGovernedOutputNormalizerV721
-NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderGeometryV721"] = (
-    "VSCS Provider Geometry Adapter v7.2.1"
-)
+NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderGeometryV721"] = "VSCS Provider Geometry Adapter v7.2.1"
 NODE_DISPLAY_NAME_MAPPINGS["VSCSProviderFrameCountV721"] = (
     "VSCS Provider Frame Count Adapter v7.2.1"
 )
