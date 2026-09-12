@@ -25,7 +25,7 @@ _ROLE_TO_SLOT = {
 
 class VSCSMultiReferenceResolverV721:
     @classmethod
-    def INPUT_TYPES(cls) -> dict[str, Any]:
+    def INPUT_TYPES(cls) -> dict[str, Any]:  # noqa: N802
         return {
             "required": {
                 "reference_plan_json": ("STRING", {"forceInput": True}),
@@ -123,11 +123,11 @@ class VSCSMultiReferenceResolverV721:
                 raw_weight = record.get(weight_key, record.get("weight", 1.0))
                 try:
                     weight = float(raw_weight)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as exc:
                     if strict_validation:
                         raise ValueError(
                             f"Governed LTX reference has invalid {weight_key}: {raw_weight!r}"
-                        )
+                        ) from exc
                     weight = 1.0
                 if not 0.0 <= weight <= 1.0:
                     if strict_validation:
@@ -181,7 +181,7 @@ class VSCSMultiReferenceResolverV721:
 
 class VSCSContinuityPromptV721:
     @classmethod
-    def INPUT_TYPES(cls) -> dict[str, Any]:
+    def INPUT_TYPES(cls) -> dict[str, Any]:  # noqa: N802
         return {
             "required": {
                 "shot_prompt": ("STRING", {"forceInput": True}),
@@ -217,9 +217,7 @@ class VSCSContinuityPromptV721:
                             "do not use as foreground composition or replace the governed set)"
                         )
                     else:
-                        role_text.append(
-                            f"{role}={label} (preserve this person's identity)"
-                        )
+                        role_text.append(f"{role}={label} (preserve this person's identity)")
 
         continuity = contract.get("continuity")
         has_continuity = (
@@ -267,10 +265,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 }
 
 
-
 class VSCSProviderFrameCountV721:
     @classmethod
-    def INPUT_TYPES(cls) -> dict[str, Any]:
+    def INPUT_TYPES(cls) -> dict[str, Any]:  # noqa: N802
         return {
             "required": {
                 "governed_frame_count": ("INT", {"forceInput": True}),
@@ -302,7 +299,7 @@ class VSCSProviderFrameCountV721:
 
 class VSCSGovernedOutputNormalizerV721:
     @classmethod
-    def INPUT_TYPES(cls) -> dict[str, Any]:
+    def INPUT_TYPES(cls) -> dict[str, Any]:  # noqa: N802
         return {
             "required": {
                 "images": ("IMAGE", {"forceInput": True}),
@@ -376,7 +373,7 @@ class VSCSGovernedOutputNormalizerV721:
 
 class VSCSProviderGeometryV721:
     @classmethod
-    def INPUT_TYPES(cls) -> dict[str, Any]:
+    def INPUT_TYPES(cls) -> dict[str, Any]:  # noqa: N802
         return {
             "required": {
                 "governed_width": ("INT", {"forceInput": True}),
