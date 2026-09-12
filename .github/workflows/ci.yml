@@ -30,10 +30,10 @@ jobs:
       - name: Format check
         run: ruff format --check .
 
-      - name: Type check
-        run: mypy
-
       - name: Test
         env:
           QT_QPA_PLATFORM: offscreen
         run: pytest --cov=vscs --cov-report=term-missing
+
+      - name: Type check
+        run: mypy
