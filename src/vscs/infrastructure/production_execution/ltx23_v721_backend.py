@@ -28,6 +28,7 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
+from .provider_reference_helper import GovernedProviderReferenceHelperBuilder
 from .stale_reconciliation_backend import (
     LocalComfyUIProductionExecutionBackend as _Phase20182ProductionExecutionBackend,
 )
@@ -358,7 +359,7 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
         plan["provider"] = "ltx-2.3"
         plan["legacy_synthesized"] = False
         plan["bindings"] = [self._provider_reference_binding(item) for item in references]
-        return plan
+        return GovernedProviderReferenceHelperBuilder(self.project_directory).ensure_helper(plan)
 
     def _provider_reference_binding(self, raw: object) -> dict[str, Any]:
         if not isinstance(raw, dict):
