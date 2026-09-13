@@ -9,6 +9,10 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from vscs.application.governed_reference_plan_source import (
+    GovernedReferencePlanSourceError,
+    PersistedGovernedReferencePlanSource,
+)
 from vscs.application.production_package import ProductionPackage
 from vscs.application.production_tasks import (
     ProductionTask,
@@ -24,6 +28,13 @@ from .governed_reference_compilation import (
 
 class ProductionPackageCompilationError(RuntimeError):
     """Raised when approved production authority cannot be compiled safely."""
+
+
+class _ReferencePlanProjectDirectory:
+    """Minimal ProjectService-compatible view for persisted reference authority."""
+
+    def __init__(self, project_directory: Path) -> None:
+        self.project_directory = project_directory
 
 
 class ProductionPackageCompilationState(StrEnum):
@@ -140,6 +151,13 @@ class ProductionPackageCompilerService:
 
     def __init__(self, *, reference_root: Path | None = None) -> None:
         self.reference_compiler = GovernedReferenceCompiler(reference_root)
+        self.reference_plan_source = (
+            PersistedGovernedReferencePlanSource(
+                _ReferencePlanProjectDirectory(reference_root)  # type: ignore[arg-type]
+            )
+            if reference_root is not None
+            else None
+        )
 
     def compile(
         self,
@@ -162,9 +180,10 @@ class ProductionPackageCompilerService:
 
         normalized_profile = profile.strip().lower() or "production"
         render = self._render_settings(production, normalized_profile)
+        reference_plan_payload = self._reference_plan_payload(production, source.shot_id)
         try:
             governed_references = self.reference_compiler.compile(
-                production.get("reference_plan"),
+                reference_plan_payload,
                 width=render["width"],
                 height=render["height"],
                 profile=normalized_profile,
@@ -255,6 +274,21 @@ class ProductionPackageCompilerService:
             package_fingerprint=package_fingerprint,
             reference_plan=reference_plan,
         )
+
+    def _reference_plan_payload(
+        self, production: dict[str, Any], shot_id: str
+    ) -> dict[str, Any] | None:
+        embedded = production.get("reference_plan")
+        if isinstance(embedded, dict):
+            return embedded
+        if self.reference_plan_source is None:
+            return None
+        try:
+            return self.reference_plan_source.reference_plan_for_shot(shot_id)
+        except GovernedReferencePlanSourceError as exc:
+            raise ProductionPackageCompilationError(
+                f"Governed reference authority cannot be resolved: {exc}"
+            ) from exc
 
     @classmethod
     def authority_fingerprint(cls, source: ProductionPackage) -> str:
