@@ -394,29 +394,100 @@ class GovernedShotPlanningService:
         self,
         scene: ScenePlan,
     ) -> tuple[str, tuple[ShotPlan, ...]]:
-        """Choose the richest preserved semantic Shot authority for hardware decomposition."""
-        candidates: list[tuple[str, tuple[ShotPlan, ...]]] = []
+        """Select current semantic authority before considering historical recovery data."""
         current = self.list_plans(scene_id=scene.scene_id)
-        if current:
-            candidates.append(("current-governed-plan", current))
-        candidates.extend(self._archived_scene_plan_candidates(scene.scene_id))
+        if self._is_complete_semantic_source(scene, current):
+            lineage = self._matching_hardware_lineage_archive(scene, current)
+            if lineage is not None:
+                return lineage
+            return ("current-governed-plan", current)
 
-        valid = [
-            (source, plans)
-            for source, plans in candidates
-            if plans
-            and sum(plan.target_runtime_seconds for plan in plans) == scene.target_runtime_seconds
-        ]
-        if not valid:
-            return ("scene-authority-fallback", self._scene_semantic_fallback(scene))
+        for source, plans in self._archived_scene_plan_candidates(scene.scene_id):
+            if self._is_complete_semantic_source(scene, plans):
+                return (source, plans)
 
-        return max(
-            valid,
-            key=lambda item: (
-                self._semantic_density(item[1]),
-                -len(item[1]),
-            ),
-        )
+        return ("scene-authority-fallback", self._scene_semantic_fallback(scene))
+
+    def _matching_hardware_lineage_archive(
+        self,
+        scene: ScenePlan,
+        current: tuple[ShotPlan, ...],
+    ) -> tuple[str, tuple[ShotPlan, ...]] | None:
+        """Recover only an archive explicitly named by current hardware-derived Shots."""
+        lineage = self._hardware_lineage_markers(current)
+        if not lineage:
+            return None
+
+        for source, plans in self._archived_scene_plan_candidates(scene.scene_id):
+            if not self._is_complete_semantic_source(scene, plans):
+                continue
+            expected = frozenset(
+                self._semantic_source_marker(plan)
+                for plan in plans
+            )
+            if expected == lineage:
+                return (source, plans)
+        return None
+
+    def _is_complete_semantic_source(
+        self,
+        scene: ScenePlan,
+        plans: tuple[ShotPlan, ...],
+    ) -> bool:
+        """Return whether a plan is current, complete, and semantically usable."""
+        if not plans:
+            return False
+        if sum(plan.target_runtime_seconds for plan in plans) != scene.target_runtime_seconds:
+            return False
+        scene_hash = self._scene_contract_hash(scene)
+        for plan in plans:
+            if plan.scene_id != scene.scene_id or plan.scene_contract_hash != scene_hash:
+                return False
+            if plan.target_runtime_seconds <= 0:
+                return False
+            if not all(
+                value.strip()
+                for value in (
+                    plan.title,
+                    plan.narrative_purpose,
+                    plan.production_objective,
+                    plan.required_action,
+                )
+            ):
+                return False
+        return self._semantic_density(plans) > 0.0
+
+    def _hardware_lineage_markers(
+        self,
+        plans: tuple[ShotPlan, ...],
+    ) -> frozenset[str]:
+        """Return direct semantic-parent markers only for untouched hardware-derived Shots."""
+        markers: set[str] = set()
+        prefix = "Preserve semantic source Shot "
+        for plan in plans:
+            if plan.coverage_role is CinematicCoverageRole.UNSPECIFIED:
+                return frozenset()
+            role_constraint = f"Cinematic coverage role: {plan.coverage_role.value}."
+            if role_constraint not in plan.shot_constraints:
+                return frozenset()
+            if not plan.title.endswith(f"— {self._coverage_label(plan.coverage_role)}"):
+                return frozenset()
+            marker = next(
+                (
+                    constraint
+                    for constraint in reversed(plan.shot_constraints)
+                    if constraint.startswith(prefix)
+                ),
+                None,
+            )
+            if marker is None:
+                return frozenset()
+            markers.add(marker)
+        return frozenset(markers)
+
+    @staticmethod
+    def _semantic_source_marker(plan: ShotPlan) -> str:
+        return f"Preserve semantic source Shot {plan.shot_id}: {plan.title}."
 
     def _archived_scene_plan_candidates(
         self,
