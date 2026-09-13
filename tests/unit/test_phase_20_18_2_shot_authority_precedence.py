@@ -259,13 +259,14 @@ def test_repeated_hardware_replanning_does_not_change_semantic_identity(tmp_path
 
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
     combined = " ".join(
-        (
+        value
+        for shot in proposal.proposed_shots
+        for value in (
             shot.title,
             shot.narrative_purpose,
             shot.required_action,
             shot.dialogue_requirement,
         )
-        for shot in proposal.proposed_shots
     )
 
     assert original.title in combined
