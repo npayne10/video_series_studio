@@ -48,9 +48,7 @@ def test_compiler_recovers_persisted_governed_reference_plan(tmp_path) -> None:
 
     compiler = ProductionPackageCompilerService(reference_root=tmp_path)
 
-    assert compiler._reference_plan_payload(  # noqa: SLF001
-        {}, "ep-001-scn-001-sht-002"
-    ) == plan
+    assert compiler._reference_plan_payload({}, "ep-001-scn-001-sht-002") == plan
 
 
 def test_ready_upd_source_package_pin_prevents_latest_package_dialogue_drift(
