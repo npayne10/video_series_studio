@@ -2,13 +2,13 @@
 
 The legacy local package compiler resolved a ProductionTask by scanning canonical
 ProductionPackage history backwards until *any* historical package matched the
-immutable task authority fingerprint.  That behavior is unsafe once a READY UPD
+immutable task authority fingerprint. That behavior is unsafe once a READY UPD
 acquires a newer governed ReferencePlan: an old task can silently select an old
 UPD-bearing package and produce a seemingly READY Preview package.
 
-This module makes current READY UPD authority the only executable source.  A
+This module makes current READY UPD authority the only executable source. A
 reference-only READY-UPD dependency change is refreshed through the existing UPD
-compiler.  If that produces authority different from the immutable scheduled
+compiler. If that produces authority different from the immutable scheduled
 ProductionTask, compilation is blocked and the task must be recompiled/rescheduled.
 Historical package fallback is never used.
 """
@@ -51,9 +51,11 @@ class _ProjectDirectoryView:
 class _CurrentProductionPackageStore:
     """File-backed current-package adapter used only for governed UPD refresh.
 
-    ProductionPackage history remains append-only.  The last record for the shot
-    is treated as current execution authority; older records remain readable but
-    are never selected for execution merely because they match an old task hash.
+    ProductionPackage history remains append-only. Execution is pinned to the
+    source package recorded by the READY UPD before refresh begins. This prevents
+    a later package for the same shot from silently replacing reviewed dialogue or
+    other human-approved production authority. Governed reference dependencies may
+    still be refreshed by the READY-UPD compiler.
     """
 
     SOURCE_FILE = Path("production") / "production_packages.json"
@@ -61,19 +63,38 @@ class _CurrentProductionPackageStore:
     def __init__(self, project_directory: Path) -> None:
         self.project_directory = project_directory
         self.path = project_directory / self.SOURCE_FILE
+        self._pinned_package_id: str | None = None
+
+    def pin_source_package(self, package_id: str) -> None:
+        """Pin current-package resolution to the package reviewed by the READY UPD."""
+        normalized = package_id.strip()
+        if not normalized:
+            raise LocalProductionPackageCompilationError(
+                "READY Universal Production Description has no source Production Package identity"
+            )
+        self._pinned_package_id = normalized
 
     def current_package(self, shot_id: str) -> ProductionPackage | None:
         normalized = shot_id.strip().upper()
         for raw in reversed(self._raw_packages()):
             if not isinstance(raw, dict):
                 continue
-            if str(raw.get("shot_id", "")).strip().upper() == normalized:
-                return LocalLTX23V721ProductionPackageCompilationService._canonical_from_dict(raw)
+            if str(raw.get("shot_id", "")).strip().upper() != normalized:
+                continue
+            package_id = str(raw.get("package_id", "")).strip()
+            if self._pinned_package_id is not None and package_id != self._pinned_package_id:
+                continue
+            return LocalLTX23V721ProductionPackageCompilationService._canonical_from_dict(raw)
         return None
 
     def materialize(self, shot_id: str) -> ProductionPackage:
         package = self.current_package(shot_id)
         if package is None:
+            if self._pinned_package_id is not None:
+                raise LocalProductionPackageCompilationError(
+                    "READY Universal Production Description source Production Package "
+                    f"{self._pinned_package_id} does not exist for {shot_id.strip().upper()}"
+                )
             raise LocalProductionPackageCompilationError(
                 f"No current Production Package exists for {shot_id.strip().upper()}"
             )
@@ -173,6 +194,12 @@ class CurrentAuthorityLTX23V721ProductionPackageCompilationService(
         if draft.status is not UniversalProductionDescriptionStatus.READY:
             raise LocalProductionPackageCompilationError(
                 f"Universal Production Description for {task.shot_id.strip().upper()} is not Ready"
+            )
+        packages.pin_source_package(draft.source_package_id)
+        if packages.current_package(task.shot_id) is None:
+            raise LocalProductionPackageCompilationError(
+                "READY Universal Production Description source Production Package "
+                f"{draft.source_package_id} cannot be resolved for {task.shot_id.strip().upper()}"
             )
         try:
             return universal.compile(task.shot_id)
