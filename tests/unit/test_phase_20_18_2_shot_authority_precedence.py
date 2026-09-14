@@ -135,12 +135,7 @@ def _write_mauritania_current(
 
 
 def _set_hardware_limit(project_directory: Path, seconds: int) -> None:
-    path = (
-        project_directory
-        / ".vscs"
-        / "provider_executions"
-        / "hardware_capability.json"
-    )
+    path = project_directory / ".vscs" / "provider_executions" / "hardware_capability.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
