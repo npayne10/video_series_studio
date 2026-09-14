@@ -280,15 +280,52 @@ class ProductionPackageCompilerService:
     ) -> dict[str, Any] | None:
         embedded = production.get("reference_plan")
         if isinstance(embedded, dict):
-            return embedded
-        if self.reference_plan_source is None:
-            return None
-        try:
-            return self.reference_plan_source.reference_plan_for_shot(shot_id)
-        except GovernedReferencePlanSourceError as exc:
+            return self._require_usable_reference_plan(embedded, shot_id)
+
+        persisted = None
+        if self.reference_plan_source is not None:
+            try:
+                persisted = self.reference_plan_source.reference_plan_for_shot(shot_id)
+            except GovernedReferencePlanSourceError as exc:
+                raise ProductionPackageCompilationError(
+                    f"Governed reference authority cannot be resolved: {exc}"
+                ) from exc
+        if persisted is not None:
+            return self._require_usable_reference_plan(persisted, shot_id)
+
+        canonical_references = self._list_of_mappings(production.get("canonical_references"))
+        if canonical_references:
             raise ProductionPackageCompilationError(
-                f"Governed reference authority cannot be resolved: {exc}"
-            ) from exc
+                f"Governed reference authority is required for {shot_id.strip().upper()} because "
+                "approved canonical visual references are present, but no provider-ready governed "
+                "ReferencePlan has been persisted. Resolve and persist governed provider-ready "
+                "reference authority before Production Package compilation."
+            )
+        return None
+
+    @staticmethod
+    def _require_usable_reference_plan(
+        reference_plan: dict[str, Any], shot_id: str
+    ) -> dict[str, Any]:
+        status = str(reference_plan.get("status") or "").strip().lower()
+        if status and status != "passed":
+            diagnostics_raw = reference_plan.get("diagnostics", [])
+            diagnostics: list[str] = []
+            if isinstance(diagnostics_raw, list):
+                for item in diagnostics_raw:
+                    if not isinstance(item, dict):
+                        continue
+                    code = str(item.get("code") or "").strip()
+                    message = str(item.get("message") or "").strip()
+                    detail = ": ".join(value for value in (code, message) if value)
+                    if detail:
+                        diagnostics.append(detail)
+            suffix = f" Diagnostics: {'; '.join(diagnostics)}" if diagnostics else ""
+            raise ProductionPackageCompilationError(
+                f"Governed ReferencePlan for {shot_id.strip().upper()} has status '{status}' and "
+                f"cannot be used for provider execution.{suffix}"
+            )
+        return reference_plan
 
     @classmethod
     def authority_fingerprint(cls, source: ProductionPackage) -> str:
