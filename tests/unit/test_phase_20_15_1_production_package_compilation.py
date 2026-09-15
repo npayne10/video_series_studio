@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import struct
+import zlib
 from dataclasses import asdict, replace
 from pathlib import Path
 
@@ -29,7 +31,65 @@ from vscs.infrastructure.production_execution import (
 )
 
 
-def _source() -> ProductionPackage:
+def _png(path: Path, width: int = 1280, height: int = 720) -> None:
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+        )
+
+    raw = (b"\x00" + (b"\x00\x00\x00" * width)) * height
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw, 1))
+        + chunk(b"IEND", b"")
+    )
+
+
+def _reference_plan(reference_path: Path) -> dict[str, object]:
+    return {
+        "schema_version": "1.0",
+        "status": "passed",
+        "target": {
+            "width": 1280,
+            "height": 720,
+            "profile_id": "production-video-16x9",
+            "provider_id": "ltx23-local",
+            "aspect_tolerance": 0.03,
+        },
+        "references": [
+            {
+                "reference_id": "REF-CHR-JAMES-PROVIDER-READY",
+                "asset_id": "CHR-JAMES",
+                "role": "primary_identity",
+                "reference_class": "provider_ready_derivative",
+                "priority": "required",
+                "subject_type": "character",
+                "source_path": str(reference_path),
+                "canonical_source_id": "CAP-CHR-JAMES-FRONT",
+                "label": "Commander James provider-ready identity",
+                "width": 1280,
+                "height": 720,
+                "provider_ready": True,
+                "provider_profiles": ["production-video-16x9"],
+                "coverage": {
+                    "framing_type": "full_body",
+                    "coverage": "full_required_asset",
+                    "required_features_visible": True,
+                    "identity_visible": True,
+                    "full_required_asset_visible": True,
+                },
+            }
+        ],
+        "diagnostics": [],
+    }
+
+
+def _source(reference_path: Path) -> ProductionPackage:
     production = {
         "current_shot_id": "SHT-001",
         "universal_text": (
@@ -80,6 +140,7 @@ def _source() -> ProductionPackage:
                 "canonical_reference": "CAP-CHR-JAMES-FRONT",
             }
         ],
+        "reference_plan": _reference_plan(reference_path),
         "source_policy": "approved-production-authority-only",
         "provider_neutral": True,
     }
@@ -158,8 +219,12 @@ def _write_source(project: Path, source: ProductionPackage) -> None:
     )
 
 
-def test_compiler_carries_governed_camera_lighting_action_continuity_and_references() -> None:
-    source = _source()
+def test_compiler_carries_governed_camera_lighting_action_continuity_and_references(
+    tmp_path: Path,
+) -> None:
+    reference_path = tmp_path / "references" / "james-provider-ready.png"
+    _png(reference_path)
+    source = _source(reference_path)
     task = _task(source)
 
     compiled = ProductionPackageCompilerService().compile(task, source)
@@ -171,6 +236,11 @@ def test_compiler_carries_governed_camera_lighting_action_continuity_and_referen
     assert compiled.composition_plan["shot"]["frame_count"] == 240
     assert compiled.composition_plan["action_performance"]["temporal_narrative"].startswith("James")
     assert compiled.composition_plan["canonical_references"][0]["asset_id"] == "CHR-JAMES"
+    assert compiled.composition_plan["reference_plan"]["status"] == "passed"
+    assert (
+        compiled.composition_plan["reference_plan"]["references"][0]["role"]
+        == "primary_identity"
+    )
     assert compiled.composition_plan["dialogue"][0]["speaker"] == "James"
     assert compiled.previous_approved_final_frame == "continuity/SHT-000-final.png"
     assert compiled.frame_count == 240
@@ -187,7 +257,9 @@ def test_local_compilation_persists_authority_bound_package_and_detects_stale_or
 ) -> None:
     project = tmp_path / "project"
     project.mkdir()
-    source = _source()
+    reference_path = project / "references" / "james-provider-ready.png"
+    _png(reference_path)
+    source = _source(reference_path)
     task = _task(source)
     _write_source(project, source)
     service = LocalProductionPackageCompilationService(project)
@@ -203,6 +275,8 @@ def test_local_compilation_persists_authority_bound_package_and_detects_stale_or
     assert raw["_vscs_manifest"]["authority_fingerprint"] == task.authority.fingerprint
     assert raw["production_authority"]["camera"]["lens_mm"] == 35
     assert raw["composition_plan"]["continuity"]["requirements"]
+    assert raw["reference_plan"]["status"] == "passed"
+    assert raw["reference_plan"]["references"][0]["provider_ready"] is True
 
     stale_authority = replace(task.authority, fingerprint="different-authority")
     stale_task = replace(task, authority=stale_authority)
