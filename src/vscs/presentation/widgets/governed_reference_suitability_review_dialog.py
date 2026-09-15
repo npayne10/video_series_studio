@@ -779,5 +779,5 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
     @staticmethod
     def _dimensions_text(state: _ReferenceState) -> str:
         if state.width > 0 and state.height > 0:
-            return f"{state.width}×{state.height}"
+            return f"{state.width}x{state.height}"
         return "Unknown"
