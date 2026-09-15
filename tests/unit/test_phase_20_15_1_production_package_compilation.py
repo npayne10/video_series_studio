@@ -238,8 +238,7 @@ def test_compiler_carries_governed_camera_lighting_action_continuity_and_referen
     assert compiled.composition_plan["canonical_references"][0]["asset_id"] == "CHR-JAMES"
     assert compiled.composition_plan["reference_plan"]["status"] == "passed"
     assert (
-        compiled.composition_plan["reference_plan"]["references"][0]["role"]
-        == "primary_identity"
+        compiled.composition_plan["reference_plan"]["references"][0]["role"] == "primary_identity"
     )
     assert compiled.composition_plan["dialogue"][0]["speaker"] == "James"
     assert compiled.previous_approved_final_frame == "continuity/SHT-000-final.png"
