@@ -19,8 +19,8 @@ from vscs.application.universal_production_description_compiler import (
     UniversalProductionDescriptionCompilerService,
 )
 
-from .governed_reference_suitability_review_dialog import (
-    GovernedReferenceSuitabilityReviewDialog,
+from .governed_reference_suitability_guided_dialog import (
+    GovernedReferenceSuitabilityGuidedDialog,
 )
 from .universal_production_description_compiler_workspace import (
     UniversalProductionDescriptionCompilerWorkspace,
@@ -101,7 +101,7 @@ class GovernedReferenceSuitabilityWorkspace(UniversalProductionDescriptionCompil
                 "reviewed. Refresh the governed Production Planning authorities first.",
             )
             return
-        dialog = GovernedReferenceSuitabilityReviewDialog(
+        dialog = GovernedReferenceSuitabilityGuidedDialog(
             self.reference_suitability_authoring,
             package,
             self,
