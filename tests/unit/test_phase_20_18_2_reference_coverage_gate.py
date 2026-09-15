@@ -159,7 +159,7 @@ def test_dialogue_speaker_and_supporting_character_roles_follow_governed_semanti
 
     with pytest.raises(
         GovernedReferenceSuitabilityError,
-        match="CAP-CHR-003.*primary_identity",
+        match=r"CAP-CHR-003.*primary_identity",
     ):
         service._require_explicit_visual_coverage(package)
 
