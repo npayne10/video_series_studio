@@ -3,8 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
 from PySide6.QtWidgets import QComboBox, QFormLayout, QWidget
+
+from vscs.application.acpp.reference_roles import (
+    ReferenceClass,
+    ReferencePriority,
+    ReferenceRole,
+    ReferenceSubjectType,
+)
 
 from .governed_reference_suitability_review_dialog import (
     GovernedReferenceSuitabilityReviewDialog,
@@ -118,6 +126,67 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         )
         self.framing_type.currentIndexChanged.connect(self._editor_changed)
         self.coverage.currentIndexChanged.connect(self._editor_changed)
+
+    def _editor_changed(self, *_args: object) -> None:
+        """Persist editor values while normalizing Qt round-tripped StrEnum data."""
+        if self._loading_editor or not (0 <= self._current_row < len(self._states)):
+            return
+        state = self._states[self._current_row]
+        state.reference_id = self.reference_id.text().strip()
+        state.label = self.label_edit.text().strip()
+        state.role = self._combo_enum_value(
+            self.role_combo,
+            ReferenceRole,
+            self._enum_value(ReferenceRole, state.role, ReferenceRole.BACKGROUND_IDENTITY),
+        )
+        state.reference_class = self._combo_enum_value(
+            self.class_combo,
+            ReferenceClass,
+            self._enum_value(
+                ReferenceClass,
+                state.reference_class,
+                ReferenceClass.CANONICAL_MASTER,
+            ),
+        )
+        state.subject_type = self._combo_enum_value(
+            self.subject_combo,
+            ReferenceSubjectType,
+            self._enum_value(
+                ReferenceSubjectType,
+                state.subject_type,
+                ReferenceSubjectType.OTHER,
+            ),
+        )
+        state.priority = self._combo_enum_value(
+            self.priority_combo,
+            ReferencePriority,
+            self._enum_value(
+                ReferencePriority,
+                state.priority,
+                ReferencePriority.REQUIRED,
+            ),
+        )
+        state.provider_ready = self.provider_ready.isChecked()
+        state.provider_profiles = self.provider_profiles.text().strip()
+        state.framing_type = self.framing_type.text().strip()
+        state.coverage = self.coverage.text().strip()
+        state.required_features_visible = self.features_visible.isChecked()
+        state.identity_visible = self.identity_visible.isChecked()
+        state.full_required_asset_visible = self.full_asset_visible.isChecked()
+        state.contains_subjects = self.contains_subjects.text().strip()
+        state.contains_props = self.contains_props.text().strip()
+        state.contains_environments = self.contains_environments.text().strip()
+        state.review_note = self.review_note.toPlainText().strip()
+        self._refresh_table_row(self._current_row)
+
+    @staticmethod
+    def _combo_enum_value(combo: QComboBox, enum_type: type[Any], default: Any) -> Any:
+        """Convert QVariant-backed combo data back to its governed StrEnum type."""
+        raw = combo.currentData()
+        try:
+            return enum_type(str(raw or ""))
+        except ValueError:
+            return default
 
     @staticmethod
     def _replace_with_choice_combo(
