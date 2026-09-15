@@ -113,10 +113,13 @@ def test_passing_embedded_governed_plan_is_preserved() -> None:
     service = ProductionPackageCompilerService()
     plan = _reference_plan()
 
-    assert service._reference_plan_payload(
-        {"canonical_references": [], "reference_plan": plan},
-        "EP-001-SCN-001-SHT-002",
-    ) == plan
+    assert (
+        service._reference_plan_payload(
+            {"canonical_references": [], "reference_plan": plan},
+            "EP-001-SCN-001-SHT-002",
+        )
+        == plan
+    )
 
 
 def test_passing_persisted_governed_plan_is_loaded_at_executable_boundary(
