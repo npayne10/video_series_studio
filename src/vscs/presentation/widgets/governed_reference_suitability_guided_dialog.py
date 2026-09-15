@@ -10,7 +10,6 @@ from .governed_reference_suitability_review_dialog import (
     GovernedReferenceSuitabilityReviewDialog,
 )
 
-
 FRAMING_TYPE_CHOICES: tuple[tuple[str, str, str], ...] = (
     ("Unknown / not reviewed", "unknown", "Use only until the framing has been reviewed."),
     ("Close-up", "close_up", "Face or small identity-critical detail dominates the frame."),
@@ -28,15 +27,43 @@ FRAMING_TYPE_CHOICES: tuple[tuple[str, str, str], ...] = (
 
 COVERAGE_CHOICES: tuple[tuple[str, str, str], ...] = (
     ("Unknown / not reviewed", "unknown", "Use only until coverage has been reviewed."),
-    ("Identity critical", "identity_critical", "Covers the subject features needed to preserve identity."),
-    ("Required features", "required_features", "Covers all features specifically required by the Shot."),
-    ("Full required asset", "full_required_asset", "Covers the complete governed asset needed by the Shot."),
+    (
+        "Identity critical",
+        "identity_critical",
+        "Covers the subject features needed to preserve identity.",
+    ),
+    (
+        "Required features",
+        "required_features",
+        "Covers all features specifically required by the Shot.",
+    ),
+    (
+        "Full required asset",
+        "full_required_asset",
+        "Covers the complete governed asset needed by the Shot.",
+    ),
     ("Partial asset", "partial_asset", "Only part of the governed asset is visible."),
-    ("Environment context", "environment_context", "Provides contextual location/environment information."),
-    ("Full environment", "full_environment", "Provides broad coverage of the required environment."),
+    (
+        "Environment context",
+        "environment_context",
+        "Provides contextual location/environment information.",
+    ),
+    (
+        "Full environment",
+        "full_environment",
+        "Provides broad coverage of the required environment.",
+    ),
     ("Multi-subject", "multi_subject", "One reference covers multiple governed subjects."),
-    ("Scene composition", "scene_composition", "Covers the governed spatial relationship of a complete scene."),
-    ("Continuity state", "continuity_state", "Captures a reviewed visual state carried between Shots."),
+    (
+        "Scene composition",
+        "scene_composition",
+        "Covers the governed spatial relationship of a complete scene.",
+    ),
+    (
+        "Continuity state",
+        "continuity_state",
+        "Captures a reviewed visual state carried between Shots.",
+    ),
     ("Start frame", "start_frame", "Covers the exact governed starting frame state."),
     ("End frame", "end_frame", "Covers the exact governed ending frame state."),
 )
