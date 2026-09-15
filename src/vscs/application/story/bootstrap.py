@@ -111,7 +111,7 @@ def register_governed_asset_resolution(
         register_governed_shot_planning(services),
         services.require(AssetResolutionService),
         services.require(AssetBrowserService),
-        services.get(ShotAssetSemanticInferenceProvider),
+        services.get(ShotAssetSemanticInferenceProvider),  # type: ignore[type-abstract]
     )
     return services.register(GovernedAssetResolutionService, resolver)
 

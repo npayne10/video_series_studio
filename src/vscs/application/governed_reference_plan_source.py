@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from vscs.application.acpp.serialization import ACPPSerializationError, ACPPSerializer
 from vscs.application.projects import ProjectNotOpenError, ProjectService
@@ -134,7 +134,7 @@ class PersistedGovernedReferencePlanSource:
                     f"Persisted governed reference plan for {shot_id} is invalid"
                 )
             self._validate_plan(plan, shot_id)
-            return self._detached(plan)
+            return cast(dict[str, Any], self._detached(plan))
         return None
 
     def _legacy_reference_plan(self, shot_id: str) -> dict[str, Any] | None:

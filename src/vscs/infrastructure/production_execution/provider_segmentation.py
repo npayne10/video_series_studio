@@ -57,6 +57,7 @@ class GovernedProviderSegmentationPlanner:
         if height is not None and height <= 0:
             raise ValueError("height must be greater than zero")
 
+        provider_frames: tuple[int, ...]
         if self._valid_provider_frame_count(frame_count):
             provider_frames = (frame_count,)
             segment_count = 1

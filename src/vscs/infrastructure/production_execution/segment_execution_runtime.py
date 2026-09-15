@@ -37,7 +37,7 @@ class SegmentExecutionRecord:
     error_message: str | None = None
     updated_at: str = ""
 
-    def with_state(self, state: str, **changes: object) -> SegmentExecutionRecord:
+    def with_state(self, state: str, **changes: Any) -> SegmentExecutionRecord:
         return replace(
             self,
             state=state,

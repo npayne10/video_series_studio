@@ -61,9 +61,11 @@ class GovernedReferenceSuitabilityWorkspace(UniversalProductionDescriptionCompil
 
     def _install_reference_suitability_action(self) -> None:
         group = self.universal_create_button.parentWidget()
-        if group is None or group.layout() is None:
+        if group is None:
             raise RuntimeError("Universal Description action layout is unavailable")
         group_layout = group.layout()
+        if group_layout is None:
+            raise RuntimeError("Universal Description action layout is unavailable")
         action_item = group_layout.itemAt(group_layout.count() - 1)
         actions = action_item.layout() if action_item is not None else None
         if not isinstance(actions, QHBoxLayout):

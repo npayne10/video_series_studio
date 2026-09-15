@@ -173,6 +173,8 @@ class ShotPlanningService:
     def hardware_shot_limit_seconds(self) -> float:
         """Return the current planning ceiling from persisted hardware authority."""
         raw = self.hardware_capability().get("validated_maximum_shot_seconds")
+        if raw is None:
+            return self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS
         try:
             value = float(raw)
         except (TypeError, ValueError):

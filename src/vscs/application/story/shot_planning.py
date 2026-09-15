@@ -144,6 +144,8 @@ class GovernedShotPlanningService:
     def hardware_shot_limit_seconds(self) -> int:
         """Return the integer governed Shot ceiling used by the current planner."""
         raw = self.hardware_capability().get("validated_maximum_shot_seconds")
+        if raw is None:
+            return max(1, self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS)
         try:
             value = int(float(raw))
         except (TypeError, ValueError):
@@ -706,6 +708,7 @@ class GovernedShotPlanningService:
             return CinematicCoverageRole.DIALOGUE_DELIVERY
 
         interior = index - 2
+        roles: tuple[CinematicCoverageRole, ...]
         if count >= 5:
             roles = (
                 CinematicCoverageRole.PRIMARY_SUBJECT,

@@ -393,7 +393,8 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
         return state
 
     def _state_from_existing(self, value: dict[str, Any], *, custom: bool) -> _ReferenceState:
-        coverage = value.get("coverage") if isinstance(value.get("coverage"), dict) else {}
+        raw_coverage = value.get("coverage")
+        coverage: dict[str, Any] = raw_coverage if isinstance(raw_coverage, dict) else {}
         source_path = str(value.get("source_path") or "")
         actual_width, actual_height = self._image_dimensions(source_path)
         role = self._enum_value(ReferenceRole, value.get("role"), ReferenceRole.BACKGROUND_IDENTITY)
@@ -537,9 +538,15 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
         state = self._states[row]
         self.table.blockSignals(True)
         try:
-            self.table.item(row, 5).setText(self._dimensions_text(state))
-            self.table.item(row, 6).setText("Yes" if state.provider_ready else "No")
-            self.table.item(row, 7).setText(state.role.value)
+            dimensions_item = self.table.item(row, 5)
+            provider_ready_item = self.table.item(row, 6)
+            role_item = self.table.item(row, 7)
+            if dimensions_item is not None:
+                dimensions_item.setText(self._dimensions_text(state))
+            if provider_ready_item is not None:
+                provider_ready_item.setText("Yes" if state.provider_ready else "No")
+            if role_item is not None:
+                role_item.setText(state.role.value)
         finally:
             self.table.blockSignals(False)
 

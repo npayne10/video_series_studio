@@ -12,22 +12,29 @@ import contextlib
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from vscs.application.generated_media import GeneratedMediaIngestionService
 from vscs.application.production_execution import (
     CompiledProductionPackage,
+    ProductionExecutionCandidate,
     ProductionExecutionError,
     ProductionExecutionResult,
     ProductionExecutionState,
+    ProductionPackageStatus,
     normalize_execution_profile,
 )
-from vscs.application.production_tasks import ProductionQueue, ProductionQueueCompilerService
+from vscs.application.production_tasks import (
+    ProductionQueue,
+    ProductionQueueCompilerService,
+    ProductionTask,
+)
 from vscs.application.provider_execution import (
     ProviderExecutionContext,
     ProviderExecutionHandle,
     ProviderExecutionOutput,
     ProviderExecutionState,
+    QueueProviderExecutionService,
     RenderProviderExecutionAdapter,
 )
 from vscs.application.rendering import RenderRequest
@@ -70,8 +77,8 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
     def set_hardware_capability(self, capability: HardwareShotCapability) -> None:
         self._hardware_capability = capability
 
-    def validate_file(self, task: object, path: Path) -> None:
-        super().validate_file(task, path)  # type: ignore[arg-type]
+    def validate_file(self, task: ProductionTask, path: Path) -> None:
+        super().validate_file(task, path)
         raw = self._read_json(path)
         policy = raw.get("hardware_shot_policy")
         plan = raw.get("provider_execution_plan")
@@ -84,7 +91,9 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
                 "Hidden provider segmentation is retired for Phase 20.18.2; recompile the Shot."
             )
 
-    def _comfyui_payload(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
+    def _comfyui_payload(  # type: ignore[override]
+        self, compiled: CompiledProductionPackage
+    ) -> dict[str, Any]:
         capability = self._hardware_capability
         if compiled.frames_per_second != capability.frames_per_second:
             raise LocalProductionPackageCompilationError(
@@ -200,11 +209,11 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
 
 @dataclass(slots=True)
 class _ActiveSegmentedExecution:
-    candidate: object
+    candidate: ProductionExecutionCandidate
     queue: ProductionQueue
     lease_id: str
     handle: ProviderExecutionHandle
-    service: object
+    service: QueueProviderExecutionService
     adapter: RenderProviderExecutionAdapter
     context: ProviderExecutionContext
     profile: str
@@ -253,14 +262,17 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         task_id: str,
         *,
         profile: str = "production",
-    ):
+    ) -> ProductionPackageStatus:
         try:
             capability = self.hardware_capabilities.resolve()
         except HardwareShotCapabilityError as exc:
             raise ProductionExecutionError(
                 "Cannot establish hardware-aware Shot capability before compilation: " + str(exc)
             ) from exc
-        self.package_compilation.set_hardware_capability(capability)
+        cast(
+            SegmentedLTX23V721ProductionPackageCompilationService,
+            self.package_compilation,
+        ).set_hardware_capability(capability)
         return super().compile_package(task_id, profile=profile)
 
     def start_for_profile(
@@ -774,17 +786,17 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
 
     def _resolve_parent_package(
         self,
-        task: object,
+        task: ProductionTask,
         profile: str,
         production_package: Path | None,
     ) -> Path:
         try:
             if production_package is None:
-                current = self.package_compilation.require_current(task, profile=profile)  # type: ignore[arg-type]
+                current = self.package_compilation.require_current(task, profile=profile)
                 assert current.path is not None
                 return current.path
             package = Path(production_package).expanduser().resolve(strict=False)
-            self.package_compilation.validate_file(task, package)  # type: ignore[arg-type]
+            self.package_compilation.validate_file(task, package)
             payload_profile = self._package_profile(package)
             if payload_profile != profile:
                 raise ProductionExecutionError(
@@ -799,9 +811,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         self,
         *,
         adapter: RenderProviderExecutionAdapter,
-        service: object,
+        service: QueueProviderExecutionService,
         context: ProviderExecutionContext,
-        task: object,
+        task: ProductionTask,
         parent: dict[str, Any],
         segment: dict[str, Any],
         package_path: Path,
@@ -809,7 +821,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         segment_id = str(segment["segment_id"])
         frame_count = int(segment["frame_count"])
         seed = int(segment["seed"])
-        base_request = self._render_request(task)  # type: ignore[arg-type]
+        base_request = self._render_request(task)
         render = replace(
             base_request.render,
             width=int(parent.get("width", base_request.render.width)),
@@ -893,7 +905,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
     def _fail_segmented(
         self,
         active: _ActiveSegmentedExecution,
-        task: object,
+        task: ProductionTask,
         segment_number: int,
         message: str,
     ) -> ProductionExecutionResult:

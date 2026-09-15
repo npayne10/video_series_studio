@@ -190,7 +190,10 @@ def build_application_context(
     services.register(AutomationProposalService, AutomationProposalService(projects))
     shot_asset_provider = _shot_asset_provider(configuration, selected.mode)
     if shot_asset_provider is not None:
-        services.register(ShotAssetSemanticInferenceProvider, shot_asset_provider)
+        services.register(
+            ShotAssetSemanticInferenceProvider,  # type: ignore[type-abstract]
+            shot_asset_provider,
+        )
     stories = services.register(StoryService, StoryService(projects))
     register_story_approval(services)
     register_story_analysis(services)

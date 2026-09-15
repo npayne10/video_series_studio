@@ -1,5 +1,7 @@
 """Reusable VSCS presentation widgets."""
 
+from typing import Any, cast
+
 from . import universal_production_description_compiler_workspace as _universal_workspace
 from .governed_reference_suitability_workspace import GovernedReferenceSuitabilityWorkspace
 from .production_package_review_workspace import (
@@ -19,7 +21,8 @@ install_scheduling_review_reset()
 # Production Planning extensions above patch the original Universal workspace. The
 # suitability-aware subclass inherits those installed behaviours and then becomes the
 # public workspace type consumed by story_integration and later installers.
-_universal_workspace.UniversalProductionDescriptionCompilerWorkspace = (
+workspace_module = cast(Any, _universal_workspace)
+workspace_module.UniversalProductionDescriptionCompilerWorkspace = (
     GovernedReferenceSuitabilityWorkspace
 )
 

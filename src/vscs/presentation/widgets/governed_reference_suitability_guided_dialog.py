@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtWidgets import QComboBox, QFormLayout, QWidget
 
@@ -114,18 +114,21 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
 
     def _build_ui(self) -> None:
         super()._build_ui()
-        self.framing_type = self._replace_with_choice_combo(
+        framing_combo = self._replace_with_choice_combo(
             self.framing_type,
             FRAMING_TYPE_CHOICES,
             "Choose how the reviewed subject/environment is framed in this reference.",
         )
-        self.coverage = self._replace_with_choice_combo(
+        coverage_combo = self._replace_with_choice_combo(
             self.coverage,
             COVERAGE_CHOICES,
             "Choose what governed visual requirement this reference actually covers.",
         )
-        self.framing_type.currentIndexChanged.connect(self._editor_changed)
-        self.coverage.currentIndexChanged.connect(self._editor_changed)
+        guided_self = cast(Any, self)
+        guided_self.framing_type = framing_combo
+        guided_self.coverage = coverage_combo
+        framing_combo.currentIndexChanged.connect(self._editor_changed)
+        coverage_combo.currentIndexChanged.connect(self._editor_changed)
 
     def _editor_changed(self, *_args: object) -> None:
         """Persist editor values while normalizing Qt round-tripped StrEnum data."""
@@ -195,10 +198,12 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         tooltip: str,
     ) -> _GuidedChoiceComboBox:
         parent = old_widget.parentWidget()
-        if parent is None or not isinstance(parent.layout(), QFormLayout):
+        if parent is None:
             raise RuntimeError("Suitability choice field is not hosted by the expected form layout")
         form = parent.layout()
-        row, role = form.getWidgetPosition(old_widget)
+        if not isinstance(form, QFormLayout):
+            raise RuntimeError("Suitability choice field is not hosted by the expected form layout")
+        row, role = cast(tuple[int, Any], form.getWidgetPosition(old_widget))
         if row < 0:
             raise RuntimeError("Suitability choice field could not be located in the form layout")
         combo = _GuidedChoiceComboBox(choices, parent)

@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.application.universal_production_description_compiler import (
@@ -146,7 +147,13 @@ def install_universal_approval_provenance() -> None:
     if getattr(service_type, "_approval_provenance_installed", False):
         return
 
-    original_return_to_draft = service_type.return_to_draft
+    original_return_to_draft = cast(
+        Callable[
+            [UniversalProductionDescriptionCompilerService, str],
+            UniversalProductionDescriptionDraft,
+        ],
+        service_type.return_to_draft,
+    )
 
     def approval_provenance(
         self: UniversalProductionDescriptionCompilerService,

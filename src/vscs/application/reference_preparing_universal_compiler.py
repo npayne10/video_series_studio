@@ -17,6 +17,7 @@ from vscs.application.projects import ProjectService
 from vscs.application.universal_production_description_compiler import (
     UniversalProductionDescriptionCompilerError,
     UniversalProductionDescriptionCompilerService,
+    UniversalProductionDescriptionDraft,
     UniversalProductionDescriptionStatus,
 )
 
@@ -40,7 +41,7 @@ class GovernedReferenceAwareUniversalProductionDescriptionCompilerService(
             store if isinstance(store, PersistedGovernedReferencePlanSource) else None,
         )
 
-    def create_from_current_package(self, shot_id: str):
+    def create_from_current_package(self, shot_id: str) -> UniversalProductionDescriptionDraft:
         normalized = shot_id.strip().upper()
         if self.draft(normalized) is not None:
             return super().create_from_current_package(normalized)
@@ -48,7 +49,7 @@ class GovernedReferenceAwareUniversalProductionDescriptionCompilerService(
         self._prepare_references(package)
         return super().create_from_current_package(normalized)
 
-    def rebase_to_current_package(self, shot_id: str):
+    def rebase_to_current_package(self, shot_id: str) -> UniversalProductionDescriptionDraft:
         current = self._require_draft(shot_id)
         if current.status is UniversalProductionDescriptionStatus.READY:
             return super().rebase_to_current_package(shot_id)
@@ -56,7 +57,7 @@ class GovernedReferenceAwareUniversalProductionDescriptionCompilerService(
         self._prepare_references(package)
         return super().rebase_to_current_package(current.shot_id)
 
-    def mark_ready(self, shot_id: str):
+    def mark_ready(self, shot_id: str) -> UniversalProductionDescriptionDraft:
         current = self._require_draft(shot_id)
         if not self.is_current(current):
             return super().mark_ready(shot_id)
@@ -64,7 +65,7 @@ class GovernedReferenceAwareUniversalProductionDescriptionCompilerService(
         self._prepare_references(package)
         return super().mark_ready(current.shot_id)
 
-    def compile(self, shot_id: str):
+    def compile(self, shot_id: str) -> ProductionPackage:
         draft = self._require_draft(shot_id)
         if draft.status is not UniversalProductionDescriptionStatus.READY:
             return super().compile(shot_id)

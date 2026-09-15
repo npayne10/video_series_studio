@@ -157,7 +157,11 @@ class LTX23V721DeploymentAssurance:
         for node_id, (image, strength, latent) in expected.items():
             node = workflow.get(node_id)
             inputs = node.get("inputs") if isinstance(node, dict) else None
-            if not isinstance(inputs, dict) or node.get("class_type") != "LTXAddVideoICLoRAGuide":
+            if (
+                not isinstance(node, dict)
+                or not isinstance(inputs, dict)
+                or node.get("class_type") != "LTXAddVideoICLoRAGuide"
+            ):
                 issues.append(f"v7.2.1 governed multi-reference guide node {node_id} is missing")
                 continue
             if inputs.get("image") != image or inputs.get("strength") != strength:
@@ -183,7 +187,11 @@ class LTX23V721DeploymentAssurance:
     ) -> None:
         node = workflow.get("112")
         inputs = node.get("inputs") if isinstance(node, dict) else None
-        if not isinstance(inputs, dict) or node.get("class_type") != "VSCSContinuityPromptV721":
+        if (
+            not isinstance(node, dict)
+            or not isinstance(inputs, dict)
+            or node.get("class_type") != "VSCSContinuityPromptV721"
+        ):
             issues.append("v7.2.1 continuity prompt authority node 112 is missing")
             return
         if inputs.get("shot_prompt") != ["107", 5] or inputs.get("reference_plan_json") != [
@@ -203,7 +211,11 @@ class LTX23V721DeploymentAssurance:
     ) -> None:
         node = workflow.get("111")
         inputs = node.get("inputs") if isinstance(node, dict) else None
-        if not isinstance(inputs, dict) or node.get("class_type") != "VSCSProviderGeometryV721":
+        if (
+            not isinstance(node, dict)
+            or not isinstance(inputs, dict)
+            or node.get("class_type") != "VSCSProviderGeometryV721"
+        ):
             issues.append("v7.2.1 provider geometry adapter node 111 is missing")
             return
         if (
@@ -228,7 +240,11 @@ class LTX23V721DeploymentAssurance:
     ) -> None:
         node = workflow.get("113")
         inputs = node.get("inputs") if isinstance(node, dict) else None
-        if not isinstance(inputs, dict) or node.get("class_type") != "VSCSProviderFrameCountV721":
+        if (
+            not isinstance(node, dict)
+            or not isinstance(inputs, dict)
+            or node.get("class_type") != "VSCSProviderFrameCountV721"
+        ):
             issues.append("v7.2.1 provider frame-count adapter node 113 is missing")
             return
         if (
@@ -258,7 +274,8 @@ class LTX23V721DeploymentAssurance:
         node = workflow.get("114")
         inputs = node.get("inputs") if isinstance(node, dict) else None
         if (
-            not isinstance(inputs, dict)
+            not isinstance(node, dict)
+            or not isinstance(inputs, dict)
             or node.get("class_type") != "VSCSGovernedOutputNormalizerV721"
         ):
             issues.append("v7.2.1 governed output normalizer node 114 is missing")
@@ -305,7 +322,9 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
                 "recompile it before starting production"
             )
 
-    def _comfyui_payload(self, compiled: CompiledProductionPackage) -> dict[str, Any]:
+    def _comfyui_payload(  # type: ignore[override]
+        self, compiled: CompiledProductionPackage
+    ) -> dict[str, Any]:
         content = super()._comfyui_payload(compiled)
         content["schema_version"] = LTX23_V721_PACKAGE_SCHEMA
         content["status"] = "READY"
@@ -495,6 +514,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase20182ProductionExecutionBacke
             production_package_title=LTX23_V721_PACKAGE_LOADER_TITLE,
         )
 
-    def _render_request(self, task: ProductionTask) -> RenderRequest:
-        request = super()._render_request(task)
+    @staticmethod
+    def _render_request(task: ProductionTask) -> RenderRequest:
+        request = _Phase20182ProductionExecutionBackend._render_request(task)
         return replace(request, workflow_id=LTX23_V721_WORKFLOW_ID)
