@@ -103,11 +103,7 @@ def _service(tmp_path: Path, package: ProductionPackage):
 
 
 def _write_review(tmp_path: Path, references: list[dict[str, object]]) -> None:
-    path = (
-        tmp_path
-        / "production"
-        / "governed_reference_suitability_EP-001-SCN-001-SHT-002.json"
-    )
+    path = tmp_path / "production" / "governed_reference_suitability_EP-001-SCN-001-SHT-002.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(

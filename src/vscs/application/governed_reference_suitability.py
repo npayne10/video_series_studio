@@ -70,11 +70,7 @@ class GovernedReferenceSuitabilityService:
 
     def suitability_file(self, shot_id: str) -> Path:
         normalized = shot_id.strip().upper()
-        return (
-            self.project_directory
-            / "production"
-            / f"{self.FILE_PREFIX}{normalized}.json"
-        )
+        return self.project_directory / "production" / f"{self.FILE_PREFIX}{normalized}.json"
 
     def ensure_for_package(self, package: ProductionPackage) -> dict[str, Any] | None:
         """Return safe governed reference authority for the current package.
@@ -171,9 +167,7 @@ class GovernedReferenceSuitabilityService:
             provenance={
                 "source": "live-explicit-suitability",
                 "suitability_file": str(path),
-                "suitability_file_checksum": hashlib.sha256(
-                    raw_text.encode("utf-8")
-                ).hexdigest(),
+                "suitability_file_checksum": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
             },
         )
         if not resolution.passed:
@@ -246,15 +240,10 @@ class GovernedReferenceSuitabilityService:
 
         try:
             role = ReferenceRole(self._required_text(value, "role", context))
-            reference_class = ReferenceClass(
-                self._required_text(value, "reference_class", context)
-            )
-            subject_type = ReferenceSubjectType(
-                self._required_text(value, "subject_type", context)
-            )
+            reference_class = ReferenceClass(self._required_text(value, "reference_class", context))
+            subject_type = ReferenceSubjectType(self._required_text(value, "subject_type", context))
             priority = ReferencePriority(
-                self._optional_text(value.get("priority"))
-                or ReferencePriority.REQUIRED.value
+                self._optional_text(value.get("priority")) or ReferencePriority.REQUIRED.value
             )
         except ValueError as exc:
             raise GovernedReferenceSuitabilityError(
@@ -284,9 +273,7 @@ class GovernedReferenceSuitabilityService:
         provider_ready = self._required_bool(value, "provider_ready", context)
         provider_profiles_raw = value.get("provider_profiles")
         if not isinstance(provider_profiles_raw, list | tuple):
-            raise GovernedReferenceSuitabilityError(
-                f"{context}.provider_profiles must be a list"
-            )
+            raise GovernedReferenceSuitabilityError(f"{context}.provider_profiles must be a list")
         provider_profiles = tuple(
             text
             for item in provider_profiles_raw
@@ -295,9 +282,7 @@ class GovernedReferenceSuitabilityService:
 
         coverage_raw = value.get("coverage")
         if not isinstance(coverage_raw, dict):
-            raise GovernedReferenceSuitabilityError(
-                f"{context}.coverage must be a JSON object"
-            )
+            raise GovernedReferenceSuitabilityError(f"{context}.coverage must be a JSON object")
         coverage = ReferenceCoverage(
             framing_type=self._required_text(coverage_raw, "framing_type", f"{context}.coverage"),
             coverage=self._required_text(coverage_raw, "coverage", f"{context}.coverage"),
