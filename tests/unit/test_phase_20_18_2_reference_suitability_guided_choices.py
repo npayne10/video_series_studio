@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QComboBox
 
+from vscs.application.acpp.reference_roles import ReferenceRole
 from vscs.presentation.widgets.governed_reference_suitability_guided_dialog import (
     COVERAGE_CHOICES,
     FRAMING_TYPE_CHOICES,
+    GovernedReferenceSuitabilityGuidedDialog,
     _GuidedChoiceComboBox,
 )
 
@@ -56,3 +58,20 @@ def test_guided_choice_combo_persists_stable_values_and_preserves_legacy(
     combo.setText("legacy_custom_framing")
     assert combo.text() == "legacy_custom_framing"
     assert combo.currentText() == "Legacy value: legacy_custom_framing"
+
+
+def test_suitability_enum_combo_data_is_normalized_back_to_str_enum(
+    qapp: QApplication,
+) -> None:
+    _ = qapp
+    combo = QComboBox()
+    combo.addItem("Primary identity", "primary_identity")
+
+    resolved = GovernedReferenceSuitabilityGuidedDialog._combo_enum_value(
+        combo,
+        ReferenceRole,
+        ReferenceRole.BACKGROUND_IDENTITY,
+    )
+
+    assert resolved is ReferenceRole.PRIMARY_IDENTITY
+    assert resolved.value == "primary_identity"
