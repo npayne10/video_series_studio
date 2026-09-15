@@ -8,8 +8,8 @@ from vscs.application.action_performance import ActionPerformanceCompilerService
 from vscs.application.asset_compiler import AssetCompilerService
 from vscs.application.camera_compiler import CameraCompilerService
 from vscs.application.continuity_compiler import ContinuityCompilerService
-from vscs.application.governed_reference_suitability_authoring import (
-    GovernedReferenceSuitabilityAuthoringService,
+from vscs.application.governed_reference_suitability_review import (
+    GovernedReferenceSuitabilityReviewService,
 )
 from vscs.application.lighting_compiler import LightingCompilerService
 from vscs.application.production_package import ProductionPackageService
@@ -43,7 +43,7 @@ class GovernedReferenceSuitabilityWorkspace(UniversalProductionDescriptionCompil
         universal_compiler: UniversalProductionDescriptionCompilerService,
         parent: QWidget | None = None,
     ) -> None:
-        self.reference_suitability_authoring = GovernedReferenceSuitabilityAuthoringService(projects)
+        self.reference_suitability_authoring = GovernedReferenceSuitabilityReviewService(projects)
         super().__init__(
             projects,
             packages,
