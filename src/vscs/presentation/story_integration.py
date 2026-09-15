@@ -26,6 +26,9 @@ from vscs.application.camera_compiler import CameraCompilerService
 from vscs.application.continuity_compiler import ContinuityCompilerService
 from vscs.application.lighting_compiler import LightingCompilerService
 from vscs.application.production_package import ProductionPackageService
+from vscs.application.reference_preparing_universal_compiler import (
+    GovernedReferenceAwareUniversalProductionDescriptionCompilerService,
+)
 from vscs.application.shots import ShotPlanningService
 from vscs.application.story import (
     EpisodePlanningService,
@@ -268,7 +271,7 @@ def install_story_browser() -> None:
             (StyleCompilerService, StyleCompilerService),
             (
                 UniversalProductionDescriptionCompilerService,
-                UniversalProductionDescriptionCompilerService,
+                GovernedReferenceAwareUniversalProductionDescriptionCompilerService,
             ),
         ):
             service = window.services.get(compiler_service_type)
