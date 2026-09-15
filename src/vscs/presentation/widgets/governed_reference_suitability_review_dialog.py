@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -21,7 +22,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
-    QDoubleSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -308,7 +308,9 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
             if isinstance(target, dict):
                 self.target_width.setValue(self._positive_int(target.get("width"), 1280))
                 self.target_height.setValue(self._positive_int(target.get("height"), 720))
-                self.target_profile.setText(str(target.get("profile_id") or "production-video-16x9"))
+                self.target_profile.setText(
+                    str(target.get("profile_id") or "production-video-16x9")
+                )
                 self.target_provider.setText(str(target.get("provider_id") or "ltx23-local"))
                 tolerance = target.get("aspect_tolerance")
                 if isinstance(tolerance, int | float) and not isinstance(tolerance, bool):
@@ -422,7 +424,9 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
             ),
             width=actual_width or self._positive_int(value.get("width"), 0),
             height=actual_height or self._positive_int(value.get("height"), 0),
-            checksum=self._file_checksum_display(source_path, str(value.get("file_checksum") or "")),
+            checksum=self._file_checksum_display(
+                source_path, str(value.get("file_checksum") or "")
+            ),
             provider_ready=value.get("provider_ready") is True,
             provider_profiles=self._join_values(value.get("provider_profiles")),
             framing_type=str(coverage.get("framing_type") or "unknown"),
@@ -450,7 +454,9 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
             self.table.setItem(row, 1, QTableWidgetItem(state.asset_id or "—"))
             self.table.setItem(row, 2, QTableWidgetItem(state.semantic_role or "—"))
             self.table.setItem(row, 3, QTableWidgetItem(state.category or "—"))
-            self.table.setItem(row, 4, QTableWidgetItem(Path(state.source_path).name or state.source_path))
+            self.table.setItem(
+                row, 4, QTableWidgetItem(Path(state.source_path).name or state.source_path)
+            )
             self.table.setItem(row, 5, QTableWidgetItem(self._dimensions_text(state)))
             self.table.setItem(row, 6, QTableWidgetItem("Yes" if state.provider_ready else "No"))
             self.table.setItem(row, 7, QTableWidgetItem(state.role.value))
@@ -760,7 +766,11 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
 
     @staticmethod
     def _positive_int(value: object, fallback: int) -> int:
-        return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else fallback
+        return (
+            value
+            if isinstance(value, int) and not isinstance(value, bool) and value > 0
+            else fallback
+        )
 
     @staticmethod
     def _path_key(value: str) -> str:

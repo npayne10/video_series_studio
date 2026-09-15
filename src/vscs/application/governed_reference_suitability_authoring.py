@@ -334,7 +334,9 @@ class GovernedReferenceSuitabilityAuthoringService:
         asset = self._normalized_asset_id(asset_id)
         if asset:
             return f"LIVE-{role.value.upper()}-{asset}"
-        digest = hashlib.sha256(str(self._resolve_path(source_path)).encode("utf-8")).hexdigest()[:12]
+        digest = hashlib.sha256(str(self._resolve_path(source_path)).encode("utf-8")).hexdigest()[
+            :12
+        ]
         return f"LIVE-{role.value.upper()}-{digest.upper()}"
 
     def _asset_views(self, package: ProductionPackage) -> dict[str, dict[str, Any]]:
@@ -419,7 +421,11 @@ class GovernedReferenceSuitabilityAuthoringService:
             {
                 normalized
                 for value in values
-                if (normalized := GovernedReferenceSuitabilityAuthoringService._normalized_asset_id(value))
+                if (
+                    normalized := GovernedReferenceSuitabilityAuthoringService._normalized_asset_id(
+                        value
+                    )
+                )
                 and normalized not in governed_asset_ids
             }
         )

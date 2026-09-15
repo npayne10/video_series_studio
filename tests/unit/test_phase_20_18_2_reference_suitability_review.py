@@ -106,9 +106,7 @@ def _review(
             ReferenceClass.CANONICAL_MASTER if asset_id else ReferenceClass.SHOT_COMPOSITE
         ),
         subject_type=(
-            ReferenceSubjectType.CHARACTER
-            if asset_id
-            else ReferenceSubjectType.MULTI_SUBJECT_SCENE
+            ReferenceSubjectType.CHARACTER if asset_id else ReferenceSubjectType.MULTI_SUBJECT_SCENE
         ),
         priority=ReferencePriority.REQUIRED,
         source_path=str(source),
@@ -141,9 +139,7 @@ def test_approval_requires_every_governed_visual_asset_to_be_covered(tmp_path: P
         service.approve_and_resolve(
             package,
             target=SuitabilityReviewTarget(),
-            references=(
-                _review(source, contains_subjects=("CAP-CHR-003",)),
-            ),
+            references=(_review(source, contains_subjects=("CAP-CHR-003",)),),
         )
 
 

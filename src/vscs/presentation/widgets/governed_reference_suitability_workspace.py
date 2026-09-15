@@ -75,7 +75,9 @@ class GovernedReferenceSuitabilityWorkspace(UniversalProductionDescriptionCompil
             "persist the governed ReferencePlan. This does not execute a provider."
         )
         insertion = actions.indexOf(self.universal_refresh_button)
-        actions.insertWidget(insertion + 1 if insertion >= 0 else 0, self.reference_suitability_button)
+        actions.insertWidget(
+            insertion + 1 if insertion >= 0 else 0, self.reference_suitability_button
+        )
         self.reference_suitability_button.clicked.connect(self._open_reference_suitability)
 
     def _load_universal_draft(self) -> None:

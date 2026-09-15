@@ -144,9 +144,7 @@ def test_candidates_derive_semantic_identity_roles_without_promoting_files(tmp_p
         candidate.suggested_reference_class is ReferenceClass.CANONICAL_MASTER
         for candidate in candidates
     )
-    assert by_asset["CAP-CHR-003"].file_checksum == hashlib.sha256(
-        b"assets/sandra.png"
-    ).hexdigest()
+    assert by_asset["CAP-CHR-003"].file_checksum == hashlib.sha256(b"assets/sandra.png").hexdigest()
 
 
 def test_save_review_writes_explicit_schema_and_recomputes_checksum(tmp_path: Path) -> None:
@@ -173,9 +171,10 @@ def test_save_review_writes_explicit_schema_and_recomputes_checksum(tmp_path: Pa
     assert payload["shot_id"] == package.shot_id
     assert payload["target"]["profile_id"] == "production-video-16x9"
     assert payload["references"][0]["provider_ready"] is True
-    assert payload["references"][0]["file_checksum"] == hashlib.sha256(
-        b"reviewed-composition"
-    ).hexdigest()
+    assert (
+        payload["references"][0]["file_checksum"]
+        == hashlib.sha256(b"reviewed-composition").hexdigest()
+    )
     assert payload["references"][0]["contains_subjects"] == [
         "CAP-CHR-003",
         "CAP-CHR-001",
@@ -231,7 +230,9 @@ def test_approve_and_resolve_uses_existing_resolver_and_persists_plan(tmp_path: 
     assert records[0]["shot_id"] == package.shot_id
 
 
-def test_direct_character_review_can_be_authored_without_story_specific_code(tmp_path: Path) -> None:
+def test_direct_character_review_can_be_authored_without_story_specific_code(
+    tmp_path: Path,
+) -> None:
     package = _package()
     source = tmp_path / "sandra.png"
     source.write_bytes(b"sandra")
