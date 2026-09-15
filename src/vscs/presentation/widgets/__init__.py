@@ -14,6 +14,16 @@ install_production_planning_performance()
 install_production_planning_profiler()
 install_scheduling_review_reset()
 
+# Production Planning extensions are installed against the original Universal workspace
+# above.  The suitability-aware subclass inherits those installed behaviours and then
+# becomes the public workspace type consumed by story_integration and later installers.
+from . import universal_production_description_compiler_workspace as _universal_workspace
+from .governed_reference_suitability_workspace import GovernedReferenceSuitabilityWorkspace
+
+_universal_workspace.UniversalProductionDescriptionCompilerWorkspace = (
+    GovernedReferenceSuitabilityWorkspace
+)
+
 __all__ = [
     "StoryAnalysisWorkspaceDialog",
     "StoryGraphView",
