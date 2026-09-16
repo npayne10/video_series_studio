@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
-from vscs.application.acpp.reference_roles import ReferenceRole
+from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 from vscs.application.governed_reference_suitability_authoring import (
+    GovernedReferenceCandidate,
     GovernedReferenceSuitabilityAuthoringError,
     GovernedReferenceSuitabilityAuthoringService,
     SuitabilityReferenceReview,
@@ -14,8 +16,61 @@ from vscs.application.governed_reference_suitability_authoring import (
 from vscs.application.production_package import ProductionPackage
 
 
+def suggested_reference_priority(
+    category: str,
+    semantic_role: str,
+) -> ReferencePriority:
+    """Suggest execution priority from governed Shot semantics.
+
+    Identity-bearing characters and the primary location/set remain required.
+    Contextual environment/planet/vehicle/ship references are preferred unless
+    their governed semantic role explicitly marks them as shot-critical.
+
+    This is a suggestion only. Existing explicit review authority is never
+    rewritten silently; the operator must apply and approve any change.
+    """
+    normalized_category = category.strip().lower()
+    normalized_role = semantic_role.strip().lower()
+
+    if normalized_category in {"character", "location", "set"}:
+        return ReferencePriority.REQUIRED
+
+    if any(
+        marker in normalized_role
+        for marker in (
+            "required",
+            "critical",
+            "hero",
+            "foreground",
+            "interaction",
+            "interacting",
+            "held",
+            "used",
+        )
+    ):
+        return ReferencePriority.REQUIRED
+
+    return ReferencePriority.PREFERRED
+
+
 class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuthoringService):
     """Require complete governed visual coverage before approving a ReferencePlan."""
+
+    def candidates_for_package(
+        self,
+        package: ProductionPackage,
+    ) -> tuple[GovernedReferenceCandidate, ...]:
+        """Return candidates with production-semantic priority suggestions."""
+        return tuple(
+            replace(
+                candidate,
+                suggested_priority=suggested_reference_priority(
+                    candidate.category,
+                    candidate.semantic_role,
+                ),
+            )
+            for candidate in super().candidates_for_package(package)
+        )
 
     def approve_and_resolve(
         self,

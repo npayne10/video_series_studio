@@ -18,6 +18,7 @@ _LEGACY_HELPER_ROLES = frozenset({"scene_composition_anchor", "provider_helper_r
 _CONTINUITY_ROLES = frozenset(
     {"start_frame_reference", "continuity_reference", "previous_shot_final_frame"}
 )
+_LTX_INGREDIENTS_VISUAL_REFERENCE_LIMIT = 3
 _ROLE_ORDER = {
     "primary_identity": 0,
     "secondary_identity": 1,
@@ -79,13 +80,30 @@ class GovernedProviderReferenceHelperBuilder:
             raise LocalProductionPackageCompilationError(
                 "LTX provider reference contract requires at least one governed reference"
             )
-        if len(visual_required) > 3:
+        if len(visual_required) > _LTX_INGREDIENTS_VISUAL_REFERENCE_LIMIT:
+            reference_ids = ", ".join(
+                str(item.get("reference_id") or item.get("asset_id") or "<unknown>")
+                for item in sorted(visual_required, key=self._reference_sort_key)
+            )
             raise LocalProductionPackageCompilationError(
                 "LTX Ingredients production workflow supports at most three required governed "
-                "references per shot"
+                "references per shot; "
+                f"received {len(visual_required)} required references: {reference_ids}"
             )
 
-        ordered = sorted(visual_required, key=self._reference_sort_key)
+        visual_preferred = [
+            item
+            for item in bindings
+            if item.get("required") is not True
+            and str(item.get("vscs_priority") or "").strip().lower() == "preferred"
+            and item.get("provider_ready") is True
+            and str(item.get("role") or "") not in _CONTINUITY_ROLES
+        ]
+        ordered_required = sorted(visual_required, key=self._reference_sort_key)
+        remaining_capacity = _LTX_INGREDIENTS_VISUAL_REFERENCE_LIMIT - len(ordered_required)
+        ordered_preferred = sorted(visual_preferred, key=self._reference_sort_key)
+        ordered = ordered_required + ordered_preferred[:remaining_capacity]
+
         enriched = dict(plan)
         enriched["bindings"] = bindings
 
@@ -105,6 +123,9 @@ class GovernedProviderReferenceHelperBuilder:
             "enabled": True,
             "mode": "ltx_ingredients_iclora",
             "collapsed_scene_anchor": False,
+            "provider_capacity": _LTX_INGREDIENTS_VISUAL_REFERENCE_LIMIT,
+            "required_reference_count": len(ordered_required),
+            "preferred_reference_count": len(ordered_preferred),
             "reference_count": len(ordered),
             "references": [
                 {
@@ -123,7 +144,11 @@ class GovernedProviderReferenceHelperBuilder:
                         if str(item.get("role") or "") == "environment_reference"
                         else "identity"
                     ),
-                    "required": True,
+                    "required": item.get("required") is True,
+                    "vscs_priority": str(
+                        item.get("vscs_priority")
+                        or ("required" if item.get("required") is True else "")
+                    ),
                     "provider_ready": item.get("provider_ready") is True,
                     "file_checksum": item.get("file_checksum"),
                     "reference_fingerprint": item.get("reference_fingerprint"),

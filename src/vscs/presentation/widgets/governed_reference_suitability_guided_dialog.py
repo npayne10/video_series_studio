@@ -5,13 +5,25 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, cast
 
-from PySide6.QtWidgets import QComboBox, QFormLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from vscs.application.acpp.reference_roles import (
     ReferenceClass,
     ReferencePriority,
     ReferenceRole,
     ReferenceSubjectType,
+)
+from vscs.application.governed_reference_suitability_review import (
+    suggested_reference_priority,
 )
 
 from .governed_reference_suitability_review_dialog import (
@@ -76,6 +88,18 @@ COVERAGE_CHOICES: tuple[tuple[str, str, str], ...] = (
     ("End frame", "end_frame", "Covers the exact governed ending frame state."),
 )
 
+_LTX_PROVIDER_IDS = frozenset({"ltx23-local", "ltx23", "ltx-2.3"})
+_LTX_VISUAL_REFERENCE_LIMIT = 3
+_NON_DIRECT_VISUAL_ROLE_VALUES = frozenset(
+    {
+        "scene_composition_anchor",
+        "provider_helper_reference",
+        "start_frame_reference",
+        "continuity_reference",
+        "previous_shot_final_frame",
+    }
+)
+
 
 class _GuidedChoiceComboBox(QComboBox):
     """Fixed-choice combo compatible with the legacy line-edit API used by the base dialog."""
@@ -110,7 +134,7 @@ class _GuidedChoiceComboBox(QComboBox):
 
 
 class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityReviewDialog):
-    """Replace free-text suitability classification fields with guided dropdown choices."""
+    """Add guided classification and provider-capacity review to suitability authoring."""
 
     def _build_ui(self) -> None:
         super()._build_ui()
@@ -129,6 +153,45 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         guided_self.coverage = coverage_combo
         framing_combo.currentIndexChanged.connect(self._editor_changed)
         coverage_combo.currentIndexChanged.connect(self._editor_changed)
+
+        self.table.setColumnCount(9)
+        self.table.setHorizontalHeaderItem(8, QTableWidgetItem("Priority"))
+
+        list_panel = self.table.parentWidget()
+        list_layout = list_panel.layout() if list_panel is not None else None
+        if not isinstance(list_layout, QVBoxLayout):
+            raise RuntimeError("Suitability reference list layout is unavailable")
+
+        self.capacity_status = QLabel(list_panel)
+        self.capacity_status.setWordWrap(True)
+        self.capacity_status.setObjectName("reference_capacity_status")
+        self.apply_suggested_priorities_button = QPushButton(
+            "Apply Suggested Priorities",
+            list_panel,
+        )
+        self.apply_suggested_priorities_button.setObjectName(
+            "apply_suggested_reference_priorities_button"
+        )
+        self.apply_suggested_priorities_button.setToolTip(
+            "Apply production-semantic REQUIRED/PREFERRED suggestions to included canonical "
+            "candidates. Existing explicit authority is changed only when you click this button "
+            "and later save/approve the review."
+        )
+
+        capacity_row = QHBoxLayout()
+        capacity_row.addWidget(self.capacity_status, 1)
+        capacity_row.addWidget(self.apply_suggested_priorities_button)
+        table_index = list_layout.indexOf(self.table)
+        list_layout.insertLayout(table_index + 1, capacity_row)
+
+        self.apply_suggested_priorities_button.clicked.connect(
+            self._apply_suggested_priorities
+        )
+        self.target_provider.textChanged.connect(self._update_action_state)
+
+    def _populate_table(self) -> None:
+        super()._populate_table()
+        self._refresh_priority_column()
 
     def _editor_changed(self, *_args: object) -> None:
         """Persist editor values while normalizing Qt round-tripped StrEnum data."""
@@ -181,6 +244,113 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         state.contains_environments = self.contains_environments.text().strip()
         state.review_note = self.review_note.toPlainText().strip()
         self._refresh_table_row(self._current_row)
+        self._update_action_state()
+
+    def _refresh_table_row(self, row: int) -> None:
+        super()._refresh_table_row(row)
+        self._refresh_priority_cell(row)
+
+    def _refresh_priority_column(self) -> None:
+        for row in range(len(self._states)):
+            self._refresh_priority_cell(row)
+
+    def _refresh_priority_cell(self, row: int) -> None:
+        if not (0 <= row < len(self._states)):
+            return
+        item = self.table.item(row, 8)
+        if item is None:
+            item = QTableWidgetItem()
+            self.table.setItem(row, 8, item)
+        item.setText(self._states[row].priority.value)
+
+    def _apply_suggested_priorities(self) -> None:
+        changed = 0
+        for state in self._states:
+            if not state.included or state.custom:
+                continue
+            suggested = suggested_reference_priority(state.category, state.semantic_role)
+            if state.priority is not suggested:
+                state.priority = suggested
+                changed += 1
+
+        self._refresh_priority_column()
+        if 0 <= self._current_row < len(self._states):
+            self._loading_editor = True
+            try:
+                self._select_enum(
+                    self.priority_combo,
+                    self._states[self._current_row].priority,
+                )
+            finally:
+                self._loading_editor = False
+
+        self._update_action_state()
+        if changed:
+            self.capacity_status.setToolTip(
+                f"Applied {changed} semantic priority suggestion(s). "
+                "Review the result before saving or approving."
+            )
+
+    def _update_action_state(self, *_args: object) -> None:
+        super()._update_action_state()
+        if not hasattr(self, "capacity_status"):
+            return
+
+        self._refresh_priority_column()
+        included_candidates = [
+            state for state in self._states if state.included and not state.custom
+        ]
+        self.apply_suggested_priorities_button.setEnabled(bool(included_candidates))
+
+        provider_id = self.target_provider.text().strip().lower()
+        if provider_id not in _LTX_PROVIDER_IDS:
+            self.capacity_status.setText(
+                "Provider capacity: no LTX direct-reference limit is enforced by this review."
+            )
+            return
+
+        direct_visual = [
+            state
+            for state in self._states
+            if state.included and state.role.value not in _NON_DIRECT_VISUAL_ROLE_VALUES
+        ]
+        required = [
+            state for state in direct_visual if state.priority is ReferencePriority.REQUIRED
+        ]
+        preferred_ready = [
+            state
+            for state in direct_visual
+            if state.priority is ReferencePriority.PREFERRED and state.provider_ready
+        ]
+        planned_direct = min(
+            _LTX_VISUAL_REFERENCE_LIMIT,
+            len(required) + len(preferred_ready),
+        )
+
+        if not required:
+            self.capacity_status.setText(
+                "LTX direct visual capacity: required 0/3 — BLOCKED. "
+                "At least one required governed visual reference is required."
+            )
+            self.approve_button.setEnabled(False)
+            return
+
+        if len(required) > _LTX_VISUAL_REFERENCE_LIMIT:
+            self.capacity_status.setText(
+                "LTX direct visual capacity: "
+                f"required {len(required)}/{_LTX_VISUAL_REFERENCE_LIMIT}; "
+                f"preferred {len(preferred_ready)} — OVER CAPACITY. "
+                "Required references are never silently dropped."
+            )
+            self.approve_button.setEnabled(False)
+            return
+
+        self.capacity_status.setText(
+            "LTX direct visual capacity: "
+            f"required {len(required)}/{_LTX_VISUAL_REFERENCE_LIMIT}; "
+            f"preferred {len(preferred_ready)}; "
+            f"planned direct slots {planned_direct}/{_LTX_VISUAL_REFERENCE_LIMIT} — PASS."
+        )
 
     @staticmethod
     def _combo_enum_value(combo: QComboBox, enum_type: type[Any], default: Any) -> Any:
