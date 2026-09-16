@@ -184,9 +184,7 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         table_index = list_layout.indexOf(self.table)
         list_layout.insertLayout(table_index + 1, capacity_row)
 
-        self.apply_suggested_priorities_button.clicked.connect(
-            self._apply_suggested_priorities
-        )
+        self.apply_suggested_priorities_button.clicked.connect(self._apply_suggested_priorities)
         self.target_provider.textChanged.connect(self._update_action_state)
 
     def _populate_table(self) -> None:
