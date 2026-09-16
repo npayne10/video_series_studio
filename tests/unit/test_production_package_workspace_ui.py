@@ -4,7 +4,11 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import Qt
 
-from vscs.application.action_performance import ActionPerformanceDraft, ActionPerformanceStatus
+from vscs.application.action_performance import (
+    ActionPerformanceDraft,
+    ActionPerformanceStatus,
+    ActionPerformanceStructuralChange,
+)
 from vscs.application.asset_compiler import AssetCompilationDraft, AssetCompilationStatus
 from vscs.application.production_package import (
     ProductionPackage,
@@ -86,11 +90,17 @@ class _Packages:
 
 class _Actions:
     def __init__(
-        self, draft: ActionPerformanceDraft | None = None, *, current: bool = True
+        self,
+        draft: ActionPerformanceDraft | None = None,
+        *,
+        current: bool = True,
+        structural_changes: tuple[ActionPerformanceStructuralChange, ...] = (),
     ) -> None:
         self.value = draft
         self.current = current
+        self.changes = structural_changes
         self.rebased = False
+        self.rebuilt = False
 
     def draft(self, _shot_id: str):
         return self.value
@@ -98,9 +108,17 @@ class _Actions:
     def is_current(self, _draft):
         return self.current
 
+    def structural_changes(self, _draft):
+        return self.changes
+
     def rebase_to_current_package(self, _shot_id: str):
         self.current = True
         self.rebased = True
+        return self.value
+
+    def rebuild_from_current_package(self, _shot_id: str):
+        self.current = True
+        self.rebuilt = True
         return self.value
 
 
@@ -142,7 +160,7 @@ def test_workspace_exposes_action_and_asset_compilers_without_provider_controls(
     assert widget.package_table.item(0, 3).text() == "Not started"
 
 
-def test_stale_action_draft_exposes_refresh_recovery_and_preserves_content(qtbot) -> None:
+def test_provenance_stale_action_draft_allows_rebase_and_preserves_content(qtbot) -> None:
     draft = ActionPerformanceDraft(
         shot_id="SHT-001",
         source_package_id="PP-SHT-001-OLD",
@@ -166,8 +184,9 @@ def test_stale_action_draft_exposes_refresh_recovery_and_preserves_content(qtbot
 
     assert widget.package_table.item(0, 2).text() == "Draft / Stale"
     assert widget.refresh_source_button.isEnabled()
+    assert widget.rebuild_source_button.isEnabled()
     assert widget.temporal_narrative.isReadOnly()
-    assert "preserve this authored content" in widget.action_status.text()
+    assert "provenance changed" in widget.action_status.text()
 
     qtbot.mouseClick(widget.refresh_source_button, Qt.MouseButton.LeftButton)
 
@@ -175,6 +194,45 @@ def test_stale_action_draft_exposes_refresh_recovery_and_preserves_content(qtbot
     assert not widget.temporal_narrative.isReadOnly()
     assert widget.save_button.isEnabled()
     assert widget.temporal_narrative.toPlainText() == draft.temporal_narrative
+
+
+def test_structurally_stale_action_draft_blocks_rebase_and_requires_rebuild(qtbot) -> None:
+    draft = ActionPerformanceDraft(
+        shot_id="SHT-001",
+        source_package_id="PP-SHT-001-OLD",
+        source_fingerprint="old-source",
+        temporal_narrative="Legacy narrative that must not be preserved after a structural change.",
+        spoken_content='"Legacy dialogue."',
+        performance_direction="Restrained sense of wonder.",
+        opening_state="Legacy opening.",
+        closing_state="Legacy closing.",
+        timing_notes="Target runtime: 22 seconds",
+        status=ActionPerformanceStatus.DRAFT,
+    )
+    changes = (
+        ActionPerformanceStructuralChange(
+            field="target_runtime_seconds",
+            label="Target runtime",
+            previous="22",
+            current="6",
+        ),
+    )
+    actions = _Actions(draft, current=False, structural_changes=changes)
+    widget = ProductionPackageWorkspace(
+        _Projects(),  # type: ignore[arg-type]
+        _Packages(),  # type: ignore[arg-type]
+        actions,  # type: ignore[arg-type]
+        _Assets(),  # type: ignore[arg-type]
+    )
+    qtbot.addWidget(widget)
+
+    assert widget.package_table.item(0, 2).text() == "Draft / Stale"
+    assert not widget.refresh_source_button.isEnabled()
+    assert widget.rebuild_source_button.isEnabled()
+    assert widget.temporal_narrative.isReadOnly()
+    assert not widget.save_button.isEnabled()
+    assert "structurally stale" in widget.action_status.text()
+    assert "Target runtime" in widget.action_status.text()
 
 
 def test_asset_compiler_displays_governed_assets_and_stale_recovery(qtbot) -> None:
