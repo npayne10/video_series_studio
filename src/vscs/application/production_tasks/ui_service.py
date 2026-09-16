@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 
 from .graph import ProductionTaskGraphIntegrationService, ProductionTaskGraphRefreshResult
 from .lifecycle import ProductionTaskLifecycleService
-from .models import ProductionTask, ProductionTaskState
+from .models import ProductionTask, ProductionTaskPriority, ProductionTaskState
 from .production_queue import ProductionQueue, ProductionQueueCompilerService
 from .production_readiness import (
     ProductionReadinessAssessment,
@@ -84,6 +85,49 @@ class ProductionSchedulingUiService:
         return self._task_repository().list_for_production(
             self._require_production_id(production_id)
         )
+
+    def update_task_priority(
+        self,
+        task_id: str,
+        priority: ProductionTaskPriority,
+    ) -> ProductionTask:
+        """Persist operator-controlled scheduling priority before task execution.
+
+        Priority is operational scheduling metadata, not compiled UPD authority.
+        Existing schedule revisions remain immutable history; operators must create
+        and approve a new revision before compiling a replacement execution queue.
+        """
+        normalized_task_id = task_id.strip()
+        if not normalized_task_id:
+            raise ProductionSchedulingUiError("task_id cannot be blank")
+
+        repository = self._task_repository()
+        task = repository.get(normalized_task_id)
+        if task is None:
+            raise ProductionSchedulingUiError(f"ProductionTask not found: {normalized_task_id}")
+        if task.state not in {
+            ProductionTaskState.PLANNED,
+            ProductionTaskState.READY,
+            ProductionTaskState.BLOCKED,
+            ProductionTaskState.FAILED,
+        }:
+            raise ProductionSchedulingUiError(
+                "Scheduling priority cannot be changed for ProductionTask "
+                f"{task.task_id} in {task.state.value} state"
+            )
+
+        normalized_priority = ProductionTaskPriority(priority)
+        if task.priority is normalized_priority:
+            return task
+
+        updated = repository.save(replace(task, priority=normalized_priority))
+
+        # A queue compiled before a priority change represents superseded scheduling
+        # intent. Keep immutable schedule history, but require an explicit new
+        # schedule/review/queue cycle before execution can continue.
+        self._queues.pop(updated.production_id, None)
+        self._runtime_by_production.pop(updated.production_id, None)
+        return updated
 
     def supersede_task(
         self,
@@ -304,7 +348,6 @@ def _same_compiled_contract(existing: ProductionTask, candidate: ProductionTask)
         and existing.expected_outputs == candidate.expected_outputs
         and existing.dependencies == candidate.dependencies
         and existing.required_inputs == candidate.required_inputs
-        and existing.priority is candidate.priority
         and existing.attempt_policy == candidate.attempt_policy
         and existing.provenance == candidate.provenance
         and existing.metadata == candidate.metadata

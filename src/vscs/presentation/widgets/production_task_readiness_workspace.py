@@ -4,9 +4,20 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from PySide6.QtWidgets import QLabel, QMessageBox, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
-from vscs.application.production_tasks import ProductionTask, ProductionTaskState
+from vscs.application.production_tasks import (
+    ProductionTask,
+    ProductionTaskPriority,
+    ProductionTaskState,
+)
 
 
 def install_production_task_readiness_workspace(workspace_class: type[Any]) -> None:
@@ -45,6 +56,32 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             "authority exists."
         )
 
+        self.production_task_priority_label = QLabel("Scheduling Priority", group)
+        self.production_task_priority_combo = QComboBox(group)
+        self.production_task_priority_combo.setObjectName("production_task_priority_combo")
+        for priority in ProductionTaskPriority:
+            self.production_task_priority_combo.addItem(
+                priority.name.title(),
+                int(priority),
+            )
+        self.production_task_priority_apply_button = QPushButton(
+            "Apply Scheduling Priority",
+            group,
+        )
+        self.production_task_priority_apply_button.setObjectName(
+            "production_task_priority_apply_button"
+        )
+        self.production_task_priority_apply_button.setToolTip(
+            "Persist operator scheduling priority for the selected ProductionTask. "
+            "Existing schedule revisions remain immutable; create and approve a new "
+            "schedule revision after changing priority."
+        )
+        priority_layout = QHBoxLayout()
+        priority_layout.addWidget(self.production_task_priority_label)
+        priority_layout.addWidget(self.production_task_priority_combo)
+        priority_layout.addWidget(self.production_task_priority_apply_button)
+        priority_layout.addStretch(1)
+
         # Anchor readiness/supersession actions in the compiler's existing visible
         # action row rather than injecting another child container around the table.
         # This toolbar already renders Compile Production Tasks reliably in the UI.
@@ -60,14 +97,21 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
 
         table_index = layout.indexOf(self.production_task_table)
         layout.insertWidget(table_index, self.production_task_readiness_status)
+        layout.insertLayout(table_index + 1, priority_layout)
         self.production_task_refresh_readiness_button.clicked.connect(
             self._production_task_refresh_readiness
         )
         self.production_task_supersede_button.clicked.connect(
             self._production_task_supersede_obsolete
         )
+        self.production_task_priority_apply_button.clicked.connect(
+            self._production_task_apply_priority
+        )
         self.production_task_table.itemSelectionChanged.connect(
             self._refresh_production_task_supersession_eligibility
+        )
+        self.production_task_table.itemSelectionChanged.connect(
+            self._refresh_production_task_priority_control
         )
         self._refresh_production_tasks()
 
@@ -123,6 +167,83 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             (task for task in self._persisted_tasks_for_selected_shot() if task.task_id == task_id),
             None,
         )
+
+    def _refresh_production_task_priority_control(self: Any, *_args: Any) -> None:
+        if not hasattr(self, "production_task_priority_combo"):
+            return
+        selected = self._selected_persisted_production_task()
+        if selected is None:
+            self.production_task_priority_combo.setEnabled(False)
+            self.production_task_priority_apply_button.setEnabled(False)
+            self.production_task_priority_combo.setToolTip(
+                "Select a persisted ProductionTask row to inspect scheduling priority."
+            )
+            return
+
+        index = self.production_task_priority_combo.findData(int(selected.priority))
+        if index >= 0:
+            self.production_task_priority_combo.setCurrentIndex(index)
+
+        editable = selected.state in {
+            ProductionTaskState.PLANNED,
+            ProductionTaskState.READY,
+            ProductionTaskState.BLOCKED,
+            ProductionTaskState.FAILED,
+        }
+        self.production_task_priority_combo.setEnabled(editable)
+        self.production_task_priority_apply_button.setEnabled(editable)
+        if editable:
+            self.production_task_priority_combo.setToolTip(
+                "Priority controls deterministic scheduling order. Higher-priority READY "
+                "tasks are considered before older lower-priority tasks."
+            )
+        else:
+            self.production_task_priority_combo.setToolTip(
+                f"Priority cannot be changed while the task is {selected.state.value}."
+            )
+
+    def _production_task_apply_priority(self: Any) -> None:
+        selected = self._selected_persisted_production_task()
+        if selected is None:
+            self.production_task_readiness_status.setText(
+                "Select a persisted ProductionTask row before changing scheduling priority."
+            )
+            return
+
+        raw_priority = self.production_task_priority_combo.currentData()
+        try:
+            priority = ProductionTaskPriority(int(raw_priority))
+        except (TypeError, ValueError):
+            self.production_task_readiness_status.setText(
+                "Select a valid ProductionTask scheduling priority."
+            )
+            return
+
+        previous = selected.priority
+        try:
+            updated = self.production_scheduling.update_task_priority(
+                selected.task_id,
+                priority,
+            )
+        except (ValueError, RuntimeError) as exc:
+            self.production_task_readiness_status.setText(str(exc))
+            QMessageBox.warning(self, "ProductionTask Scheduling Priority", str(exc))
+            return
+
+        self._refresh_persisted_production_tasks(updated.production_id)
+        if previous is updated.priority:
+            message = f"Scheduling priority for {updated.task_id} remains {updated.priority.name}."
+        else:
+            message = (
+                f"Scheduling priority updated for {updated.task_id}: "
+                f"{previous.name} -> {updated.priority.name}. "
+                "Existing schedule revisions remain unchanged. Refresh Task Readiness, "
+                "then create and approve a new schedule revision before compiling a queue."
+            )
+        self.production_task_readiness_status.setText(message)
+        self._refresh_production_task_priority_control()
+        self._refresh_production_task_supersession_eligibility()
+        self._refresh_production_scheduling()
 
     def _current_replacement_production_task(self: Any) -> ProductionTask | None:
         shot_id = self._production_task_shot_id()
@@ -266,6 +387,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             and self.projects.is_project_open
         )
         self.production_task_refresh_readiness_button.setEnabled(enabled)
+        self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
 
     def readiness_compile_tasks(self: Any) -> None:
@@ -290,6 +412,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             f"Readiness refreshed: {len(result.transitions)} transition(s). "
             f"Current authoritative state: {states}."
         )
+        self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
         self._refresh_production_scheduling()
 
@@ -297,6 +420,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     workspace_type._persisted_tasks_for_selected_shot = _persisted_tasks_for_selected_shot
     workspace_type._refresh_persisted_production_tasks = _refresh_persisted_production_tasks
     workspace_type._selected_persisted_production_task = _selected_persisted_production_task
+    workspace_type._refresh_production_task_priority_control = (
+        _refresh_production_task_priority_control
+    )
+    workspace_type._production_task_apply_priority = _production_task_apply_priority
     workspace_type._current_replacement_production_task = _current_replacement_production_task
     workspace_type._production_task_supersession_context = _production_task_supersession_context
     workspace_type._refresh_production_task_supersession_eligibility = (

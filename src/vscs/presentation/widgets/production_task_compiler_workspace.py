@@ -121,7 +121,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
         self.production_task_actions_layout.addStretch(1)
         group_layout.addLayout(self.production_task_actions_layout)
 
-        self.production_task_table = QTableWidget(0, 9, group)
+        self.production_task_table = QTableWidget(0, 10, group)
         self.production_task_table.setObjectName("production_task_table")
         self.production_task_table.setHorizontalHeaderLabels(
             (
@@ -134,6 +134,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
                 "Required Inputs",
                 "Expected Outputs",
                 "Authority Fingerprint",
+                "Priority",
             )
         )
         self.production_task_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -353,6 +354,7 @@ def install_production_task_compiler_workspace(workspace_class: type[Any]) -> No
                 "\n".join(task.required_inputs),
                 "\n".join(task.expected_outputs),
                 task.authority.fingerprint,
+                task.priority.name,
             )
             for column, value in enumerate(values):
                 self.production_task_table.setItem(row, column, QTableWidgetItem(value))
