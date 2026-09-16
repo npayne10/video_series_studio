@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -77,6 +78,8 @@ def test_suggested_draft_preserves_governed_shot_story_without_invention(tmp_pat
     assert draft.opening_state == "James enters from the upper stairs."
     assert draft.closing_state == "James stands beside Cheryl."
     assert draft.performance_direction == ""
+    assert draft.source_authority is not None
+    assert draft.source_authority.target_runtime_seconds == "12"
     assert draft.status is ActionPerformanceStatus.DRAFT
 
 
@@ -168,6 +171,7 @@ def test_stale_draft_can_rebase_without_losing_authored_content(tmp_path: Path) 
     )
 
     assert not service.is_current(authored)
+    assert service.structural_changes(authored) == ()
     rebased = service.rebase_to_current_package("SHT-001")
 
     assert service.is_current(rebased)
@@ -180,6 +184,107 @@ def test_stale_draft_can_rebase_without_losing_authored_content(tmp_path: Path) 
     assert rebased.opening_state == authored.opening_state
     assert rebased.closing_state == authored.closing_state
     assert rebased.timing_notes == authored.timing_notes
+
+
+def test_structural_shot_split_blocks_rebase_and_rebuilds_current_authority(
+    tmp_path: Path,
+) -> None:
+    service, packages = _service(tmp_path)
+    old_shot = {
+        "required_action": (
+            "Establish nine days in the Xorix system. Sandra reports something unusual to James."
+        ),
+        "dialogue_requirement": (
+            'Sandra: "Commander, I have something unusual." James: "How unusual?"'
+        ),
+        "continuity_in": "The Iron Horizon is in orbit before any anomaly is known.",
+        "continuity_out": "James is attending to Sandra's report at her control station.",
+        "target_runtime_seconds": 22,
+    }
+    packages.value = replace(packages.value, shot=old_shot)
+    service.create_from_current_package("SHT-001")
+    authored = service.save(
+        "SHT-001",
+        temporal_narrative=old_shot["required_action"],
+        spoken_content=old_shot["dialogue_requirement"],
+        performance_direction="Keep the opening observational and restrained.",
+        opening_state=old_shot["continuity_in"],
+        closing_state=old_shot["continuity_out"],
+        timing_notes="Target runtime: 22 seconds",
+    )
+
+    current_shot = {
+        "required_action": "Establish the Iron Horizon in orbit around Xorix after nine days.",
+        "dialogue_requirement": "",
+        "continuity_in": "The Iron Horizon remains in stable Xorix orbit.",
+        "continuity_out": "Sandra looks up from her control station before speaking.",
+        "target_runtime_seconds": 6,
+    }
+    packages.value = replace(
+        packages.value,
+        package_id="PP-SHT-001-SPLIT",
+        source_fingerprint="source-split",
+        shot=current_shot,
+    )
+
+    changes = service.structural_changes(authored)
+    assert {change.field for change in changes} == {
+        "required_action",
+        "dialogue_requirement",
+        "continuity_in",
+        "continuity_out",
+        "target_runtime_seconds",
+    }
+    with pytest.raises(ActionPerformanceError, match="Rebase / Preserve is blocked"):
+        service.rebase_to_current_package("SHT-001")
+    with pytest.raises(ActionPerformanceError, match="stale or structurally unverified"):
+        service.save(
+            "SHT-001",
+            temporal_narrative=authored.temporal_narrative,
+            spoken_content=authored.spoken_content,
+            performance_direction=authored.performance_direction,
+            opening_state=authored.opening_state,
+            closing_state=authored.closing_state,
+            timing_notes=authored.timing_notes,
+        )
+
+    rebuilt = service.rebuild_from_current_package("SHT-001")
+
+    assert rebuilt.status is ActionPerformanceStatus.DRAFT
+    assert rebuilt.temporal_narrative == current_shot["required_action"]
+    assert rebuilt.spoken_content == ""
+    assert rebuilt.opening_state == current_shot["continuity_in"]
+    assert rebuilt.closing_state == current_shot["continuity_out"]
+    assert rebuilt.timing_notes == "Target runtime: 6 seconds"
+    assert rebuilt.performance_direction == "Keep the opening observational and restrained."
+    assert service.is_current(rebuilt)
+
+
+def test_legacy_draft_without_authority_snapshot_cannot_be_silently_current(
+    tmp_path: Path,
+) -> None:
+    service, _packages = _service(tmp_path)
+    service.create_from_current_package("SHT-001")
+
+    payload = json.loads(service.draft_file.read_text(encoding="utf-8"))
+    payload["schema_version"] = "1.0"
+    payload["action_performance"][0].pop("source_authority", None)
+    service.draft_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    legacy = service.draft("SHT-001")
+    assert legacy is not None
+    assert legacy.source_authority is None
+    assert not service.is_current(legacy)
+    changes = service.structural_changes(legacy)
+    assert len(changes) == 1
+    assert changes[0].field == "source_authority"
+
+    with pytest.raises(ActionPerformanceError, match="Rebase / Preserve is blocked"):
+        service.rebase_to_current_package("SHT-001")
+
+    rebuilt = service.rebuild_from_current_package("SHT-001")
+    assert rebuilt.source_authority is not None
+    assert service.is_current(rebuilt)
 
 
 def test_ready_stale_draft_must_return_to_draft_before_rebase(tmp_path: Path) -> None:

@@ -3,6 +3,9 @@
 from typing import Any, cast
 
 from . import universal_production_description_compiler_workspace as _universal_workspace
+from .action_performance_authority_integrity import (
+    install_action_performance_authority_integrity,
+)
 from .governed_reference_suitability_workspace import GovernedReferenceSuitabilityWorkspace
 from .production_package_review_workspace import (
     install_production_package_review_workspace,
@@ -14,6 +17,7 @@ from .story_analysis_workspace import StoryAnalysisWorkspaceDialog, StoryGraphVi
 from .story_intelligence_dashboard import StoryIntelligenceDashboardDialog
 
 install_production_package_review_workspace()
+install_action_performance_authority_integrity()
 install_production_planning_performance()
 install_production_planning_profiler()
 install_scheduling_review_reset()
