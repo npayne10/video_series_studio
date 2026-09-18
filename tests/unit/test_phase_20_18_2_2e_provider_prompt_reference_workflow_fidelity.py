@@ -165,7 +165,7 @@ def test_ltx_visual_fidelity_blocks_shot_critical_reference_dropped_by_capacity(
 
     with pytest.raises(
         LocalProductionPackageCompilationError,
-        match="PROVIDER_VISUAL_AUTHORITY_DROPPED.*CAP-PLN-002",
+        match=r"PROVIDER_VISUAL_AUTHORITY_DROPPED.*CAP-PLN-002",
     ):
         LocalLTX23V721ProductionPackageCompilationService._require_provider_visual_fidelity(
             plan, authority
