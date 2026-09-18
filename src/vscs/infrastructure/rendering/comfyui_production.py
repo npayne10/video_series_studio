@@ -137,9 +137,7 @@ class ProductionPackageComfyUIAdapter(ComfyUIAdapter):
             },
             "provider_prompt": {
                 "positive": str(
-                    package_raw.get("positive_prompt")
-                    or package_raw.get("shot_prompt")
-                    or ""
+                    package_raw.get("positive_prompt") or package_raw.get("shot_prompt") or ""
                 ),
                 "negative": str(package_raw.get("negative_prompt") or ""),
                 "contract": copy.deepcopy(package_raw.get("provider_prompt_contract")),

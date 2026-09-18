@@ -149,9 +149,7 @@ class ProductionProviderPromptCompiler:
         if not normalized:
             return ()
         return tuple(
-            part.strip()
-            for part in re.split(r"(?<=[.!?])\s+", normalized)
-            if part.strip()
+            part.strip() for part in re.split(r"(?<=[.!?])\s+", normalized) if part.strip()
         )
 
     @classmethod

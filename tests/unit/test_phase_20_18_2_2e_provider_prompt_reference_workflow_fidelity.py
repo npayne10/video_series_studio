@@ -140,10 +140,7 @@ def test_generic_bridge_name_requires_matching_location_scope() -> None:
 
 
 def test_visible_planet_is_required_reference_authority() -> None:
-    assert (
-        suggested_reference_priority("planet", "Visible Planet")
-        is ReferencePriority.REQUIRED
-    )
+    assert suggested_reference_priority("planet", "Visible Planet") is ReferencePriority.REQUIRED
 
 
 def test_ltx_visual_fidelity_blocks_shot_critical_reference_dropped_by_capacity() -> None:

@@ -459,16 +459,12 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
             "vscs_priority": raw.get("priority"),
             "vscs_coverage": coverage_detail,
             "contains_subjects": [
-                str(item).strip()
-                for item in raw.get("contains_subjects", [])
-                if str(item).strip()
+                str(item).strip() for item in raw.get("contains_subjects", []) if str(item).strip()
             ]
             if isinstance(raw.get("contains_subjects"), list | tuple)
             else [],
             "contains_props": [
-                str(item).strip()
-                for item in raw.get("contains_props", [])
-                if str(item).strip()
+                str(item).strip() for item in raw.get("contains_props", []) if str(item).strip()
             ]
             if isinstance(raw.get("contains_props"), list | tuple)
             else [],
