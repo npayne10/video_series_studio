@@ -21,7 +21,7 @@ from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.domain.assets import AssetCategory
 
 from .asset_resolver import GovernedAssetResolutionService
-from .shot_planning import GovernedShotPlanningService, ShotPlan
+from .shot_planning import CinematicCoverageRole, GovernedShotPlanningService, ShotPlan
 
 
 class GovernedCameraPlanningError(RuntimeError):
@@ -173,14 +173,20 @@ class GovernedCameraPlanningService:
         focus_strategy = "hold primary subject focus with physically plausible depth of field"
         movement_notes = "keep movement restrained and mechanically plausible"
 
-        if any(term in text for term in ("establish", "arrival", "orbit", "city", "environment")):
+        if self._contains_affirmative_term(
+            text,
+            ("establish", "arrival", "orbit", "city", "environment"),
+        ):
             shot_size = ShotSize.WIDE
             lens_family = LensFamily.WIDE
             focal_length = 28
             composition = "prioritise readable spatial geography, scale and subject placement"
             focus_strategy = "maintain readable, physically plausible depth across the environment and primary subject"
 
-        if any(term in text for term in ("run", "walk", "fly", "move", "cross", "approach")):
+        if self._contains_affirmative_term(
+            text,
+            ("run", "walk", "fly", "move", "cross", "approach"),
+        ):
             movement = CameraMovement.TRACK
             if shot_size is ShotSize.MEDIUM:
                 shot_size = ShotSize.WIDE
@@ -190,9 +196,8 @@ class GovernedCameraPlanningService:
                 "track at a stable speed matched to subject motion; avoid impossible acceleration"
             )
 
-        # Governed dialogue is stronger framing authority than broad setting/motion
-        # keywords. Preserve any genuinely motivated movement, but keep the speaker
-        # readable rather than widening a dialogue-delivery Shot into a master view.
+        # Explicit dialogue authority is stronger framing authority than broad
+        # setting/motion keywords.
         if shot.dialogue_requirement.strip():
             shot_size = ShotSize.MEDIUM_CLOSE
             lens_family = LensFamily.NORMAL
@@ -203,13 +208,56 @@ class GovernedCameraPlanningService:
                 "depth separation from supporting subjects and environment"
             )
 
-        if any(term in text for term in ("reaction", "realises", "recognises")):
+        if self._contains_affirmative_term(
+            text,
+            ("reaction", "realises", "recognises"),
+        ):
             shot_size = ShotSize.CLOSE_UP
             movement = CameraMovement.PUSH_IN
             lens_family = LensFamily.PORTRAIT
             focal_length = 85
             composition = "prioritise the reaction without distorting facial perspective"
             movement_notes = "use a slow physically motivated push-in without abrupt acceleration"
+
+        # Hardware-decomposed Shots carry explicit cinematic coverage authority.
+        # It must outrank lexical hints because Shot text can also contain negative
+        # guardrails such as "do not spend this Shot on a close reaction".
+        if shot.coverage_role is CinematicCoverageRole.ESTABLISHING:
+            shot_size = ShotSize.WIDE
+            lens_family = LensFamily.WIDE
+            focal_length = 28
+            composition = "prioritise readable spatial geography, scale and subject placement"
+            focus_strategy = (
+                "maintain readable, physically plausible depth across the environment "
+                "and primary subjects"
+            )
+            if movement is CameraMovement.PUSH_IN:
+                movement = CameraMovement.STATIC
+                movement_notes = "keep movement restrained and mechanically plausible"
+        elif shot.coverage_role is CinematicCoverageRole.DIALOGUE_DELIVERY:
+            shot_size = ShotSize.MEDIUM_CLOSE
+            lens_family = LensFamily.NORMAL
+            focal_length = 50
+            composition = "preserve eye-line, conversational screen direction and natural headroom"
+            focus_strategy = (
+                "hold the dialogue speaker in primary focus with physically plausible "
+                "depth separation from supporting subjects and environment"
+            )
+        elif shot.coverage_role is CinematicCoverageRole.REACTION:
+            shot_size = ShotSize.CLOSE_UP
+            movement = CameraMovement.PUSH_IN
+            lens_family = LensFamily.PORTRAIT
+            focal_length = 85
+            composition = "prioritise the reaction without distorting facial perspective"
+            movement_notes = "use a slow physically motivated push-in without abrupt acceleration"
+        elif shot.coverage_role is CinematicCoverageRole.DETAIL_INSERT:
+            shot_size = ShotSize.INSERT
+            movement = CameraMovement.STATIC
+            lens_family = LensFamily.MACRO
+            focal_length = 85
+            composition = "isolate the governed detail without losing its physical orientation"
+            focus_strategy = "hold the governed detail in precise readable focus"
+            movement_notes = "keep the insert mechanically stable unless the Shot explicitly moves"
 
         return CameraPlan(
             camera_plan_id=self._camera_plan_id(shot.shot_id),
@@ -423,6 +471,42 @@ class GovernedCameraPlanningService:
         if not findings:
             findings.append("Camera Plan dependencies are current")
         return tuple(findings)
+
+    @staticmethod
+    def _contains_affirmative_term(text: str, terms: tuple[str, ...]) -> bool:
+        """Return True only when a camera-intent term is used affirmatively.
+
+        Shot authority frequently contains negative guardrails ("do not", "avoid",
+        "never", "without"). Those clauses must not be reinterpreted as positive
+        camera instructions merely because they contain a keyword.
+        """
+        normalized = text.casefold()
+        for separator in (".", "!", "?", ";", "\n"):
+            normalized = normalized.replace(separator, "|")
+        negation_cues = (
+            "do not",
+            "don't",
+            "must not",
+            "never",
+            "avoid",
+            "without",
+            "no ",
+        )
+        for clause in normalized.split("|"):
+            clause = " ".join(clause.split())
+            if not clause:
+                continue
+            for term in terms:
+                start = 0
+                while True:
+                    index = clause.find(term, start)
+                    if index < 0:
+                        break
+                    prefix = clause[max(0, index - 96) : index]
+                    if not any(cue in prefix for cue in negation_cues):
+                        return True
+                    start = index + len(term)
+        return False
 
     def _require_ready_shot(self, shot_id: str) -> ShotPlan:
         shot = self.shots.plan(shot_id)
