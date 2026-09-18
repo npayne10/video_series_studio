@@ -58,9 +58,7 @@ def _governed_description() -> dict[str, object]:
             "production_objective": (
                 "Show Commander James Spence holding position in the observation lounge."
             ),
-            "required_action": (
-                "Commander James Spence holds position in the observation lounge."
-            ),
+            "required_action": ("Commander James Spence holds position in the observation lounge."),
             "shot_constraints": [],
         },
         "action_performance": {},
