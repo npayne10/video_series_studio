@@ -24,6 +24,7 @@ from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
     GovernedReferenceCompiler,
 )
+from .provider_prompt import ProductionProviderPromptCompiler, ProductionProviderPromptError
 
 
 class ProductionPackageCompilationError(RuntimeError):
@@ -151,6 +152,7 @@ class ProductionPackageCompilerService:
 
     def __init__(self, *, reference_root: Path | None = None) -> None:
         self.reference_compiler = GovernedReferenceCompiler(reference_root)
+        self.provider_prompt_compiler = ProductionProviderPromptCompiler()
         self.reference_plan_source = (
             PersistedGovernedReferencePlanSource(
                 _ReferencePlanProjectDirectory(reference_root)  # type: ignore[arg-type]
@@ -194,8 +196,14 @@ class ProductionPackageCompilerService:
             ) from exc
         reference_plan = governed_references.to_dict() if governed_references is not None else None
 
-        positive_prompt = universal_text
-        negative_prompt = self._negative_prompt(production.get("style"))
+        try:
+            provider_prompt = self.provider_prompt_compiler.compile(production)
+        except ProductionProviderPromptError as exc:
+            raise ProductionPackageCompilationError(
+                f"Provider prompt compilation failed: {exc}"
+            ) from exc
+        positive_prompt = provider_prompt.positive_prompt
+        negative_prompt = provider_prompt.negative_prompt
         continuity = self._mapping(production.get("continuity"))
         previous_frame = self._first_text(
             continuity,
@@ -233,6 +241,7 @@ class ProductionPackageCompilerService:
             "authority_fingerprint": task.authority.fingerprint,
             "source_package_fingerprint": source.package_fingerprint,
             "universal_text": universal_text,
+            "positive_prompt": positive_prompt,
             "negative_prompt": negative_prompt,
             "previous_frame": previous_frame,
             "filename_prefix": filename_prefix,

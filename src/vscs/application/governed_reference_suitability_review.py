@@ -24,7 +24,7 @@ def suggested_reference_priority(
 
     Identity-bearing characters and the primary location/set remain required.
     Contextual environment/planet/vehicle/ship references are preferred unless
-    their governed semantic role explicitly marks them as shot-critical.
+    their governed semantic role explicitly marks them as visible or shot-critical.
 
     This is a suggestion only. Existing explicit review authority is never
     rewritten silently; the operator must apply and approve any change.
@@ -42,6 +42,7 @@ def suggested_reference_priority(
             "critical",
             "hero",
             "foreground",
+            "visible",
             "interaction",
             "interacting",
             "held",

@@ -26,7 +26,7 @@ from vscs.infrastructure.production_execution.provider_reference_helper import (
         ("location", "Location", ReferencePriority.REQUIRED),
         ("set", "Primary Set", ReferencePriority.REQUIRED),
         ("environment", "Environment Context", ReferencePriority.PREFERRED),
-        ("planet", "Visible Planet", ReferencePriority.PREFERRED),
+        ("planet", "Visible Planet", ReferencePriority.REQUIRED),
         ("ship", "Vehicle/Ship", ReferencePriority.PREFERRED),
         ("prop", "Hero critical prop", ReferencePriority.REQUIRED),
         ("prop", "Background prop", ReferencePriority.PREFERRED),
