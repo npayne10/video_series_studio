@@ -145,6 +145,7 @@ def test_v721_package_maps_governed_reference_authority_without_silent_weakening
 
     assert payload["schema_version"] == "7.2.1-vscs-2"
     assert payload["status"] == "READY"
+    assert payload["provider_prompt_contract"]["compiler"] == "structured-authority-v1"
     assert payload["acpp"]["prompts"]["positive"] == payload["shot_prompt"]
     assert payload["acpp"]["generation"]["width"] == 1280
     assert payload["acpp"]["generation"]["height"] == 720
@@ -279,3 +280,22 @@ def test_deployment_assurance_rejects_broken_governed_output_normalizer(
     issues = LTX23V721DeploymentAssurance(workflow_root).inspect()
 
     assert any("governed-normalized provider output" in issue for issue in issues)
+
+
+def test_deployment_assurance_rejects_static_reference_frame_zero(tmp_path: Path) -> None:
+    workflow_root = tmp_path / "resources" / "workflows"
+    workflow_path = workflow_root / LTX23_V721_WORKFLOW_FILE
+    workflow_path.parent.mkdir(parents=True)
+    raw = json.loads((WORKFLOW_ROOT / LTX23_V721_WORKFLOW_FILE).read_text(encoding="utf-8"))
+    raw["9"]["inputs"]["frame_idx"] = 0
+    workflow_path.write_text(json.dumps(raw), encoding="utf-8")
+
+    issues = LTX23V721DeploymentAssurance(workflow_root).inspect()
+
+    assert any("attention-only frame_idx -1" in issue for issue in issues)
+
+
+def test_checked_in_static_reference_guides_are_attention_only() -> None:
+    raw = json.loads((WORKFLOW_ROOT / LTX23_V721_WORKFLOW_FILE).read_text(encoding="utf-8"))
+
+    assert [raw[node_id]["inputs"]["frame_idx"] for node_id in ("9", "109", "110")] == [-1, -1, -1]
