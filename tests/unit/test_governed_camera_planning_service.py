@@ -9,8 +9,8 @@ import pytest
 from vscs.application.story import (
     AssetBindingStatus,
     CameraMovement,
-    CinematicCoverageRole,
     CameraPlanStatus,
+    CinematicCoverageRole,
     GovernedCameraPlanningError,
     GovernedCameraPlanningService,
     LensFamily,
@@ -269,6 +269,7 @@ def test_dialogue_suggestion_keeps_speaker_readable_despite_generic_action_text(
     assert plan.focal_length_mm == 50
     assert "dialogue speaker" in plan.focus_strategy.lower()
 
+
 def test_negated_reaction_guardrail_does_not_override_establishing_camera(
     tmp_path: Path,
 ) -> None:
@@ -333,4 +334,3 @@ def test_explicit_reaction_coverage_role_overrides_broad_establishing_words(
     assert plan.movement is CameraMovement.PUSH_IN
     assert plan.lens_family is LensFamily.PORTRAIT
     assert plan.focal_length_mm == 85
-

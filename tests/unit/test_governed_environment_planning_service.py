@@ -389,6 +389,7 @@ def test_shot_local_bridge_environment_overrides_scene_orbit(
     assert "interior" in plan.surface_state.lower()
     assert "shot-local interior" in " ".join(plan.environment_constraints).lower()
 
+
 def test_environment_continuity_applies_scene_boundaries_only_to_boundary_shots(
     tmp_path: Path,
 ) -> None:
@@ -440,4 +441,3 @@ def test_environment_continuity_applies_scene_boundaries_only_to_boundary_shots(
     assert scenes.scene.continuity_out in last_notes
     assert last.continuity_in in last_notes
     assert last.continuity_out in last_notes
-
