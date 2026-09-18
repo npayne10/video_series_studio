@@ -156,11 +156,11 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         return replace(context, dependencies=dependencies)
 
     def readiness_task_blocker(self: Any) -> str:
-        blocker = original_task_blocker(self)
+        blocker = str(original_task_blocker(self) or "")
         if blocker:
             return blocker
         _dependencies, dependency_blocker = self._production_task_dependencies()
-        return dependency_blocker
+        return str(dependency_blocker or "")
 
     def _persisted_tasks_for_selected_shot(
         self: Any,
