@@ -7,7 +7,12 @@ from dataclasses import replace
 
 from .graph import ProductionTaskGraphIntegrationService, ProductionTaskGraphRefreshResult
 from .lifecycle import ProductionTaskLifecycleService
-from .models import ProductionTask, ProductionTaskPriority, ProductionTaskState
+from .models import (
+    ProductionTask,
+    ProductionTaskPriority,
+    ProductionTaskState,
+    ProductionTaskType,
+)
 from .production_queue import ProductionQueue, ProductionQueueCompilerService
 from .production_readiness import (
     ProductionReadinessAssessment,
@@ -85,6 +90,47 @@ class ProductionSchedulingUiService:
         return self._task_repository().list_for_production(
             self._require_production_id(production_id)
         )
+
+    def resolve_previous_shot_dependency(
+        self,
+        production_id: str,
+        previous_shot_id: str,
+    ) -> tuple[str, ...]:
+        """Resolve one active predecessor VIDEO_GENERATION task for Shot continuity.
+
+        Cross-Shot continuity is execution authority, not scheduler preference. A
+        successor Shot must therefore depend on the current predecessor task instead
+        of competing with it for the same resource as an unrelated READY task.
+        """
+        normalized = self._require_production_id(production_id)
+        previous = previous_shot_id.strip().upper()
+        if not previous:
+            return ()
+
+        candidates = tuple(
+            task
+            for task in self._task_repository().list_for_production(normalized)
+            if task.shot_id == previous
+            and task.task_type is ProductionTaskType.VIDEO_GENERATION
+            and task.state
+            not in {
+                ProductionTaskState.CANCELLED,
+                ProductionTaskState.SUPERSEDED,
+            }
+        )
+        if not candidates:
+            raise ProductionSchedulingUiError(
+                "Previous Shot continuity requires an active VIDEO_GENERATION "
+                f"ProductionTask for {previous}. Compile and persist that predecessor first."
+            )
+        if len(candidates) > 1:
+            identities = ", ".join(sorted(task.task_id for task in candidates))
+            raise ProductionSchedulingUiError(
+                "Previous Shot continuity is ambiguous because multiple active "
+                f"VIDEO_GENERATION ProductionTasks exist for {previous}: {identities}. "
+                "Supersede obsolete predecessor tasks before compiling the successor."
+            )
+        return (candidates[0].task_id,)
 
     def update_task_priority(
         self,
@@ -166,9 +212,13 @@ class ProductionSchedulingUiService:
                 "Supersession requires replacement authority for the same production, Shot, "
                 "task type and governed UPD identity"
             )
-        if obsolete.authority.fingerprint == replacement.authority.fingerprint:
+        if (
+            obsolete.authority.fingerprint == replacement.authority.fingerprint
+            and obsolete.dependencies == replacement.dependencies
+        ):
             raise ProductionSchedulingUiError(
-                "Supersession requires a replacement compiled from different UPD authority"
+                "Supersession requires different UPD authority or a different governed "
+                "ProductionTask dependency contract"
             )
         if replacement.state in {
             ProductionTaskState.CANCELLED,

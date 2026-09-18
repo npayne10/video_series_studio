@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -160,3 +162,33 @@ def test_refresh_task_readiness_updates_authoritative_state_and_table(
     assert tasks[0].state is ProductionTaskState.READY
     assert workspace.production_task_table.item(0, 2).text() == "ready"
     assert "Current authoritative state: ready" in workspace.production_task_readiness_status.text()
+
+def test_current_shot_compilation_context_inherits_previous_video_task_dependency(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
+) -> None:
+    projects = application_context.services.require(ProjectService)
+    projects.create(tmp_path / "Project", name="Project")
+    window = application_context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    workspace = window.production_package_workspace
+
+    predecessor = replace(
+        _task(),
+        task_id="PT-VIDEO-GENERATION-PREVIOUS",
+        shot_id="EP-001-SCN-001-SHT-001",
+    )
+    workspace.production_scheduling.register_compiled_tasks((predecessor,))
+    workspace._selected_shot_id = "EP-001-SCN-001-SHT-002"
+    workspace.production_task_production_id.setText("PROD-READINESS")
+    workspace.packages.current_package = lambda _shot_id: SimpleNamespace(
+        continuity={"previous_shot_id": "EP-001-SCN-001-SHT-001"}
+    )
+
+    dependencies, blocker = workspace._production_task_dependencies()
+
+    assert blocker == ""
+    assert dependencies == (predecessor.task_id,)
+

@@ -45,6 +45,7 @@ def _task(
     *,
     state: ProductionTaskState,
     shot_id: str = "EP-001-SCN-001-SHT-001",
+    dependencies: tuple[str, ...] = (),
 ) -> ProductionTask:
     return ProductionTask(
         task_id=task_id,
@@ -62,6 +63,7 @@ def _task(
             approved_by="Neill Payne",
         ),
         capabilities=(ProductionCapability.VIDEO_GENERATION,),
+        dependencies=dependencies,
         expected_outputs=("video/shot",),
         state=state,
     )
@@ -115,7 +117,7 @@ def test_supersede_obsolete_task_preserves_record_and_removes_it_from_scheduling
     assert obsolete.task_id in schedule.ignored_task_ids
 
 
-def test_supersession_rejects_replacement_with_same_governed_authority() -> None:
+def test_supersession_rejects_replacement_with_same_governed_authority_and_dependencies() -> None:
     obsolete = _task(
         "PT-VIDEO-GENERATION-OLD",
         "same-authority",
@@ -130,7 +132,7 @@ def test_supersession_rejects_replacement_with_same_governed_authority() -> None
 
     with pytest.raises(
         ProductionSchedulingUiError,
-        match="different UPD authority",
+        match="different UPD authority or a different governed ProductionTask dependency contract",
     ):
         _service(repository).supersede_task(
             obsolete.task_id,
@@ -203,3 +205,75 @@ def test_supersession_rejects_current_task_as_its_own_replacement() -> None:
         )
 
     assert repository.get(current.task_id) == current
+
+def test_supersession_allows_same_upd_when_dependency_contract_changes() -> None:
+    obsolete = _task(
+        "PT-VIDEO-GENERATION-OLD",
+        "same-authority",
+        state=ProductionTaskState.READY,
+    )
+    replacement = _task(
+        "PT-VIDEO-GENERATION-NEW",
+        "same-authority",
+        state=ProductionTaskState.PLANNED,
+        dependencies=("PT-VIDEO-GENERATION-PREVIOUS",),
+    )
+    repository = _TaskRepository(obsolete, replacement)
+
+    updated = _service(repository).supersede_task(
+        obsolete.task_id,
+        replacement_task_id=replacement.task_id,
+        reason="Cross-Shot continuity dependency became governed",
+    )
+
+    assert updated.state is ProductionTaskState.SUPERSEDED
+    assert repository.get(replacement.task_id) == replacement
+
+
+def test_previous_shot_dependency_resolution_requires_one_active_video_task() -> None:
+    predecessor = _task(
+        "PT-VIDEO-GENERATION-PREVIOUS",
+        "predecessor-authority",
+        state=ProductionTaskState.READY,
+        shot_id="EP-001-SCN-001-SHT-001",
+    )
+    successor = _task(
+        "PT-VIDEO-GENERATION-SUCCESSOR",
+        "successor-authority",
+        state=ProductionTaskState.PLANNED,
+        shot_id="EP-001-SCN-001-SHT-002",
+    )
+    repository = _TaskRepository(predecessor, successor)
+    service = _service(repository)
+
+    assert service.resolve_previous_shot_dependency(
+        "VSCS-TSR2",
+        "EP-001-SCN-001-SHT-001",
+    ) == (predecessor.task_id,)
+
+
+def test_previous_shot_dependency_resolution_rejects_missing_or_ambiguous_authority() -> None:
+    service = _service(_TaskRepository())
+    with pytest.raises(ProductionSchedulingUiError, match="Compile and persist"):
+        service.resolve_previous_shot_dependency(
+            "VSCS-TSR2",
+            "EP-001-SCN-001-SHT-001",
+        )
+
+    first = _task(
+        "PT-VIDEO-GENERATION-FIRST",
+        "authority-a",
+        state=ProductionTaskState.READY,
+    )
+    second = _task(
+        "PT-VIDEO-GENERATION-SECOND",
+        "authority-b",
+        state=ProductionTaskState.PLANNED,
+    )
+    ambiguous = _service(_TaskRepository(first, second))
+    with pytest.raises(ProductionSchedulingUiError, match="multiple active"):
+        ambiguous.resolve_previous_shot_dependency(
+            "VSCS-TSR2",
+            "EP-001-SCN-001-SHT-001",
+        )
+

@@ -66,13 +66,18 @@ class _PackageStub:
         return self.package
 
 
-def _context(*, revision: int = 3) -> ProductionTaskCompilationContext:
+def _context(
+    *,
+    revision: int = 3,
+    dependencies: tuple[str, ...] = (),
+) -> ProductionTaskCompilationContext:
     return ProductionTaskCompilationContext(
         production_id="production-XORIX-S01",
         episode_id="EP01",
         scene_id="SC04",
         approved_by="Neill",
         authority_revision=revision,
+        dependencies=dependencies,
     )
 
 
@@ -130,3 +135,30 @@ def test_compiler_rejects_unready_or_stale_upd() -> None:
 
     with pytest.raises(ProductionTaskCompilationError, match="stale"):
         _compiler(current=False).compile_shot("SH027", _context())
+
+def test_compiler_preserves_cross_shot_dependencies_and_changes_task_identity() -> None:
+    compiler = _compiler()
+    predecessor = "PT-VIDEO-GENERATION-PREVIOUS"
+
+    root = compiler.compile_shot("SH027", _context())[0]
+    dependant = compiler.compile_shot(
+        "SH027",
+        _context(dependencies=(predecessor,)),
+    )[0]
+    repeated = compiler.compile_shot(
+        "SH027",
+        _context(dependencies=(predecessor,)),
+    )[0]
+
+    assert root.dependencies == ()
+    assert dependant.dependencies == (predecessor,)
+    assert dependant.task_id != root.task_id
+    assert repeated.task_id == dependant.task_id
+
+
+def test_compilation_context_rejects_invalid_dependency_contract() -> None:
+    with pytest.raises(ValueError, match="blank"):
+        _context(dependencies=(" ",))
+    with pytest.raises(ValueError, match="duplicates"):
+        _context(dependencies=("PT-A", "PT-A"))
+

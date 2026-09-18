@@ -37,6 +37,7 @@ class ProductionTaskCompilationContext:
     approved_by: str
     authority_revision: int
     scene_id: str | None = None
+    dependencies: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -48,6 +49,10 @@ class ProductionTaskCompilationContext:
                 raise ValueError(f"{name} cannot be blank")
         if self.authority_revision < 1:
             raise ValueError("authority_revision must be at least 1")
+        if any(not dependency.strip() for dependency in self.dependencies):
+            raise ValueError("dependencies cannot contain blank values")
+        if len(set(self.dependencies)) != len(self.dependencies):
+            raise ValueError("dependencies cannot contain duplicates")
 
 
 class ProductionTaskCompilerService:
@@ -117,6 +122,7 @@ class ProductionTaskCompilerService:
                 authority_revision=authority.revision,
                 authority_fingerprint=authority.fingerprint,
                 task_type=ProductionTaskType.VIDEO_GENERATION,
+                dependencies=context.dependencies,
             ),
             production_id=context.production_id.strip(),
             episode_id=context.episode_id.strip(),
@@ -125,6 +131,7 @@ class ProductionTaskCompilerService:
             task_type=ProductionTaskType.VIDEO_GENERATION,
             authority=authority,
             capabilities=(ProductionCapability.VIDEO_GENERATION,),
+            dependencies=context.dependencies,
             required_inputs=self._required_inputs(package.universal_description),
             expected_outputs=("video/shot",),
             state=ProductionTaskState.PLANNED,
@@ -150,6 +157,7 @@ class ProductionTaskCompilerService:
         authority_revision: int,
         authority_fingerprint: str,
         task_type: ProductionTaskType,
+        dependencies: tuple[str, ...] = (),
     ) -> str:
         payload = {
             "authority_id": authority_id,
@@ -157,6 +165,8 @@ class ProductionTaskCompilerService:
             "authority_fingerprint": authority_fingerprint,
             "task_type": task_type.value,
         }
+        if dependencies:
+            payload["dependencies"] = list(dependencies)
         digest = cls._fingerprint(payload)[:16].upper()
         return f"PT-{task_type.value.upper().replace('_', '-')}-{digest}"
 

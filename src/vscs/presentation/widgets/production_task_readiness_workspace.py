@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
@@ -29,6 +30,8 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     original_init = workspace_type.__init__
     original_refresh_tasks = workspace_type._refresh_production_tasks
     original_compile_tasks = workspace_type._compile_production_tasks
+    original_task_context = workspace_type._production_task_context
+    original_task_blocker = workspace_type._production_task_blocker
 
     def readiness_init(self: Any, *args: Any, **kwargs: Any) -> None:
         original_init(self, *args, **kwargs)
@@ -114,6 +117,50 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             self._refresh_production_task_priority_control
         )
         self._refresh_production_tasks()
+
+    def _production_task_previous_shot_id(self: Any) -> str:
+        shot_id = self._production_task_shot_id()
+        if not shot_id:
+            return ""
+        package = self.packages.current_package(shot_id)
+        if package is None:
+            return ""
+        continuity = getattr(package, "continuity", None)
+        if not isinstance(continuity, dict):
+            return ""
+        return str(continuity.get("previous_shot_id") or "").strip().upper()
+
+    def _production_task_dependencies(self: Any) -> tuple[tuple[str, ...], str]:
+        previous_shot_id = self._production_task_previous_shot_id()
+        if not previous_shot_id:
+            return (), ""
+        production_id = self.production_task_production_id.text().strip()
+        if not production_id:
+            return (), "Production ID is required before resolving previous-Shot dependency."
+        if not hasattr(self, "production_scheduling"):
+            return (), "Production scheduling service is unavailable for dependency resolution."
+        try:
+            dependencies = self.production_scheduling.resolve_previous_shot_dependency(
+                production_id,
+                previous_shot_id,
+            )
+        except (ValueError, RuntimeError) as exc:
+            return (), str(exc)
+        return dependencies, ""
+
+    def readiness_task_context(self: Any) -> Any:
+        context = original_task_context(self)
+        dependencies, blocker = self._production_task_dependencies()
+        if blocker:
+            raise ValueError(blocker)
+        return replace(context, dependencies=dependencies)
+
+    def readiness_task_blocker(self: Any) -> str:
+        blocker = original_task_blocker(self)
+        if blocker:
+            return blocker
+        _dependencies, dependency_blocker = self._production_task_dependencies()
+        return dependency_blocker
 
     def _persisted_tasks_for_selected_shot(
         self: Any,
@@ -292,11 +339,15 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             )
         if selected.task_id == replacement.task_id:
             return selected, replacement, "Selected ProductionTask is the current UPD authority."
-        if selected.authority.fingerprint == replacement.authority.fingerprint:
+        if (
+            selected.authority.fingerprint == replacement.authority.fingerprint
+            and selected.dependencies == replacement.dependencies
+        ):
             return (
                 selected,
                 replacement,
-                "Selected ProductionTask is not obsolete against current UPD authority.",
+                "Selected ProductionTask is not obsolete against current governed "
+                "UPD/dependency authority.",
             )
         return selected, replacement, ""
 
@@ -417,6 +468,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self._refresh_production_scheduling()
 
     workspace_type.__init__ = readiness_init
+    workspace_type._production_task_previous_shot_id = _production_task_previous_shot_id
+    workspace_type._production_task_dependencies = _production_task_dependencies
+    workspace_type._production_task_context = readiness_task_context
+    workspace_type._production_task_blocker = readiness_task_blocker
     workspace_type._persisted_tasks_for_selected_shot = _persisted_tasks_for_selected_shot
     workspace_type._refresh_persisted_production_tasks = _refresh_persisted_production_tasks
     workspace_type._selected_persisted_production_task = _selected_persisted_production_task
