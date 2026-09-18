@@ -9,6 +9,7 @@ import pytest
 from vscs.application.story import (
     AssetBindingStatus,
     CameraMovement,
+    CinematicCoverageRole,
     CameraPlanStatus,
     GovernedCameraPlanningError,
     GovernedCameraPlanningService,
@@ -267,3 +268,69 @@ def test_dialogue_suggestion_keeps_speaker_readable_despite_generic_action_text(
     assert plan.lens_family is LensFamily.NORMAL
     assert plan.focal_length_mm == 50
     assert "dialogue speaker" in plan.focus_strategy.lower()
+
+def test_negated_reaction_guardrail_does_not_override_establishing_camera(
+    tmp_path: Path,
+) -> None:
+    shot = replace(
+        _shot(),
+        title="Nine Days in Xorix Orbit — Establish",
+        narrative_purpose="Establish the bridge geography and participants before the anomaly.",
+        production_objective=(
+            "Show the bridge environment with Xorix visible, Sandra at the control station, "
+            "and James at the forward display."
+        ),
+        required_action=(
+            "Establish the full spatial relationship of the Iron Horizon bridge. "
+            "Sandra notices an unusual reading and looks toward James. "
+            "Do not spend this Shot on a close reaction or insert."
+        ),
+        coverage_role=CinematicCoverageRole.ESTABLISHING,
+    )
+    service, _shots, _assets = _service(tmp_path, shot)
+
+    plan = service.suggested_plan(shot.shot_id)
+
+    assert plan.shot_size is ShotSize.WIDE
+    assert plan.lens_family is LensFamily.WIDE
+    assert plan.focal_length_mm == 28
+    assert plan.movement is not CameraMovement.PUSH_IN
+    assert "spatial geography" in plan.composition.lower()
+
+
+def test_negated_motion_keyword_does_not_create_tracking_camera(tmp_path: Path) -> None:
+    shot = replace(
+        _shot(),
+        title="Quiet bridge hold",
+        narrative_purpose="Hold a stable bridge composition.",
+        production_objective="Keep the command team readable without camera travel.",
+        required_action="Sandra studies the console. Do not move or track the camera.",
+        coverage_role=CinematicCoverageRole.UNSPECIFIED,
+    )
+    service, _shots, _assets = _service(tmp_path, shot)
+
+    plan = service.suggested_plan(shot.shot_id)
+
+    assert plan.movement is CameraMovement.STATIC
+
+
+def test_explicit_reaction_coverage_role_overrides_broad_establishing_words(
+    tmp_path: Path,
+) -> None:
+    shot = replace(
+        _shot(),
+        title="Reaction in orbit",
+        narrative_purpose="Capture James recognising the anomaly.",
+        production_objective="Keep the orbital bridge context subordinate to his reaction.",
+        required_action="James recognises the significance of the reading.",
+        coverage_role=CinematicCoverageRole.REACTION,
+    )
+    service, _shots, _assets = _service(tmp_path, shot)
+
+    plan = service.suggested_plan(shot.shot_id)
+
+    assert plan.shot_size is ShotSize.CLOSE_UP
+    assert plan.movement is CameraMovement.PUSH_IN
+    assert plan.lens_family is LensFamily.PORTRAIT
+    assert plan.focal_length_mm == 85
+
