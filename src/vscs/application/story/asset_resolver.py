@@ -90,6 +90,42 @@ SPECIALIST_CATEGORIES = frozenset(
     }
 )
 
+_GENERIC_LOCATION_NAMES = frozenset(
+    {
+        "bridge",
+        "command deck",
+        "control room",
+        "engineering",
+        "engineering bay",
+        "hangar",
+        "hangar bay",
+        "laboratory",
+        "lab",
+        "medical",
+        "observation lounge",
+        "quarters",
+        "ready room",
+    }
+)
+_GENERIC_LOCATION_SCOPE_NOISE = frozenset(
+    {
+        "approved",
+        "asset",
+        "bridge",
+        "canonical",
+        "command",
+        "control",
+        "deck",
+        "engineered",
+        "environment",
+        "interior",
+        "location",
+        "production",
+        "room",
+        "space",
+    }
+)
+
 
 @dataclass(frozen=True, slots=True)
 class ShotAssetBinding:
@@ -548,10 +584,14 @@ class GovernedAssetResolutionService:
     ) -> tuple[float, str] | None:
         name = self._normalize_text(item.name)
         if name and f" {name} " in f" {normalized_text} ":
-            return (
-                1.0,
-                f"Explicit canonical asset name '{item.name}' occurs in governed Shot text.",
+            generic_location = (
+                item.category is AssetCategory.LOCATION and name in _GENERIC_LOCATION_NAMES
             )
+            if not generic_location or self._generic_location_scope_matches(item, normalized_text):
+                return (
+                    1.0,
+                    f"Explicit canonical asset name '{item.name}' occurs in governed Shot text.",
+                )
 
         if item.category is AssetCategory.CHARACTER:
             aliases = self._character_aliases(item.name)
@@ -587,6 +627,35 @@ class GovernedAssetResolutionService:
         ):
             return (0.72, f"Governed Shot text matches canonical asset identity {item.asset_id}.")
         return None
+
+    @classmethod
+    def _generic_location_scope_matches(cls, item: Any, normalized_text: str) -> bool:
+        """Require owning/context identity before accepting a generic location name."""
+        padded_text = f" {normalized_text} "
+        scoped_tags: list[str] = []
+        for raw_tag in getattr(item, "tags", ()):
+            tag = cls._normalize_text(str(raw_tag))
+            marker = "xpd subcategory "
+            if tag.startswith(marker):
+                scope = tag[len(marker) :].strip()
+                if scope:
+                    scoped_tags.append(scope)
+        if any(f" {scope} " in padded_text for scope in scoped_tags):
+            return True
+
+        description = cls._normalize_text(str(getattr(item, "description", "") or ""))
+        name_tokens = set(cls._normalize_text(str(getattr(item, "name", "") or "")).split())
+        scope_tokens = [
+            token
+            for token in description.split()
+            if len(token) >= 4
+            and token not in name_tokens
+            and token not in _GENERIC_LOCATION_SCOPE_NOISE
+        ]
+        if not scope_tokens:
+            return False
+        text_tokens = set(normalized_text.split())
+        return all(token in text_tokens for token in scope_tokens[:3])
 
     @classmethod
     def _inferred_role(

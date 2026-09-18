@@ -166,6 +166,11 @@ class LTX23V721DeploymentAssurance:
                 continue
             if inputs.get("image") != image or inputs.get("strength") != strength:
                 issues.append(f"v7.2.1 governed multi-reference guide node {node_id} is miswired")
+            if inputs.get("frame_idx") != -1:
+                issues.append(
+                    f"v7.2.1 governed static reference guide node {node_id} must use "
+                    "attention-only frame_idx -1"
+                )
             if latent is not None and inputs.get("latent") != latent:
                 issues.append(
                     f"v7.2.1 governed multi-reference guide node {node_id} latent chain is broken"
@@ -321,6 +326,14 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
                 "Production Package is not compiled for LTX-2.3 v7.2.1; "
                 "recompile it before starting production"
             )
+        prompt_contract = raw.get("provider_prompt_contract")
+        if not isinstance(prompt_contract, dict) or (
+            prompt_contract.get("compiler") != "structured-authority-v1"
+        ):
+            raise LocalProductionPackageCompilationError(
+                "Production Package predates Phase 20.18.2.2e provider-prompt fidelity; "
+                "recompile it before starting production"
+            )
 
     def _comfyui_payload(  # type: ignore[override]
         self, compiled: CompiledProductionPackage
@@ -329,6 +342,12 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
         content["schema_version"] = LTX23_V721_PACKAGE_SCHEMA
         content["status"] = "READY"
         content["positive_prompt"] = compiled.positive_prompt
+        content["provider_prompt_contract"] = {
+            "schema_version": "1.0",
+            "compiler": "structured-authority-v1",
+            "source": "approved_structured_production_authority",
+            "universal_text_usage": "audit_authority_only",
+        }
         content["acpp"] = {
             "metadata": {"id": compiled.source_package_id},
             "timing": {
@@ -360,6 +379,9 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
         }
         if compiled.reference_plan is not None:
             content["reference_plan"] = self._provider_reference_plan(compiled.reference_plan)
+            self._require_provider_visual_fidelity(
+                content["reference_plan"], compiled.production_authority
+            )
         self._refresh_manifest_fingerprint(content)
         return content
 
@@ -436,7 +458,101 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
             "height": raw.get("height"),
             "vscs_priority": raw.get("priority"),
             "vscs_coverage": coverage_detail,
+            "contains_subjects": [
+                str(item).strip()
+                for item in raw.get("contains_subjects", [])
+                if str(item).strip()
+            ]
+            if isinstance(raw.get("contains_subjects"), list | tuple)
+            else [],
+            "contains_props": [
+                str(item).strip()
+                for item in raw.get("contains_props", [])
+                if str(item).strip()
+            ]
+            if isinstance(raw.get("contains_props"), list | tuple)
+            else [],
+            "contains_environments": [
+                str(item).strip()
+                for item in raw.get("contains_environments", [])
+                if str(item).strip()
+            ]
+            if isinstance(raw.get("contains_environments"), list | tuple)
+            else [],
         }
+
+    @classmethod
+    def _require_provider_visual_fidelity(
+        cls,
+        reference_plan: dict[str, Any],
+        production_authority: dict[str, Any],
+    ) -> None:
+        """Block execution when shot-critical visual authority would be dropped."""
+        assets = production_authority.get("assets")
+        if not isinstance(assets, list):
+            return
+        required: set[str] = set()
+        critical_role_markers = (
+            "required",
+            "critical",
+            "hero",
+            "foreground",
+            "visible",
+            "interaction",
+            "interacting",
+            "held",
+            "used",
+            "dialogue speaker",
+        )
+        for raw_asset in assets:
+            if not isinstance(raw_asset, dict):
+                continue
+            asset_id = str(raw_asset.get("asset_id") or "").strip().upper()
+            if not asset_id:
+                continue
+            category = str(raw_asset.get("category") or "").strip().lower()
+            semantic_role = str(raw_asset.get("role") or "").strip().lower()
+            if category in {"character", "location", "set"} or any(
+                marker in semantic_role for marker in critical_role_markers
+            ):
+                required.add(asset_id)
+        if not required:
+            return
+
+        contract = reference_plan.get("provider_multi_reference")
+        if not isinstance(contract, dict):
+            raise LocalProductionPackageCompilationError(
+                "PROVIDER_VISUAL_AUTHORITY_DROPPED: provider multi-reference contract is missing"
+            )
+        references = contract.get("references")
+        if not isinstance(references, list):
+            references = []
+        covered: set[str] = set()
+        for raw_reference in references:
+            if not isinstance(raw_reference, dict):
+                continue
+            direct = str(raw_reference.get("asset_id") or "").strip().upper()
+            if direct:
+                covered.add(direct)
+            for key in ("contains_subjects", "contains_props", "contains_environments"):
+                values = raw_reference.get(key)
+                if not isinstance(values, list | tuple):
+                    continue
+                covered.update(str(item).strip().upper() for item in values if str(item).strip())
+
+        contract["required_visual_asset_ids"] = sorted(required)
+        contract["covered_visual_asset_ids"] = sorted(covered)
+        missing = sorted(required - covered)
+        if missing:
+            raise LocalProductionPackageCompilationError(
+                "PROVIDER_VISUAL_AUTHORITY_DROPPED: LTX direct references do not cover "
+                "shot-critical governed visual assets: "
+                + ", ".join(missing)
+                + ". Provide a governed provider-ready reference whose contains_* coverage "
+                "includes the missing visual authority, or revise the governed Shot if the "
+                "asset is not actually visible. Do not demote shot-critical authority merely "
+                "to fit provider capacity."
+            )
 
     @classmethod
     def _refresh_manifest_fingerprint(cls, content: dict[str, Any]) -> None:
@@ -448,7 +564,7 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
         payload = dict(content)
         payload.pop("_vscs_manifest", None)
         manifest["package_fingerprint"] = cls._fingerprint(payload)
-        manifest["compiler"] = "VSCS Phase 20.18.2 / LTX-2.3 v7.2.1"
+        manifest["compiler"] = "VSCS Phase 20.18.2.2e / LTX-2.3 v7.2.1"
 
 
 class LocalComfyUIProductionExecutionBackend(_Phase20182ProductionExecutionBackend):
@@ -512,6 +628,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase20182ProductionExecutionBacke
             ComfyUIWorkflowCompiler(workflow_root),
             production_package_class_type=LTX23_V721_PACKAGE_LOADER_CLASS,
             production_package_title=LTX23_V721_PACKAGE_LOADER_TITLE,
+            submission_audit_directory=(
+                self.project_directory / ".vscs" / "provider_executions" / "payload_audit"
+            ),
         )
 
     @staticmethod

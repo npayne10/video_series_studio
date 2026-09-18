@@ -103,6 +103,7 @@ class GovernedProviderReferenceHelperBuilder:
         remaining_capacity = _LTX_INGREDIENTS_VISUAL_REFERENCE_LIMIT - len(ordered_required)
         ordered_preferred = sorted(visual_preferred, key=self._reference_sort_key)
         ordered = ordered_required + ordered_preferred[:remaining_capacity]
+        deferred_preferred = ordered_preferred[remaining_capacity:]
 
         enriched = dict(plan)
         enriched["bindings"] = bindings
@@ -127,6 +128,16 @@ class GovernedProviderReferenceHelperBuilder:
             "required_reference_count": len(ordered_required),
             "preferred_reference_count": len(ordered_preferred),
             "reference_count": len(ordered),
+            "deferred_reference_count": len(deferred_preferred),
+            "deferred_references": [
+                {
+                    "reference_id": str(item.get("reference_id") or ""),
+                    "asset_id": str(item.get("asset_id") or ""),
+                    "role": str(item.get("role") or ""),
+                    "reason": "provider_capacity",
+                }
+                for item in deferred_preferred
+            ],
             "references": [
                 {
                     "slot": index,
@@ -144,6 +155,11 @@ class GovernedProviderReferenceHelperBuilder:
                         if str(item.get("role") or "") == "environment_reference"
                         else "identity"
                     ),
+                    "conditioning_mode": "attention_only",
+                    "frame_idx": -1,
+                    "contains_subjects": list(item.get("contains_subjects") or []),
+                    "contains_props": list(item.get("contains_props") or []),
+                    "contains_environments": list(item.get("contains_environments") or []),
                     "required": item.get("required") is True,
                     "vscs_priority": str(
                         item.get("vscs_priority")
