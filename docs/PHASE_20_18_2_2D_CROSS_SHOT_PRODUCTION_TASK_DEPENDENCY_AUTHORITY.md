@@ -34,6 +34,27 @@ Supersession governance now also permits replacement when UPD authority is uncha
 the governed ProductionTask dependency contract changed. This is required to migrate
 legacy dependency-free successor tasks safely while preserving them as provenance.
 
+## Persisted continuity shape correction
+
+Functional acceptance exposed an integration-shape mismatch in the initial implementation.
+The Continuity Compiler does not persist `previous_shot_id` at the root of
+`ProductionPackage.continuity`; it persists canonical views:
+
+```text
+continuity.production.previous_shot_id
+continuity.governed.previous_shot_id
+```
+
+The first dependency resolver incorrectly read only
+`continuity.previous_shot_id`. That always returned blank for current compiled
+packages, so successor VIDEO_GENERATION tasks were still generated without dependencies
+and became READY independently.
+
+The resolver now consumes `production.previous_shot_id` first, falls back to the
+governed view, and retains a flat legacy fallback only for historical payloads. Regression
+coverage uses the real compiled continuity shape so this boundary cannot silently drift
+again.
+
 ## Safety rules
 
 - No previous Shot: dependency tuple remains empty.
