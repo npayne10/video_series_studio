@@ -541,7 +541,7 @@ def test_inference_uses_specific_production_role_labels_for_asset_categories(
 ) -> None:
     context, shots, service, shot = _planning(tmp_path)
     for asset_id, name, category in (
-        ("CAP-LOC-008", "Bridge", AssetCategory.LOCATION),
+        ("CAP-LOC-008", "Iron Horizon Bridge", AssetCategory.LOCATION),
         ("CAP-ENV-004", "Xorix Orbit", AssetCategory.ENVIRONMENT),
         ("CAP-PLN-002", "Xorix", AssetCategory.PLANET),
         ("CAP-SHP-002", "Iron Horizon", AssetCategory.SHIP),
