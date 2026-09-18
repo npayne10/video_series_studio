@@ -128,6 +128,19 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         continuity = getattr(package, "continuity", None)
         if not isinstance(continuity, dict):
             return ""
+
+        # ContinuityCompilerService persists canonical continuity as
+        # {"governed": {...}, "production": {...}}. ProductionTask dependency
+        # authority must consume that compiled shape rather than the draft shape.
+        for section_name in ("production", "governed"):
+            section = continuity.get(section_name)
+            if not isinstance(section, dict):
+                continue
+            previous = str(section.get("previous_shot_id") or "").strip().upper()
+            if previous:
+                return previous
+
+        # Backward-compatible fallback for legacy flat continuity payloads.
         return str(continuity.get("previous_shot_id") or "").strip().upper()
 
     def _production_task_dependencies(self: Any) -> tuple[tuple[str, ...], str]:
