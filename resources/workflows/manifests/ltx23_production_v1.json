@@ -39,6 +39,18 @@
     [
       "provider_frame_adaptation",
       "VSCSProviderFrameCountV721"
+    ],
+    [
+      "provider_prompt_compiler",
+      "structured_authority_v1"
+    ],
+    [
+      "static_reference_conditioning",
+      "attention_only_frame_idx_-1"
+    ],
+    [
+      "submission_payload_audit",
+      ".vscs/provider_executions/payload_audit"
     ]
   ],
   "lip_sync_modes": [
