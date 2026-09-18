@@ -52,12 +52,21 @@ class FakeScenes:
 class FakeShots:
     def __init__(self, shot: ShotPlan) -> None:
         self.shot = shot
+        self.scene_shots: tuple[ShotPlan, ...] = (shot,)
 
     def plan(self, shot_id: str) -> ShotPlan | None:
-        return self.shot if shot_id.strip().upper() == self.shot.shot_id else None
+        normalized = shot_id.strip().upper()
+        return next((item for item in self.scene_shots if item.shot_id == normalized), None)
+
+    def list_plans(self, *, scene_id: str | None = None) -> tuple[ShotPlan, ...]:
+        if scene_id is None:
+            return self.scene_shots
+        normalized = scene_id.strip().upper()
+        return tuple(item for item in self.scene_shots if item.scene_id == normalized)
 
     def is_production_ready(self, shot: ShotPlan) -> bool:
-        return shot.status is ShotPlanStatus.READY and shot == self.shot
+        current = self.plan(shot.shot_id)
+        return current is not None and current.status is ShotPlanStatus.READY and shot == current
 
 
 class FakeAssets:
@@ -277,6 +286,7 @@ def test_changed_shot_makes_ready_environment_plan_stale(tmp_path: Path) -> None
     ready = service.mark_ready(service.create_suggested(shots.shot.shot_id).shot_id)
 
     shots.shot = replace(shots.shot, required_action="Mauritania rolls during orbital insertion")
+    shots.scene_shots = (shots.shot,)
 
     assert not service.is_shot_context_current(ready)
     assert not service.is_production_ready(ready)
@@ -367,6 +377,7 @@ def test_shot_local_bridge_environment_overrides_scene_orbit(
         dialogue_requirement='Sandra must report: "Commander, I have something unusual."',
         shot_constraints=("Keep the setting on the Iron Horizon bridge.",),
     )
+    shots.scene_shots = (shots.shot,)
 
     plan = service.suggested_plan(shots.shot.shot_id)
 
@@ -377,3 +388,56 @@ def test_shot_local_bridge_environment_overrides_scene_orbit(
     assert plan.pressure_kpa is None
     assert "interior" in plan.surface_state.lower()
     assert "shot-local interior" in " ".join(plan.environment_constraints).lower()
+
+def test_environment_continuity_applies_scene_boundaries_only_to_boundary_shots(
+    tmp_path: Path,
+) -> None:
+    service, scenes, shots, _assets, _camera, _lighting = _service(tmp_path)
+    first = replace(
+        shots.shot,
+        continuity_in="Normal bridge operations before the anomaly is known.",
+        continuity_out="Sandra notices an unusual reading and prepares to report it.",
+    )
+    middle = replace(
+        shots.shot,
+        shot_id="EP-001-SCN-001-SHT-002",
+        sequence_number=2,
+        continuity_in="Sandra begins reporting the unusual reading.",
+        continuity_out="James asks for clarification.",
+    )
+    last = replace(
+        shots.shot,
+        shot_id="EP-001-SCN-001-SHT-003",
+        sequence_number=3,
+        continuity_in="The anomaly is now understood as an old Guild emergency transmission.",
+        continuity_out="The crew commits to investigating the outer moon.",
+    )
+    shots.shot = first
+    shots.scene_shots = (first, middle, last)
+    scenes.scene = replace(
+        scenes.scene,
+        continuity_in="The Iron Horizon is already in Xorix orbit.",
+        continuity_out=(
+            "The crew has identified the weak old Guild emergency transmission "
+            "and commits to investigating it."
+        ),
+    )
+
+    first_notes = service._continuity_notes(scenes.scene, first)
+    middle_notes = service._continuity_notes(scenes.scene, middle)
+    last_notes = service._continuity_notes(scenes.scene, last)
+
+    assert scenes.scene.continuity_in in first_notes
+    assert scenes.scene.continuity_out not in first_notes
+    assert first.continuity_out in first_notes
+
+    assert scenes.scene.continuity_in not in middle_notes
+    assert scenes.scene.continuity_out not in middle_notes
+    assert middle.continuity_in in middle_notes
+    assert middle.continuity_out in middle_notes
+
+    assert scenes.scene.continuity_in not in last_notes
+    assert scenes.scene.continuity_out in last_notes
+    assert last.continuity_in in last_notes
+    assert last.continuity_out in last_notes
+
