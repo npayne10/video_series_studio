@@ -185,10 +185,78 @@ def test_current_shot_compilation_context_inherits_previous_video_task_dependenc
     workspace._selected_shot_id = "EP-001-SCN-001-SHT-002"
     workspace.production_task_production_id.setText("PROD-READINESS")
     workspace.packages.current_package = lambda _shot_id: SimpleNamespace(
-        continuity={"previous_shot_id": "EP-001-SCN-001-SHT-001"}
+        continuity={
+            "governed": {
+                "previous_shot_id": "EP-001-SCN-001-SHT-001",
+            },
+            "production": {
+                "previous_shot_id": "EP-001-SCN-001-SHT-001",
+            },
+        }
     )
 
     dependencies, blocker = workspace._production_task_dependencies()
 
     assert blocker == ""
     assert dependencies == (predecessor.task_id,)
+
+
+def test_previous_shot_dependency_reads_governed_fallback_when_production_view_missing(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
+) -> None:
+    projects = application_context.services.require(ProjectService)
+    projects.create(tmp_path / "Project", name="Project")
+    window = application_context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    workspace = window.production_package_workspace
+
+    predecessor = replace(
+        _task(),
+        task_id="PT-VIDEO-GENERATION-PREVIOUS",
+        shot_id="EP-001-SCN-001-SHT-001",
+    )
+    workspace.production_scheduling.register_compiled_tasks((predecessor,))
+    workspace._selected_shot_id = "EP-001-SCN-001-SHT-002"
+    workspace.production_task_production_id.setText("PROD-READINESS")
+    workspace.packages.current_package = lambda _shot_id: SimpleNamespace(
+        continuity={
+            "governed": {
+                "previous_shot_id": "EP-001-SCN-001-SHT-001",
+            }
+        }
+    )
+
+    dependencies, blocker = workspace._production_task_dependencies()
+
+    assert blocker == ""
+    assert dependencies == (predecessor.task_id,)
+
+
+def test_series_entry_continuity_produces_no_task_dependency(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
+) -> None:
+    projects = application_context.services.require(ProjectService)
+    projects.create(tmp_path / "Project", name="Project")
+    window = application_context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    workspace = window.production_package_workspace
+
+    workspace._selected_shot_id = "EP-001-SCN-001-SHT-001"
+    workspace.production_task_production_id.setText("PROD-READINESS")
+    workspace.packages.current_package = lambda _shot_id: SimpleNamespace(
+        continuity={
+            "governed": {"previous_shot_id": ""},
+            "production": {"previous_shot_id": ""},
+        }
+    )
+
+    dependencies, blocker = workspace._production_task_dependencies()
+
+    assert blocker == ""
+    assert dependencies == ()
