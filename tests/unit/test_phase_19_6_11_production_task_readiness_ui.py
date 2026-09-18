@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from PySide6.QtCore import Qt
@@ -163,6 +163,7 @@ def test_refresh_task_readiness_updates_authoritative_state_and_table(
     assert workspace.production_task_table.item(0, 2).text() == "ready"
     assert "Current authoritative state: ready" in workspace.production_task_readiness_status.text()
 
+
 def test_current_shot_compilation_context_inherits_previous_video_task_dependency(
     qtbot: object,
     qapp: QApplication,
@@ -191,4 +192,3 @@ def test_current_shot_compilation_context_inherits_previous_video_task_dependenc
 
     assert blocker == ""
     assert dependencies == (predecessor.task_id,)
-

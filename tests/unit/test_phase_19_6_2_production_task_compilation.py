@@ -136,6 +136,7 @@ def test_compiler_rejects_unready_or_stale_upd() -> None:
     with pytest.raises(ProductionTaskCompilationError, match="stale"):
         _compiler(current=False).compile_shot("SH027", _context())
 
+
 def test_compiler_preserves_cross_shot_dependencies_and_changes_task_identity() -> None:
     compiler = _compiler()
     predecessor = "PT-VIDEO-GENERATION-PREVIOUS"
@@ -161,4 +162,3 @@ def test_compilation_context_rejects_invalid_dependency_contract() -> None:
         _context(dependencies=(" ",))
     with pytest.raises(ValueError, match="duplicates"):
         _context(dependencies=("PT-A", "PT-A"))
-

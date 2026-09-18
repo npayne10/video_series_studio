@@ -206,6 +206,7 @@ def test_supersession_rejects_current_task_as_its_own_replacement() -> None:
 
     assert repository.get(current.task_id) == current
 
+
 def test_supersession_allows_same_upd_when_dependency_contract_changes() -> None:
     obsolete = _task(
         "PT-VIDEO-GENERATION-OLD",
@@ -276,4 +277,3 @@ def test_previous_shot_dependency_resolution_rejects_missing_or_ambiguous_author
             "VSCS-TSR2",
             "EP-001-SCN-001-SHT-001",
         )
-
