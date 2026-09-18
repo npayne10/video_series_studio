@@ -94,7 +94,7 @@ def test_production_profile_keeps_seven_second_ceiling_on_rtx5060ti(tmp_path: Pa
 
     with pytest.raises(
         LocalProductionPackageCompilationError,
-        match="validated production 7.0s",
+        match=r"validated production 7\.0s",
     ):
         service._comfyui_payload(_compiled(192, profile="production"))
 
@@ -152,6 +152,6 @@ def test_preview_profile_rejects_duration_above_revalidation_ceiling(
 
     with pytest.raises(
         LocalProductionPackageCompilationError,
-        match="controlled revalidation 16.0s",
+        match=r"controlled revalidation 16\.0s",
     ):
         service._comfyui_payload(_compiled(408, profile="preview"))
