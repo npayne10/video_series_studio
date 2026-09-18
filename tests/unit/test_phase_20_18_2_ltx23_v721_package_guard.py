@@ -37,7 +37,15 @@ def test_v721_validator_accepts_current_provider_package_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = tmp_path / "production_package.json"
-    path.write_text(json.dumps({"schema_version": LTX23_V721_PACKAGE_SCHEMA}), encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": LTX23_V721_PACKAGE_SCHEMA,
+                "provider_prompt_contract": {"compiler": "structured-authority-v1"},
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         LocalProductionPackageCompilationService,
         "validate_file",
@@ -46,3 +54,23 @@ def test_v721_validator_accepts_current_provider_package_schema(
     service = LocalLTX23V721ProductionPackageCompilationService(tmp_path)
 
     service.validate_file(object(), path)  # type: ignore[arg-type]
+
+
+def test_v721_validator_rejects_current_schema_without_provider_prompt_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "production_package.json"
+    path.write_text(json.dumps({"schema_version": LTX23_V721_PACKAGE_SCHEMA}), encoding="utf-8")
+    monkeypatch.setattr(
+        LocalProductionPackageCompilationService,
+        "validate_file",
+        lambda self, task, package_path: None,
+    )
+    service = LocalLTX23V721ProductionPackageCompilationService(tmp_path)
+
+    with pytest.raises(
+        LocalProductionPackageCompilationError,
+        match="provider-prompt fidelity",
+    ):
+        service.validate_file(object(), path)  # type: ignore[arg-type]

@@ -52,7 +52,17 @@ def _governed_description() -> dict[str, object]:
         "current_shot_id": "SHT-001",
         "universal_text": "Commander James Spence holds position in the observation lounge.",
         "story_context": {},
-        "shot": {"frame_count": 145, "fps": 24},
+        "shot": {
+            "frame_count": 145,
+            "fps": 24,
+            "production_objective": (
+                "Show Commander James Spence holding position in the observation lounge."
+            ),
+            "required_action": (
+                "Commander James Spence holds position in the observation lounge."
+            ),
+            "shot_constraints": [],
+        },
         "action_performance": {},
         "assets": [],
         "camera": {},

@@ -292,7 +292,11 @@ def test_persisted_governed_plan_reaches_upd_and_xpc(tmp_path: Path) -> None:
         "current_shot_id": "EP-001-SCN-001-SHT-001",
         "universal_text": "Commander James Spence holds position on the bridge.",
         "story_context": {},
-        "shot": {},
+        "shot": {
+            "production_objective": "Show Commander James Spence holding position on the bridge.",
+            "required_action": "Commander James Spence holds position on the bridge.",
+            "shot_constraints": [],
+        },
         "action_performance": {},
         "assets": [],
         "camera": {},
