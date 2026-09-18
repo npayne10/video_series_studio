@@ -665,21 +665,37 @@ class GovernedEnvironmentPlanningService:
             return WeatherState.CLEAR
         return WeatherState.NONE
 
-    @staticmethod
-    def _continuity_notes(scene: ScenePlan, shot: ShotPlan) -> str:
-        values = [
-            value.strip()
-            for value in (
-                scene.continuity_in,
-                shot.continuity_in,
-                shot.continuity_out,
-                scene.continuity_out,
+    def _continuity_notes(self, scene: ScenePlan, shot: ShotPlan) -> str:
+        """Compose Shot-local continuity without leaking future Scene boundary state.
+
+        Scene continuity is boundary authority: continuity_in applies only to the
+        first governed Shot and continuity_out only to the last. Every Shot always
+        receives its own explicit continuity_in/out values.
+        """
+        siblings = self.shots.list_plans(scene_id=scene.scene_id)
+        ordered = tuple(
+            sorted(
+                siblings,
+                key=lambda item: (item.sequence_number, item.shot_id),
             )
-            if value.strip()
-        ]
+        )
+        is_first = not ordered or ordered[0].shot_id == shot.shot_id
+        is_last = not ordered or ordered[-1].shot_id == shot.shot_id
+
+        candidates: list[str] = []
+        if is_first and scene.continuity_in.strip():
+            candidates.append(scene.continuity_in.strip())
+        if shot.continuity_in.strip():
+            candidates.append(shot.continuity_in.strip())
+        if shot.continuity_out.strip():
+            candidates.append(shot.continuity_out.strip())
+        if is_last and scene.continuity_out.strip():
+            candidates.append(scene.continuity_out.strip())
+
+        values = list(dict.fromkeys(candidates))
         if not values:
             return "Preserve physical environment state across adjacent Shots unless the story explicitly changes it."
-        return " / ".join(dict.fromkeys(values))
+        return " / ".join(values)
 
     @staticmethod
     def _environment_plan_id(shot_id: str) -> str:
