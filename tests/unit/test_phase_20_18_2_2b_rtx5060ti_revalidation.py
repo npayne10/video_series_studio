@@ -6,6 +6,7 @@ import pytest
 
 from vscs.application.production_execution import CompiledProductionPackage
 from vscs.infrastructure.production_execution.hardware_shot_capability import (
+    HardwareShotCapability,
     capability_for_vram,
 )
 from vscs.infrastructure.production_execution.package_compilation import (
@@ -50,7 +51,7 @@ def _compiled(frame_count: int, *, profile: str = "production") -> CompiledProdu
     )
 
 
-def _rtx_5060_ti_capability():
+def _rtx_5060_ti_capability() -> HardwareShotCapability:
     return capability_for_vram(
         16 * 1024**3,
         gpu_name="NVIDIA GeForce RTX 5060 Ti",

@@ -102,16 +102,17 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             )
 
         profile = compiled.profile.strip().casefold()
+        revalidation_maximum = capability.revalidation_maximum_shot_seconds
         preview_revalidation = (
             profile == "preview"
-            and capability.revalidation_maximum_shot_seconds is not None
+            and revalidation_maximum is not None
             and bool(capability.revalidation_candidate_shot_seconds)
         )
         active_maximum_seconds = capability.validated_maximum_shot_seconds
         active_maximum_frames = capability.governed_maximum_frame_count
         limit_kind = "validated production"
-        if preview_revalidation:
-            active_maximum_seconds = capability.revalidation_maximum_shot_seconds
+        if preview_revalidation and revalidation_maximum is not None:
+            active_maximum_seconds = revalidation_maximum
             active_maximum_frames = int(
                 active_maximum_seconds * capability.frames_per_second
             )
