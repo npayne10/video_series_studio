@@ -113,9 +113,7 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
         limit_kind = "validated production"
         if preview_revalidation and revalidation_maximum is not None:
             active_maximum_seconds = revalidation_maximum
-            active_maximum_frames = int(
-                active_maximum_seconds * capability.frames_per_second
-            )
+            active_maximum_frames = int(active_maximum_seconds * capability.frames_per_second)
             limit_kind = "controlled revalidation"
 
         if compiled.frame_count > active_maximum_frames:
@@ -130,8 +128,7 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             )
 
         revalidation_active = (
-            preview_revalidation
-            and compiled.frame_count > capability.governed_maximum_frame_count
+            preview_revalidation and compiled.frame_count > capability.governed_maximum_frame_count
         )
         if revalidation_active:
             candidate_frames = {
@@ -140,8 +137,7 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             }
             if compiled.frame_count not in candidate_frames:
                 candidate_text = ", ".join(
-                    f"{seconds:g}s"
-                    for seconds in capability.revalidation_candidate_shot_seconds
+                    f"{seconds:g}s" for seconds in capability.revalidation_candidate_shot_seconds
                 )
                 duration = compiled.frame_count / compiled.frames_per_second
                 raise LocalProductionPackageCompilationError(
@@ -167,9 +163,7 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             "governed_maximum_frame_count": capability.governed_maximum_frame_count,
             "active_maximum_shot_seconds": active_maximum_seconds,
             "active_maximum_frame_count": active_maximum_frames,
-            "revalidation_maximum_shot_seconds": (
-                capability.revalidation_maximum_shot_seconds
-            ),
+            "revalidation_maximum_shot_seconds": (capability.revalidation_maximum_shot_seconds),
             "revalidation_candidate_shot_seconds": list(
                 capability.revalidation_candidate_shot_seconds
             ),
