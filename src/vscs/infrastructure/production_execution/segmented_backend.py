@@ -100,16 +100,54 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
                 "Hardware-aware LTX Shot capability is validated at "
                 f"{capability.frames_per_second} fps, got {compiled.frames_per_second} fps."
             )
-        if compiled.frame_count > capability.governed_maximum_frame_count:
+
+        profile = compiled.profile.strip().casefold()
+        preview_revalidation = (
+            profile == "preview"
+            and capability.revalidation_maximum_shot_seconds is not None
+            and bool(capability.revalidation_candidate_shot_seconds)
+        )
+        active_maximum_seconds = capability.validated_maximum_shot_seconds
+        active_maximum_frames = capability.governed_maximum_frame_count
+        limit_kind = "validated production"
+        if preview_revalidation:
+            active_maximum_seconds = capability.revalidation_maximum_shot_seconds
+            active_maximum_frames = int(
+                active_maximum_seconds * capability.frames_per_second
+            )
+            limit_kind = "controlled revalidation"
+
+        if compiled.frame_count > active_maximum_frames:
             duration = compiled.frame_count / compiled.frames_per_second
             raise LocalProductionPackageCompilationError(
                 f"Governed Shot is {duration:.3f}s ({compiled.frame_count} frames), exceeding "
-                f"the validated {capability.validated_maximum_shot_seconds:.1f}s "
-                f"({capability.governed_maximum_frame_count} frames) limit for "
+                f"the {limit_kind} {active_maximum_seconds:.1f}s "
+                f"({active_maximum_frames} frames) limit for "
                 f"{capability.gpu_name} / {capability.vram_class_gb} GB class. "
                 "Re-plan the scene as multiple independent cinematic Shots; hidden provider "
                 "segmentation and reassembly are retired."
             )
+
+        revalidation_active = (
+            preview_revalidation
+            and compiled.frame_count > capability.governed_maximum_frame_count
+        )
+        if revalidation_active:
+            candidate_frames = {
+                int(seconds * capability.frames_per_second): seconds
+                for seconds in capability.revalidation_candidate_shot_seconds
+            }
+            if compiled.frame_count not in candidate_frames:
+                candidate_text = ", ".join(
+                    f"{seconds:g}s"
+                    for seconds in capability.revalidation_candidate_shot_seconds
+                )
+                duration = compiled.frame_count / compiled.frames_per_second
+                raise LocalProductionPackageCompilationError(
+                    f"Preview Shot is {duration:.3f}s ({compiled.frame_count} frames). "
+                    "RTX 5060 Ti 16 GB revalidation above the production-approved ceiling "
+                    f"must use one staged candidate duration: {candidate_text}."
+                )
 
         provider_frame_count = compiled.frame_count
         while (provider_frame_count - 1) % 8 != 0:
@@ -126,6 +164,18 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             "validation_status": capability.validation_status,
             "validated_maximum_shot_seconds": capability.validated_maximum_shot_seconds,
             "governed_maximum_frame_count": capability.governed_maximum_frame_count,
+            "active_maximum_shot_seconds": active_maximum_seconds,
+            "active_maximum_frame_count": active_maximum_frames,
+            "revalidation_maximum_shot_seconds": (
+                capability.revalidation_maximum_shot_seconds
+            ),
+            "revalidation_candidate_shot_seconds": list(
+                capability.revalidation_candidate_shot_seconds
+            ),
+            "revalidation_active": revalidation_active,
+            "production_approved": (
+                compiled.frame_count <= capability.governed_maximum_frame_count
+            ),
             "source": capability.source,
         }
         content["provider_execution_plan"] = {

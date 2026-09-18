@@ -33,6 +33,8 @@ class HardwareShotCapability:
     frames_per_second: int
     validation_status: str
     source: str
+    revalidation_maximum_shot_seconds: float | None = None
+    revalidation_candidate_shot_seconds: tuple[float, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -49,11 +51,26 @@ def capability_for_vram(
     if total_vram_bytes <= 0:
         raise HardwareShotCapabilityError("GPU total VRAM must be greater than zero")
     gib = total_vram_bytes / (1024**3)
+    normalized_gpu = " ".join(gpu_name.casefold().split())
+    revalidation_maximum: float | None = None
+    revalidation_candidates: tuple[float, ...] = ()
+
     if gib <= 8.5:
         vram_class = 8
         maximum_seconds = 7.0
         status = "validated"
         source = "phase-20.18.2-live-rtx4060-8gb"
+    elif "rtx 5060 ti" in normalized_gpu and gib >= 14.5:
+        # Phase 20.18.2.2b deliberately keeps the production ceiling at the
+        # previously validated seven seconds. The wider envelope is available
+        # only to preview-profile revalidation jobs until live evidence promotes
+        # a new production maximum for this exact GPU/provider pair.
+        vram_class = 16
+        maximum_seconds = 7.0
+        status = "revalidation-required"
+        source = "phase-20.18.2.2b-rtx5060ti-16gb-revalidation"
+        revalidation_maximum = 16.0
+        revalidation_candidates = (8.0, 10.0, 12.0, 14.0, 16.0)
     else:
         vram_class = max(9, round(gib))
         maximum_seconds = 7.0
@@ -76,6 +93,8 @@ def capability_for_vram(
         frames_per_second=frames_per_second,
         validation_status=status,
         source=source,
+        revalidation_maximum_shot_seconds=revalidation_maximum,
+        revalidation_candidate_shot_seconds=revalidation_candidates,
     )
 
 
