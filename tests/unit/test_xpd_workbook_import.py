@@ -314,6 +314,7 @@ def test_preview_still_rejects_duplicate_asset_id_inside_workbook(tmp_path: Path
     assert preview.items[1].disposition is XPDImportDisposition.CONFLICT
     assert "Asset ID appears more than once" in preview.items[1].reason
 
+
 def test_apply_imports_assets_and_retains_complete_provenance(tmp_path: Path) -> None:
     workbook = tmp_path / "XPD.xlsx"
     _write_xpd(workbook, (_row("CAP-SHP-001", "Iron Horizon", "Ship", "Survey vessel"),))
