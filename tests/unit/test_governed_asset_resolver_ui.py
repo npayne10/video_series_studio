@@ -139,9 +139,9 @@ def test_ready_inferred_binding_surfaces_inference_stale_governance(qtbot) -> No
             infer_requirements=lambda _shot_id: (),
             resolution=lambda _binding: SimpleNamespace(status=AssetResolutionStatus.RESOLVED),
             is_asset_current=lambda _binding: True,
-            is_inference_current=lambda _binding: False,
+            is_inference_current=lambda _binding, **_kwargs: False,
             is_upstream_current=lambda _binding: True,
-            is_production_ready=lambda _binding: False,
+            is_production_ready=lambda _binding, **_kwargs: False,
         ),
     )
 
@@ -178,7 +178,7 @@ def test_partial_draft_binding_is_not_mislabelled_as_changed(qtbot) -> None:
             resolution=lambda _binding: SimpleNamespace(status=AssetResolutionStatus.PARTIAL),
             is_asset_current=lambda _binding: False,
             is_upstream_current=lambda _binding: True,
-            is_production_ready=lambda _binding: False,
+            is_production_ready=lambda _binding, **_kwargs: False,
         ),
     )
 

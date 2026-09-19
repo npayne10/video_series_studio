@@ -320,7 +320,21 @@ class GovernedAssetResolverDialog(QDialog):
             else "Upstream Shot is not production-ready. Existing bindings remain visible but cannot advance."
         )
         bindings = self.service.list_bindings(shot_id=self.shot_id)
-        ready_count = sum(1 for binding in bindings if self.service.is_production_ready(binding))
+        inferred = tuple(binding for binding in bindings if binding.inference_source is not None)
+        proposals: tuple[ShotAssetRequirementProposal, ...] | None = None
+        if inferred:
+            proposals = self.service.infer_requirements(
+                self.shot_id,
+                include_ai=any(
+                    binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC
+                    for binding in inferred
+                ),
+            )
+        ready_count = sum(
+            1
+            for binding in bindings
+            if self.service.is_production_ready(binding, proposals=proposals)
+        )
         self.summary_label.setText(
             f"Asset requirements: {len(bindings)} declared • {ready_count} production-ready • "
             f"{len(bindings) - ready_count} unresolved, Draft or stale"
@@ -343,7 +357,7 @@ class GovernedAssetResolverDialog(QDialog):
             elif binding.status is AssetBindingStatus.READY:
                 if not self.service.is_asset_current(binding):
                     governance += " / Asset Stale"
-                if not self.service.is_inference_current(binding):
+                if not self.service.is_inference_current(binding, proposals=proposals):
                     governance += " / Inference Stale"
             values = (
                 binding.binding_id,
