@@ -367,7 +367,7 @@ def test_inference_candidate_scan_does_not_eagerly_resolve_unmatched_assets(
     shots.mark_ready(updated.shot_id)
 
     monkeypatch.setattr(
-        service.browser,
+        type(service.browser),
         "browse",
         lambda *_args, **_kwargs: pytest.fail(
             "deterministic inference must not resolve the entire Asset Browser"
