@@ -1245,10 +1245,7 @@ class GovernedAssetResolutionService:
                     for binding in inferred
                 ),
             )
-        return all(
-            self.is_production_ready(binding, proposals=proposals)
-            for binding in bindings
-        )
+        return all(self.is_production_ready(binding, proposals=proposals) for binding in bindings)
 
     def _dependency_hash(self, asset_id: str, category: AssetCategory) -> str:
         if not asset_id:

@@ -322,7 +322,9 @@ class GovernedAssetResolverDialog(QDialog):
         )
         bindings = self.service.list_bindings(shot_id=self.shot_id)
         inferred = tuple(
-            binding for binding in bindings if getattr(binding, "inference_source", None) is not None
+            binding
+            for binding in bindings
+            if getattr(binding, "inference_source", None) is not None
         )
         proposals: tuple[ShotAssetRequirementProposal, ...] | None = None
         if inferred:
