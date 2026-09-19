@@ -116,6 +116,45 @@ def test_asset_resolver_exposes_automated_requirement_analysis_and_human_apply(
     assert applied == [(proposal,)]
 
 
+
+def test_ready_inferred_binding_surfaces_inference_stale_governance(qtbot) -> None:
+    shot = _shot()
+    binding = SimpleNamespace(
+        binding_id=f"{shot.shot_id}-AST-001",
+        role="Location",
+        expected_category=AssetCategory.LOCATION,
+        requirement="Bridge is required.",
+        asset_id="CAP-LOC-008",
+        notes="Inferred via canonical_match.",
+        status=AssetBindingStatus.READY,
+    )
+    service = cast(
+        Any,
+        SimpleNamespace(
+            shots=SimpleNamespace(
+                plan=lambda _shot_id: shot,
+                is_production_ready=lambda _shot: True,
+            ),
+            semantic_provider=None,
+            list_bindings=lambda **_kwargs: (binding,),
+            infer_requirements=lambda _shot_id: (),
+            resolution=lambda _binding: SimpleNamespace(status=AssetResolutionStatus.RESOLVED),
+            is_asset_current=lambda _binding: True,
+            is_inference_current=lambda _binding: False,
+            is_upstream_current=lambda _binding: True,
+            is_production_ready=lambda _binding: False,
+        ),
+    )
+
+    dialog = GovernedAssetResolverDialog(service, shot)
+    qtbot.addWidget(dialog)
+
+    assert dialog.summary_label.text() == (
+        "Asset requirements: 1 declared • 0 production-ready • 1 unresolved, Draft or stale"
+    )
+    assert dialog.table.item(0, 6).text() == "Ready / Inference Stale"
+
+
 def test_partial_draft_binding_is_not_mislabelled_as_changed(qtbot) -> None:
     shot = _shot()
     binding = SimpleNamespace(

@@ -340,10 +340,11 @@ class GovernedAssetResolverDialog(QDialog):
             governance = binding.status.value.title()
             if not self.service.is_upstream_current(binding):
                 governance += " / Shot Stale"
-            elif binding.status is AssetBindingStatus.READY and not self.service.is_asset_current(
-                binding
-            ):
-                governance += " / Asset Stale"
+            elif binding.status is AssetBindingStatus.READY:
+                if not self.service.is_asset_current(binding):
+                    governance += " / Asset Stale"
+                if not self.service.is_inference_current(binding):
+                    governance += " / Inference Stale"
             values = (
                 binding.binding_id,
                 binding.role,

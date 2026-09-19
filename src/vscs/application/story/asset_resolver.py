@@ -141,6 +141,7 @@ class ShotAssetBinding:
     notes: str = ""
     shot_contract_hash: str = ""
     asset_dependency_hash: str = ""
+    inference_source: ShotAssetInferenceSource | None = None
     status: AssetBindingStatus = AssetBindingStatus.DRAFT
 
 
@@ -294,6 +295,7 @@ class GovernedAssetResolutionService:
                     f"Inferred via {proposal.source.value}; confidence "
                     f"{proposal.confidence:.2f}. {proposal.rationale}"
                 ).strip(),
+                inference_source=proposal.source,
             )
             created.append(binding)
             existing_keys.add(key)
@@ -1035,6 +1037,21 @@ class GovernedAssetResolutionService:
             and binding.asset_dependency_hash == resolution.fingerprint.checksum
         )
 
+    def is_inference_current(self, binding: ShotAssetBinding) -> bool:
+        """Return whether a machine-inferred binding is still supported by current inference."""
+        if binding.inference_source is None:
+            return True
+        proposals = self.infer_requirements(
+            binding.shot_id,
+            include_ai=binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC,
+        )
+        return any(
+            proposal.expected_category is binding.expected_category
+            and proposal.matched_asset_id.strip().upper() == binding.asset_id
+            and proposal.role == binding.role
+            for proposal in proposals
+        )
+
     def is_production_ready(self, binding: ShotAssetBinding) -> bool:
         """Return whether downstream specialist planners may consume this binding."""
         shot = self.shots.plan(binding.shot_id)
@@ -1044,6 +1061,7 @@ class GovernedAssetResolutionService:
             and self.shots.is_production_ready(shot)
             and self.is_upstream_current(binding)
             and self.is_asset_current(binding)
+            and self.is_inference_current(binding)
         )
 
     def create(
@@ -1056,6 +1074,7 @@ class GovernedAssetResolutionService:
         expected_category: AssetCategory,
         asset_id: str = "",
         notes: str = "",
+        inference_source: ShotAssetInferenceSource | None = None,
     ) -> ShotAssetBinding:
         """Create one Draft asset requirement beneath a current Ready Shot."""
         shot = self._require_ready_shot(shot_id)
@@ -1077,6 +1096,7 @@ class GovernedAssetResolutionService:
             notes=notes.strip(),
             shot_contract_hash=self._shot_contract_hash(shot),
             asset_dependency_hash=self._dependency_hash(selected_asset, expected_category),
+            inference_source=inference_source,
         )
         self._write((*self.list_bindings(), binding))
         return binding
@@ -1109,6 +1129,7 @@ class GovernedAssetResolutionService:
             notes=notes.strip(),
             shot_contract_hash=self._shot_contract_hash(shot),
             asset_dependency_hash=self._dependency_hash(selected_asset, expected_category),
+            inference_source=None,
         )
         self._replace(updated)
         return updated
@@ -1126,6 +1147,11 @@ class GovernedAssetResolutionService:
         if current.shot_contract_hash != self._shot_contract_hash(shot):
             raise GovernedAssetResolutionError(
                 "Asset binding is stale because the Shot contract changed; edit and save it before marking Ready"
+            )
+        if not self.is_inference_current(current):
+            raise GovernedAssetResolutionError(
+                "Inferred asset binding is stale against current governed requirement inference; "
+                "edit and save it before marking Ready"
             )
         if not current.asset_id:
             raise GovernedAssetResolutionError(
@@ -1267,10 +1293,18 @@ class GovernedAssetResolutionService:
         raw = asdict(binding)
         raw["expected_category"] = binding.expected_category.value
         raw["status"] = binding.status.value
+        raw["inference_source"] = (
+            binding.inference_source.value if binding.inference_source is not None else ""
+        )
         return raw
 
     @staticmethod
     def _from_dict(raw: dict[str, Any]) -> ShotAssetBinding:
+        notes = str(raw.get("notes", ""))
+        inference_value = str(raw.get("inference_source", "")).strip()
+        if not inference_value:
+            legacy_match = re.match(r"^Inferred via ([a-z_]+);", notes)
+            inference_value = legacy_match.group(1) if legacy_match is not None else ""
         return ShotAssetBinding(
             binding_id=str(raw["binding_id"]).strip().upper(),
             shot_id=str(raw["shot_id"]).strip().upper(),
@@ -1279,9 +1313,12 @@ class GovernedAssetResolutionService:
             requirement=str(raw["requirement"]),
             expected_category=AssetCategory(str(raw["expected_category"])),
             asset_id=str(raw.get("asset_id", "")).strip().upper(),
-            notes=str(raw.get("notes", "")),
+            notes=notes,
             shot_contract_hash=str(raw.get("shot_contract_hash", "")),
             asset_dependency_hash=str(raw.get("asset_dependency_hash", "")),
+            inference_source=(
+                ShotAssetInferenceSource(inference_value) if inference_value else None
+            ),
             status=AssetBindingStatus(str(raw.get("status", AssetBindingStatus.DRAFT.value))),
         )
 

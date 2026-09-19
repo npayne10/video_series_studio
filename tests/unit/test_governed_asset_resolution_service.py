@@ -374,6 +374,67 @@ def test_inferred_requirements_materialize_only_as_draft_bindings(
     context.shutdown()
 
 
+
+def test_legacy_inferred_binding_becomes_stale_when_current_inference_drops_match(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    _approved_named_asset(
+        context,
+        tmp_path,
+        asset_id="CAP-LOC-008",
+        name="Bridge",
+        category=AssetCategory.LOCATION,
+    )
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Iron Horizon Bridge",
+        narrative_purpose="Establish the Iron Horizon bridge.",
+        production_objective="Show the Iron Horizon bridge before the anomaly is known.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="Establish the Iron Horizon bridge with the crew at their stations.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    updated = shots.mark_ready(updated.shot_id)
+
+    binding = service.create(
+        shot_id=updated.shot_id,
+        sequence_number=1,
+        role="Location",
+        requirement="Bridge is required.",
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-008",
+    )
+    ready = service.mark_ready(binding.binding_id)
+    assert service.is_production_ready(ready)
+
+    payload = json.loads(service.planning_file.read_text(encoding="utf-8"))
+    payload["bindings"][0]["notes"] = (
+        "Inferred via canonical_match; confidence 1.00. "
+        "Explicit canonical asset name 'Bridge' occurs in governed Shot text."
+    )
+    payload["bindings"][0].pop("inference_source", None)
+    service.planning_file.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    legacy = service.binding(ready.binding_id)
+    assert legacy is not None
+    assert legacy.inference_source is ShotAssetInferenceSource.CANONICAL_MATCH
+    assert all(
+        proposal.matched_asset_id != "CAP-LOC-008"
+        for proposal in service.infer_requirements(updated.shot_id, include_ai=False)
+    )
+    assert not service.is_inference_current(legacy)
+    assert not service.is_production_ready(legacy)
+    assert not service.shot_ready(updated.shot_id)
+    context.shutdown()
+
 def test_optional_ai_inference_runs_only_when_deterministic_requirements_are_insufficient(
     tmp_path: Path,
 ) -> None:
