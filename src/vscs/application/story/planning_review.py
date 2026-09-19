@@ -140,8 +140,7 @@ class GovernedPlanningReviewService:
         assets_ready = (
             bool(shot_ready(normalized))
             if callable(shot_ready)
-            else bool(bindings)
-            and all(self.assets.is_production_ready(item) for item in bindings)
+            else bool(bindings) and all(self.assets.is_production_ready(item) for item in bindings)
         )
         checks.append(
             self._check(
