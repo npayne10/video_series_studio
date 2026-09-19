@@ -375,7 +375,6 @@ def test_inferred_requirements_materialize_only_as_draft_bindings(
     context.shutdown()
 
 
-
 def test_legacy_inferred_binding_becomes_stale_when_current_inference_drops_match(
     tmp_path: Path,
 ) -> None:
@@ -448,6 +447,7 @@ def test_legacy_inferred_binding_becomes_stale_when_current_inference_drops_matc
     assert human_reviewed is not None
     assert human_reviewed.inference_source is None
     context.shutdown()
+
 
 def test_optional_ai_inference_runs_only_when_deterministic_requirements_are_insufficient(
     tmp_path: Path,

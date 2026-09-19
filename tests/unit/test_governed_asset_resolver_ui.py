@@ -116,7 +116,6 @@ def test_asset_resolver_exposes_automated_requirement_analysis_and_human_apply(
     assert applied == [(proposal,)]
 
 
-
 def test_ready_inferred_binding_surfaces_inference_stale_governance(qtbot) -> None:
     shot = _shot()
     binding = SimpleNamespace(
