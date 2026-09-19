@@ -29,6 +29,7 @@ from vscs.application.story import (
     GovernedAssetResolutionError,
     GovernedAssetResolutionService,
     ShotAssetBinding,
+    ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
     ShotPlan,
 )
