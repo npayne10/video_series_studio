@@ -1041,6 +1041,9 @@ class GovernedAssetResolutionService:
         """Return whether a machine-inferred binding is still supported by current inference."""
         if binding.inference_source is None:
             return True
+        shot = self.shots.plan(binding.shot_id)
+        if shot is None or not self.shots.is_production_ready(shot):
+            return False
         proposals = self.infer_requirements(
             binding.shot_id,
             include_ai=binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC,
@@ -1302,7 +1305,7 @@ class GovernedAssetResolutionService:
     def _from_dict(raw: dict[str, Any]) -> ShotAssetBinding:
         notes = str(raw.get("notes", ""))
         inference_value = str(raw.get("inference_source", "")).strip()
-        if not inference_value:
+        if "inference_source" not in raw:
             legacy_match = re.match(r"^Inferred via ([a-z_]+);", notes)
             inference_value = legacy_match.group(1) if legacy_match is not None else ""
         return ShotAssetBinding(

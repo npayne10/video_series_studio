@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -433,6 +434,19 @@ def test_legacy_inferred_binding_becomes_stale_when_current_inference_drops_matc
     assert not service.is_inference_current(legacy)
     assert not service.is_production_ready(legacy)
     assert not service.shot_ready(updated.shot_id)
+
+    editable = service.return_to_draft(legacy.binding_id)
+    service.update(
+        editable.binding_id,
+        role=editable.role,
+        requirement=editable.requirement,
+        expected_category=editable.expected_category,
+        asset_id=editable.asset_id,
+        notes=editable.notes,
+    )
+    human_reviewed = service.binding(editable.binding_id)
+    assert human_reviewed is not None
+    assert human_reviewed.inference_source is None
     context.shutdown()
 
 def test_optional_ai_inference_runs_only_when_deterministic_requirements_are_insufficient(
