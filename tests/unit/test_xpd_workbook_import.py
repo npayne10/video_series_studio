@@ -259,8 +259,9 @@ def test_preview_allows_same_name_for_distinct_xpd_scopes(tmp_path: Path) -> Non
     assert "xpd:subcategory=Iron Horizon" in imported["CAP-LOC-021"].tags
 
 
-
-def test_preview_allows_duplicate_names_with_distinct_ids_inside_workbook(tmp_path: Path) -> None:
+def test_preview_allows_duplicate_names_with_distinct_ids_inside_workbook(
+    tmp_path: Path,
+) -> None:
     workbook = tmp_path / "XPD.xlsx"
     _write_xpd(
         workbook,
