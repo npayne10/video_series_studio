@@ -320,13 +320,16 @@ class GovernedAssetResolverDialog(QDialog):
             else "Upstream Shot is not production-ready. Existing bindings remain visible but cannot advance."
         )
         bindings = self.service.list_bindings(shot_id=self.shot_id)
-        inferred = tuple(binding for binding in bindings if binding.inference_source is not None)
+        inferred = tuple(
+            binding for binding in bindings if getattr(binding, "inference_source", None) is not None
+        )
         proposals: tuple[ShotAssetRequirementProposal, ...] | None = None
         if inferred:
             proposals = self.service.infer_requirements(
                 self.shot_id,
                 include_ai=any(
-                    binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC
+                    getattr(binding, "inference_source", None)
+                    is ShotAssetInferenceSource.AI_SEMANTIC
                     for binding in inferred
                 ),
             )
