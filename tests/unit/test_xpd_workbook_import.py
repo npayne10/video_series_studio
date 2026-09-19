@@ -119,12 +119,19 @@ def _write_xpd(path: Path, data_rows: tuple[tuple[str, ...], ...]) -> None:
         archive.writestr("xl/worksheets/sheet1.xml", sheet)
 
 
-def _row(asset_id: str, name: str, category: str, notes: str = "") -> tuple[str, ...]:
+def _row(
+    asset_id: str,
+    name: str,
+    category: str,
+    notes: str = "",
+    *,
+    subcategory: str = "",
+) -> tuple[str, ...]:
     values = [""] * 22
     values[0] = asset_id
     values[1] = name
     values[2] = category
-    values[3] = "Human" if category == "Character" else ""
+    values[3] = subcategory or ("Human" if category == "Character" else "")
     values[6] = "A"
     values[10] = "Locked"
     values[11] = "1.0"
@@ -157,6 +164,7 @@ def test_preview_classifies_new_update_unchanged_conflict_and_invalid(tmp_path: 
             _row("CAP-CHR-001", "Commander James Spence", "Character", "Changed note"),
             _row("CAP-PLN-001", "Xorix", "Planet"),
             _row("CAP-OLD-999", "Iron Horizon", "Ship"),
+            _row("CAP-CONFLICT-001", "Replacement Name", "Ship"),
             _row("CAP-BAD-001", "Bad", "UnknownCategory"),
         ),
     )
@@ -187,6 +195,16 @@ def test_preview_classifies_new_update_unchanged_conflict_and_invalid(tmp_path: 
                 "xpd:prompt=CAP-PLN-001.md",
             ),
         ),
+        Asset(
+            id=3,
+            asset_id="CAP-CONFLICT-001",
+            name="Existing Canonical Name",
+            category=AssetCategory.SHIP,
+            description="",
+            status=AssetStatus.APPROVED,
+            file_path=None,
+            tags=(),
+        ),
     )
     service = XPDWorkbookImportService(_Assets(tmp_path, existing))
 
@@ -196,9 +214,50 @@ def test_preview_classifies_new_update_unchanged_conflict_and_invalid(tmp_path: 
     assert dispositions["CAP-SHP-001"] is XPDImportDisposition.NEW
     assert dispositions["CAP-CHR-001"] is XPDImportDisposition.UPDATE
     assert dispositions["CAP-PLN-001"] is XPDImportDisposition.UNCHANGED
-    assert dispositions["CAP-OLD-999"] is XPDImportDisposition.CONFLICT
+    assert dispositions["CAP-OLD-999"] is XPDImportDisposition.NEW
+    assert dispositions["CAP-CONFLICT-001"] is XPDImportDisposition.CONFLICT
     assert dispositions["CAP-BAD-001"] is XPDImportDisposition.INVALID
 
+
+
+def test_preview_allows_same_name_for_distinct_xpd_scopes(tmp_path: Path) -> None:
+    workbook = tmp_path / "XPD.xlsx"
+    _write_xpd(
+        workbook,
+        (
+            _row(
+                "CAP-LOC-021",
+                "Bridge",
+                "Location",
+                "Iron Horizon bridge",
+                subcategory="Iron Horizon",
+            ),
+        ),
+    )
+    existing = (
+        Asset(
+            id=1,
+            asset_id="CAP-LOC-008",
+            name="Bridge",
+            category=AssetCategory.LOCATION,
+            description="Mauritania command deck",
+            status=AssetStatus.APPROVED,
+            file_path=None,
+            tags=("xpd:subcategory=Mauritania",),
+        ),
+    )
+    assets = _Assets(tmp_path, existing)
+    service = XPDWorkbookImportService(assets)
+
+    preview = service.preview(workbook)
+
+    assert preview.items[0].disposition is XPDImportDisposition.NEW
+    report = service.apply(preview)
+    assert report.created == 1
+    imported = {asset.asset_id: asset for asset in assets.list()}
+    assert set(imported) == {"CAP-LOC-008", "CAP-LOC-021"}
+    assert imported["CAP-LOC-021"].name == "Bridge"
+    assert "xpd:subcategory=Iron Horizon" in imported["CAP-LOC-021"].tags
 
 def test_apply_imports_assets_and_retains_complete_provenance(tmp_path: Path) -> None:
     workbook = tmp_path / "XPD.xlsx"

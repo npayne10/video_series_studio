@@ -271,11 +271,8 @@ class XPDWorkbookImportService:
         workbook_hash, rows = self.reader.read(workbook_path)
         existing = self.assets.list()
         by_id = {asset.asset_id.casefold(): asset for asset in existing}
-        by_name: dict[str, list[object]] = {}
-        for asset in existing:
-            by_name.setdefault(asset.name.casefold(), []).append(asset)
         provenance = self.provenance.load()
-        items = tuple(self._classify(row, by_id, by_name, provenance) for row in rows)
+        items = tuple(self._classify(row, by_id, provenance) for row in rows)
         return XPDImportPreview(
             workbook_path=str(workbook_path.expanduser().resolve(strict=False)),
             workbook_hash=workbook_hash,
@@ -325,7 +322,7 @@ class XPDWorkbookImportService:
             imported_asset_ids=tuple(imported_ids),
         )
 
-    def _classify(self, row, by_id, by_name, provenance) -> XPDImportItem:
+    def _classify(self, row, by_id, provenance) -> XPDImportItem:
         if not row.asset_id or not row.asset_name:
             return XPDImportItem(
                 row=row,
@@ -376,19 +373,13 @@ class XPDWorkbookImportService:
                 reason="Existing asset differs from XPD workbook metadata",
                 matched_asset_id=current.asset_id,
             )
-        same_name = by_name.get(row.asset_name.casefold(), [])
-        if same_name:
-            matched = same_name[0]
-            return XPDImportItem(
-                row=row,
-                disposition=XPDImportDisposition.CONFLICT,
-                reason="Canonical name already exists under a different Asset ID",
-                matched_asset_id=matched.asset_id,
-            )
         return XPDImportItem(
             row=row,
             disposition=XPDImportDisposition.NEW,
-            reason="New canonical XPD asset",
+            reason=(
+                "New canonical XPD asset. Asset ID is authoritative; display names may be "
+                "reused by assets in different XPD scopes."
+            ),
         )
 
     @staticmethod
