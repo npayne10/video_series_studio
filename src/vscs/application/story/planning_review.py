@@ -136,10 +136,10 @@ class GovernedPlanningReviewService:
         payload["shot"] = asdict(shot) if shot is not None else None
 
         bindings = self.assets.list_bindings(shot_id=normalized)
-        shot_ready = getattr(self.assets, "shot_ready", None)
+        asset_shot_ready = getattr(self.assets, "shot_ready", None)
         assets_ready = (
-            bool(shot_ready(normalized))
-            if callable(shot_ready)
+            bool(asset_shot_ready(normalized))
+            if callable(asset_shot_ready)
             else bool(bindings) and all(self.assets.is_production_ready(item) for item in bindings)
         )
         checks.append(
