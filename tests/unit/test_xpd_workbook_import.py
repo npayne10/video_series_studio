@@ -259,6 +259,60 @@ def test_preview_allows_same_name_for_distinct_xpd_scopes(tmp_path: Path) -> Non
     assert "xpd:subcategory=Iron Horizon" in imported["CAP-LOC-021"].tags
 
 
+
+def test_preview_allows_duplicate_names_with_distinct_ids_inside_workbook(tmp_path: Path) -> None:
+    workbook = tmp_path / "XPD.xlsx"
+    _write_xpd(
+        workbook,
+        (
+            _row(
+                "CAP-LOC-008",
+                "Bridge",
+                "Location",
+                "Mauritania command deck",
+                subcategory="Mauritania",
+            ),
+            _row(
+                "CAP-LOC-021",
+                "Bridge",
+                "Location",
+                "Iron Horizon bridge",
+                subcategory="Iron Horizon",
+            ),
+        ),
+    )
+    assets = _Assets(tmp_path)
+    service = XPDWorkbookImportService(assets)
+
+    preview = service.preview(workbook)
+
+    assert tuple(item.disposition for item in preview.items) == (
+        XPDImportDisposition.NEW,
+        XPDImportDisposition.NEW,
+    )
+    report = service.apply(preview)
+    assert report.created == 2
+    imported = {asset.asset_id: asset for asset in assets.list()}
+    assert set(imported) == {"CAP-LOC-008", "CAP-LOC-021"}
+
+
+def test_preview_still_rejects_duplicate_asset_id_inside_workbook(tmp_path: Path) -> None:
+    workbook = tmp_path / "XPD.xlsx"
+    _write_xpd(
+        workbook,
+        (
+            _row("CAP-LOC-021", "Bridge", "Location", subcategory="Iron Horizon"),
+            _row("CAP-LOC-021", "Bridge Duplicate", "Location", subcategory="Iron Horizon"),
+        ),
+    )
+    service = XPDWorkbookImportService(_Assets(tmp_path))
+
+    preview = service.preview(workbook)
+
+    assert preview.items[0].disposition is XPDImportDisposition.NEW
+    assert preview.items[1].disposition is XPDImportDisposition.CONFLICT
+    assert "Asset ID appears more than once" in preview.items[1].reason
+
 def test_apply_imports_assets_and_retains_complete_provenance(tmp_path: Path) -> None:
     workbook = tmp_path / "XPD.xlsx"
     _write_xpd(workbook, (_row("CAP-SHP-001", "Iron Horizon", "Ship", "Survey vessel"),))

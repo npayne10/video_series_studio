@@ -10,7 +10,7 @@ The importer targets worksheet `XAR_Master` and validates the approved XPD v1.1 
 
 Asset ID, Asset Name, Category, Subcategory, Asset Owner, Parent Asset, Production Priority, First Season, First Episode, First Clip, CAP Status, CAP Version, SVB Status, ARC Status, MSR Status, PRL, Variant Count, Dependencies, Image Filename, Prompt Filename, Last Modified, Notes.
 
-The supplied reference workbook contains 155 asset rows across Character, Uniform, Ship, Location, Prop, Planet, Environment, Lighting, Technology, Vehicle, Effect, Audio and Camera categories.
+The approved workbook may evolve over time; the importer validates the XAR_Master schema rather than relying on a fixed asset-row count. Supported categories include Character, Uniform, Ship, Location, Prop, Planet, Environment, Lighting, Technology, Vehicle, Effect, Audio and Camera.
 
 ## Architecture
 
@@ -24,17 +24,17 @@ VSCS does not write changes back to the workbook.
 
 ## Dry-run classifications
 
-- `new` — Asset ID and canonical name do not exist in VSCS.
+- `new` — Asset ID does not exist in VSCS. Display names may legitimately be reused by different Asset IDs when XPD scope/subcategory distinguishes the assets.
 - `update` — matching Asset ID/name/category exists, but projected XPD metadata differs.
 - `unchanged` — canonical asset and/or previous row hash already match.
-- `conflict` — Asset ID collides with a different canonical identity, or the canonical name exists under another ID.
+- `conflict` — Asset ID collides with a different canonical identity, or the same Asset ID appears more than once in the workbook.
 - `invalid` — required identity is missing or the XPD category is unsupported.
 
 Conflict and invalid rows are never auto-imported.
 
 ## Canonical field projection
 
-The generic Asset database receives Asset ID, canonical name, mapped category, notes as description, CAP-derived readiness status, and selected searchable XPD metadata tags. The complete 22-column source row remains available in provenance so no workbook metadata is discarded.
+The generic Asset database receives Asset ID, canonical name, mapped category, notes as description, CAP-derived readiness status, and selected searchable XPD metadata tags. Asset ID is the canonical identity key; names are descriptive and are not required to be globally unique. The complete 22-column source row remains available in provenance so no workbook metadata is discarded.
 
 CAP `Locked`/`Approved` maps to Asset `approved`; review states map to Asset `review`; other states map to Asset `draft`.
 
