@@ -345,6 +345,91 @@ def test_inference_extracts_explicit_shot_asset_and_matches_current_canonical_au
     context.shutdown()
 
 
+def test_inference_candidate_scan_does_not_eagerly_resolve_unmatched_assets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    asset_id = _approved_ship(context, tmp_path)
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Iron Horizon Establish",
+        narrative_purpose="Establish the Iron Horizon.",
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="The Iron Horizon crosses frame.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    shots.mark_ready(updated.shot_id)
+
+    monkeypatch.setattr(
+        service.browser,
+        "browse",
+        lambda *_args, **_kwargs: pytest.fail(
+            "deterministic inference must not resolve the entire Asset Browser"
+        ),
+    )
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+
+    assert any(proposal.matched_asset_id == asset_id for proposal in proposals)
+    context.shutdown()
+
+
+def test_shot_ready_reuses_one_inference_pass_for_multiple_inferred_bindings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    for asset_id, name, category in (
+        ("CAP-SHP-002", "Iron Horizon", AssetCategory.SHIP),
+        ("CAP-PLN-002", "Xorix", AssetCategory.PLANET),
+    ):
+        _approved_named_asset(
+            context,
+            tmp_path,
+            asset_id=asset_id,
+            name=name,
+            category=category,
+        )
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Iron Horizon over Xorix",
+        narrative_purpose="Establish the Iron Horizon over Xorix.",
+        production_objective="Orient the audience.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="The Iron Horizon crosses frame above Xorix.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    updated = shots.mark_ready(updated.shot_id)
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    created = service.apply_inferred_requirements(updated.shot_id, proposals)
+    for binding in created:
+        service.mark_ready(binding.binding_id)
+
+    original = service.infer_requirements
+    calls = 0
+
+    def counted_inference(shot_id: str, *, include_ai: bool = True):
+        nonlocal calls
+        calls += 1
+        return original(shot_id, include_ai=include_ai)
+
+    monkeypatch.setattr(service, "infer_requirements", counted_inference)
+
+    assert service.shot_ready(updated.shot_id)
+    assert calls == 1
+    context.shutdown()
+
+
 def test_inferred_requirements_materialize_only_as_draft_bindings(
     tmp_path: Path,
 ) -> None:

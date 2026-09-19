@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from time import perf_counter
 from typing import cast
 
 from sqlalchemy import Engine, Table, create_engine, event, select, text
@@ -61,14 +62,25 @@ class DatabaseManager:
         database_path = (project_directory / project.paths.database).resolve(strict=False)
         try:
             database_path.parent.mkdir(parents=True, exist_ok=True)
+            started = perf_counter()
             engine = create_engine(f"sqlite:///{database_path.as_posix()}", future=True)
             self._configure_sqlite(engine)
             self.database_path = database_path
             self.engine = engine
             self._session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+            self._logger.info("DBPROF engine.configure %.3f s", perf_counter() - started)
+
+            step = perf_counter()
             Base.metadata.create_all(engine)
+            self._logger.info("DBPROF metadata.create_all %.3f s", perf_counter() - step)
+
+            step = perf_counter()
             self._install_or_validate_schema()
+            self._logger.info("DBPROF schema.validate %.3f s", perf_counter() - step)
+
+            step = perf_counter()
             self.check_integrity()
+            self._logger.info("DBPROF integrity_check %.3f s", perf_counter() - step)
         except (OSError, SQLAlchemyError, DatabaseError) as exc:
             self.close()
             if isinstance(exc, DatabaseError):

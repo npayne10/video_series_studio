@@ -309,7 +309,7 @@ class GovernedAssetResolutionService:
         scene_text: str,
     ) -> tuple[ShotAssetRequirementProposal, ...]:
         """Extract explicit canonical asset mentions from governed Shot/Scene authority."""
-        items = self.browser.browse().items
+        items = self.browser.assets.list()
         proposals: list[ShotAssetRequirementProposal] = []
         normalized_text = self._normalize_text(scene_text)
         shot_text = self._normalize_text(self._shot_only_text(shot))
@@ -490,9 +490,7 @@ class GovernedAssetResolutionService:
             )
         )
         candidates = []
-        for item in self.browser.browse(
-            AssetBrowserFilter(categories=frozenset({proposal.expected_category}))
-        ).items:
+        for item in self.browser.assets.list(category=proposal.expected_category):
             evidence = self._asset_evidence(item, query)
             if evidence is not None:
                 candidates.append((evidence[0], item))
@@ -1037,25 +1035,37 @@ class GovernedAssetResolutionService:
             and binding.asset_dependency_hash == resolution.fingerprint.checksum
         )
 
-    def is_inference_current(self, binding: ShotAssetBinding) -> bool:
+    def is_inference_current(
+        self,
+        binding: ShotAssetBinding,
+        *,
+        proposals: tuple[ShotAssetRequirementProposal, ...] | None = None,
+    ) -> bool:
         """Return whether a machine-inferred binding is still supported by current inference."""
         if binding.inference_source is None:
             return True
         shot = self.shots.plan(binding.shot_id)
         if shot is None or not self.shots.is_production_ready(shot):
             return False
-        proposals = self.infer_requirements(
-            binding.shot_id,
-            include_ai=binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC,
-        )
+        current_proposals = proposals
+        if current_proposals is None:
+            current_proposals = self.infer_requirements(
+                binding.shot_id,
+                include_ai=binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC,
+            )
         return any(
             proposal.expected_category is binding.expected_category
             and proposal.matched_asset_id.strip().upper() == binding.asset_id
             and proposal.role == binding.role
-            for proposal in proposals
+            for proposal in current_proposals
         )
 
-    def is_production_ready(self, binding: ShotAssetBinding) -> bool:
+    def is_production_ready(
+        self,
+        binding: ShotAssetBinding,
+        *,
+        proposals: tuple[ShotAssetRequirementProposal, ...] | None = None,
+    ) -> bool:
         """Return whether downstream specialist planners may consume this binding."""
         shot = self.shots.plan(binding.shot_id)
         return (
@@ -1064,7 +1074,7 @@ class GovernedAssetResolutionService:
             and self.shots.is_production_ready(shot)
             and self.is_upstream_current(binding)
             and self.is_asset_current(binding)
-            and self.is_inference_current(binding)
+            and self.is_inference_current(binding, proposals=proposals)
         )
 
     def create(
@@ -1223,7 +1233,22 @@ class GovernedAssetResolutionService:
     def shot_ready(self, shot_id: str) -> bool:
         """Return whether every declared asset requirement for a Shot is production-ready."""
         bindings = self.list_bindings(shot_id=shot_id)
-        return bool(bindings) and all(self.is_production_ready(binding) for binding in bindings)
+        if not bindings:
+            return False
+        inferred = tuple(binding for binding in bindings if binding.inference_source is not None)
+        proposals: tuple[ShotAssetRequirementProposal, ...] | None = None
+        if inferred:
+            proposals = self.infer_requirements(
+                shot_id,
+                include_ai=any(
+                    binding.inference_source is ShotAssetInferenceSource.AI_SEMANTIC
+                    for binding in inferred
+                ),
+            )
+        return all(
+            self.is_production_ready(binding, proposals=proposals)
+            for binding in bindings
+        )
 
     def _dependency_hash(self, asset_id: str, category: AssetCategory) -> str:
         if not asset_id:
