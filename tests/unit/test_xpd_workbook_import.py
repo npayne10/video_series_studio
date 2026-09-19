@@ -219,7 +219,6 @@ def test_preview_classifies_new_update_unchanged_conflict_and_invalid(tmp_path: 
     assert dispositions["CAP-BAD-001"] is XPDImportDisposition.INVALID
 
 
-
 def test_preview_allows_same_name_for_distinct_xpd_scopes(tmp_path: Path) -> None:
     workbook = tmp_path / "XPD.xlsx"
     _write_xpd(
@@ -258,6 +257,7 @@ def test_preview_allows_same_name_for_distinct_xpd_scopes(tmp_path: Path) -> Non
     assert set(imported) == {"CAP-LOC-008", "CAP-LOC-021"}
     assert imported["CAP-LOC-021"].name == "Bridge"
     assert "xpd:subcategory=Iron Horizon" in imported["CAP-LOC-021"].tags
+
 
 def test_apply_imports_assets_and_retains_complete_provenance(tmp_path: Path) -> None:
     workbook = tmp_path / "XPD.xlsx"
