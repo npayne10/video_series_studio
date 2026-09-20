@@ -77,6 +77,9 @@ def test_ltx23_production_manifest_is_package_driven_and_parseable() -> None:
     assert "hardware_aware_one_shot" in manifest.capabilities
     assert dict(manifest.extra)["shot_execution_mode"] == "one_shot_per_provider_job"
     assert dict(manifest.extra)["provider_frame_adaptation"] == "VSCSProviderFrameCountV721"
+    assert dict(manifest.extra)["provider_prompt_compiler"] == "cinematic_action_v2"
+    assert dict(manifest.extra)["rebaseline_candidate"] == "A"
+    assert dict(manifest.extra)["preferred_rebaseline_candidate"] == "C_ltx25_i2v_keyframe"
 
 
 def test_exported_production_backend_builds_v721_package_adapter(tmp_path: Path) -> None:
@@ -145,7 +148,9 @@ def test_v721_package_maps_governed_reference_authority_without_silent_weakening
 
     assert payload["schema_version"] == "7.2.1-vscs-2"
     assert payload["status"] == "READY"
-    assert payload["provider_prompt_contract"]["compiler"] == "structured-authority-v1"
+    assert payload["provider_prompt_contract"]["compiler"] == "cinematic-action-v2"
+    assert payload["provider_video_rebaseline"]["active_candidate"] == "A"
+    assert payload["provider_video_rebaseline"]["preferred_candidate"] == "C"
     assert payload["acpp"]["prompts"]["positive"] == payload["shot_prompt"]
     assert payload["acpp"]["generation"]["width"] == 1280
     assert payload["acpp"]["generation"]["height"] == 720

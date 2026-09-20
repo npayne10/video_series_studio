@@ -41,7 +41,7 @@ def test_v721_validator_accepts_current_provider_package_schema(
         json.dumps(
             {
                 "schema_version": LTX23_V721_PACKAGE_SCHEMA,
-                "provider_prompt_contract": {"compiler": "structured-authority-v1"},
+                "provider_prompt_contract": {"compiler": "cinematic-action-v2"},
             }
         ),
         encoding="utf-8",
@@ -71,6 +71,6 @@ def test_v721_validator_rejects_current_schema_without_provider_prompt_contract(
 
     with pytest.raises(
         LocalProductionPackageCompilationError,
-        match="provider-prompt fidelity",
+        match="cinematic provider-prompt rebaseline",
     ):
         service.validate_file(object(), path)  # type: ignore[arg-type]

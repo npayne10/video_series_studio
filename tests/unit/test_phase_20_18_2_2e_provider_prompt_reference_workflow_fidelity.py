@@ -119,9 +119,9 @@ def test_structured_provider_prompt_excludes_governance_json_and_routes_negative
 
     assert "Iron Horizon bridge" in prompt.positive_prompt
     assert "Xorix visible" in prompt.positive_prompt
-    assert "Camera: wide shot; eye level angle; 28 mm lens; static camera movement" in (
-        prompt.positive_prompt
-    )
+    assert "Use a wide eye level 28 mm shot with a static camera" in prompt.positive_prompt
+    assert "Exactly two people are visible throughout the shot." in prompt.positive_prompt
+    assert "All other bridge stations remain empty." in prompt.positive_prompt
     assert "End before Sandra speaks." in prompt.positive_prompt
     assert "Do not spend this shot on a close reaction or insert." not in prompt.positive_prompt
     assert "Do not spend this shot on a close reaction or insert." in prompt.negative_prompt
@@ -137,7 +137,9 @@ def test_structured_provider_prompt_excludes_governance_json_and_routes_negative
     assert "asset_id" not in prompt.positive_prompt
     assert "dependency_checksum" not in prompt.positive_prompt
     assert r"assets\characters" not in prompt.positive_prompt
-    assert len(prompt.positive_prompt) < 3000
+    assert prompt.positive_word_count <= ProductionProviderPromptCompiler.MAX_POSITIVE_WORDS
+    assert prompt.motion_word_count <= ProductionProviderPromptCompiler.MAX_MOTION_WORDS
+    assert prompt.compiler == "cinematic-action-v2"
 
 
 def test_generic_bridge_name_requires_matching_location_scope() -> None:
@@ -246,7 +248,7 @@ def test_submission_audit_persists_exact_api_payload_and_provider_contract(
                 "negative_prompt": "identity swap",
                 "provider_prompt_contract": {
                     "schema_version": "1.0",
-                    "compiler": "structured-authority-v1",
+                    "compiler": "cinematic-action-v2",
                 },
                 "width": 1280,
                 "height": 720,
