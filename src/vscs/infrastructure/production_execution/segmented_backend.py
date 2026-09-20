@@ -229,13 +229,33 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
         content["positive_prompt"] = f"{authority} {positive}".strip()
         content["shot_prompt"] = content["positive_prompt"]
         negative = str(content.get("negative_prompt") or "").strip()
-        audio_negative = (
-            "generated speech, invented dialogue, unscripted voice, identity swap, duplicated "
-            "character, merged identity, contact sheet, split screen, tiled references"
+        audio_negatives = (
+            "generated speech",
+            "invented dialogue",
+            "unscripted voice",
+            "identity swap",
+            "duplicated character",
+            "merged identity",
+            "contact sheet",
+            "split screen",
+            "tiled references",
         )
-        content["negative_prompt"] = (
-            f"{negative}, {audio_negative}".strip(", ") if negative else audio_negative
-        )
+        negative_parts = [
+            part.strip(" ;")
+            for part in negative.split(";")
+            if part.strip(" ;")
+        ]
+        seen_negatives = {
+            part.casefold().rstrip(".")
+            for part in negative_parts
+        }
+        for safeguard in audio_negatives:
+            key = safeguard.casefold().rstrip(".")
+            if key in seen_negatives:
+                continue
+            negative_parts.append(safeguard)
+            seen_negatives.add(key)
+        content["negative_prompt"] = "; ".join(negative_parts)
         acpp = content.get("acpp")
         if isinstance(acpp, dict):
             prompts = acpp.get("prompts")

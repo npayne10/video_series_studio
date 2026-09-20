@@ -24,6 +24,9 @@ from vscs.domain.assets import AssetCategory
 from vscs.infrastructure.production_execution.ltx23_v721_backend import (
     LocalLTX23V721ProductionPackageCompilationService,
 )
+from vscs.infrastructure.production_execution.segmented_backend import (
+    SegmentedLTX23V721ProductionPackageCompilationService,
+)
 from vscs.infrastructure.production_execution.package_compilation import (
     LocalProductionPackageCompilationError,
 )
@@ -306,3 +309,48 @@ def test_submission_audit_persists_exact_api_payload_and_provider_contract(
     assert audit["production_package"]["package_fingerprint"] == "package-fingerprint-123456"
     assert audit["workflow"]["guide_nodes"][0]["frame_idx"] == -1
     assert audit["reference_contract"]["references"][0]["conditioning_mode"] == "attention_only"
+
+def test_provider_role_authority_deduplicates_existing_audio_negatives() -> None:
+    content = {
+        "positive_prompt": "Wide Iron Horizon bridge establishing shot.",
+        "negative_prompt": (
+            "generated speech; invented dialogue; identity swap; extra people; "
+            "Do not introduce additional named bridge officers."
+        ),
+        "reference_plan": {
+            "provider_multi_reference": {
+                "references": [
+                    {
+                        "role": "group_identity",
+                        "label": "James Spence + Sandra Crawford",
+                    }
+                ]
+            }
+        },
+        "acpp": {
+            "prompts": {
+                "positive": "Wide Iron Horizon bridge establishing shot.",
+                "negative": "stale",
+            },
+            "generation": {"audio_mode": "generated_reference"},
+        },
+    }
+
+    result = SegmentedLTX23V721ProductionPackageCompilationService._apply_provider_role_authority(
+        content
+    )
+
+    negative = str(result["negative_prompt"])
+    assert negative.casefold().count("generated speech") == 1
+    assert negative.casefold().count("invented dialogue") == 1
+    assert negative.casefold().count("identity swap") == 1
+    assert negative.casefold().count("unscripted voice") == 1
+    assert negative.casefold().count("duplicated character") == 1
+    assert negative.casefold().count("merged identity") == 1
+    assert negative.casefold().count("contact sheet") == 1
+    assert negative.casefold().count("split screen") == 1
+    assert negative.casefold().count("tiled references") == 1
+    assert "extra people" in negative
+    assert result["acpp"]["prompts"]["negative"] == negative
+    assert result["acpp"]["generation"]["audio_mode"] == "silent_visual_authority"
+
