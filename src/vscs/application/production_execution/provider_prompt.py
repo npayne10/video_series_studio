@@ -264,7 +264,7 @@ class ProductionProviderPromptCompiler:
         return tuple(
             fragment
             for raw in values
-            for fragment in (part.strip() for part in re.split(r"[;,]\\s*", raw))
+            for fragment in (part.strip() for part in re.split(r"[;,]\s*", raw))
             if fragment
         )
 
