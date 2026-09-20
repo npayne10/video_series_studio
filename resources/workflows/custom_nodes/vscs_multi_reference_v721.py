@@ -94,9 +94,7 @@ class VSCSMultiReferenceResolverV721:
                         f"Governed LTX reference slot must be between 1 and 3: {slot_number!r}"
                     )
             elif slot_number is not None and strict_validation:
-                raise ValueError(
-                    f"Governed LTX reference slot must be an integer: {slot_number!r}"
-                )
+                raise ValueError(f"Governed LTX reference slot must be an integer: {slot_number!r}")
 
             if slot is None:
                 slot = _ROLE_TO_SLOT.get(role)

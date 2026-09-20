@@ -96,6 +96,7 @@ def test_multi_reference_resolver_is_shipped_as_deployable_custom_node() -> None
     assert '"continuation_weight"' in content
     assert "Continue the exact same cinematic shot" in content
 
+
 def test_multi_reference_resolver_prefers_explicit_contract_slots(
     monkeypatch: object,
 ) -> None:
@@ -158,4 +159,3 @@ def test_multi_reference_resolver_prefers_explicit_contract_slots(
     assert result[:3] == ("GROUP", "PLANET", "BRIDGE")
     assert result[3:6] == (0.49500000000000005, 0.1375, 0.1375)
     assert result[7] is True
-
