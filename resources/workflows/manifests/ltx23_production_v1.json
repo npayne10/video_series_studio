@@ -42,7 +42,7 @@
     ],
     [
       "provider_prompt_compiler",
-      "structured_authority_v1"
+      "cinematic_action_v2"
     ],
     [
       "static_reference_conditioning",
@@ -51,6 +51,18 @@
     [
       "submission_payload_audit",
       ".vscs/provider_executions/payload_audit"
+    ],
+    [
+      "rebaseline_candidate",
+      "A"
+    ],
+    [
+      "preferred_rebaseline_candidate",
+      "C_ltx25_i2v_keyframe"
+    ],
+    [
+      "reference_metadata_prompt_policy",
+      "conditioning_only_not_creative_prompt"
     ]
   ],
   "lip_sync_modes": [
@@ -59,7 +71,7 @@
   ],
   "metadata": {
     "author": "VSCS",
-    "description": "Primary governed ComfyUI manifest for the LTX-2.3 Video Studio Production Engine v7.2.1 used by Phase 20.18.2 live functional acceptance. Governed visual references remain separate through the LTX Ingredients IC-LoRA path. Each governed Shot is hardware-bounded and executes as one normal provider job; hidden provider segmentation and reassembly are retired.",
+    "description": "Phase 20.18.2.2f Candidate A control workflow. LTX-2.3 governed multi-reference conditioning remains executable while provider text is rebaselined to concise cinematic/action prose. Reference/governance metadata is conditioning authority only and is not injected into the creative prompt. LTX-2.5 governed-keyframe I2V is the preferred Candidate C target but remains fail-closed until locally deployed and accepted.",
     "display_name": "LTX-2.3 Video Studio Production",
     "manifest_version": "1.0",
     "renderer": "comfyui",

@@ -208,55 +208,25 @@ class VSCSContinuityPromptV721:
         if not isinstance(contract, dict):
             return (shot_prompt,)
 
-        references = contract.get("references")
-        role_text: list[str] = []
-        if isinstance(references, list):
-            for raw in references:
-                if not isinstance(raw, dict):
-                    continue
-                role = str(raw.get("role") or "").strip()
-                label = str(
-                    raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or ""
-                ).strip()
-                if role and label:
-                    if role == "environment_reference":
-                        role_text.append(
-                            f"{role}={label} (supporting appearance reference only; "
-                            "do not use as foreground composition or replace the governed set)"
-                        )
-                    else:
-                        role_text.append(f"{role}={label} (preserve this person's identity)")
-
         continuity = contract.get("continuity")
         has_continuity = isinstance(continuity, dict) and bool(
             str(continuity.get("path") or "").strip()
         )
-        prompt_mode = (
-            str(continuity.get("prompt_mode") or "").strip() if isinstance(continuity, dict) else ""
-        )
-        if has_continuity and prompt_mode == "preserve_shot_to_shot_continuity":
+        if not has_continuity:
+            return (shot_prompt,)
+
+        prompt_mode = str(continuity.get("prompt_mode") or "").strip()
+        if prompt_mode == "preserve_shot_to_shot_continuity":
             prefix = (
-                "Use the supplied previous approved Shot final frame as visual continuity "
-                "authority for identity, wardrobe, environment, lighting state and spatial "
-                "orientation. Obey the new governed Shot description and camera direction; "
-                "do not force the previous framing or pretend this is the same continuous shot. "
-            )
-        elif has_continuity:
-            prefix = (
-                "Continue the exact same cinematic shot from the supplied previous-segment final "
-                "frame. Preserve camera position, lens, framing, people, wardrobe, lighting, "
-                "environment, spatial relationships and action direction. Do not restart, re-stage "
-                "or introduce new people. "
+                "Match the supplied previous approved final frame for identity, wardrobe, "
+                "environment, lighting and screen direction. Then perform the new shot action. "
             )
         else:
-            prefix = "Begin one coherent cinematic shot from the governed scene description. "
-        roles = "Reference roles: " + "; ".join(role_text) + ". " if role_text else ""
-        composition = (
-            "Identity references control who the people are, not where they are placed. "
-            "Environment references control appearance only and must remain subordinate to the "
-            "governed shot description and continuity frame. "
-        )
-        return (f"{prefix}{roles}{composition}{shot_prompt}".strip(),)
+            prefix = (
+                "Continue from the supplied previous frame without changing identity, wardrobe, "
+                "environment or screen direction. "
+            )
+        return (f"{prefix}{shot_prompt}".strip(),)
 
 
 NODE_CLASS_MAPPINGS = {
