@@ -192,42 +192,11 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
 
     @staticmethod
     def _apply_provider_role_authority(content: dict[str, Any]) -> dict[str, Any]:
-        plan = content.get("reference_plan")
-        if not isinstance(plan, dict):
-            return content
-        multi = plan.get("provider_multi_reference")
-        if not isinstance(multi, dict):
-            return content
-        references = multi.get("references")
-        if not isinstance(references, list):
-            return content
-
-        role_lines: list[str] = []
-        for raw in references:
-            if not isinstance(raw, dict):
-                continue
-            role = str(raw.get("role") or "").strip()
-            label = str(
-                raw.get("label") or raw.get("asset_id") or raw.get("reference_id") or ""
-            ).strip()
-            if not role or not label:
-                continue
-            role_lines.append(f"{role}: {label}")
-        if not role_lines:
-            return content
-
-        authority = (
-            "GOVERNED REFERENCE ROLE AUTHORITY. Treat each reference as a separate named visual "
-            "authority; do not merge, swap, duplicate, or substitute identities. "
-            + " | ".join(role_lines)
-            + ". Compose one coherent cinematic scene from the shot description. "
-            "Do not display the reference images as panels or cutaways. "
-            "Do not invent spoken dialogue or voices; authoritative dialogue/audio is supplied "
-            "by the VSCS audio pipeline."
-        )
+        """Keep reference governance out of creative text while enforcing provider safeguards."""
         positive = str(content.get("positive_prompt") or "").strip()
-        content["positive_prompt"] = f"{authority} {positive}".strip()
-        content["shot_prompt"] = content["positive_prompt"]
+        content["positive_prompt"] = positive
+        content["shot_prompt"] = positive
+
         negative = str(content.get("negative_prompt") or "").strip()
         audio_negatives = (
             "generated speech",
@@ -249,11 +218,12 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             negative_parts.append(safeguard)
             seen_negatives.add(key)
         content["negative_prompt"] = "; ".join(negative_parts)
+
         acpp = content.get("acpp")
         if isinstance(acpp, dict):
             prompts = acpp.get("prompts")
             if isinstance(prompts, dict):
-                prompts["positive"] = content["positive_prompt"]
+                prompts["positive"] = positive
                 prompts["negative"] = content["negative_prompt"]
             generation = acpp.get("generation")
             if isinstance(generation, dict):

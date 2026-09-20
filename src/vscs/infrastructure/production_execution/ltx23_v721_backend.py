@@ -11,7 +11,9 @@ from vscs.application.production_execution import (
     CompiledProductionPackage,
     ProductionExecutionError,
     ProductionPackageStatus,
+    provider_video_rebaseline_contract,
 )
+from vscs.application.production_execution.provider_prompt import ProductionProviderPromptCompiler
 from vscs.application.production_tasks import ProductionTask
 from vscs.application.rendering import RenderRequest
 from vscs.application.rendering.workflows import (
@@ -328,10 +330,10 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
             )
         prompt_contract = raw.get("provider_prompt_contract")
         if not isinstance(prompt_contract, dict) or (
-            prompt_contract.get("compiler") != "structured-authority-v1"
+            prompt_contract.get("compiler") != ProductionProviderPromptCompiler.COMPILER_ID
         ):
             raise LocalProductionPackageCompilationError(
-                "Production Package predates Phase 20.18.2.2e provider-prompt fidelity; "
+                "Production Package predates Phase 20.18.2.2f cinematic provider-prompt rebaseline; "
                 "recompile it before starting production"
             )
 
@@ -342,12 +344,19 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
         content["schema_version"] = LTX23_V721_PACKAGE_SCHEMA
         content["status"] = "READY"
         content["positive_prompt"] = compiled.positive_prompt
+        content["motion_prompt"] = compiled.motion_prompt
         content["provider_prompt_contract"] = {
-            "schema_version": "1.0",
-            "compiler": "structured-authority-v1",
+            "schema_version": "2.0",
+            "compiler": ProductionProviderPromptCompiler.COMPILER_ID,
             "source": "approved_structured_production_authority",
             "universal_text_usage": "audit_authority_only",
+            "reference_metadata_usage": "conditioning_only_not_creative_prompt",
+            "scene_prompt_max_words": ProductionProviderPromptCompiler.MAX_POSITIVE_WORDS,
+            "scene_prompt_word_count": len(compiled.positive_prompt.split()),
+            "motion_prompt_max_words": ProductionProviderPromptCompiler.MAX_MOTION_WORDS,
+            "motion_prompt_word_count": len(compiled.motion_prompt.split()),
         }
+        content["provider_video_rebaseline"] = provider_video_rebaseline_contract()
         content["acpp"] = {
             "metadata": {"id": compiled.source_package_id},
             "timing": {
@@ -367,6 +376,7 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
             "prompts": {
                 "positive": compiled.positive_prompt,
                 "negative": compiled.negative_prompt,
+                "motion": compiled.motion_prompt,
             },
             "story": {
                 "opening_state": "",
@@ -560,7 +570,7 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
         payload = dict(content)
         payload.pop("_vscs_manifest", None)
         manifest["package_fingerprint"] = cls._fingerprint(payload)
-        manifest["compiler"] = "VSCS Phase 20.18.2.2e / LTX-2.3 v7.2.1"
+        manifest["compiler"] = "VSCS Phase 20.18.2.2f / LTX-2.3 v7.2.1 Candidate A"
 
 
 class LocalComfyUIProductionExecutionBackend(_Phase20182ProductionExecutionBackend):
