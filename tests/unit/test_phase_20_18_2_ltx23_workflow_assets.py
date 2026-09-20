@@ -1,3 +1,4 @@
+import importlib.util
 import json
 from pathlib import Path
 
@@ -94,3 +95,67 @@ def test_multi_reference_resolver_is_shipped_as_deployable_custom_node() -> None
     assert "VSCSGovernedOutputNormalizerV721" in content
     assert '"continuation_weight"' in content
     assert "Continue the exact same cinematic shot" in content
+
+def test_multi_reference_resolver_prefers_explicit_contract_slots(
+    monkeypatch: object,
+) -> None:
+    node_path = (
+        REPOSITORY_ROOT
+        / "resources"
+        / "workflows"
+        / "custom_nodes"
+        / "vscs_multi_reference_v721.py"
+    )
+    spec = importlib.util.spec_from_file_location("vscs_multi_reference_v721_test", node_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    resolver_class = module.VSCSMultiReferenceResolverV721
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        resolver_class,
+        "_load_image",
+        staticmethod(lambda record: record["reference_id"]),
+    )
+    resolver = resolver_class()
+    reference_plan = {
+        "provider_multi_reference": {
+            "mode": "ltx_ingredients_iclora",
+            "references": [
+                {
+                    "reference_id": "GROUP",
+                    "role": "group_identity",
+                    "slot": 1,
+                    "weight": 0.9,
+                },
+                {
+                    "reference_id": "PLANET",
+                    "role": "environment_reference",
+                    "slot": 2,
+                    "weight": 0.25,
+                },
+                {
+                    "reference_id": "BRIDGE",
+                    "role": "environment_reference",
+                    "slot": 3,
+                    "weight": 0.25,
+                },
+            ],
+            "continuity": None,
+        }
+    }
+
+    result = resolver.resolve(
+        json.dumps(reference_plan),
+        "",
+        1280,
+        720,
+        0.55,
+        True,
+    )
+
+    assert result[:3] == ("GROUP", "PLANET", "BRIDGE")
+    assert result[3:6] == (0.49500000000000005, 0.1375, 0.1375)
+    assert result[7] is True
+

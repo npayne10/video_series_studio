@@ -84,11 +84,22 @@ class VSCSMultiReferenceResolverV721:
             if not isinstance(raw, dict):
                 continue
             role = str(raw.get("role") or "")
-            slot = _ROLE_TO_SLOT.get(role)
-            if slot is None:
-                slot_number = raw.get("slot")
-                if isinstance(slot_number, int) and 1 <= slot_number <= 3:
+            slot: int | None = None
+            slot_number = raw.get("slot")
+            if isinstance(slot_number, int) and not isinstance(slot_number, bool):
+                if 1 <= slot_number <= 3:
                     slot = slot_number - 1
+                elif strict_validation:
+                    raise ValueError(
+                        f"Governed LTX reference slot must be between 1 and 3: {slot_number!r}"
+                    )
+            elif slot_number is not None and strict_validation:
+                raise ValueError(
+                    f"Governed LTX reference slot must be an integer: {slot_number!r}"
+                )
+
+            if slot is None:
+                slot = _ROLE_TO_SLOT.get(role)
             if slot is None:
                 if strict_validation:
                     raise ValueError(f"Unsupported governed LTX reference role: {role!r}")
