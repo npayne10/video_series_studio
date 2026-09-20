@@ -240,15 +240,8 @@ class SegmentedLTX23V721ProductionPackageCompilationService(_CurrentPackageCompi
             "split screen",
             "tiled references",
         )
-        negative_parts = [
-            part.strip(" ;")
-            for part in negative.split(";")
-            if part.strip(" ;")
-        ]
-        seen_negatives = {
-            part.casefold().rstrip(".")
-            for part in negative_parts
-        }
+        negative_parts = [part.strip(" ;") for part in negative.split(";") if part.strip(" ;")]
+        seen_negatives = {part.casefold().rstrip(".") for part in negative_parts}
         for safeguard in audio_negatives:
             key = safeguard.casefold().rstrip(".")
             if key in seen_negatives:

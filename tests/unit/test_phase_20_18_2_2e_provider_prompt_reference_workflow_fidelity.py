@@ -24,11 +24,11 @@ from vscs.domain.assets import AssetCategory
 from vscs.infrastructure.production_execution.ltx23_v721_backend import (
     LocalLTX23V721ProductionPackageCompilationService,
 )
-from vscs.infrastructure.production_execution.segmented_backend import (
-    SegmentedLTX23V721ProductionPackageCompilationService,
-)
 from vscs.infrastructure.production_execution.package_compilation import (
     LocalProductionPackageCompilationError,
+)
+from vscs.infrastructure.production_execution.segmented_backend import (
+    SegmentedLTX23V721ProductionPackageCompilationService,
 )
 from vscs.infrastructure.rendering import ComfyUIWorkflowCompiler
 from vscs.infrastructure.rendering.comfyui_production import (
@@ -310,6 +310,7 @@ def test_submission_audit_persists_exact_api_payload_and_provider_contract(
     assert audit["workflow"]["guide_nodes"][0]["frame_idx"] == -1
     assert audit["reference_contract"]["references"][0]["conditioning_mode"] == "attention_only"
 
+
 def test_provider_role_authority_deduplicates_existing_audio_negatives() -> None:
     content = {
         "positive_prompt": "Wide Iron Horizon bridge establishing shot.",
@@ -353,4 +354,3 @@ def test_provider_role_authority_deduplicates_existing_audio_negatives() -> None
     assert "extra people" in negative
     assert result["acpp"]["prompts"]["negative"] == negative
     assert result["acpp"]["generation"]["audio_mode"] == "silent_visual_authority"
-
