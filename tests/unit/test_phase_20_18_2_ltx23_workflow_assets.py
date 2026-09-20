@@ -1,6 +1,8 @@
 import importlib.util
 import json
+import sys
 from pathlib import Path
+from types import ModuleType
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH = (
@@ -107,6 +109,16 @@ def test_multi_reference_resolver_prefers_explicit_contract_slots(
         / "custom_nodes"
         / "vscs_multi_reference_v721.py"
     )
+    numpy_stub = ModuleType("numpy")
+    torch_stub = ModuleType("torch")
+    pil_stub = ModuleType("PIL")
+    pil_image_stub = ModuleType("PIL.Image")
+    pil_stub.Image = pil_image_stub  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "numpy", numpy_stub)  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "torch", torch_stub)  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "PIL", pil_stub)  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "PIL.Image", pil_image_stub)  # type: ignore[attr-defined]
+
     spec = importlib.util.spec_from_file_location("vscs_multi_reference_v721_test", node_path)
     assert spec is not None
     assert spec.loader is not None
