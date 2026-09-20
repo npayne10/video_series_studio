@@ -90,13 +90,25 @@ def test_structured_provider_prompt_excludes_governance_json_and_routes_negative
         },
         "style": {
             "negative_constraints": ["avoid fantasy glow"],
+            "negative_prompt": (
+                "generated speech, invented dialogue, unscripted voice, identity swap, "
+                "duplicated character, merged identity, contact sheet, split screen, "
+                "tiled references"
+            ),
         },
         "assets": [
             {
                 "asset_id": "CAP-CHR-001",
+                "category": "character",
                 "canonical_reference": r"assets\characters\CAP-CHR-001.png",
                 "dependency_checksum": "deadbeef",
-            }
+            },
+            {
+                "asset_id": "CAP-CHR-003",
+                "category": "character",
+                "canonical_reference": r"assets\characters\CAP-CHR-003.png",
+                "dependency_checksum": "feedface",
+            },
         ],
     }
 
@@ -111,6 +123,13 @@ def test_structured_provider_prompt_excludes_governance_json_and_routes_negative
     assert "Do not spend this shot on a close reaction or insert." not in prompt.positive_prompt
     assert "Do not spend this shot on a close reaction or insert." in prompt.negative_prompt
     assert "Do not introduce additional named bridge officers." in prompt.negative_prompt
+    assert "extra people" in prompt.negative_prompt
+    assert "additional bridge crew" in prompt.negative_prompt
+    assert "additional officers" in prompt.negative_prompt
+    assert "third person" in prompt.negative_prompt
+    assert prompt.negative_prompt.casefold().count("generated speech") == 1
+    assert prompt.negative_prompt.casefold().count("invented dialogue") == 1
+    assert prompt.negative_prompt.casefold().count("identity swap") == 1
     assert "avoid fantasy glow" in prompt.negative_prompt
     assert "asset_id" not in prompt.positive_prompt
     assert "dependency_checksum" not in prompt.positive_prompt

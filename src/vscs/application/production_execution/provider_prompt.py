@@ -93,12 +93,13 @@ class ProductionProviderPromptCompiler:
             positive.append(style_text)
         for key in ("negative_constraints", "avoid", "forbidden", "negative_prompt"):
             raw = style.get(key)
-            if isinstance(raw, str):
-                self._partition_text(raw, [], negative, force_negative=True)
-            else:
-                for value in self._string_list(raw):
-                    self._partition_text(value, [], negative, force_negative=True)
+            for value in self._negative_values(
+                raw,
+                split_delimited=key == "negative_prompt",
+            ):
+                self._partition_text(value, [], negative, force_negative=True)
 
+        negative.extend(self._participant_safeguards(production, shot, action, environment))
         positive = self._deduplicate(positive)
         negative = self._deduplicate(negative)
         if not positive:
@@ -249,6 +250,64 @@ class ProductionProviderPromptCompiler:
         if not isinstance(value, list | tuple):
             return ()
         return tuple(str(item).strip() for item in value if str(item).strip())
+
+    @classmethod
+    def _negative_values(
+        cls,
+        value: object,
+        *,
+        split_delimited: bool,
+    ) -> tuple[str, ...]:
+        values = cls._string_list(value)
+        if not split_delimited:
+            return values
+        return tuple(
+            fragment
+            for raw in values
+            for fragment in (part.strip() for part in re.split(r"[;,]\\s*", raw))
+            if fragment
+        )
+
+    @classmethod
+    def _participant_safeguards(
+        cls,
+        production: dict[str, Any],
+        shot: dict[str, Any],
+        action: dict[str, Any],
+        environment: dict[str, Any],
+    ) -> tuple[str, ...]:
+        """Strengthen an existing two-person bridge constraint without inventing one."""
+        assets = production.get("assets")
+        if not isinstance(assets, list | tuple):
+            return ()
+        character_ids = {
+            cls._text(asset.get("asset_id")).upper()
+            for asset in assets
+            if isinstance(asset, dict)
+            and cls._text(asset.get("category")).casefold() == "character"
+            and cls._text(asset.get("asset_id"))
+        }
+        if len(character_ids) != 2:
+            return ()
+
+        governed_text = " ".join(
+            (
+                cls._text(shot.get("production_objective")),
+                cls._text(shot.get("required_action")),
+                cls._text(action.get("temporal_narrative")),
+                cls._text(action.get("performance_direction")),
+                cls._text(environment.get("continuity_notes")),
+                *cls._string_list(shot.get("shot_constraints")),
+            )
+        ).casefold()
+        if "additional named bridge officers" not in governed_text:
+            return ()
+        return (
+            "extra people",
+            "additional bridge crew",
+            "additional officers",
+            "third person",
+        )
 
     @staticmethod
     def _text(value: object) -> str:
