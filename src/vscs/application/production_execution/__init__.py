@@ -24,6 +24,13 @@ from .retry_override import (
     GovernedRetryOverrideState,
     GovernedRetryOverrideStatus,
 )
+from .video_workflow_rebaseline import (
+    ProviderVideoCandidate,
+    ProviderVideoCandidateId,
+    VISUAL_ACCEPTANCE_CRITERIA,
+    provider_video_candidates,
+    provider_video_rebaseline_contract,
+)
 from .telemetry import (
     ProductionDeviceTelemetry,
     ProductionTelemetrySnapshot,
@@ -61,8 +68,13 @@ __all__ = [
     "ProductionPackageStatus",
     "ProductionTelemetrySnapshot",
     "ProductionTelemetryState",
+    "ProviderVideoCandidate",
+    "ProviderVideoCandidateId",
     "ReferencePlanRenderBinding",
     "ReferencePlanRenderBindingError",
     "ReferencePlanRenderRequestBinder",
+    "VISUAL_ACCEPTANCE_CRITERIA",
     "normalize_execution_profile",
+    "provider_video_candidates",
+    "provider_video_rebaseline_contract",
 ]

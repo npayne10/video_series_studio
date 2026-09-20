@@ -1,4 +1,4 @@
-"""Deterministic provider-facing prompt compilation from approved production authority."""
+"""Deterministic cinematic provider prompts derived from approved production authority."""
 
 from __future__ import annotations
 
@@ -13,17 +13,28 @@ class ProductionProviderPromptError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class ProductionProviderPrompt:
-    """Concise provider-facing prompt while the full UPD remains audit authority."""
+    """Provider-facing scene and motion prompts while the full UPD remains audit authority."""
 
     positive_prompt: str
     negative_prompt: str
-    compiler: str = "structured-authority-v1"
+    motion_prompt: str
+    compiler: str = "cinematic-action-v2"
+
+    @property
+    def positive_word_count(self) -> int:
+        return len(self.positive_prompt.split())
+
+    @property
+    def motion_word_count(self) -> int:
+        return len(self.motion_prompt.split())
 
 
 class ProductionProviderPromptCompiler:
-    """Translate structured approved authority into cinematic provider prose."""
+    """Translate governed authority into literal, chronological cinematic prose."""
 
-    MAX_POSITIVE_CHARS = 6000
+    COMPILER_ID = "cinematic-action-v2"
+    MAX_POSITIVE_WORDS = 150
+    MAX_MOTION_WORDS = 90
     MAX_NEGATIVE_CHARS = 3000
 
     _NEGATIVE_PREFIXES = ("do not ", "don't ", "never ", "avoid ", "no ", "without ")
@@ -48,71 +59,85 @@ class ProductionProviderPromptCompiler:
     def compile(self, production: dict[str, Any]) -> ProductionProviderPrompt:
         if not isinstance(production, dict):
             raise ProductionProviderPromptError("production authority must be an object")
+
         shot = self._mapping(production.get("shot"))
         action = self._mapping(production.get("action_performance"))
         camera = self._mapping(production.get("camera"))
         lighting = self._mapping(production.get("lighting"))
         environment = self._mapping(production.get("environment"))
-        continuity = self._mapping(production.get("continuity"))
         style = self._mapping(production.get("style"))
 
+        action_sentences, action_negatives = self._action_sentences(shot, action)
+        participant_positive, participant_negative = self._participant_safeguards(
+            production,
+            shot,
+            action,
+            environment,
+        )
+
         positive: list[str] = []
-        negative: list[str] = list(self._BASE_NEGATIVES)
-        for value in (
-            shot.get("production_objective"),
-            shot.get("required_action"),
-            action.get("temporal_narrative"),
-            action.get("performance_direction"),
-            continuity.get("opening_state") or action.get("opening_state"),
-            continuity.get("closing_state") or action.get("closing_state"),
-        ):
-            self._partition_text(value, positive, negative)
-        for value in self._string_list(shot.get("shot_constraints")):
-            self._partition_text(value, positive, negative)
+        objective = self._text(shot.get("production_objective"))
+        if objective:
+            self._partition_text(objective, positive, [])
+        positive.extend(participant_positive)
+        positive.extend(action_sentences)
 
         camera_text = self._camera_text(camera)
         if camera_text:
             positive.append(camera_text)
-        for value in self._string_list(camera.get("camera_constraints")):
-            self._partition_text(value, positive, negative)
-
         lighting_text = self._lighting_text(lighting)
         if lighting_text:
             positive.append(lighting_text)
-        for value in self._string_list(lighting.get("lighting_constraints")):
-            self._partition_text(value, positive, negative)
-
         environment_text = self._environment_text(environment)
         if environment_text:
             positive.append(environment_text)
-        for value in self._string_list(environment.get("environment_constraints")):
-            self._partition_text(value, positive, negative)
-
         style_text = self._style_text(style)
         if style_text:
             positive.append(style_text)
+
+        negative: list[str] = list(self._BASE_NEGATIVES)
+        negative.extend(action_negatives)
+        for value in self._string_list(shot.get("shot_constraints")):
+            self._partition_text(value, [], negative)
+        for value in self._string_list(camera.get("camera_constraints")):
+            self._partition_text(value, [], negative)
+        for value in self._string_list(lighting.get("lighting_constraints")):
+            self._partition_text(value, [], negative)
+        for value in self._string_list(environment.get("environment_constraints")):
+            self._partition_text(value, [], negative)
         for key in ("negative_constraints", "avoid", "forbidden", "negative_prompt"):
-            raw = style.get(key)
             for value in self._negative_values(
-                raw,
+                style.get(key),
                 split_delimited=key == "negative_prompt",
             ):
                 self._partition_text(value, [], negative, force_negative=True)
+        negative.extend(participant_negative)
 
-        negative.extend(self._participant_safeguards(production, shot, action, environment))
         positive = self._deduplicate(positive)
         negative = self._deduplicate(negative)
+        motion = self._motion_prompt(
+            action_sentences,
+            participant_positive,
+            camera,
+            environment,
+        )
         if not positive:
             raise ProductionProviderPromptError(
                 "approved production authority contains no provider-facing visual/action content"
             )
-        positive_prompt = "\n".join(positive)
+
+        positive_prompt = " ".join(self._ensure_terminal(value) for value in positive)
         negative_prompt = "; ".join(negative)
-        if len(positive_prompt) > self.MAX_POSITIVE_CHARS:
+        if self._word_count(positive_prompt) > self.MAX_POSITIVE_WORDS:
             raise ProductionProviderPromptError(
-                "provider-facing positive prompt exceeds "
-                f"{self.MAX_POSITIVE_CHARS} characters; refine governed production authority "
-                "instead of silently truncating it"
+                "cinematic provider prompt exceeds "
+                f"{self.MAX_POSITIVE_WORDS} words; refine governed production authority "
+                "instead of sending governance/detail overload to the video model"
+            )
+        if self._word_count(motion) > self.MAX_MOTION_WORDS:
+            raise ProductionProviderPromptError(
+                "motion-only provider prompt exceeds "
+                f"{self.MAX_MOTION_WORDS} words; simplify the governed Shot action"
             )
         if len(negative_prompt) > self.MAX_NEGATIVE_CHARS:
             raise ProductionProviderPromptError(
@@ -120,7 +145,49 @@ class ProductionProviderPromptCompiler:
                 f"{self.MAX_NEGATIVE_CHARS} characters; refine governed production authority "
                 "instead of silently truncating it"
             )
-        return ProductionProviderPrompt(positive_prompt, negative_prompt)
+        return ProductionProviderPrompt(
+            positive_prompt=positive_prompt,
+            negative_prompt=negative_prompt,
+            motion_prompt=motion,
+        )
+
+    def _action_sentences(
+        self,
+        shot: dict[str, Any],
+        action: dict[str, Any],
+    ) -> tuple[list[str], list[str]]:
+        positive: list[str] = []
+        negative: list[str] = []
+        for raw in (
+            action.get("temporal_narrative"),
+            shot.get("required_action"),
+            action.get("performance_direction"),
+        ):
+            self._partition_text(raw, positive, negative)
+        return self._deduplicate(positive), self._deduplicate(negative)
+
+    def _motion_prompt(
+        self,
+        action_sentences: list[str],
+        participant_positive: tuple[str, ...],
+        camera: dict[str, Any],
+        environment: dict[str, Any],
+    ) -> str:
+        motion: list[str] = []
+        if participant_positive:
+            motion.append(participant_positive[0])
+        motion.extend(action_sentences)
+
+        movement = self._text(camera.get("movement")).casefold()
+        if movement == "static":
+            motion.append("The camera remains locked in place throughout the shot.")
+
+        environmental_motion = self._text(environment.get("environmental_motion"))
+        if environmental_motion and environmental_motion.casefold().startswith("no "):
+            motion.append("The environment remains visually stable throughout the shot.")
+
+        cleaned = self._deduplicate(motion)
+        return " ".join(self._ensure_terminal(value) for value in cleaned)
 
     def _partition_text(
         self,
@@ -155,89 +222,122 @@ class ProductionProviderPromptCompiler:
 
     @classmethod
     def _camera_text(cls, camera: dict[str, Any]) -> str:
-        values: list[str] = []
-        shot_size = cls._text(camera.get("shot_size"))
-        angle = cls._text(camera.get("angle"))
+        parts: list[str] = []
+        shot_size = cls._humanize(cls._text(camera.get("shot_size")))
+        angle = cls._humanize(cls._text(camera.get("angle")))
         focal = camera.get("focal_length_mm")
-        movement = cls._text(camera.get("movement"))
+        movement = cls._humanize(cls._text(camera.get("movement")))
         if shot_size:
-            values.append(f"{cls._humanize(shot_size)} shot")
+            parts.append(shot_size)
         if angle:
-            values.append(f"{cls._humanize(angle)} angle")
+            parts.append(angle)
         if isinstance(focal, int | float) and not isinstance(focal, bool) and focal > 0:
-            values.append(f"{focal:g} mm lens")
+            parts.append(f"{focal:g} mm")
+        if not parts and not movement:
+            return ""
+
+        description = "Use a " + " ".join(parts)
+        if parts:
+            description += " shot"
         if movement:
-            values.append(f"{cls._humanize(movement)} camera movement")
-        values.extend(
-            value
-            for value in (
-                cls._text(camera.get("composition")),
-                cls._text(camera.get("focus_strategy")),
-                cls._text(camera.get("movement_notes")),
-            )
-            if value
-        )
-        return "Camera: " + "; ".join(cls._deduplicate(values)) if values else ""
+            description += f" with a {movement} camera"
+        composition = cls._text(camera.get("composition"))
+        if composition:
+            description += f", {composition}"
+        return description + "."
 
     @classmethod
     def _lighting_text(cls, lighting: dict[str, Any]) -> str:
-        values: list[str] = []
-        intent = cls._text(lighting.get("lighting_intent"))
+        intent = cls._humanize(cls._text(lighting.get("lighting_intent")))
         temperature = lighting.get("color_temperature_k")
-        quality = cls._text(lighting.get("key_quality"))
-        direction = cls._text(lighting.get("key_direction"))
+        quality = cls._humanize(cls._text(lighting.get("key_quality")))
+        direction = cls._humanize(cls._text(lighting.get("key_direction")))
         fill = lighting.get("fill_level_percent")
+
+        parts: list[str] = []
         if intent:
-            values.append(cls._humanize(intent))
+            parts.append(intent)
         if isinstance(temperature, int | float) and not isinstance(temperature, bool):
-            values.append(f"{temperature:g} K")
+            parts.append(f"{temperature:g} K")
         if quality or direction:
-            values.append(
-                " ".join(
-                    value
-                    for value in (
-                        cls._humanize(quality),
-                        cls._humanize(direction),
-                        "key",
-                    )
-                    if value
-                )
-            )
+            parts.append(" ".join(value for value in (quality, direction, "key") if value))
         if isinstance(fill, int | float) and not isinstance(fill, bool):
-            values.append(f"{fill:g}% restrained fill")
-        values.extend(
-            value
-            for value in (
-                cls._text(lighting.get("source_strategy")),
-                cls._text(lighting.get("shadow_strategy")),
-                cls._text(lighting.get("subject_readability")),
-            )
-            if value
-        )
-        return "Lighting: " + "; ".join(cls._deduplicate(values)) if values else ""
+            parts.append(f"restrained {fill:g}% fill")
+        return "Use " + ", ".join(parts) + " lighting." if parts else ""
 
     @classmethod
     def _environment_text(cls, environment: dict[str, Any]) -> str:
         values = [
-            cls._humanize(value)
-            for value in (
-                cls._text(environment.get("environment_context")),
-                cls._text(environment.get("atmosphere_state")),
-                cls._text(environment.get("surface_state")),
-                cls._text(environment.get("environmental_motion")),
+            cls._humanize(cls._text(environment.get(key)))
+            for key in (
+                "environment_context",
+                "atmosphere_state",
+                "surface_state",
+                "environmental_motion",
             )
-            if value
         ]
-        return "Environment: " + "; ".join(cls._deduplicate(values)) if values else ""
+        parts = [value for value in values if value]
+        return "The environment remains " + ", ".join(parts) + "." if parts else ""
 
     @classmethod
     def _style_text(cls, style: dict[str, Any]) -> str:
         values = [
-            cls._text(style.get("declared_style")),
-            cls._text(style.get("declared_tone")),
+            cls._humanize(cls._text(style.get("declared_style"))),
+            cls._humanize(cls._text(style.get("declared_tone"))),
         ]
-        cleaned = [cls._humanize(value) for value in values if value]
-        return "Style: " + "; ".join(cls._deduplicate(cleaned)) if cleaned else ""
+        cleaned = [value for value in values if value]
+        return (
+            "Use a " + ", ".join(cls._deduplicate(cleaned)) + " visual treatment."
+            if cleaned
+            else ""
+        )
+
+    @classmethod
+    def _participant_safeguards(
+        cls,
+        production: dict[str, Any],
+        shot: dict[str, Any],
+        action: dict[str, Any],
+        environment: dict[str, Any],
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        """Translate an existing two-person restriction into positive visual staging."""
+        assets = production.get("assets")
+        if not isinstance(assets, list | tuple):
+            return (), ()
+        character_ids = {
+            cls._text(asset.get("asset_id")).upper()
+            for asset in assets
+            if isinstance(asset, dict)
+            and cls._text(asset.get("category")).casefold() == "character"
+            and cls._text(asset.get("asset_id"))
+        }
+        if len(character_ids) != 2:
+            return (), ()
+
+        governed_text = " ".join(
+            (
+                cls._text(shot.get("production_objective")),
+                cls._text(shot.get("required_action")),
+                cls._text(action.get("temporal_narrative")),
+                cls._text(action.get("performance_direction")),
+                cls._text(environment.get("continuity_notes")),
+                *cls._string_list(shot.get("shot_constraints")),
+            )
+        ).casefold()
+        if "additional named bridge officers" not in governed_text:
+            return (), ()
+
+        positive = ["Exactly two people are visible throughout the shot."]
+        if "bridge" in governed_text:
+            positive.append("All other bridge stations remain empty.")
+        negative = (
+            "extra people",
+            "background people",
+            "additional bridge crew",
+            "additional officers",
+            "third person",
+        )
+        return tuple(positive), negative
 
     @staticmethod
     def _mapping(value: object) -> dict[str, Any]:
@@ -268,47 +368,6 @@ class ProductionProviderPromptCompiler:
             if fragment
         )
 
-    @classmethod
-    def _participant_safeguards(
-        cls,
-        production: dict[str, Any],
-        shot: dict[str, Any],
-        action: dict[str, Any],
-        environment: dict[str, Any],
-    ) -> tuple[str, ...]:
-        """Strengthen an existing two-person bridge constraint without inventing one."""
-        assets = production.get("assets")
-        if not isinstance(assets, list | tuple):
-            return ()
-        character_ids = {
-            cls._text(asset.get("asset_id")).upper()
-            for asset in assets
-            if isinstance(asset, dict)
-            and cls._text(asset.get("category")).casefold() == "character"
-            and cls._text(asset.get("asset_id"))
-        }
-        if len(character_ids) != 2:
-            return ()
-
-        governed_text = " ".join(
-            (
-                cls._text(shot.get("production_objective")),
-                cls._text(shot.get("required_action")),
-                cls._text(action.get("temporal_narrative")),
-                cls._text(action.get("performance_direction")),
-                cls._text(environment.get("continuity_notes")),
-                *cls._string_list(shot.get("shot_constraints")),
-            )
-        ).casefold()
-        if "additional named bridge officers" not in governed_text:
-            return ()
-        return (
-            "extra people",
-            "additional bridge crew",
-            "additional officers",
-            "third person",
-        )
-
     @staticmethod
     def _text(value: object) -> str:
         return str(value).strip() if isinstance(value, str) else ""
@@ -316,6 +375,15 @@ class ProductionProviderPromptCompiler:
     @staticmethod
     def _humanize(value: str) -> str:
         return " ".join(value.replace("_", " ").split())
+
+    @staticmethod
+    def _ensure_terminal(value: str) -> str:
+        cleaned = " ".join(value.split()).strip()
+        return cleaned if cleaned.endswith((".", "!", "?")) else cleaned + "."
+
+    @staticmethod
+    def _word_count(value: str) -> int:
+        return len(value.split())
 
     @staticmethod
     def _deduplicate(values: list[str]) -> list[str]:
