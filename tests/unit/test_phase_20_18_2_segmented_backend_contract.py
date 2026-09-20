@@ -50,11 +50,12 @@ def test_segmented_package_enforces_reference_roles_and_no_generated_dialogue() 
         content
     )
 
-    assert "Commander James Spence approved identity" in result["positive_prompt"]
+    assert result["positive_prompt"] == "Sandra reports unusual sensor data to James."
     assert result["shot_prompt"] == result["positive_prompt"]
-    assert "Sandra Crawford approved identity" in result["positive_prompt"]
-    assert "Xorix approved environment" in result["positive_prompt"]
-    assert "Do not invent spoken dialogue or voices" in result["positive_prompt"]
+    assert "Commander James Spence approved identity" not in result["positive_prompt"]
+    assert "Sandra Crawford approved identity" not in result["positive_prompt"]
+    assert "Xorix approved environment" not in result["positive_prompt"]
+    assert "GOVERNED REFERENCE ROLE AUTHORITY" not in result["positive_prompt"]
     assert "generated speech" in result["negative_prompt"]
     assert result["acpp"]["generation"]["audio_mode"] == "silent_visual_authority"
     assert result["provider_dialogue_policy"]["mode"] == "no_generated_dialogue"

@@ -96,7 +96,8 @@ def test_multi_reference_resolver_is_shipped_as_deployable_custom_node() -> None
     assert "VSCSProviderFrameCountV721" in content
     assert "VSCSGovernedOutputNormalizerV721" in content
     assert '"continuation_weight"' in content
-    assert "Continue the exact same cinematic shot" in content
+    assert "Match the supplied previous approved final frame" in content
+    assert "Reference roles:" not in content
 
 
 def test_multi_reference_resolver_prefers_explicit_contract_slots(
