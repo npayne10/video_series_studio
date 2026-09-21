@@ -1,0 +1,107 @@
+{
+  "bindings": [],
+  "capabilities": [
+    "image_to_video",
+    "start_frame",
+    "seed_control",
+    "governed_keyframe",
+    "hardware_aware_one_shot"
+  ],
+  "extra": [
+    [
+      "profile_purpose",
+      "Phase 20.18.2.2g governed Shot Composition Keyframe I2V production"
+    ],
+    [
+      "video_model_family",
+      "LTX 2.5"
+    ],
+    [
+      "binding_mode",
+      "governed_keyframe_package_v1"
+    ],
+    [
+      "composition_authority",
+      "single_human_approved_keyframe"
+    ],
+    [
+      "prompt_mode",
+      "motion_only_v2"
+    ],
+    [
+      "shot_execution_mode",
+      "one_shot_per_provider_job"
+    ],
+    [
+      "provider_frame_rule",
+      "1_plus_8n"
+    ],
+    [
+      "keyframe_strength",
+      "0.90"
+    ],
+    [
+      "submission_payload_audit",
+      ".vscs/provider_executions/payload_audit"
+    ],
+    [
+      "rebaseline_candidate",
+      "C"
+    ],
+    [
+      "combined_identity_video_reference",
+      "disabled"
+    ]
+  ],
+  "lip_sync_modes": [
+    "none",
+    "off_screen"
+  ],
+  "metadata": {
+    "author": "VSCS",
+    "description": "Phase 20.18.2.2g Candidate C: LTX-2.5 image-to-video from one checksum-pinned human-approved Shot Composition Keyframe. The video stage receives no separate James+Sandra Ingredients reference.",
+    "display_name": "LTX-2.5 Governed Keyframe I2V",
+    "manifest_version": "1.0",
+    "renderer": "comfyui",
+    "workflow_id": "ltx25_i2v_keyframe_v1",
+    "workflow_version": "1.0"
+  },
+  "output_kinds": [
+    "production_video",
+    "image_sequence",
+    "reference_frame",
+    "metadata"
+  ],
+  "quality_levels": [
+    "production"
+  ],
+  "requirements": [
+    {
+      "identifier": "LTX-2.5",
+      "kind": "video_model",
+      "optional": false,
+      "version": "2.5"
+    },
+    {
+      "identifier": "ComfyUI-LTXVideo",
+      "kind": "custom_node",
+      "optional": false
+    },
+    {
+      "identifier": "ComfyUI-VSCS-LTX25-Keyframe-v1",
+      "kind": "custom_node",
+      "optional": false,
+      "version": "1.0"
+    }
+  ],
+  "tags": [
+    "ltx",
+    "ltx-2.5",
+    "video",
+    "production",
+    "image-to-video",
+    "governed-keyframe",
+    "candidate-c"
+  ],
+  "workflow_file": "workflows/ltx25_i2v_keyframe_v1_api.json"
+}
