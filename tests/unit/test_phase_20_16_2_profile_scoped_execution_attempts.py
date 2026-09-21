@@ -208,6 +208,7 @@ def test_execution_profile_assignment_survives_restart(tmp_path: Path) -> None:
     assert master.attempts_recorded == 1
     assert production.attempts_recorded == 0
 
+
 def test_generated_media_does_not_consume_or_block_remaining_profile_attempts(
     tmp_path: Path,
     monkeypatch,
@@ -232,4 +233,3 @@ def test_generated_media_does_not_consume_or_block_remaining_profile_attempts(
     assert status.effective_maximum_attempts == 3
     assert status.next_attempt_number == 2
     assert not backend.has_execution_for_profile(task.task_id, profile="production")
-
