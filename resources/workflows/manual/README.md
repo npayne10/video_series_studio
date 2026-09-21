@@ -15,7 +15,7 @@ They retain the Candidate A generation architecture:
 - LTX-2.3 22B distilled 1.1;
 - LTX-2.3 Ingredients IC-LoRA;
 - three attention-only IC-LoRA guides with frame_idx = -1;
-- fixed VSCS seed;
+- fixed JavaScript-safe manual seed `2360325115660865` for deterministic A/B comparison;
 - 1280×720;
 - 145 provider frames;
 - 144 governed output frames;
@@ -35,6 +35,12 @@ They retain the Candidate A generation architecture:
 - `VSCS_SHT001_James_Sandra.png`
 - `VSCS_SHT001_Xorix.png`
 - `VSCS_SHT001_Iron_Horizon_Bridge.png`
+
+The source VSCS Production Package used seed `2360325115660865087`. A ComfyUI UI workflow is parsed by
+the browser as JavaScript, whose exact integer range ends at `2^53 - 1`. That source seed is larger
+than the safe integer range and would be rounded by the UI. The manual workflows therefore use the
+derived deterministic seed `2360325115660865`, which is exactly representable in JavaScript. Both manual
+workflow variants use the same seed, so the prompt-only A/B comparison remains controlled.
 
 The default direct guide strengths reproduce the current provider reference weights when no
 previous-shot continuity frame exists:

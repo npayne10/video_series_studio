@@ -27,7 +27,7 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "# VSCS Phase 20.18.2.2f — Candidate A Manual Bench\nClean Benchmark Prompt\n\nThis workflow removes the VSCS Production Package loader and continuity/prompt-governance nodes.\nEdit the positive/negative CLIP text nodes directly and choose the three reference images manually.\n\nControlled settings:\n- LTX-2.3 distilled 1.1\n- 1280×720\n- 145 provider frames / 144 saved governed frames\n- 24 fps\n- fixed seed 2360325115660865087\n- group / Xorix / bridge guide strengths: 0.90 / 0.25 / 0.25\n- frame_idx = -1 for all three reference guides"
+        "# VSCS Phase 20.18.2.2f — Candidate A Manual Bench\nClean Benchmark Prompt\n\nThis workflow removes the VSCS Production Package loader and continuity/prompt-governance nodes.\nEdit the positive/negative CLIP text nodes directly and choose the three reference images manually.\n\nControlled settings:\n- LTX-2.3 distilled 1.1\n- 1280×720\n- 145 provider frames / 144 saved governed frames\n- 24 fps\n- fixed manual seed 2360325115660865 (JavaScript-safe)\n- group / Xorix / bridge guide strengths: 0.90 / 0.25 / 0.25\n- frame_idx = -1 for all three reference guides"
       ]
     },
     {
@@ -1238,14 +1238,14 @@
           ]
         }
       ],
-      "title": "Fixed VSCS Seed",
+      "title": "Fixed Manual Seed — JS-safe",
       "properties": {
         "cnr_id": "comfy-core",
         "ver": "0.14.1",
         "Node name for S&R": "RandomNoise"
       },
       "widgets_values": [
-        2360325115660865000,
+        2360325115660865,
         "fixed"
       ]
     },
@@ -2360,7 +2360,8 @@
       "phase": "20.18.2.2f",
       "candidate": "A",
       "source": "VSCS Candidate A graph with package-loader/reference-plan automation removed",
-      "seed": "2360325115660865087",
+      "manual_seed": "2360325115660865",
+      "source_vscs_seed": "2360325115660865087",
       "provider_frames": 145,
       "governed_frames": 144,
       "fps": 24,

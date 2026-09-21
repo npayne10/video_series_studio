@@ -35,7 +35,7 @@ def test_manual_candidate_a_workflow_preserves_controlled_execution_settings() -
     workflow = _load("ltx23_candidate_a_manual_ui_vscs_prompt.json")
 
     noise = _nodes(workflow, "RandomNoise")[0]
-    assert noise["widgets_values"][0] == 2360325115660865087
+    assert noise["widgets_values"][0] == 2360325115660865
 
     checkpoint = _nodes(workflow, "LowVRAMCheckpointLoader")[0]
     assert checkpoint["widgets_values"][0] == "ltx-2.3-22b-distilled-1.1.safetensors"
