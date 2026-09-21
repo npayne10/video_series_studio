@@ -207,3 +207,29 @@ def test_execution_profile_assignment_survives_restart(tmp_path: Path) -> None:
     production = restarted.retry_override_status_for_profile(task.task_id, profile="production")
     assert master.attempts_recorded == 1
     assert production.attempts_recorded == 0
+
+def test_generated_media_does_not_consume_or_block_remaining_profile_attempts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    backend, task = _backend(tmp_path)
+    backend.execution_jobs.repository.save(_failed_job(task, 1))
+    backend.execution_profiles.assign(
+        f"PEX-PQ-PROFILE-TEST-PQE-{task.task_id}-A001",
+        task.task_id,
+        "production",
+    )
+    monkeypatch.setattr(
+        backend,
+        "_media_for_profile",
+        lambda task_id, profile: (object(),),
+    )
+
+    status = backend.retry_override_status_for_profile(task.task_id, profile="production")
+
+    assert status.state is GovernedRetryOverrideState.NOT_REQUIRED
+    assert status.attempts_recorded == 1
+    assert status.effective_maximum_attempts == 3
+    assert status.next_attempt_number == 2
+    assert not backend.has_execution_for_profile(task.task_id, profile="production")
+

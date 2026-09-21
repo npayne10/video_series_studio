@@ -132,6 +132,17 @@ Every candidate is evaluated against the same contract:
 
 A technically valid render that violates any of these is a visual acceptance failure.
 
+## Generated Media and retry authority
+
+A technically completed provider execution that has been ingested as Generated Media does not by
+itself make the ProductionTask complete and does not consume the remaining human-governed attempt
+budget. Generated Media becomes authoritative only through explicit human review/selection and
+ProductionTask completion reconciliation. Therefore a GENERATED/UNDER_REVIEW/REJECTED candidate
+must not disable Start Production or retry authorization while profile attempts remain.
+
+This is required for visual acceptance work: a technically successful but visually failed render
+must remain a candidate artifact, not a lock on further governed production attempts.
+
 ## Stage 1 acceptance
 
 Automated:

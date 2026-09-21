@@ -52,8 +52,6 @@ class LocalComfyUIProductionExecutionBackend(_Phase20161GovernedRetryBackend):
         all_jobs = self._ordered_jobs(task.task_id)
         if any(not job.terminal for job in all_jobs):
             return True
-        if self._media_for_profile(task.task_id, normalized):
-            return True
         profile_jobs = self._jobs_for_profile(all_jobs, normalized)
         effective = task.attempt_policy.maximum_attempts + len(
             self._authorizations_for_profile(task, normalized)
@@ -118,15 +116,6 @@ class LocalComfyUIProductionExecutionBackend(_Phase20161GovernedRetryBackend):
                     f"A provider execution is still non-terminal; {profile_label} retry authority "
                     "cannot change while another profile is executing."
                 ),
-            )
-        if self._media_for_profile(task.task_id, normalized):
-            return GovernedRetryOverrideStatus(
-                GovernedRetryOverrideState.BLOCKED,
-                base,
-                attempts,
-                effective,
-                latest_authorization=latest,
-                message=f"{profile_label} Generated Media already exists; retry override is unavailable.",
             )
         if attempts < base:
             return GovernedRetryOverrideStatus(
