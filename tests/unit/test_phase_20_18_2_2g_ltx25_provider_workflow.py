@@ -42,3 +42,12 @@ def test_candidate_c_manifest_declares_ltx25_governed_keyframe() -> None:
     assert "governed_keyframe" in manifest["capabilities"]
     assert dict(manifest["extra"])["rebaseline_candidate"] == "C"
     assert dict(manifest["extra"])["combined_identity_video_reference"] == "disabled"
+
+
+def test_candidate_c_provider_frame_adapter_preserves_six_second_governed_output() -> None:
+    from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
+        CurrentAuthorityLTX25GovernedKeyframeCompilationService,
+    )
+
+    assert CurrentAuthorityLTX25GovernedKeyframeCompilationService._provider_frame_count(144) == 145
+    assert CurrentAuthorityLTX25GovernedKeyframeCompilationService._provider_frame_count(145) == 145

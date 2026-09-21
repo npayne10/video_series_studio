@@ -2,7 +2,10 @@
 
 ## Status
 
-Implementation started on a dedicated Phase 20.18.2.2g branch.
+Application authority, manual Candidate C workflow, provider API workflow, custom package loader,
+deployment assurance, and the fail-closed Candidate C backend are now implemented on the dedicated
+Phase 20.18.2.2g branch. Automated/local ComfyUI acceptance is still required before the phase can
+be closed.
 
 Candidate A (LTX-2.3 Ingredients multi-reference) is retained only as the historical control.
 Its clean-prompt manual test improved stability but still produced an additional person and failed
@@ -94,3 +97,24 @@ The production provider path remains fail-closed until:
 3. the governed keyframe is human-approved and checksum-pinned;
 4. the checked-in provider API workflow passes deployment assurance;
 5. the exact provider payload is audited before submission.
+
+## Provider integration
+
+The checked-in provider workflow is:
+
+`resources/workflows/workflows/ltx25_i2v_keyframe_v1_api.json`
+
+The manifest is:
+
+`resources/workflows/manifests/ltx25_i2v_keyframe_v1.json`
+
+The ComfyUI package loader is:
+
+`resources/workflows/custom_nodes/vscs_ltx25_keyframe_v1.py`
+
+The Phase 20.18.2.2g infrastructure composition now selects the Candidate C backend. Production
+Package compilation therefore fails closed until an approved governed keyframe is registered.
+
+The provider API graph uses the lower-memory LTX-2.5 convolutional video VAE by default while
+retaining the official LTX-2.5 distilled transformer, LTX-2.5 audio VAE, and LTX-2.5 text encoder.
+Local hardware/model availability remains an acceptance gate rather than an assumption.

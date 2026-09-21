@@ -1022,11 +1022,12 @@
       },
       "widgets_values": [
         "ltx-2.5-audio-vae-bf16.safetensors",
-        "ltx-2.5-video-vae-bf16.safetensors",
+        "ltx-2.5-video-vae-conv-bf16.safetensors",
         "ltx-2.5-22b-distilled-transformer-bf16.safetensors",
         "gemma4_e2b_it_bf16.safetensors",
         "gemma4-12b-with-proj-ltx-2.5-bf16.safetensors"
-      ]
+      ],
+      "title": "VSCS LTX-2.5 Models — Conv Video VAE / Lower Memory"
     }
   ],
   "links": [

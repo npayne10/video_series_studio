@@ -122,7 +122,7 @@ def provider_video_rebaseline_contract(
         "execution_policy": (
             "candidate_c_requires_approved_governed_keyframe"
             if governed_keyframe_ready
-            else "candidate_a_control_only_until_governed_keyframe"
+            else "only_execution_ready_candidate_may_submit"
         ),
         "candidates": [item.to_dict() for item in candidates],
         "visual_acceptance_criteria": list(VISUAL_ACCEPTANCE_CRITERIA),
