@@ -92,6 +92,12 @@
       "kind": "custom_node",
       "optional": false,
       "version": "1.0"
+    },
+    {
+      "identifier": "ComfyUI-VSCS-Production-v721",
+      "kind": "custom_node",
+      "optional": false,
+      "version": "7.2.1"
     }
   ],
   "tags": [

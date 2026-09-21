@@ -91,7 +91,15 @@ class VSCSLTX25GovernedKeyframePackageLoaderV1:
         if strict_validation and (not expected_sha or expected_sha != actual_sha):
             raise ValueError("Governed Shot Composition Keyframe checksum mismatch")
 
+        governed_width = int(root.get("width") or 0)
+        governed_height = int(root.get("height") or 0)
         with Image.open(keyframe_path) as source:
+            if strict_validation and source.size != (governed_width, governed_height):
+                raise ValueError(
+                    "Governed Shot Composition Keyframe dimensions do not match "
+                    f"the governed render size: {source.size} != "
+                    f"{(governed_width, governed_height)}"
+                )
             image = source.convert("RGB")
             array = np.asarray(image, dtype=np.float32) / 255.0
         tensor = torch.from_numpy(array)[None, ...]
@@ -106,8 +114,8 @@ class VSCSLTX25GovernedKeyframePackageLoaderV1:
         values = {
             "motion_prompt": str(root.get("motion_prompt") or "").strip(),
             "negative_prompt": str(root.get("negative_prompt") or "").strip(),
-            "width": int(root.get("width") or 0),
-            "height": int(root.get("height") or 0),
+            "width": governed_width,
+            "height": governed_height,
             "provider_frames": provider_frames,
             "governed_frames": governed_frames,
             "fps": float(root.get("fps") or 0),

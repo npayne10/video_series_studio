@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
-
 from vscs.application.production_execution import (
     GovernedShotKeyframeError,
     GovernedShotKeyframeStore,
