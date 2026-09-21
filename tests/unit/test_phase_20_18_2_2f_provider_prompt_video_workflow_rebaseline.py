@@ -141,3 +141,30 @@ def test_rebaseline_keeps_a_executable_and_c_preferred_fail_closed() -> None:
     assert contract["preferred_candidate"] == "C"
     assert contract["execution_policy"] == "only_execution_ready_candidate_may_submit"
     assert len(contract["visual_acceptance_criteria"]) == 15
+
+def test_scene_prompt_omits_optional_detail_before_blocking_essential_action() -> None:
+    authority = _sht001_authority()
+    authority["lighting"] = {
+        "lighting_intent": "naturalistic cinematic physically motivated practical illumination",
+        "color_temperature_k": 5600,
+        "key_quality": "hard directional controlled realistic motivated",
+        "key_direction": "side with detailed motivated practical source geometry",
+        "fill_level_percent": 18,
+    }
+    authority["style"] = {
+        "declared_style": (
+            "grounded engineered premium streaming hard science fiction with restrained "
+            "production design and realistic materials"
+        ),
+        "declared_tone": (
+            "quietly observational procedural controlled precise professional understated"
+        ),
+    }
+
+    prompt = ProductionProviderPromptCompiler().compile(authority)
+
+    assert prompt.positive_word_count <= 150
+    assert "Sandra Crawford is at her control station" in prompt.positive_prompt
+    assert "She looks up toward Commander James Spence" in prompt.positive_prompt
+    assert prompt.omitted_optional_sections
+

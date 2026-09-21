@@ -355,6 +355,8 @@ class LocalLTX23V721ProductionPackageCompilationService(LocalProductionPackageCo
             "scene_prompt_word_count": len(compiled.positive_prompt.split()),
             "motion_prompt_max_words": ProductionProviderPromptCompiler.MAX_MOTION_WORDS,
             "motion_prompt_word_count": len(compiled.motion_prompt.split()),
+            "selection_policy": "essential_scene_action_then_optional_with_audited_budget",
+            "omitted_optional_sections": list(compiled.omitted_provider_prompt_sections),
         }
         content["provider_video_rebaseline"] = provider_video_rebaseline_contract()
         content["acpp"] = {

@@ -99,6 +99,7 @@ class CompiledProductionPackage:
     package_fingerprint: str
     reference_plan: dict[str, Any] | None = None
     motion_prompt: str = ""
+    omitted_provider_prompt_sections: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Return deterministic JSON-compatible provider-neutral content."""
@@ -126,6 +127,7 @@ class CompiledProductionPackage:
                 "positive_prompt": self.positive_prompt,
                 "negative_prompt": self.negative_prompt,
                 "motion_prompt": self.motion_prompt,
+                "omitted_optional_sections": list(self.omitted_provider_prompt_sections),
             },
             "continuity": {
                 "previous_approved_final_frame": self.previous_approved_final_frame,
@@ -207,6 +209,7 @@ class ProductionPackageCompilerService:
         positive_prompt = provider_prompt.positive_prompt
         negative_prompt = provider_prompt.negative_prompt
         motion_prompt = provider_prompt.motion_prompt
+        omitted_provider_prompt_sections = provider_prompt.omitted_optional_sections
         continuity = self._mapping(production.get("continuity"))
         previous_frame = self._first_text(
             continuity,
@@ -247,6 +250,7 @@ class ProductionPackageCompilerService:
             "positive_prompt": positive_prompt,
             "negative_prompt": negative_prompt,
             "motion_prompt": motion_prompt,
+            "omitted_provider_prompt_sections": omitted_provider_prompt_sections,
             "previous_frame": previous_frame,
             "filename_prefix": filename_prefix,
             "render": render,
@@ -287,6 +291,7 @@ class ProductionPackageCompilerService:
             package_fingerprint=package_fingerprint,
             reference_plan=reference_plan,
             motion_prompt=motion_prompt,
+            omitted_provider_prompt_sections=omitted_provider_prompt_sections,
         )
 
     def _reference_plan_payload(

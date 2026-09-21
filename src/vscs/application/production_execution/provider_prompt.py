@@ -18,6 +18,7 @@ class ProductionProviderPrompt:
     positive_prompt: str
     negative_prompt: str
     motion_prompt: str
+    omitted_optional_sections: tuple[str, ...] = ()
     compiler: str = "cinematic-action-v2"
 
     @property
@@ -75,25 +76,19 @@ class ProductionProviderPromptCompiler:
             environment,
         )
 
-        positive: list[str] = []
+        essential_positive: list[str] = []
         objective = self._text(shot.get("production_objective"))
         if objective:
-            self._partition_text(objective, positive, [])
-        positive.extend(participant_positive)
-        positive.extend(action_sentences)
+            self._partition_text(objective, essential_positive, [])
+        essential_positive.extend(participant_positive)
+        essential_positive.extend(action_sentences)
 
-        camera_text = self._camera_text(camera)
-        if camera_text:
-            positive.append(camera_text)
-        lighting_text = self._lighting_text(lighting)
-        if lighting_text:
-            positive.append(lighting_text)
-        environment_text = self._environment_text(environment)
-        if environment_text:
-            positive.append(environment_text)
-        style_text = self._style_text(style)
-        if style_text:
-            positive.append(style_text)
+        optional_positive = (
+            ("camera", self._camera_text(camera)),
+            ("lighting", self._lighting_text(lighting)),
+            ("environment", self._environment_text(environment)),
+            ("style", self._style_text(style)),
+        )
 
         negative: list[str] = list(self._BASE_NEGATIVES)
         negative.extend(action_negatives)
@@ -113,7 +108,7 @@ class ProductionProviderPromptCompiler:
                 self._partition_text(value, [], negative, force_negative=True)
         negative.extend(participant_negative)
 
-        positive = self._deduplicate(positive)
+        essential_positive = self._deduplicate(essential_positive)
         negative = self._deduplicate(negative)
         motion = self._motion_prompt(
             action_sentences,
@@ -121,19 +116,16 @@ class ProductionProviderPromptCompiler:
             camera,
             environment,
         )
-        if not positive:
+        if not essential_positive:
             raise ProductionProviderPromptError(
                 "approved production authority contains no provider-facing visual/action content"
             )
 
-        positive_prompt = " ".join(self._ensure_terminal(value) for value in positive)
+        positive_prompt, omitted_optional_sections = self._bounded_scene_prompt(
+            essential_positive,
+            optional_positive,
+        )
         negative_prompt = "; ".join(negative)
-        if self._word_count(positive_prompt) > self.MAX_POSITIVE_WORDS:
-            raise ProductionProviderPromptError(
-                "cinematic provider prompt exceeds "
-                f"{self.MAX_POSITIVE_WORDS} words; refine governed production authority "
-                "instead of sending governance/detail overload to the video model"
-            )
         if self._word_count(motion) > self.MAX_MOTION_WORDS:
             raise ProductionProviderPromptError(
                 "motion-only provider prompt exceeds "
@@ -149,6 +141,7 @@ class ProductionProviderPromptCompiler:
             positive_prompt=positive_prompt,
             negative_prompt=negative_prompt,
             motion_prompt=motion,
+            omitted_optional_sections=omitted_optional_sections,
         )
 
     def _action_sentences(
@@ -156,14 +149,37 @@ class ProductionProviderPromptCompiler:
         shot: dict[str, Any],
         action: dict[str, Any],
     ) -> tuple[list[str], list[str]]:
-        positive: list[str] = []
-        negative: list[str] = []
-        for raw in (
+        temporal_positive: list[str] = []
+        temporal_negative: list[str] = []
+        required_positive: list[str] = []
+        required_negative: list[str] = []
+        performance_positive: list[str] = []
+        performance_negative: list[str] = []
+
+        self._partition_text(
             action.get("temporal_narrative"),
+            temporal_positive,
+            temporal_negative,
+        )
+        self._partition_text(
             shot.get("required_action"),
+            required_positive,
+            required_negative,
+        )
+        self._partition_text(
             action.get("performance_direction"),
-        ):
-            self._partition_text(raw, positive, negative)
+            performance_positive,
+            performance_negative,
+        )
+
+        positive = list(temporal_positive or required_positive)
+        if temporal_positive:
+            for sentence in required_positive:
+                lowered = sentence.casefold()
+                if lowered.startswith(("end ", "begin ", "keep ", "hold ", "remain ")):
+                    positive.append(sentence)
+        positive.extend(performance_positive)
+        negative = temporal_negative + required_negative + performance_negative
         return self._deduplicate(positive), self._deduplicate(negative)
 
     def _motion_prompt(
@@ -188,6 +204,38 @@ class ProductionProviderPromptCompiler:
 
         cleaned = self._deduplicate(motion)
         return " ".join(self._ensure_terminal(value) for value in cleaned)
+
+    def _bounded_scene_prompt(
+        self,
+        essential: list[str],
+        optional: tuple[tuple[str, str], ...],
+    ) -> tuple[str, tuple[str, ...]]:
+        selected = list(essential)
+        essential_prompt = " ".join(self._ensure_terminal(value) for value in selected)
+        if self._word_count(essential_prompt) > self.MAX_POSITIVE_WORDS:
+            raise ProductionProviderPromptError(
+                "essential cinematic scene/action content exceeds "
+                f"{self.MAX_POSITIVE_WORDS} words; simplify the governed Shot action before "
+                "provider execution"
+            )
+
+        omitted: list[str] = []
+        for label, value in optional:
+            if not value:
+                continue
+            candidate = " ".join(
+                self._ensure_terminal(item)
+                for item in self._deduplicate([*selected, value])
+            )
+            if self._word_count(candidate) <= self.MAX_POSITIVE_WORDS:
+                selected.append(value)
+            else:
+                omitted.append(label)
+        prompt = " ".join(
+            self._ensure_terminal(value)
+            for value in self._deduplicate(selected)
+        )
+        return prompt, tuple(omitted)
 
     def _partition_text(
         self,
