@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.2g LTX-2.5 governed Shot Composition Keyframe authority with checksum-pinned human approval.
+- Phase 20.18.2.2g Candidate C manual I2V workflow derived from the pinned official Lightricks LTX-2.5 single-stage I2V workflow.
+
 - Phase 20.18.2.2f controlled provider-video A/B/C rebaseline contract, with LTX-2.5 governed-keyframe I2V as the preferred fail-closed Candidate C target.
 - Phase 20.18.2.2f motion-only prompt output for future governed-keyframe image-to-video workflows.
 
@@ -28,6 +31,8 @@ The project follows semantic versioning where practical.
 - Phase 20.18.2.2f stops the LTX continuity/reference runtime from prepending reference-role authority prose to series-entry Shot prompts.
 
 ### In progress
+
+- Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
 
 - Phase 20.18.2.2f Candidate A automated and live SHT-001 acceptance; Candidate B/C remain fail-closed until governed-keyframe workflows are installed and validated.
 - Local verification and owner approval for Phase 12.1.1-4B2-1A

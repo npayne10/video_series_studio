@@ -6,6 +6,12 @@ from .functional_acceptance import (
     LiveShotFunctionalAcceptanceService,
     LiveShotFunctionalAcceptanceSubmission,
 )
+from .governed_keyframe import (
+    KEYFRAME_ACCEPTANCE_CRITERIA,
+    GovernedShotKeyframe,
+    GovernedShotKeyframeError,
+    GovernedShotKeyframeStore,
+)
 from .package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
@@ -49,6 +55,10 @@ __all__ = [
     "VISUAL_ACCEPTANCE_CRITERIA",
     "CompiledProductionPackage",
     "GovernedRetryAuthorization",
+    "GovernedShotKeyframe",
+    "GovernedShotKeyframeError",
+    "GovernedShotKeyframeStore",
+    "KEYFRAME_ACCEPTANCE_CRITERIA",
     "GovernedRetryOverrideState",
     "GovernedRetryOverrideStatus",
     "LiveShotFunctionalAcceptanceError",

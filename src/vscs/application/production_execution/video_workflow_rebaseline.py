@@ -1,4 +1,4 @@
-"""Phase 20.18.2.2f provider video workflow rebaseline candidates."""
+"""Provider video workflow rebaseline candidates through Phase 20.18.2.2g."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from enum import StrEnum
 
 
 class ProviderVideoCandidateId(StrEnum):
-    """Stable identities for the Phase 20.18.2.2f A/B/C evaluation."""
+    """Stable identities for the governed A/B/C provider evaluation."""
 
     A_LTX23_INGREDIENTS = "A"
     B_LTX23_I2V_KEYFRAME = "B"
@@ -61,8 +61,8 @@ VISUAL_ACCEPTANCE_CRITERIA = (
 )
 
 
-def provider_video_candidates() -> tuple[ProviderVideoCandidate, ...]:
-    """Return the fixed Phase 20.18.2.2f A/B/C comparison matrix."""
+def provider_video_candidates(*, governed_keyframe_ready: bool = False) -> tuple[ProviderVideoCandidate, ...]:
+    """Return the provider candidates, activating C only from approved keyframe authority."""
     return (
         ProviderVideoCandidate(
             candidate_id=ProviderVideoCandidateId.A_LTX23_INGREDIENTS,
@@ -71,8 +71,11 @@ def provider_video_candidates() -> tuple[ProviderVideoCandidate, ...]:
             workflow_id="ltx23_production_v1",
             composition_authority="governed_multi_reference",
             prompt_mode="cinematic_scene_v2",
-            execution_ready=True,
-            readiness_note="Existing governed LTX-2.3 workflow retained as the A/B control.",
+            execution_ready=not governed_keyframe_ready,
+            readiness_note=(
+                "Candidate A failed visual acceptance in Phase 20.18.2.2f and remains available "
+                "only as the historical control."
+            ),
         ),
         ProviderVideoCandidate(
             candidate_id=ProviderVideoCandidateId.B_LTX23_I2V_KEYFRAME,
@@ -94,27 +97,33 @@ def provider_video_candidates() -> tuple[ProviderVideoCandidate, ...]:
             workflow_id="ltx25_i2v_keyframe_v1",
             composition_authority="governed_start_keyframe",
             prompt_mode="motion_only_v2",
-            execution_ready=False,
+            execution_ready=governed_keyframe_ready,
             preferred=True,
             readiness_note=(
-                "Preferred target. Blocked until the local LTX-2.5 model/workflow deployment and "
-                "governed keyframe path pass provider assurance."
+                "Preferred Phase 20.18.2.2g target. Requires an approved governed Shot Composition "
+                "Keyframe and successful local LTX-2.5 deployment assurance."
             ),
         ),
     )
 
 
-def provider_video_rebaseline_contract() -> dict[str, object]:
-    """Return package metadata for the controlled A/B/C rebaseline."""
-    candidates = provider_video_candidates()
+def provider_video_rebaseline_contract(
+    *, governed_keyframe_ready: bool = False
+) -> dict[str, object]:
+    """Return package metadata for the current governed provider baseline."""
+    candidates = provider_video_candidates(governed_keyframe_ready=governed_keyframe_ready)
     active = next(item for item in candidates if item.execution_ready)
     preferred = next(item for item in candidates if item.preferred)
     return {
         "schema_version": "1.0",
-        "phase": "20.18.2.2f",
+        "phase": "20.18.2.2g" if governed_keyframe_ready else "20.18.2.2f",
         "active_candidate": active.candidate_id.value,
         "preferred_candidate": preferred.candidate_id.value,
-        "execution_policy": "only_execution_ready_candidate_may_submit",
+        "execution_policy": (
+            "candidate_c_requires_approved_governed_keyframe"
+            if governed_keyframe_ready
+            else "candidate_a_control_only_until_governed_keyframe"
+        ),
         "candidates": [item.to_dict() for item in candidates],
         "visual_acceptance_criteria": list(VISUAL_ACCEPTANCE_CRITERIA),
     }
