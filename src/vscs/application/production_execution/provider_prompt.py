@@ -224,17 +224,13 @@ class ProductionProviderPromptCompiler:
             if not value:
                 continue
             candidate = " ".join(
-                self._ensure_terminal(item)
-                for item in self._deduplicate([*selected, value])
+                self._ensure_terminal(item) for item in self._deduplicate([*selected, value])
             )
             if self._word_count(candidate) <= self.MAX_POSITIVE_WORDS:
                 selected.append(value)
             else:
                 omitted.append(label)
-        prompt = " ".join(
-            self._ensure_terminal(value)
-            for value in self._deduplicate(selected)
-        )
+        prompt = " ".join(self._ensure_terminal(value) for value in self._deduplicate(selected))
         return prompt, tuple(omitted)
 
     def _partition_text(

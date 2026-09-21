@@ -142,6 +142,7 @@ def test_rebaseline_keeps_a_executable_and_c_preferred_fail_closed() -> None:
     assert contract["execution_policy"] == "only_execution_ready_candidate_may_submit"
     assert len(contract["visual_acceptance_criteria"]) == 15
 
+
 def test_scene_prompt_omits_optional_detail_before_blocking_essential_action() -> None:
     authority = _sht001_authority()
     authority["lighting"] = {
@@ -167,4 +168,3 @@ def test_scene_prompt_omits_optional_detail_before_blocking_essential_action() -
     assert "Sandra Crawford is at her control station" in prompt.positive_prompt
     assert "She looks up toward Commander James Spence" in prompt.positive_prompt
     assert prompt.omitted_optional_sections
-
