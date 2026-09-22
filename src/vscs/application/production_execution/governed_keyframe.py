@@ -137,7 +137,9 @@ class GovernedShotKeyframeStore:
         try:
             root = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-            raise GovernedShotKeyframeError(f"Cannot read governed keyframe authority: {exc}") from exc
+            raise GovernedShotKeyframeError(
+                f"Cannot read governed keyframe authority: {exc}"
+            ) from exc
         raw = root.get("keyframes", []) if isinstance(root, dict) else None
         if not isinstance(raw, list):
             raise GovernedShotKeyframeError("Governed keyframe authority store is invalid.")

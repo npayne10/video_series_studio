@@ -61,7 +61,9 @@ VISUAL_ACCEPTANCE_CRITERIA = (
 )
 
 
-def provider_video_candidates(*, governed_keyframe_ready: bool = False) -> tuple[ProviderVideoCandidate, ...]:
+def provider_video_candidates(
+    *, governed_keyframe_ready: bool = False
+) -> tuple[ProviderVideoCandidate, ...]:
     """Return the provider candidates, activating C only from approved keyframe authority."""
     return (
         ProviderVideoCandidate(

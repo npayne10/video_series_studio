@@ -128,8 +128,7 @@ class VSCSLTX25GovernedKeyframePackageLoaderV1:
             missing = [
                 name
                 for name, value in values.items()
-                if value in ("", 0, 0.0)
-                and name not in {"seed"}
+                if value in ("", 0, 0.0) and name not in {"seed"}
             ]
             if missing:
                 raise ValueError(
