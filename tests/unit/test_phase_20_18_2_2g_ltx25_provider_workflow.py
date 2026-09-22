@@ -29,9 +29,7 @@ def test_candidate_c_api_workflow_uses_one_keyframe_and_no_ingredients_guides() 
     assert raw["6"]["inputs"]["text"] == ["1", 1]
     assert raw["23"]["inputs"]["governed_frame_count"] == ["1", 6]
     assert raw["2"]["inputs"]["vae_name"] == r"ltx2.5\ltx-2.5-audio-vae-bf16.safetensors"
-    assert raw["3"]["inputs"]["vae_name"] == (
-        r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors"
-    )
+    assert raw["3"]["inputs"]["vae_name"] == (r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors")
     assert raw["4"]["inputs"]["unet_name"] == (
         r"ltx2.5\ltx-2.5-22b-distilled-transformer-bf16.safetensors"
     )

@@ -106,7 +106,9 @@ class LTX25GovernedKeyframeDeploymentAssurance:
         if not isinstance(video_inputs, dict) or video_inputs.get("vae_name") != (
             r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors"
         ):
-            issues.append("Candidate C workflow must use the approved LTX-2.5 convolutional video VAE")
+            issues.append(
+                "Candidate C workflow must use the approved LTX-2.5 convolutional video VAE"
+            )
 
         text_encoder = raw.get("5")
         text_inputs = text_encoder.get("inputs") if isinstance(text_encoder, dict) else None
