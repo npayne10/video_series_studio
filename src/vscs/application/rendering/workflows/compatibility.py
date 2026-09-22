@@ -86,10 +86,17 @@ class WorkflowCompatibilityValidator:
         has_previous = request.continuity.previous_frame_id is not None
         has_next = request.continuity.next_frame_id is not None
         has_references = bool(request.assets.canonical_reference_ids)
+        generation_mode = request.metadata.get("generation_mode", "").strip().casefold()
+        if generation_mode == "image_to_video":
+            image_to_video = True
+        elif generation_mode == "text_to_video":
+            image_to_video = False
+        else:
+            image_to_video = has_previous
         return WorkflowCapabilities(
-            text_to_video=not has_previous,
-            image_to_video=has_previous,
-            start_frame=has_previous,
+            text_to_video=not image_to_video,
+            image_to_video=image_to_video,
+            start_frame=image_to_video,
             end_frame=has_next,
             reference_images=has_references,
             multiple_reference_images=(len(request.assets.canonical_reference_ids) > 1),

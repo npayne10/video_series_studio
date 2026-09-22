@@ -300,4 +300,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
     @staticmethod
     def _render_request(task: ProductionTask) -> RenderRequest:
         request = _CurrentAuthorityBackend._render_request(task)
-        return replace(request, workflow_id=LTX25_KEYFRAME_WORKFLOW_ID)
+        metadata = dict(request.metadata)
+        metadata.update(
+            {
+                "generation_mode": "image_to_video",
+                "start_frame_source": "governed_keyframe",
+            }
+        )
+        return replace(
+            request,
+            workflow_id=LTX25_KEYFRAME_WORKFLOW_ID,
+            metadata=metadata,
+        )

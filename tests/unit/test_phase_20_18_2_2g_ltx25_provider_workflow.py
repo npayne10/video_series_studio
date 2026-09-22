@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
     LTX25GovernedKeyframeDeploymentAssurance,
+    LocalComfyUIProductionExecutionBackend,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,3 +57,20 @@ def test_candidate_c_provider_frame_adapter_preserves_six_second_governed_output
 
     assert CurrentAuthorityLTX25GovernedKeyframeCompilationService._provider_frame_count(144) == 145
     assert CurrentAuthorityLTX25GovernedKeyframeCompilationService._provider_frame_count(145) == 145
+
+
+def test_candidate_c_render_request_declares_governed_keyframe_i2v_mode() -> None:
+    task = SimpleNamespace(
+        task_id="PT-VIDEO-GENERATION-TEST",
+        production_id="VSCS TSR2",
+        episode_id="EP-001",
+        scene_id="SCN-001",
+        shot_id="EP-001-SCN-001-SHT-001",
+        authority=SimpleNamespace(authority_id="UPD-EP-001-SCN-001-SHT-001"),
+    )
+
+    request = LocalComfyUIProductionExecutionBackend._render_request(task)  # type: ignore[arg-type]
+
+    assert request.workflow_id == "ltx25_i2v_keyframe_v1"
+    assert request.metadata["generation_mode"] == "image_to_video"
+    assert request.metadata["start_frame_source"] == "governed_keyframe"

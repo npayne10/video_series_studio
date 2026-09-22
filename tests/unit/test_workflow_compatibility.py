@@ -126,3 +126,21 @@ def test_unresolved_continuity_is_warning_not_exception() -> None:
 
     assert report.passed
     assert any(item.code == "workflow.continuity_unresolved" for item in report.warnings)
+
+
+def test_explicit_image_to_video_mode_does_not_fall_back_to_text_to_video() -> None:
+    request = _request(metadata={"generation_mode": "image_to_video"})
+    manifest = _manifest(capabilities=("image_to_video", "start_frame"))
+
+    required = WorkflowCompatibilityValidator.required_capabilities(request)
+    report = WorkflowCompatibilityValidator().validate(
+        request,
+        manifest,
+        installed=InstalledWorkflowResources(),
+    )
+
+    assert required.image_to_video is True
+    assert required.start_frame is True
+    assert required.text_to_video is False
+    assert report.passed
+    assert report.errors == ()
