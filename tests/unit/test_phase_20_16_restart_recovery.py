@@ -33,7 +33,9 @@ from vscs.application.provider_execution import (
     ProviderExecutionOutput,
     ProviderExecutionState,
 )
-from vscs.infrastructure.production_execution import LocalComfyUIProductionExecutionBackend
+from vscs.infrastructure.production_execution.compiled_backend import (
+    LocalComfyUIProductionExecutionBackend,
+)
 from vscs.infrastructure.production_execution.restart_recovery import (
     ComfyUIRecoveryObservation,
     ComfyUIRecoveryPresence,
