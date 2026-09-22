@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from types import SimpleNamespace
 
 from vscs.application.production_execution import (
     KEYFRAME_ACCEPTANCE_CRITERIA,
@@ -13,8 +14,10 @@ from vscs.application.production_execution import (
     resolve_provider_audio_policy,
 )
 from vscs.application.provider_execution import ProviderExecutionOutput
+import vscs.infrastructure.production_execution.ltx25_keyframe_backend as ltx25_module
 from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
     CurrentAuthorityLTX25GovernedKeyframeCompilationService,
+    LocalComfyUIProductionExecutionBackend,
 )
 from vscs.infrastructure.production_execution.provider_audio_runtime import (
     ProviderAudioGovernanceRuntime,
@@ -191,3 +194,63 @@ def test_candidate_c_compiled_payload_declares_silent_visual_audio_authority(
     assert audio["provider_audio_action"] == "discard"
     assert audio["authoritative_audio_source"] == "vscs_audio_pipeline"
     assert payload["_vscs_manifest"]["compiler"].startswith("VSCS Phase 20.18.2.2h")
+
+
+def test_candidate_c_pre_ingestion_hook_applies_compiled_audio_policy(
+    monkeypatch, tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    source = tmp_path / "provider"
+    source.mkdir()
+    (source / "shot.mp4").write_bytes(b"provider-container")
+    package_path = project / "production_package.json"
+    package_path.write_text("{}\n", encoding="utf-8")
+    policy = resolve_provider_audio_policy({"dialogue": []}).to_dict()
+
+    class _ExecutionProfiles:
+        def profile_for_execution(self, execution_id: str) -> str:
+            assert execution_id == "PEX-A005"
+            return "production"
+
+    class _PackageCompilation:
+        def require_current(self, task: object, *, profile: str) -> SimpleNamespace:
+            del task
+            assert profile == "production"
+            return SimpleNamespace(path=package_path)
+
+        def _read_json(self, path: Path) -> dict[str, object]:
+            assert path == package_path
+            return {"provider_audio_policy": policy}
+
+    backend = object.__new__(LocalComfyUIProductionExecutionBackend)
+    backend.project_directory = project
+    backend.comfyui_output_directory = source
+    backend.execution_profiles = _ExecutionProfiles()
+    backend.package_compilation = _PackageCompilation()
+    monkeypatch.setattr(ltx25_module, "ProviderAudioGovernanceRuntime", _FakeAudioRuntime)
+
+    output = ProviderExecutionOutput(
+        output_id="PEO-VIDEO",
+        relative_path="shot.mp4",
+        media_kind="production_video",
+    )
+
+    governed_outputs, governed_root, note = backend._prepare_outputs_for_ingestion(
+        SimpleNamespace(),
+        SimpleNamespace(execution_id="PEX-A005"),
+        (output,),
+    )
+
+    assert governed_root == (
+        project / ".vscs" / "provider_executions" / "audio_governance" / "PEX-A005"
+    ).resolve()
+    assert len(governed_outputs) == 1
+    governed = governed_outputs[0]
+    assert governed.relative_path == "video/PEO-VIDEO.mp4"
+    metadata = dict(governed.metadata)
+    assert metadata["provider_audio_policy"] == "silent_visual"
+    assert metadata["provider_audio_action"] == "discarded"
+    assert metadata["provider_audio_authority"] == "vscs_audio_pipeline"
+    assert metadata["provider_video_stream_copy"] == "true"
+    assert "authoritative audio remains with VSCS" in note
