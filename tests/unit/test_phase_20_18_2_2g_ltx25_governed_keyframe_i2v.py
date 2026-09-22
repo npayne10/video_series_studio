@@ -71,12 +71,32 @@ def test_manual_ltx25_workflow_is_governed_keyframe_i2v() -> None:
     assert nodes[5004]["widgets_values"] == [
         r"ltx2.5\ltx-2.5-audio-vae-bf16.safetensors",
         r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors",
-        r"ltx2.5\ltx-2.5-22b-distilled-transformer-bf16.safetensors",
-        r"ltx2.5\gemma4_e2b_it_bf16.safetensors",
-        r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-bf16.safetensors",
+        r"ltx2.5\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+        r"ltx2.5\gemma4_e2b_it_int8_convrot.safetensors",
+        r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
     ]
 
     contract = workflow["extra"]["vscs_phase_contract"]
     assert contract["candidate"] == "C"
     assert contract["architecture"] == "governed_keyframe_i2v"
     assert contract["combined_james_sandra_video_reference"] is False
+
+
+def test_manual_ltx25_lowvram_smoke_workflow_is_small_and_non_production() -> None:
+    workflow = json.loads(
+        (MANUAL / "ltx25_candidate_c_lowvram_smoke_ui.json").read_text(encoding="utf-8")
+    )
+    nodes = {node["id"]: node for node in workflow["nodes"]}
+
+    assert nodes[5514]["widgets_values"][3:5] == [960, 544]
+    assert nodes[5512]["widgets_values"][0] == 2
+    assert nodes[5004]["widgets_values"][2] == (
+        r"ltx2.5\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"
+    )
+    assert nodes[5004]["widgets_values"][4] == (
+        r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors"
+    )
+    contract = workflow["extra"]["vscs_phase_contract"]
+    assert contract["smoke_test"] is True
+    assert contract["expected_provider_frames"] == 49
+    assert contract["production_acceptance"] is False

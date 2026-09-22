@@ -1,5 +1,5 @@
 {
-  "id": "vscs-phase-20-18-2-2g-ltx25-governed-keyframe-i2v",
+  "id": "vscs-phase-20-18-2-2g-ltx25-governed-keyframe-i2v-smoke",
   "revision": 0,
   "last_node_id": 5572,
   "last_link_id": 13808,
@@ -104,15 +104,15 @@
         "previewExposures": []
       },
       "widgets_values": [
-        145,
+        49,
         0,
         false,
-        1280,
-        720,
+        960,
+        544,
         18,
         0.9
       ],
-      "title": "VSCS I2V Preprocess — 1280×720 / strength 0.90"
+      "title": "VSCS I2V SMOKE — 960×544 / strength 0.90"
     },
     {
       "id": 5532,
@@ -455,14 +455,14 @@
           ]
         }
       ],
-      "title": "Duration — 6 seconds",
+      "title": "Duration — 2 seconds (smoke)",
       "properties": {
         "Node name for S&R": "PrimitiveFloat",
         "cnr_id": "comfy-core",
         "ver": "0.25.0"
       },
       "widgets_values": [
-        6
+        2
       ],
       "color": "#2a363b",
       "bgcolor": "#3f5159"
@@ -500,11 +500,11 @@
         "ver": "0.14.1"
       },
       "widgets_values": [
-        "VSCS_LTX25_CandidateC",
+        "VSCS_LTX25_CandidateC_SMOKE",
         "auto",
         "auto"
       ],
-      "title": "Save VSCS Candidate C"
+      "title": "Save VSCS Candidate C Smoke Test"
     },
     {
       "id": 5511,
@@ -6290,12 +6290,12 @@
       "upstream_commit": "dfb2786749af36f200ea023388dc729a3e106b42",
       "upstream_workflow": "example_workflows/2.5/LTX-2.5_T2V_I2V_Single_Stage_Distilled.json",
       "governed_resolution": [
-        1280,
-        720
+        960,
+        544
       ],
       "governed_fps": 24,
-      "governed_duration_seconds": 6,
-      "expected_provider_frames": 145,
+      "governed_duration_seconds": 2,
+      "expected_provider_frames": 49,
       "governed_output_frames": 144,
       "keyframe_strength": 0.9,
       "prompt_mode": "motion_only_v2",
@@ -6305,7 +6305,9 @@
         "gpu": "NVIDIA GeForce RTX 5060 Ti",
         "vram_gb": 16,
         "system_ram_gb": 32
-      }
+      },
+      "smoke_test": true,
+      "production_acceptance": false
     }
   },
   "version": 0.4

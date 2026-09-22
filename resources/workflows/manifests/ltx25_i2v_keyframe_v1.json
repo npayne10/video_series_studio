@@ -51,6 +51,18 @@
     [
       "combined_identity_video_reference",
       "disabled"
+    ],
+    [
+      "execution_profile",
+      "low_vram_int8_convrot_16gb"
+    ],
+    [
+      "hardware_target",
+      "RTX 5060 Ti 16GB / 32GB system RAM"
+    ],
+    [
+      "smoke_workflow",
+      "manual/ltx25_candidate_c_lowvram_smoke_ui.json"
     ]
   ],
   "lip_sync_modes": [
@@ -59,7 +71,7 @@
   ],
   "metadata": {
     "author": "VSCS",
-    "description": "Phase 20.18.2.2g Candidate C: LTX-2.5 image-to-video from one checksum-pinned human-approved Shot Composition Keyframe. The video stage receives no separate James+Sandra Ingredients reference.",
+    "description": "Phase 20.18.2.2g Candidate C: LTX-2.5 image-to-video from one checksum-pinned human-approved Shot Composition Keyframe. The video stage receives no separate James+Sandra Ingredients reference. Production execution uses the Comfy INT8 ConvRot transformer and text encoder on the 16GB target GPU.",
     "display_name": "LTX-2.5 Governed Keyframe I2V",
     "manifest_version": "1.0",
     "renderer": "comfyui",

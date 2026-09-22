@@ -31,10 +31,10 @@ def test_candidate_c_api_workflow_uses_one_keyframe_and_no_ingredients_guides() 
     assert raw["2"]["inputs"]["vae_name"] == r"ltx2.5\ltx-2.5-audio-vae-bf16.safetensors"
     assert raw["3"]["inputs"]["vae_name"] == (r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors")
     assert raw["4"]["inputs"]["unet_name"] == (
-        r"ltx2.5\ltx-2.5-22b-distilled-transformer-bf16.safetensors"
+        r"ltx2.5\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"
     )
     assert raw["5"]["inputs"]["clip_name"] == (
-        r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-bf16.safetensors"
+        r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors"
     )
 
 

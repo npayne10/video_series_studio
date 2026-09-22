@@ -90,9 +90,9 @@ class LTX25GovernedKeyframeDeploymentAssurance:
         model = raw.get("4")
         model_inputs = model.get("inputs") if isinstance(model, dict) else None
         if not isinstance(model_inputs, dict) or model_inputs.get("unet_name") != (
-            r"ltx2.5\ltx-2.5-22b-distilled-transformer-bf16.safetensors"
+            r"ltx2.5\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"
         ):
-            issues.append("Candidate C workflow must use the approved LTX-2.5 distilled model")
+            issues.append("Candidate C workflow must use the approved LTX-2.5 INT8 ConvRot distilled model")
 
         audio_vae = raw.get("2")
         audio_inputs = audio_vae.get("inputs") if isinstance(audio_vae, dict) else None
@@ -113,9 +113,9 @@ class LTX25GovernedKeyframeDeploymentAssurance:
         text_encoder = raw.get("5")
         text_inputs = text_encoder.get("inputs") if isinstance(text_encoder, dict) else None
         if not isinstance(text_inputs, dict) or text_inputs.get("clip_name") != (
-            r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-bf16.safetensors"
+            r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors"
         ):
-            issues.append("Candidate C workflow must use the approved LTX-2.5 text encoder")
+            issues.append("Candidate C workflow must use the approved LTX-2.5 INT8 ConvRot text encoder")
 
         prompt = raw.get("6")
         prompt_inputs = prompt.get("inputs") if isinstance(prompt, dict) else None

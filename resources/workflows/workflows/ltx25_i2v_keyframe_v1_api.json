@@ -30,22 +30,22 @@
   "4": {
     "class_type": "UNETLoader",
     "inputs": {
-      "unet_name": "ltx2.5\\ltx-2.5-22b-distilled-transformer-bf16.safetensors",
+      "unet_name": "ltx2.5\\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
       "weight_dtype": "default"
     },
     "_meta": {
-      "title": "LTX-2.5 Distilled Transformer"
+      "title": "LTX-2.5 Distilled Transformer — INT8 ConvRot"
     }
   },
   "5": {
     "class_type": "CLIPLoader",
     "inputs": {
-      "clip_name": "ltx2.5\\gemma4-12b-with-proj-ltx-2.5-bf16.safetensors",
+      "clip_name": "ltx2.5\\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
       "type": "ltxv",
       "device": "default"
     },
     "_meta": {
-      "title": "LTX-2.5 Text Encoder"
+      "title": "LTX-2.5 Text Encoder — INT8 ConvRot"
     }
   },
   "6": {

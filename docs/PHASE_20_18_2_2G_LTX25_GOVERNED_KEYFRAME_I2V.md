@@ -115,16 +115,41 @@ The ComfyUI package loader is:
 The Phase 20.18.2.2g infrastructure composition now selects the Candidate C backend. Production
 Package compilation therefore fails closed until an approved governed keyframe is registered.
 
-The provider API graph uses the lower-memory LTX-2.5 convolutional video VAE by default while
-retaining the official LTX-2.5 distilled transformer, LTX-2.5 audio VAE, and LTX-2.5 text encoder.
-Local hardware/model availability remains an acceptance gate rather than an assumption.
+The provider API graph uses the lower-memory LTX-2.5 convolutional video VAE plus the Comfy
+INT8 ConvRot distilled transformer and text encoder. This is the Phase 20.18.2.2g execution
+profile for the target RTX 5060 Ti 16GB system. Prompt enhancement remains disabled, but the
+matching INT8 ConvRot enhancer model is selected in the manual workflow so the graph remains
+internally coherent if enhancement is explicitly enabled during diagnostics.
+
+Measured local readiness on 2026-09-22:
+- GPU: NVIDIA GeForce RTX 5060 Ti, 16GB VRAM;
+- idle VRAM usage after reboot/cleanup: approximately 1.5GB;
+- system RAM: 31.1GB;
+- free system RAM before testing: approximately 15.27GB;
+- CUDA UMD: 13.4;
+- required INT8 ConvRot transformer and text encoders are present.
+
+Because this hardware is below the standard BF16 memory envelope, production acceptance requires
+a low-cost smoke test before a full 1280×720 / 6-second render.
 
 The current ComfyUI installation stores the LTX-2.5 models in `ltx2.5` subfolders. The
 checked-in manual and provider workflows therefore reference these exact relative model names:
 
-- `diffusion_models/ltx2.5/ltx-2.5-22b-distilled-transformer-bf16.safetensors`
+- `diffusion_models/ltx2.5/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors`
 - `vae/ltx2.5/ltx-2.5-audio-vae-bf16.safetensors`
 - `vae/ltx2.5/ltx-2.5-video-vae-conv-bf16.safetensors`
-- `text_encoders/ltx2.5/gemma4_e2b_it_bf16.safetensors`
-- `text_encoders/ltx2.5/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors`
+- `text_encoders/ltx2.5/gemma4_e2b_it_int8_convrot.safetensors`
+- `text_encoders/ltx2.5/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors`
+
+### 16GB readiness smoke test
+
+Open:
+
+`resources/workflows/manual/ltx25_candidate_c_lowvram_smoke_ui.json`
+
+This workflow uses the same Candidate C architecture and INT8 ConvRot models, but reduces the
+diagnostic render to 960×544 and two seconds (49 provider frames at 24fps). It is not a production
+acceptance render. A PASS means model loading, I2V conditioning, sampling, VAE decode, and video
+save all complete without CUDA OOM or node failure. After this passes, restore the full manual
+workflow for the governed 1280×720 / six-second SHT-001 test.
 
