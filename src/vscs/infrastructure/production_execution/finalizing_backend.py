@@ -161,7 +161,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
                     ),
                 ).ingest_execution_outputs(durable_job, task, prepared_outputs)
             except Exception as exc:
-                message = f"Provider completed but VSCS could not govern/ingest production output: {exc}"
+                message = (
+                    f"Provider completed but VSCS could not govern/ingest production output: {exc}"
+                )
                 result = self._production_failure_result(task, durable_job, message)
                 self._finish_current(task.task_id, result)
                 return result
@@ -171,8 +173,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
                 generated_media_ids=tuple(item.media.media_id for item in ingested),
                 message=(
                     "Provider completed; output files validated, copied into project media storage, "
-                    "and ingested as authoritative Generated Media. "
-                    + governance_note
+                    "and ingested as authoritative Generated Media. " + governance_note
                 ),
             )
             self._finish_current(task.task_id, result)
@@ -225,7 +226,9 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
                 ),
             ).ingest_execution_outputs(durable_job, task, prepared_outputs)
         except Exception as exc:
-            message = f"Provider completed but VSCS could not govern/ingest production output: {exc}"
+            message = (
+                f"Provider completed but VSCS could not govern/ingest production output: {exc}"
+            )
             self._fail_queue_after_provider_completion(active, message)
             result = self._production_failure_result(task, durable_job, message)
             self._finish_current(task.task_id, result)
@@ -242,8 +245,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
             generated_media_ids=tuple(item.media.media_id for item in ingested),
             message=(
                 "Provider completed; output files validated, copied into project media storage, "
-                "and ingested as authoritative Generated Media. "
-                + governance_note
+                "and ingested as authoritative Generated Media. " + governance_note
             ),
         )
         self._finish_current(task.task_id, result)

@@ -52,7 +52,7 @@ class ProviderAudioPolicy:
         }
 
     @classmethod
-    def from_dict(cls, raw: object) -> "ProviderAudioPolicy":
+    def from_dict(cls, raw: object) -> ProviderAudioPolicy:
         if not isinstance(raw, dict):
             raise ProviderAudioPolicyError("Provider audio policy must be an object")
         if str(raw.get("schema_version", "")).strip() != "1.0":
@@ -104,7 +104,9 @@ def _explicit_mode(raw: object) -> ProviderAudioPolicyMode:
     try:
         return ProviderAudioPolicyMode(value)
     except ValueError as exc:
-        raise ProviderAudioPolicyError(f"Unsupported provider audio policy mode: {value!r}") from exc
+        raise ProviderAudioPolicyError(
+            f"Unsupported provider audio policy mode: {value!r}"
+        ) from exc
 
 
 def _policy_for_mode(mode: ProviderAudioPolicyMode) -> ProviderAudioPolicy:

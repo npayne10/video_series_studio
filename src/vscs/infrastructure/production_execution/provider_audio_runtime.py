@@ -29,9 +29,7 @@ class GovernedProviderOutputs:
 class ProviderAudioGovernanceRuntime:
     """Strip or preserve provider audio according to explicit Shot authority."""
 
-    _VIDEO_KINDS = frozenset(
-        {"production_video", "preview_video", "lip_sync_video", "video"}
-    )
+    _VIDEO_KINDS = frozenset({"production_video", "preview_video", "lip_sync_video", "video"})
     _AUDIO_KINDS = frozenset({"audio", "dialogue_audio", "music", "effects"})
 
     def __init__(

@@ -28,8 +28,8 @@ from vscs.application.production_tasks import (
 from vscs.application.provider_execution import (
     DurableExecutionJob,
     ProviderExecutionHandle,
-    ProviderExecutionOutput,
     ProviderExecutionHandleRestorer,
+    ProviderExecutionOutput,
     ProviderExecutionState,
 )
 from vscs.infrastructure.generated_media import LocalGeneratedMediaFileStore
@@ -483,9 +483,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                         managed_relative_root=self.managed_media_directory,
                     ),
                 )
-                ingested = ingestion.ingest_execution_outputs(
-                    durable_job, task, prepared_outputs
-                )
+                ingested = ingestion.ingest_execution_outputs(durable_job, task, prepared_outputs)
             except Exception as exc:
                 message = (
                     "Recovered provider completed but VSCS could not govern/ingest production "
@@ -505,8 +503,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 generated_media_ids=tuple(item.media.media_id for item in ingested),
                 message=(
                     "Recovered provider completion reconciled after restart; outputs ingested "
-                    "as authoritative Generated Media. "
-                    + governance_note
+                    "as authoritative Generated Media. " + governance_note
                 ),
             )
             self._finish_recovery(task.task_id, result)
