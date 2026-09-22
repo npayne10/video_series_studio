@@ -11,10 +11,14 @@ from vscs.application.production_execution import (
     GovernedShotKeyframeStore,
     ProductionExecutionError,
     ProductionPackageStatus,
+    ProviderAudioPolicy,
+    ProviderAudioPolicyError,
     provider_video_rebaseline_contract,
+    resolve_provider_audio_policy,
 )
 from vscs.application.production_execution.provider_prompt import ProductionProviderPromptCompiler
 from vscs.application.production_tasks import ProductionTask
+from vscs.application.provider_execution import DurableExecutionJob, ProviderExecutionOutput
 from vscs.application.rendering import RenderRequest
 from vscs.application.rendering.workflows import (
     WorkflowCompatibilityValidator,
@@ -36,6 +40,7 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
+from .provider_audio_runtime import ProviderAudioGovernanceRuntime
 
 LTX25_KEYFRAME_WORKFLOW_ID = "ltx25_i2v_keyframe_v1"
 LTX25_KEYFRAME_WORKFLOW_FILE = "workflows/ltx25_i2v_keyframe_v1_api.json"
@@ -160,6 +165,12 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
             raise LocalProductionPackageCompilationError(
                 "Candidate C Production Package does not declare active provider candidate C"
             )
+        try:
+            ProviderAudioPolicy.from_dict(raw.get("provider_audio_policy"))
+        except ProviderAudioPolicyError as exc:
+            raise LocalProductionPackageCompilationError(
+                f"Candidate C Production Package has invalid provider audio authority: {exc}"
+            ) from exc
 
     def _comfyui_payload(self, compiled):  # type: ignore[no-untyped-def, override]
         content = LocalProductionPackageCompilationService._comfyui_payload(compiled)
@@ -198,6 +209,8 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         content["provider_video_rebaseline"] = provider_video_rebaseline_contract(
             governed_keyframe_ready=True
         )
+        audio_policy = resolve_provider_audio_policy(compiled.production_authority)
+        content["provider_audio_policy"] = audio_policy.to_dict()
         content["provider_execution_plan"] = {
             "provider": "ltx-2.5",
             "mode": "monolithic",
@@ -216,7 +229,9 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         payload = dict(content)
         payload.pop("_vscs_manifest", None)
         manifest["package_fingerprint"] = self._fingerprint(payload)
-        manifest["compiler"] = "VSCS Phase 20.18.2.2g / LTX-2.5 Candidate C"
+        manifest["compiler"] = (
+            "VSCS Phase 20.18.2.2h / LTX-2.5 Candidate C + governed provider audio"
+        )
         return content
 
     @staticmethod
@@ -296,6 +311,41 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 self.project_directory / ".vscs" / "provider_executions" / "payload_audit"
             ),
         )
+
+    def _prepare_outputs_for_ingestion(
+        self,
+        task: ProductionTask,
+        execution: DurableExecutionJob,
+        outputs: tuple[ProviderExecutionOutput, ...],
+    ) -> tuple[tuple[ProviderExecutionOutput, ...], Path, str]:
+        profile = self.execution_profiles.profile_for_execution(execution.execution_id)
+        status = self.package_compilation.require_current(task, profile=profile)
+        if status.path is None:
+            raise ProductionExecutionError(
+                "Governed provider audio requires the current compiled Production Package"
+            )
+        raw = self.package_compilation._read_json(status.path)
+        try:
+            policy = ProviderAudioPolicy.from_dict(raw.get("provider_audio_policy"))
+        except ProviderAudioPolicyError as exc:
+            raise ProductionExecutionError(
+                f"Governed provider audio policy cannot be resolved: {exc}"
+            ) from exc
+        runtime = ProviderAudioGovernanceRuntime()
+        governed = runtime.apply(
+            policy,
+            execution_id=execution.execution_id,
+            outputs=outputs,
+            source_root=self._require_comfyui_output_directory(),
+            staging_root=(
+                self.project_directory
+                / ".vscs"
+                / "provider_executions"
+                / "audio_governance"
+                / execution.execution_id
+            ),
+        )
+        return governed.outputs, governed.source_root, governed.note
 
     @staticmethod
     def _render_request(task: ProductionTask) -> RenderRequest:

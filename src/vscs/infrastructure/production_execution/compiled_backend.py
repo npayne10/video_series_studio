@@ -28,6 +28,7 @@ from vscs.application.production_tasks import (
 from vscs.application.provider_execution import (
     DurableExecutionJob,
     ProviderExecutionHandle,
+    ProviderExecutionOutput,
     ProviderExecutionHandleRestorer,
     ProviderExecutionState,
 )
@@ -475,22 +476,42 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 active.candidate.queue_entry_id,
                 active.lease_id,
             )
-            ingestion = GeneratedMediaIngestionService(
-                self.media,
-                LocalGeneratedMediaFileStore(
-                    source_root=self._require_comfyui_output_directory(),
-                    project_root=self.project_directory,
-                    managed_relative_root=self.managed_media_directory,
-                ),
+            try:
+                prepared_outputs, source_root, governance_note = (
+                    self._prepare_outputs_for_ingestion(task, durable_job, outputs)
+                )
+                ingestion = GeneratedMediaIngestionService(
+                    self.media,
+                    LocalGeneratedMediaFileStore(
+                        source_root=source_root,
+                        project_root=self.project_directory,
+                        managed_relative_root=self.managed_media_directory,
+                    ),
+                )
+                ingested = ingestion.ingest_execution_outputs(
+                    durable_job, task, prepared_outputs
+                )
+            except Exception as exc:
+                message = (
+                    "Recovered provider completed but VSCS could not govern/ingest production "
+                    f"output: {exc}"
+                )
+                result = self._failed_production_result(task, durable_job, message)
+                self._finish_recovery(task.task_id, result)
+                return result
+            active.queue = active.service.runtime.complete(
+                active.queue,
+                active.candidate.queue_entry_id,
+                active.lease_id,
             )
-            ingested = ingestion.ingest_execution_outputs(durable_job, task, outputs)
             result = self._result(
                 active.candidate,
                 refreshed,
                 generated_media_ids=tuple(item.media.media_id for item in ingested),
                 message=(
                     "Recovered provider completion reconciled after restart; outputs ingested "
-                    "as authoritative Generated Media."
+                    "as authoritative Generated Media. "
+                    + governance_note
                 ),
             )
             self._finish_recovery(task.task_id, result)
@@ -533,6 +554,16 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
         )
         self._latest[task.task_id] = result
         return result
+
+    def _prepare_outputs_for_ingestion(
+        self,
+        task: ProductionTask,
+        execution: DurableExecutionJob,
+        outputs: tuple[ProviderExecutionOutput, ...],
+    ) -> tuple[tuple[ProviderExecutionOutput, ...], Path, str]:
+        """Hook for provider-specific output governance before Generated Media ingestion."""
+        del task, execution
+        return outputs, self._require_comfyui_output_directory(), ""
 
     def _finish_recovery(self, task_id: str, result: ProductionExecutionResult) -> None:
         self._active.pop(task_id, None)

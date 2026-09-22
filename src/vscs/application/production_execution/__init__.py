@@ -20,6 +20,13 @@ from .package_compilation import (
     ProductionPackageStatus,
 )
 from .profiles import ProductionExecutionProfile, normalize_execution_profile
+from .provider_audio_policy import (
+    ProviderAudioAction,
+    ProviderAudioPolicy,
+    ProviderAudioPolicyError,
+    ProviderAudioPolicyMode,
+    resolve_provider_audio_policy,
+)
 from .reference_plan_rendering import (
     ReferencePlanRenderBinding,
     ReferencePlanRenderBindingError,
@@ -79,6 +86,10 @@ __all__ = [
     "ProductionPackageStatus",
     "ProductionTelemetrySnapshot",
     "ProductionTelemetryState",
+    "ProviderAudioAction",
+    "ProviderAudioPolicy",
+    "ProviderAudioPolicyError",
+    "ProviderAudioPolicyMode",
     "ProviderVideoCandidate",
     "ProviderVideoCandidateId",
     "ReferencePlanRenderBinding",
@@ -86,5 +97,6 @@ __all__ = [
     "ReferencePlanRenderRequestBinder",
     "normalize_execution_profile",
     "provider_video_candidates",
+    "resolve_provider_audio_policy",
     "provider_video_rebaseline_contract",
 ]

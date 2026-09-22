@@ -18,6 +18,11 @@ from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
+from .provider_audio_runtime import (
+    GovernedProviderOutputs,
+    ProviderAudioGovernanceRuntime,
+    ProviderAudioGovernanceRuntimeError,
+)
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
@@ -31,5 +36,8 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "GovernedProviderOutputs",
+    "ProviderAudioGovernanceRuntime",
+    "ProviderAudioGovernanceRuntimeError",
     "capability_for_vram",
 ]

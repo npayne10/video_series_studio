@@ -149,14 +149,17 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
             if durable_job is None:
                 durable_job = self.execution_jobs.require(refreshed.execution_id)
             try:
+                prepared_outputs, source_root, governance_note = (
+                    self._prepare_outputs_for_ingestion(task, durable_job, outputs)
+                )
                 ingested = GeneratedMediaIngestionService(
                     self.media,
                     LocalGeneratedMediaFileStore(
-                        source_root=self._require_comfyui_output_directory(),
+                        source_root=source_root,
                         project_root=self.project_directory,
                         managed_relative_root=self.managed_media_directory,
                     ),
-                ).ingest_execution_outputs(durable_job, task, outputs)
+                ).ingest_execution_outputs(durable_job, task, prepared_outputs)
             except Exception as exc:
                 message = f"Provider completed but VSCS could not ingest production output: {exc}"
                 result = self._production_failure_result(task, durable_job, message)
@@ -168,7 +171,8 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
                 generated_media_ids=tuple(item.media.media_id for item in ingested),
                 message=(
                     "Provider completed; output files validated, copied into project media storage, "
-                    "and ingested as authoritative Generated Media."
+                    "and ingested as authoritative Generated Media. "
+                    + governance_note
                 ),
             )
             self._finish_current(task.task_id, result)
@@ -209,14 +213,17 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
 
         durable_job = self.execution_jobs.observe(refreshed.execution_id, refreshed)
         try:
+            prepared_outputs, source_root, governance_note = self._prepare_outputs_for_ingestion(
+                task, durable_job, outputs
+            )
             ingested = GeneratedMediaIngestionService(
                 self.media,
                 LocalGeneratedMediaFileStore(
-                    source_root=self._require_comfyui_output_directory(),
+                    source_root=source_root,
                     project_root=self.project_directory,
                     managed_relative_root=self.managed_media_directory,
                 ),
-            ).ingest_execution_outputs(durable_job, task, outputs)
+            ).ingest_execution_outputs(durable_job, task, prepared_outputs)
         except Exception as exc:
             message = f"Provider completed but VSCS could not ingest production output: {exc}"
             self._fail_queue_after_provider_completion(active, message)
@@ -235,7 +242,8 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
             generated_media_ids=tuple(item.media.media_id for item in ingested),
             message=(
                 "Provider completed; output files validated, copied into project media storage, "
-                "and ingested as authoritative Generated Media."
+                "and ingested as authoritative Generated Media. "
+                + governance_note
             ),
         )
         self._finish_current(task.task_id, result)

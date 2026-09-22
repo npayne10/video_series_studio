@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.2h governed provider-audio policy and fail-closed pre-ingestion audio governance for joint audio/video providers.
+- Phase 20.18.2.2h provenance records for discarded/preserved provider audio and stream-copy video normalization.
+
 - Phase 20.18.2.2g LTX-2.5 governed Shot Composition Keyframe authority with checksum-pinned human approval.
 - Phase 20.18.2.2g Candidate C manual I2V workflow derived from the pinned official Lightricks LTX-2.5 single-stage I2V workflow.
 
@@ -26,6 +29,8 @@ The project follows semantic versioning where practical.
 - Focused unit tests for valid, incomplete, ambiguous, and ignored prompt package entries
 
 ### Changed
+
+- Phase 20.18.2.2h Candidate C Production Packages declare explicit provider audio authority; silent and canonical-dialogue Shots discard provider audio before Generated Media registration.
 
 - Phase 20.18.2.2f replaces governance-heavy provider text with bounded cinematic scene/action prompts and keeps reference metadata out of the creative text encoder.
 - Phase 20.18.2.2f stops the LTX continuity/reference runtime from prepending reference-role authority prose to series-entry Shot prompts.
