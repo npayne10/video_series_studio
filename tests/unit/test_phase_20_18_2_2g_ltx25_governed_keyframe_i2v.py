@@ -68,6 +68,13 @@ def test_manual_ltx25_workflow_is_governed_keyframe_i2v() -> None:
     assert nodes[5014]["widgets_values"][0] is True
     assert nodes[5014]["widgets_values"][2] is False
     assert nodes[5514]["widgets_values"][-1] == 0.9
+    assert nodes[5004]["widgets_values"] == [
+        r"ltx2.5\ltx-2.5-audio-vae-bf16.safetensors",
+        r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors",
+        r"ltx2.5\ltx-2.5-22b-distilled-transformer-bf16.safetensors",
+        r"ltx2.5\gemma4_e2b_it_bf16.safetensors",
+        r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-bf16.safetensors",
+    ]
 
     contract = workflow["extra"]["vscs_phase_contract"]
     assert contract["candidate"] == "C"

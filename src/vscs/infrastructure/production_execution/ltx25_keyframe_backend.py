@@ -90,9 +90,30 @@ class LTX25GovernedKeyframeDeploymentAssurance:
         model = raw.get("4")
         model_inputs = model.get("inputs") if isinstance(model, dict) else None
         if not isinstance(model_inputs, dict) or model_inputs.get("unet_name") != (
-            "ltx-2.5-22b-distilled-transformer-bf16.safetensors"
+            r"ltx2.5\ltx-2.5-22b-distilled-transformer-bf16.safetensors"
         ):
             issues.append("Candidate C workflow must use the approved LTX-2.5 distilled model")
+
+        audio_vae = raw.get("2")
+        audio_inputs = audio_vae.get("inputs") if isinstance(audio_vae, dict) else None
+        if not isinstance(audio_inputs, dict) or audio_inputs.get("vae_name") != (
+            r"ltx2.5\ltx-2.5-audio-vae-bf16.safetensors"
+        ):
+            issues.append("Candidate C workflow must use the approved LTX-2.5 audio VAE")
+
+        video_vae = raw.get("3")
+        video_inputs = video_vae.get("inputs") if isinstance(video_vae, dict) else None
+        if not isinstance(video_inputs, dict) or video_inputs.get("vae_name") != (
+            r"ltx2.5\ltx-2.5-video-vae-conv-bf16.safetensors"
+        ):
+            issues.append("Candidate C workflow must use the approved LTX-2.5 convolutional video VAE")
+
+        text_encoder = raw.get("5")
+        text_inputs = text_encoder.get("inputs") if isinstance(text_encoder, dict) else None
+        if not isinstance(text_inputs, dict) or text_inputs.get("clip_name") != (
+            r"ltx2.5\gemma4-12b-with-proj-ltx-2.5-bf16.safetensors"
+        ):
+            issues.append("Candidate C workflow must use the approved LTX-2.5 text encoder")
 
         prompt = raw.get("6")
         prompt_inputs = prompt.get("inputs") if isinstance(prompt, dict) else None

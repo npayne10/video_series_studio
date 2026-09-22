@@ -118,3 +118,13 @@ Package compilation therefore fails closed until an approved governed keyframe i
 The provider API graph uses the lower-memory LTX-2.5 convolutional video VAE by default while
 retaining the official LTX-2.5 distilled transformer, LTX-2.5 audio VAE, and LTX-2.5 text encoder.
 Local hardware/model availability remains an acceptance gate rather than an assumption.
+
+The current ComfyUI installation stores the LTX-2.5 models in `ltx2.5` subfolders. The
+checked-in manual and provider workflows therefore reference these exact relative model names:
+
+- `diffusion_models/ltx2.5/ltx-2.5-22b-distilled-transformer-bf16.safetensors`
+- `vae/ltx2.5/ltx-2.5-audio-vae-bf16.safetensors`
+- `vae/ltx2.5/ltx-2.5-video-vae-conv-bf16.safetensors`
+- `text_encoders/ltx2.5/gemma4_e2b_it_bf16.safetensors`
+- `text_encoders/ltx2.5/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors`
+
