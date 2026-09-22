@@ -55,6 +55,8 @@ class ProviderAudioPolicy:
     def from_dict(cls, raw: object) -> "ProviderAudioPolicy":
         if not isinstance(raw, dict):
             raise ProviderAudioPolicyError("Provider audio policy must be an object")
+        if str(raw.get("schema_version", "")).strip() != "1.0":
+            raise ProviderAudioPolicyError("Unsupported provider audio policy schema")
         try:
             mode = ProviderAudioPolicyMode(str(raw["mode"]).strip())
             action = ProviderAudioAction(str(raw["provider_audio_action"]).strip())
@@ -72,6 +74,10 @@ class ProviderAudioPolicy:
         if action is not expected.provider_audio_action:
             raise ProviderAudioPolicyError(
                 f"Provider audio action {action.value!r} is incompatible with mode {mode.value!r}"
+            )
+        if source != expected.authoritative_audio_source:
+            raise ProviderAudioPolicyError(
+                "Provider audio authoritative source is incompatible with the selected mode"
             )
         return cls(mode, action, source, rationale)
 

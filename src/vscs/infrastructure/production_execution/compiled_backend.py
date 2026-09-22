@@ -471,11 +471,6 @@ class LocalComfyUIProductionExecutionBackend(_Phase2015ComfyUIBackend):
                 return result
             durable_job = self.execution_jobs.observe(refreshed.execution_id, refreshed)
             outputs = probe.completed_outputs(refreshed.provider_job_id)
-            active.queue = active.service.runtime.complete(
-                active.queue,
-                active.candidate.queue_entry_id,
-                active.lease_id,
-            )
             try:
                 prepared_outputs, source_root, governance_note = (
                     self._prepare_outputs_for_ingestion(task, durable_job, outputs)

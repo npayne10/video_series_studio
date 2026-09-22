@@ -58,6 +58,8 @@ class ProviderAudioGovernanceRuntime:
         source_root: Path,
         staging_root: Path,
     ) -> GovernedProviderOutputs:
+        if not execution_id.strip():
+            raise ProviderAudioGovernanceRuntimeError("Provider execution identity is required")
         if not outputs:
             raise ProviderAudioGovernanceRuntimeError(
                 "Provider audio governance requires at least one provider output"
@@ -76,7 +78,10 @@ class ProviderAudioGovernanceRuntime:
             return GovernedProviderOutputs(
                 governed,
                 source,
-                f"Provider audio policy {policy.mode.value} preserved provider audio for VSCS.",
+                (
+                    f"Provider audio policy {policy.mode.value} preserved provider audio for VSCS "
+                    f"execution {execution_id}."
+                ),
             )
 
         staging = Path(staging_root).expanduser().resolve(strict=False)
@@ -151,7 +156,7 @@ class ProviderAudioGovernanceRuntime:
         )
         if discarded_audio_outputs:
             note += f" and discarded {discarded_audio_outputs} separate audio output(s)"
-        note += "; authoritative audio remains with VSCS."
+        note += f"; authoritative audio remains with VSCS for execution {execution_id}."
         return GovernedProviderOutputs(tuple(retained), staging, note)
 
     def _strip_audio(self, source: Path, destination: Path) -> None:

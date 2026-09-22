@@ -161,7 +161,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
                     ),
                 ).ingest_execution_outputs(durable_job, task, prepared_outputs)
             except Exception as exc:
-                message = f"Provider completed but VSCS could not ingest production output: {exc}"
+                message = f"Provider completed but VSCS could not govern/ingest production output: {exc}"
                 result = self._production_failure_result(task, durable_job, message)
                 self._finish_current(task.task_id, result)
                 return result
@@ -225,7 +225,7 @@ class LocalComfyUIProductionExecutionBackend(_Phase2016RecoveryBackend):
                 ),
             ).ingest_execution_outputs(durable_job, task, prepared_outputs)
         except Exception as exc:
-            message = f"Provider completed but VSCS could not ingest production output: {exc}"
+            message = f"Provider completed but VSCS could not govern/ingest production output: {exc}"
             self._fail_queue_after_provider_completion(active, message)
             result = self._production_failure_result(task, durable_job, message)
             self._finish_current(task.task_id, result)

@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from vscs.application.production_execution import (
+    KEYFRAME_ACCEPTANCE_CRITERIA,
+    CompiledProductionPackage,
+    GovernedShotKeyframe,
+    GovernedShotKeyframeStore,
     ProviderAudioAction,
     ProviderAudioPolicyMode,
     resolve_provider_audio_policy,
 )
 from vscs.application.provider_execution import ProviderExecutionOutput
+from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
+    CurrentAuthorityLTX25GovernedKeyframeCompilationService,
+)
 from vscs.infrastructure.production_execution.provider_audio_runtime import (
     ProviderAudioGovernanceRuntime,
 )
@@ -122,3 +130,64 @@ def test_generated_ambience_runtime_keeps_original_source_bytes(tmp_path: Path) 
     assert result.outputs[0].relative_path == "shot.mp4"
     metadata = dict(result.outputs[0].metadata)
     assert metadata["provider_audio_action"] == "preserved"
+
+
+def test_candidate_c_compiled_payload_declares_silent_visual_audio_authority(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    image = project / "opening.png"
+    image.write_bytes(b"approved-opening")
+    record = GovernedShotKeyframe(
+        shot_id="EP-001-SCN-001-SHT-001",
+        image_path="opening.png",
+        image_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),
+        approved_by="Neill Payne",
+        approved_at="2026-09-22T19:00:00+02:00",
+        acceptance_criteria=KEYFRAME_ACCEPTANCE_CRITERIA,
+    )
+    GovernedShotKeyframeStore(project).save(record)
+    compiled = CompiledProductionPackage(
+        task_id="PT-VIDEO-001",
+        production_id="XORIX",
+        episode_id="EP-001",
+        scene_id="SCN-001",
+        shot_id=record.shot_id,
+        profile="production",
+        authority_id="UPD-SHT-001",
+        authority_revision=1,
+        authority_fingerprint="authority",
+        approved_by="Neill Payne",
+        source_package_id="PP-SHT-001",
+        source_package_fingerprint="source",
+        source_schema_version="1.0",
+        universal_text="governed shot",
+        positive_prompt="positive",
+        negative_prompt="negative",
+        previous_approved_final_frame=None,
+        filename_prefix="XORIX/EP-001/PT-VIDEO-001",
+        width=1280,
+        height=720,
+        frame_count=144,
+        frames_per_second=24,
+        cfg=1.0,
+        ic_lora_strength=1.0,
+        seed=42,
+        composition_plan={},
+        production_authority={
+            "action_performance": {"spoken_content": ""},
+            "dialogue": [],
+        },
+        package_fingerprint="placeholder",
+        motion_prompt="Sandra notices the reading while James remains focused forward.",
+    )
+    service = CurrentAuthorityLTX25GovernedKeyframeCompilationService(project)
+
+    payload = service._comfyui_payload(compiled)
+
+    audio = payload["provider_audio_policy"]
+    assert audio["mode"] == "silent_visual"
+    assert audio["provider_audio_action"] == "discard"
+    assert audio["authoritative_audio_source"] == "vscs_audio_pipeline"
+    assert payload["_vscs_manifest"]["compiler"].startswith("VSCS Phase 20.18.2.2h")

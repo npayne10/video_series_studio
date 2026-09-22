@@ -1,4 +1,4 @@
-"""LTX-2.5 governed-keyframe Candidate C execution backend for Phase 20.18.2.2g."""
+"""LTX-2.5 Candidate C with governed provider audio for Phase 20.18.2.2h."""
 
 from __future__ import annotations
 
