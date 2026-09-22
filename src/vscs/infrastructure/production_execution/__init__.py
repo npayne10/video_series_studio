@@ -8,8 +8,8 @@ from .hardware_shot_capability import (
 )
 from .ltx23_v721_backend import LTX23V721DeploymentAssurance
 from .ltx25_keyframe_backend import (
-    LTX25GovernedKeyframeDeploymentAssurance,
     LocalComfyUIProductionExecutionBackend,
+    LTX25GovernedKeyframeDeploymentAssurance,
 )
 from .package_compilation import (
     ComfyUIInputAssuranceReport,

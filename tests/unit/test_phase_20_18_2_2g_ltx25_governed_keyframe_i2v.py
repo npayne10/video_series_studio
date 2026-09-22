@@ -26,7 +26,9 @@ def test_candidate_c_activates_only_from_governed_keyframe_authority() -> None:
 
     assert without["active_candidate"] == ProviderVideoCandidateId.A_LTX23_INGREDIENTS.value
     assert with_keyframe["active_candidate"] == ProviderVideoCandidateId.C_LTX25_I2V_KEYFRAME.value
-    assert with_keyframe["preferred_candidate"] == ProviderVideoCandidateId.C_LTX25_I2V_KEYFRAME.value
+    assert (
+        with_keyframe["preferred_candidate"] == ProviderVideoCandidateId.C_LTX25_I2V_KEYFRAME.value
+    )
     assert with_keyframe["phase"] == "20.18.2.2g"
 
 

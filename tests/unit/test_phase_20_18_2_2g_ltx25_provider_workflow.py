@@ -17,9 +17,7 @@ def test_candidate_c_api_workflow_passes_static_deployment_assurance() -> None:
 
 def test_candidate_c_api_workflow_uses_one_keyframe_and_no_ingredients_guides() -> None:
     raw = json.loads(
-        (WORKFLOW_ROOT / "workflows" / "ltx25_i2v_keyframe_v1_api.json").read_text(
-            encoding="utf-8"
-        )
+        (WORKFLOW_ROOT / "workflows" / "ltx25_i2v_keyframe_v1_api.json").read_text(encoding="utf-8")
     )
     types = [node["class_type"] for node in raw.values()]
 
@@ -34,9 +32,7 @@ def test_candidate_c_api_workflow_uses_one_keyframe_and_no_ingredients_guides() 
 
 def test_candidate_c_manifest_declares_ltx25_governed_keyframe() -> None:
     manifest = json.loads(
-        (WORKFLOW_ROOT / "manifests" / "ltx25_i2v_keyframe_v1.json").read_text(
-            encoding="utf-8"
-        )
+        (WORKFLOW_ROOT / "manifests" / "ltx25_i2v_keyframe_v1.json").read_text(encoding="utf-8")
     )
     assert manifest["metadata"]["workflow_id"] == "ltx25_i2v_keyframe_v1"
     assert "governed_keyframe" in manifest["capabilities"]
