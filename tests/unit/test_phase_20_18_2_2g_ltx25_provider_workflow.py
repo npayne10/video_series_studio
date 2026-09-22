@@ -5,8 +5,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
-    LTX25GovernedKeyframeDeploymentAssurance,
     LocalComfyUIProductionExecutionBackend,
+    LTX25GovernedKeyframeDeploymentAssurance,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
