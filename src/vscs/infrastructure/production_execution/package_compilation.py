@@ -253,6 +253,8 @@ class LocalProductionPackageCompilationService:
             "composition_plan": compiled.composition_plan,
             "production_authority": compiled.production_authority,
         }
+        if compiled.timed_asset_presence is not None:
+            content["timed_asset_presence"] = compiled.timed_asset_presence
         if compiled.reference_plan is not None:
             content["reference_plan"] = compiled.reference_plan
         fingerprint = cls._fingerprint(content)
@@ -328,6 +330,7 @@ class LocalProductionPackageCompilationService:
             universal_description=dict(data.get("universal_description", {})),
             provider_outputs=dict(data.get("provider_outputs", {})),
             validation=dict(data.get("validation", {})),
+            timed_asset_presence=dict(data.get("timed_asset_presence", {})),
             status=CanonicalProductionPackageStatus(
                 str(data.get("status", CanonicalProductionPackageStatus.FOUNDATION.value))
             ),
