@@ -26,12 +26,12 @@ from vscs.application.production_execution.provider_prompt import ProductionProv
 from vscs.application.production_tasks import ProductionTask
 from vscs.application.provider_execution import DurableExecutionJob, ProviderExecutionOutput
 from vscs.application.rendering import RenderRequest
-from vscs.domain.generated_media import GeneratedMediaKind, GeneratedMediaState
 from vscs.application.rendering.workflows import (
     WorkflowCompatibilityValidator,
     WorkflowManifest,
     WorkflowRegistry,
 )
+from vscs.domain.generated_media import GeneratedMediaKind, GeneratedMediaState
 from vscs.infrastructure.rendering import (
     ComfyUIWorkflowCompiler,
     ProductionPackageComfyUIAdapter,

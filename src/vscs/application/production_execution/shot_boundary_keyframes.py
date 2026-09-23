@@ -196,10 +196,7 @@ class GovernedShotBoundaryStore:
                 "Governed closing boundary checksum does not match the image being published."
             )
         records = self._records()
-        if any(
-            str(raw.get("boundary_id") or "").strip() == record.boundary_id
-            for raw in records
-        ):
+        if any(str(raw.get("boundary_id") or "").strip() == record.boundary_id for raw in records):
             return self.require_current_closing(record.shot_id)
         records.append(record.to_dict())
         self.path.parent.mkdir(parents=True, exist_ok=True)
