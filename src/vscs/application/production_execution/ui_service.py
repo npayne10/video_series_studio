@@ -12,6 +12,7 @@ from vscs.application.production_tasks import ProductionTaskState, ProductionTas
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
+from .shot_boundary_keyframes import GovernedClosingBoundaryFrame, ShotBoundaryAuthorityStatus
 from .telemetry import ProductionTelemetrySnapshot
 
 
@@ -83,6 +84,44 @@ class ProductionExecutionBackend(Protocol):
         reason: str,
     ) -> GovernedRetryOverrideStatus: ...
 
+    def shot_boundary_status(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> ShotBoundaryAuthorityStatus:
+        normalized = self._task_id(task_id, "inspecting Shot Boundary Keyframes")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "shot_boundary_status_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not expose Shot Boundary Keyframe authority."
+            )
+        return cast(_ShotBoundaryStatusForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def publish_closing_boundary(
+        self,
+        task_id: str,
+        *,
+        published_by: str,
+        profile: str | None = None,
+    ) -> GovernedClosingBoundaryFrame:
+        normalized = self._task_id(task_id, "publishing its closing Shot Boundary Keyframe")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "publish_closing_boundary_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support closing Shot Boundary publication."
+            )
+        return cast(_PublishClosingBoundaryForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            published_by=published_by,
+        )
+
     def package_status(
         self,
         task_id: str,
@@ -142,6 +181,20 @@ class _StartForProfile(Protocol):
 
 class _ReconcileForProfile(Protocol):
     def __call__(self, task_id: str, *, profile: str) -> ProductionExecutionResult: ...
+
+
+class _ShotBoundaryStatusForProfile(Protocol):
+    def __call__(self, task_id: str, *, profile: str) -> ShotBoundaryAuthorityStatus: ...
+
+
+class _PublishClosingBoundaryForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        published_by: str,
+    ) -> GovernedClosingBoundaryFrame: ...
 
 
 class _RetryOverrideStatusOperation(Protocol):
