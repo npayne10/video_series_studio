@@ -31,8 +31,13 @@ from .governed_reference_compilation import (
 from .internal_render_spans import (
     GovernedInternalRenderSpanCompiler,
     GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
 )
 from .provider_prompt import ProductionProviderPromptCompiler, ProductionProviderPromptError
+from .timed_reference_activation import (
+    TimedCanonicalReferenceActivationCompiler,
+    TimedCanonicalReferenceActivationError,
+)
 
 
 class ProductionPackageCompilationError(RuntimeError):
@@ -107,6 +112,7 @@ class CompiledProductionPackage:
     package_fingerprint: str
     timed_asset_presence: dict[str, Any] | None = None
     internal_render_spans: dict[str, Any] | None = None
+    timed_reference_activation: dict[str, Any] | None = None
     reference_plan: dict[str, Any] | None = None
     motion_prompt: str = ""
     omitted_provider_prompt_sections: tuple[str, ...] = ()
@@ -160,6 +166,8 @@ class CompiledProductionPackage:
             payload["timed_asset_presence"] = self.timed_asset_presence
         if self.internal_render_spans is not None:
             payload["internal_render_spans"] = self.internal_render_spans
+        if self.timed_reference_activation is not None:
+            payload["timed_reference_activation"] = self.timed_reference_activation
         if self.reference_plan is not None:
             payload["reference_plan"] = self.reference_plan
         return payload
@@ -220,6 +228,11 @@ class ProductionPackageCompilerService:
                 f"Governed reference compilation failed: {exc}"
             ) from exc
         reference_plan = governed_references.to_dict() if governed_references is not None else None
+        timed_reference_activation = self._timed_reference_activation(
+            timed_asset_presence,
+            internal_render_spans,
+            reference_plan,
+        )
 
         try:
             provider_prompt = self.provider_prompt_compiler.compile(production)
@@ -261,6 +274,8 @@ class ProductionPackageCompilerService:
             composition_plan["timed_asset_presence"] = timed_asset_presence
         if internal_render_spans is not None:
             composition_plan["internal_render_spans"] = internal_render_spans
+        if timed_reference_activation is not None:
+            composition_plan["timed_reference_activation"] = timed_reference_activation
         if reference_plan is not None:
             composition_plan["reference_plan"] = reference_plan
 
@@ -284,6 +299,7 @@ class ProductionPackageCompilerService:
             "production_authority": production,
             "timed_asset_presence": timed_asset_presence,
             "internal_render_spans": internal_render_spans,
+            "timed_reference_activation": timed_reference_activation,
             "reference_plan": reference_plan,
         }
         package_fingerprint = self._fingerprint(base)
@@ -318,6 +334,7 @@ class ProductionPackageCompilerService:
             package_fingerprint=package_fingerprint,
             timed_asset_presence=timed_asset_presence,
             internal_render_spans=internal_render_spans,
+            timed_reference_activation=timed_reference_activation,
             reference_plan=reference_plan,
             motion_prompt=motion_prompt,
             omitted_provider_prompt_sections=omitted_provider_prompt_sections,
@@ -367,6 +384,33 @@ class ProductionPackageCompilerService:
         except (TimedAssetPresenceError, GovernedInternalRenderSpanError) as exc:
             raise ProductionPackageCompilationError(
                 f"Governed Internal Render Span authority cannot compile: {exc}"
+            ) from exc
+        return plan.to_dict()
+
+    @staticmethod
+    def _timed_reference_activation(
+        timed_asset_presence: dict[str, Any] | None,
+        internal_render_spans: dict[str, Any] | None,
+        reference_plan: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if timed_asset_presence is None or internal_render_spans is None:
+            return None
+        try:
+            timed = TimedAssetPresencePlan.from_dict(timed_asset_presence)
+            spans = GovernedInternalRenderSpanPlan.from_dict(internal_render_spans)
+            plan = TimedCanonicalReferenceActivationCompiler().compile(
+                timed,
+                spans,
+                reference_plan,
+            )
+            plan.require_sources(timed, spans, reference_plan)
+        except (
+            TimedAssetPresenceError,
+            GovernedInternalRenderSpanError,
+            TimedCanonicalReferenceActivationError,
+        ) as exc:
+            raise ProductionPackageCompilationError(
+                f"Timed Canonical Reference Activation authority cannot compile: {exc}"
             ) from exc
         return plan.to_dict()
 
