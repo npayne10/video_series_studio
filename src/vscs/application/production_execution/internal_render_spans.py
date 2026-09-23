@@ -606,13 +606,13 @@ class GovernedInternalRenderSpanCompiler:
         spans: list[GovernedInternalRenderSpan] = []
         for sequence, (start_frame, end_exclusive) in enumerate(zip(starts, ends), start=1):
             through_frame = end_exclusive - 1
-            active = source.active_at(start_frame)
-            introduced = (
+            active: tuple[TimedAssetPresence, ...] = source.active_at(start_frame)
+            introduced: tuple[TimedAssetPresence, ...] = (
                 tuple(item for item in source.presences if item.from_frame == start_frame)
                 if start_frame > 0
                 else ()
             )
-            removed = (
+            removed: tuple[TimedAssetPresence, ...] = (
                 tuple(item for item in source.presences if item.through_frame == start_frame - 1)
                 if start_frame > 0
                 else ()
