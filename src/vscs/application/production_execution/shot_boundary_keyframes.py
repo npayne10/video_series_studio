@@ -115,6 +115,22 @@ class OpeningShotBoundaryAuthority:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class ShotBoundaryAuthorityStatus:
+    """Operator-visible opening and closing boundary authority for one shot."""
+
+    shot_id: str
+    opening_mode: ShotBoundaryContinuityMode
+    opening_state: str
+    opening_source_shot_id: str | None = None
+    opening_boundary_id: str | None = None
+    closing_state: str = "not_published"
+    closing_boundary_id: str | None = None
+    closing_frame_index: int | None = None
+    closing_frame_count: int | None = None
+    message: str = ""
+
+
 class GovernedShotBoundaryStore:
     """Persist closing boundary frames and resolve explicit opening inheritance."""
 
