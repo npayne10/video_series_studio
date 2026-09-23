@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -13,6 +13,10 @@ from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.application.story.planning_integration import (
     GovernedPlanningIntegrationService,
     IntegratedPlanningPackage,
+)
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
 )
 
 
@@ -63,6 +67,7 @@ class ProductionPackage:
     universal_description: dict[str, Any]
     provider_outputs: dict[str, Any]
     validation: dict[str, Any]
+    timed_asset_presence: dict[str, Any] = field(default_factory=dict)
     status: ProductionPackageStatus = ProductionPackageStatus.FOUNDATION
 
 
@@ -205,6 +210,51 @@ class ProductionPackageService:
         data["status"] = ProductionPackageStatus.COMPILING.value
         return self._append_derived(current, data)
 
+    def derive_timed_asset_presence(
+        self,
+        shot_id: str,
+        authority: TimedAssetPresencePlan | dict[str, Any],
+        *,
+        production_notes: str = "",
+    ) -> ProductionPackage:
+        """Append reviewed frame-exact asset-presence authority for one Shot."""
+        current = self.require_current_package(shot_id)
+        try:
+            plan = (
+                authority
+                if isinstance(authority, TimedAssetPresencePlan)
+                else TimedAssetPresencePlan.from_dict(authority)
+            )
+            if plan.shot_id != current.shot_id.strip().upper():
+                raise TimedAssetPresenceError(
+                    "Timed asset presence Shot identity does not match Production Package"
+                )
+            plan.require_governed_assets(self._governed_asset_ids(current.assets))
+        except TimedAssetPresenceError as exc:
+            raise ProductionPackageError(
+                f"Timed asset presence authority is invalid: {exc}"
+            ) from exc
+
+        payload = plan.to_dict()
+        if (
+            current.timed_asset_presence == payload
+            and current.validation.get("timed_asset_presence_complete") is True
+        ):
+            return current
+        data = asdict(current)
+        data.pop("package_id", None)
+        data.pop("package_fingerprint", None)
+        data["timed_asset_presence"] = payload
+        validation = dict(current.validation)
+        validation["timed_asset_presence_complete"] = True
+        if production_notes.strip():
+            validation["timed_asset_presence_review_notes"] = production_notes.strip()
+        else:
+            validation.pop("timed_asset_presence_review_notes", None)
+        data["validation"] = validation
+        data["status"] = ProductionPackageStatus.COMPILING.value
+        return self._append_derived(current, data)
+
     def derive_camera(
         self,
         shot_id: str,
@@ -309,6 +359,7 @@ class ProductionPackageService:
             "dialogue": [],
             "effects": [],
             "references": self._reference_index(assets),
+            "timed_asset_presence": {},
             "universal_description": {},
             "provider_outputs": {},
             "validation": {
@@ -345,6 +396,7 @@ class ProductionPackageService:
             universal_description={},
             provider_outputs={},
             validation=foundation["validation"],
+            timed_asset_presence={},
         )
 
     @staticmethod
@@ -360,6 +412,21 @@ class ProductionPackageService:
         if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
             raise ProductionPackageError(f"Integrated planning field '{key}' is not an object list")
         return [dict(item) for item in value]
+
+    @staticmethod
+    def _governed_asset_ids(assets: tuple[dict[str, Any], ...]) -> set[str]:
+        governed: set[str] = set()
+        for item in assets:
+            candidates: list[object] = [item.get("asset_id")]
+            for section_name in ("production", "resolution", "binding", "governed"):
+                section = item.get(section_name)
+                if isinstance(section, dict):
+                    candidates.append(section.get("asset_id"))
+            for candidate in candidates:
+                value = str(candidate or "").strip().upper()
+                if value:
+                    governed.add(value)
+        return governed
 
     @staticmethod
     def _reference_index(assets: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -429,5 +496,6 @@ class ProductionPackageService:
             universal_description=dict(data.get("universal_description", {})),
             provider_outputs=dict(data.get("provider_outputs", {})),
             validation=dict(data.get("validation", {})),
+            timed_asset_presence=dict(data.get("timed_asset_presence", {})),
             status=ProductionPackageStatus(str(data.get("status", "foundation"))),
         )
