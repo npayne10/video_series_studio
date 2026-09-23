@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.3.2 Governed Internal Render Spans: deterministic Shot-internal span topology, exact frame coverage, source/target span linkage, and governed internal-boundary requirements derived from Timed Asset Presence authority.
+- Phase 20.18.2.3.2 provider-neutral span IDs, boundary IDs, plan fingerprinting, transition asset sets, and tamper-detecting round-trip validation.
+
 - Phase 20.18.2.3.1 Timed Asset Presence Model: provider-neutral frame-exact asset intervals, deterministic identities/fingerprints, explicit introduction/removal events, and governed asset-reference linkage.
 - Phase 20.18.2.3.1 Production Package / UPD / execution-package propagation for timed asset presence authority, including exact change-frame derivation and timing validation.
 
@@ -36,6 +39,9 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.3.2 Production Package compilation now derives internal render-span authority from reviewed Timed Asset Presence and includes it in composition/package fingerprints.
+- Phase 20.18.2.3.2 keeps multi-span provider execution fail-closed until timed canonical-reference activation and governed span orchestration are implemented.
+
 - Phase 20.18.2.3.1 fails closed when a dynamic timed-presence plan reaches the current monolithic ComfyUI execution path; internal governed render spans are required before in-shot composition changes may execute.
 
 - Phase 20.18.2.2i Candidate C packages include shot-boundary continuity in their executable fingerprint and become STALE when inherited source boundary or source-media checksums change.
@@ -47,7 +53,7 @@ The project follows semantic versioning where practical.
 
 ### In progress
 
-- Phase 20.18.2.3.1 local verification and Ros frame-96 timed-presence model acceptance.
+- Phase 20.18.2.3.2 local verification and Ros frame-96 governed internal-span acceptance.
 
 - Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
 
