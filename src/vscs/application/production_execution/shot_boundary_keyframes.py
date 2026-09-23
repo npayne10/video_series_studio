@@ -44,6 +44,7 @@ class GovernedClosingBoundaryFrame:
     source_media_id: str
     source_execution_id: str
     source_media_revision: int
+    source_media_path: str
     source_media_sha256: str
     frame_index: int
     frame_count: int
@@ -74,6 +75,7 @@ class GovernedClosingBoundaryFrame:
             "source_media_id": self.source_media_id,
             "source_execution_id": self.source_execution_id,
             "source_media_revision": self.source_media_revision,
+            "source_media_path": self.source_media_path,
             "source_media_sha256": self.source_media_sha256,
             "frame_index": self.frame_index,
             "frame_count": self.frame_count,
@@ -167,6 +169,15 @@ class GovernedShotBoundaryStore:
         if self._sha256(image) != record.image_sha256:
             raise GovernedShotBoundaryError(
                 "Governed closing boundary image checksum no longer matches published authority."
+            )
+        source_media = self.resolve_image(record.source_media_path)
+        if not source_media.is_file():
+            raise GovernedShotBoundaryError(
+                f"Source Generated Media for closing boundary does not exist: {source_media}"
+            )
+        if self._sha256(source_media) != record.source_media_sha256:
+            raise GovernedShotBoundaryError(
+                "Source Generated Media checksum changed after closing boundary publication."
             )
         return record
 
@@ -307,6 +318,7 @@ class GovernedShotBoundaryStore:
             source_media_id=str(raw.get("source_media_id") or "").strip(),
             source_execution_id=str(raw.get("source_execution_id") or "").strip(),
             source_media_revision=int(raw.get("source_media_revision") or 0),
+            source_media_path=str(raw.get("source_media_path") or "").strip(),
             source_media_sha256=str(raw.get("source_media_sha256") or "").strip().lower(),
             frame_index=int(raw.get("frame_index") or 0),
             frame_count=int(raw.get("frame_count") or 0),
