@@ -12,12 +12,16 @@ from vscs.domain.generated_media import (
     GeneratedMediaKind,
     GeneratedMediaProvenance,
     GeneratedMediaScope,
+    GeneratedMediaState,
 )
 from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
     JsonGeneratedMediaSelectionRepository,
 )
-from vscs.presentation.widgets.generated_media_workspace import GeneratedMediaWorkspaceWidget
+from vscs.presentation.widgets.generated_media_workspace import (
+    GeneratedMediaActionDialog,
+    GeneratedMediaWorkspaceWidget,
+)
 
 
 def _service(tmp_path: Path) -> GeneratedMediaUiService:
@@ -139,3 +143,43 @@ def test_workspace_exposes_readable_context_and_stable_ids(
     assert "PT-VIDEO-GENERATION-00000001" in widget.identifiers.toPlainText()
     assert "GM-UI-001" in widget.candidates.toPlainText()
     assert widget.submit_button.isEnabled()
+
+
+def test_workspace_accepted_governance_dialog_executes_submission(
+    monkeypatch: object,
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    service = _service(tmp_path)
+    widget = GeneratedMediaWorkspaceWidget(lambda: service)
+    qtbot.addWidget(widget)  # type: ignore[attr-defined]
+    widget.refresh()
+    widget.production_filter.setCurrentIndex(widget.production_filter.findData("XORIX"))
+    widget.episode_filter.setCurrentIndex(widget.episode_filter.findData("EP-001"))
+    qapp.processEvents()
+    widget.media_table.selectRow(0)
+    qapp.processEvents()
+
+    assert widget.submit_button.isEnabled()
+
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        GeneratedMediaActionDialog,
+        "exec",
+        lambda _self: 1,
+    )
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        GeneratedMediaActionDialog,
+        "values",
+        lambda _self: (
+            "neill.payne",
+            "Neill Payne",
+            "Submit governed Candidate C result for review",
+        ),
+    )
+
+    widget._run_action("submit")
+
+    detail = service.detail("GM-UI-001")
+    assert detail.media.state is GeneratedMediaState.UNDER_REVIEW
+    assert detail.media.governance_history[-1].actor == "human:neill.payne"
