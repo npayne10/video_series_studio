@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.3.1 Timed Asset Presence Model: provider-neutral frame-exact asset intervals, deterministic identities/fingerprints, explicit introduction/removal events, and governed asset-reference linkage.
+- Phase 20.18.2.3.1 Production Package / UPD / execution-package propagation for timed asset presence authority, including exact change-frame derivation and timing validation.
+
 - Phase 20.18.2.2i governed Shot Boundary Keyframes: explicit human publication of the exact final governed frame from APPROVED Generated Media, checksum-pinned source provenance, explicit continuity modes, and Candidate C inherited-opening authority.
 - Phase 20.18.2.2i Production Execution visibility for opening/closing boundary state and fail-closed closing-boundary publication.
 
@@ -33,6 +36,8 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.3.1 fails closed when a dynamic timed-presence plan reaches the current monolithic ComfyUI execution path; internal governed render spans are required before in-shot composition changes may execute.
+
 - Phase 20.18.2.2i Candidate C packages include shot-boundary continuity in their executable fingerprint and become STALE when inherited source boundary or source-media checksums change.
 
 - Phase 20.18.2.2h Candidate C Production Packages declare explicit provider audio authority; silent and canonical-dialogue Shots discard provider audio before Generated Media registration.
@@ -42,7 +47,7 @@ The project follows semantic versioning where practical.
 
 ### In progress
 
-- Phase 20.18.2.2i local verification and governed closing-boundary acceptance for SHT-001.
+- Phase 20.18.2.3.1 local verification and Ros frame-96 timed-presence model acceptance.
 
 - Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
 
