@@ -235,6 +235,18 @@ class LocalProductionPackageCompilationService:
     @classmethod
     def _comfyui_payload(cls, compiled: CompiledProductionPackage) -> dict[str, Any]:
         """Translate provider-neutral execution authority into the v7.1.4 loader contract."""
+        if compiled.timed_asset_presence is not None:
+            change_frames = compiled.timed_asset_presence.get("change_frames", [])
+            if not isinstance(change_frames, list):
+                raise LocalProductionPackageCompilationError(
+                    "Timed Asset Presence change_frames must be an array"
+                )
+            if change_frames:
+                raise LocalProductionPackageCompilationError(
+                    "Phase 20.18.2.3.1 timed asset authority declares in-shot composition "
+                    "changes, but current provider execution is monolithic. Internal governed "
+                    "render spans must be implemented before this package may execute."
+                )
         content: dict[str, Any] = {
             "schema_version": "7.1.4-vscs-1",
             "profile": compiled.profile,
