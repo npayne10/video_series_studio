@@ -154,9 +154,7 @@ def test_internal_spans_cover_every_governed_frame_once_without_editorial_split(
     plan = GovernedInternalRenderSpanCompiler().compile(_ros_plan())
 
     covered = [
-        frame
-        for span in plan.spans
-        for frame in range(span.start_frame, span.through_frame + 1)
+        frame for span in plan.spans for frame in range(span.start_frame, span.through_frame + 1)
     ]
 
     assert covered == list(range(144))

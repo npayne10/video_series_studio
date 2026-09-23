@@ -24,13 +24,13 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresencePlan,
 )
 
-from .internal_render_spans import (
-    GovernedInternalRenderSpanCompiler,
-    GovernedInternalRenderSpanError,
-)
 from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
     GovernedReferenceCompiler,
+)
+from .internal_render_spans import (
+    GovernedInternalRenderSpanCompiler,
+    GovernedInternalRenderSpanError,
 )
 from .provider_prompt import ProductionProviderPromptCompiler, ProductionProviderPromptError
 

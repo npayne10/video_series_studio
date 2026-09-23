@@ -255,9 +255,7 @@ class LocalProductionPackageCompilationService:
         span_plan: GovernedInternalRenderSpanPlan | None = None
         if compiled.internal_render_spans is not None:
             try:
-                span_plan = GovernedInternalRenderSpanPlan.from_dict(
-                    compiled.internal_render_spans
-                )
+                span_plan = GovernedInternalRenderSpanPlan.from_dict(compiled.internal_render_spans)
                 if timed_plan is None:
                     raise GovernedInternalRenderSpanError(
                         "Internal render spans require Timed Asset Presence authority"

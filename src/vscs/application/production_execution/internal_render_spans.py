@@ -44,7 +44,9 @@ class GovernedInternalRenderSpan:
         if self.sequence_number <= 0:
             raise GovernedInternalRenderSpanError("Internal render span sequence must be positive")
         if self.start_frame < 0:
-            raise GovernedInternalRenderSpanError("Internal render span start_frame cannot be negative")
+            raise GovernedInternalRenderSpanError(
+                "Internal render span start_frame cannot be negative"
+            )
         if self.through_frame < self.start_frame:
             raise GovernedInternalRenderSpanError(
                 "Internal render span through_frame cannot precede start_frame"
@@ -177,9 +179,11 @@ class GovernedInternalRenderSpan:
                 "Internal render span frame_count does not match its frame interval"
             )
         supplied_duration = raw.get("duration_seconds")
-        if supplied_duration is not None and abs(
-            _number_value(supplied_duration, "duration_seconds") - span.duration_seconds
-        ) > 1e-9:
+        if (
+            supplied_duration is not None
+            and abs(_number_value(supplied_duration, "duration_seconds") - span.duration_seconds)
+            > 1e-9
+        ):
             raise GovernedInternalRenderSpanError(
                 "Internal render span duration_seconds does not match its frame interval"
             )
@@ -206,7 +210,9 @@ class GovernedInternalSpanBoundary:
             raise GovernedInternalRenderSpanError("Internal span boundary requires shot_id")
         object.__setattr__(self, "shot_id", shot_id)
         if self.sequence_number <= 0:
-            raise GovernedInternalRenderSpanError("Internal span boundary sequence must be positive")
+            raise GovernedInternalRenderSpanError(
+                "Internal span boundary sequence must be positive"
+            )
         if not self.source_span_id.strip() or not self.target_span_id.strip():
             raise GovernedInternalRenderSpanError(
                 "Internal span boundary requires source and target span identities"
