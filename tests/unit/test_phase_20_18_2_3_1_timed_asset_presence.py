@@ -198,9 +198,7 @@ def test_presence_plan_fingerprint_and_identity_detect_tampering() -> None:
 
 def test_presence_plan_requires_assets_from_governed_asset_authority() -> None:
     with pytest.raises(TimedAssetPresenceError, match="CAP-CHR-004"):
-        _ros_plan().require_governed_assets(
-            {"CAP-CHR-001", "CAP-CHR-003", "CAP-LOC-021"}
-        )
+        _ros_plan().require_governed_assets({"CAP-CHR-001", "CAP-CHR-003", "CAP-LOC-021"})
 
 
 @dataclass(frozen=True)
@@ -351,7 +349,9 @@ def _compiled_package(plan: dict[str, object] | None) -> CompiledProductionPacka
 
 
 def test_dynamic_timed_presence_fails_closed_until_internal_span_rendering_exists() -> None:
-    with pytest.raises(LocalProductionPackageCompilationError, match="Internal governed render spans"):
+    with pytest.raises(
+        LocalProductionPackageCompilationError, match="Internal governed render spans"
+    ):
         LocalProductionPackageCompilationService._comfyui_payload(
             _compiled_package(_ros_plan().to_dict())
         )
@@ -372,8 +372,6 @@ def test_static_timed_presence_can_be_carried_without_changing_provider_behavior
         ),
     ).to_dict()
 
-    payload = LocalProductionPackageCompilationService._comfyui_payload(
-        _compiled_package(static)
-    )
+    payload = LocalProductionPackageCompilationService._comfyui_payload(_compiled_package(static))
 
     assert payload["timed_asset_presence"] == static
