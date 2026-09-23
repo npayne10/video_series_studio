@@ -314,18 +314,42 @@ class GovernedShotBoundaryStore:
             image_sha256=str(raw.get("image_sha256") or "").strip().lower(),
             source_media_id=str(raw.get("source_media_id") or "").strip(),
             source_execution_id=str(raw.get("source_execution_id") or "").strip(),
-            source_media_revision=int(raw.get("source_media_revision") or 0),
+            source_media_revision=GovernedShotBoundaryStore._int_field(
+                raw, "source_media_revision"
+            ),
             source_media_path=str(raw.get("source_media_path") or "").strip(),
             source_media_sha256=str(raw.get("source_media_sha256") or "").strip().lower(),
-            frame_index=int(raw.get("frame_index") or 0),
-            frame_count=int(raw.get("frame_count") or 0),
-            width=int(raw.get("width") or 0),
-            height=int(raw.get("height") or 0),
+            frame_index=GovernedShotBoundaryStore._int_field(raw, "frame_index"),
+            frame_count=GovernedShotBoundaryStore._int_field(raw, "frame_count"),
+            width=GovernedShotBoundaryStore._int_field(raw, "width"),
+            height=GovernedShotBoundaryStore._int_field(raw, "height"),
             frame_rate=str(raw.get("frame_rate") or "").strip(),
             published_by=str(raw.get("published_by") or "").strip(),
             published_at=str(raw.get("published_at") or "").strip(),
             status=str(raw.get("status") or "").strip().lower(),
             schema_version=str(raw.get("schema_version") or "1.0"),
+        )
+
+    @staticmethod
+    def _int_field(raw: dict[str, object], key: str) -> int:
+        value = raw.get(key)
+        if value is None:
+            return 0
+        if isinstance(value, bool):
+            raise GovernedShotBoundaryError(
+                f"Governed shot-boundary field {key!r} must be an integer."
+            )
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                return int(value.strip())
+            except ValueError as exc:
+                raise GovernedShotBoundaryError(
+                    f"Governed shot-boundary field {key!r} must be an integer."
+                ) from exc
+        raise GovernedShotBoundaryError(
+            f"Governed shot-boundary field {key!r} must be an integer."
         )
 
     @staticmethod
