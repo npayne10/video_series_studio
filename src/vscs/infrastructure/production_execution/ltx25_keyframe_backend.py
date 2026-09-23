@@ -199,16 +199,59 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
 
     def _comfyui_payload(self, compiled):  # type: ignore[no-untyped-def, override]
         content = LocalProductionPackageCompilationService._comfyui_payload(compiled)
+        boundary_store = GovernedShotBoundaryStore(self.project_directory)
         try:
-            store = GovernedShotKeyframeStore(self.project_directory)
-            keyframe = store.require_approved(compiled.shot_id)
-        except GovernedShotKeyframeError as exc:
+            opening = boundary_store.resolve_opening(
+                compiled.shot_id,
+                compiled.production_authority,
+            )
+        except GovernedShotBoundaryError as exc:
             raise LocalProductionPackageCompilationError(
-                "LTX-2.5 Candidate C is fail-closed until a governed Shot Composition Keyframe "
-                f"is approved: {exc}"
+                f"LTX-2.5 Candidate C Shot Boundary Keyframe authority cannot resolve: {exc}"
             ) from exc
 
-        image_path = store.image_path(keyframe)
+        if opening.inherited:
+            if opening.source_shot_id is None or opening.image_path is None:
+                raise LocalProductionPackageCompilationError(
+                    "Inherited Shot Boundary Keyframe authority is incomplete"
+                )
+            closing = boundary_store.require_current_closing(opening.source_shot_id)
+            image_path = boundary_store.resolve_image(closing.image_path)
+            governed_keyframe = {
+                "schema_version": "1.0",
+                "shot_id": compiled.shot_id,
+                "image_path": str(image_path),
+                "image_sha256": closing.image_sha256,
+                "approved_by": closing.published_by,
+                "approved_at": closing.published_at,
+                "acceptance_criteria": ["inherited_from_approved_closing_boundary"],
+                "status": "approved",
+                "source_kind": "governed_closing_boundary",
+                "source_shot_id": closing.shot_id,
+                "boundary_id": closing.boundary_id,
+                "source_media_id": closing.source_media_id,
+                "source_media_sha256": closing.source_media_sha256,
+                "frame_index": closing.frame_index,
+                "frame_count": closing.frame_count,
+            }
+            scene_composition_source = "approved_closing_boundary"
+        else:
+            try:
+                keyframe_store = GovernedShotKeyframeStore(self.project_directory)
+                keyframe = keyframe_store.require_approved(compiled.shot_id)
+            except GovernedShotKeyframeError as exc:
+                raise LocalProductionPackageCompilationError(
+                    "LTX-2.5 Candidate C is fail-closed until a governed Shot Composition "
+                    f"Keyframe is approved: {exc}"
+                ) from exc
+            image_path = keyframe_store.image_path(keyframe)
+            governed_keyframe = {
+                **keyframe.to_dict(),
+                "image_path": str(image_path),
+                "source_kind": "human_approved_shot_composition",
+            }
+            scene_composition_source = "human_approved_governed_keyframe"
+
         provider_frames = self._provider_frame_count(compiled.frame_count)
         content["schema_version"] = LTX25_KEYFRAME_SCHEMA
         content["status"] = "READY"
@@ -217,16 +260,14 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         content["motion_prompt"] = compiled.motion_prompt
         content["negative_prompt"] = compiled.negative_prompt
         content["keyframe_strength"] = 0.9
-        content["governed_keyframe"] = {
-            **keyframe.to_dict(),
-            "image_path": str(image_path),
-        }
+        content["governed_keyframe"] = governed_keyframe
+        content["shot_boundary_continuity"] = opening.to_dict()
         content["provider_prompt_contract"] = {
             "schema_version": "3.0",
             "compiler": ProductionProviderPromptCompiler.COMPILER_ID,
             "mode": "motion_only_v2",
             "source": "approved_structured_production_authority",
-            "scene_composition_source": "human_approved_governed_keyframe",
+            "scene_composition_source": scene_composition_source,
             "motion_prompt_word_count": len(compiled.motion_prompt.split()),
             "motion_prompt_max_words": ProductionProviderPromptCompiler.MAX_MOTION_WORDS,
             "combined_identity_video_reference": False,
@@ -255,7 +296,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         payload.pop("_vscs_manifest", None)
         manifest["package_fingerprint"] = self._fingerprint(payload)
         manifest["compiler"] = (
-            "VSCS Phase 20.18.2.2h / LTX-2.5 Candidate C + governed provider audio"
+            "VSCS Phase 20.18.2.2i / LTX-2.5 Candidate C + governed shot boundaries"
         )
         return content
 
