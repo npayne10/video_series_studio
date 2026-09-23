@@ -52,6 +52,12 @@ from .shot_boundary_keyframes import (
     ShotBoundaryAuthorityStatus,
     ShotBoundaryContinuityMode,
 )
+from .timed_reference_activation import (
+    SpanCanonicalReferenceActivation,
+    TimedCanonicalReferenceActivationCompiler,
+    TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
+)
 from .telemetry import (
     ProductionDeviceTelemetry,
     ProductionTelemetrySnapshot,
@@ -120,6 +126,10 @@ __all__ = [
     "ReferencePlanRenderBindingError",
     "ReferencePlanRenderRequestBinder",
     "ShotBoundaryAuthorityStatus",
+    "SpanCanonicalReferenceActivation",
+    "TimedCanonicalReferenceActivationCompiler",
+    "TimedCanonicalReferenceActivationError",
+    "TimedCanonicalReferenceActivationPlan",
     "ShotBoundaryContinuityMode",
     "normalize_execution_profile",
     "provider_video_candidates",
