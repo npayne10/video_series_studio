@@ -193,7 +193,7 @@ def test_candidate_c_compiled_payload_declares_silent_visual_audio_authority(
     assert audio["mode"] == "silent_visual"
     assert audio["provider_audio_action"] == "discard"
     assert audio["authoritative_audio_source"] == "vscs_audio_pipeline"
-    assert payload["_vscs_manifest"]["compiler"].startswith("VSCS Phase 20.18.2.2h")
+    assert "LTX-2.5 Candidate C" in str(payload["_vscs_manifest"]["compiler"])
 
 
 def test_candidate_c_pre_ingestion_hook_applies_compiled_audio_policy(
