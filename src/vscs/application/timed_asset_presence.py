@@ -130,9 +130,7 @@ class TimedAssetPresence:
         try:
             asset_kind = TimedAssetKind(kind_raw)
         except ValueError as exc:
-            raise TimedAssetPresenceError(
-                f"Unsupported timed asset kind: {kind_raw!r}"
-            ) from exc
+            raise TimedAssetPresenceError(f"Unsupported timed asset kind: {kind_raw!r}") from exc
         try:
             introduction = AssetPresenceIntroduction(introduction_raw)
         except ValueError as exc:
@@ -344,9 +342,9 @@ class TimedAssetPresencePlan:
         if supplied_change_frames is not None:
             if not isinstance(supplied_change_frames, list):
                 raise TimedAssetPresenceError("change_frames must be an array")
-            if tuple(_integer_value(value, "change_frames") for value in supplied_change_frames) != (
-                plan.change_frames
-            ):
+            if tuple(
+                _integer_value(value, "change_frames") for value in supplied_change_frames
+            ) != (plan.change_frames):
                 raise TimedAssetPresenceError(
                     "Timed asset presence change_frames do not match governed intervals"
                 )

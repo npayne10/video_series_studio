@@ -19,11 +19,11 @@ from vscs.application.production_package import (
     ProductionPackageService,
     ProductionPackageStatus,
 )
+from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.application.timed_asset_presence import (
     TimedAssetPresenceError,
     TimedAssetPresencePlan,
 )
-from vscs.application.projects import ProjectNotOpenError, ProjectService
 
 
 class UniversalProductionDescriptionCompilerError(RuntimeError):

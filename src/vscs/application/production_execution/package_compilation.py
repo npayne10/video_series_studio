@@ -334,9 +334,7 @@ class ProductionPackageCompilerService:
                 frame_count=frame_count,
             )
             plan.require_governed_assets(
-                self._governed_asset_ids(
-                    self._list_of_mappings(production.get("assets"))
-                )
+                self._governed_asset_ids(self._list_of_mappings(production.get("assets")))
             )
         except TimedAssetPresenceError as exc:
             raise ProductionPackageCompilationError(
