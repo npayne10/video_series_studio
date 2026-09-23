@@ -12,6 +12,13 @@ from .governed_keyframe import (
     GovernedShotKeyframeError,
     GovernedShotKeyframeStore,
 )
+from .internal_render_spans import (
+    GovernedInternalRenderSpan,
+    GovernedInternalRenderSpanCompiler,
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+    GovernedInternalSpanBoundary,
+)
 from .package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
@@ -71,6 +78,11 @@ __all__ = [
     "VISUAL_ACCEPTANCE_CRITERIA",
     "CompiledProductionPackage",
     "GovernedClosingBoundaryFrame",
+    "GovernedInternalRenderSpan",
+    "GovernedInternalRenderSpanCompiler",
+    "GovernedInternalRenderSpanError",
+    "GovernedInternalRenderSpanPlan",
+    "GovernedInternalSpanBoundary",
     "GovernedRetryAuthorization",
     "GovernedRetryOverrideState",
     "GovernedRetryOverrideStatus",
