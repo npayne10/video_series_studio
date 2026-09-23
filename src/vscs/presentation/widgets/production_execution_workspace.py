@@ -378,8 +378,7 @@ class ProductionExecutionWorkspace(QWidget):
         if status.closing_state == "published":
             frame = (
                 f" frame {status.closing_frame_index}/{status.closing_frame_count}"
-                if status.closing_frame_index is not None
-                and status.closing_frame_count is not None
+                if status.closing_frame_index is not None and status.closing_frame_count is not None
                 else ""
             )
             self.closing_boundary_state.setText(
