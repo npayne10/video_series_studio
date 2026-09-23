@@ -143,6 +143,7 @@ class GovernedShotBoundaryRuntime:
             source_media_id=media.media_id,
             source_execution_id=media.provenance.execution_id,
             source_media_revision=media.revision,
+            source_media_path=media.file.relative_path,
             source_media_sha256=source_sha256,
             frame_index=observation.final_frame_index,
             frame_count=observation.frame_count,
