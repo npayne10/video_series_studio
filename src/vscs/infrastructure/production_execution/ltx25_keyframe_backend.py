@@ -360,6 +360,118 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             self.project_directory
         )
 
+    def publish_closing_boundary_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        published_by: str,
+    ) -> GovernedClosingBoundaryFrame:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        candidates = tuple(
+            media
+            for media in self.media.list_for_task(task.task_id)
+            if self.execution_profiles.profile_for_execution(media.provenance.execution_id)
+            == normalized
+            and media.kind is GeneratedMediaKind.VIDEO
+            and media.state is GeneratedMediaState.APPROVED
+        )
+        if not candidates:
+            raise ProductionExecutionError(
+                f"No APPROVED {normalized} Generated Media video is available to publish "
+                "a closing Shot Boundary Keyframe."
+            )
+        if len(candidates) != 1:
+            raise ProductionExecutionError(
+                f"Closing Shot Boundary publication is ambiguous: {len(candidates)} APPROVED "
+                f"{normalized} videos exist for {task.task_id}. Supersede media before publishing "
+                "continuity authority."
+            )
+        try:
+            return GovernedShotBoundaryRuntime(
+                self.project_directory,
+                self.media,
+            ).publish_closing(
+                candidates[0].media_id,
+                published_by=published_by,
+            )
+        except GovernedShotBoundaryRuntimeError as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def shot_boundary_status_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> ShotBoundaryAuthorityStatus:
+        task = self._require_task(task_id)
+        if task.shot_id is None:
+            raise ProductionExecutionError(
+                "ProductionTask has no shot identity for Shot Boundary Keyframes."
+            )
+        normalized = normalize_execution_profile(profile)
+        package = self.package_compilation.status(task, profile=normalized)
+        production_authority: dict[str, object] = {}
+        compiled_opening: object = None
+        if package.path is not None and package.path.is_file():
+            raw = self.package_compilation._read_json(package.path)
+            authority = raw.get("production_authority")
+            if isinstance(authority, dict):
+                production_authority = authority
+            compiled_opening = raw.get("shot_boundary_continuity")
+
+        store = GovernedShotBoundaryStore(self.project_directory)
+        opening_mode = store.resolve_opening(task.shot_id, {}).mode
+        opening_state = "not_compiled"
+        source_shot_id = None
+        opening_boundary_id = None
+        messages: list[str] = []
+        if production_authority:
+            try:
+                opening = store.resolve_opening(task.shot_id, production_authority)
+                opening_mode = opening.mode
+                source_shot_id = opening.source_shot_id
+                opening_boundary_id = opening.boundary_id
+                if compiled_opening is not None:
+                    store.validate_compiled_opening(
+                        task.shot_id,
+                        production_authority,
+                        compiled_opening,
+                    )
+                opening_state = "inherited" if opening.inherited else "independent"
+            except GovernedShotBoundaryError as exc:
+                opening_state = "stale"
+                messages.append(str(exc))
+
+        closing_state = "not_published"
+        closing_boundary_id = None
+        closing_frame_index = None
+        closing_frame_count = None
+        if store.current_closing(task.shot_id) is not None:
+            try:
+                closing = store.require_current_closing(task.shot_id)
+                closing_state = "published"
+                closing_boundary_id = closing.boundary_id
+                closing_frame_index = closing.frame_index
+                closing_frame_count = closing.frame_count
+            except GovernedShotBoundaryError as exc:
+                closing_state = "stale"
+                messages.append(str(exc))
+
+        return ShotBoundaryAuthorityStatus(
+            shot_id=task.shot_id,
+            opening_mode=opening_mode,
+            opening_state=opening_state,
+            opening_source_shot_id=source_shot_id,
+            opening_boundary_id=opening_boundary_id,
+            closing_state=closing_state,
+            closing_boundary_id=closing_boundary_id,
+            closing_frame_index=closing_frame_index,
+            closing_frame_count=closing_frame_count,
+            message=" ".join(messages),
+        )
+
     @staticmethod
     def _workflow_root() -> Path:
         return Path(__file__).resolve().parents[4] / "resources" / "workflows"
