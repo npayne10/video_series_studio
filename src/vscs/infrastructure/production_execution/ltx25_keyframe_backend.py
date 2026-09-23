@@ -155,6 +155,27 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
 ):
     """Compile current READY authority into fail-closed LTX-2.5 Candidate C packages."""
 
+    def status(
+        self,
+        task: ProductionTask,
+        *,
+        profile: str = "production",
+    ) -> ProductionPackageStatus:
+        base = super().status(task, profile=profile)
+        if (
+            base.state is ProductionPackageCompilationState.INVALID
+            and "Shot Boundary Keyframe authority is stale" in base.message
+        ):
+            return replace(
+                base,
+                state=ProductionPackageCompilationState.STALE,
+                message=(
+                    "Compiled Production Package is stale because inherited Shot Boundary "
+                    "Keyframe authority changed. Recompile before execution."
+                ),
+            )
+        return base
+
     def validate_file(self, task: ProductionTask, path: Path) -> None:
         LocalProductionPackageCompilationService.validate_file(self, task, path)
         raw = self._read_json(path)
