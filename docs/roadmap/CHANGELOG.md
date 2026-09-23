@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.3.3 Timed Canonical Reference Activation: deterministic per-span canonical-reference authority derived from Timed Asset Presence, Internal Render Span topology, and the compiled governed ReferencePlan.
+- Phase 20.18.2.3.3 explicit frame-state-reference separation, reference-to-asset ownership validation, source fingerprinting, and fail-closed rejection of unscoped supporting references in dynamic multi-span Shots.
+
 - Phase 20.18.2.3.2 Governed Internal Render Spans: deterministic Shot-internal span topology, exact frame coverage, source/target span linkage, and governed internal-boundary requirements derived from Timed Asset Presence authority.
 - Phase 20.18.2.3.2 provider-neutral span IDs, boundary IDs, plan fingerprinting, transition asset sets, and tamper-detecting round-trip validation.
 
@@ -39,6 +42,9 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.3.3 Production Package compilation now carries per-span active/introduced/removed canonical reference IDs into composition and executable package fingerprints.
+- Phase 20.18.2.3.3 keeps dynamic provider execution fail-closed after successful reference activation until governed multi-span orchestration and internal-boundary runtime are implemented.
+
 - Phase 20.18.2.3.2 Production Package compilation now derives internal render-span authority from reviewed Timed Asset Presence and includes it in composition/package fingerprints.
 - Phase 20.18.2.3.2 keeps multi-span provider execution fail-closed until timed canonical-reference activation and governed span orchestration are implemented.
 
@@ -53,7 +59,7 @@ The project follows semantic versioning where practical.
 
 ### In progress
 
-- Phase 20.18.2.3.2 local verification and Ros frame-96 governed internal-span acceptance.
+- Phase 20.18.2.3.3 local verification and Ros frame-96 timed canonical-reference activation acceptance.
 
 - Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
 
