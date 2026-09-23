@@ -42,6 +42,7 @@ from .shot_boundary_keyframes import (
     GovernedShotBoundaryError,
     GovernedShotBoundaryStore,
     OpeningShotBoundaryAuthority,
+    ShotBoundaryAuthorityStatus,
     ShotBoundaryContinuityMode,
 )
 from .telemetry import (
@@ -97,6 +98,7 @@ __all__ = [
     "ProductionPackageStatus",
     "ProductionTelemetrySnapshot",
     "ProductionTelemetryState",
+    "ShotBoundaryAuthorityStatus",
     "ProviderAudioAction",
     "ProviderAudioPolicy",
     "ProviderAudioPolicyError",
