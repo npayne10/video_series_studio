@@ -23,12 +23,19 @@ from .provider_audio_runtime import (
     ProviderAudioGovernanceRuntime,
     ProviderAudioGovernanceRuntimeError,
 )
+from .shot_boundary_runtime import (
+    GovernedShotBoundaryRuntime,
+    GovernedShotBoundaryRuntimeError,
+    VideoBoundaryObservation,
+)
 
 __all__ = [
     "ComfyUIInputAssuranceReport",
     "ComfyUIInputTrace",
     "ComfyUIV714InputAssurance",
     "GovernedProviderOutputs",
+    "GovernedShotBoundaryRuntime",
+    "GovernedShotBoundaryRuntimeError",
     "HardwareShotCapability",
     "HardwareShotCapabilityError",
     "LTX23V721DeploymentAssurance",
@@ -39,5 +46,6 @@ __all__ = [
     "LocalProductionPackageCompilationService",
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
+    "VideoBoundaryObservation",
     "capability_for_vram",
 ]
