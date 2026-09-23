@@ -84,44 +84,6 @@ class ProductionExecutionBackend(Protocol):
         reason: str,
     ) -> GovernedRetryOverrideStatus: ...
 
-    def shot_boundary_status(
-        self,
-        task_id: str,
-        *,
-        profile: str | None = None,
-    ) -> ShotBoundaryAuthorityStatus:
-        normalized = self._task_id(task_id, "inspecting Shot Boundary Keyframes")
-        execution_profile = self._resolve_profile(normalized, profile)
-        operation = getattr(self.backend, "shot_boundary_status_for_profile", None)
-        if operation is None:
-            raise ProductionExecutionError(
-                "This execution backend does not expose Shot Boundary Keyframe authority."
-            )
-        return cast(_ShotBoundaryStatusForProfile, operation)(
-            normalized,
-            profile=execution_profile,
-        )
-
-    def publish_closing_boundary(
-        self,
-        task_id: str,
-        *,
-        published_by: str,
-        profile: str | None = None,
-    ) -> GovernedClosingBoundaryFrame:
-        normalized = self._task_id(task_id, "publishing its closing Shot Boundary Keyframe")
-        execution_profile = self._resolve_profile(normalized, profile)
-        operation = getattr(self.backend, "publish_closing_boundary_for_profile", None)
-        if operation is None:
-            raise ProductionExecutionError(
-                "This execution backend does not support closing Shot Boundary publication."
-            )
-        return cast(_PublishClosingBoundaryForProfile, operation)(
-            normalized,
-            profile=execution_profile,
-            published_by=published_by,
-        )
-
     def package_status(
         self,
         task_id: str,
@@ -294,6 +256,44 @@ class ProductionExecutionUiService:
             normalized,
             authorized_by=authorized_by,
             reason=reason,
+        )
+
+    def shot_boundary_status(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> ShotBoundaryAuthorityStatus:
+        normalized = self._task_id(task_id, "inspecting Shot Boundary Keyframes")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "shot_boundary_status_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not expose Shot Boundary Keyframe authority."
+            )
+        return cast(_ShotBoundaryStatusForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def publish_closing_boundary(
+        self,
+        task_id: str,
+        *,
+        published_by: str,
+        profile: str | None = None,
+    ) -> GovernedClosingBoundaryFrame:
+        normalized = self._task_id(task_id, "publishing its closing Shot Boundary Keyframe")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "publish_closing_boundary_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support closing Shot Boundary publication."
+            )
+        return cast(_PublishClosingBoundaryForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            published_by=published_by,
         )
 
     def package_status(
