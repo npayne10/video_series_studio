@@ -19,6 +19,10 @@ from vscs.application.production_package import (
     ProductionPackageService,
     ProductionPackageStatus,
 )
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 
 
@@ -344,6 +348,9 @@ class UniversalProductionDescriptionCompilerService:
             "dialogue": [dict(item) for item in package.dialogue],
             "effects": [dict(item) for item in package.effects],
             "canonical_references": [dict(item) for item in package.references],
+            "timed_asset_presence": self._detached(package.timed_asset_presence)
+            if package.timed_asset_presence
+            else {},
             "source_policy": "approved-production-authority-only",
             "provider_neutral": True,
         }
@@ -372,6 +379,7 @@ class UniversalProductionDescriptionCompilerService:
             "dialogue": governed.get("dialogue", []),
             "effects": governed.get("effects", []),
             "canonical_references": governed.get("canonical_references", []),
+            "timed_asset_presence": governed.get("timed_asset_presence", {}),
             "consistency_findings": governed.get("consistency_findings", []),
             "source_policy": governed.get("source_policy", ""),
             "provider_neutral": True,
@@ -411,6 +419,9 @@ class UniversalProductionDescriptionCompilerService:
             "dialogue": [dict(item) for item in package.dialogue],
             "effects": [dict(item) for item in package.effects],
             "references": [dict(item) for item in package.references],
+            "timed_asset_presence": self._detached(package.timed_asset_presence)
+            if package.timed_asset_presence
+            else {},
             "reference_plan": self.reference_plans.reference_plan_for_shot(package.shot_id),
         }
         canonical = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
@@ -502,6 +513,17 @@ class UniversalProductionDescriptionCompilerService:
         if isinstance(continuity_ids, str):
             continuity_ids = [continuity_ids]
         governed_ids = cls._governed_asset_ids(assets)
+
+        timed_raw = description.get("timed_asset_presence")
+        if timed_raw not in (None, {}, []):
+            if not isinstance(timed_raw, dict):
+                findings.append("Timed Asset Presence authority must be a structured object.")
+            else:
+                try:
+                    timed_plan = TimedAssetPresencePlan.from_dict(timed_raw)
+                    timed_plan.require_governed_assets(governed_ids)
+                except TimedAssetPresenceError as exc:
+                    findings.append(f"Timed Asset Presence authority is invalid: {exc}.")
         if isinstance(continuity_ids, list | tuple):
             missing_ids = [
                 str(item).strip()
@@ -622,6 +644,7 @@ class UniversalProductionDescriptionCompilerService:
             ("DIALOGUE", "dialogue"),
             ("EFFECTS", "effects"),
             ("CANONICAL REFERENCES", "canonical_references"),
+            ("TIMED ASSET PRESENCE", "timed_asset_presence"),
             ("CONSISTENCY FINDINGS", "consistency_findings"),
         ):
             value = description.get(key)
