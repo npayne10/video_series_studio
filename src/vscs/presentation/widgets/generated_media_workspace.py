@@ -493,7 +493,7 @@ class GeneratedMediaWorkspaceWidget(QWidget):
             "supersede": "Supersede and Select Generated Media",
         }[action]
         dialog = GeneratedMediaActionDialog(title, self)
-        if dialog.exec() is not QDialog.DialogCode.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         actor_id, display_name, reason = dialog.values()
         try:
