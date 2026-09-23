@@ -1,4 +1,4 @@
-"""LTX-2.5 Candidate C with governed provider audio for Phase 20.18.2.2h."""
+"""LTX-2.5 Candidate C with governed provider audio for Phase 20.18.2.2i."""
 
 from __future__ import annotations
 
@@ -7,12 +7,15 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from vscs.application.production_execution import (
+    GovernedShotBoundaryError,
+    GovernedShotBoundaryStore,
     GovernedShotKeyframeError,
     GovernedShotKeyframeStore,
     ProductionExecutionError,
     ProductionPackageStatus,
     ProviderAudioPolicy,
     ProviderAudioPolicyError,
+    ShotBoundaryAuthorityStatus,
     provider_video_rebaseline_contract,
     resolve_provider_audio_policy,
 )
@@ -20,6 +23,7 @@ from vscs.application.production_execution.provider_prompt import ProductionProv
 from vscs.application.production_tasks import ProductionTask
 from vscs.application.provider_execution import DurableExecutionJob, ProviderExecutionOutput
 from vscs.application.rendering import RenderRequest
+from vscs.domain.generated_media import GeneratedMediaKind, GeneratedMediaState
 from vscs.application.rendering.workflows import (
     WorkflowCompatibilityValidator,
     WorkflowManifest,
@@ -41,6 +45,7 @@ from .package_compilation import (
     LocalProductionPackageCompilationService,
 )
 from .provider_audio_runtime import ProviderAudioGovernanceRuntime
+from .shot_boundary_runtime import GovernedShotBoundaryRuntime, GovernedShotBoundaryRuntimeError
 
 LTX25_KEYFRAME_WORKFLOW_ID = "ltx25_i2v_keyframe_v1"
 LTX25_KEYFRAME_WORKFLOW_FILE = "workflows/ltx25_i2v_keyframe_v1_api.json"
@@ -153,7 +158,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         raw = self._read_json(path)
         if raw.get("schema_version") != LTX25_KEYFRAME_SCHEMA:
             raise LocalProductionPackageCompilationError(
-                "Production Package is not compiled for Phase 20.18.2.2g LTX-2.5 Candidate C"
+                "Production Package is not compiled for Phase 20.18.2.2i LTX-2.5 Candidate C"
             )
         keyframe = raw.get("governed_keyframe")
         if not isinstance(keyframe, dict) or keyframe.get("status") != "approved":
@@ -248,7 +253,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
 
 
 class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
-    """Execute Phase 20.18.2.2g Candidate C through LTX-2.5 governed-keyframe I2V."""
+    """Execute Phase 20.18.2.2i Candidate C with governed opening/closing boundaries."""
 
     def __init__(
         self,
