@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 
+import vscs.infrastructure.production_execution.ltx25_keyframe_backend as ltx25_module
 from vscs.application.production_execution import (
     KEYFRAME_ACCEPTANCE_CRITERIA,
     CompiledProductionPackage,
@@ -14,7 +15,6 @@ from vscs.application.production_execution import (
     resolve_provider_audio_policy,
 )
 from vscs.application.provider_execution import ProviderExecutionOutput
-import vscs.infrastructure.production_execution.ltx25_keyframe_backend as ltx25_module
 from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
     CurrentAuthorityLTX25GovernedKeyframeCompilationService,
     LocalComfyUIProductionExecutionBackend,
@@ -242,9 +242,10 @@ def test_candidate_c_pre_ingestion_hook_applies_compiled_audio_policy(
         (output,),
     )
 
-    assert governed_root == (
-        project / ".vscs" / "provider_executions" / "audio_governance" / "PEX-A005"
-    ).resolve()
+    assert (
+        governed_root
+        == (project / ".vscs" / "provider_executions" / "audio_governance" / "PEX-A005").resolve()
+    )
     assert len(governed_outputs) == 1
     governed = governed_outputs[0]
     assert governed.relative_path == "video/PEO-VIDEO.mp4"
