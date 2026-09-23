@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.2i governed Shot Boundary Keyframes: explicit human publication of the exact final governed frame from APPROVED Generated Media, checksum-pinned source provenance, explicit continuity modes, and Candidate C inherited-opening authority.
+- Phase 20.18.2.2i Production Execution visibility for opening/closing boundary state and fail-closed closing-boundary publication.
+
 - Phase 20.18.2.2h governed provider-audio policy and fail-closed pre-ingestion audio governance for joint audio/video providers.
 - Phase 20.18.2.2h provenance records for discarded/preserved provider audio and stream-copy video normalization.
 
@@ -30,12 +33,16 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.2i Candidate C packages include shot-boundary continuity in their executable fingerprint and become STALE when inherited source boundary or source-media checksums change.
+
 - Phase 20.18.2.2h Candidate C Production Packages declare explicit provider audio authority; silent and canonical-dialogue Shots discard provider audio before Generated Media registration.
 
 - Phase 20.18.2.2f replaces governance-heavy provider text with bounded cinematic scene/action prompts and keeps reference metadata out of the creative text encoder.
 - Phase 20.18.2.2f stops the LTX continuity/reference runtime from prepending reference-role authority prose to series-entry Shot prompts.
 
 ### In progress
+
+- Phase 20.18.2.2i local verification and governed closing-boundary acceptance for SHT-001.
 
 - Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
 
