@@ -269,6 +269,15 @@ class TimedCanonicalReferenceActivationPlan:
             raise TimedCanonicalReferenceActivationError(
                 "Timed canonical-reference activation source ReferencePlan changed"
             )
+        expected = TimedCanonicalReferenceActivationCompiler().compile(
+            timed_presence,
+            span_plan,
+            reference_plan,
+        )
+        if expected.fingerprint != self.fingerprint:
+            raise TimedCanonicalReferenceActivationError(
+                "Timed canonical-reference activation content no longer matches its sources"
+            )
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> TimedCanonicalReferenceActivationPlan:
@@ -429,7 +438,7 @@ class TimedCanonicalReferenceActivationCompiler:
                 )
             )
 
-        plan = TimedCanonicalReferenceActivationPlan(
+        return TimedCanonicalReferenceActivationPlan(
             shot_id=timed_presence.shot_id,
             source_timed_asset_presence_plan_id=timed_presence.plan_id,
             source_timed_asset_presence_fingerprint=timed_presence.fingerprint,
@@ -443,8 +452,6 @@ class TimedCanonicalReferenceActivationCompiler:
             frame_state_reference_ids=frame_state_ids,
             activations=tuple(activations),
         )
-        plan.require_sources(timed_presence, span_plan, reference_plan)
-        return plan
 
     @staticmethod
     def _validate_presence_references(
