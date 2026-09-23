@@ -12,6 +12,10 @@ from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
 )
+from vscs.application.production_execution.timed_reference_activation import (
+    TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
+)
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
@@ -272,11 +276,37 @@ class LocalProductionPackageCompilationService:
                 "internal render-span plan is compiled."
             )
 
+        activation_plan: TimedCanonicalReferenceActivationPlan | None = None
+        if compiled.timed_reference_activation is not None:
+            try:
+                activation_plan = TimedCanonicalReferenceActivationPlan.from_dict(
+                    compiled.timed_reference_activation
+                )
+                if timed_plan is None or span_plan is None:
+                    raise TimedCanonicalReferenceActivationError(
+                        "Timed reference activation requires presence and internal-span authority"
+                    )
+                activation_plan.require_sources(
+                    timed_plan,
+                    span_plan,
+                    compiled.reference_plan,
+                )
+            except TimedCanonicalReferenceActivationError as exc:
+                raise LocalProductionPackageCompilationError(
+                    f"Timed Canonical Reference Activation authority is invalid: {exc}"
+                ) from exc
+
         if span_plan is not None and span_plan.span_count > 1:
+            if activation_plan is None:
+                raise LocalProductionPackageCompilationError(
+                    "Phase 20.18.2.3.2 compiled governed internal render spans successfully, "
+                    "but current provider execution is still monolithic and no Phase 20.18.2.3.3 "
+                    "timed canonical-reference activation plan is compiled."
+                )
             raise LocalProductionPackageCompilationError(
-                "Phase 20.18.2.3.2 compiled governed internal render spans successfully, "
-                "but current provider execution is still monolithic. Timed canonical-reference "
-                "activation and governed multi-span provider orchestration must be implemented "
+                "Phase 20.18.2.3.3 compiled timed canonical-reference activation successfully, "
+                "but current provider execution is still monolithic. Governed multi-span "
+                "provider orchestration and internal-boundary runtime must be implemented "
                 "before this package may execute."
             )
         content: dict[str, Any] = {
@@ -301,6 +331,8 @@ class LocalProductionPackageCompilationService:
             content["timed_asset_presence"] = compiled.timed_asset_presence
         if compiled.internal_render_spans is not None:
             content["internal_render_spans"] = compiled.internal_render_spans
+        if compiled.timed_reference_activation is not None:
+            content["timed_reference_activation"] = compiled.timed_reference_activation
         if compiled.reference_plan is not None:
             content["reference_plan"] = compiled.reference_plan
         fingerprint = cls._fingerprint(content)
