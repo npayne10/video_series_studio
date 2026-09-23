@@ -8,6 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.internal_render_spans import (
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+)
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
@@ -23,6 +27,10 @@ from vscs.application.production_package import (
     ProductionPackageStatus as CanonicalProductionPackageStatus,
 )
 from vscs.application.production_tasks import ProductionTask
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 
 
 class LocalProductionPackageCompilationError(ProductionPackageCompilationError):
@@ -235,18 +243,43 @@ class LocalProductionPackageCompilationService:
     @classmethod
     def _comfyui_payload(cls, compiled: CompiledProductionPackage) -> dict[str, Any]:
         """Translate provider-neutral execution authority into the v7.1.4 loader contract."""
+        timed_plan: TimedAssetPresencePlan | None = None
         if compiled.timed_asset_presence is not None:
-            change_frames = compiled.timed_asset_presence.get("change_frames", [])
-            if not isinstance(change_frames, list):
+            try:
+                timed_plan = TimedAssetPresencePlan.from_dict(compiled.timed_asset_presence)
+            except TimedAssetPresenceError as exc:
                 raise LocalProductionPackageCompilationError(
-                    "Timed Asset Presence change_frames must be an array"
+                    f"Timed Asset Presence authority is invalid: {exc}"
+                ) from exc
+
+        span_plan: GovernedInternalRenderSpanPlan | None = None
+        if compiled.internal_render_spans is not None:
+            try:
+                span_plan = GovernedInternalRenderSpanPlan.from_dict(
+                    compiled.internal_render_spans
                 )
-            if change_frames:
+                if timed_plan is None:
+                    raise GovernedInternalRenderSpanError(
+                        "Internal render spans require Timed Asset Presence authority"
+                    )
+                span_plan.require_source(timed_plan)
+            except GovernedInternalRenderSpanError as exc:
                 raise LocalProductionPackageCompilationError(
-                    "Phase 20.18.2.3.1 timed asset authority declares in-shot composition "
-                    "changes, but current provider execution is monolithic. Internal governed "
-                    "render spans must be implemented before this package may execute."
-                )
+                    f"Governed Internal Render Span authority is invalid: {exc}"
+                ) from exc
+        elif timed_plan is not None and timed_plan.change_frames:
+            raise LocalProductionPackageCompilationError(
+                "Phase 20.18.2.3.1 timed asset authority declares in-shot composition "
+                "changes, but no governed internal render-span plan is compiled."
+            )
+
+        if span_plan is not None and span_plan.span_count > 1:
+            raise LocalProductionPackageCompilationError(
+                "Phase 20.18.2.3.2 compiled governed internal render spans successfully, "
+                "but current provider execution is still monolithic. Timed canonical-reference "
+                "activation and governed multi-span provider orchestration must be implemented "
+                "before this package may execute."
+            )
         content: dict[str, Any] = {
             "schema_version": "7.1.4-vscs-1",
             "profile": compiled.profile,
@@ -267,6 +300,8 @@ class LocalProductionPackageCompilationService:
         }
         if compiled.timed_asset_presence is not None:
             content["timed_asset_presence"] = compiled.timed_asset_presence
+        if compiled.internal_render_spans is not None:
+            content["internal_render_spans"] = compiled.internal_render_spans
         if compiled.reference_plan is not None:
             content["reference_plan"] = compiled.reference_plan
         fingerprint = cls._fingerprint(content)
