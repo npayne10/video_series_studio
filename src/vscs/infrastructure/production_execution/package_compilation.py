@@ -270,7 +270,8 @@ class LocalProductionPackageCompilationService:
         elif timed_plan is not None and timed_plan.change_frames:
             raise LocalProductionPackageCompilationError(
                 "Phase 20.18.2.3.1 timed asset authority declares in-shot composition "
-                "changes, but no governed internal render-span plan is compiled."
+                "changes. Internal governed render spans are required, but no governed "
+                "internal render-span plan is compiled."
             )
 
         if span_plan is not None and span_plan.span_count > 1:
