@@ -177,6 +177,26 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
                 f"Candidate C Production Package has invalid provider audio authority: {exc}"
             ) from exc
 
+        production_authority = raw.get("production_authority")
+        if not isinstance(production_authority, dict):
+            raise LocalProductionPackageCompilationError(
+                "Candidate C Production Package has no structured production authority"
+            )
+        if task.shot_id is None:
+            raise LocalProductionPackageCompilationError(
+                "Candidate C ProductionTask has no shot identity for boundary validation"
+            )
+        try:
+            GovernedShotBoundaryStore(self.project_directory).validate_compiled_opening(
+                task.shot_id,
+                production_authority,
+                raw.get("shot_boundary_continuity"),
+            )
+        except GovernedShotBoundaryError as exc:
+            raise LocalProductionPackageCompilationError(
+                f"Candidate C Shot Boundary Keyframe authority is stale or invalid: {exc}"
+            ) from exc
+
     def _comfyui_payload(self, compiled):  # type: ignore[no-untyped-def, override]
         content = LocalProductionPackageCompilationService._comfyui_payload(compiled)
         try:
