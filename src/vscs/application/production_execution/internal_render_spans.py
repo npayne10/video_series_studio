@@ -176,6 +176,13 @@ class GovernedInternalRenderSpan:
             raise GovernedInternalRenderSpanError(
                 "Internal render span frame_count does not match its frame interval"
             )
+        supplied_duration = raw.get("duration_seconds")
+        if supplied_duration is not None and abs(
+            _number_value(supplied_duration, "duration_seconds") - span.duration_seconds
+        ) > 1e-9:
+            raise GovernedInternalRenderSpanError(
+                "Internal render span duration_seconds does not match its frame interval"
+            )
         return span
 
 
@@ -689,6 +696,19 @@ def _integer_value(value: object, field_name: str) -> int:
         except ValueError as exc:
             raise GovernedInternalRenderSpanError(f"{field_name} must be an integer") from exc
     raise GovernedInternalRenderSpanError(f"{field_name} must be an integer")
+
+
+def _number_value(value: object, field_name: str) -> float:
+    if isinstance(value, bool):
+        raise GovernedInternalRenderSpanError(f"{field_name} must be numeric")
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.strip())
+        except ValueError as exc:
+            raise GovernedInternalRenderSpanError(f"{field_name} must be numeric") from exc
+    raise GovernedInternalRenderSpanError(f"{field_name} must be numeric")
 
 
 def _string_tuple(raw: dict[str, Any], key: str) -> tuple[str, ...]:
