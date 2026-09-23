@@ -27,7 +27,6 @@ from vscs.application.timed_asset_presence import (
 from .internal_render_spans import (
     GovernedInternalRenderSpanCompiler,
     GovernedInternalRenderSpanError,
-    GovernedInternalRenderSpanPlan,
 )
 from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
