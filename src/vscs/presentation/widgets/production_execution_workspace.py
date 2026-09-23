@@ -31,6 +31,7 @@ from vscs.application.production_execution import (
     ProductionExecutionUiService,
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
+    ShotBoundaryAuthorityStatus,
 )
 
 
@@ -51,6 +52,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._execution_active = False
         self._package_status: ProductionPackageStatus | None = None
         self._retry_status: GovernedRetryOverrideStatus | None = None
+        self._boundary_status: ShotBoundaryAuthorityStatus | None = None
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(self.POLL_INTERVAL_MS)
         self._poll_timer.timeout.connect(self._poll_live_status)
@@ -79,6 +81,18 @@ class ProductionExecutionWorkspace(QWidget):
         package_row.addWidget(QLabel("Production Package"))
         package_row.addWidget(self.package_state, 1)
         package_row.addWidget(self.compile_package_button)
+
+        boundary_row = QHBoxLayout()
+        self.opening_boundary_state = QLabel("Opening Boundary: -")
+        self.opening_boundary_state.setWordWrap(True)
+        self.closing_boundary_state = QLabel("Closing Boundary: -")
+        self.closing_boundary_state.setWordWrap(True)
+        self.publish_boundary_button = QPushButton("Publish Closing Boundary")
+        self.publish_boundary_button.setEnabled(False)
+        self.publish_boundary_button.clicked.connect(self._publish_closing_boundary)
+        boundary_row.addWidget(self.opening_boundary_state, 1)
+        boundary_row.addWidget(self.closing_boundary_state, 1)
+        boundary_row.addWidget(self.publish_boundary_button)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -164,6 +178,7 @@ class ProductionExecutionWorkspace(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(guidance)
         layout.addLayout(package_row)
+        layout.addLayout(boundary_row)
         layout.addLayout(buttons)
         layout.addWidget(self.table, 1)
         layout.addWidget(self.monitor_group)
@@ -178,11 +193,15 @@ class ProductionExecutionWorkspace(QWidget):
         self._execution_active = False
         self._package_status = None
         self._retry_status = None
+        self._boundary_status = None
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
         self.retry_button.setEnabled(False)
         self.retry_state.setText("Retry Override: -")
+        self.opening_boundary_state.setText("Opening Boundary: -")
+        self.closing_boundary_state.setText("Closing Boundary: -")
+        self.publish_boundary_button.setEnabled(False)
         self.compile_package_button.setEnabled(False)
         self.package_state.setText("Select a scheduled task.")
         self.details.clear()
@@ -233,9 +252,13 @@ class ProductionExecutionWorkspace(QWidget):
             self._execution_active = False
             self._package_status = None
             self._retry_status = None
+            self._boundary_status = None
             self.compile_package_button.setEnabled(False)
             self.retry_button.setEnabled(False)
             self.retry_state.setText("Retry Override: -")
+            self.opening_boundary_state.setText("Opening Boundary: -")
+            self.closing_boundary_state.setText("Closing Boundary: -")
+            self.publish_boundary_button.setEnabled(False)
             self.package_state.setText("Select a scheduled task.")
             self._update_start_enabled()
             self.status_button.setEnabled(False)
@@ -254,6 +277,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_package_status()
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
+        self._refresh_boundary_status()
         candidate = self._candidates[task_id]
         self._render_candidate(candidate)
 
@@ -265,6 +289,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_package_status()
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
+        self._refresh_boundary_status()
         candidate = self._candidates.get(self._selected_task_id)
         if candidate is not None:
             self._render_candidate(candidate)
@@ -318,6 +343,92 @@ class ProductionExecutionWorkspace(QWidget):
             f"{profile.title()} Retry: {status.state.value.upper()} — profile attempts "
             f"{status.attempts_recorded}/{status.effective_maximum_attempts}. {status.message}"
         )
+
+    def _refresh_boundary_status(self) -> None:
+        if self._selected_task_id is None:
+            self._boundary_status = None
+            self.opening_boundary_state.setText("Opening Boundary: -")
+            self.closing_boundary_state.setText("Closing Boundary: -")
+            self.publish_boundary_button.setEnabled(False)
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.shot_boundary_status(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self._boundary_status = None
+            self.opening_boundary_state.setText(f"Opening Boundary: unavailable — {exc}")
+            self.closing_boundary_state.setText("Closing Boundary: unavailable")
+            self.publish_boundary_button.setEnabled(False)
+            return
+        self._boundary_status = status
+        source = (
+            f" from {status.opening_source_shot_id} / {status.opening_boundary_id}"
+            if status.opening_source_shot_id
+            else ""
+        )
+        self.opening_boundary_state.setText(
+            f"Opening Boundary: {status.opening_mode.value.upper()} — "
+            f"{status.opening_state.upper()}{source}"
+        )
+        if status.closing_state == "published":
+            frame = (
+                f" frame {status.closing_frame_index}/{status.closing_frame_count}"
+                if status.closing_frame_index is not None
+                and status.closing_frame_count is not None
+                else ""
+            )
+            self.closing_boundary_state.setText(
+                f"Closing Boundary: PUBLISHED — {status.closing_boundary_id or '-'}{frame}"
+            )
+        else:
+            suffix = f" — {status.message}" if status.message else ""
+            self.closing_boundary_state.setText(
+                f"Closing Boundary: {status.closing_state.upper()}{suffix}"
+            )
+        self.publish_boundary_button.setEnabled(status.closing_state != "published")
+
+    def _publish_closing_boundary(self) -> None:
+        if self._selected_task_id is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        published_by, accepted = QInputDialog.getText(
+            self,
+            "Publish Closing Shot Boundary",
+            "Published by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = published_by.strip()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Publish Closing Shot Boundary",
+                "Publishing identity is required.",
+            )
+            return
+        try:
+            boundary = service.publish_closing_boundary(
+                self._selected_task_id,
+                published_by=actor,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Publish Closing Shot Boundary", str(exc))
+            self._refresh_boundary_status()
+            return
+        self.summary.setText(
+            f"Published {boundary.boundary_id} from exact governed frame "
+            f"{boundary.frame_index}/{boundary.frame_count}."
+        )
+        self._refresh_boundary_status()
+        self._refresh_package_status()
 
     def _authorize_retry(self) -> None:
         if self._selected_task_id is None:
@@ -436,6 +547,7 @@ class ProductionExecutionWorkspace(QWidget):
         )
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
+        self._refresh_boundary_status()
         self._update_start_enabled()
 
     def _update_start_enabled(self) -> None:
@@ -503,6 +615,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._render_result(result)
         self._refresh_telemetry()
         self._refresh_retry_override_status()
+        self._refresh_boundary_status()
         if show_warning:
             self._refresh_package_status()
         self.status_button.setEnabled(not result.terminal)
