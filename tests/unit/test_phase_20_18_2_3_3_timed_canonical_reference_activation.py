@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
@@ -269,6 +270,66 @@ def test_activation_detects_reference_set_tampering() -> None:
 
     with pytest.raises(TimedCanonicalReferenceActivationError):
         TimedCanonicalReferenceActivationPlan.from_dict(tampered)
+
+
+def test_recomputed_but_wrong_activation_content_fails_source_reproduction() -> None:
+    timed = _timed_plan()
+    spans = GovernedInternalRenderSpanCompiler().compile(timed)
+    references = _reference_plan()
+    original = TimedCanonicalReferenceActivationCompiler().compile(
+        timed,
+        spans,
+        references,
+    )
+    first, second = original.activations
+    wrong_first = replace(
+        first,
+        active_reference_ids=(*first.active_reference_ids, "REF-ROS-PRIMARY"),
+        introduced_reference_ids=("REF-ROS-PRIMARY",),
+    )
+    wrong = replace(original, activations=(wrong_first, second))
+
+    with pytest.raises(TimedCanonicalReferenceActivationError, match="no longer matches"):
+        wrong.require_sources(timed, spans, references)
+
+
+def test_single_span_may_keep_unscoped_supporting_reference_active() -> None:
+    timed = TimedAssetPresencePlan(
+        shot_id="SHT-STATIC",
+        frames_per_second=24,
+        frame_count=144,
+        presences=(
+            TimedAssetPresence(
+                asset_id="CAP-CHR-001",
+                asset_kind=TimedAssetKind.CHARACTER,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=("REF-JAMES-PRIMARY",),
+            ),
+        ),
+    )
+    spans = GovernedInternalRenderSpanCompiler().compile(timed)
+    references = {
+        "schema_version": "1.0",
+        "status": "passed",
+        "references": [
+            _reference("REF-JAMES-PRIMARY", "primary_identity", "CAP-CHR-001"),
+            _reference("REF-STYLE", "style_reference", None),
+        ],
+        "diagnostics": [],
+    }
+
+    plan = TimedCanonicalReferenceActivationCompiler().compile(
+        timed,
+        spans,
+        references,
+    )
+
+    assert plan.activation_count == 1
+    assert plan.activations[0].active_reference_ids == (
+        "REF-JAMES-PRIMARY",
+        "REF-STYLE",
+    )
 
 
 def test_activation_becomes_stale_when_reference_plan_content_changes() -> None:
