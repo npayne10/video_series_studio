@@ -37,6 +37,13 @@ from .retry_override import (
     GovernedRetryOverrideState,
     GovernedRetryOverrideStatus,
 )
+from .shot_boundary_keyframes import (
+    GovernedClosingBoundaryFrame,
+    GovernedShotBoundaryError,
+    GovernedShotBoundaryStore,
+    OpeningShotBoundaryAuthority,
+    ShotBoundaryContinuityMode,
+)
 from .telemetry import (
     ProductionDeviceTelemetry,
     ProductionTelemetrySnapshot,
@@ -65,6 +72,9 @@ __all__ = [
     "GovernedRetryAuthorization",
     "GovernedRetryOverrideState",
     "GovernedRetryOverrideStatus",
+    "GovernedClosingBoundaryFrame",
+    "GovernedShotBoundaryError",
+    "GovernedShotBoundaryStore",
     "GovernedShotKeyframe",
     "GovernedShotKeyframeError",
     "GovernedShotKeyframeStore",
@@ -72,6 +82,7 @@ __all__ = [
     "LiveShotFunctionalAcceptanceReconciliation",
     "LiveShotFunctionalAcceptanceService",
     "LiveShotFunctionalAcceptanceSubmission",
+    "OpeningShotBoundaryAuthority",
     "ProductionDeviceTelemetry",
     "ProductionExecutionBackend",
     "ProductionExecutionCandidate",
@@ -95,6 +106,7 @@ __all__ = [
     "ReferencePlanRenderBinding",
     "ReferencePlanRenderBindingError",
     "ReferencePlanRenderRequestBinder",
+    "ShotBoundaryContinuityMode",
     "normalize_execution_profile",
     "provider_video_candidates",
     "provider_video_rebaseline_contract",
