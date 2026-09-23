@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from vscs.application.production_execution import (
+    GovernedClosingBoundaryFrame,
     GovernedShotBoundaryError,
     GovernedShotBoundaryStore,
     GovernedShotKeyframeError,
