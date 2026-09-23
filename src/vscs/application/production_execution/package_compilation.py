@@ -19,6 +19,10 @@ from vscs.application.production_tasks import (
     ProductionTaskState,
     ProductionTaskType,
 )
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 
 from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
@@ -97,6 +101,7 @@ class CompiledProductionPackage:
     composition_plan: dict[str, Any]
     production_authority: dict[str, Any]
     package_fingerprint: str
+    timed_asset_presence: dict[str, Any] | None = None
     reference_plan: dict[str, Any] | None = None
     motion_prompt: str = ""
     omitted_provider_prompt_sections: tuple[str, ...] = ()
@@ -146,6 +151,8 @@ class CompiledProductionPackage:
             "production_authority": self.production_authority,
             "package_fingerprint": self.package_fingerprint,
         }
+        if self.timed_asset_presence is not None:
+            payload["timed_asset_presence"] = self.timed_asset_presence
         if self.reference_plan is not None:
             payload["reference_plan"] = self.reference_plan
         return payload
@@ -186,6 +193,12 @@ class ProductionPackageCompilerService:
 
         normalized_profile = profile.strip().lower() or "production"
         render = self._render_settings(production, normalized_profile)
+        timed_asset_presence = self._timed_asset_presence(
+            production,
+            shot_id=source.shot_id,
+            frames_per_second=render["frames_per_second"],
+            frame_count=render["frame_count"],
+        )
         reference_plan_payload = self._reference_plan_payload(production, source.shot_id)
         try:
             governed_references = self.reference_compiler.compile(
@@ -236,6 +249,8 @@ class ProductionPackageCompilerService:
             "dialogue": self._list_of_mappings(production.get("dialogue")),
             "effects": self._list_of_mappings(production.get("effects")),
         }
+        if timed_asset_presence is not None:
+            composition_plan["timed_asset_presence"] = timed_asset_presence
         if reference_plan is not None:
             composition_plan["reference_plan"] = reference_plan
 
@@ -257,6 +272,7 @@ class ProductionPackageCompilerService:
             "seed": seed,
             "composition_plan": composition_plan,
             "production_authority": production,
+            "timed_asset_presence": timed_asset_presence,
             "reference_plan": reference_plan,
         }
         package_fingerprint = self._fingerprint(base)
@@ -289,10 +305,44 @@ class ProductionPackageCompilerService:
             composition_plan=composition_plan,
             production_authority=production,
             package_fingerprint=package_fingerprint,
+            timed_asset_presence=timed_asset_presence,
             reference_plan=reference_plan,
             motion_prompt=motion_prompt,
             omitted_provider_prompt_sections=omitted_provider_prompt_sections,
         )
+
+    def _timed_asset_presence(
+        self,
+        production: dict[str, Any],
+        *,
+        shot_id: str,
+        frames_per_second: int,
+        frame_count: int,
+    ) -> dict[str, Any] | None:
+        raw = production.get("timed_asset_presence")
+        if raw in (None, {}, []):
+            return None
+        if not isinstance(raw, dict):
+            raise ProductionPackageCompilationError(
+                "Timed Asset Presence authority must be a structured object"
+            )
+        try:
+            plan = TimedAssetPresencePlan.from_dict(raw)
+            plan.require_execution_timing(
+                shot_id=shot_id,
+                frames_per_second=frames_per_second,
+                frame_count=frame_count,
+            )
+            plan.require_governed_assets(
+                self._governed_asset_ids(
+                    self._list_of_mappings(production.get("assets"))
+                )
+            )
+        except TimedAssetPresenceError as exc:
+            raise ProductionPackageCompilationError(
+                f"Timed Asset Presence authority cannot compile: {exc}"
+            ) from exc
+        return plan.to_dict()
 
     def _reference_plan_payload(
         self, production: dict[str, Any], shot_id: str
@@ -451,6 +501,21 @@ class ProductionPackageCompilerService:
             elif isinstance(raw, list):
                 collected.extend(str(item).strip() for item in raw if str(item).strip())
         return "; ".join(dict.fromkeys(collected))
+
+    @staticmethod
+    def _governed_asset_ids(assets: list[dict[str, Any]]) -> set[str]:
+        governed: set[str] = set()
+        for item in assets:
+            candidates: list[object] = [item.get("asset_id")]
+            for section_name in ("production", "resolution", "binding", "governed"):
+                section = item.get(section_name)
+                if isinstance(section, dict):
+                    candidates.append(section.get("asset_id"))
+            for candidate in candidates:
+                value = str(candidate or "").strip().upper()
+                if value:
+                    governed.add(value)
+        return governed
 
     @staticmethod
     def _mapping(value: object) -> dict[str, Any]:
