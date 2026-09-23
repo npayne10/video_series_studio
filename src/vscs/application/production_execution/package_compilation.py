@@ -24,6 +24,11 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresencePlan,
 )
 
+from .internal_render_spans import (
+    GovernedInternalRenderSpanCompiler,
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+)
 from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
     GovernedReferenceCompiler,
@@ -102,6 +107,7 @@ class CompiledProductionPackage:
     production_authority: dict[str, Any]
     package_fingerprint: str
     timed_asset_presence: dict[str, Any] | None = None
+    internal_render_spans: dict[str, Any] | None = None
     reference_plan: dict[str, Any] | None = None
     motion_prompt: str = ""
     omitted_provider_prompt_sections: tuple[str, ...] = ()
@@ -153,6 +159,8 @@ class CompiledProductionPackage:
         }
         if self.timed_asset_presence is not None:
             payload["timed_asset_presence"] = self.timed_asset_presence
+        if self.internal_render_spans is not None:
+            payload["internal_render_spans"] = self.internal_render_spans
         if self.reference_plan is not None:
             payload["reference_plan"] = self.reference_plan
         return payload
@@ -199,6 +207,7 @@ class ProductionPackageCompilerService:
             frames_per_second=render["frames_per_second"],
             frame_count=render["frame_count"],
         )
+        internal_render_spans = self._internal_render_spans(timed_asset_presence)
         reference_plan_payload = self._reference_plan_payload(production, source.shot_id)
         try:
             governed_references = self.reference_compiler.compile(
@@ -251,6 +260,8 @@ class ProductionPackageCompilerService:
         }
         if timed_asset_presence is not None:
             composition_plan["timed_asset_presence"] = timed_asset_presence
+        if internal_render_spans is not None:
+            composition_plan["internal_render_spans"] = internal_render_spans
         if reference_plan is not None:
             composition_plan["reference_plan"] = reference_plan
 
@@ -273,6 +284,7 @@ class ProductionPackageCompilerService:
             "composition_plan": composition_plan,
             "production_authority": production,
             "timed_asset_presence": timed_asset_presence,
+            "internal_render_spans": internal_render_spans,
             "reference_plan": reference_plan,
         }
         package_fingerprint = self._fingerprint(base)
@@ -306,6 +318,7 @@ class ProductionPackageCompilerService:
             production_authority=production,
             package_fingerprint=package_fingerprint,
             timed_asset_presence=timed_asset_presence,
+            internal_render_spans=internal_render_spans,
             reference_plan=reference_plan,
             motion_prompt=motion_prompt,
             omitted_provider_prompt_sections=omitted_provider_prompt_sections,
@@ -339,6 +352,22 @@ class ProductionPackageCompilerService:
         except TimedAssetPresenceError as exc:
             raise ProductionPackageCompilationError(
                 f"Timed Asset Presence authority cannot compile: {exc}"
+            ) from exc
+        return plan.to_dict()
+
+    @staticmethod
+    def _internal_render_spans(
+        timed_asset_presence: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if timed_asset_presence is None:
+            return None
+        try:
+            source = TimedAssetPresencePlan.from_dict(timed_asset_presence)
+            plan = GovernedInternalRenderSpanCompiler().compile(source)
+            plan.require_source(source)
+        except (TimedAssetPresenceError, GovernedInternalRenderSpanError) as exc:
+            raise ProductionPackageCompilationError(
+                f"Governed Internal Render Span authority cannot compile: {exc}"
             ) from exc
         return plan.to_dict()
 
