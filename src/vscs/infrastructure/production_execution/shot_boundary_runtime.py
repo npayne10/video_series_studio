@@ -71,7 +71,9 @@ class GovernedShotBoundaryRuntime:
     ) -> GovernedClosingBoundaryFrame:
         actor = published_by.strip()
         if not actor:
-            raise GovernedShotBoundaryRuntimeError("Closing boundary publication requires a human identity")
+            raise GovernedShotBoundaryRuntimeError(
+                "Closing boundary publication requires a human identity"
+            )
         media = self.media.get(media_id.strip())
         if media is None:
             raise GovernedShotBoundaryRuntimeError(f"Generated Media not found: {media_id.strip()}")
@@ -102,12 +104,16 @@ class GovernedShotBoundaryRuntime:
                 "Approved Generated Media video exposes no addressable frames"
             )
 
-        digest = hashlib.sha256(
-            (
-                f"{media.media_id}|{source_sha256}|{observation.final_frame_index}|"
-                f"{media.revision}"
-            ).encode("utf-8")
-        ).hexdigest()[:24].upper()
+        digest = (
+            hashlib.sha256(
+                (
+                    f"{media.media_id}|{source_sha256}|{observation.final_frame_index}|"
+                    f"{media.revision}"
+                ).encode()
+            )
+            .hexdigest()[:24]
+            .upper()
+        )
         boundary_id = f"GBF-{digest}"
         relative_image = (
             Path(".vscs")
@@ -205,7 +211,9 @@ class GovernedShotBoundaryRuntime:
 
     def _extract_frame(self, source: Path, frame_index: int, destination: Path) -> None:
         if frame_index < 0:
-            raise GovernedShotBoundaryRuntimeError("Closing boundary frame index cannot be negative")
+            raise GovernedShotBoundaryRuntimeError(
+                "Closing boundary frame index cannot be negative"
+            )
         destination.parent.mkdir(parents=True, exist_ok=True)
         self._run(
             self.ffmpeg,

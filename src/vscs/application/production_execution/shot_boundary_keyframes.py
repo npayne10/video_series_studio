@@ -348,9 +348,7 @@ class GovernedShotBoundaryStore:
                 raise GovernedShotBoundaryError(
                     f"Governed shot-boundary field {key!r} must be an integer."
                 ) from exc
-        raise GovernedShotBoundaryError(
-            f"Governed shot-boundary field {key!r} must be an integer."
-        )
+        raise GovernedShotBoundaryError(f"Governed shot-boundary field {key!r} must be an integer.")
 
     @staticmethod
     def _mode(continuity: dict[str, Any]) -> ShotBoundaryContinuityMode:
