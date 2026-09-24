@@ -622,12 +622,20 @@ class ProductionExecutionWorkspace(QWidget):
             f"Timed Span Acceptance: {status.state.value.upper()} — {status.message}"
         )
         final_frames = str(status.final_frame_count) if status.final_frame_count is not None else "-"
+        boundaries = (
+            " • ".join(status.boundary_summaries)
+            if status.boundary_summaries
+            else "no internal introduction boundary"
+        )
+        final_path = status.final_path or "-"
         self.timed_span_detail.setText(
             f"Spans {status.span_count} • Boundaries {status.boundary_count} • "
             f"Introduction Keyframes {status.approved_keyframe_count}/{status.requirement_count} • "
             f"Visual QC {status.qc_passed_count}/{status.requirement_count} • "
             f"Assembly {'verified' if status.assembly_present else 'pending'} • "
-            f"Final frames {final_frames}"
+            f"Final frames {final_frames}\n"
+            f"Transitions: {boundaries}\n"
+            f"Assembled Shot: {final_path}"
         )
         self.build_span_packages_button.setEnabled(
             status.applicable
