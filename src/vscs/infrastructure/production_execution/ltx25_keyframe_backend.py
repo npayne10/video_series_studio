@@ -43,6 +43,10 @@ from .current_authority_backend import (
 from .current_authority_backend import (
     LocalComfyUIProductionExecutionBackend as _CurrentAuthorityBackend,
 )
+from .ltx25_span_conditioning import (
+    LTX25SpanConditioningError,
+    LTX25SpanProviderConditioningCompiler,
+)
 from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
@@ -323,6 +327,20 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
             "VSCS Phase 20.18.2.2i / LTX-2.5 Candidate C + governed shot boundaries"
         )
         return content
+
+    def compile_span_provider_conditioning(
+        self,
+        compiled,
+    ) -> dict[str, object]:
+        """Compile approved Phase 20.18.2.3.4 span conditioning without executing it."""
+        try:
+            return LTX25SpanProviderConditioningCompiler(self.project_directory).compile(
+                compiled
+            ).to_dict()
+        except LTX25SpanConditioningError as exc:
+            raise LocalProductionPackageCompilationError(
+                f"LTX-2.5 governed span conditioning cannot compile: {exc}"
+            ) from exc
 
     @staticmethod
     def _provider_frame_count(governed_frames: int) -> int:
