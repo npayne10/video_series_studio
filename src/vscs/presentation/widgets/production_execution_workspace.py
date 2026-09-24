@@ -579,6 +579,256 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_execution_availability()
         self._refresh_package_status()
 
+    def _refresh_timed_span_status(self) -> None:
+        if self._selected_task_id is None:
+            self._timed_span_status = None
+            self._reset_timed_span_status()
+            self._update_start_enabled()
+            return
+        service = self._service_provider()
+        if service is None:
+            self._timed_span_status = None
+            self._reset_timed_span_status()
+            self._update_start_enabled()
+            return
+        try:
+            status = service.timed_span_acceptance_status(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self._timed_span_status = None
+            self.timed_span_state.setText(f"Timed Span Acceptance: unavailable — {exc}")
+            self.timed_span_detail.setText(
+                "This backend does not expose Phase 20.18.2.3.5 timed-span acceptance."
+            )
+            self.approve_introduction_keyframe_button.setEnabled(False)
+            self.assemble_span_outputs_button.setEnabled(False)
+            self.record_span_qc_button.setEnabled(False)
+            self._update_start_enabled()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self._update_start_enabled()
+
+    def _render_timed_span_status(self, status: TimedSpanAcceptanceStatus) -> None:
+        self.timed_span_state.setText(
+            f"Timed Span Acceptance: {status.state.value.upper()} — {status.message}"
+        )
+        final_frames = str(status.final_frame_count) if status.final_frame_count is not None else "-"
+        self.timed_span_detail.setText(
+            f"Spans {status.span_count} • Boundaries {status.boundary_count} • "
+            f"Introduction Keyframes {status.approved_keyframe_count}/{status.requirement_count} • "
+            f"Visual QC {status.qc_passed_count}/{status.requirement_count} • "
+            f"Assembly {'verified' if status.assembly_present else 'pending'} • "
+            f"Final frames {final_frames}"
+        )
+        self.approve_introduction_keyframe_button.setEnabled(
+            bool(status.pending_keyframe_requirement_ids)
+        )
+        self.assemble_span_outputs_button.setEnabled(
+            status.applicable
+            and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED
+            and not status.pending_keyframe_requirement_ids
+        )
+        self.record_span_qc_button.setEnabled(
+            status.assembly_present and bool(status.pending_qc_requirement_ids)
+        )
+
+    def _reset_timed_span_status(self) -> None:
+        self.timed_span_state.setText("Timed Span Acceptance: -")
+        self.timed_span_detail.setText(
+            "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
+        )
+        self.approve_introduction_keyframe_button.setEnabled(False)
+        self.assemble_span_outputs_button.setEnabled(False)
+        self.record_span_qc_button.setEnabled(False)
+
+    def _select_timed_requirement(
+        self,
+        requirement_ids: tuple[str, ...],
+        title: str,
+    ) -> str | None:
+        if not requirement_ids:
+            return None
+        if len(requirement_ids) == 1:
+            return requirement_ids[0]
+        selected, accepted = QInputDialog.getItem(
+            self,
+            title,
+            "Governed requirement:",
+            list(requirement_ids),
+            0,
+            False,
+        )
+        if not accepted:
+            return None
+        value = selected.strip()
+        return value or None
+
+    def _approve_introduction_keyframe(self) -> None:
+        if self._selected_task_id is None or self._timed_span_status is None:
+            return
+        requirement_id = self._select_timed_requirement(
+            self._timed_span_status.pending_keyframe_requirement_ids,
+            "Approve Introduction Keyframe",
+        )
+        if requirement_id is None:
+            return
+        image_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select approved Introduction Keyframe",
+            "",
+            "Images (*.png *.jpg *.jpeg *.webp);;All Files (*)",
+        )
+        if not image_path:
+            return
+        source_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select exact preceding internal-boundary frame",
+            "",
+            "Images (*.png *.jpg *.jpeg *.webp);;All Files (*)",
+        )
+        if not source_path:
+            return
+        approved_by, accepted = QInputDialog.getText(
+            self,
+            "Approve Introduction Keyframe",
+            "Approved by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = approved_by.strip()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Approve Introduction Keyframe",
+                "Human approval identity is required.",
+            )
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.approve_introduction_keyframe(
+                self._selected_task_id,
+                requirement_id=requirement_id,
+                image_path=Path(image_path),
+                source_boundary_image_path=Path(source_path),
+                approved_by=actor,
+                approved_at=datetime.now(UTC).isoformat(),
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Approve Introduction Keyframe", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self.summary.setText(
+            f"Governed Introduction Keyframe approved for {requirement_id}."
+        )
+
+    def _assemble_span_outputs(self) -> None:
+        if self._selected_task_id is None or self._timed_span_status is None:
+            return
+        expected = self._timed_span_status.span_count
+        paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            f"Select {expected} normalized span outputs in governed sequence",
+            "",
+            "Video (*.mp4 *.mov *.mkv *.webm);;All Files (*)",
+        )
+        if not paths:
+            return
+        if len(paths) != expected:
+            QMessageBox.warning(
+                self,
+                "Verify & Assemble Span Outputs",
+                f"Select exactly {expected} span output files in governed sequence.",
+            )
+            return
+        output_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save assembled governed Shot inside the VSCS project",
+            "",
+            "MP4 Video (*.mp4)",
+        )
+        if not output_path:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.assemble_timed_span_outputs(
+                self._selected_task_id,
+                span_paths=tuple(Path(path) for path in paths),
+                output_path=Path(output_path),
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Verify & Assemble Span Outputs", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self.summary.setText(
+            f"Verified and assembled {expected} governed span outputs."
+        )
+
+    def _record_span_qc(self) -> None:
+        if self._selected_task_id is None or self._timed_span_status is None:
+            return
+        requirement_id = self._select_timed_requirement(
+            self._timed_span_status.pending_qc_requirement_ids,
+            "Record Timed Span Visual QC",
+        )
+        if requirement_id is None:
+            return
+        dialog = TimedSpanQcDialog(requirement_id, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        (
+            absent_before,
+            present_from,
+            continuity,
+            no_unapproved,
+            actor,
+            notes,
+        ) = dialog.values()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Record Timed Span Visual QC",
+                "Human reviewer identity is required.",
+            )
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.record_timed_span_qc(
+                self._selected_task_id,
+                requirement_id=requirement_id,
+                absent_before_boundary=absent_before,
+                present_from_target_frame=present_from,
+                source_continuity_preserved=continuity,
+                no_unapproved_assets=no_unapproved,
+                approved_by=actor,
+                notes=notes,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Record Timed Span Visual QC", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self.summary.setText(
+            f"Timed-span visual QC recorded for {requirement_id}: "
+            f"{'PASSED' if status.accepted else status.state.value.upper()}."
+        )
+
     def _refresh_telemetry(self) -> None:
         if self._selected_task_id is None:
             return
