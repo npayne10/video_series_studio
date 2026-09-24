@@ -26,6 +26,9 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresence,
     TimedAssetPresencePlan,
 )
+from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
+    CurrentAuthorityLTX25GovernedKeyframeCompilationService,
+)
 from vscs.infrastructure.production_execution.ltx25_span_conditioning import (
     LTX25SpanConditioningError,
     LTX25SpanProviderConditioningCompiler,
@@ -314,6 +317,27 @@ def test_ltx25_conditioning_uses_97_and_49_provider_frames_without_duplicate_95(
     assert second.conditioning_frame_is_emitted is True
     assert second.introduced_reference_ids == ("REF-ROS-PRIMARY",)
     assert second.direct_provider_reference_ids == ()
+
+
+def test_candidate_c_exposes_governed_span_conditioning_compilation(
+    tmp_path: Path,
+) -> None:
+    _, _, _, requirements = _authority()
+    _approved_introduction(tmp_path, requirements)
+
+    payload = CurrentAuthorityLTX25GovernedKeyframeCompilationService(
+        tmp_path
+    ).compile_span_provider_conditioning(
+        _compiled(requirements=requirements.to_dict())
+    )
+
+    assert payload["provider_id"] == "ltx-2.5"
+    assert payload["mode"] == "governed_multi_span_keyframe_i2v"
+    spans = payload["spans"]
+    assert isinstance(spans, list)
+    assert spans[1]["introduction_keyframe_id"]
+    assert spans[1]["conditioning_frame_global_index"] == 96
+    assert spans[1]["preceding_boundary_frame_reemitted"] is False
 
 
 def test_ltx25_conditioning_fails_closed_without_approved_introduction_keyframe(
