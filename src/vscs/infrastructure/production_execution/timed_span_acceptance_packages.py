@@ -22,6 +22,10 @@ from vscs.application.production_execution.timed_reference_activation import (
     TimedCanonicalReferenceActivationError,
     TimedCanonicalReferenceActivationPlan,
 )
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 
 
 class TimedSpanAcceptancePackageError(RuntimeError):
@@ -78,9 +82,14 @@ class LTX25TimedSpanAcceptancePackageBuilder:
                 "Candidate C Production Package has no package fingerprint"
             )
 
+        timed_raw = root.get("timed_asset_presence")
         spans_raw = root.get("internal_render_spans")
         activation_raw = root.get("timed_reference_activation")
         requirements_raw = root.get("introduction_keyframe_requirements")
+        if not isinstance(timed_raw, dict):
+            raise TimedSpanAcceptancePackageError(
+                "Candidate C package has no Timed Asset Presence authority"
+            )
         if not isinstance(spans_raw, dict):
             raise TimedSpanAcceptancePackageError(
                 "Candidate C package has no governed internal render spans"
@@ -94,13 +103,19 @@ class LTX25TimedSpanAcceptancePackageBuilder:
                 "Candidate C package has no Introduction Keyframe requirements"
             )
         try:
+            timed = TimedAssetPresencePlan.from_dict(timed_raw)
             spans = GovernedInternalRenderSpanPlan.from_dict(spans_raw)
             activation = TimedCanonicalReferenceActivationPlan.from_dict(activation_raw)
             requirements = IntroductionKeyframeRequirementPlan.from_dict(requirements_raw)
+            spans.require_source(timed)
+            self._require_activation_structural_sources(timed, spans, activation)
+            requirements.require_sources(spans, activation)
         except (
+            TimedAssetPresenceError,
             GovernedInternalRenderSpanError,
             TimedCanonicalReferenceActivationError,
             GovernedIntroductionKeyframeError,
+            TimedSpanAcceptancePackageError,
         ) as exc:
             raise TimedSpanAcceptancePackageError(
                 f"Candidate C timed-span authority is invalid: {exc}"
@@ -246,6 +261,33 @@ class LTX25TimedSpanAcceptancePackageBuilder:
             span_ids=tuple(span.span_id for span in spans.spans),
             package_paths=tuple(package_paths),
         )
+
+    @staticmethod
+    def _require_activation_structural_sources(
+        timed: TimedAssetPresencePlan,
+        spans: GovernedInternalRenderSpanPlan,
+        activation: TimedCanonicalReferenceActivationPlan,
+    ) -> None:
+        if activation.shot_id != timed.shot_id or activation.shot_id != spans.shot_id:
+            raise TimedSpanAcceptancePackageError(
+                "Timed reference activation Shot identity does not match source authority"
+            )
+        if activation.source_timed_asset_presence_plan_id != timed.plan_id:
+            raise TimedSpanAcceptancePackageError(
+                "Timed reference activation source presence identity changed"
+            )
+        if activation.source_timed_asset_presence_fingerprint != timed.fingerprint:
+            raise TimedSpanAcceptancePackageError(
+                "Timed reference activation source presence fingerprint changed"
+            )
+        if activation.source_internal_render_span_plan_id != spans.plan_id:
+            raise TimedSpanAcceptancePackageError(
+                "Timed reference activation source span identity changed"
+            )
+        if activation.source_internal_render_span_fingerprint != spans.fingerprint:
+            raise TimedSpanAcceptancePackageError(
+                "Timed reference activation source span fingerprint changed"
+            )
 
     @staticmethod
     def _span_motion_prompt(sequence_number: int) -> str:
