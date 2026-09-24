@@ -15,12 +15,14 @@ from vscs.application.production_execution import (
     GovernedShotKeyframe,
     GovernedShotKeyframeStore,
     ProductionExecutionCandidate,
+    ProductionExecutionUiService,
     ProductionPackageCompilationState,
     ProductionPackageStatus,
     IntroductionKeyframeRequirementPlan,
     TimedCanonicalReferenceActivationCompiler,
     TimedCanonicalReferenceActivationPlan,
     TimedSpanAcceptanceEvaluator,
+    TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStore,
     TimedSpanAssemblyEvidence,
@@ -658,6 +660,44 @@ def test_candidate_c_dynamic_payload_compiles_for_acceptance_but_not_monolithic_
     assert payload["provider_execution_plan"]["automatic_provider_submission"] is False
     assert payload["provider_execution_plan"]["monolithic_submission_permitted"] is False
     assert "reference_plan" not in payload
+
+
+class _TimedSpanFacadeBackend:
+    def __init__(self) -> None:
+        self.profile: str | None = None
+
+    def timed_span_acceptance_status_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> TimedSpanAcceptanceStatus:
+        assert task_id == "PT-TIMED"
+        self.profile = profile
+        return TimedSpanAcceptanceStatus(
+            shot_id="EP-001-SCN-001-SHT-002",
+            state=TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+            span_count=2,
+            boundary_count=1,
+            requirement_count=1,
+            approved_keyframe_count=0,
+            qc_passed_count=0,
+            assembly_present=False,
+            message="Introduction Keyframe required.",
+            requirement_ids=("GIKR-001",),
+            pending_keyframe_requirement_ids=("GIKR-001",),
+            pending_qc_requirement_ids=("GIKR-001",),
+        )
+
+
+def test_ui_service_delegates_timed_span_status_with_normalized_profile() -> None:
+    backend = _TimedSpanFacadeBackend()
+    service = ProductionExecutionUiService(backend)  # type: ignore[arg-type]
+
+    status = service.timed_span_acceptance_status("PT-TIMED", profile="Production")
+
+    assert status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert backend.profile == "production"
 
 
 class _TimedSpanWorkspaceService:
