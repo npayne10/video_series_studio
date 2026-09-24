@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from vscs.application.production_execution import (
+    CompiledProductionPackage,
     GovernedClosingBoundaryFrame,
     GovernedShotBoundaryError,
     GovernedShotBoundaryStore,
@@ -330,7 +331,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
 
     def compile_span_provider_conditioning(
         self,
-        compiled,
+        compiled: CompiledProductionPackage,
     ) -> dict[str, object]:
         """Compile approved Phase 20.18.2.3.4 span conditioning without executing it."""
         try:
