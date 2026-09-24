@@ -31,7 +31,6 @@ from .governed_reference_compilation import (
 from .introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeRequirementCompiler,
-    IntroductionKeyframeRequirementPlan,
 )
 from .internal_render_spans import (
     GovernedInternalRenderSpanCompiler,
