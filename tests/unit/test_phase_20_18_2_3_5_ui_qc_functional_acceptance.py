@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import Qt
-
 from vscs.application.production_execution import (
     INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
     KEYFRAME_ACCEPTANCE_CRITERIA,
