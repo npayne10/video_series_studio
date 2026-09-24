@@ -8,6 +8,9 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.3.5 UI, QC and Functional Acceptance: operator-visible timed-span acceptance states, Introduction Keyframe approval controls, Candidate C span acceptance-package generation, exact normalized-span assembly evidence, and human boundary QC.
+- Phase 20.18.2.3.5 verifies approved internal-boundary evidence against the actual decoded final frame of the preceding normalized span and checksum-pins both span sources and the final assembled Shot.
+
 - Phase 20.18.2.3.4 Governed Introduction Keyframes: deterministic frame-96 introduction requirements, checksum-pinned human approval, source-boundary continuity evidence, and explicit non-duplication semantics for internal boundaries.
 - Phase 20.18.2.3.4 LTX-2.5 per-span provider conditioning: governed/provider frame-count separation, approved Introduction Keyframe binding, Candidate C no-direct-multi-reference policy, and normalized sequential assembly authority.
 
@@ -45,6 +48,9 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.3.5 Candidate C can compile dynamic timed-span Shots into acceptance-ready authority while ordinary monolithic Start Production remains fail-closed.
+- Phase 20.18.2.3.5 Production Execution disables monolithic Start for dynamic Shots and exposes the governed keyframe/package/assembly/QC workflow without consuming or resetting ProductionTask retry authority.
+
 - Phase 20.18.2.3.4 Production Package compilation now carries Introduction Keyframe requirements into composition and executable package fingerprints.
 - Phase 20.18.2.3.4 exposes governed LTX-2.5 span conditioning from Candidate C while keeping the existing monolithic execution path fail-closed until multi-span orchestration is explicitly enabled.
 
@@ -65,7 +71,7 @@ The project follows semantic versioning where practical.
 
 ### In progress
 
-- Phase 20.18.2.3.4 local verification and Ros frame-96 Governed Introduction Keyframe / provider-conditioning acceptance.
+- Phase 20.18.2.3.5 local verification and SHT-002 Ros frame-96 UI/QC/functional acceptance.
 
 - Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
 
