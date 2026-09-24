@@ -320,6 +320,46 @@ def test_failed_visual_qc_does_not_accept_timed_span_shot(tmp_path: Path) -> Non
     assert status.qc_passed_count == 0
 
 
+def test_visual_qc_history_is_append_only_and_latest_record_controls_state(
+    tmp_path: Path,
+) -> None:
+    package_path, raw = _candidate_package(tmp_path)
+    requirement_id = _approve_intro(tmp_path, package_path)
+    _record_assembly(tmp_path, raw)
+    service = TimedSpanFunctionalAcceptanceService(tmp_path)
+
+    failed = service.record_visual_qc(
+        package_path,
+        requirement_id=requirement_id,
+        absent_before_boundary=False,
+        present_from_target_frame=True,
+        source_continuity_preserved=True,
+        no_unapproved_assets=True,
+        approved_by="Reviewer",
+        notes="Ros appeared before frame 96.",
+    )
+    assert failed.state is TimedSpanAcceptanceState.QC_REQUIRED
+
+    passed = service.record_visual_qc(
+        package_path,
+        requirement_id=requirement_id,
+        absent_before_boundary=True,
+        present_from_target_frame=True,
+        source_continuity_preserved=True,
+        no_unapproved_assets=True,
+        approved_by="Reviewer",
+        notes="Corrected acceptance render.",
+    )
+    assert passed.state is TimedSpanAcceptanceState.ACCEPTED
+
+    store_path = tmp_path / ".vscs" / "timed_span_acceptance.json"
+    raw_store = json.loads(store_path.read_text(encoding="utf-8"))
+    records = raw_store["qc_records"]
+    assert len(records) == 2
+    assert records[0]["passed"] is False
+    assert records[1]["passed"] is True
+
+
 def test_assembly_evidence_becomes_invalid_when_final_media_changes(tmp_path: Path) -> None:
     package_path, raw = _candidate_package(tmp_path)
     _approve_intro(tmp_path, package_path)
@@ -371,6 +411,7 @@ def test_timed_span_package_builder_emits_97_and_49_frame_candidate_c_packages(
     assert first["_vscs_manifest"]["package_fingerprint"] != second["_vscs_manifest"][
         "package_fingerprint"
     ]
+    assert not (tmp_path / ".vscs" / "provider_executions").exists()
 
 
 def test_timed_span_package_builder_fails_closed_without_introduction_keyframe(
