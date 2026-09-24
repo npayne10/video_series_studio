@@ -572,6 +572,9 @@ class TimedSpanAcceptanceEvaluator:
         except TimedSpanAcceptanceError:
             assembly = None
         assembly_valid = assembly is not None and self._assembly_matches(spans, assembly)
+        current_final_frame_count = (
+            assembly.final_frame_count if assembly is not None and assembly_valid else None
+        )
         if approved < requirements.requirement_count:
             return TimedSpanAcceptanceStatus(
                 shot_id=shot_id,
@@ -582,7 +585,7 @@ class TimedSpanAcceptanceEvaluator:
                 approved_keyframe_count=approved,
                 qc_passed_count=qc_passed,
                 assembly_present=assembly_valid,
-                final_frame_count=assembly.final_frame_count if assembly_valid else None,
+                final_frame_count=current_final_frame_count,
                 message=(
                     f"{requirements.requirement_count - approved} governed Introduction "
                     "Keyframe approval(s) remain."
@@ -608,6 +611,7 @@ class TimedSpanAcceptanceEvaluator:
                 pending_keyframe_requirement_ids=tuple(pending_keyframes),
                 pending_qc_requirement_ids=tuple(pending_qc),
             )
+        assert assembly is not None
         if qc_passed < requirements.requirement_count:
             return TimedSpanAcceptanceStatus(
                 shot_id=shot_id,
