@@ -11,12 +11,15 @@ from vscs.application.production_execution import (
     CompiledProductionPackage,
     GovernedIntroductionKeyframeRequirementCompiler,
     GovernedInternalRenderSpanCompiler,
+    GovernedInternalRenderSpanPlan,
     GovernedShotKeyframe,
     GovernedShotKeyframeStore,
     ProductionExecutionCandidate,
     ProductionPackageCompilationState,
     ProductionPackageStatus,
+    IntroductionKeyframeRequirementPlan,
     TimedCanonicalReferenceActivationCompiler,
+    TimedCanonicalReferenceActivationPlan,
     TimedSpanAcceptanceEvaluator,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStore,
@@ -136,7 +139,12 @@ def _reference_plan() -> dict[str, object]:
     }
 
 
-def _authority() -> tuple[TimedAssetPresencePlan, object, object, object]:
+def _authority() -> tuple[
+    TimedAssetPresencePlan,
+    GovernedInternalRenderSpanPlan,
+    TimedCanonicalReferenceActivationPlan,
+    IntroductionKeyframeRequirementPlan,
+]:
     timed = _timed()
     spans = GovernedInternalRenderSpanCompiler().compile(timed)
     activation = TimedCanonicalReferenceActivationCompiler().compile(
@@ -236,8 +244,6 @@ def _approve_intro(project: Path, package_path: Path) -> str:
 def _record_assembly(project: Path, raw: dict[str, object]) -> None:
     spans_raw = raw["internal_render_spans"]
     assert isinstance(spans_raw, dict)
-    from vscs.application.production_execution import GovernedInternalRenderSpanPlan
-
     spans = GovernedInternalRenderSpanPlan.from_dict(spans_raw)
     span1 = project / "acceptance" / "span-001.mp4"
     span2 = project / "acceptance" / "span-002.mp4"
