@@ -165,17 +165,20 @@ class ProductionExecutionWorkspace(QWidget):
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
         self.timed_span_detail.setWordWrap(True)
+        self.build_span_packages_button = QPushButton("Build Span Packages")
         self.approve_introduction_keyframe_button = QPushButton(
             "Approve Introduction Keyframe"
         )
         self.assemble_span_outputs_button = QPushButton("Verify & Assemble Span Outputs")
         self.record_span_qc_button = QPushButton("Record Visual QC")
         for button in (
+            self.build_span_packages_button,
             self.approve_introduction_keyframe_button,
             self.assemble_span_outputs_button,
             self.record_span_qc_button,
         ):
             button.setEnabled(False)
+        self.build_span_packages_button.clicked.connect(self._build_span_packages)
         self.approve_introduction_keyframe_button.clicked.connect(
             self._approve_introduction_keyframe
         )
@@ -183,9 +186,10 @@ class ProductionExecutionWorkspace(QWidget):
         self.record_span_qc_button.clicked.connect(self._record_span_qc)
         timed_span_layout.addWidget(self.timed_span_state, 0, 0, 1, 3)
         timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
-        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 2, 0)
-        timed_span_layout.addWidget(self.assemble_span_outputs_button, 2, 1)
-        timed_span_layout.addWidget(self.record_span_qc_button, 2, 2)
+        timed_span_layout.addWidget(self.build_span_packages_button, 2, 0)
+        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 2, 1)
+        timed_span_layout.addWidget(self.assemble_span_outputs_button, 3, 0)
+        timed_span_layout.addWidget(self.record_span_qc_button, 3, 1)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -603,6 +607,7 @@ class ProductionExecutionWorkspace(QWidget):
             self.timed_span_detail.setText(
                 "This backend does not expose Phase 20.18.2.3.5 timed-span acceptance."
             )
+            self.build_span_packages_button.setEnabled(False)
             self.approve_introduction_keyframe_button.setEnabled(False)
             self.assemble_span_outputs_button.setEnabled(False)
             self.record_span_qc_button.setEnabled(False)
@@ -624,6 +629,11 @@ class ProductionExecutionWorkspace(QWidget):
             f"Assembly {'verified' if status.assembly_present else 'pending'} • "
             f"Final frames {final_frames}"
         )
+        self.build_span_packages_button.setEnabled(
+            status.applicable
+            and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED
+            and not status.pending_keyframe_requirement_ids
+        )
         self.approve_introduction_keyframe_button.setEnabled(
             bool(status.pending_keyframe_requirement_ids)
         )
@@ -641,6 +651,7 @@ class ProductionExecutionWorkspace(QWidget):
         self.timed_span_detail.setText(
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
+        self.build_span_packages_button.setEnabled(False)
         self.approve_introduction_keyframe_button.setEnabled(False)
         self.assemble_span_outputs_button.setEnabled(False)
         self.record_span_qc_button.setEnabled(False)
@@ -666,6 +677,27 @@ class ProductionExecutionWorkspace(QWidget):
             return None
         value = selected.strip()
         return value or None
+
+    def _build_span_packages(self) -> None:
+        if self._selected_task_id is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            paths = service.build_timed_span_packages(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Build Span Packages", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self.summary.setText(
+            "Built governed timed-span Candidate C packages: "
+            + ", ".join(str(path) for path in paths)
+        )
+        self._refresh_timed_span_status()
 
     def _approve_introduction_keyframe(self) -> None:
         if self._selected_task_id is None or self._timed_span_status is None:
