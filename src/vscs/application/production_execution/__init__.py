@@ -66,6 +66,15 @@ from .telemetry import (
     ProductionTelemetrySnapshot,
     ProductionTelemetryState,
 )
+from .timed_span_acceptance import (
+    TimedSpanAcceptanceError,
+    TimedSpanAcceptanceEvaluator,
+    TimedSpanAcceptanceState,
+    TimedSpanAcceptanceStatus,
+    TimedSpanAcceptanceStore,
+    TimedSpanAssemblyEvidence,
+    TimedSpanVisualQCRecord,
+)
 from .timed_reference_activation import (
     SpanCanonicalReferenceActivation,
     TimedCanonicalReferenceActivationCompiler,
@@ -147,6 +156,13 @@ __all__ = [
     "TimedCanonicalReferenceActivationCompiler",
     "TimedCanonicalReferenceActivationError",
     "TimedCanonicalReferenceActivationPlan",
+    "TimedSpanAcceptanceError",
+    "TimedSpanAcceptanceEvaluator",
+    "TimedSpanAcceptanceState",
+    "TimedSpanAcceptanceStatus",
+    "TimedSpanAcceptanceStore",
+    "TimedSpanAssemblyEvidence",
+    "TimedSpanVisualQCRecord",
     "normalize_execution_profile",
     "provider_video_candidates",
     "provider_video_rebaseline_contract",
