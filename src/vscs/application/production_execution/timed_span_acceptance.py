@@ -29,6 +29,7 @@ class TimedSpanAcceptanceState(StrEnum):
     """Operator-visible Phase 20.18.2.3.5 acceptance state."""
 
     NOT_APPLICABLE = "not_applicable"
+    PACKAGE_REQUIRED = "package_required"
     KEYFRAME_REQUIRED = "keyframe_required"
     OUTPUTS_REQUIRED = "outputs_required"
     QC_REQUIRED = "qc_required"
