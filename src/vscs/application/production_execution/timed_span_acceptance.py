@@ -20,6 +20,14 @@ from .internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
 )
+from .timed_reference_activation import (
+    TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
+)
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 
 
 class TimedSpanAcceptanceError(RuntimeError):
@@ -291,6 +299,8 @@ class TimedSpanAcceptanceStatus:
     assembly_present: bool
     final_frame_count: int | None = None
     message: str = ""
+    final_path: str | None = None
+    boundary_summaries: tuple[str, ...] = ()
     requirement_ids: tuple[str, ...] = ()
     pending_keyframe_requirement_ids: tuple[str, ...] = ()
     pending_qc_requirement_ids: tuple[str, ...] = ()
@@ -443,7 +453,9 @@ class TimedSpanAcceptanceEvaluator:
 
     def evaluate(self, compiled_package: dict[str, Any]) -> TimedSpanAcceptanceStatus:
         shot_id = _shot_id(compiled_package)
+        timed_raw = compiled_package.get("timed_asset_presence")
         spans_raw = compiled_package.get("internal_render_spans")
+        activation_raw = compiled_package.get("timed_reference_activation")
         requirements_raw = compiled_package.get("introduction_keyframe_requirements")
         if not isinstance(spans_raw, dict):
             return TimedSpanAcceptanceStatus(
@@ -457,10 +469,32 @@ class TimedSpanAcceptanceEvaluator:
                 assembly_present=False,
                 message="Shot has no governed internal render-span authority.",
             )
+        if not isinstance(timed_raw, dict):
+            return self._failed(
+                shot_id,
+                "Dynamic Shot has no Timed Asset Presence authority.",
+            )
+        if not isinstance(activation_raw, dict):
+            return self._failed(
+                shot_id,
+                "Dynamic Shot has no Timed Canonical Reference Activation authority.",
+            )
         try:
+            timed = TimedAssetPresencePlan.from_dict(timed_raw)
             spans = GovernedInternalRenderSpanPlan.from_dict(spans_raw)
-        except GovernedInternalRenderSpanError as exc:
-            return self._failed(shot_id, f"Internal render-span authority is invalid: {exc}")
+            activation = TimedCanonicalReferenceActivationPlan.from_dict(activation_raw)
+            spans.require_source(timed)
+            self._require_activation_structural_sources(timed, spans, activation)
+        except (
+            TimedAssetPresenceError,
+            GovernedInternalRenderSpanError,
+            TimedCanonicalReferenceActivationError,
+            TimedSpanAcceptanceError,
+        ) as exc:
+            return self._failed(
+                shot_id,
+                f"Dynamic timed-span authority chain is invalid: {exc}",
+            )
         if spans.span_count <= 1:
             return TimedSpanAcceptanceStatus(
                 shot_id=shot_id,
@@ -482,6 +516,7 @@ class TimedSpanAcceptanceEvaluator:
             )
         try:
             requirements = IntroductionKeyframeRequirementPlan.from_dict(requirements_raw)
+            requirements.require_sources(spans, activation)
         except GovernedIntroductionKeyframeError as exc:
             return self._failed(
                 shot_id,
@@ -502,6 +537,18 @@ class TimedSpanAcceptanceEvaluator:
         qc_passed = 0
         requirement_ids = tuple(
             requirement.requirement_id for requirement in requirements.requirements
+        )
+        boundary_summaries = tuple(
+            (
+                f"frame {requirement.source_global_frame_index} -> "
+                f"{requirement.target_global_frame_index}: "
+                + (
+                    ", ".join(requirement.introduced_asset_ids)
+                    if requirement.introduced_asset_ids
+                    else "composition change"
+                )
+            )
+            for requirement in requirements.requirements
         )
         pending_keyframes: list[str] = []
         pending_qc: list[str] = []
@@ -539,6 +586,7 @@ class TimedSpanAcceptanceEvaluator:
                     f"{requirements.requirement_count - approved} governed Introduction "
                     "Keyframe approval(s) remain."
                 ),
+                boundary_summaries=boundary_summaries,
                 requirement_ids=requirement_ids,
                 pending_keyframe_requirement_ids=tuple(pending_keyframes),
                 pending_qc_requirement_ids=tuple(pending_qc),
@@ -554,6 +602,7 @@ class TimedSpanAcceptanceEvaluator:
                 qc_passed_count=qc_passed,
                 assembly_present=False,
                 message="Normalized span outputs must be verified and assembled.",
+                boundary_summaries=boundary_summaries,
                 requirement_ids=requirement_ids,
                 pending_keyframe_requirement_ids=tuple(pending_keyframes),
                 pending_qc_requirement_ids=tuple(pending_qc),
@@ -573,6 +622,8 @@ class TimedSpanAcceptanceEvaluator:
                     f"{requirements.requirement_count - qc_passed} visual introduction-boundary "
                     "QC approval(s) remain."
                 ),
+                final_path=assembly.final_path,
+                boundary_summaries=boundary_summaries,
                 requirement_ids=requirement_ids,
                 pending_keyframe_requirement_ids=tuple(pending_keyframes),
                 pending_qc_requirement_ids=tuple(pending_qc),
@@ -588,10 +639,39 @@ class TimedSpanAcceptanceEvaluator:
             assembly_present=True,
             final_frame_count=assembly.final_frame_count,
             message="Timed-span functional acceptance passed.",
+            final_path=assembly.final_path,
+            boundary_summaries=boundary_summaries,
             requirement_ids=requirement_ids,
             pending_keyframe_requirement_ids=(),
             pending_qc_requirement_ids=(),
         )
+
+    @staticmethod
+    def _require_activation_structural_sources(
+        timed: TimedAssetPresencePlan,
+        spans: GovernedInternalRenderSpanPlan,
+        activation: TimedCanonicalReferenceActivationPlan,
+    ) -> None:
+        if activation.shot_id != timed.shot_id or activation.shot_id != spans.shot_id:
+            raise TimedSpanAcceptanceError(
+                "Timed reference activation Shot identity does not match its structural sources"
+            )
+        if activation.source_timed_asset_presence_plan_id != timed.plan_id:
+            raise TimedSpanAcceptanceError(
+                "Timed reference activation source presence identity changed"
+            )
+        if activation.source_timed_asset_presence_fingerprint != timed.fingerprint:
+            raise TimedSpanAcceptanceError(
+                "Timed reference activation source presence fingerprint changed"
+            )
+        if activation.source_internal_render_span_plan_id != spans.plan_id:
+            raise TimedSpanAcceptanceError(
+                "Timed reference activation source span identity changed"
+            )
+        if activation.source_internal_render_span_fingerprint != spans.fingerprint:
+            raise TimedSpanAcceptanceError(
+                "Timed reference activation source span fingerprint changed"
+            )
 
     @staticmethod
     def make_qc_record(
