@@ -528,6 +528,7 @@ class ProductionExecutionWorkspace(QWidget):
         )
         self._refresh_boundary_status()
         self._refresh_package_status()
+        self._refresh_timed_span_status()
 
     def _authorize_retry(self) -> None:
         if self._selected_task_id is None:
@@ -901,11 +902,15 @@ class ProductionExecutionWorkspace(QWidget):
         self._update_start_enabled()
 
     def _update_start_enabled(self) -> None:
+        timed_span_blocks_monolithic_start = (
+            self._timed_span_status is not None and self._timed_span_status.applicable
+        )
         self.start_button.setEnabled(
             self._selected_task_id is not None
             and self._package_status is not None
             and self._package_status.executable
             and not self._execution_active
+            and not timed_span_blocks_monolithic_start
         )
 
     def _start(self) -> None:
