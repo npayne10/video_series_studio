@@ -208,6 +208,10 @@ class TimedSpanAssemblyEvidence:
             raise TimedSpanAcceptanceError("Timed-span assembly frame counts must be positive")
         if self.final_frame_count <= 0:
             raise TimedSpanAcceptanceError("Timed-span final frame count must be positive")
+        if sum(self.span_frame_counts) != self.final_frame_count:
+            raise TimedSpanAcceptanceError(
+                "Timed-span normalized frame counts must sum exactly to the final Shot frame count"
+            )
         if self.width <= 0 or self.height <= 0 or self.frames_per_second <= 0:
             raise TimedSpanAcceptanceError(
                 "Timed-span assembly dimensions and frame rate must be positive"
