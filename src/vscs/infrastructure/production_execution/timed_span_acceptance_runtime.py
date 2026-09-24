@@ -12,6 +12,11 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.introduction_keyframes import (
+    GovernedIntroductionKeyframeError,
+    GovernedIntroductionKeyframeStore,
+    IntroductionKeyframeRequirementPlan,
+)
 from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
@@ -101,6 +106,12 @@ class GovernedSpanAssemblyRuntime:
                     f"{spans.frames_per_second} fps."
                 )
 
+        self._verify_boundary_evidence(
+            compiled_package,
+            spans,
+            observations,
+        )
+
         first = observations[0]
         for observation in observations[1:]:
             if (observation.width, observation.height) != (first.width, first.height):
@@ -161,6 +172,91 @@ class GovernedSpanAssemblyRuntime:
             raise GovernedSpanAssemblyRuntimeError(
                 f"Cannot persist timed-span assembly evidence: {exc}"
             ) from exc
+
+    def _verify_boundary_evidence(
+        self,
+        compiled_package: dict[str, Any],
+        spans: GovernedInternalRenderSpanPlan,
+        observations: tuple[SpanMediaObservation, ...],
+    ) -> None:
+        requirements_raw = compiled_package.get("introduction_keyframe_requirements")
+        if not isinstance(requirements_raw, dict):
+            raise GovernedSpanAssemblyRuntimeError(
+                "Dynamic span assembly requires Introduction Keyframe requirement authority"
+            )
+        try:
+            requirements = IntroductionKeyframeRequirementPlan.from_dict(requirements_raw)
+        except GovernedIntroductionKeyframeError as exc:
+            raise GovernedSpanAssemblyRuntimeError(
+                f"Introduction Keyframe requirements are invalid: {exc}"
+            ) from exc
+        if requirements.requirement_count != len(spans.boundaries):
+            raise GovernedSpanAssemblyRuntimeError(
+                "Introduction Keyframe requirements do not cover every internal boundary"
+            )
+
+        source_by_span = {
+            span.span_id: observation
+            for span, observation in zip(spans.spans, observations, strict=True)
+        }
+        store = GovernedIntroductionKeyframeStore(self.project_directory)
+        for requirement in requirements.requirements:
+            source_span = next(
+                (span for span in spans.spans if span.span_id == requirement.source_span_id),
+                None,
+            )
+            source_observation = source_by_span.get(requirement.source_span_id)
+            if source_span is None or source_observation is None:
+                raise GovernedSpanAssemblyRuntimeError(
+                    f"Introduction boundary {requirement.boundary_id} has no source span output"
+                )
+            try:
+                keyframe = store.require_approved(requirement)
+            except GovernedIntroductionKeyframeError as exc:
+                raise GovernedSpanAssemblyRuntimeError(
+                    f"Introduction Keyframe authority is missing or stale: {exc}"
+                ) from exc
+
+            boundary_image = store._resolve_project_file(  # noqa: SLF001
+                keyframe.source_boundary_image_path
+            )
+            video_hash = self._decoded_rgb_sha256(
+                source_observation.path,
+                frame_index=source_span.frame_count - 1,
+            )
+            image_hash = self._decoded_rgb_sha256(boundary_image, frame_index=None)
+            if video_hash != image_hash:
+                raise GovernedSpanAssemblyRuntimeError(
+                    f"Approved source-boundary evidence for {requirement.boundary_id} does not "
+                    "match the exact final frame of its preceding normalized span"
+                )
+
+    def _decoded_rgb_sha256(
+        self,
+        path: Path,
+        *,
+        frame_index: int | None,
+    ) -> str:
+        candidate = Path(path).expanduser().resolve(strict=False)
+        command: list[str] = [self.ffmpeg, "-v", "error", "-i", str(candidate)]
+        if frame_index is not None:
+            command.extend(("-vf", f"select=eq(n\\,{frame_index})", "-vsync", "0"))
+        command.extend(("-frames:v", "1", "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"))
+        try:
+            completed = subprocess.run(
+                tuple(command),
+                check=True,
+                capture_output=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise GovernedSpanAssemblyRuntimeError(
+                f"Unable to decode exact boundary pixels from {candidate}: {exc}"
+            ) from exc
+        if not completed.stdout:
+            raise GovernedSpanAssemblyRuntimeError(
+                f"No decoded boundary pixels were produced from {candidate}"
+            )
+        return hashlib.sha256(completed.stdout).hexdigest()
 
     def _observe(self, path: Path) -> SpanMediaObservation:
         candidate = Path(path).expanduser().resolve(strict=False)
