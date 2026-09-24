@@ -335,6 +335,11 @@ class LocalProductionPackageCompilationService:
                 "after the required human-approved Introduction Keyframes exist; monolithic "
                 "provider execution remains blocked."
             )
+        return cls._base_payload_content(compiled)
+
+    @classmethod
+    def _base_payload_content(cls, compiled: CompiledProductionPackage) -> dict[str, Any]:
+        """Build fingerprinted package content after authority validation has completed."""
         content: dict[str, Any] = {
             "schema_version": "7.1.4-vscs-1",
             "profile": compiled.profile,
@@ -363,10 +368,10 @@ class LocalProductionPackageCompilationService:
             content["reference_plan"] = compiled.reference_plan
         if compiled.introduction_keyframe_requirements is not None:
             content["introduction_keyframe_requirements"] = (
-                compiled.introduction_keyframe_requirements
-            )
+                    compiled.introduction_keyframe_requirements
+                )
         fingerprint = cls._fingerprint(content)
-        content["_vscs_manifest"] = {
+            content["_vscs_manifest"] = {
             "task_id": compiled.task_id,
             "production_id": compiled.production_id,
             "episode_id": compiled.episode_id,
@@ -383,6 +388,7 @@ class LocalProductionPackageCompilationService:
             "compiler": "VSCS Phase 20.18.2",
         }
         return content
+
 
     @staticmethod
     def _manifest(raw: dict[str, Any]) -> dict[str, Any]:
