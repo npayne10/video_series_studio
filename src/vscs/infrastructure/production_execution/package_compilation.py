@@ -12,16 +12,16 @@ from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
 )
-from vscs.application.production_execution.timed_reference_activation import (
-    TimedCanonicalReferenceActivationError,
-    TimedCanonicalReferenceActivationPlan,
-)
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
     ProductionPackageCompilationState,
     ProductionPackageCompilerService,
     ProductionPackageStatus,
+)
+from vscs.application.production_execution.timed_reference_activation import (
+    TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
 )
 from vscs.application.production_package import (
     ProductionPackage,

@@ -196,8 +196,7 @@ def test_frame_state_reference_is_audited_but_never_timed_as_canonical_support()
 
     assert plan.frame_state_reference_ids == ("REF-COMPOSITION",)
     assert all(
-        "REF-COMPOSITION" not in activation.active_reference_ids
-        for activation in plan.activations
+        "REF-COMPOSITION" not in activation.active_reference_ids for activation in plan.activations
     )
 
 
@@ -208,9 +207,7 @@ def test_reference_asset_identity_mismatch_fails_closed() -> None:
     raw = references["references"]
     assert isinstance(raw, list)
     ros = next(
-        item
-        for item in raw
-        if isinstance(item, dict) and item["reference_id"] == "REF-ROS-PRIMARY"
+        item for item in raw if isinstance(item, dict) and item["reference_id"] == "REF-ROS-PRIMARY"
     )
     ros["asset_id"] = "CAP-CHR-001"
 
@@ -373,7 +370,9 @@ def test_execution_compiler_rejects_timed_reference_without_reference_plan() -> 
     timed = _timed_plan()
     spans = GovernedInternalRenderSpanCompiler().compile(timed)
 
-    with pytest.raises(ProductionPackageCompilationError, match="absent from the governed ReferencePlan"):
+    with pytest.raises(
+        ProductionPackageCompilationError, match="absent from the governed ReferencePlan"
+    ):
         ProductionPackageCompilerService._timed_reference_activation(
             timed.to_dict(),
             spans.to_dict(),

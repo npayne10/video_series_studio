@@ -305,20 +305,14 @@ class TimedCanonicalReferenceActivationPlan:
             if isinstance(item, dict)
         )
         if len(activations) != len(activations_raw):
-            raise TimedCanonicalReferenceActivationError(
-                "Every activation entry must be an object"
-            )
+            raise TimedCanonicalReferenceActivationError("Every activation entry must be an object")
         reference_fingerprint_raw = raw.get("source_reference_plan_fingerprint")
         reference_fingerprint = (
-            None
-            if reference_fingerprint_raw is None
-            else str(reference_fingerprint_raw)
+            None if reference_fingerprint_raw is None else str(reference_fingerprint_raw)
         )
         provider_neutral = raw.get("provider_neutral", True)
         if not isinstance(provider_neutral, bool):
-            raise TimedCanonicalReferenceActivationError(
-                "provider_neutral must be a boolean"
-            )
+            raise TimedCanonicalReferenceActivationError("provider_neutral must be a boolean")
 
         plan = cls(
             shot_id=str(raw.get("shot_id") or ""),
@@ -333,9 +327,10 @@ class TimedCanonicalReferenceActivationPlan:
             provider_neutral=provider_neutral,
         )
         supplied_count = raw.get("activation_count")
-        if supplied_count is not None and _integer_value(
-            supplied_count, "activation_count"
-        ) != plan.activation_count:
+        if (
+            supplied_count is not None
+            and _integer_value(supplied_count, "activation_count") != plan.activation_count
+        ):
             raise TimedCanonicalReferenceActivationError(
                 "activation_count does not match persisted activations"
             )
@@ -406,19 +401,14 @@ class TimedCanonicalReferenceActivationCompiler:
         if span_plan.span_count > 1 and unscoped_supporting:
             raise TimedCanonicalReferenceActivationError(
                 "Dynamic timed-reference activation cannot infer temporal scope for governed "
-                "supporting references: "
-                + ", ".join(unscoped_supporting)
+                "supporting references: " + ", ".join(unscoped_supporting)
             )
 
-        presences_by_id = {
-            presence.presence_id: presence for presence in timed_presence.presences
-        }
+        presences_by_id = {presence.presence_id: presence for presence in timed_presence.presences}
         activations: list[SpanCanonicalReferenceActivation] = []
         for span in span_plan.spans:
             active = self._presences_for_ids(span.active_presence_ids, presences_by_id)
-            introduced = self._presences_for_ids(
-                span.introduced_presence_ids, presences_by_id
-            )
+            introduced = self._presences_for_ids(span.introduced_presence_ids, presences_by_id)
             removed = self._presences_for_ids(span.removed_presence_ids, presences_by_id)
             active_reference_ids = _reference_ids(active)
             if span_plan.span_count == 1:
@@ -445,9 +435,7 @@ class TimedCanonicalReferenceActivationCompiler:
             source_internal_render_span_plan_id=span_plan.plan_id,
             source_internal_render_span_fingerprint=span_plan.fingerprint,
             source_reference_plan_fingerprint=(
-                _reference_plan_fingerprint(reference_plan)
-                if reference_plan is not None
-                else None
+                _reference_plan_fingerprint(reference_plan) if reference_plan is not None else None
             ),
             frame_state_reference_ids=frame_state_ids,
             activations=tuple(activations),
@@ -544,17 +532,13 @@ def _required_text(raw: dict[str, Any], key: str) -> str:
 
 def _required_int(raw: dict[str, Any], key: str) -> int:
     if key not in raw:
-        raise TimedCanonicalReferenceActivationError(
-            f"Missing required integer field {key!r}"
-        )
+        raise TimedCanonicalReferenceActivationError(f"Missing required integer field {key!r}")
     return _integer_value(raw[key], key)
 
 
 def _integer_value(value: object, field_name: str) -> int:
     if isinstance(value, bool):
-        raise TimedCanonicalReferenceActivationError(
-            f"{field_name} must be an integer"
-        )
+        raise TimedCanonicalReferenceActivationError(f"{field_name} must be an integer")
     if isinstance(value, int):
         return value
     if isinstance(value, str):
