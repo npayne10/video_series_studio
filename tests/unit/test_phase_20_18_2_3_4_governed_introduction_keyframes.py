@@ -11,6 +11,7 @@ from vscs.application.production_execution import (
     GovernedIntroductionKeyframeStore,
     GovernedInternalRenderSpanCompiler,
     GovernedInternalRenderSpanPlan,
+    IntroductionKeyframeRequirement,
     IntroductionKeyframeRequirementPlan,
     TimedCanonicalReferenceActivationCompiler,
     TimedCanonicalReferenceActivationPlan,
@@ -263,7 +264,7 @@ def test_introduction_keyframe_fails_when_requirement_changes(tmp_path: Path) ->
     _, _, _, requirements = _authority()
     _approved_introduction(tmp_path, requirements)
     requirement = requirements.requirements[0]
-    changed = type(requirement)(
+    changed = IntroductionKeyframeRequirement(
         shot_id=requirement.shot_id,
         boundary_id=requirement.boundary_id,
         source_span_id=requirement.source_span_id,
