@@ -28,6 +28,11 @@ from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
     GovernedReferenceCompiler,
 )
+from .introduction_keyframes import (
+    GovernedIntroductionKeyframeError,
+    GovernedIntroductionKeyframeRequirementCompiler,
+    IntroductionKeyframeRequirementPlan,
+)
 from .internal_render_spans import (
     GovernedInternalRenderSpanCompiler,
     GovernedInternalRenderSpanError,
@@ -116,6 +121,7 @@ class CompiledProductionPackage:
     reference_plan: dict[str, Any] | None = None
     motion_prompt: str = ""
     omitted_provider_prompt_sections: tuple[str, ...] = ()
+    introduction_keyframe_requirements: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return deterministic JSON-compatible provider-neutral content."""
@@ -170,6 +176,10 @@ class CompiledProductionPackage:
             payload["timed_reference_activation"] = self.timed_reference_activation
         if self.reference_plan is not None:
             payload["reference_plan"] = self.reference_plan
+        if self.introduction_keyframe_requirements is not None:
+            payload["introduction_keyframe_requirements"] = (
+                self.introduction_keyframe_requirements
+            )
         return payload
 
 
@@ -233,6 +243,10 @@ class ProductionPackageCompilerService:
             internal_render_spans,
             reference_plan,
         )
+        introduction_keyframe_requirements = self._introduction_keyframe_requirements(
+            internal_render_spans,
+            timed_reference_activation,
+        )
 
         try:
             provider_prompt = self.provider_prompt_compiler.compile(production)
@@ -278,6 +292,10 @@ class ProductionPackageCompilerService:
             composition_plan["timed_reference_activation"] = timed_reference_activation
         if reference_plan is not None:
             composition_plan["reference_plan"] = reference_plan
+        if introduction_keyframe_requirements is not None:
+            composition_plan["introduction_keyframe_requirements"] = (
+                introduction_keyframe_requirements
+            )
 
         seed = self._derived_seed(task.authority.fingerprint, normalized_profile)
         filename_prefix = f"{task.production_id}/{task.episode_id}/{task.task_id}"
@@ -301,6 +319,7 @@ class ProductionPackageCompilerService:
             "internal_render_spans": internal_render_spans,
             "timed_reference_activation": timed_reference_activation,
             "reference_plan": reference_plan,
+            "introduction_keyframe_requirements": introduction_keyframe_requirements,
         }
         package_fingerprint = self._fingerprint(base)
         return CompiledProductionPackage(
@@ -338,6 +357,7 @@ class ProductionPackageCompilerService:
             reference_plan=reference_plan,
             motion_prompt=motion_prompt,
             omitted_provider_prompt_sections=omitted_provider_prompt_sections,
+            introduction_keyframe_requirements=introduction_keyframe_requirements,
         )
 
     def _timed_asset_presence(
@@ -411,6 +431,33 @@ class ProductionPackageCompilerService:
         ) as exc:
             raise ProductionPackageCompilationError(
                 f"Timed Canonical Reference Activation authority cannot compile: {exc}"
+            ) from exc
+        return plan.to_dict()
+
+    @staticmethod
+    def _introduction_keyframe_requirements(
+        internal_render_spans: dict[str, Any] | None,
+        timed_reference_activation: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if internal_render_spans is None or timed_reference_activation is None:
+            return None
+        try:
+            spans = GovernedInternalRenderSpanPlan.from_dict(internal_render_spans)
+            activation = TimedCanonicalReferenceActivationPlan.from_dict(
+                timed_reference_activation
+            )
+            plan = GovernedIntroductionKeyframeRequirementCompiler().compile(
+                spans,
+                activation,
+            )
+            plan.require_sources(spans, activation)
+        except (
+            GovernedInternalRenderSpanError,
+            TimedCanonicalReferenceActivationError,
+            GovernedIntroductionKeyframeError,
+        ) as exc:
+            raise ProductionPackageCompilationError(
+                f"Governed Introduction Keyframe requirements cannot compile: {exc}"
             ) from exc
         return plan.to_dict()
 
