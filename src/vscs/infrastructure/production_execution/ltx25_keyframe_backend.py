@@ -553,6 +553,146 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         except LocalProductionPackageCompilationError as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def timed_span_acceptance_status_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> TimedSpanAcceptanceStatus:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        package = self.package_compilation.status(task, profile=normalized)
+        if not package.executable or package.path is None:
+            return TimedSpanAcceptanceStatus(
+                shot_id=task.shot_id or task.task_id,
+                state=TimedSpanAcceptanceState.PACKAGE_REQUIRED,
+                span_count=0,
+                boundary_count=0,
+                requirement_count=0,
+                approved_keyframe_count=0,
+                qc_passed_count=0,
+                assembly_present=False,
+                message=package.message or "Compile the current Production Package first.",
+            )
+        try:
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).status(package.path)
+        except TimedSpanFunctionalAcceptanceServiceError as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def approve_introduction_keyframe_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        image_path: Path,
+        source_boundary_image_path: Path,
+        approved_by: str,
+        approved_at: str,
+    ) -> TimedSpanAcceptanceStatus:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).approve_introduction_keyframe(
+                package.path,
+                requirement_id=requirement_id,
+                image_path=image_path,
+                source_boundary_image_path=source_boundary_image_path,
+                approved_by=approved_by,
+                approved_at=approved_at,
+            )
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def assemble_timed_span_outputs_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        span_paths: tuple[Path, ...],
+        output_path: Path,
+    ) -> TimedSpanAcceptanceStatus:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).assemble_outputs(
+                package.path,
+                span_paths=span_paths,
+                output_path=output_path,
+            )
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def record_timed_span_qc_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        absent_before_boundary: bool,
+        present_from_target_frame: bool,
+        source_continuity_preserved: bool,
+        no_unapproved_assets: bool,
+        approved_by: str,
+        notes: str,
+    ) -> TimedSpanAcceptanceStatus:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).record_visual_qc(
+                package.path,
+                requirement_id=requirement_id,
+                absent_before_boundary=absent_before_boundary,
+                present_from_target_frame=present_from_target_frame,
+                source_continuity_preserved=source_continuity_preserved,
+                no_unapproved_assets=no_unapproved_assets,
+                approved_by=approved_by,
+                notes=notes,
+            )
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def start_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        production_package: Path | None = None,
+    ) -> ProductionExecutionResult:
+        status = self.timed_span_acceptance_status_for_profile(task_id, profile=profile)
+        if status.applicable and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED:
+            raise ProductionExecutionError(
+                "Dynamic timed-span Shots cannot use monolithic Start Production. "
+                "Phase 20.18.2.3.5 keeps production submission fail-closed while the operator "
+                "completes governed span-output assembly and visual functional acceptance."
+            )
+        return super().start_for_profile(
+            task_id,
+            profile=profile,
+            production_package=production_package,
+        )
+
     def _workflow_foundation(self) -> ProductionPackageComfyUIAdapter:
         workflow_root = self._workflow_root()
         manifest_path = workflow_root / "manifests" / LTX25_KEYFRAME_MANIFEST_FILE
