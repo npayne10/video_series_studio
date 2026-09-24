@@ -324,7 +324,7 @@ class TimedSpanAcceptanceStore:
         self.path = self.project_directory / self.RELATIVE_PATH
 
     def qc_for_requirement(self, requirement_id: str) -> TimedSpanVisualQCRecord | None:
-        for raw in self._root().get("qc_records", []):
+        for raw in reversed(self._root().get("qc_records", [])):
             if not isinstance(raw, dict):
                 continue
             if str(raw.get("requirement_id") or "").strip() == requirement_id.strip():
@@ -334,12 +334,12 @@ class TimedSpanAcceptanceStore:
     def save_qc(self, record: TimedSpanVisualQCRecord) -> TimedSpanVisualQCRecord:
         root = self._root()
         records = [
-            dict(item)
-            for item in root.get("qc_records", [])
-            if isinstance(item, dict)
-            and str(item.get("requirement_id") or "").strip() != record.requirement_id
+            dict(item) for item in root.get("qc_records", []) if isinstance(item, dict)
         ]
-        records.append(record.to_dict())
+        if not any(
+            str(item.get("record_id") or "").strip() == record.record_id for item in records
+        ):
+            records.append(record.to_dict())
         root["qc_records"] = records
         self._write(root)
         stored = self.qc_for_requirement(record.requirement_id)
@@ -348,7 +348,7 @@ class TimedSpanAcceptanceStore:
 
     def assembly_for_shot(self, shot_id: str) -> TimedSpanAssemblyEvidence | None:
         normalized = shot_id.strip().upper()
-        for raw in self._root().get("assemblies", []):
+        for raw in reversed(self._root().get("assemblies", [])):
             if not isinstance(raw, dict):
                 continue
             if str(raw.get("shot_id") or "").strip().upper() == normalized:
@@ -390,12 +390,13 @@ class TimedSpanAcceptanceStore:
     def save_assembly(self, evidence: TimedSpanAssemblyEvidence) -> TimedSpanAssemblyEvidence:
         root = self._root()
         assemblies = [
-            dict(item)
-            for item in root.get("assemblies", [])
-            if isinstance(item, dict)
-            and str(item.get("shot_id") or "").strip().upper() != evidence.shot_id
+            dict(item) for item in root.get("assemblies", []) if isinstance(item, dict)
         ]
-        assemblies.append(evidence.to_dict())
+        if not any(
+            str(item.get("evidence_id") or "").strip() == evidence.evidence_id
+            for item in assemblies
+        ):
+            assemblies.append(evidence.to_dict())
         root["assemblies"] = assemblies
         self._write(root)
         stored = self.assembly_for_shot(evidence.shot_id)
