@@ -131,6 +131,24 @@ class ProductionExecutionBackend(Protocol):
             approved_at=approved_at,
         )
 
+    def build_timed_span_packages(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> tuple[Path, ...]:
+        normalized = self._task_id(task_id, "building governed timed-span packages")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "build_timed_span_packages_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support governed timed-span packages."
+            )
+        return cast(_BuildTimedSpanPackagesForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
     def assemble_timed_span_outputs(
         self,
         task_id: str,
@@ -276,6 +294,15 @@ class _ApproveIntroductionKeyframeForProfile(Protocol):
         approved_by: str,
         approved_at: str,
     ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _BuildTimedSpanPackagesForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> tuple[Path, ...]: ...
 
 
 class _AssembleTimedSpanOutputsForProfile(Protocol):
