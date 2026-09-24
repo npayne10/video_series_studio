@@ -694,6 +694,23 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def start(
+        self,
+        task_id: str,
+        *,
+        production_package: Path | None = None,
+    ) -> ProductionExecutionResult:
+        status = self.timed_span_acceptance_status_for_profile(
+            task_id,
+            profile="production",
+        )
+        if status.applicable and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED:
+            raise ProductionExecutionError(
+                "Dynamic timed-span Shots cannot use monolithic provider execution. "
+                "Use the governed Phase 20.18.2.3.5 functional-acceptance span packages."
+            )
+        return super().start(task_id, production_package=production_package)
+
     def start_for_profile(
         self,
         task_id: str,
