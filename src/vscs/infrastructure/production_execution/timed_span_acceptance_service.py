@@ -17,7 +17,7 @@ from vscs.application.production_execution import (
     TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceStore,
 )
-from vscs.infrastructure.production_execution.timed_span_acceptance_runtime import (
+from .timed_span_acceptance_runtime import (
     GovernedSpanAssemblyRuntime,
     GovernedSpanAssemblyRuntimeError,
 )
