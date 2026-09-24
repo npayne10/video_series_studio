@@ -17,6 +17,11 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
+from .timed_span_acceptance_runtime import (
+    GovernedSpanAssemblyRuntime,
+    GovernedSpanAssemblyRuntimeError,
+    SpanMediaObservation,
+)
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
@@ -42,6 +47,8 @@ __all__ = [
     "GovernedProviderOutputs",
     "GovernedShotBoundaryRuntime",
     "GovernedShotBoundaryRuntimeError",
+    "GovernedSpanAssemblyRuntime",
+    "GovernedSpanAssemblyRuntimeError",
     "HardwareShotCapability",
     "HardwareShotCapabilityError",
     "LTX23V721DeploymentAssurance",
@@ -56,6 +63,7 @@ __all__ = [
     "LocalProductionPackageCompilationService",
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
+    "SpanMediaObservation",
     "VideoBoundaryObservation",
     "capability_for_vram",
 ]
