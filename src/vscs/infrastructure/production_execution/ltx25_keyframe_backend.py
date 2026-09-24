@@ -9,6 +9,8 @@ from pathlib import Path
 from vscs.application.production_execution import (
     CompiledProductionPackage,
     GovernedClosingBoundaryFrame,
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
     GovernedShotBoundaryError,
     GovernedShotBoundaryStore,
     GovernedShotKeyframeError,
@@ -19,6 +21,8 @@ from vscs.application.production_execution import (
     ProviderAudioPolicy,
     ProviderAudioPolicyError,
     ShotBoundaryAuthorityStatus,
+    TimedSpanAcceptanceState,
+    TimedSpanAcceptanceStatus,
     normalize_execution_profile,
     provider_video_rebaseline_contract,
     resolve_provider_audio_policy,
@@ -54,6 +58,10 @@ from .package_compilation import (
 )
 from .provider_audio_runtime import ProviderAudioGovernanceRuntime
 from .shot_boundary_runtime import GovernedShotBoundaryRuntime, GovernedShotBoundaryRuntimeError
+from .timed_span_acceptance_service import (
+    TimedSpanFunctionalAcceptanceService,
+    TimedSpanFunctionalAcceptanceServiceError,
+)
 
 LTX25_KEYFRAME_WORKFLOW_ID = "ltx25_i2v_keyframe_v1"
 LTX25_KEYFRAME_WORKFLOW_FILE = "workflows/ltx25_i2v_keyframe_v1_api.json"
@@ -227,7 +235,23 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
             ) from exc
 
     def _comfyui_payload(self, compiled):  # type: ignore[no-untyped-def, override]
-        content = LocalProductionPackageCompilationService._comfyui_payload(compiled)
+        dynamic_spans = False
+        if compiled.internal_render_spans is not None:
+            try:
+                span_plan = GovernedInternalRenderSpanPlan.from_dict(
+                    compiled.internal_render_spans
+                )
+                dynamic_spans = span_plan.span_count > 1
+            except GovernedInternalRenderSpanError as exc:
+                raise LocalProductionPackageCompilationError(
+                    f"LTX-2.5 Candidate C internal span authority is invalid: {exc}"
+                ) from exc
+
+        content = (
+            LocalProductionPackageCompilationService._base_payload_content(compiled)
+            if dynamic_spans
+            else LocalProductionPackageCompilationService._comfyui_payload(compiled)
+        )
         boundary_store = GovernedShotBoundaryStore(self.project_directory)
         try:
             opening = boundary_store.resolve_opening(
@@ -306,15 +330,29 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         )
         audio_policy = resolve_provider_audio_policy(compiled.production_authority)
         content["provider_audio_policy"] = audio_policy.to_dict()
-        content["provider_execution_plan"] = {
-            "provider": "ltx-2.5",
-            "mode": "monolithic",
-            "governed_frame_count": compiled.frame_count,
-            "provider_frame_count": provider_frames,
-            "governed_duration_seconds": compiled.frame_count / compiled.frames_per_second,
-            "hidden_segmentation": False,
-            "keyframe_conditioning": "first_frame_i2v",
-        }
+        if dynamic_spans:
+            content["status"] = "TIMED_SPAN_ACCEPTANCE_REQUIRED"
+            content["provider_execution_plan"] = {
+                "provider": "ltx-2.5",
+                "mode": "governed_multi_span_functional_acceptance",
+                "governed_frame_count": compiled.frame_count,
+                "provider_frame_count": provider_frames,
+                "governed_duration_seconds": compiled.frame_count / compiled.frames_per_second,
+                "hidden_segmentation": True,
+                "keyframe_conditioning": "per_span_governed_keyframe_i2v",
+                "automatic_provider_submission": False,
+                "monolithic_submission_permitted": False,
+            }
+        else:
+            content["provider_execution_plan"] = {
+                "provider": "ltx-2.5",
+                "mode": "monolithic",
+                "governed_frame_count": compiled.frame_count,
+                "provider_frame_count": provider_frames,
+                "governed_duration_seconds": compiled.frame_count / compiled.frames_per_second,
+                "hidden_segmentation": False,
+                "keyframe_conditioning": "first_frame_i2v",
+            }
         content.pop("reference_plan", None)
         manifest = content.get("_vscs_manifest")
         if not isinstance(manifest, dict):
@@ -325,7 +363,9 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         payload.pop("_vscs_manifest", None)
         manifest["package_fingerprint"] = self._fingerprint(payload)
         manifest["compiler"] = (
-            "VSCS Phase 20.18.2.2i / LTX-2.5 Candidate C + governed shot boundaries"
+            "VSCS Phase 20.18.2.3.5 / LTX-2.5 Candidate C timed-span acceptance"
+            if dynamic_spans
+            else "VSCS Phase 20.18.2.2i / LTX-2.5 Candidate C + governed shot boundaries"
         )
         return content
 
