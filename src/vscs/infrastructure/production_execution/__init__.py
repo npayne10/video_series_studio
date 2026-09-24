@@ -17,6 +17,10 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
+from .timed_span_acceptance_service import (
+    TimedSpanFunctionalAcceptanceService,
+    TimedSpanFunctionalAcceptanceServiceError,
+)
 from .timed_span_acceptance_runtime import (
     GovernedSpanAssemblyRuntime,
     GovernedSpanAssemblyRuntimeError,
@@ -64,6 +68,8 @@ __all__ = [
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
     "SpanMediaObservation",
+    "TimedSpanFunctionalAcceptanceService",
+    "TimedSpanFunctionalAcceptanceServiceError",
     "VideoBoundaryObservation",
     "capability_for_vram",
 ]
