@@ -436,15 +436,24 @@ class TimedSpanAcceptanceEvaluator:
 
         approved = 0
         qc_passed = 0
+        requirement_ids = tuple(
+            requirement.requirement_id for requirement in requirements.requirements
+        )
+        pending_keyframes: list[str] = []
+        pending_qc: list[str] = []
         for requirement in requirements.requirements:
             try:
                 self.keyframes.require_approved(requirement)
                 approved += 1
             except GovernedIntroductionKeyframeError:
+                pending_keyframes.append(requirement.requirement_id)
+                pending_qc.append(requirement.requirement_id)
                 continue
             qc = self.acceptance.qc_for_requirement(requirement.requirement_id)
             if qc is not None and self._qc_matches(requirement, qc) and qc.passed:
                 qc_passed += 1
+            else:
+                pending_qc.append(requirement.requirement_id)
 
         assembly = self.acceptance.assembly_for_shot(shot_id)
         assembly_valid = assembly is not None and self._assembly_matches(spans, assembly)
@@ -463,6 +472,9 @@ class TimedSpanAcceptanceEvaluator:
                     f"{requirements.requirement_count - approved} governed Introduction "
                     "Keyframe approval(s) remain."
                 ),
+                requirement_ids=requirement_ids,
+                pending_keyframe_requirement_ids=tuple(pending_keyframes),
+                pending_qc_requirement_ids=tuple(pending_qc),
             )
         if not assembly_valid:
             return TimedSpanAcceptanceStatus(
@@ -475,6 +487,9 @@ class TimedSpanAcceptanceEvaluator:
                 qc_passed_count=qc_passed,
                 assembly_present=False,
                 message="Normalized span outputs must be verified and assembled.",
+                requirement_ids=requirement_ids,
+                pending_keyframe_requirement_ids=tuple(pending_keyframes),
+                pending_qc_requirement_ids=tuple(pending_qc),
             )
         if qc_passed < requirements.requirement_count:
             return TimedSpanAcceptanceStatus(
@@ -491,6 +506,9 @@ class TimedSpanAcceptanceEvaluator:
                     f"{requirements.requirement_count - qc_passed} visual introduction-boundary "
                     "QC approval(s) remain."
                 ),
+                requirement_ids=requirement_ids,
+                pending_keyframe_requirement_ids=tuple(pending_keyframes),
+                pending_qc_requirement_ids=tuple(pending_qc),
             )
         return TimedSpanAcceptanceStatus(
             shot_id=shot_id,
@@ -503,6 +521,9 @@ class TimedSpanAcceptanceEvaluator:
             assembly_present=True,
             final_frame_count=assembly.final_frame_count,
             message="Timed-span functional acceptance passed.",
+            requirement_ids=requirement_ids,
+            pending_keyframe_requirement_ids=(),
+            pending_qc_requirement_ids=(),
         )
 
     @staticmethod
