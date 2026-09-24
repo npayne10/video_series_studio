@@ -411,7 +411,7 @@ def test_provider_boundary_validates_activation_then_stays_fail_closed_for_orche
 
     with pytest.raises(
         LocalProductionPackageCompilationError,
-        match="20.18.2.3.3 compiled timed canonical-reference activation successfully",
+        match=r"20\.18\.2\.3\.3 compiled timed canonical-reference activation successfully",
     ):
         LocalProductionPackageCompilationService._comfyui_payload(
             _compiled_package(
