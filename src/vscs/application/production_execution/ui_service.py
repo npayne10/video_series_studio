@@ -14,6 +14,7 @@ from .profiles import normalize_execution_profile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
 from .shot_boundary_keyframes import GovernedClosingBoundaryFrame, ShotBoundaryAuthorityStatus
 from .telemetry import ProductionTelemetrySnapshot
+from .timed_span_acceptance import TimedSpanAcceptanceStatus
 
 
 class ProductionExecutionError(RuntimeError):
@@ -83,6 +84,106 @@ class ProductionExecutionBackend(Protocol):
         authorized_by: str,
         reason: str,
     ) -> GovernedRetryOverrideStatus: ...
+
+    def timed_span_acceptance_status(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "inspecting timed-span functional acceptance")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "timed_span_acceptance_status_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not expose timed-span functional acceptance."
+            )
+        return cast(_TimedSpanStatusForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def approve_introduction_keyframe(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        image_path: Path,
+        source_boundary_image_path: Path,
+        approved_by: str,
+        approved_at: str,
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "approving an Introduction Keyframe")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "approve_introduction_keyframe_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support Introduction Keyframe approval."
+            )
+        return cast(_ApproveIntroductionKeyframeForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            requirement_id=requirement_id,
+            image_path=Path(image_path),
+            source_boundary_image_path=Path(source_boundary_image_path),
+            approved_by=approved_by,
+            approved_at=approved_at,
+        )
+
+    def assemble_timed_span_outputs(
+        self,
+        task_id: str,
+        *,
+        span_paths: tuple[Path, ...],
+        output_path: Path,
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "assembling governed timed-span outputs")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "assemble_timed_span_outputs_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support governed timed-span assembly."
+            )
+        return cast(_AssembleTimedSpanOutputsForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            span_paths=tuple(Path(path) for path in span_paths),
+            output_path=Path(output_path),
+        )
+
+    def record_timed_span_qc(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        absent_before_boundary: bool,
+        present_from_target_frame: bool,
+        source_continuity_preserved: bool,
+        no_unapproved_assets: bool,
+        approved_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "recording timed-span visual QC")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(self.backend, "record_timed_span_qc_for_profile", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support timed-span visual QC."
+            )
+        return cast(_RecordTimedSpanQcForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            requirement_id=requirement_id,
+            absent_before_boundary=absent_before_boundary,
+            present_from_target_frame=present_from_target_frame,
+            source_continuity_preserved=source_continuity_preserved,
+            no_unapproved_assets=no_unapproved_assets,
+            approved_by=approved_by,
+            notes=notes,
+        )
 
     def package_status(
         self,
@@ -157,6 +258,51 @@ class _PublishClosingBoundaryForProfile(Protocol):
         profile: str,
         published_by: str,
     ) -> GovernedClosingBoundaryFrame: ...
+
+
+class _TimedSpanStatusForProfile(Protocol):
+    def __call__(self, task_id: str, *, profile: str) -> TimedSpanAcceptanceStatus: ...
+
+
+class _ApproveIntroductionKeyframeForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        image_path: Path,
+        source_boundary_image_path: Path,
+        approved_by: str,
+        approved_at: str,
+    ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _AssembleTimedSpanOutputsForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        span_paths: tuple[Path, ...],
+        output_path: Path,
+    ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _RecordTimedSpanQcForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        absent_before_boundary: bool,
+        present_from_target_frame: bool,
+        source_continuity_preserved: bool,
+        no_unapproved_assets: bool,
+        approved_by: str,
+        notes: str,
+    ) -> TimedSpanAcceptanceStatus: ...
 
 
 class _RetryOverrideStatusOperation(Protocol):
