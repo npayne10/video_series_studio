@@ -217,9 +217,14 @@ class GovernedSpanAssemblyRuntime:
                     f"Introduction Keyframe authority is missing or stale: {exc}"
                 ) from exc
 
-            boundary_image = store._resolve_project_file(  # noqa: SLF001
-                keyframe.source_boundary_image_path
-            )
+            boundary_image = Path(keyframe.source_boundary_image_path).expanduser()
+            if not boundary_image.is_absolute():
+                boundary_image = self.project_directory / boundary_image
+            boundary_image = boundary_image.resolve(strict=False)
+            if not boundary_image.is_relative_to(self.project_directory):
+                raise GovernedSpanAssemblyRuntimeError(
+                    "Approved internal boundary evidence must remain inside the VSCS project"
+                )
             video_hash = self._decoded_rgb_sha256(
                 source_observation.path,
                 frame_index=source_span.frame_count - 1,
