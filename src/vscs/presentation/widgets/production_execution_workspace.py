@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -32,7 +39,62 @@ from vscs.application.production_execution import (
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
     ShotBoundaryAuthorityStatus,
+    TimedSpanAcceptanceState,
+    TimedSpanAcceptanceStatus,
 )
+
+
+class TimedSpanQcDialog(QDialog):
+    """Collect explicit human visual QC for one internal introduction boundary."""
+
+    def __init__(self, requirement_id: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Timed Span Visual QC")
+        self.requirement_id = requirement_id
+
+        layout = QVBoxLayout(self)
+        guidance = QLabel(
+            "Confirm each visual criterion against the assembled Shot. Acceptance is "
+            "recorded only when every criterion is explicitly checked."
+        )
+        guidance.setWordWrap(True)
+        layout.addWidget(guidance)
+
+        form = QFormLayout()
+        self.actor = QLineEdit()
+        self.actor.setPlaceholderText("Human reviewer")
+        form.addRow("Reviewed by", self.actor)
+
+        self.absent_before = QCheckBox("Introduced asset is absent before the governed boundary")
+        self.present_from = QCheckBox("Introduced asset is present from the target frame")
+        self.continuity = QCheckBox("Source visual continuity is preserved across the boundary")
+        self.no_unapproved = QCheckBox("No unapproved asset appears at the transition")
+        form.addRow(self.absent_before)
+        form.addRow(self.present_from)
+        form.addRow(self.continuity)
+        form.addRow(self.no_unapproved)
+
+        self.notes = QTextEdit()
+        self.notes.setMaximumHeight(90)
+        form.addRow("Notes", self.notes)
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def values(self) -> tuple[bool, bool, bool, bool, str, str]:
+        return (
+            self.absent_before.isChecked(),
+            self.present_from.isChecked(),
+            self.continuity.isChecked(),
+            self.no_unapproved.isChecked(),
+            self.actor.text().strip(),
+            self.notes.toPlainText().strip(),
+        )
 
 
 class ProductionExecutionWorkspace(QWidget):
@@ -53,6 +115,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._package_status: ProductionPackageStatus | None = None
         self._retry_status: GovernedRetryOverrideStatus | None = None
         self._boundary_status: ShotBoundaryAuthorityStatus | None = None
+        self._timed_span_status: TimedSpanAcceptanceStatus | None = None
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(self.POLL_INTERVAL_MS)
         self._poll_timer.timeout.connect(self._poll_live_status)
@@ -93,6 +156,36 @@ class ProductionExecutionWorkspace(QWidget):
         boundary_row.addWidget(self.opening_boundary_state, 1)
         boundary_row.addWidget(self.closing_boundary_state, 1)
         boundary_row.addWidget(self.publish_boundary_button)
+
+        self.timed_span_group = QGroupBox("Timed Asset / Span Functional Acceptance")
+        timed_span_layout = QGridLayout(self.timed_span_group)
+        self.timed_span_state = QLabel("Timed Span Acceptance: -")
+        self.timed_span_state.setWordWrap(True)
+        self.timed_span_detail = QLabel(
+            "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
+        )
+        self.timed_span_detail.setWordWrap(True)
+        self.approve_introduction_keyframe_button = QPushButton(
+            "Approve Introduction Keyframe"
+        )
+        self.assemble_span_outputs_button = QPushButton("Verify & Assemble Span Outputs")
+        self.record_span_qc_button = QPushButton("Record Visual QC")
+        for button in (
+            self.approve_introduction_keyframe_button,
+            self.assemble_span_outputs_button,
+            self.record_span_qc_button,
+        ):
+            button.setEnabled(False)
+        self.approve_introduction_keyframe_button.clicked.connect(
+            self._approve_introduction_keyframe
+        )
+        self.assemble_span_outputs_button.clicked.connect(self._assemble_span_outputs)
+        self.record_span_qc_button.clicked.connect(self._record_span_qc)
+        timed_span_layout.addWidget(self.timed_span_state, 0, 0, 1, 3)
+        timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
+        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 2, 0)
+        timed_span_layout.addWidget(self.assemble_span_outputs_button, 2, 1)
+        timed_span_layout.addWidget(self.record_span_qc_button, 2, 2)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -179,6 +272,7 @@ class ProductionExecutionWorkspace(QWidget):
         layout.addWidget(guidance)
         layout.addLayout(package_row)
         layout.addLayout(boundary_row)
+        layout.addWidget(self.timed_span_group)
         layout.addLayout(buttons)
         layout.addWidget(self.table, 1)
         layout.addWidget(self.monitor_group)
