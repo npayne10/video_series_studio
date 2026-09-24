@@ -452,6 +452,63 @@ class GovernedIntroductionKeyframe:
     status: str = "approved"
     schema_version: str = "1.0"
 
+    def __post_init__(self) -> None:
+        for field_name in (
+            "keyframe_id",
+            "requirement_id",
+            "boundary_id",
+            "target_span_id",
+            "image_path",
+            "image_sha256",
+            "source_boundary_image_path",
+            "source_boundary_image_sha256",
+            "approved_by",
+            "approved_at",
+        ):
+            value = str(getattr(self, field_name)).strip()
+            if not value:
+                raise GovernedIntroductionKeyframeError(
+                    f"Governed Introduction Keyframe requires {field_name}"
+                )
+            if field_name.endswith("sha256"):
+                value = value.lower()
+            object.__setattr__(self, field_name, value)
+        shot_id = self.shot_id.strip().upper()
+        if not shot_id:
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe requires shot_id"
+            )
+        object.__setattr__(self, "shot_id", shot_id)
+        if self.target_global_frame_index < 0:
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe target frame cannot be negative"
+            )
+        for field_name in ("active_reference_ids", "introduced_reference_ids"):
+            values = tuple(str(value).strip() for value in getattr(self, field_name))
+            if any(not value for value in values):
+                raise GovernedIntroductionKeyframeError(
+                    f"Governed Introduction Keyframe {field_name} cannot contain blanks"
+                )
+            if len(set(values)) != len(values):
+                raise GovernedIntroductionKeyframeError(
+                    f"Governed Introduction Keyframe {field_name} cannot contain duplicates"
+                )
+            object.__setattr__(self, field_name, values)
+        if not set(self.introduced_reference_ids).issubset(set(self.active_reference_ids)):
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe introduced references must be active"
+            )
+        criteria = tuple(str(value).strip() for value in self.acceptance_criteria)
+        if any(not value for value in criteria):
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe acceptance criteria cannot contain blanks"
+            )
+        if len(set(criteria)) != len(criteria):
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe acceptance criteria cannot contain duplicates"
+            )
+        object.__setattr__(self, "acceptance_criteria", criteria)
+
     @property
     def approved(self) -> bool:
         return (
@@ -511,6 +568,7 @@ class GovernedIntroductionKeyframeStore:
             raise GovernedIntroductionKeyframeError(
                 f"Governed Introduction Keyframe {record.keyframe_id} is not approved."
             )
+        self._require_identity(record)
         self._require_matches(record, requirement)
         required = set(INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA)
         missing = sorted(required - set(record.acceptance_criteria))
@@ -532,6 +590,11 @@ class GovernedIntroductionKeyframeStore:
         record: GovernedIntroductionKeyframe,
         requirement: IntroductionKeyframeRequirement,
     ) -> GovernedIntroductionKeyframe:
+        if not record.approved:
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe must be human-approved before registration"
+            )
+        self._require_identity(record)
         self._require_matches(record, requirement)
         self._verify_file(record.image_path, record.image_sha256, "Introduction Keyframe")
         self._verify_file(
@@ -600,6 +663,21 @@ class GovernedIntroductionKeyframeStore:
             approved_at=approved_at.strip(),
             acceptance_criteria=acceptance_criteria,
         )
+
+    @staticmethod
+    def _require_identity(record: GovernedIntroductionKeyframe) -> None:
+        payload = {
+            "requirement_id": record.requirement_id,
+            "image_sha256": record.image_sha256,
+            "source_boundary_image_sha256": record.source_boundary_image_sha256,
+            "approved_by": record.approved_by,
+            "approved_at": record.approved_at,
+        }
+        expected = f"GIK-{_fingerprint(payload)[:16].upper()}"
+        if record.keyframe_id != expected:
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe identity does not match approved content"
+            )
 
     def _require_matches(
         self,
@@ -728,7 +806,7 @@ def _string_tuple(
     value = raw.get(key, [])
     if not isinstance(value, list | tuple):
         raise GovernedIntroductionKeyframeError(f"{key} must be an array")
-    return tuple(str(item).strip() for item in value if str(item).strip())
+    return tuple(str(item).strip() for item in value)
 
 
 def _fingerprint(value: object) -> str:
