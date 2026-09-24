@@ -7,15 +7,15 @@ from .hardware_shot_capability import (
     capability_for_vram,
 )
 from .ltx23_v721_backend import LTX23V721DeploymentAssurance
+from .ltx25_keyframe_backend import (
+    LocalComfyUIProductionExecutionBackend,
+    LTX25GovernedKeyframeDeploymentAssurance,
+)
 from .ltx25_span_conditioning import (
     LTX25SpanConditioning,
     LTX25SpanConditioningError,
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
-)
-from .ltx25_keyframe_backend import (
-    LocalComfyUIProductionExecutionBackend,
-    LTX25GovernedKeyframeDeploymentAssurance,
 )
 from .package_compilation import (
     ComfyUIInputAssuranceReport,

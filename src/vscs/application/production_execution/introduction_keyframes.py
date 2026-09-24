@@ -171,9 +171,11 @@ class IntroductionKeyframeRequirement:
                 "Introduction-keyframe requirement identity does not match governed content"
             )
         supplied_count = raw.get("target_frame_count")
-        if supplied_count is not None and _integer_value(
-            supplied_count, "target_frame_count"
-        ) != requirement.target_frame_count:
+        if (
+            supplied_count is not None
+            and _integer_value(supplied_count, "target_frame_count")
+            != requirement.target_frame_count
+        ):
             raise GovernedIntroductionKeyframeError(
                 "Introduction-keyframe target_frame_count does not match target interval"
             )
@@ -346,9 +348,10 @@ class IntroductionKeyframeRequirementPlan:
             provider_neutral=provider_neutral,
         )
         supplied_count = raw.get("requirement_count")
-        if supplied_count is not None and _integer_value(
-            supplied_count, "requirement_count"
-        ) != plan.requirement_count:
+        if (
+            supplied_count is not None
+            and _integer_value(supplied_count, "requirement_count") != plan.requirement_count
+        ):
             raise GovernedIntroductionKeyframeError(
                 "requirement_count does not match persisted requirements"
             )
@@ -381,9 +384,7 @@ class GovernedIntroductionKeyframeRequirementCompiler:
             raise GovernedIntroductionKeyframeError(
                 "Span and reference-activation counts do not match"
             )
-        activation_by_span = {
-            item.span_id: item for item in activation.activations
-        }
+        activation_by_span = {item.span_id: item for item in activation.activations}
         requirements: list[IntroductionKeyframeRequirement] = []
         for boundary in spans.boundaries:
             target = next(
@@ -574,8 +575,7 @@ class GovernedIntroductionKeyframeStore:
         missing = sorted(required - set(record.acceptance_criteria))
         if missing:
             raise GovernedIntroductionKeyframeError(
-                "Governed Introduction Keyframe approval does not cover: "
-                + ", ".join(missing)
+                "Governed Introduction Keyframe approval does not cover: " + ", ".join(missing)
             )
         self._verify_file(record.image_path, record.image_sha256, "Introduction Keyframe")
         self._verify_file(
@@ -754,12 +754,10 @@ class GovernedIntroductionKeyframeStore:
             target_global_frame_index=_required_int(raw, "target_global_frame_index"),
             image_path=str(raw.get("image_path") or "").strip(),
             image_sha256=str(raw.get("image_sha256") or "").strip().lower(),
-            source_boundary_image_path=str(
-                raw.get("source_boundary_image_path") or ""
-            ).strip(),
-            source_boundary_image_sha256=str(
-                raw.get("source_boundary_image_sha256") or ""
-            ).strip().lower(),
+            source_boundary_image_path=str(raw.get("source_boundary_image_path") or "").strip(),
+            source_boundary_image_sha256=str(raw.get("source_boundary_image_sha256") or "")
+            .strip()
+            .lower(),
             active_reference_ids=_string_tuple(raw, "active_reference_ids"),
             introduced_reference_ids=_string_tuple(raw, "introduced_reference_ids"),
             approved_by=str(raw.get("approved_by") or "").strip(),
@@ -793,9 +791,7 @@ def _integer_value(value: object, field_name: str) -> int:
         try:
             return int(value.strip())
         except ValueError as exc:
-            raise GovernedIntroductionKeyframeError(
-                f"{field_name} must be an integer"
-            ) from exc
+            raise GovernedIntroductionKeyframeError(f"{field_name} must be an integer") from exc
     raise GovernedIntroductionKeyframeError(f"{field_name} must be an integer")
 
 

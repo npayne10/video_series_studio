@@ -28,14 +28,14 @@ from .governed_reference_compilation import (
     GovernedReferenceCompilationError,
     GovernedReferenceCompiler,
 )
-from .introduction_keyframes import (
-    GovernedIntroductionKeyframeError,
-    GovernedIntroductionKeyframeRequirementCompiler,
-)
 from .internal_render_spans import (
     GovernedInternalRenderSpanCompiler,
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
+)
+from .introduction_keyframes import (
+    GovernedIntroductionKeyframeError,
+    GovernedIntroductionKeyframeRequirementCompiler,
 )
 from .provider_prompt import ProductionProviderPromptCompiler, ProductionProviderPromptError
 from .timed_reference_activation import (
@@ -176,9 +176,7 @@ class CompiledProductionPackage:
         if self.reference_plan is not None:
             payload["reference_plan"] = self.reference_plan
         if self.introduction_keyframe_requirements is not None:
-            payload["introduction_keyframe_requirements"] = (
-                self.introduction_keyframe_requirements
-            )
+            payload["introduction_keyframe_requirements"] = self.introduction_keyframe_requirements
         return payload
 
 
@@ -442,9 +440,7 @@ class ProductionPackageCompilerService:
             return None
         try:
             spans = GovernedInternalRenderSpanPlan.from_dict(internal_render_spans)
-            activation = TimedCanonicalReferenceActivationPlan.from_dict(
-                timed_reference_activation
-            )
+            activation = TimedCanonicalReferenceActivationPlan.from_dict(timed_reference_activation)
             plan = GovernedIntroductionKeyframeRequirementCompiler().compile(
                 spans,
                 activation,

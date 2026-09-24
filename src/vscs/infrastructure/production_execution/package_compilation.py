@@ -8,13 +8,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from vscs.application.production_execution.introduction_keyframes import (
-    GovernedIntroductionKeyframeError,
-    IntroductionKeyframeRequirementPlan,
-)
 from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
+)
+from vscs.application.production_execution.introduction_keyframes import (
+    GovernedIntroductionKeyframeError,
+    IntroductionKeyframeRequirementPlan,
 )
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,

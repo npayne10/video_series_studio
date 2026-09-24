@@ -335,9 +335,11 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
     ) -> dict[str, object]:
         """Compile approved Phase 20.18.2.3.4 span conditioning without executing it."""
         try:
-            return LTX25SpanProviderConditioningCompiler(self.project_directory).compile(
-                compiled
-            ).to_dict()
+            return (
+                LTX25SpanProviderConditioningCompiler(self.project_directory)
+                .compile(compiled)
+                .to_dict()
+            )
         except LTX25SpanConditioningError as exc:
             raise LocalProductionPackageCompilationError(
                 f"LTX-2.5 governed span conditioning cannot compile: {exc}"

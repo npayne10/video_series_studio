@@ -6,16 +6,15 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
+from vscs.application.production_execution.internal_render_spans import (
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+)
 from vscs.application.production_execution.introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
     IntroductionKeyframeRequirementPlan,
-)
-from vscs.application.production_execution.internal_render_spans import (
-    GovernedInternalRenderSpanError,
-    GovernedInternalRenderSpanPlan,
 )
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,
@@ -312,9 +311,7 @@ class LTX25SpanProviderConditioningCompiler:
             ) from exc
 
         activation_by_span = {item.span_id: item for item in activation.activations}
-        requirement_by_target = {
-            item.target_span_id: item for item in requirements.requirements
-        }
+        requirement_by_target = {item.target_span_id: item for item in requirements.requirements}
         conditioned: list[LTX25SpanConditioning] = []
         for span in spans.spans:
             active = activation_by_span.get(span.span_id)

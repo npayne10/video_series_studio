@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 
 from vscs.application.production_execution import (
+    GovernedInternalRenderSpanCompiler,
+    GovernedInternalRenderSpanPlan,
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeRequirementCompiler,
     GovernedIntroductionKeyframeStore,
-    GovernedInternalRenderSpanCompiler,
-    GovernedInternalRenderSpanPlan,
     IntroductionKeyframeRequirement,
     IntroductionKeyframeRequirementPlan,
     TimedCanonicalReferenceActivationCompiler,
@@ -327,9 +327,7 @@ def test_candidate_c_exposes_governed_span_conditioning_compilation(
 
     payload = CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         tmp_path
-    ).compile_span_provider_conditioning(
-        _compiled(requirements=requirements.to_dict())
-    )
+    ).compile_span_provider_conditioning(_compiled(requirements=requirements.to_dict()))
 
     assert payload["provider_id"] == "ltx-2.5"
     assert payload["mode"] == "governed_multi_span_keyframe_i2v"
@@ -345,7 +343,9 @@ def test_ltx25_conditioning_fails_closed_without_approved_introduction_keyframe(
 ) -> None:
     _, _, _, requirements = _authority()
 
-    with pytest.raises(LTX25SpanConditioningError, match="no usable governed Introduction Keyframe"):
+    with pytest.raises(
+        LTX25SpanConditioningError, match="no usable governed Introduction Keyframe"
+    ):
         LTX25SpanProviderConditioningCompiler(tmp_path).compile(
             _compiled(requirements=requirements.to_dict())
         )
