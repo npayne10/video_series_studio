@@ -391,6 +391,14 @@ class _FakeAssemblyRuntime(GovernedSpanAssemblyRuntime):
         super().__init__(project_directory)
         self.observations = observations
 
+    def _verify_boundary_evidence(
+        self,
+        compiled_package: dict[str, object],
+        spans: object,
+        observations: tuple[SpanMediaObservation, ...],
+    ) -> None:
+        del compiled_package, spans, observations
+
     def _observe(self, path: Path) -> SpanMediaObservation:
         key = str(Path(path).resolve(strict=False))
         observation = self.observations.get(key)
@@ -408,6 +416,84 @@ class _FakeAssemblyRuntime(GovernedSpanAssemblyRuntime):
             width=1280,
             height=720,
             frames_per_second=24,
+        )
+
+
+class _BoundaryEvidenceRuntime(_FakeAssemblyRuntime):
+    def __init__(
+        self,
+        project_directory: Path,
+        observations: dict[str, SpanMediaObservation],
+        *,
+        boundary_matches: bool,
+    ) -> None:
+        super().__init__(project_directory, observations)
+        self.boundary_matches = boundary_matches
+
+    def _verify_boundary_evidence(
+        self,
+        compiled_package: dict[str, object],
+        spans: object,
+        observations: tuple[SpanMediaObservation, ...],
+    ) -> None:
+        from vscs.application.production_execution import GovernedInternalRenderSpanPlan
+
+        assert isinstance(spans, GovernedInternalRenderSpanPlan)
+        super(_FakeAssemblyRuntime, self)._verify_boundary_evidence(  # type: ignore[misc]
+            compiled_package,  # type: ignore[arg-type]
+            spans,
+            observations,
+        )
+
+    def _decoded_rgb_sha256(
+        self,
+        path: Path,
+        *,
+        frame_index: int | None,
+    ) -> str:
+        name = Path(path).name
+        if name == "span1.mp4" and frame_index == 95:
+            return "same-boundary-pixels"
+        if name == "span-001-frame-95.png" and frame_index is None:
+            return "same-boundary-pixels" if self.boundary_matches else "wrong-boundary-pixels"
+        return f"pixels-{name}-{frame_index}"
+
+
+def test_assembly_requires_source_boundary_pixels_to_match_actual_frame_95(
+    tmp_path: Path,
+) -> None:
+    package_path, raw = _candidate_package(tmp_path)
+    _approve_intro(tmp_path, package_path)
+    span1 = tmp_path / "span1.mp4"
+    span2 = tmp_path / "span2.mp4"
+    span1.write_bytes(b"span1")
+    span2.write_bytes(b"span2")
+    observations = {
+        str(span1.resolve()): SpanMediaObservation(span1.resolve(), 96, 1280, 720, 24),
+        str(span2.resolve()): SpanMediaObservation(span2.resolve(), 48, 1280, 720, 24),
+    }
+
+    runtime = _BoundaryEvidenceRuntime(
+        tmp_path,
+        observations,
+        boundary_matches=True,
+    )
+    evidence = runtime.assemble(
+        raw,
+        (span1, span2),
+        tmp_path / "Media Output" / "boundary-verified.mp4",
+    )
+    assert evidence.final_frame_count == 144
+
+    with pytest.raises(GovernedSpanAssemblyRuntimeError, match="exact final frame"):
+        _BoundaryEvidenceRuntime(
+            tmp_path,
+            observations,
+            boundary_matches=False,
+        ).assemble(
+            raw,
+            (span1, span2),
+            tmp_path / "Media Output" / "boundary-rejected.mp4",
         )
 
 
