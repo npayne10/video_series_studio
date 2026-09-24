@@ -10,8 +10,10 @@ from vscs.application.production_execution import (
     GovernedIntroductionKeyframeRequirementCompiler,
     GovernedIntroductionKeyframeStore,
     GovernedInternalRenderSpanCompiler,
+    GovernedInternalRenderSpanPlan,
     IntroductionKeyframeRequirementPlan,
     TimedCanonicalReferenceActivationCompiler,
+    TimedCanonicalReferenceActivationPlan,
 )
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,
@@ -124,8 +126,8 @@ def _reference_plan() -> dict[str, object]:
 
 def _authority() -> tuple[
     TimedAssetPresencePlan,
-    object,
-    object,
+    GovernedInternalRenderSpanPlan,
+    TimedCanonicalReferenceActivationPlan,
     IntroductionKeyframeRequirementPlan,
 ]:
     timed = _timed()
