@@ -41,6 +41,7 @@ from .provider_prompt import ProductionProviderPromptCompiler, ProductionProvide
 from .timed_reference_activation import (
     TimedCanonicalReferenceActivationCompiler,
     TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
 )
 
 
