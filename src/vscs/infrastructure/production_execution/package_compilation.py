@@ -368,10 +368,10 @@ class LocalProductionPackageCompilationService:
             content["reference_plan"] = compiled.reference_plan
         if compiled.introduction_keyframe_requirements is not None:
             content["introduction_keyframe_requirements"] = (
-                    compiled.introduction_keyframe_requirements
-                )
+                compiled.introduction_keyframe_requirements
+            )
         fingerprint = cls._fingerprint(content)
-            content["_vscs_manifest"] = {
+        content["_vscs_manifest"] = {
             "task_id": compiled.task_id,
             "production_id": compiled.production_id,
             "episode_id": compiled.episode_id,
@@ -388,7 +388,6 @@ class LocalProductionPackageCompilationService:
             "compiler": "VSCS Phase 20.18.2",
         }
         return content
-
 
     @staticmethod
     def _manifest(raw: dict[str, Any]) -> dict[str, Any]:
