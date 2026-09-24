@@ -145,6 +145,7 @@ class GovernedSpanAssemblyRuntime:
             source_span_plan_fingerprint=spans.fingerprint,
             span_ids=tuple(span.span_id for span in spans.spans),
             span_paths=tuple(str(observation.path) for observation in observations),
+            span_sha256=tuple(self._sha256(observation.path) for observation in observations),
             span_frame_counts=tuple(observation.frame_count for observation in observations),
             final_path=str(destination),
             final_frame_count=final.frame_count,
