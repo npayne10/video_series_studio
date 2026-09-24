@@ -13,6 +13,7 @@ from typing import Any
 from .introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
+    IntroductionKeyframeRequirement,
     IntroductionKeyframeRequirementPlan,
 )
 from .internal_render_spans import (
@@ -528,7 +529,7 @@ class TimedSpanAcceptanceEvaluator:
 
     @staticmethod
     def make_qc_record(
-        requirement: Any,
+        requirement: IntroductionKeyframeRequirement,
         *,
         absent_before_boundary: bool,
         present_from_target_frame: bool,
@@ -555,7 +556,10 @@ class TimedSpanAcceptanceEvaluator:
         )
 
     @staticmethod
-    def _qc_matches(requirement: Any, record: TimedSpanVisualQCRecord) -> bool:
+    def _qc_matches(
+        requirement: IntroductionKeyframeRequirement,
+        record: TimedSpanVisualQCRecord,
+    ) -> bool:
         return (
             record.shot_id == requirement.shot_id
             and record.requirement_id == requirement.requirement_id
