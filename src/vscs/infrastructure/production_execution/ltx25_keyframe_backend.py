@@ -9,9 +9,9 @@ from pathlib import Path
 from vscs.application.production_execution import (
     CompiledProductionPackage,
     GovernedClosingBoundaryFrame,
-    GovernedIntroductionKeyframeError,
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
+    GovernedIntroductionKeyframeError,
     GovernedShotBoundaryError,
     GovernedShotBoundaryStore,
     GovernedShotKeyframeError,
@@ -34,16 +34,16 @@ from vscs.application.production_execution import (
 )
 from vscs.application.production_execution.provider_prompt import ProductionProviderPromptCompiler
 from vscs.application.production_tasks import ProductionTask
-from vscs.application.timed_asset_presence import (
-    TimedAssetPresenceError,
-    TimedAssetPresencePlan,
-)
 from vscs.application.provider_execution import DurableExecutionJob, ProviderExecutionOutput
 from vscs.application.rendering import RenderRequest
 from vscs.application.rendering.workflows import (
     WorkflowCompatibilityValidator,
     WorkflowManifest,
     WorkflowRegistry,
+)
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
 )
 from vscs.domain.generated_media import GeneratedMediaKind, GeneratedMediaState
 from vscs.infrastructure.rendering import (
@@ -247,9 +247,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         dynamic_spans = False
         if compiled.internal_render_spans is not None:
             try:
-                span_plan = GovernedInternalRenderSpanPlan.from_dict(
-                    compiled.internal_render_spans
-                )
+                span_plan = GovernedInternalRenderSpanPlan.from_dict(compiled.internal_render_spans)
                 dynamic_spans = span_plan.span_count > 1
                 if dynamic_spans:
                     self._validate_dynamic_span_authority(compiled, span_plan)
@@ -682,9 +680,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            return TimedSpanFunctionalAcceptanceService(
-                self.project_directory
-            ).build_span_packages(package.path)
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).build_span_packages(
+                package.path
+            )
         except (
             LocalProductionPackageCompilationError,
             TimedSpanFunctionalAcceptanceServiceError,
@@ -704,9 +702,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            return TimedSpanFunctionalAcceptanceService(
-                self.project_directory
-            ).assemble_outputs(
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).assemble_outputs(
                 package.path,
                 span_paths=span_paths,
                 output_path=output_path,
@@ -735,9 +731,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            return TimedSpanFunctionalAcceptanceService(
-                self.project_directory
-            ).record_visual_qc(
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).record_visual_qc(
                 package.path,
                 requirement_id=requirement_id,
                 absent_before_boundary=absent_before_boundary,

@@ -5,25 +5,26 @@ import json
 from pathlib import Path
 
 import pytest
+
 from vscs.application.production_execution import (
     INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
     KEYFRAME_ACCEPTANCE_CRITERIA,
     CompiledProductionPackage,
-    GovernedIntroductionKeyframeRequirementCompiler,
     GovernedInternalRenderSpanCompiler,
     GovernedInternalRenderSpanPlan,
+    GovernedIntroductionKeyframeRequirementCompiler,
     GovernedShotKeyframe,
     GovernedShotKeyframeStore,
+    IntroductionKeyframeRequirementPlan,
     ProductionExecutionCandidate,
     ProductionExecutionUiService,
     ProductionPackageCompilationState,
     ProductionPackageStatus,
-    IntroductionKeyframeRequirementPlan,
     TimedCanonicalReferenceActivationCompiler,
     TimedCanonicalReferenceActivationPlan,
     TimedSpanAcceptanceEvaluator,
-    TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceState,
+    TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceStore,
     TimedSpanAssemblyEvidence,
 )
@@ -416,9 +417,10 @@ def test_timed_span_package_builder_emits_97_and_49_frame_candidate_c_packages(
     assert second["governed_keyframe"]["acceptance_criteria"] == list(
         INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA
     )
-    assert first["_vscs_manifest"]["package_fingerprint"] != second["_vscs_manifest"][
-        "package_fingerprint"
-    ]
+    assert (
+        first["_vscs_manifest"]["package_fingerprint"]
+        != second["_vscs_manifest"]["package_fingerprint"]
+    )
     assert not (tmp_path / ".vscs" / "provider_executions").exists()
 
 
@@ -568,9 +570,10 @@ def test_assembly_runtime_proves_exact_144_frame_output(tmp_path: Path) -> None:
     assert evidence.span_frame_counts == (96, 48)
     assert evidence.final_frame_count == 144
     assert evidence.span_sha256 == (_sha(span1), _sha(span2))
-    assert TimedSpanAcceptanceStore(tmp_path).require_current_assembly(
-        "EP-001-SCN-001-SHT-002"
-    ) == evidence
+    assert (
+        TimedSpanAcceptanceStore(tmp_path).require_current_assembly("EP-001-SCN-001-SHT-002")
+        == evidence
+    )
 
 
 def test_assembly_runtime_rejects_untrimmed_provider_span(tmp_path: Path) -> None:
@@ -649,9 +652,9 @@ def test_candidate_c_dynamic_payload_compiles_for_acceptance_but_not_monolithic_
         motion_prompt="continue",
     )
 
-    payload = CurrentAuthorityLTX25GovernedKeyframeCompilationService(
-        tmp_path
-    )._comfyui_payload(compiled)
+    payload = CurrentAuthorityLTX25GovernedKeyframeCompilationService(tmp_path)._comfyui_payload(
+        compiled
+    )
 
     assert payload["status"] == "TIMED_SPAN_ACCEPTANCE_REQUIRED"
     assert payload["provider_execution_plan"]["mode"] == (
@@ -824,4 +827,3 @@ def test_workspace_preserves_start_for_monolithic_shot(qtbot, tmp_path: Path) ->
 
     assert "NOT_APPLICABLE" in workspace.timed_span_state.text()
     assert workspace.start_button.isEnabled()
-

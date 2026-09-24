@@ -66,6 +66,12 @@ from .telemetry import (
     ProductionTelemetrySnapshot,
     ProductionTelemetryState,
 )
+from .timed_reference_activation import (
+    SpanCanonicalReferenceActivation,
+    TimedCanonicalReferenceActivationCompiler,
+    TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
+)
 from .timed_span_acceptance import (
     TimedSpanAcceptanceError,
     TimedSpanAcceptanceEvaluator,
@@ -74,12 +80,6 @@ from .timed_span_acceptance import (
     TimedSpanAcceptanceStore,
     TimedSpanAssemblyEvidence,
     TimedSpanVisualQCRecord,
-)
-from .timed_reference_activation import (
-    SpanCanonicalReferenceActivation,
-    TimedCanonicalReferenceActivationCompiler,
-    TimedCanonicalReferenceActivationError,
-    TimedCanonicalReferenceActivationPlan,
 )
 from .ui_service import (
     ProductionExecutionBackend,

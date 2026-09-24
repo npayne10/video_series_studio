@@ -17,20 +17,6 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
-from .timed_span_acceptance_service import (
-    TimedSpanFunctionalAcceptanceService,
-    TimedSpanFunctionalAcceptanceServiceError,
-)
-from .timed_span_acceptance_packages import (
-    LTX25TimedSpanAcceptancePackageBuilder,
-    TimedSpanAcceptancePackageError,
-    TimedSpanAcceptancePackageSet,
-)
-from .timed_span_acceptance_runtime import (
-    GovernedSpanAssemblyRuntime,
-    GovernedSpanAssemblyRuntimeError,
-    SpanMediaObservation,
-)
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
@@ -47,6 +33,20 @@ from .shot_boundary_runtime import (
     GovernedShotBoundaryRuntime,
     GovernedShotBoundaryRuntimeError,
     VideoBoundaryObservation,
+)
+from .timed_span_acceptance_packages import (
+    LTX25TimedSpanAcceptancePackageBuilder,
+    TimedSpanAcceptancePackageError,
+    TimedSpanAcceptancePackageSet,
+)
+from .timed_span_acceptance_runtime import (
+    GovernedSpanAssemblyRuntime,
+    GovernedSpanAssemblyRuntimeError,
+    SpanMediaObservation,
+)
+from .timed_span_acceptance_service import (
+    TimedSpanFunctionalAcceptanceService,
+    TimedSpanFunctionalAcceptanceServiceError,
 )
 
 __all__ = [
@@ -74,9 +74,9 @@ __all__ = [
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
     "SpanMediaObservation",
-    "TimedSpanFunctionalAcceptanceService",
     "TimedSpanAcceptancePackageError",
     "TimedSpanAcceptancePackageSet",
+    "TimedSpanFunctionalAcceptanceService",
     "TimedSpanFunctionalAcceptanceServiceError",
     "VideoBoundaryObservation",
     "capability_for_vram",

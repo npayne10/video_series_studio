@@ -9,14 +9,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.internal_render_spans import (
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+)
 from vscs.application.production_execution.introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
     IntroductionKeyframeRequirementPlan,
-)
-from vscs.application.production_execution.internal_render_spans import (
-    GovernedInternalRenderSpanError,
-    GovernedInternalRenderSpanPlan,
 )
 from vscs.application.production_execution.timed_reference_activation import (
     TimedCanonicalReferenceActivationError,
@@ -139,12 +139,8 @@ class LTX25TimedSpanAcceptancePackageBuilder:
                 "Candidate C package has no approved opening governed keyframe"
             )
 
-        activation_by_span = {
-            item.span_id: item for item in activation.activations
-        }
-        requirement_by_span = {
-            item.target_span_id: item for item in requirements.requirements
-        }
+        activation_by_span = {item.span_id: item for item in activation.activations}
+        requirement_by_span = {item.target_span_id: item for item in requirements.requirements}
 
         task_id = str(manifest.get("task_id") or "TASK").strip()
         profile = str(root.get("profile") or "production").strip().lower()

@@ -12,14 +12,14 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.internal_render_spans import (
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+)
 from vscs.application.production_execution.introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
     IntroductionKeyframeRequirementPlan,
-)
-from vscs.application.production_execution.internal_render_spans import (
-    GovernedInternalRenderSpanError,
-    GovernedInternalRenderSpanPlan,
 )
 from vscs.application.production_execution.timed_span_acceptance import (
     TimedSpanAcceptanceError,
@@ -349,9 +349,7 @@ class GovernedSpanAssemblyRuntime:
                 return raw
             if isinstance(raw, str) and raw.isdigit() and int(raw) > 0:
                 return int(raw)
-        raise GovernedSpanAssemblyRuntimeError(
-            "ffprobe did not expose an exact video frame count"
-        )
+        raise GovernedSpanAssemblyRuntimeError("ffprobe did not expose an exact video frame count")
 
     @staticmethod
     def _fps(raw: object) -> int:
@@ -361,9 +359,7 @@ class GovernedSpanAssemblyRuntime:
         try:
             value = Fraction(text)
         except (ValueError, ZeroDivisionError) as exc:
-            raise GovernedSpanAssemblyRuntimeError(
-                f"Invalid ffprobe frame rate: {text}"
-            ) from exc
+            raise GovernedSpanAssemblyRuntimeError(f"Invalid ffprobe frame rate: {text}") from exc
         if value.denominator != 1 or value.numerator <= 0:
             raise GovernedSpanAssemblyRuntimeError(
                 f"Governed span assembly requires an integer frame rate, got {text}"
@@ -376,9 +372,7 @@ class GovernedSpanAssemblyRuntime:
             return raw
         if isinstance(raw, str) and raw.isdigit() and int(raw) > 0:
             return int(raw)
-        raise GovernedSpanAssemblyRuntimeError(
-            f"ffprobe returned invalid {field_name}: {raw!r}"
-        )
+        raise GovernedSpanAssemblyRuntimeError(f"ffprobe returned invalid {field_name}: {raw!r}")
 
     @staticmethod
     def _sha256(path: Path) -> str:

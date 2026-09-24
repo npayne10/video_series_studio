@@ -10,23 +10,24 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
+
+from .internal_render_spans import (
+    GovernedInternalRenderSpanError,
+    GovernedInternalRenderSpanPlan,
+)
 from .introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
     IntroductionKeyframeRequirement,
     IntroductionKeyframeRequirementPlan,
 )
-from .internal_render_spans import (
-    GovernedInternalRenderSpanError,
-    GovernedInternalRenderSpanPlan,
-)
 from .timed_reference_activation import (
     TimedCanonicalReferenceActivationError,
     TimedCanonicalReferenceActivationPlan,
-)
-from vscs.application.timed_asset_presence import (
-    TimedAssetPresenceError,
-    TimedAssetPresencePlan,
 )
 
 
@@ -206,9 +207,7 @@ class TimedSpanAssemblyEvidence:
             )
         span_hashes = tuple(value.strip().lower() for value in self.span_sha256)
         if any(not value for value in span_hashes):
-            raise TimedSpanAcceptanceError(
-                "Timed-span assembly span checksums cannot be blank"
-            )
+            raise TimedSpanAcceptanceError("Timed-span assembly span checksums cannot be blank")
         object.__setattr__(self, "span_sha256", span_hashes)
         if len(set(self.span_ids)) != len(self.span_ids):
             raise TimedSpanAcceptanceError("Timed-span assembly span IDs must be unique")
@@ -224,7 +223,11 @@ class TimedSpanAssemblyEvidence:
             raise TimedSpanAcceptanceError(
                 "Timed-span assembly dimensions and frame rate must be positive"
             )
-        if not self.final_path.strip() or not self.final_sha256.strip() or not self.recorded_at.strip():
+        if (
+            not self.final_path.strip()
+            or not self.final_sha256.strip()
+            or not self.recorded_at.strip()
+        ):
             raise TimedSpanAcceptanceError(
                 "Timed-span assembly final path, checksum, and timestamp are required"
             )
@@ -333,9 +336,7 @@ class TimedSpanAcceptanceStore:
 
     def save_qc(self, record: TimedSpanVisualQCRecord) -> TimedSpanVisualQCRecord:
         root = self._root()
-        records = [
-            dict(item) for item in root.get("qc_records", []) if isinstance(item, dict)
-        ]
+        records = [dict(item) for item in root.get("qc_records", []) if isinstance(item, dict)]
         if not any(
             str(item.get("record_id") or "").strip() == record.record_id for item in records
         ):
@@ -369,18 +370,12 @@ class TimedSpanAcceptanceStore:
         ):
             path = self._resolve_file(raw_path)
             if not path.is_file():
-                raise TimedSpanAcceptanceError(
-                    f"Timed-span source output no longer exists: {path}"
-                )
+                raise TimedSpanAcceptanceError(f"Timed-span source output no longer exists: {path}")
             if self._sha256(path) != checksum:
-                raise TimedSpanAcceptanceError(
-                    f"Timed-span source output checksum changed: {path}"
-                )
+                raise TimedSpanAcceptanceError(f"Timed-span source output checksum changed: {path}")
         final = self._resolve_file(evidence.final_path)
         if not final.is_file():
-            raise TimedSpanAcceptanceError(
-                f"Timed-span assembled Shot no longer exists: {final}"
-            )
+            raise TimedSpanAcceptanceError(f"Timed-span assembled Shot no longer exists: {final}")
         if self._sha256(final) != evidence.final_sha256:
             raise TimedSpanAcceptanceError(
                 "Timed-span assembled Shot checksum changed after acceptance evidence was recorded"
@@ -389,9 +384,7 @@ class TimedSpanAcceptanceStore:
 
     def save_assembly(self, evidence: TimedSpanAssemblyEvidence) -> TimedSpanAssemblyEvidence:
         root = self._root()
-        assemblies = [
-            dict(item) for item in root.get("assemblies", []) if isinstance(item, dict)
-        ]
+        assemblies = [dict(item) for item in root.get("assemblies", []) if isinstance(item, dict)]
         if not any(
             str(item.get("evidence_id") or "").strip() == evidence.evidence_id
             for item in assemblies

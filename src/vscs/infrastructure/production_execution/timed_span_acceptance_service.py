@@ -18,6 +18,7 @@ from vscs.application.production_execution import (
     TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceStore,
 )
+
 from .timed_span_acceptance_packages import (
     LTX25TimedSpanAcceptancePackageBuilder,
     TimedSpanAcceptancePackageError,
@@ -111,9 +112,9 @@ class TimedSpanFunctionalAcceptanceService:
         compiled_package_path: Path,
     ) -> tuple[Path, ...]:
         try:
-            package_set = LTX25TimedSpanAcceptancePackageBuilder(
-                self.project_directory
-            ).build(compiled_package_path)
+            package_set = LTX25TimedSpanAcceptancePackageBuilder(self.project_directory).build(
+                compiled_package_path
+            )
         except TimedSpanAcceptancePackageError as exc:
             raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
         return package_set.package_paths
@@ -153,8 +154,7 @@ class TimedSpanFunctionalAcceptanceService:
             self.keyframes.require_approved(requirement)
         except GovernedIntroductionKeyframeError as exc:
             raise TimedSpanFunctionalAcceptanceServiceError(
-                "Visual QC requires the current Governed Introduction Keyframe first: "
-                f"{exc}"
+                f"Visual QC requires the current Governed Introduction Keyframe first: {exc}"
             ) from exc
 
         current = self.status(compiled_package_path)
@@ -227,9 +227,7 @@ class TimedSpanFunctionalAcceptanceService:
                 f"{label} must remain inside the VSCS project"
             )
         if not candidate.is_file():
-            raise TimedSpanFunctionalAcceptanceServiceError(
-                f"{label} does not exist: {candidate}"
-            )
+            raise TimedSpanFunctionalAcceptanceServiceError(f"{label} does not exist: {candidate}")
         return candidate
 
     @staticmethod

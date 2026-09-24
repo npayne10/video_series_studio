@@ -166,9 +166,7 @@ class ProductionExecutionWorkspace(QWidget):
         )
         self.timed_span_detail.setWordWrap(True)
         self.build_span_packages_button = QPushButton("Build Span Packages")
-        self.approve_introduction_keyframe_button = QPushButton(
-            "Approve Introduction Keyframe"
-        )
+        self.approve_introduction_keyframe_button = QPushButton("Approve Introduction Keyframe")
         self.assemble_span_outputs_button = QPushButton("Verify & Assemble Span Outputs")
         self.record_span_qc_button = QPushButton("Record Visual QC")
         for button in (
@@ -621,7 +619,9 @@ class ProductionExecutionWorkspace(QWidget):
         self.timed_span_state.setText(
             f"Timed Span Acceptance: {status.state.value.upper()} — {status.message}"
         )
-        final_frames = str(status.final_frame_count) if status.final_frame_count is not None else "-"
+        final_frames = (
+            str(status.final_frame_count) if status.final_frame_count is not None else "-"
+        )
         boundaries = (
             " • ".join(status.boundary_summaries)
             if status.boundary_summaries
@@ -766,9 +766,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._timed_span_status = status
         self._render_timed_span_status(status)
-        self.summary.setText(
-            f"Governed Introduction Keyframe approved for {requirement_id}."
-        )
+        self.summary.setText(f"Governed Introduction Keyframe approved for {requirement_id}.")
 
     def _assemble_span_outputs(self) -> None:
         if self._selected_task_id is None or self._timed_span_status is None:
@@ -813,9 +811,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._timed_span_status = status
         self._render_timed_span_status(status)
-        self.summary.setText(
-            f"Verified and assembled {expected} governed span outputs."
-        )
+        self.summary.setText(f"Verified and assembled {expected} governed span outputs.")
 
     def _record_span_qc(self) -> None:
         if self._selected_task_id is None or self._timed_span_status is None:
