@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from vscs.application.production_execution import (
     GovernedIntroductionKeyframeError,
@@ -16,6 +17,10 @@ from vscs.application.production_execution import (
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceStore,
+)
+from .timed_span_acceptance_packages import (
+    LTX25TimedSpanAcceptancePackageBuilder,
+    TimedSpanAcceptancePackageError,
 )
 from .timed_span_acceptance_runtime import (
     GovernedSpanAssemblyRuntime,
@@ -101,6 +106,18 @@ class TimedSpanFunctionalAcceptanceService:
             raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
         return self.status(compiled_package_path)
 
+    def build_span_packages(
+        self,
+        compiled_package_path: Path,
+    ) -> tuple[Path, ...]:
+        try:
+            package_set = LTX25TimedSpanAcceptancePackageBuilder(
+                self.project_directory
+            ).build(compiled_package_path)
+        except TimedSpanAcceptancePackageError as exc:
+            raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
+        return package_set.package_paths
+
     def assemble_outputs(
         self,
         compiled_package_path: Path,
@@ -182,7 +199,7 @@ class TimedSpanFunctionalAcceptanceService:
             )
         return requirement
 
-    def _read_package(self, path: Path) -> dict[str, object]:
+    def _read_package(self, path: Path) -> dict[str, Any]:
         candidate = Path(path).expanduser().resolve(strict=False)
         if not candidate.is_file():
             raise TimedSpanFunctionalAcceptanceServiceError(
