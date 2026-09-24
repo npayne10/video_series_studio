@@ -313,7 +313,7 @@ class GovernedSpanAssemblyRuntime:
             list_path = Path(temporary) / "concat.txt"
             lines = []
             for path in paths:
-                escaped = str(path).replace("'", "'\\''")
+                escaped = path.resolve(strict=False).as_posix().replace("'", "'\\''")
                 lines.append(f"file '{escaped}'")
             list_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
             command = (
