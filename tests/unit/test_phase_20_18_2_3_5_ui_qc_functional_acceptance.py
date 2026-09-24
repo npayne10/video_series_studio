@@ -5,22 +5,26 @@ import json
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import Qt
 
 from vscs.application.production_execution import (
     INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
     KEYFRAME_ACCEPTANCE_CRITERIA,
     CompiledProductionPackage,
     GovernedIntroductionKeyframeRequirementCompiler,
-    GovernedIntroductionKeyframeStore,
     GovernedInternalRenderSpanCompiler,
     GovernedShotKeyframe,
     GovernedShotKeyframeStore,
+    ProductionExecutionCandidate,
+    ProductionPackageCompilationState,
+    ProductionPackageStatus,
     TimedCanonicalReferenceActivationCompiler,
     TimedSpanAcceptanceEvaluator,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStore,
     TimedSpanAssemblyEvidence,
 )
+from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     TimedAssetKind,
@@ -42,6 +46,7 @@ from vscs.infrastructure.production_execution.timed_span_acceptance_runtime impo
 from vscs.infrastructure.production_execution.timed_span_acceptance_service import (
     TimedSpanFunctionalAcceptanceService,
 )
+from vscs.presentation.widgets.production_execution_workspace import ProductionExecutionWorkspace
 
 
 def _sha(path: Path) -> str:
@@ -521,3 +526,130 @@ def test_candidate_c_dynamic_payload_compiles_for_acceptance_but_not_monolithic_
     assert payload["provider_execution_plan"]["automatic_provider_submission"] is False
     assert payload["provider_execution_plan"]["monolithic_submission_permitted"] is False
     assert "reference_plan" not in payload
+
+
+class _TimedSpanWorkspaceService:
+    def __init__(self, package_path: Path, status_state: TimedSpanAcceptanceState) -> None:
+        self.package_path = package_path
+        self.status_state = status_state
+        self.candidate = ProductionExecutionCandidate(
+            production_id="XORIX",
+            task_id="PT-UI-TIMED-SPAN",
+            task_type=ProductionTaskType.VIDEO_GENERATION,
+            task_state=ProductionTaskState.READY,
+            episode_id="EP-001",
+            scene_id="SCN-001",
+            shot_id="EP-001-SCN-001-SHT-002",
+            resource_id="GPU-01",
+            queue_entry_id="PQE-UI-TIMED-SPAN",
+            label="Video Generation — SHT-002",
+        )
+
+    def candidates(self) -> tuple[ProductionExecutionCandidate, ...]:
+        return (self.candidate,)
+
+    def package_status(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> ProductionPackageStatus:
+        assert task_id == self.candidate.task_id
+        return ProductionPackageStatus(
+            task_id=task_id,
+            state=ProductionPackageCompilationState.COMPILED,
+            profile=profile,
+            path=self.package_path,
+            authority_fingerprint="authority",
+            package_fingerprint="package",
+            source_package_id="PP-SHT-002",
+            message="Compiled",
+        )
+
+    def has_execution(self, task_id: str, *, profile: str | None = None) -> bool:
+        assert task_id == self.candidate.task_id
+        return False
+
+    def retry_override_status(self, task_id: str, *, profile: str | None = None) -> object:
+        raise RuntimeError("not needed for this UI test")
+
+    def shot_boundary_status(self, task_id: str, *, profile: str | None = None) -> object:
+        raise RuntimeError("not needed for this UI test")
+
+    def timed_span_acceptance_status(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> object:
+        assert task_id == self.candidate.task_id
+        if self.status_state is TimedSpanAcceptanceState.NOT_APPLICABLE:
+            from vscs.application.production_execution import TimedSpanAcceptanceStatus
+
+            return TimedSpanAcceptanceStatus(
+                shot_id="EP-001-SCN-001-SHT-002",
+                state=self.status_state,
+                span_count=1,
+                boundary_count=0,
+                requirement_count=0,
+                approved_keyframe_count=0,
+                qc_passed_count=0,
+                assembly_present=False,
+                message="Monolithic.",
+            )
+        from vscs.application.production_execution import TimedSpanAcceptanceStatus
+
+        return TimedSpanAcceptanceStatus(
+            shot_id="EP-001-SCN-001-SHT-002",
+            state=self.status_state,
+            span_count=2,
+            boundary_count=1,
+            requirement_count=1,
+            approved_keyframe_count=0,
+            qc_passed_count=0,
+            assembly_present=False,
+            message="One governed Introduction Keyframe approval remains.",
+            requirement_ids=("GIKR-001",),
+            pending_keyframe_requirement_ids=("GIKR-001",),
+            pending_qc_requirement_ids=("GIKR-001",),
+        )
+
+
+def test_workspace_surfaces_timed_span_acceptance_and_blocks_monolithic_start(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "production_package.json"
+    package.write_text("{}", encoding="utf-8")
+    service = _TimedSpanWorkspaceService(
+        package,
+        TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+    )
+    workspace = ProductionExecutionWorkspace(lambda: service)  # type: ignore[arg-type]
+    qtbot.addWidget(workspace)
+
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    assert "KEYFRAME_REQUIRED" in workspace.timed_span_state.text()
+    assert "Spans 2" in workspace.timed_span_detail.text()
+    assert workspace.approve_introduction_keyframe_button.isEnabled()
+    assert not workspace.start_button.isEnabled()
+
+
+def test_workspace_preserves_start_for_monolithic_shot(qtbot, tmp_path: Path) -> None:
+    package = tmp_path / "production_package.json"
+    package.write_text("{}", encoding="utf-8")
+    service = _TimedSpanWorkspaceService(
+        package,
+        TimedSpanAcceptanceState.NOT_APPLICABLE,
+    )
+    workspace = ProductionExecutionWorkspace(lambda: service)  # type: ignore[arg-type]
+    qtbot.addWidget(workspace)
+
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    assert "NOT_APPLICABLE" in workspace.timed_span_state.text()
+    assert workspace.start_button.isEnabled()
+
