@@ -19,6 +19,15 @@ from .internal_render_spans import (
     GovernedInternalRenderSpanPlan,
     GovernedInternalSpanBoundary,
 )
+from .introduction_keyframes import (
+    INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
+    GovernedIntroductionKeyframe,
+    GovernedIntroductionKeyframeError,
+    GovernedIntroductionKeyframeRequirementCompiler,
+    GovernedIntroductionKeyframeStore,
+    IntroductionKeyframeRequirement,
+    IntroductionKeyframeRequirementPlan,
+)
 from .package_compilation import (
     CompiledProductionPackage,
     ProductionPackageCompilationError,
@@ -80,10 +89,15 @@ from .video_workflow_rebaseline import (
 )
 
 __all__ = [
+    "INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA",
     "KEYFRAME_ACCEPTANCE_CRITERIA",
     "VISUAL_ACCEPTANCE_CRITERIA",
     "CompiledProductionPackage",
     "GovernedClosingBoundaryFrame",
+    "GovernedIntroductionKeyframe",
+    "GovernedIntroductionKeyframeError",
+    "GovernedIntroductionKeyframeRequirementCompiler",
+    "GovernedIntroductionKeyframeStore",
     "GovernedInternalRenderSpan",
     "GovernedInternalRenderSpanCompiler",
     "GovernedInternalRenderSpanError",
@@ -97,6 +111,8 @@ __all__ = [
     "GovernedShotKeyframe",
     "GovernedShotKeyframeError",
     "GovernedShotKeyframeStore",
+    "IntroductionKeyframeRequirement",
+    "IntroductionKeyframeRequirementPlan",
     "LiveShotFunctionalAcceptanceError",
     "LiveShotFunctionalAcceptanceReconciliation",
     "LiveShotFunctionalAcceptanceService",
