@@ -273,6 +273,9 @@ class TimedSpanAcceptanceStatus:
     assembly_present: bool
     final_frame_count: int | None = None
     message: str = ""
+    requirement_ids: tuple[str, ...] = ()
+    pending_keyframe_requirement_ids: tuple[str, ...] = ()
+    pending_qc_requirement_ids: tuple[str, ...] = ()
 
     @property
     def applicable(self) -> bool:
