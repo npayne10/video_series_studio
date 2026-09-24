@@ -8,6 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.introduction_keyframes import (
+    GovernedIntroductionKeyframeError,
+    IntroductionKeyframeRequirementPlan,
+)
 from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
@@ -296,6 +300,22 @@ class LocalProductionPackageCompilationService:
                     f"Timed Canonical Reference Activation authority is invalid: {exc}"
                 ) from exc
 
+        requirement_plan: IntroductionKeyframeRequirementPlan | None = None
+        if compiled.introduction_keyframe_requirements is not None:
+            try:
+                requirement_plan = IntroductionKeyframeRequirementPlan.from_dict(
+                    compiled.introduction_keyframe_requirements
+                )
+                if span_plan is None or activation_plan is None:
+                    raise GovernedIntroductionKeyframeError(
+                        "Introduction Keyframe requirements need span and activation authority"
+                    )
+                requirement_plan.require_sources(span_plan, activation_plan)
+            except GovernedIntroductionKeyframeError as exc:
+                raise LocalProductionPackageCompilationError(
+                    f"Governed Introduction Keyframe requirements are invalid: {exc}"
+                ) from exc
+
         if span_plan is not None and span_plan.span_count > 1:
             if activation_plan is None:
                 raise LocalProductionPackageCompilationError(
@@ -303,11 +323,17 @@ class LocalProductionPackageCompilationService:
                     "but current provider execution is still monolithic and no Phase 20.18.2.3.3 "
                     "timed canonical-reference activation plan is compiled."
                 )
+            if requirement_plan is None:
+                raise LocalProductionPackageCompilationError(
+                    "Phase 20.18.2.3.3 compiled timed canonical-reference activation successfully, "
+                    "but no Phase 20.18.2.3.4 governed Introduction Keyframe requirements are "
+                    "compiled."
+                )
             raise LocalProductionPackageCompilationError(
-                "Phase 20.18.2.3.3 compiled timed canonical-reference activation successfully, "
-                "but current provider execution is still monolithic. Governed multi-span "
-                "provider orchestration and internal-boundary runtime must be implemented "
-                "before this package may execute."
+                "Phase 20.18.2.3.4 compiled governed Introduction Keyframe requirements "
+                "successfully. Provider-safe LTX-2.5 span conditioning can now be compiled only "
+                "after the required human-approved Introduction Keyframes exist; monolithic "
+                "provider execution remains blocked."
             )
         content: dict[str, Any] = {
             "schema_version": "7.1.4-vscs-1",
@@ -335,6 +361,10 @@ class LocalProductionPackageCompilationService:
             content["timed_reference_activation"] = compiled.timed_reference_activation
         if compiled.reference_plan is not None:
             content["reference_plan"] = compiled.reference_plan
+        if compiled.introduction_keyframe_requirements is not None:
+            content["introduction_keyframe_requirements"] = (
+                compiled.introduction_keyframe_requirements
+            )
         fingerprint = cls._fingerprint(content)
         content["_vscs_manifest"] = {
             "task_id": compiled.task_id,
