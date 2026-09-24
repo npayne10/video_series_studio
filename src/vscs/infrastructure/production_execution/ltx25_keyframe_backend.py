@@ -612,6 +612,26 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def build_timed_span_packages_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> tuple[Path, ...]:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).build_span_packages(package.path)
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
     def assemble_timed_span_outputs_for_profile(
         self,
         task_id: str,
