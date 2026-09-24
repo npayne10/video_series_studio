@@ -159,6 +159,7 @@ class TimedSpanAssemblyEvidence:
     source_span_plan_fingerprint: str
     span_ids: tuple[str, ...]
     span_paths: tuple[str, ...]
+    span_sha256: tuple[str, ...]
     span_frame_counts: tuple[int, ...]
     final_path: str
     final_frame_count: int
@@ -187,10 +188,20 @@ class TimedSpanAssemblyEvidence:
             raise TimedSpanAcceptanceError(
                 "Timed-span assembly evidence requires one path per span"
             )
+        if len(self.span_ids) != len(self.span_sha256):
+            raise TimedSpanAcceptanceError(
+                "Timed-span assembly evidence requires one checksum per span"
+            )
         if len(self.span_ids) != len(self.span_frame_counts):
             raise TimedSpanAcceptanceError(
                 "Timed-span assembly evidence requires one frame count per span"
             )
+        span_hashes = tuple(value.strip().lower() for value in self.span_sha256)
+        if any(not value for value in span_hashes):
+            raise TimedSpanAcceptanceError(
+                "Timed-span assembly span checksums cannot be blank"
+            )
+        object.__setattr__(self, "span_sha256", span_hashes)
         if len(set(self.span_ids)) != len(self.span_ids):
             raise TimedSpanAcceptanceError("Timed-span assembly span IDs must be unique")
         if any(count <= 0 for count in self.span_frame_counts):
@@ -219,6 +230,7 @@ class TimedSpanAssemblyEvidence:
             "source_span_plan_fingerprint": self.source_span_plan_fingerprint,
             "span_ids": list(self.span_ids),
             "span_paths": list(self.span_paths),
+            "span_sha256": list(self.span_sha256),
             "span_frame_counts": list(self.span_frame_counts),
             "final_path": self.final_path,
             "final_frame_count": self.final_frame_count,
@@ -242,6 +254,7 @@ class TimedSpanAssemblyEvidence:
             source_span_plan_fingerprint=str(raw.get("source_span_plan_fingerprint") or ""),
             span_ids=_string_tuple(raw, "span_ids"),
             span_paths=_string_tuple(raw, "span_paths"),
+            span_sha256=_string_tuple(raw, "span_sha256"),
             span_frame_counts=_int_tuple(raw, "span_frame_counts"),
             final_path=str(raw.get("final_path") or ""),
             final_frame_count=_required_int(raw, "final_frame_count"),
@@ -328,6 +341,38 @@ class TimedSpanAcceptanceStore:
                 return TimedSpanAssemblyEvidence.from_dict(raw)
         return None
 
+    def require_current_assembly(
+        self,
+        shot_id: str,
+    ) -> TimedSpanAssemblyEvidence | None:
+        evidence = self.assembly_for_shot(shot_id)
+        if evidence is None:
+            return None
+        for raw_path, checksum in zip(
+            evidence.span_paths,
+            evidence.span_sha256,
+            strict=True,
+        ):
+            path = self._resolve_file(raw_path)
+            if not path.is_file():
+                raise TimedSpanAcceptanceError(
+                    f"Timed-span source output no longer exists: {path}"
+                )
+            if self._sha256(path) != checksum:
+                raise TimedSpanAcceptanceError(
+                    f"Timed-span source output checksum changed: {path}"
+                )
+        final = self._resolve_file(evidence.final_path)
+        if not final.is_file():
+            raise TimedSpanAcceptanceError(
+                f"Timed-span assembled Shot no longer exists: {final}"
+            )
+        if self._sha256(final) != evidence.final_sha256:
+            raise TimedSpanAcceptanceError(
+                "Timed-span assembled Shot checksum changed after acceptance evidence was recorded"
+            )
+        return evidence
+
     def save_assembly(self, evidence: TimedSpanAssemblyEvidence) -> TimedSpanAssemblyEvidence:
         root = self._root()
         assemblies = [
@@ -359,6 +404,20 @@ class TimedSpanAcceptanceStore:
         if not isinstance(qc, list) or not isinstance(assemblies, list):
             raise TimedSpanAcceptanceError("Timed-span acceptance store is invalid")
         return dict(root)
+
+    def _resolve_file(self, value: str) -> Path:
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            path = self.project_directory / path
+        return path.resolve(strict=False)
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
 
     def _write(self, root: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -456,7 +515,10 @@ class TimedSpanAcceptanceEvaluator:
             else:
                 pending_qc.append(requirement.requirement_id)
 
-        assembly = self.acceptance.assembly_for_shot(shot_id)
+        try:
+            assembly = self.acceptance.require_current_assembly(shot_id)
+        except TimedSpanAcceptanceError:
+            assembly = None
         assembly_valid = assembly is not None and self._assembly_matches(spans, assembly)
         if approved < requirements.requirement_count:
             return TimedSpanAcceptanceStatus(
