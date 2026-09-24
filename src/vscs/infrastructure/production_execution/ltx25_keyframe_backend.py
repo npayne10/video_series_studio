@@ -9,12 +9,14 @@ from pathlib import Path
 from vscs.application.production_execution import (
     CompiledProductionPackage,
     GovernedClosingBoundaryFrame,
+    GovernedIntroductionKeyframeError,
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
     GovernedShotBoundaryError,
     GovernedShotBoundaryStore,
     GovernedShotKeyframeError,
     GovernedShotKeyframeStore,
+    IntroductionKeyframeRequirementPlan,
     ProductionExecutionError,
     ProductionExecutionResult,
     ProductionPackageCompilationState,
@@ -22,6 +24,8 @@ from vscs.application.production_execution import (
     ProviderAudioPolicy,
     ProviderAudioPolicyError,
     ShotBoundaryAuthorityStatus,
+    TimedCanonicalReferenceActivationError,
+    TimedCanonicalReferenceActivationPlan,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
     normalize_execution_profile,
@@ -30,6 +34,10 @@ from vscs.application.production_execution import (
 )
 from vscs.application.production_execution.provider_prompt import ProductionProviderPromptCompiler
 from vscs.application.production_tasks import ProductionTask
+from vscs.application.timed_asset_presence import (
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 from vscs.application.provider_execution import DurableExecutionJob, ProviderExecutionOutput
 from vscs.application.rendering import RenderRequest
 from vscs.application.rendering.workflows import (
@@ -243,6 +251,8 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
                     compiled.internal_render_spans
                 )
                 dynamic_spans = span_plan.span_count > 1
+                if dynamic_spans:
+                    self._validate_dynamic_span_authority(compiled, span_plan)
             except GovernedInternalRenderSpanError as exc:
                 raise LocalProductionPackageCompilationError(
                     f"LTX-2.5 Candidate C internal span authority is invalid: {exc}"
@@ -369,6 +379,55 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
             else "VSCS Phase 20.18.2.2i / LTX-2.5 Candidate C + governed shot boundaries"
         )
         return content
+
+    @staticmethod
+    def _validate_dynamic_span_authority(
+        compiled: CompiledProductionPackage,
+        spans: GovernedInternalRenderSpanPlan,
+    ) -> None:
+        if compiled.timed_asset_presence is None:
+            raise LocalProductionPackageCompilationError(
+                "Dynamic Candidate C package has no Timed Asset Presence authority"
+            )
+        if compiled.timed_reference_activation is None:
+            raise LocalProductionPackageCompilationError(
+                "Dynamic Candidate C package has no Timed Canonical Reference Activation"
+            )
+        if compiled.introduction_keyframe_requirements is None:
+            raise LocalProductionPackageCompilationError(
+                "Dynamic Candidate C package has no Introduction Keyframe requirements"
+            )
+        try:
+            timed = TimedAssetPresencePlan.from_dict(compiled.timed_asset_presence)
+            spans.require_source(timed)
+            activation = TimedCanonicalReferenceActivationPlan.from_dict(
+                compiled.timed_reference_activation
+            )
+            if (
+                activation.shot_id != timed.shot_id
+                or activation.shot_id != spans.shot_id
+                or activation.source_timed_asset_presence_plan_id != timed.plan_id
+                or activation.source_timed_asset_presence_fingerprint != timed.fingerprint
+                or activation.source_internal_render_span_plan_id != spans.plan_id
+                or activation.source_internal_render_span_fingerprint != spans.fingerprint
+            ):
+                raise LocalProductionPackageCompilationError(
+                    "Dynamic Candidate C timed reference activation is stale against its "
+                    "structural authority"
+                )
+            requirements = IntroductionKeyframeRequirementPlan.from_dict(
+                compiled.introduction_keyframe_requirements
+            )
+            requirements.require_sources(spans, activation)
+        except (
+            TimedAssetPresenceError,
+            GovernedInternalRenderSpanError,
+            TimedCanonicalReferenceActivationError,
+            GovernedIntroductionKeyframeError,
+        ) as exc:
+            raise LocalProductionPackageCompilationError(
+                f"Dynamic Candidate C timed-span authority is invalid: {exc}"
+            ) from exc
 
     def compile_span_provider_conditioning(
         self,
