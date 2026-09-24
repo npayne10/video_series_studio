@@ -288,6 +288,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._package_status = None
         self._retry_status = None
         self._boundary_status = None
+        self._timed_span_status = None
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
@@ -296,6 +297,7 @@ class ProductionExecutionWorkspace(QWidget):
         self.opening_boundary_state.setText("Opening Boundary: -")
         self.closing_boundary_state.setText("Closing Boundary: -")
         self.publish_boundary_button.setEnabled(False)
+        self._reset_timed_span_status()
         self.compile_package_button.setEnabled(False)
         self.package_state.setText("Select a scheduled task.")
         self.details.clear()
@@ -347,12 +349,14 @@ class ProductionExecutionWorkspace(QWidget):
             self._package_status = None
             self._retry_status = None
             self._boundary_status = None
+            self._timed_span_status = None
             self.compile_package_button.setEnabled(False)
             self.retry_button.setEnabled(False)
             self.retry_state.setText("Retry Override: -")
             self.opening_boundary_state.setText("Opening Boundary: -")
             self.closing_boundary_state.setText("Closing Boundary: -")
             self.publish_boundary_button.setEnabled(False)
+            self._reset_timed_span_status()
             self.package_state.setText("Select a scheduled task.")
             self._update_start_enabled()
             self.status_button.setEnabled(False)
@@ -372,6 +376,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
         self._refresh_boundary_status()
+        self._refresh_timed_span_status()
         candidate = self._candidates[task_id]
         self._render_candidate(candidate)
 
@@ -384,6 +389,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
         self._refresh_boundary_status()
+        self._refresh_timed_span_status()
         candidate = self._candidates.get(self._selected_task_id)
         if candidate is not None:
             self._render_candidate(candidate)
@@ -641,6 +647,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
         self._refresh_boundary_status()
+        self._refresh_timed_span_status()
         self._update_start_enabled()
 
     def _update_start_enabled(self) -> None:
