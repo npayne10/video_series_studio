@@ -439,7 +439,8 @@ class _BoundaryEvidenceRuntime(_FakeAssemblyRuntime):
         from vscs.application.production_execution import GovernedInternalRenderSpanPlan
 
         assert isinstance(spans, GovernedInternalRenderSpanPlan)
-        super(_FakeAssemblyRuntime, self)._verify_boundary_evidence(  # type: ignore[misc]
+        GovernedSpanAssemblyRuntime._verify_boundary_evidence(
+            self,
             compiled_package,  # type: ignore[arg-type]
             spans,
             observations,
