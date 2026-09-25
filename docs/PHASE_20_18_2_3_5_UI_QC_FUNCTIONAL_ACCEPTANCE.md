@@ -365,6 +365,48 @@ SHT-002 remains PLANNED while its SHT-001 predecessor task is incomplete, and be
 eligible for READY only after SHT-001 completion is reconciled from governed media
 evidence.
 
+## Timed Asset Presence authoring bridge
+
+Live SHT-002 acceptance exposed that Phase 20.18.2.3.1 had a complete provider-neutral
+Timed Asset Presence model and persistence API, but Production Planning had no
+operator-facing path to author that authority. The result was a valid Shot/UPD whose
+Ros frame-96 entrance existed only in prose while the compiled Production Package
+contained an empty `timed_asset_presence` object and therefore remained monolithic.
+
+Production Planning now includes a **Timed Asset Presence** tab.
+
+The editor:
+
+- starts from the current governed Asset authority;
+- loads direct governed ReferencePlan IDs by matching exact `asset_id`;
+- keeps frame-state references such as `scene_composition_anchor` outside timed
+  canonical asset references;
+- shows full-shot defaults only as an unsaved convenience and labels them explicitly
+  as non-authoritative;
+- requires the human operator to set any non-frame-zero introduction or early removal;
+- persists only through `ProductionPackageService.derive_timed_asset_presence()`;
+- validates selected reference IDs against the current passing governed ReferencePlan;
+- rejects dynamic plans that leave non-frame-state governed supporting references
+  without temporal scope;
+- makes downstream Universal Description, provider output, review, task and schedule
+  authority stale in the normal governed way.
+
+No Shot prose is parsed to infer entrance timing.
+
+For the live SHT-002 acceptance case, the intended explicit authority is:
+
+```text
+CAP-CHR-003 Sandra Crawford     0-143   present
+CAP-CHR-001 James Spence       0-143   present
+CAP-ENV-004 Xorix Orbit        0-143   present
+CAP-PLN-002 Xorix              0-143   present
+CAP-SHP-002 Iron Horizon       0-143   present
+CAP-LOC-021 Iron Horizon Bridge 0-143  present
+CAP-CHR-005 Major Ros Rohsgard 96-143  enter
+```
+
+The expected change-frame set is exactly `(96,)`.
+
 ## Functional acceptance procedure
 
 For SHT-002:
