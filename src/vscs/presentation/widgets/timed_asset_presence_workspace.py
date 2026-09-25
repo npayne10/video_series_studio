@@ -222,8 +222,8 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
                 self.timed_presence_table.setCellWidget(row, 4, through_spin)
 
                 introduction = QComboBox(self.timed_presence_table)
-                for value in AssetPresenceIntroduction:
-                    introduction.addItem(value.value, value.value)
+                for introduction_value in AssetPresenceIntroduction:
+                    introduction.addItem(introduction_value.value, introduction_value.value)
                 introduction.setCurrentIndex(
                     max(0, introduction.findData(presence.introduction.value))
                 )
@@ -233,8 +233,8 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
                 self.timed_presence_table.setCellWidget(row, 5, introduction)
 
                 removal = QComboBox(self.timed_presence_table)
-                for value in AssetPresenceRemoval:
-                    removal.addItem(value.value, value.value)
+                for removal_value in AssetPresenceRemoval:
+                    removal.addItem(removal_value.value, removal_value.value)
                 removal.setCurrentIndex(max(0, removal.findData(presence.removal.value)))
                 removal.currentIndexChanged.connect(
                     lambda _index: self._refresh_timed_presence_change_preview()
