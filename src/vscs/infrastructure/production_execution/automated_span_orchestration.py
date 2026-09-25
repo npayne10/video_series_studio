@@ -348,6 +348,12 @@ class AutomatedTimedSpanOrchestrationService:
             source_boundary_image_sha256=result.source_boundary_image_sha256,
             approved_by=f"VSCS Automation — {result.provider_name}",
             approved_at=result.generated_at,
+            acceptance_criteria=(
+                "source_boundary_continuity_preserved",
+                "target_span_first_emitted_frame_correct",
+            ),
+            approval_mode="automated_structural",
+            automated_validation_findings=result.validation_findings,
         )
         try:
             self.keyframes.save(record, requirement)
