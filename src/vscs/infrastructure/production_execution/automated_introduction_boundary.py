@@ -242,9 +242,6 @@ class ComfyUIIntroductionBoundarySynthesizer:
         while time.monotonic() <= deadline:
             if expected.is_file():
                 return expected
-            candidates = tuple(output_root.glob("pass-*.png"))
-            if candidates:
-                return max(candidates, key=lambda path: path.stat().st_mtime_ns)
             time.sleep(0.25)
         raise ComfyUIIntroductionBoundarySynthesisError(
             f"ComfyUI completed without writing the expected introduction frame in {output_root}"
