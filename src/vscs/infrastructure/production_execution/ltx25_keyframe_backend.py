@@ -354,14 +354,16 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
             content["status"] = "TIMED_SPAN_ACCEPTANCE_REQUIRED"
             content["provider_execution_plan"] = {
                 "provider": "ltx-2.5",
-                "mode": "governed_multi_span_functional_acceptance",
+                "mode": "governed_multi_span_automated_orchestration",
                 "governed_frame_count": compiled.frame_count,
                 "provider_frame_count": provider_frames,
                 "governed_duration_seconds": compiled.frame_count / compiled.frames_per_second,
                 "hidden_segmentation": True,
                 "keyframe_conditioning": "per_span_governed_keyframe_i2v",
-                "automatic_provider_submission": False,
+                "introduction_boundary_synthesis": "qwen_image_edit_2511",
+                "automatic_provider_submission": True,
                 "monolithic_submission_permitted": False,
+                "manual_recovery_controls": True,
             }
         else:
             content["provider_execution_plan"] = {
@@ -383,7 +385,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
         payload.pop("_vscs_manifest", None)
         manifest["package_fingerprint"] = self._fingerprint(payload)
         manifest["compiler"] = (
-            "VSCS Phase 20.18.2.3.5 / LTX-2.5 Candidate C timed-span acceptance"
+            "VSCS Phase 20.18.2.3.6 / LTX-2.5 automated timed-span orchestration"
             if dynamic_spans
             else "VSCS Phase 20.18.2.2i / LTX-2.5 Candidate C + governed shot boundaries"
         )
