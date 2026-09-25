@@ -21,6 +21,7 @@ class TimedAssetKind(StrEnum):
     VEHICLE = "vehicle"
     LOCATION = "location"
     ENVIRONMENT = "environment"
+    PLANET = "planet"
     PROP = "prop"
     EFFECT = "effect"
     TECHNOLOGY = "technology"
