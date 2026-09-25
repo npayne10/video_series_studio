@@ -67,6 +67,7 @@ class AutomatedIntroductionBoundaryRequest:
     introduced_asset_kinds: tuple[str, ...]
     introduced_reference_ids: tuple[str, ...]
     introduced_reference_paths: tuple[str, ...]
+    introduced_reference_sha256: tuple[str, ...]
     active_asset_ids: tuple[str, ...]
     active_reference_ids: tuple[str, ...]
     width: int
@@ -123,6 +124,7 @@ class AutomatedIntroductionBoundaryRequest:
             "introduced_asset_kinds",
             "introduced_reference_ids",
             "introduced_reference_paths",
+            "introduced_reference_sha256",
             "active_asset_ids",
             "active_reference_ids",
         ):
@@ -144,9 +146,13 @@ class AutomatedIntroductionBoundaryRequest:
             raise AutomatedIntroductionBoundaryError(
                 "Introduced asset IDs and kinds must have matching cardinality"
             )
-        if len(self.introduced_reference_ids) != len(self.introduced_reference_paths):
+        if not (
+            len(self.introduced_reference_ids)
+            == len(self.introduced_reference_paths)
+            == len(self.introduced_reference_sha256)
+        ):
             raise AutomatedIntroductionBoundaryError(
-                "Introduced reference IDs and paths must have matching cardinality"
+                "Introduced reference IDs, paths and checksums must have matching cardinality"
             )
         if not set(self.introduced_asset_ids).issubset(set(self.active_asset_ids)):
             raise AutomatedIntroductionBoundaryError(
@@ -186,6 +192,7 @@ class AutomatedIntroductionBoundaryRequest:
             "introduced_asset_kinds": list(self.introduced_asset_kinds),
             "introduced_reference_ids": list(self.introduced_reference_ids),
             "introduced_reference_paths": list(self.introduced_reference_paths),
+            "introduced_reference_sha256": list(self.introduced_reference_sha256),
             "active_asset_ids": list(self.active_asset_ids),
             "active_reference_ids": list(self.active_reference_ids),
             "width": self.width,
@@ -410,6 +417,7 @@ def request_from_requirement(
         if isinstance(item, dict) and str(item.get("reference_id") or "").strip()
     }
     introduced_paths: list[str] = []
+    introduced_sha256: list[str] = []
     for reference_id in requirement.introduced_reference_ids:
         reference = references.get(reference_id)
         if reference is None:
@@ -421,7 +429,13 @@ def request_from_requirement(
             raise AutomatedIntroductionBoundaryError(
                 f"Introduced governed reference has no source_path: {reference_id}"
             )
+        checksum = str(reference.get("file_checksum") or "").strip().lower()
+        if not checksum:
+            raise AutomatedIntroductionBoundaryError(
+                f"Introduced governed reference has no file_checksum: {reference_id}"
+            )
         introduced_paths.append(source_path)
+        introduced_sha256.append(checksum)
 
     presences_raw = timed_asset_presence.get("presences")
     if not isinstance(presences_raw, list):
@@ -470,6 +484,7 @@ def request_from_requirement(
         introduced_asset_kinds=introduced_kinds,
         introduced_reference_ids=requirement.introduced_reference_ids,
         introduced_reference_paths=tuple(introduced_paths),
+        introduced_reference_sha256=tuple(introduced_sha256),
         active_asset_ids=requirement.active_asset_ids,
         active_reference_ids=requirement.active_reference_ids,
         width=width,
