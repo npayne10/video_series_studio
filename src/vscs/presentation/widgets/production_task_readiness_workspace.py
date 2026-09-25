@@ -265,9 +265,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     ) -> ProductionTaskCompletionReconciliationService:
         project_directory = self.projects.project_directory
         if project_directory is None:
-            raise RuntimeError(
-                "Open a VSCS project before reconciling ProductionTask completion."
-            )
+            raise RuntimeError("Open a VSCS project before reconciling ProductionTask completion.")
         task_repository = JsonProductionTaskRepository(
             project_directory / "production" / "scheduling" / "tasks"
         )
@@ -341,10 +339,12 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
                 "Refresh Task Readiness to release eligible dependent tasks."
             )
         else:
-            findings = "; ".join(
-                f"{finding.code}: {finding.message}"
-                for finding in result.assessment.findings
-            ) or "Completion evidence is incomplete."
+            findings = (
+                "; ".join(
+                    f"{finding.code}: {finding.message}" for finding in result.assessment.findings
+                )
+                or "Completion evidence is incomplete."
+            )
             self.production_task_readiness_status.setText(
                 f"ProductionTask completion not reconciled: {findings}"
             )
@@ -627,9 +627,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     workspace_type._refresh_production_task_completion_eligibility = (
         _refresh_production_task_completion_eligibility
     )
-    workspace_type._production_task_reconcile_completion = (
-        _production_task_reconcile_completion
-    )
+    workspace_type._production_task_reconcile_completion = _production_task_reconcile_completion
     workspace_type._refresh_production_task_priority_control = (
         _refresh_production_task_priority_control
     )
