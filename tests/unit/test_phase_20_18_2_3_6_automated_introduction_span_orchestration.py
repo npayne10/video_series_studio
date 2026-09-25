@@ -16,6 +16,7 @@ from vscs.application.production_execution import (
     IntroductionBoundaryProviderCapabilities,
     IntroductionBoundaryStrategy,
     TimedCanonicalReferenceActivationCompiler,
+    ProductionExecutionUiService,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
     request_from_requirement,
@@ -518,6 +519,70 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
     keyframe = store.require_approved(requirements.requirements[0])
     assert keyframe.approval_mode == "automated_structural"
     assert keyframe.target_global_frame_index == 96
+
+
+class _FacadeBackend:
+    def __init__(self) -> None:
+        self.profile: str | None = None
+
+    def run_automated_timed_span_orchestration_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> TimedSpanAcceptanceStatus:
+        assert task_id == "PT-AUTO"
+        self.profile = profile
+        return TimedSpanAcceptanceStatus(
+            shot_id="EP-001-SCN-001-SHT-002",
+            state=TimedSpanAcceptanceState.QC_REQUIRED,
+            span_count=2,
+            boundary_count=1,
+            requirement_count=1,
+            approved_keyframe_count=1,
+            qc_passed_count=0,
+            assembly_present=True,
+            message="Automated provider work complete; visual QC required.",
+            requirement_ids=("GIKR-1",),
+            pending_qc_requirement_ids=("GIKR-1",),
+            final_frame_count=144,
+        )
+
+
+def test_ui_service_delegates_automated_orchestration_with_normalized_profile() -> None:
+    backend = _FacadeBackend()
+    service = ProductionExecutionUiService(backend)  # type: ignore[arg-type]
+
+    status = service.run_automated_timed_span_orchestration(
+        "PT-AUTO",
+        profile="Production",
+    )
+
+    assert status.state is TimedSpanAcceptanceState.QC_REQUIRED
+    assert status.final_frame_count == 144
+    assert backend.profile == "production"
+
+
+def test_introduction_boundary_workflow_and_deployment_assets_are_versioned() -> None:
+    repository = Path(__file__).resolve().parents[2]
+    workflow = json.loads(
+        (
+            repository
+            / "src"
+            / "vscs"
+            / "workflows"
+            / "image"
+            / "VSCS_Qwen_Introduction_Boundary_Workflow_API_v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert workflow["1"]["class_type"] == "VSCSIntroductionBoundaryPackageLoaderV1"
+    assert workflow["9"]["inputs"]["image1"] == ["1", 0]
+    assert workflow["9"]["inputs"]["image2"] == ["1", 1]
+    assert workflow["20"]["inputs"]["latent_image"] == ["13", 0]
+    deploy = (
+        repository / "scripts" / "deploy_comfyui_introduction_boundary_v1.ps1"
+    ).read_text(encoding="utf-8")
+    assert "VSCSIntroductionBoundaryPackageLoaderV1" in deploy
 
 
 class _UiService:
