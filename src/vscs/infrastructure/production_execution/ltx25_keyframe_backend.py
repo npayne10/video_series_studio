@@ -51,6 +51,18 @@ from vscs.infrastructure.rendering import (
     ProductionPackageComfyUIAdapter,
 )
 
+from .automated_introduction_boundary import (
+    ComfyUIIntroductionBoundarySynthesizer,
+)
+from .automated_span_orchestration import (
+    AutomatedSpanOrchestrationError,
+    AutomatedSpanOrchestrationResult,
+    AutomatedTimedSpanOrchestrationService,
+)
+from .automated_span_provider import (
+    AutomatedSpanProviderError,
+    LTX25AutomatedSpanProvider,
+)
 from .current_authority_backend import (
     CurrentAuthorityLTX23V721ProductionPackageCompilationService,
 )
@@ -637,6 +649,44 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         except TimedSpanFunctionalAcceptanceServiceError as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def run_automated_timed_span_orchestration_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> AutomatedSpanOrchestrationResult:
+        """Execute governed spans and synthesize internal introduction frames automatically."""
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            if self.comfyui_output_directory is None:
+                raise ProductionExecutionError(
+                    "Configure the ComfyUI output folder before automated span orchestration."
+                )
+            span_provider = LTX25AutomatedSpanProvider(
+                self.project_directory,
+                endpoint=self.endpoint,
+                comfyui_output_directory=self.comfyui_output_directory,
+            )
+            synthesizer = ComfyUIIntroductionBoundarySynthesizer(
+                self.project_directory,
+                base_url=self.endpoint,
+            )
+            return AutomatedTimedSpanOrchestrationService(
+                self.project_directory,
+                span_provider=span_provider,
+                synthesizer=synthesizer,
+                managed_media_directory=self.managed_media_directory,
+            ).run(package.path)
+        except (
+            LocalProductionPackageCompilationError,
+            AutomatedSpanProviderError,
+            AutomatedSpanOrchestrationError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
     def approve_introduction_keyframe_for_profile(
         self,
         task_id: str,
@@ -760,7 +810,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         if status.applicable and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED:
             raise ProductionExecutionError(
                 "Dynamic timed-span Shots cannot use monolithic provider execution. "
-                "Use the governed Phase 20.18.2.3.5 functional-acceptance span packages."
+                "Use Phase 20.18.2.3.6 automated timed-span orchestration or the manual "
+                "Phase 20.18.2.3.5 recovery controls."
             )
         return super().start(task_id, production_package=production_package)
 
@@ -775,8 +826,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         if status.applicable and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED:
             raise ProductionExecutionError(
                 "Dynamic timed-span Shots cannot use monolithic Start Production. "
-                "Phase 20.18.2.3.5 keeps production submission fail-closed while the operator "
-                "completes governed span-output assembly and visual functional acceptance."
+                "Use Phase 20.18.2.3.6 automated span orchestration; manual Phase 20.18.2.3.5 "
+                "controls remain available only as governed recovery paths."
             )
         return super().start_for_profile(
             task_id,
