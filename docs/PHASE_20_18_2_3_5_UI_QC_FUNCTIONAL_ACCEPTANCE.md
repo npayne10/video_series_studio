@@ -59,6 +59,11 @@ The preceding frame is never duplicated into the target span.
 
 ## Production Execution UI
 
+> **Phase 20.18.2.3.6 operational change:** the manual Introduction Keyframe,
+> span-package and assembly actions in this phase remain supported as governed recovery
+> controls. Normal dynamic-Shot production now uses automated boundary extraction,
+> canonical-reference synthesis and span orchestration.
+
 The Production Execution workspace now contains a
 **Timed Asset / Span Functional Acceptance** section.
 
