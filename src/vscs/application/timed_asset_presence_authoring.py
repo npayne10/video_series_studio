@@ -86,6 +86,24 @@ class TimedAssetPresenceAuthoringService:
                 persisted=True,
             )
 
+        return self.default_context(normalized, frames_per_second=fps)
+
+    def default_context(
+        self,
+        shot_id: str,
+        *,
+        frames_per_second: int = 24,
+    ) -> TimedAssetPresenceAuthoringContext:
+        """Return non-persisted full-shot defaults from current governed assets."""
+        package = self.packages.current_package(shot_id)
+        if package is None:
+            raise TimedAssetPresenceAuthoringError(
+                f"No current Production Package exists for {shot_id}"
+            )
+        normalized = package.shot_id.strip().upper()
+        fps = int(frames_per_second)
+        if fps <= 0:
+            raise TimedAssetPresenceAuthoringError("Frames per second must be positive")
         frame_count = self._default_frame_count(package.shot, fps)
         references = self._reference_ids_by_asset(normalized)
         presences: list[TimedAssetPresence] = []
