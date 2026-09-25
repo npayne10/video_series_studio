@@ -317,6 +317,45 @@ def test_automated_structural_keyframe_can_condition_provider_before_final_visua
     assert "introduced_assets_present" not in current.acceptance_criteria
 
 
+def test_automated_keyframe_identity_detects_validation_mode_tampering(
+    tmp_path: Path,
+) -> None:
+    _timed_plan, _spans, _activation, requirements, _reference_plan_value = _authority(tmp_path)
+    requirement = requirements.requirements[0]
+    source = _png(tmp_path / "boundary-tamper.png", (3, 3, 3))
+    intro = _png(tmp_path / "intro-tamper.png", (4, 4, 4))
+    store = GovernedIntroductionKeyframeStore(tmp_path)
+    record = store.create_record(
+        requirement,
+        image_path=intro.relative_to(tmp_path).as_posix(),
+        image_sha256=_sha(intro),
+        source_boundary_image_path=source.relative_to(tmp_path).as_posix(),
+        source_boundary_image_sha256=_sha(source),
+        approved_by="VSCS Automation — test provider",
+        approved_at="2026-09-25T18:35:00+02:00",
+        acceptance_criteria=("source_boundary_continuity_preserved",),
+        approval_mode="automated_structural",
+        automated_validation_findings=(
+            "source_boundary_checksum_verified",
+            "introduced_reference_checksums_verified",
+            "output_geometry_verified",
+        ),
+    )
+    store.save(record, requirement)
+
+    store_path = tmp_path / ".vscs" / "governed_introduction_keyframes.json"
+    raw = json.loads(store_path.read_text(encoding="utf-8"))
+    raw["introduction_keyframes"][0]["approval_mode"] = "human"
+    store_path.write_text(json.dumps(raw), encoding="utf-8")
+
+    from vscs.application.production_execution import GovernedIntroductionKeyframeError
+
+    import pytest
+
+    with pytest.raises(GovernedIntroductionKeyframeError, match="identity"):
+        store.require_approved(requirement)
+
+
 class _SynthesisClient:
     def __init__(self) -> None:
         self.prompt: dict[str, Any] | None = None
