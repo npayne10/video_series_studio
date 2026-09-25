@@ -104,6 +104,32 @@ contains multiple governed internal spans.
 This prevents the existing monolithic provider path from silently ignoring timed-span
 authority.
 
+## Cross-Shot opening continuity
+
+Live SHT-002 acceptance exposed a boundary-authority gap between the Phase 19 Continuity
+Compiler and Phase 20.18.2.2i Shot Boundary Keyframes.
+
+An explicit preservation directive such as:
+
+```text
+Continue directly from EP-001-SCN-001-SHT-001.
+```
+
+now compiles deterministic boundary authority:
+
+```text
+shot_boundary_mode = continuous
+source_shot_id = EP-001-SCN-001-SHT-001
+```
+
+This is not inferred from sequence position alone. The current Shot must explicitly name
+the predecessor and use a preservation directive. Otherwise the fail-safe mode remains
+`new_composition`.
+
+For SHT-002 this ensures the published SHT-001 closing boundary is the governed opening
+continuity source for SPAN-001 rather than silently falling back to an independent
+composition.
+
 ## Introduction Keyframe approval
 
 The operator selects:
