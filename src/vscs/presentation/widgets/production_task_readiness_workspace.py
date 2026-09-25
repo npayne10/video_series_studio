@@ -584,6 +584,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             and self.projects.is_project_open
         )
         self.production_task_refresh_readiness_button.setEnabled(enabled)
+        self._refresh_production_task_completion_eligibility()
         self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
 
@@ -609,6 +610,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             f"Readiness refreshed: {len(result.transitions)} transition(s). "
             f"Current authoritative state: {states}."
         )
+        self._refresh_production_task_completion_eligibility()
         self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
         self._refresh_production_scheduling()
@@ -621,6 +623,13 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     workspace_type._persisted_tasks_for_selected_shot = _persisted_tasks_for_selected_shot
     workspace_type._refresh_persisted_production_tasks = _refresh_persisted_production_tasks
     workspace_type._selected_persisted_production_task = _selected_persisted_production_task
+    workspace_type._production_task_completion_service = _production_task_completion_service
+    workspace_type._refresh_production_task_completion_eligibility = (
+        _refresh_production_task_completion_eligibility
+    )
+    workspace_type._production_task_reconcile_completion = (
+        _production_task_reconcile_completion
+    )
     workspace_type._refresh_production_task_priority_control = (
         _refresh_production_task_priority_control
     )
