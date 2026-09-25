@@ -450,6 +450,8 @@ class GovernedIntroductionKeyframe:
     approved_by: str
     approved_at: str
     acceptance_criteria: tuple[str, ...]
+    approval_mode: str = "human"
+    automated_validation_findings: tuple[str, ...] = ()
     status: str = "approved"
     schema_version: str = "1.0"
 
@@ -509,6 +511,26 @@ class GovernedIntroductionKeyframe:
                 "Governed Introduction Keyframe acceptance criteria cannot contain duplicates"
             )
         object.__setattr__(self, "acceptance_criteria", criteria)
+        approval_mode = self.approval_mode.strip().casefold()
+        if approval_mode not in {"human", "automated_structural"}:
+            raise GovernedIntroductionKeyframeError(
+                f"Unsupported Introduction Keyframe approval mode: {self.approval_mode!r}"
+            )
+        object.__setattr__(self, "approval_mode", approval_mode)
+        findings = tuple(
+            str(value).strip()
+            for value in self.automated_validation_findings
+            if str(value).strip()
+        )
+        if len(set(findings)) != len(findings):
+            raise GovernedIntroductionKeyframeError(
+                "Automated Introduction Keyframe validation findings cannot contain duplicates"
+            )
+        object.__setattr__(self, "automated_validation_findings", findings)
+        if approval_mode == "automated_structural" and not findings:
+            raise GovernedIntroductionKeyframeError(
+                "Automated structural Introduction Keyframes require validation findings"
+            )
 
     @property
     def approved(self) -> bool:
@@ -536,6 +558,8 @@ class GovernedIntroductionKeyframe:
             "approved_by": self.approved_by,
             "approved_at": self.approved_at,
             "acceptance_criteria": list(self.acceptance_criteria),
+            "approval_mode": self.approval_mode,
+            "automated_validation_findings": list(self.automated_validation_findings),
             "status": self.status,
         }
 
@@ -571,12 +595,26 @@ class GovernedIntroductionKeyframeStore:
             )
         self._require_identity(record)
         self._require_matches(record, requirement)
-        required = set(INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA)
-        missing = sorted(required - set(record.acceptance_criteria))
-        if missing:
-            raise GovernedIntroductionKeyframeError(
-                "Governed Introduction Keyframe approval does not cover: " + ", ".join(missing)
-            )
+        if record.approval_mode == "human":
+            required = set(INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA)
+            missing = sorted(required - set(record.acceptance_criteria))
+            if missing:
+                raise GovernedIntroductionKeyframeError(
+                    "Governed Introduction Keyframe approval does not cover: "
+                    + ", ".join(missing)
+                )
+        else:
+            structural = {
+                "source_boundary_checksum_verified",
+                "introduced_reference_checksums_verified",
+                "output_geometry_verified",
+            }
+            missing = sorted(structural - set(record.automated_validation_findings))
+            if missing:
+                raise GovernedIntroductionKeyframeError(
+                    "Automated Introduction Keyframe structural validation does not cover: "
+                    + ", ".join(missing)
+                )
         self._verify_file(record.image_path, record.image_sha256, "Introduction Keyframe")
         self._verify_file(
             record.source_boundary_image_path,
@@ -592,7 +630,7 @@ class GovernedIntroductionKeyframeStore:
     ) -> GovernedIntroductionKeyframe:
         if not record.approved:
             raise GovernedIntroductionKeyframeError(
-                "Governed Introduction Keyframe must be human-approved before registration"
+                "Governed Introduction Keyframe must be approved before registration"
             )
         self._require_identity(record)
         self._require_matches(record, requirement)
@@ -637,6 +675,8 @@ class GovernedIntroductionKeyframeStore:
         approved_by: str,
         approved_at: str,
         acceptance_criteria: tuple[str, ...] = INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
+        approval_mode: str = "human",
+        automated_validation_findings: tuple[str, ...] = (),
     ) -> GovernedIntroductionKeyframe:
         payload = {
             "requirement_id": requirement.requirement_id,
@@ -662,6 +702,8 @@ class GovernedIntroductionKeyframeStore:
             approved_by=approved_by.strip(),
             approved_at=approved_at.strip(),
             acceptance_criteria=acceptance_criteria,
+            approval_mode=approval_mode,
+            automated_validation_findings=automated_validation_findings,
         )
 
     @staticmethod
@@ -763,6 +805,11 @@ class GovernedIntroductionKeyframeStore:
             approved_by=str(raw.get("approved_by") or "").strip(),
             approved_at=str(raw.get("approved_at") or "").strip(),
             acceptance_criteria=_string_tuple(raw, "acceptance_criteria"),
+            approval_mode=str(raw.get("approval_mode") or "human"),
+            automated_validation_findings=_string_tuple(
+                raw,
+                "automated_validation_findings",
+            ),
             status=str(raw.get("status") or "").strip().lower(),
             schema_version=str(raw.get("schema_version") or "1.0"),
         )
