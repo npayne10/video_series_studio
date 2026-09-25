@@ -14,11 +14,21 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from vscs.application.generated_media import (
+    GeneratedMediaPersistenceService,
+    ProductionTaskCompletionReconciliationService,
+)
 from vscs.application.production_tasks import (
     ProductionTask,
+    ProductionTaskLifecycleService,
     ProductionTaskPriority,
     ProductionTaskState,
 )
+from vscs.infrastructure.generated_media import (
+    JsonGeneratedMediaRepository,
+    JsonGeneratedMediaSelectionRepository,
+)
+from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 
 
 def install_production_task_readiness_workspace(workspace_class: type[Any]) -> None:
