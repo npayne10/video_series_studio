@@ -658,9 +658,9 @@ def test_candidate_c_dynamic_payload_compiles_for_acceptance_but_not_monolithic_
 
     assert payload["status"] == "TIMED_SPAN_ACCEPTANCE_REQUIRED"
     assert payload["provider_execution_plan"]["mode"] == (
-        "governed_multi_span_functional_acceptance"
+        "governed_multi_span_automated_orchestration"
     )
-    assert payload["provider_execution_plan"]["automatic_provider_submission"] is False
+    assert payload["provider_execution_plan"]["automatic_provider_submission"] is True
     assert payload["provider_execution_plan"]["monolithic_submission_permitted"] is False
     assert "reference_plan" not in payload
 
@@ -808,7 +808,9 @@ def test_workspace_surfaces_timed_span_acceptance_and_blocks_monolithic_start(
 
     assert "KEYFRAME_REQUIRED" in workspace.timed_span_state.text()
     assert "Spans 2" in workspace.timed_span_detail.text()
+    assert workspace.run_automated_spans_button.isEnabled()
     assert workspace.approve_introduction_keyframe_button.isEnabled()
+    assert "Manual Recovery" in workspace.approve_introduction_keyframe_button.text()
     assert not workspace.start_button.isEnabled()
 
 
