@@ -684,7 +684,7 @@ class GovernedIntroductionKeyframeStore:
             for value in automated_validation_findings
             if str(value).strip()
         )
-        payload = {
+        payload: dict[str, object] = {
             "requirement_id": requirement.requirement_id,
             "image_sha256": image_sha256.strip().lower(),
             "source_boundary_image_sha256": source_boundary_image_sha256.strip().lower(),
