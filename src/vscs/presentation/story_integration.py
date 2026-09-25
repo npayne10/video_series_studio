@@ -100,6 +100,9 @@ from vscs.presentation.widgets.production_task_readiness_workspace import (
 from vscs.presentation.widgets.story_hierarchical_navigation import (
     install_story_hierarchical_navigation,
 )
+from vscs.presentation.widgets.timed_asset_presence_workspace import (
+    install_timed_asset_presence_workspace,
+)
 from vscs.presentation.widgets.universal_production_description_compiler_workspace import (
     UniversalProductionDescriptionCompilerWorkspace,
 )
@@ -117,6 +120,7 @@ def install_story_browser() -> None:
     install_lighting_planner_navigation()
     install_environment_planner_navigation()
     install_planning_review_navigation()
+    install_timed_asset_presence_workspace(UniversalProductionDescriptionCompilerWorkspace)
     install_production_task_compiler_workspace(UniversalProductionDescriptionCompilerWorkspace)
     install_production_scheduling_workspace(UniversalProductionDescriptionCompilerWorkspace)
     install_production_task_readiness_workspace(UniversalProductionDescriptionCompilerWorkspace)
