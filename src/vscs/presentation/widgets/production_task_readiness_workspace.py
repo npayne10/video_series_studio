@@ -58,6 +58,18 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_refresh_readiness_button.setObjectName(
             "production_task_refresh_readiness_button"
         )
+        self.production_task_reconcile_completion_button = QPushButton(
+            "Reconcile Task Completion",
+            group,
+        )
+        self.production_task_reconcile_completion_button.setObjectName(
+            "production_task_reconcile_completion_button"
+        )
+        self.production_task_reconcile_completion_button.setToolTip(
+            "Complete the selected READY/RUNNING ProductionTask only when its governed "
+            "authoritative Generated Media selection, technical validation, human approval "
+            "and production-authority fingerprint all pass Phase 20.13 reconciliation."
+        )
         self.production_task_supersede_button = QPushButton("Supersede Obsolete Task", group)
         self.production_task_supersede_button.setObjectName("production_task_supersede_button")
         self.production_task_supersede_button.setMinimumWidth(210)
@@ -105,6 +117,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         actions_layout.insertWidget(
             insertion_index + 1,
+            self.production_task_reconcile_completion_button,
+        )
+        actions_layout.insertWidget(
+            insertion_index + 2,
             self.production_task_supersede_button,
         )
 
@@ -114,11 +130,17 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_refresh_readiness_button.clicked.connect(
             self._production_task_refresh_readiness
         )
+        self.production_task_reconcile_completion_button.clicked.connect(
+            self._production_task_reconcile_completion
+        )
         self.production_task_supersede_button.clicked.connect(
             self._production_task_supersede_obsolete
         )
         self.production_task_priority_apply_button.clicked.connect(
             self._production_task_apply_priority
+        )
+        self.production_task_table.itemSelectionChanged.connect(
+            self._refresh_production_task_completion_eligibility
         )
         self.production_task_table.itemSelectionChanged.connect(
             self._refresh_production_task_supersession_eligibility
