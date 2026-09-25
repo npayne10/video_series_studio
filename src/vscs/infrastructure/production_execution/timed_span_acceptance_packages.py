@@ -64,6 +64,141 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
 
+    def build_initial_span(self, source_package_path: Path) -> Path:
+        """Materialize SPAN-001 before any internal Introduction Keyframe exists.
+
+        Phase 20.18.2.3.6 uses this to render the real preceding span first, extract its
+        exact final governed frame, and synthesize the next span's Introduction Keyframe
+        automatically. No later span package is emitted by this method.
+        """
+        source_path = Path(source_package_path).expanduser().resolve(strict=False)
+        root = self._read(source_path)
+        if root.get("schema_version") != self.SCHEMA_VERSION:
+            raise TimedSpanAcceptancePackageError(
+                "Timed-span orchestration requires a Candidate C LTX-2.5 Production Package"
+            )
+        manifest = root.get("_vscs_manifest")
+        if not isinstance(manifest, dict):
+            raise TimedSpanAcceptancePackageError(
+                "Candidate C Production Package has no compilation manifest"
+            )
+        source_fingerprint = str(manifest.get("package_fingerprint") or "").strip().lower()
+        if not source_fingerprint:
+            raise TimedSpanAcceptancePackageError(
+                "Candidate C Production Package has no package fingerprint"
+            )
+        timed_raw = root.get("timed_asset_presence")
+        spans_raw = root.get("internal_render_spans")
+        activation_raw = root.get("timed_reference_activation")
+        if not isinstance(timed_raw, dict) or not isinstance(spans_raw, dict):
+            raise TimedSpanAcceptancePackageError(
+                "Candidate C package has no governed timed-span authority"
+            )
+        if not isinstance(activation_raw, dict):
+            raise TimedSpanAcceptancePackageError(
+                "Candidate C package has no timed canonical-reference activation"
+            )
+        try:
+            timed = TimedAssetPresencePlan.from_dict(timed_raw)
+            spans = GovernedInternalRenderSpanPlan.from_dict(spans_raw)
+            activation = TimedCanonicalReferenceActivationPlan.from_dict(activation_raw)
+            spans.require_source(timed)
+            self._require_activation_structural_sources(timed, spans, activation)
+        except (
+            TimedAssetPresenceError,
+            GovernedInternalRenderSpanError,
+            TimedCanonicalReferenceActivationError,
+            TimedSpanAcceptancePackageError,
+        ) as exc:
+            raise TimedSpanAcceptancePackageError(
+                f"Candidate C timed-span authority is invalid: {exc}"
+            ) from exc
+        if spans.span_count <= 1:
+            raise TimedSpanAcceptancePackageError(
+                "Monolithic Shots do not require automated span orchestration"
+            )
+        opening_keyframe = root.get("governed_keyframe")
+        if not isinstance(opening_keyframe, dict) or opening_keyframe.get("status") != "approved":
+            raise TimedSpanAcceptancePackageError(
+                "Candidate C package has no approved opening governed keyframe"
+            )
+        span = spans.spans[0]
+        active = next(
+            (item for item in activation.activations if item.span_id == span.span_id),
+            None,
+        )
+        if active is None:
+            raise TimedSpanAcceptancePackageError(
+                f"No timed reference activation exists for {span.span_id}"
+            )
+        task_id = str(manifest.get("task_id") or "TASK").strip()
+        profile = str(root.get("profile") or "production").strip().lower()
+        destination = (
+            self.project_directory
+            / ".vscs"
+            / "timed_span_acceptance"
+            / "packages"
+            / task_id
+            / profile
+        )
+        destination.mkdir(parents=True, exist_ok=True)
+        payload = deepcopy(root)
+        payload["status"] = "READY"
+        payload["frame_count"] = span.frame_count
+        payload["governed_keyframe"] = deepcopy(opening_keyframe)
+        payload["motion_prompt"] = self._span_motion_prompt(span.sequence_number)
+        payload["shot_prompt"] = payload["motion_prompt"]
+        base_prefix = str(root.get("filename_prefix") or task_id).rstrip("/")
+        payload["filename_prefix"] = f"{base_prefix}/SPAN-{span.sequence_number:03d}"
+        provider_frames = self._provider_frame_count(span.frame_count)
+        payload["provider_execution_plan"] = {
+            "provider": "ltx-2.5",
+            "mode": "governed_internal_span_i2v",
+            "governed_frame_count": span.frame_count,
+            "provider_frame_count": provider_frames,
+            "provider_trim_frames": provider_frames - span.frame_count,
+            "governed_duration_seconds": span.frame_count / spans.frames_per_second,
+            "hidden_segmentation": True,
+            "keyframe_conditioning": "first_frame_i2v",
+            "automatic_provider_submission": True,
+            "monolithic_submission_permitted": False,
+        }
+        payload["timed_span_execution"] = {
+            "schema_version": "1.0",
+            "span_id": span.span_id,
+            "sequence_number": span.sequence_number,
+            "global_start_frame": span.start_frame,
+            "global_through_frame": span.through_frame,
+            "conditioning_source_kind": "shot_opening_authority",
+            "conditioning_frame_global_index": span.start_frame,
+            "conditioning_frame_is_emitted": True,
+            "preceding_boundary_global_frame_index": None,
+            "preceding_boundary_frame_reemitted": False,
+            "active_reference_ids": list(active.active_reference_ids),
+            "introduced_reference_ids": list(active.introduced_reference_ids),
+            "direct_provider_reference_ids": [],
+            "reference_conditioning_mode": "baked_into_governed_keyframe",
+            "combined_identity_video_reference": False,
+        }
+        payload.pop("reference_plan", None)
+        span_manifest = dict(manifest)
+        span_manifest["parent_package_fingerprint"] = source_fingerprint
+        span_manifest["span_id"] = span.span_id
+        span_manifest["span_sequence_number"] = span.sequence_number
+        span_manifest["compiler"] = (
+            "VSCS Phase 20.18.2.3.6 / automated timed-span orchestration"
+        )
+        payload["_vscs_manifest"] = span_manifest
+        fingerprint_source = dict(payload)
+        fingerprint_source.pop("_vscs_manifest", None)
+        span_manifest["package_fingerprint"] = self._fingerprint(fingerprint_source)
+        package_path = destination / "span-001.json"
+        package_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        return package_path
+
     def build(self, source_package_path: Path) -> TimedSpanAcceptancePackageSet:
         source_path = Path(source_package_path).expanduser().resolve(strict=False)
         root = self._read(source_path)
