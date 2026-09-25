@@ -56,7 +56,6 @@ from .automated_introduction_boundary import (
 )
 from .automated_span_orchestration import (
     AutomatedSpanOrchestrationError,
-    AutomatedSpanOrchestrationResult,
     AutomatedTimedSpanOrchestrationService,
 )
 from .automated_span_provider import (
@@ -654,7 +653,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         task_id: str,
         *,
         profile: str,
-    ) -> AutomatedSpanOrchestrationResult:
+    ) -> TimedSpanAcceptanceStatus:
         """Execute governed spans and synthesize internal introduction frames automatically."""
         task = self._require_task(task_id)
         normalized = normalize_execution_profile(profile)
@@ -674,12 +673,13 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 self.project_directory,
                 base_url=self.endpoint,
             )
-            return AutomatedTimedSpanOrchestrationService(
+            result = AutomatedTimedSpanOrchestrationService(
                 self.project_directory,
                 span_provider=span_provider,
                 synthesizer=synthesizer,
                 managed_media_directory=self.managed_media_directory,
             ).run(package.path)
+            return result.acceptance_status
         except (
             LocalProductionPackageCompilationError,
             AutomatedSpanProviderError,
