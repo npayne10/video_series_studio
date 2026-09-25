@@ -55,6 +55,8 @@ class ContinuityCompilerService:
         "continues from the previous shot",
         "continue from previous shot",
         "continue from the previous shot",
+        "continue directly from",
+        "continues directly from",
         "unchanged from previous shot",
         "unchanged from the previous shot",
         "preserve previous",
@@ -276,9 +278,14 @@ class ContinuityCompilerService:
                 "Current opening state differs from the previous Shot closing state; user review required."
             )
         previous_shot_id = previous.shot_id if previous else referenced_previous_shot_id
+        inherited_opening = bool(previous_shot_id and preservation_directive)
+        shot_boundary_mode = "continuous" if inherited_opening else "new_composition"
+        source_shot_id = previous_shot_id if inherited_opening else ""
         return {
             "current_shot_id": package.shot_id,
             "previous_shot_id": previous_shot_id,
+            "shot_boundary_mode": shot_boundary_mode,
+            "source_shot_id": source_shot_id,
             "previous_closing_state": previous_closing,
             "current_opening_state": opening,
             "effective_opening_state": effective_opening,
@@ -316,6 +323,11 @@ class ContinuityCompilerService:
             "governed": governed,
             "production": {
                 "previous_shot_id": governed.get("previous_shot_id", ""),
+                "shot_boundary_mode": governed.get(
+                    "shot_boundary_mode",
+                    "new_composition",
+                ),
+                "source_shot_id": governed.get("source_shot_id", ""),
                 "opening_state": governed.get("effective_opening_state", ""),
                 "opening_resolution": governed.get("opening_resolution", ""),
                 "closing_state": governed.get("current_closing_state", ""),
