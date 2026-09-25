@@ -182,6 +182,64 @@ Required shot content must be visible in at least one required governed referenc
 
 ---
 
+## ADR-007 — Automated internal asset introduction with exception-based human recovery
+
+**Status:** Accepted  
+**Date:** 2026-09-25
+
+### Context
+
+Phase 20.18.2.3.5 proved frame-exact timed asset introduction by requiring a human to
+provide both the preceding internal-boundary frame and the target Introduction Keyframe.
+That is safe for functional acceptance but does not scale to automated episode production:
+every mid-Shot character, ship, planet, location, prop or technology introduction would
+create repetitive manual image work.
+
+VSCS already owns the information needed to produce those technical artifacts: exact
+internal span topology, canonical references, source-boundary frame indices, provider
+conditioning requirements and final visual-QC authority.
+
+### Decision
+
+Normal dynamic-Shot production will use automated internal-boundary orchestration.
+
+VSCS will render the preceding governed span, extract its exact final normalized frame,
+and either use validated provider-native timed reference injection or synthesize the
+target Introduction Keyframe automatically from that source frame and governed canonical
+references. The next span then executes from that machine-produced structural keyframe.
+
+Human image preparation is not part of the normal path. Manual Introduction Keyframe,
+span-package and assembly controls remain explicit recovery mechanisms.
+
+Automated structural checks may authorize provider conditioning, but final semantic visual
+acceptance remains a separate human QC gate until a governed vision-capable evaluator is
+introduced.
+
+### Alternatives considered
+
+- Require two manually created images at every internal boundary. Rejected because it
+  defeats production automation and scales poorly across episodes.
+- Remove internal span boundaries and rely on provider prose alone. Rejected because it
+  abandons frame-exact timed presence and reference authority.
+- Treat automatically generated images as fully human-approved semantic evidence.
+  Rejected because checksum/geometry validation cannot prove identity, presence or visual
+  continuity.
+
+### Consequences
+
+- Dynamic Shots remain one editorial ProductionTask rather than multiple retry-consuming
+  child tasks.
+- Exact preceding boundary frames are generated from actual provider output rather than
+  prepared by the operator.
+- Current LTX-2.5 Candidate C uses Qwen Image Edit 2511 for automatic introduction-frame
+  synthesis.
+- Future providers may bypass synthesis when direct timed-reference injection has been
+  explicitly validated.
+- Final visual QC remains human and exception/recovery controls remain available.
+- Automation failures fail closed without resetting ProductionTask retry authority.
+
+---
+
 ## ADR template
 
 Use this template for future decisions:
