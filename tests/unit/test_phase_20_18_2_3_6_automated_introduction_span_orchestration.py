@@ -6,8 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image
-from PySide6.QtCore import Qt
-
 from vscs.application.production_execution import (
     AutomatedBoundaryValidationState,
     GovernedInternalRenderSpanCompiler,
@@ -16,7 +14,10 @@ from vscs.application.production_execution import (
     IntroductionBoundaryProviderCapabilities,
     IntroductionBoundaryStrategy,
     TimedCanonicalReferenceActivationCompiler,
+    ProductionExecutionCandidate,
     ProductionExecutionUiService,
+    ProductionPackageCompilationState,
+    ProductionPackageStatus,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
     request_from_requirement,
@@ -24,6 +25,7 @@ from vscs.application.production_execution import (
 from vscs.application.production_execution.automated_introduction_boundary import (
     AutomatedIntroductionBoundaryResult,
 )
+from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     TimedAssetKind,
@@ -587,15 +589,6 @@ def test_introduction_boundary_workflow_and_deployment_assets_are_versioned() ->
 
 class _UiService:
     def __init__(self) -> None:
-        from vscs.application.production_execution import (
-            ProductionExecutionCandidate,
-            ProductionPackageCompilationState,
-            ProductionPackageStatus,
-        )
-        from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
-
-        self.ProductionPackageStatus = ProductionPackageStatus
-        self.ProductionPackageCompilationState = ProductionPackageCompilationState
         self.candidate = ProductionExecutionCandidate(
             production_id="XORIX",
             task_id="PT-AUTO-SPAN",
@@ -613,9 +606,9 @@ class _UiService:
         return (self.candidate,)
 
     def package_status(self, task_id: str, *, profile: str = "production") -> Any:
-        return self.ProductionPackageStatus(
+        return ProductionPackageStatus(
             task_id=task_id,
-            state=self.ProductionPackageCompilationState.COMPILED,
+            state=ProductionPackageCompilationState.COMPILED,
             profile=profile,
             path=Path("production_package.json"),
             authority_fingerprint="authority",
