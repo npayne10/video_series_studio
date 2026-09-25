@@ -225,7 +225,12 @@ class AutomatedTimedSpanOrchestrationService:
             except TimedSpanAcceptancePackageError as exc:
                 raise AutomatedSpanOrchestrationError(str(exc)) from exc
             span_package = package_set.package_paths[-1]
-            span_output = Path(self.span_provider.render(span_package)).resolve(strict=False)
+            try:
+                span_output = Path(self.span_provider.render(span_package)).resolve(strict=False)
+            except Exception as exc:
+                raise AutomatedSpanOrchestrationError(
+                    f"Provider execution failed for governed span {sequence_number}: {exc}"
+                ) from exc
             span_outputs.append(span_output)
             self._audit(
                 task_id,
@@ -268,7 +273,13 @@ class AutomatedTimedSpanOrchestrationService:
                 seed=int(raw.get("seed") or 0) + requirement.target_global_frame_index,
             )
             self.boundaries.save_request(request)
-            result = self.synthesizer.synthesize(request)
+            try:
+                result = self.synthesizer.synthesize(request)
+            except Exception as exc:
+                raise AutomatedSpanOrchestrationError(
+                    "Automated Introduction Keyframe synthesis failed safely: "
+                    f"{exc}"
+                ) from exc
             self.boundaries.save_result(result)
             if result.validation_state is not AutomatedBoundaryValidationState.PASSED:
                 raise AutomatedSpanOrchestrationError(
