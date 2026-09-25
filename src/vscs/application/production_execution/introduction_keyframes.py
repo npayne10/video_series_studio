@@ -678,6 +678,12 @@ class GovernedIntroductionKeyframeStore:
         approval_mode: str = "human",
         automated_validation_findings: tuple[str, ...] = (),
     ) -> GovernedIntroductionKeyframe:
+        normalized_mode = approval_mode.strip().casefold()
+        normalized_findings = tuple(
+            str(value).strip()
+            for value in automated_validation_findings
+            if str(value).strip()
+        )
         payload = {
             "requirement_id": requirement.requirement_id,
             "image_sha256": image_sha256.strip().lower(),
@@ -685,6 +691,9 @@ class GovernedIntroductionKeyframeStore:
             "approved_by": approved_by.strip(),
             "approved_at": approved_at.strip(),
         }
+        if normalized_mode != "human" or normalized_findings:
+            payload["approval_mode"] = normalized_mode
+            payload["automated_validation_findings"] = list(normalized_findings)
         keyframe_id = f"GIK-{_fingerprint(payload)[:16].upper()}"
         return GovernedIntroductionKeyframe(
             keyframe_id=keyframe_id,
@@ -702,19 +711,24 @@ class GovernedIntroductionKeyframeStore:
             approved_by=approved_by.strip(),
             approved_at=approved_at.strip(),
             acceptance_criteria=acceptance_criteria,
-            approval_mode=approval_mode,
-            automated_validation_findings=automated_validation_findings,
+            approval_mode=normalized_mode,
+            automated_validation_findings=normalized_findings,
         )
 
     @staticmethod
     def _require_identity(record: GovernedIntroductionKeyframe) -> None:
-        payload = {
+        payload: dict[str, object] = {
             "requirement_id": record.requirement_id,
             "image_sha256": record.image_sha256,
             "source_boundary_image_sha256": record.source_boundary_image_sha256,
             "approved_by": record.approved_by,
             "approved_at": record.approved_at,
         }
+        if record.approval_mode != "human" or record.automated_validation_findings:
+            payload["approval_mode"] = record.approval_mode
+            payload["automated_validation_findings"] = list(
+                record.automated_validation_findings
+            )
         expected = f"GIK-{_fingerprint(payload)[:16].upper()}"
         if record.keyframe_id != expected:
             raise GovernedIntroductionKeyframeError(
