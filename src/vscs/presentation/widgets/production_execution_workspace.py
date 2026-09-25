@@ -816,6 +816,9 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_timed_span_status()
 
     def _set_timed_span_controls_busy(self, busy: bool) -> None:
+        self.table.setEnabled(not busy)
+        self.profile.setEnabled(not busy)
+        self.refresh_button.setEnabled(not busy)
         if busy:
             for button in (
                 self.run_automated_spans_button,
@@ -823,11 +826,20 @@ class ProductionExecutionWorkspace(QWidget):
                 self.approve_introduction_keyframe_button,
                 self.assemble_span_outputs_button,
                 self.record_span_qc_button,
+                self.compile_package_button,
+                self.start_button,
+                self.status_button,
+                self.retry_button,
+                self.publish_boundary_button,
             ):
                 button.setEnabled(False)
             return
         if self._timed_span_status is not None:
             self._render_timed_span_status(self._timed_span_status)
+        self._refresh_execution_availability()
+        self._refresh_package_status()
+        self._refresh_retry_override_status()
+        self._refresh_boundary_status()
 
     def _build_span_packages(self) -> None:
         if self._selected_task_id is None:
