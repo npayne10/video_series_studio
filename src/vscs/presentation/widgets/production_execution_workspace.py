@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -43,6 +43,29 @@ from vscs.application.production_execution import (
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
 )
+
+
+class _AutomatedSpanWorker(QObject):
+    """Run long provider orchestration without blocking the desktop UI."""
+
+    succeeded = Signal(object)
+    failed = Signal(str)
+    finished = Signal()
+
+    def __init__(self, operation: Callable[[], TimedSpanAcceptanceStatus]) -> None:
+        super().__init__()
+        self.operation = operation
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            status = self.operation()
+        except Exception as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.succeeded.emit(status)
+        finally:
+            self.finished.emit()
 
 
 class TimedSpanQcDialog(QDialog):
@@ -117,6 +140,8 @@ class ProductionExecutionWorkspace(QWidget):
         self._retry_status: GovernedRetryOverrideStatus | None = None
         self._boundary_status: ShotBoundaryAuthorityStatus | None = None
         self._timed_span_status: TimedSpanAcceptanceStatus | None = None
+        self._automated_span_thread: QThread | None = None
+        self._automated_span_worker: _AutomatedSpanWorker | None = None
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(self.POLL_INTERVAL_MS)
         self._poll_timer.timeout.connect(self._poll_live_status)
@@ -166,17 +191,29 @@ class ProductionExecutionWorkspace(QWidget):
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
         self.timed_span_detail.setWordWrap(True)
-        self.build_span_packages_button = QPushButton("Build Span Packages")
-        self.approve_introduction_keyframe_button = QPushButton("Approve Introduction Keyframe")
-        self.assemble_span_outputs_button = QPushButton("Verify & Assemble Span Outputs")
+        self.run_automated_spans_button = QPushButton("Run Automated Span Orchestration")
+        self.run_automated_spans_button.setToolTip(
+            "Automatically render each governed span, extract exact boundary frames, synthesize "
+            "new-asset Introduction Keyframes from canonical references, and assemble the Shot. "
+            "Manual controls below remain available for governed recovery."
+        )
+        self.build_span_packages_button = QPushButton("Build Span Packages — Manual Recovery")
+        self.approve_introduction_keyframe_button = QPushButton(
+            "Approve Introduction Keyframe — Manual Recovery"
+        )
+        self.assemble_span_outputs_button = QPushButton(
+            "Verify & Assemble Span Outputs — Manual Recovery"
+        )
         self.record_span_qc_button = QPushButton("Record Visual QC")
         for button in (
+            self.run_automated_spans_button,
             self.build_span_packages_button,
             self.approve_introduction_keyframe_button,
             self.assemble_span_outputs_button,
             self.record_span_qc_button,
         ):
             button.setEnabled(False)
+        self.run_automated_spans_button.clicked.connect(self._run_automated_span_orchestration)
         self.build_span_packages_button.clicked.connect(self._build_span_packages)
         self.approve_introduction_keyframe_button.clicked.connect(
             self._approve_introduction_keyframe
@@ -185,10 +222,11 @@ class ProductionExecutionWorkspace(QWidget):
         self.record_span_qc_button.clicked.connect(self._record_span_qc)
         timed_span_layout.addWidget(self.timed_span_state, 0, 0, 1, 3)
         timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
-        timed_span_layout.addWidget(self.build_span_packages_button, 2, 0)
-        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 2, 1)
-        timed_span_layout.addWidget(self.assemble_span_outputs_button, 3, 0)
-        timed_span_layout.addWidget(self.record_span_qc_button, 3, 1)
+        timed_span_layout.addWidget(self.run_automated_spans_button, 2, 0, 1, 2)
+        timed_span_layout.addWidget(self.build_span_packages_button, 3, 0)
+        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 3, 1)
+        timed_span_layout.addWidget(self.assemble_span_outputs_button, 4, 0)
+        timed_span_layout.addWidget(self.record_span_qc_button, 4, 1)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -606,6 +644,7 @@ class ProductionExecutionWorkspace(QWidget):
             self.timed_span_detail.setText(
                 "This backend does not expose Phase 20.18.2.3.5 timed-span acceptance."
             )
+            self.run_automated_spans_button.setEnabled(False)
             self.build_span_packages_button.setEnabled(False)
             self.approve_introduction_keyframe_button.setEnabled(False)
             self.assemble_span_outputs_button.setEnabled(False)
@@ -638,21 +677,36 @@ class ProductionExecutionWorkspace(QWidget):
             f"Transitions: {boundaries}\n"
             f"Assembled Shot: {final_path}"
         )
+        automation_ready = (
+            status.applicable
+            and status.state
+            in {
+                TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+                TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
+            }
+            and self._automated_span_thread is None
+        )
+        self.run_automated_spans_button.setEnabled(automation_ready)
         self.build_span_packages_button.setEnabled(
             status.applicable
             and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED
             and not status.pending_keyframe_requirement_ids
+            and self._automated_span_thread is None
         )
         self.approve_introduction_keyframe_button.setEnabled(
             bool(status.pending_keyframe_requirement_ids)
+            and self._automated_span_thread is None
         )
         self.assemble_span_outputs_button.setEnabled(
             status.applicable
             and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED
             and not status.pending_keyframe_requirement_ids
+            and self._automated_span_thread is None
         )
         self.record_span_qc_button.setEnabled(
-            status.assembly_present and bool(status.pending_qc_requirement_ids)
+            status.assembly_present
+            and bool(status.pending_qc_requirement_ids)
+            and self._automated_span_thread is None
         )
 
     def _reset_timed_span_status(self) -> None:
@@ -660,6 +714,7 @@ class ProductionExecutionWorkspace(QWidget):
         self.timed_span_detail.setText(
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
+        self.run_automated_spans_button.setEnabled(False)
         self.build_span_packages_button.setEnabled(False)
         self.approve_introduction_keyframe_button.setEnabled(False)
         self.assemble_span_outputs_button.setEnabled(False)
@@ -686,6 +741,93 @@ class ProductionExecutionWorkspace(QWidget):
             return None
         value = selected.strip()
         return value or None
+
+    def _run_automated_span_orchestration(self) -> None:
+        if self._selected_task_id is None or self._timed_span_status is None:
+            return
+        if self._automated_span_thread is not None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        task_id = self._selected_task_id
+        profile = self.profile.currentText()
+        thread = QThread(self)
+        worker = _AutomatedSpanWorker(
+            lambda: service.run_automated_timed_span_orchestration(
+                task_id,
+                profile=profile,
+            )
+        )
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.succeeded.connect(self._automated_span_succeeded)
+        worker.failed.connect(self._automated_span_failed)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(self._automated_span_finished)
+        thread.finished.connect(thread.deleteLater)
+        self._automated_span_thread = thread
+        self._automated_span_worker = worker
+        self.summary.setText(
+            "Automated timed-span orchestration is running: VSCS will render the preceding "
+            "span, extract its exact boundary frame, synthesize introduced assets from governed "
+            "canonical references, continue remaining spans, and assemble the Shot."
+        )
+        self.timed_span_state.setText(
+            "Timed Span Acceptance: AUTOMATION_RUNNING — provider work is in progress."
+        )
+        self._set_timed_span_controls_busy(True)
+        thread.start()
+
+    @Slot(object)
+    def _automated_span_succeeded(self, value: object) -> None:
+        if not isinstance(value, TimedSpanAcceptanceStatus):
+            self._automated_span_failed(
+                "Automated orchestration returned an invalid acceptance status."
+            )
+            return
+        self._timed_span_status = value
+        self._render_timed_span_status(value)
+        if value.state is TimedSpanAcceptanceState.QC_REQUIRED:
+            self.summary.setText(
+                "Automated span rendering, boundary extraction, Introduction Keyframe synthesis "
+                "and Shot assembly completed. Review the assembled transition and Record Visual QC."
+            )
+        else:
+            self.summary.setText(
+                "Automated timed-span orchestration completed: "
+                f"{value.state.value.upper()} — {value.message}"
+            )
+
+    @Slot(str)
+    def _automated_span_failed(self, message: str) -> None:
+        QMessageBox.warning(self, "Automated Span Orchestration", message)
+        self.summary.setText(
+            "Automated span orchestration stopped safely. No manual image authoring is required "
+            "unless you choose the explicit recovery controls below."
+        )
+
+    @Slot()
+    def _automated_span_finished(self) -> None:
+        self._automated_span_thread = None
+        self._automated_span_worker = None
+        self._set_timed_span_controls_busy(False)
+        self._refresh_timed_span_status()
+
+    def _set_timed_span_controls_busy(self, busy: bool) -> None:
+        if busy:
+            for button in (
+                self.run_automated_spans_button,
+                self.build_span_packages_button,
+                self.approve_introduction_keyframe_button,
+                self.assemble_span_outputs_button,
+                self.record_span_qc_button,
+            ):
+                button.setEnabled(False)
+            return
+        if self._timed_span_status is not None:
+            self._render_timed_span_status(self._timed_span_status)
 
     def _build_span_packages(self) -> None:
         if self._selected_task_id is None:
