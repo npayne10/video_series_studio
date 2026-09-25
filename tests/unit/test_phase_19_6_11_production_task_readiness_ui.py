@@ -260,3 +260,28 @@ def test_series_entry_continuity_produces_no_task_dependency(
 
     assert blocker == ""
     assert dependencies == ()
+
+
+def test_completion_reconciliation_control_enables_only_for_completable_task(
+    qtbot: object,
+    qapp: QApplication,
+    tmp_path: Path,
+    application_context: ApplicationContext,
+) -> None:
+    projects = application_context.services.require(ProjectService)
+    projects.create(tmp_path / "Project", name="Project")
+    window = application_context.create_main_window()
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    workspace = window.production_package_workspace
+    _scope_workspace(workspace)
+
+    ready = replace(_task(), state=ProductionTaskState.READY)
+    workspace.production_scheduling.register_compiled_tasks((ready,))
+    workspace._refresh_production_tasks()
+    workspace.production_task_table.selectRow(0)
+    qapp.processEvents()
+
+    assert workspace.production_task_reconcile_completion_button.isEnabled()
+    assert "governed Generated Media" in (
+        workspace.production_task_reconcile_completion_button.toolTip()
+    )
