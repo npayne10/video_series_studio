@@ -1,5 +1,21 @@
 """Infrastructure composition for live Production Execution."""
 
+from .automated_introduction_boundary import (
+    ComfyUIIntroductionBoundarySynthesisError,
+    ComfyUIIntroductionBoundarySynthesizer,
+)
+from .automated_span_orchestration import (
+    AutomatedSpanOrchestrationError,
+    AutomatedSpanOrchestrationResult,
+    AutomatedTimedSpanOrchestrationService,
+    GovernedInternalBoundaryFrameExtractor,
+    IntroductionBoundarySynthesizer,
+    SpanVideoProvider,
+)
+from .automated_span_provider import (
+    AutomatedSpanProviderError,
+    LTX25AutomatedSpanProvider,
+)
 from .hardware_shot_capability import (
     HardwareShotCapability,
     HardwareShotCapabilityError,
@@ -50,9 +66,16 @@ from .timed_span_acceptance_service import (
 )
 
 __all__ = [
+    "AutomatedSpanOrchestrationError",
+    "AutomatedSpanOrchestrationResult",
+    "AutomatedSpanProviderError",
+    "AutomatedTimedSpanOrchestrationService",
+    "ComfyUIIntroductionBoundarySynthesisError",
+    "ComfyUIIntroductionBoundarySynthesizer",
     "ComfyUIInputAssuranceReport",
     "ComfyUIInputTrace",
     "ComfyUIV714InputAssurance",
+    "GovernedInternalBoundaryFrameExtractor",
     "GovernedProviderOutputs",
     "GovernedShotBoundaryRuntime",
     "GovernedShotBoundaryRuntimeError",
@@ -61,6 +84,8 @@ __all__ = [
     "HardwareShotCapability",
     "HardwareShotCapabilityError",
     "LTX23V721DeploymentAssurance",
+    "IntroductionBoundarySynthesizer",
+    "LTX25AutomatedSpanProvider",
     "LTX25GovernedKeyframeDeploymentAssurance",
     "LTX25SpanConditioning",
     "LTX25SpanConditioningError",
@@ -74,6 +99,7 @@ __all__ = [
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
     "SpanMediaObservation",
+    "SpanVideoProvider",
     "TimedSpanAcceptancePackageError",
     "TimedSpanAcceptancePackageSet",
     "TimedSpanFunctionalAcceptanceService",
