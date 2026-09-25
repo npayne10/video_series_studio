@@ -183,7 +183,7 @@ class ProductionExecutionWorkspace(QWidget):
         boundary_row.addWidget(self.closing_boundary_state, 1)
         boundary_row.addWidget(self.publish_boundary_button)
 
-        self.timed_span_group = QGroupBox("Timed Asset / Span Functional Acceptance")
+        self.timed_span_group = QGroupBox("Timed Asset / Automated Span Orchestration")
         timed_span_layout = QGridLayout(self.timed_span_group)
         self.timed_span_state = QLabel("Timed Span Acceptance: -")
         self.timed_span_state.setWordWrap(True)
@@ -642,7 +642,7 @@ class ProductionExecutionWorkspace(QWidget):
             self._timed_span_status = None
             self.timed_span_state.setText(f"Timed Span Acceptance: unavailable — {exc}")
             self.timed_span_detail.setText(
-                "This backend does not expose Phase 20.18.2.3.5 timed-span acceptance."
+                "This backend does not expose Phase 20.18.2.3.6 timed-span orchestration."
             )
             self.run_automated_spans_button.setEnabled(False)
             self.build_span_packages_button.setEnabled(False)
