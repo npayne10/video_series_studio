@@ -1090,6 +1090,9 @@ class ProductionExecutionWorkspace(QWidget):
         self._refresh_retry_override_status()
         self._refresh_boundary_status()
         self._refresh_timed_span_status()
+        candidate = self._candidates.get(self._selected_task_id)
+        if candidate is not None:
+            self._render_candidate(candidate)
         self._update_start_enabled()
 
     def _update_start_enabled(self) -> None:
