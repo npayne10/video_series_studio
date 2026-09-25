@@ -28,7 +28,7 @@ INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA = (
 
 @dataclass(frozen=True, slots=True)
 class IntroductionKeyframeRequirement:
-    """Required human-approved opening frame for one non-initial internal span."""
+    """Required governed opening frame for one non-initial internal span."""
 
     shot_id: str
     boundary_id: str
@@ -433,7 +433,7 @@ class GovernedIntroductionKeyframeRequirementCompiler:
 
 @dataclass(frozen=True, slots=True)
 class GovernedIntroductionKeyframe:
-    """Human-approved image representing the first emitted frame of one target span."""
+    """Governed image representing the first emitted frame of one target span."""
 
     keyframe_id: str
     requirement_id: str
@@ -565,7 +565,7 @@ class GovernedIntroductionKeyframe:
 
 
 class GovernedIntroductionKeyframeStore:
-    """Persist and verify human-approved internal introduction keyframes."""
+    """Persist and verify human or structurally automated Introduction Keyframes."""
 
     RELATIVE_PATH = Path(".vscs") / "governed_introduction_keyframes.json"
 
