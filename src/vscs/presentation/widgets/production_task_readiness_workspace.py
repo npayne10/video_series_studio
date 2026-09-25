@@ -260,6 +260,107 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             None,
         )
 
+    def _production_task_completion_service(
+        self: Any,
+    ) -> ProductionTaskCompletionReconciliationService:
+        project_directory = self.projects.project_directory
+        if project_directory is None:
+            raise RuntimeError(
+                "Open a VSCS project before reconciling ProductionTask completion."
+            )
+        task_repository = JsonProductionTaskRepository(
+            project_directory / "production" / "scheduling" / "tasks"
+        )
+        media = GeneratedMediaPersistenceService(
+            JsonGeneratedMediaRepository(project_directory / ".vscs" / "generated_media")
+        )
+        selections = JsonGeneratedMediaSelectionRepository(
+            project_directory / ".vscs" / "generated_media_selections"
+        )
+        return ProductionTaskCompletionReconciliationService(
+            ProductionTaskLifecycleService(task_repository),
+            media,
+            selections,
+        )
+
+    def _refresh_production_task_completion_eligibility(self: Any, *_args: Any) -> None:
+        button = getattr(self, "production_task_reconcile_completion_button", None)
+        if button is None:
+            return
+        selected = self._selected_persisted_production_task()
+        if selected is None:
+            button.setEnabled(False)
+            button.setToolTip(
+                "Select a persisted READY or RUNNING ProductionTask before reconciling completion."
+            )
+            return
+        eligible = selected.state in {
+            ProductionTaskState.READY,
+            ProductionTaskState.RUNNING,
+            ProductionTaskState.COMPLETED,
+        }
+        button.setEnabled(eligible)
+        if selected.state is ProductionTaskState.COMPLETED:
+            button.setToolTip(
+                "The selected ProductionTask is already COMPLETED; reconciliation is idempotent."
+            )
+        elif eligible:
+            button.setToolTip(
+                "Use governed Generated Media selection and approval evidence to reconcile "
+                "the selected ProductionTask to COMPLETED."
+            )
+        else:
+            button.setToolTip(
+                "Completion reconciliation requires READY or RUNNING state; "
+                f"selected task is {selected.state.value}."
+            )
+
+    def _production_task_reconcile_completion(self: Any) -> None:
+        selected = self._selected_persisted_production_task()
+        if selected is None:
+            self.production_task_readiness_status.setText(
+                "Select a persisted ProductionTask before reconciling completion."
+            )
+            return
+        try:
+            result = self._production_task_completion_service().reconcile(selected.task_id)
+        except (RuntimeError, ValueError) as exc:
+            self.production_task_readiness_status.setText(str(exc))
+            QMessageBox.warning(self, "ProductionTask Completion", str(exc))
+            return
+
+        if result.completed:
+            transition_count = len(result.transitions)
+            suffix = (
+                "already completed"
+                if result.already_completed
+                else f"completed with {transition_count} governed lifecycle transition(s)"
+            )
+            self.production_task_readiness_status.setText(
+                f"ProductionTask {result.task.task_id} {suffix}. "
+                "Refresh Task Readiness to release eligible dependent tasks."
+            )
+        else:
+            findings = "; ".join(
+                f"{finding.code}: {finding.message}"
+                for finding in result.assessment.findings
+            ) or "Completion evidence is incomplete."
+            self.production_task_readiness_status.setText(
+                f"ProductionTask completion not reconciled: {findings}"
+            )
+            QMessageBox.information(
+                self,
+                "ProductionTask Completion",
+                "Completion was not changed because governed evidence is incomplete.\n\n"
+                + findings,
+            )
+
+        self._refresh_persisted_production_tasks(result.task.production_id)
+        self._refresh_production_task_completion_eligibility()
+        self._refresh_production_task_priority_control()
+        self._refresh_production_task_supersession_eligibility()
+        self._refresh_production_scheduling()
+
     def _refresh_production_task_priority_control(self: Any, *_args: Any) -> None:
         if not hasattr(self, "production_task_priority_combo"):
             return
