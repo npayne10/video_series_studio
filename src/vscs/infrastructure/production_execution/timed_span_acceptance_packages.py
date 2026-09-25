@@ -199,7 +199,12 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         )
         return package_path
 
-    def build(self, source_package_path: Path) -> TimedSpanAcceptancePackageSet:
+    def build(
+        self,
+        source_package_path: Path,
+        *,
+        through_sequence: int | None = None,
+    ) -> TimedSpanAcceptancePackageSet:
         source_path = Path(source_package_path).expanduser().resolve(strict=False)
         root = self._read(source_path)
         if root.get("schema_version") != self.SCHEMA_VERSION:
@@ -289,7 +294,13 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         )
         destination.mkdir(parents=True, exist_ok=True)
 
+        if through_sequence is not None and not 1 <= through_sequence <= spans.span_count:
+            raise TimedSpanAcceptancePackageError(
+                f"through_sequence must be between 1 and {spans.span_count}"
+            )
+
         package_paths: list[Path] = []
+        built_span_ids: list[str] = []
         for span in spans.spans:
             active = activation_by_span.get(span.span_id)
             if active is None:
@@ -384,12 +395,15 @@ class LTX25TimedSpanAcceptancePackageBuilder:
                 encoding="utf-8",
             )
             package_paths.append(package_path)
+            built_span_ids.append(span.span_id)
+            if through_sequence is not None and span.sequence_number >= through_sequence:
+                break
 
         return TimedSpanAcceptancePackageSet(
             shot_id=spans.shot_id,
             source_package_path=source_path,
             source_package_fingerprint=source_fingerprint,
-            span_ids=tuple(span.span_id for span in spans.spans),
+            span_ids=tuple(built_span_ids),
             package_paths=tuple(package_paths),
         )
 
