@@ -1,5 +1,17 @@
 """Operator-facing Production Execution application boundary."""
 
+from .automated_introduction_boundary import (
+    AutomatedBoundaryValidationState,
+    AutomatedIntroductionBoundaryError,
+    AutomatedIntroductionBoundaryRequest,
+    AutomatedIntroductionBoundaryResult,
+    AutomatedIntroductionBoundaryStore,
+    IntroductionBoundaryProviderCapabilities,
+    IntroductionBoundaryStrategy,
+    file_sha256,
+    now_iso,
+    request_from_requirement,
+)
 from .functional_acceptance import (
     LiveShotFunctionalAcceptanceError,
     LiveShotFunctionalAcceptanceReconciliation,
@@ -98,6 +110,11 @@ from .video_workflow_rebaseline import (
 )
 
 __all__ = [
+    "AutomatedBoundaryValidationState",
+    "AutomatedIntroductionBoundaryError",
+    "AutomatedIntroductionBoundaryRequest",
+    "AutomatedIntroductionBoundaryResult",
+    "AutomatedIntroductionBoundaryStore",
     "INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA",
     "KEYFRAME_ACCEPTANCE_CRITERIA",
     "VISUAL_ACCEPTANCE_CRITERIA",
@@ -166,5 +183,8 @@ __all__ = [
     "normalize_execution_profile",
     "provider_video_candidates",
     "provider_video_rebaseline_contract",
+    "file_sha256",
+    "now_iso",
+    "request_from_requirement",
     "resolve_provider_audio_policy",
 ]
