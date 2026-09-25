@@ -12,7 +12,7 @@
 
 | Milestone | Status | Acceptance gate |
 |---|---|---|
-| Phase 12.1.1 Part 4B2 Section 1A — Prompt Package Discovery | 🧪 Implemented, awaiting local test | Focused tests, full regression suite, owner approval |
+| Phase 20.18.2.3.6 — Automated Introduction Boundary Synthesis & Span Orchestration | 🧪 Implemented, awaiting local test | Ruff, mypy, focused 3.1–3.6 regressions, ComfyUI node deployment, live SHT-002 orchestration, owner approval |
 
 ## Milestone register
 
@@ -21,6 +21,7 @@
 | 11.10.1 | CAR Migrator v2 | ✅ Complete | `v0.11.10.1` | Passed | Approved |
 | 12.1 | Validator modularisation | ✅ Complete | `b998d01` baseline | Confirmed | Approved |
 | 12.1.1-4B2-1A | Prompt Package Discovery | 🧪 Implemented | `05ad266` milestone head | Not run | Pending |
+| 20.18.2.3.6 | Automated Introduction Boundary Synthesis & Span Orchestration | 🧪 Implemented | branch `phase-20.18.2.3.6-automated-introduction-span-orchestration` | Not run | Pending |
 | 12.1.1-4B2-1B | Prompt Content Validation | ⏳ Planned | — | Not run | Pending |
 | 12.1.1-4B2-1C | Template and Metadata Validation | ⏳ Planned | — | Not run | Pending |
 | 12.1.1-4B2-1D | Prompt Package Integration | ⏳ Planned | — | Not run | Pending |
