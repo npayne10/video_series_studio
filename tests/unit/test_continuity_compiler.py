@@ -145,6 +145,8 @@ def test_first_shot_uses_series_entry_without_fake_previous_state(tmp_path: Path
     assert draft.previous_shot_id == ""
     assert draft.continuity_value()["previous_closing_state"] == ""
     assert draft.continuity_value()["inheritance_mode"] == "series-entry"
+    assert draft.continuity_value()["shot_boundary_mode"] == "new_composition"
+    assert draft.continuity_value()["source_shot_id"] == ""
 
 
 @pytest.mark.parametrize(
@@ -153,6 +155,7 @@ def test_first_shot_uses_series_entry_without_fake_previous_state(tmp_path: Path
         "Ship and crew are the same as in the previous shot",
         "Same as previous shot.",
         "Continues from the previous shot.",
+        "Continue directly from EP-001-SCN-001-SHT-001.",
         "Unchanged from previous shot.",
         "preserve_previous",
     ),
@@ -175,6 +178,8 @@ def test_preservation_directive_inherits_previous_state_without_false_conflict(
     assert continuity["current_opening_state"] == directive
     assert continuity["effective_opening_state"] == "Previous closes beside viewport."
     assert continuity["opening_resolution"] == "preserve-previous-directive"
+    assert continuity["shot_boundary_mode"] == "continuous"
+    assert continuity["source_shot_id"] == "SHT-001"
     assert continuity["continuity_conflicts"] == []
 
 
@@ -203,6 +208,8 @@ def test_ready_compiles_provider_neutral_continuity_and_locks_notes(tmp_path: Pa
     assert ready.status is ContinuityCompilationStatus.READY
     compiled = packages.values["SHT-002"].continuity
     assert compiled["production"]["previous_shot_id"] == "SHT-001"
+    assert compiled["production"]["shot_boundary_mode"] == "new_composition"
+    assert compiled["production"]["source_shot_id"] == ""
     assert compiled["production"]["provider_neutral"] is True
     assert packages.values["SHT-002"].validation["continuity_complete"] is True
     assert (
@@ -264,6 +271,8 @@ def test_explicit_previous_shot_reference_is_preserved_when_previous_package_is_
     assert draft.previous_shot_id == "EP-001-SCN-001-SHT-001"
     assert continuity["previous_shot_id"] == "EP-001-SCN-001-SHT-001"
     assert continuity["inheritance_mode"] == "explicit-previous-shot-unavailable"
+    assert continuity["shot_boundary_mode"] == "continuous"
+    assert continuity["source_shot_id"] == "EP-001-SCN-001-SHT-001"
     assert continuity["previous_closing_state"] == ""
     assert len(continuity["continuity_conflicts"]) == 1
     assert "has no current Production Package" in continuity["continuity_conflicts"][0]
