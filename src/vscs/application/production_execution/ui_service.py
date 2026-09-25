@@ -164,6 +164,15 @@ class _TimedSpanStatusForProfile(Protocol):
     def __call__(self, task_id: str, *, profile: str) -> TimedSpanAcceptanceStatus: ...
 
 
+class _RunAutomatedTimedSpanOrchestrationForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> TimedSpanAcceptanceStatus: ...
+
+
 class _ApproveIntroductionKeyframeForProfile(Protocol):
     def __call__(
         self,
@@ -365,6 +374,28 @@ class ProductionExecutionUiService:
                 "This execution backend does not expose timed-span functional acceptance."
             )
         return cast(_TimedSpanStatusForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def run_automated_timed_span_orchestration(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "running automated timed-span orchestration")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "run_automated_timed_span_orchestration_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support automated timed-span orchestration."
+            )
+        return cast(_RunAutomatedTimedSpanOrchestrationForProfile, operation)(
             normalized,
             profile=execution_profile,
         )
