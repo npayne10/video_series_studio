@@ -301,6 +301,44 @@ sub-execution model for internal spans, but that model must preserve outer Produ
 attempt authority rather than treating each hidden span as an independent production
 retry.
 
+## Predecessor ProductionTask completion reconciliation
+
+Cross-Shot continuity dependencies consume authoritative ProductionTask lifecycle state.
+A predecessor Shot that already has technically valid, human-approved and authoritatively
+selected Generated Media may therefore still need its task reconciled from `READY` to
+`COMPLETED` before a dependent dynamic Shot can become READY.
+
+The Production Tasks UI now exposes **Reconcile Task Completion** for a selected
+`READY`, `RUNNING`, or already-`COMPLETED` task.
+
+This control delegates to the existing Phase 20.13
+`ProductionTaskCompletionReconciliationService`. It does not mark a task complete
+manually and does not trust provider success alone.
+
+Completion requires:
+
+- authoritative selected Generated Media for every expected output kind;
+- current APPROVED media state;
+- passed technical validation;
+- explicit human approval;
+- explicit human selection;
+- matching Generated Media revision;
+- matching ProductionTask authority fingerprint.
+
+For a `READY` task with valid evidence, the existing governed lifecycle is preserved:
+
+```text
+READY -> RUNNING -> COMPLETED
+```
+
+If any evidence is missing or stale, no task mutation occurs and the blocking findings
+are shown to the operator.
+
+This is particularly relevant to the accepted SHT-001 -> SHT-002 continuity chain:
+SHT-002 remains PLANNED while its SHT-001 predecessor task is incomplete, and becomes
+eligible for READY only after SHT-001 completion is reconciled from governed media
+evidence.
+
 ## Functional acceptance procedure
 
 For SHT-002:
