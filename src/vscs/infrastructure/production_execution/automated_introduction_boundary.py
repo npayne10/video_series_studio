@@ -52,6 +52,17 @@ class ComfyUIIntroductionBoundarySynthesizer:
         self.timeout_seconds = timeout_seconds
         self.client = client or XCICCoreClient(self.base_url)
 
+    def preflight(self) -> None:
+        """Fail before video work if the automated image-edit workflow is unavailable."""
+        workflow = self._workflow()
+        try:
+            self.client.healthcheck()
+            self.client.validate_nodes(workflow)
+        except XCICCoreClientError as exc:
+            raise ComfyUIIntroductionBoundarySynthesisError(
+                f"Automated introduction-boundary provider preflight failed: {exc}"
+            ) from exc
+
     def synthesize(
         self,
         request: AutomatedIntroductionBoundaryRequest,
@@ -83,8 +94,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
         current_source = source
         current_source_sha = request.source_boundary_image_sha256
         try:
-            self.client.healthcheck()
-            self.client.validate_nodes(workflow)
+            self.preflight()
             for index, (reference_id, reference_path_raw, reference_sha) in enumerate(
                 zip(
                     request.introduced_reference_ids,
@@ -105,6 +115,8 @@ class ComfyUIIntroductionBoundarySynthesizer:
 
                 output_name = f"pass-{index:03d}.png"
                 output_path = root / output_name
+                if output_path.exists():
+                    output_path.unlink()
                 pass_request = replace(
                     request,
                     source_boundary_image_path=str(current_source),
