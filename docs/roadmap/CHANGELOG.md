@@ -8,6 +8,7 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.3.5 Timed Asset Presence authoring bridge: explicit frame-interval editing from governed assets, direct governed ReferencePlan linkage, no prose-based timing inference, and persistence through ProductionPackage authority.
 - Phase 20.18.2.3.5 UI, QC and Functional Acceptance: operator-visible timed-span acceptance states, Introduction Keyframe approval controls, Candidate C span acceptance-package generation, exact normalized-span assembly evidence, and human boundary QC.
 - Phase 20.18.2.3.5 verifies approved internal-boundary evidence against the actual decoded final frame of the preceding normalized span and checksum-pins both span sources and the final assembled Shot.
 
