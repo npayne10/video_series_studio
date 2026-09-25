@@ -144,7 +144,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
                 prompt[self.LOADER_NODE]["inputs"]["request_file"] = str(request_path)
                 prompt_id = self.client.submit(prompt)
                 self.client.wait(prompt_id, timeout_seconds=self.timeout_seconds)
-                generated = self._wait_for_output(output_path, root)
+                generated = self._wait_for_output(output_path)
                 self._validate_geometry(generated, request.width, request.height)
                 current_source = generated
                 current_source_sha = file_sha256(generated)
@@ -237,7 +237,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
             )
 
     @staticmethod
-    def _wait_for_output(expected: Path, output_root: Path) -> Path:
+    def _wait_for_output(expected: Path) -> Path:
         deadline = time.monotonic() + 10.0
         while time.monotonic() <= deadline:
             if expected.is_file():
