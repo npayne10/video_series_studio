@@ -54,6 +54,8 @@ class SpanVideoProvider(Protocol):
 
 
 class IntroductionBoundarySynthesizer(Protocol):
+    def preflight(self) -> None: ...
+
     def synthesize(
         self,
         request: AutomatedIntroductionBoundaryRequest,
@@ -213,6 +215,12 @@ class AutomatedTimedSpanOrchestrationService:
                 "for every non-initial span"
             )
         reference_plan = self._reference_plan(raw)
+        try:
+            self.synthesizer.preflight()
+        except Exception as exc:
+            raise AutomatedSpanOrchestrationError(
+                f"Automated Introduction Keyframe provider is not ready: {exc}"
+            ) from exc
 
         span_outputs: list[Path] = []
         synthesized_ids: list[str] = []
