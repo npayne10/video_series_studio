@@ -439,6 +439,9 @@ class _FakeExtractor(GovernedInternalBoundaryFrameExtractor):
 
 
 class _FakeSynthesizer:
+    def preflight(self) -> None:
+        return None
+
     def synthesize(self, request: Any) -> AutomatedIntroductionBoundaryResult:
         target = (
             Path(request.source_boundary_image_path).parent
