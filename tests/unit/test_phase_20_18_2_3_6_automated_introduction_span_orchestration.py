@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from PIL import Image
 from vscs.application.production_execution import (
     AutomatedBoundaryValidationState,
@@ -349,8 +350,6 @@ def test_automated_keyframe_identity_detects_validation_mode_tampering(
     store_path.write_text(json.dumps(raw), encoding="utf-8")
 
     from vscs.application.production_execution import GovernedIntroductionKeyframeError
-
-    import pytest
 
     with pytest.raises(GovernedIntroductionKeyframeError, match="identity"):
         store.require_approved(requirement)
