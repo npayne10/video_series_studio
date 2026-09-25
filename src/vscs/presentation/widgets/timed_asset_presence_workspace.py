@@ -245,9 +245,7 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
                 self.timed_presence_table.setItem(row, 7, refs_item)
 
                 required_item = QTableWidgetItem()
-                required_item.setFlags(
-                    required_item.flags() | Qt.ItemFlag.ItemIsUserCheckable
-                )
+                required_item.setFlags(required_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 required_item.setCheckState(
                     Qt.CheckState.Checked if presence.required else Qt.CheckState.Unchecked
                 )
@@ -311,9 +309,7 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
             introduction = self.timed_presence_table.cellWidget(row, 5)
             removal = self.timed_presence_table.cellWidget(row, 6)
             if not isinstance(from_spin, QSpinBox) or not isinstance(through_spin, QSpinBox):
-                raise TimedAssetPresenceAuthoringError(
-                    "Timed presence frame editor is unavailable"
-                )
+                raise TimedAssetPresenceAuthoringError("Timed presence frame editor is unavailable")
             if not isinstance(introduction, QComboBox) or not isinstance(removal, QComboBox):
                 raise TimedAssetPresenceAuthoringError(
                     "Timed presence transition editor is unavailable"
@@ -383,4 +379,4 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
     workspace_class._timed_presence_plan_from_editor = _timed_presence_plan_from_editor
     workspace_class._timed_presence_frame_count_changed = _timed_presence_frame_count_changed
     workspace_class._refresh_timed_presence_change_preview = _refresh_timed_presence_change_preview
-    setattr(workspace_class, "_timed_asset_presence_workspace_installed", True)
+    workspace_class._timed_asset_presence_workspace_installed = True
