@@ -154,6 +154,60 @@ pytest -q
 
 Focused milestone tests should run before the complete suite.
 
+## Phase 20.18.2.3.6 focused acceptance
+
+Automated Introduction Boundary Synthesis & Span Orchestration must verify:
+
+- provider-neutral strategy selection remains deterministic;
+- synthesis requests checksum-pin exact extracted source boundaries and introduced canonical references;
+- Qwen introduction synthesis requires the governed source frame and canonical introduced asset reference;
+- automated structural Introduction Keyframes do not claim final human semantic acceptance;
+- the initial span can be materialized before a later Introduction Keyframe exists;
+- orchestration renders the preceding span before synthesizing the next boundary;
+- exact source-boundary extraction is automatic;
+- dynamic span packages continue to use governed LTX frame normalization;
+- assembled Shot frame count remains exact;
+- ordinary monolithic Start Production remains disabled;
+- manual Phase 3.5 controls remain available as explicit recovery paths;
+- ProductionTask retry authority is not reset or multiplied by internal spans;
+- the desktop remains responsive while provider orchestration runs;
+- final visual QC remains an explicit human gate.
+
+Local focused regression:
+
+```powershell
+$env:QT_QPA_PLATFORM = "offscreen"
+
+python -m pytest `
+  tests/unit/test_phase_20_18_2_3_1_timed_asset_presence.py `
+  tests/unit/test_phase_20_18_2_3_2_governed_internal_render_spans.py `
+  tests/unit/test_phase_20_18_2_3_3_timed_canonical_reference_activation.py `
+  tests/unit/test_phase_20_18_2_3_4_governed_introduction_keyframes.py `
+  tests/unit/test_phase_20_18_2_3_5_ui_qc_functional_acceptance.py `
+  tests/unit/test_phase_20_18_2_3_5_timed_asset_presence_workspace.py `
+  tests/unit/test_phase_20_18_2_3_6_automated_introduction_span_orchestration.py `
+  -q
+
+Remove-Item Env:QT_QPA_PLATFORM -ErrorAction SilentlyContinue
+```
+
+Live SHT-002 UAT must demonstrate:
+
+```text
+KEYFRAME_REQUIRED
+    -> Run Automated Span Orchestration
+    -> SPAN-001 generated
+    -> frame 95 extracted automatically
+    -> frame 96 synthesized automatically with CAP-CHR-005
+    -> SPAN-002 generated
+    -> final 144-frame Shot assembled
+    -> QC_REQUIRED
+    -> human visual QC
+    -> ACCEPTED
+```
+
+No file-selection dialog is permitted in the normal automated path.
+
 ## Test data
 
 Required fixtures:
