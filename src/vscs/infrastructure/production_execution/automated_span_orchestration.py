@@ -222,6 +222,7 @@ class AutomatedTimedSpanOrchestrationService:
                 f"Automated Introduction Keyframe provider is not ready: {exc}"
             ) from exc
 
+        resume = self._load_resume_state(task_id, package_fingerprint)
         span_outputs: list[Path] = []
         synthesized_ids: list[str] = []
         for sequence_number, span in enumerate(spans.spans, start=1):
@@ -233,22 +234,46 @@ class AutomatedTimedSpanOrchestrationService:
             except TimedSpanAcceptancePackageError as exc:
                 raise AutomatedSpanOrchestrationError(str(exc)) from exc
             span_package = package_set.package_paths[-1]
-            try:
-                span_output = Path(self.span_provider.render(span_package)).resolve(strict=False)
-            except Exception as exc:
-                raise AutomatedSpanOrchestrationError(
-                    f"Provider execution failed for governed span {sequence_number}: {exc}"
-                ) from exc
+            span_package_sha256 = file_sha256(span_package)
+            span_output = self._reusable_span_output(
+                resume,
+                sequence_number=sequence_number,
+                span_id=span.span_id,
+                span_package_sha256=span_package_sha256,
+            )
+            if span_output is None:
+                try:
+                    span_output = Path(self.span_provider.render(span_package)).resolve(strict=False)
+                except Exception as exc:
+                    raise AutomatedSpanOrchestrationError(
+                        f"Provider execution failed for governed span {sequence_number}: {exc}"
+                    ) from exc
+                output_sha256 = file_sha256(span_output)
+                self._record_span_resume(
+                    resume,
+                    sequence_number=sequence_number,
+                    span_id=span.span_id,
+                    span_package_path=span_package,
+                    span_package_sha256=span_package_sha256,
+                    output_path=span_output,
+                    output_sha256=output_sha256,
+                )
+                self._save_resume_state(task_id, package_fingerprint, resume)
+                event_name = "span_completed"
+            else:
+                output_sha256 = file_sha256(span_output)
+                event_name = "span_reused"
             span_outputs.append(span_output)
             self._audit(
                 task_id,
                 {
-                    "event": "span_completed",
+                    "event": event_name,
                     "sequence_number": sequence_number,
                     "span_id": span.span_id,
                     "package_path": str(span_package),
+                    "package_sha256": span_package_sha256,
                     "output_path": str(span_output),
-                    "output_sha256": file_sha256(span_output),
+                    "output_sha256": output_sha256,
                 },
             )
             if sequence_number >= spans.span_count:
@@ -258,9 +283,6 @@ class AutomatedTimedSpanOrchestrationService:
                 requirements,
                 span.span_id,
             )
-            if self._has_current_keyframe(requirement):
-                continue
-
             boundary_image = self.extractor.extract(
                 span_output,
                 local_frame_index=span.frame_count - 1,
@@ -268,11 +290,15 @@ class AutomatedTimedSpanOrchestrationService:
                 requirement_id=requirement.requirement_id,
                 global_frame_index=requirement.source_global_frame_index,
             )
+            boundary_sha256 = file_sha256(boundary_image)
+            if self._has_current_keyframe_for_boundary(requirement, boundary_sha256):
+                continue
+
             self._release_provider_memory()
             request = request_from_requirement(
                 requirement,
                 source_boundary_image_path=boundary_image,
-                source_boundary_image_sha256=file_sha256(boundary_image),
+                source_boundary_image_sha256=boundary_sha256,
                 reference_plan=reference_plan,
                 timed_asset_presence=timed_raw,
                 width=int(raw.get("width") or 0),
@@ -381,12 +407,137 @@ class AutomatedTimedSpanOrchestrationService:
                 f"Cannot register automated Introduction Keyframe: {exc}"
             ) from exc
 
-    def _has_current_keyframe(self, requirement: IntroductionKeyframeRequirement) -> bool:
+    def _has_current_keyframe_for_boundary(
+        self,
+        requirement: IntroductionKeyframeRequirement,
+        source_boundary_sha256: str,
+    ) -> bool:
         try:
-            self.keyframes.require_approved(requirement)
+            current = self.keyframes.require_approved(requirement)
         except GovernedIntroductionKeyframeError:
             return False
-        return True
+        return current.source_boundary_image_sha256 == source_boundary_sha256.strip().lower()
+
+    def _resume_state_path(self) -> Path:
+        return self.project_directory / ".vscs" / "automated_span_orchestration_state.json"
+
+    def _load_resume_state(
+        self,
+        task_id: str,
+        package_fingerprint: str,
+    ) -> dict[str, Any]:
+        path = self._resume_state_path()
+        if not path.is_file():
+            return {"spans": {}}
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            return {"spans": {}}
+        if not isinstance(raw, dict):
+            return {"spans": {}}
+        tasks = raw.get("tasks")
+        if not isinstance(tasks, dict):
+            return {"spans": {}}
+        current = tasks.get(task_id)
+        if not isinstance(current, dict):
+            return {"spans": {}}
+        if str(current.get("package_fingerprint") or "").strip().lower() != package_fingerprint:
+            return {"spans": {}}
+        spans = current.get("spans")
+        if not isinstance(spans, dict):
+            return {"spans": {}}
+        return {"spans": dict(spans)}
+
+    def _save_resume_state(
+        self,
+        task_id: str,
+        package_fingerprint: str,
+        state: dict[str, Any],
+    ) -> None:
+        path = self._resume_state_path()
+        raw: dict[str, Any] = {}
+        if path.is_file():
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                loaded = {}
+            if isinstance(loaded, dict):
+                raw = loaded
+        tasks = raw.get("tasks")
+        if not isinstance(tasks, dict):
+            tasks = {}
+        tasks[task_id] = {
+            "package_fingerprint": package_fingerprint,
+            "spans": dict(state.get("spans") or {}),
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+        output = {"schema_version": "1.0", "tasks": tasks}
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(
+            json.dumps(output, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(path)
+
+    def _reusable_span_output(
+        self,
+        state: dict[str, Any],
+        *,
+        sequence_number: int,
+        span_id: str,
+        span_package_sha256: str,
+    ) -> Path | None:
+        spans = state.get("spans")
+        if not isinstance(spans, dict):
+            return None
+        record = spans.get(str(sequence_number))
+        if not isinstance(record, dict):
+            return None
+        if str(record.get("span_id") or "") != span_id:
+            return None
+        if (
+            str(record.get("span_package_sha256") or "").strip().lower()
+            != span_package_sha256.strip().lower()
+        ):
+            return None
+        output_value = str(record.get("output_path") or "").strip()
+        expected_sha = str(record.get("output_sha256") or "").strip().lower()
+        if not output_value or not expected_sha:
+            return None
+        output = Path(output_value).expanduser().resolve(strict=False)
+        if not output.is_file():
+            return None
+        try:
+            actual_sha = file_sha256(output)
+        except OSError:
+            return None
+        if actual_sha != expected_sha:
+            return None
+        return output
+
+    @staticmethod
+    def _record_span_resume(
+        state: dict[str, Any],
+        *,
+        sequence_number: int,
+        span_id: str,
+        span_package_path: Path,
+        span_package_sha256: str,
+        output_path: Path,
+        output_sha256: str,
+    ) -> None:
+        spans = state.get("spans")
+        if not isinstance(spans, dict):
+            spans = {}
+            state["spans"] = spans
+        spans[str(sequence_number)] = {
+            "span_id": span_id,
+            "span_package_path": str(span_package_path),
+            "span_package_sha256": span_package_sha256,
+            "output_path": str(output_path),
+            "output_sha256": output_sha256,
+        }
 
     @staticmethod
     def _requirement_for_source_span(
