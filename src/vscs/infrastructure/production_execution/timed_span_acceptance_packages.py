@@ -65,6 +65,26 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
 
     def build(self, source_package_path: Path) -> TimedSpanAcceptancePackageSet:
+        """Build every governed span after all later-span keyframes are available."""
+        return self._build(source_package_path, sequence_numbers=None)
+
+    def build_span(
+        self,
+        source_package_path: Path,
+        sequence_number: int,
+    ) -> Path:
+        """Build one governed span on demand for automated sequential orchestration."""
+        if sequence_number <= 0:
+            raise TimedSpanAcceptancePackageError("Span sequence number must be positive")
+        package_set = self._build(source_package_path, sequence_numbers=(sequence_number,))
+        return package_set.package_paths[0]
+
+    def _build(
+        self,
+        source_package_path: Path,
+        *,
+        sequence_numbers: tuple[int, ...] | None,
+    ) -> TimedSpanAcceptancePackageSet:
         source_path = Path(source_package_path).expanduser().resolve(strict=False)
         root = self._read(source_path)
         if root.get("schema_version") != self.SCHEMA_VERSION:
@@ -154,8 +174,22 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         )
         destination.mkdir(parents=True, exist_ok=True)
 
+        selected = (
+            spans.spans
+            if sequence_numbers is None
+            else tuple(span for span in spans.spans if span.sequence_number in sequence_numbers)
+        )
+        if not selected:
+            raise TimedSpanAcceptancePackageError(
+                "Requested governed internal span does not exist"
+            )
+        if sequence_numbers is not None and len(selected) != len(set(sequence_numbers)):
+            raise TimedSpanAcceptancePackageError(
+                "One or more requested governed internal spans do not exist"
+            )
+
         package_paths: list[Path] = []
-        for span in spans.spans:
+        for span in selected:
             active = activation_by_span.get(span.span_id)
             if active is None:
                 raise TimedSpanAcceptancePackageError(
@@ -236,7 +270,7 @@ class LTX25TimedSpanAcceptancePackageBuilder:
             span_manifest["span_id"] = span.span_id
             span_manifest["span_sequence_number"] = span.sequence_number
             span_manifest["compiler"] = (
-                "VSCS Phase 20.18.2.3.5 / LTX-2.5 timed-span functional acceptance"
+                "VSCS Phase 20.18.2.3.6 / LTX-2.5 automated timed-span orchestration"
             )
             payload["_vscs_manifest"] = span_manifest
             fingerprint_source = dict(payload)
@@ -254,7 +288,7 @@ class LTX25TimedSpanAcceptancePackageBuilder:
             shot_id=spans.shot_id,
             source_package_path=source_path,
             source_package_fingerprint=source_fingerprint,
-            span_ids=tuple(span.span_id for span in spans.spans),
+            span_ids=tuple(span.span_id for span in selected),
             package_paths=tuple(package_paths),
         )
 
