@@ -31,7 +31,7 @@ from vscs.infrastructure.rendering import (
     UrllibComfyUITransport,
 )
 
-from .ltx25_keyframe_backend import (
+from .ltx25_keyframe_contract import (
     LTX25_KEYFRAME_LOADER_CLASS,
     LTX25_KEYFRAME_LOADER_TITLE,
     LTX25_KEYFRAME_MANIFEST_FILE,
