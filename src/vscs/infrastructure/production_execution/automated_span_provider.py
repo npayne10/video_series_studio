@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -110,10 +111,8 @@ class LTX25AutomatedSpanProvider:
                     )
                 time.sleep(self.poll_interval_seconds)
         finally:
-            try:
+            with suppress(Exception):
                 adapter.free_models_and_memory()
-            except Exception:
-                pass
         raise AutomatedSpanProviderError(
             f"LTX-2.5 internal span render timed out after {self.timeout_seconds:.0f} seconds"
         )
