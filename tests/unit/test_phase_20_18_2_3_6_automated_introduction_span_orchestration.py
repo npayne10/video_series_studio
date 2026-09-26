@@ -673,6 +673,31 @@ def test_orchestration_regenerates_keyframe_when_current_boundary_checksum_chang
     assert synthesizer.calls == 2
 
 
+def test_orchestration_resume_discards_spans_when_package_fingerprint_changes(
+    tmp_path: Path,
+) -> None:
+    package_path, raw = _candidate_package(tmp_path)
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=_FakeSynthesizer(),
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+    service.run(package_path)
+
+    manifest = dict(raw["_vscs_manifest"])
+    manifest["package_fingerprint"] = "replacement-package-fingerprint"
+    raw["_vscs_manifest"] = manifest
+    package_path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+
+    service.run(package_path)
+
+    assert provider.calls == 4
+
+
 class _FacadeBackend:
     def __init__(self) -> None:
         self.profile: str | None = None
