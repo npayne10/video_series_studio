@@ -28,6 +28,7 @@ from vscs.application.production_execution.automated_introduction_boundary impor
     AutomatedIntroductionBoundaryResult,
 )
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
+from vscs.application.rendering import WorkflowCompatibilityValidator, WorkflowManifest
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     TimedAssetKind,
@@ -40,6 +41,9 @@ from vscs.infrastructure.production_execution.automated_introduction_boundary im
 from vscs.infrastructure.production_execution.automated_span_orchestration import (
     AutomatedTimedSpanOrchestrationService,
     GovernedInternalBoundaryFrameExtractor,
+)
+from vscs.infrastructure.production_execution.automated_span_provider import (
+    LTX25AutomatedSpanProvider,
 )
 from vscs.infrastructure.production_execution.timed_span_acceptance_packages import (
     LTX25TimedSpanAcceptancePackageBuilder,
@@ -842,3 +846,62 @@ def test_workspace_prefers_automated_orchestration_and_keeps_manual_recovery(
     assert "Manual Recovery" in workspace.approve_introduction_keyframe_button.text()
     assert workspace.approve_introduction_keyframe_button.isEnabled()
     assert not workspace.start_button.isEnabled()
+
+
+def test_automated_span_request_declares_governed_keyframe_image_to_video(
+    tmp_path: Path,
+) -> None:
+    output_directory = tmp_path / "comfy-output"
+    output_directory.mkdir()
+    package_path = tmp_path / "span-package.json"
+    package = {
+        "width": 1280,
+        "height": 720,
+        "fps": 24,
+        "frame_count": 96,
+        "seed": 42,
+        "timed_span_execution": {
+            "span_id": "SPAN-001",
+            "sequence_number": 1,
+        },
+        "_vscs_manifest": {
+            "task_id": "PT-VIDEO-SHT-002",
+            "production_id": "XORIX",
+            "episode_id": "EP-001",
+            "scene_id": "SCN-001",
+            "shot_id": "EP-001-SCN-001-SHT-002",
+            "authority_id": "UPD-SHT-002",
+        },
+    }
+    package_path.write_text(json.dumps(package), encoding="utf-8")
+
+    provider = LTX25AutomatedSpanProvider(
+        tmp_path,
+        endpoint="http://127.0.0.1:8188",
+        comfyui_output_directory=output_directory,
+    )
+    request = provider._request(package_path, package)
+
+    assert request.metadata["generation_mode"] == "image_to_video"
+
+    repository = Path(__file__).resolve().parents[2]
+    manifest_raw = json.loads(
+        (
+            repository
+            / "resources"
+            / "workflows"
+            / "manifests"
+            / "ltx25_i2v_keyframe_v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    report = WorkflowCompatibilityValidator().validate(
+        request,
+        WorkflowManifest.from_dict(manifest_raw),
+    )
+
+    errors = tuple(
+        diagnostic
+        for diagnostic in report.diagnostics
+        if diagnostic.severity.value == "error"
+    )
+    assert errors == ()
