@@ -15,6 +15,7 @@ dependencies = [
   "pydantic-settings>=2.7",
   "SQLAlchemy>=2.0",
   "PyYAML>=6.0",
+  "Pillow>=10.4",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +31,7 @@ dev = [
   "mypy>=1.14",
   "pre-commit>=4.0",
   "types-PyYAML>=6.0",
+  "types-Pillow>=10.2",
 ]
 
 [project.scripts]
