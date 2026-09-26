@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -203,6 +204,10 @@ class AutomatedTimedSpanOrchestrationService:
         timed = TimedAssetPresencePlan.from_dict(timed_raw)
         spans = GovernedInternalRenderSpanPlan.from_dict(spans_raw)
         requirements = IntroductionKeyframeRequirementPlan.from_dict(requirements_raw)
+        if timed.shot_id != spans.shot_id or requirements.shot_id != spans.shot_id:
+            raise AutomatedSpanOrchestrationError(
+                "Timed asset, span, and Introduction Keyframe Shot identities do not match"
+            )
         if spans.span_count <= 1:
             raise AutomatedSpanOrchestrationError(
                 "Monolithic Shots do not require automated timed-span orchestration"
@@ -592,10 +597,8 @@ class AutomatedTimedSpanOrchestrationService:
         return resolved
 
     def _release_provider_memory(self) -> None:
-        try:
+        with suppress(Exception):
             self.span_provider.free_models_and_memory()
-        except Exception:
-            pass
 
     def _audit(self, task_id: str, event: dict[str, Any]) -> None:
         path = self.project_directory / ".vscs" / "automated_span_orchestration.json"
