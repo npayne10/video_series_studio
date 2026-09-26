@@ -895,6 +895,37 @@ def test_workspace_prefers_automated_orchestration_and_keeps_manual_recovery(
     assert not workspace.start_button.isEnabled()
 
 
+
+def test_workspace_allows_automated_rerun_while_visual_qc_is_pending(
+    qtbot: Any,
+) -> None:
+    service = _UiService()
+    workspace = ProductionExecutionWorkspace(lambda: service)  # type: ignore[arg-type]
+    qtbot.addWidget(workspace)
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    status = TimedSpanAcceptanceStatus(
+        shot_id="EP-001-SCN-001-SHT-002",
+        state=TimedSpanAcceptanceState.QC_REQUIRED,
+        span_count=2,
+        boundary_count=1,
+        requirement_count=1,
+        approved_keyframe_count=1,
+        qc_passed_count=0,
+        assembly_present=True,
+        message="Visual QC remains pending.",
+        requirement_ids=("GIKR-1",),
+        pending_qc_requirement_ids=("GIKR-1",),
+        final_frame_count=144,
+    )
+    workspace._timed_span_status = status
+    workspace._render_timed_span_status(status)
+
+    assert workspace.run_automated_spans_button.isEnabled()
+    assert workspace.record_span_qc_button.isEnabled()
+
+
 def test_automated_span_request_declares_governed_keyframe_image_to_video(
     tmp_path: Path,
 ) -> None:
