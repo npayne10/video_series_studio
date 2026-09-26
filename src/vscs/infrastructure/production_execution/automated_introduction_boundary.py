@@ -148,7 +148,12 @@ class ComfyUIIntroductionBoundarySynthesizer:
                 self._validate_geometry(generated, request.width, request.height)
                 current_source = generated
                 current_source_sha = file_sha256(generated)
-        except (XCICCoreClientError, OSError, ValueError, AutomatedIntroductionBoundaryError) as exc:
+        except (
+            XCICCoreClientError,
+            OSError,
+            ValueError,
+            AutomatedIntroductionBoundaryError,
+        ) as exc:
             raise ComfyUIIntroductionBoundarySynthesisError(str(exc)) from exc
 
         final_path = root / f"frame-{request.target_global_frame_index:06d}.png"
@@ -216,9 +221,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
                 f"{label} must remain inside the VSCS project"
             )
         if not resolved.is_file():
-            raise ComfyUIIntroductionBoundarySynthesisError(
-                f"{label} does not exist: {resolved}"
-            )
+            raise ComfyUIIntroductionBoundarySynthesisError(f"{label} does not exist: {resolved}")
         return resolved
 
     @staticmethod
@@ -232,8 +235,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
             ) from exc
         if actual != (width, height):
             raise ComfyUIIntroductionBoundarySynthesisError(
-                "Generated introduction boundary geometry changed: "
-                f"{actual} != {(width, height)}"
+                f"Generated introduction boundary geometry changed: {actual} != {(width, height)}"
             )
 
     @staticmethod

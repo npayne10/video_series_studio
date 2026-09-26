@@ -97,9 +97,7 @@ class VSCSIntroductionBoundaryPackageLoaderV1:
             introduced_path = request_path.parent / introduced_path
         introduced_path = introduced_path.resolve(strict=False)
         if not introduced_path.is_file():
-            raise ValueError(
-                f"Introduced canonical reference does not exist: {introduced_path}"
-            )
+            raise ValueError(f"Introduced canonical reference does not exist: {introduced_path}")
 
         if strict_validation:
             expected_source = str(raw.get("source_boundary_image_sha256") or "").strip().lower()
@@ -127,9 +125,7 @@ class VSCSIntroductionBoundaryPackageLoaderV1:
             if width <= 0 or height <= 0:
                 raise ValueError("Automated introduction-boundary dimensions must be positive")
             if int(source.shape[2]) != width or int(source.shape[1]) != height:
-                raise ValueError(
-                    "Source boundary dimensions do not match governed render geometry"
-                )
+                raise ValueError("Source boundary dimensions do not match governed render geometry")
         return (
             source,
             introduced,
@@ -171,7 +167,5 @@ NODE_CLASS_MAPPINGS = {
     "VSCSIntroductionBoundaryPackageLoaderV1": VSCSIntroductionBoundaryPackageLoaderV1,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "VSCSIntroductionBoundaryPackageLoaderV1": (
-        "VSCS Automated Introduction Boundary Loader v1"
-    ),
+    "VSCSIntroductionBoundaryPackageLoaderV1": ("VSCS Automated Introduction Boundary Loader v1"),
 }

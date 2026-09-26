@@ -518,9 +518,7 @@ class GovernedIntroductionKeyframe:
             )
         object.__setattr__(self, "approval_mode", approval_mode)
         findings = tuple(
-            str(value).strip()
-            for value in self.automated_validation_findings
-            if str(value).strip()
+            str(value).strip() for value in self.automated_validation_findings if str(value).strip()
         )
         if len(set(findings)) != len(findings):
             raise GovernedIntroductionKeyframeError(
@@ -600,8 +598,7 @@ class GovernedIntroductionKeyframeStore:
             missing = sorted(required - set(record.acceptance_criteria))
             if missing:
                 raise GovernedIntroductionKeyframeError(
-                    "Governed Introduction Keyframe approval does not cover: "
-                    + ", ".join(missing)
+                    "Governed Introduction Keyframe approval does not cover: " + ", ".join(missing)
                 )
         else:
             structural = {
@@ -680,9 +677,7 @@ class GovernedIntroductionKeyframeStore:
     ) -> GovernedIntroductionKeyframe:
         normalized_mode = approval_mode.strip().casefold()
         normalized_findings = tuple(
-            str(value).strip()
-            for value in automated_validation_findings
-            if str(value).strip()
+            str(value).strip() for value in automated_validation_findings if str(value).strip()
         )
         payload: dict[str, object] = {
             "requirement_id": requirement.requirement_id,
@@ -726,9 +721,7 @@ class GovernedIntroductionKeyframeStore:
         }
         if record.approval_mode != "human" or record.automated_validation_findings:
             payload["approval_mode"] = record.approval_mode
-            payload["automated_validation_findings"] = list(
-                record.automated_validation_findings
-            )
+            payload["automated_validation_findings"] = list(record.automated_validation_findings)
         expected = f"GIK-{_fingerprint(payload)[:16].upper()}"
         if record.keyframe_id != expected:
             raise GovernedIntroductionKeyframeError(

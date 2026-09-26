@@ -43,7 +43,9 @@ class IntroductionBoundaryProviderCapabilities:
 
     def strategy_for(self, introduced_asset_kinds: tuple[str, ...]) -> IntroductionBoundaryStrategy:
         normalized = tuple(value.strip().casefold() for value in introduced_asset_kinds)
-        if normalized and all(value in self.direct_timed_reference_asset_kinds for value in normalized):
+        if normalized and all(
+            value in self.direct_timed_reference_asset_kinds for value in normalized
+        ):
             return IntroductionBoundaryStrategy.DIRECT_PROVIDER_REFERENCE
         if self.supports_reference_aware_image_synthesis:
             return IntroductionBoundaryStrategy.SYNTHESIZED_KEYFRAME
@@ -255,7 +257,9 @@ class AutomatedIntroductionBoundaryResult:
                 "Automated introduction result reference IDs must be unique and non-blank"
             )
         object.__setattr__(self, "introduced_reference_ids", refs)
-        findings = tuple(str(value).strip() for value in self.validation_findings if str(value).strip())
+        findings = tuple(
+            str(value).strip() for value in self.validation_findings if str(value).strip()
+        )
         object.__setattr__(self, "validation_findings", findings)
         if self.width <= 0 or self.height <= 0:
             raise AutomatedIntroductionBoundaryError(
@@ -349,9 +353,7 @@ class AutomatedIntroductionBoundaryStore:
                 provider_name=str(raw.get("provider_name") or ""),
                 model=str(raw.get("model") or ""),
                 source_boundary_image_path=str(raw.get("source_boundary_image_path") or ""),
-                source_boundary_image_sha256=str(
-                    raw.get("source_boundary_image_sha256") or ""
-                ),
+                source_boundary_image_sha256=str(raw.get("source_boundary_image_sha256") or ""),
                 introduced_reference_ids=tuple(
                     str(value) for value in raw.get("introduced_reference_ids", [])
                 ),

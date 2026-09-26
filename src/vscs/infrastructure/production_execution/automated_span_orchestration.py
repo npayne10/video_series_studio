@@ -164,9 +164,7 @@ class AutomatedTimedSpanOrchestrationService:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.span_provider = span_provider
         self.synthesizer = synthesizer
-        self.extractor = extractor or GovernedInternalBoundaryFrameExtractor(
-            self.project_directory
-        )
+        self.extractor = extractor or GovernedInternalBoundaryFrameExtractor(self.project_directory)
         self.assembly_runtime = assembly_runtime or GovernedSpanAssemblyRuntime(
             self.project_directory
         )
@@ -313,8 +311,7 @@ class AutomatedTimedSpanOrchestrationService:
                 result = self.synthesizer.synthesize(request)
             except Exception as exc:
                 raise AutomatedSpanOrchestrationError(
-                    "Automated Introduction Keyframe synthesis failed safely: "
-                    f"{exc}"
+                    f"Automated Introduction Keyframe synthesis failed safely: {exc}"
                 ) from exc
             self.boundaries.save_result(result)
             if result.validation_state is not AutomatedBoundaryValidationState.PASSED:
@@ -547,11 +544,7 @@ class AutomatedTimedSpanOrchestrationService:
         source_span_id: str,
     ) -> IntroductionKeyframeRequirement:
         match = next(
-            (
-                item
-                for item in requirements.requirements
-                if item.source_span_id == source_span_id
-            ),
+            (item for item in requirements.requirements if item.source_span_id == source_span_id),
             None,
         )
         if match is None:
@@ -593,9 +586,7 @@ class AutomatedTimedSpanOrchestrationService:
             path = self.project_directory / path
         resolved = path.resolve(strict=False)
         if not resolved.is_relative_to(self.project_directory):
-            raise AutomatedSpanOrchestrationError(
-                f"{label} must remain inside the VSCS project"
-            )
+            raise AutomatedSpanOrchestrationError(f"{label} must remain inside the VSCS project")
         if not resolved.is_file():
             raise AutomatedSpanOrchestrationError(f"{label} does not exist: {resolved}")
         return resolved

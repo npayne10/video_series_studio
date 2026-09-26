@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from PIL import Image
+
 from vscs.application.production_execution import (
     AutomatedBoundaryValidationState,
     GovernedInternalRenderSpanCompiler,
@@ -14,11 +15,11 @@ from vscs.application.production_execution import (
     GovernedIntroductionKeyframeStore,
     IntroductionBoundaryProviderCapabilities,
     IntroductionBoundaryStrategy,
-    TimedCanonicalReferenceActivationCompiler,
     ProductionExecutionCandidate,
     ProductionExecutionUiService,
     ProductionPackageCompilationState,
     ProductionPackageStatus,
+    TimedCanonicalReferenceActivationCompiler,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
     request_from_requirement,
@@ -151,7 +152,9 @@ def _reference_plan(project: Path) -> dict[str, object]:
     }
 
 
-def _authority(project: Path) -> tuple[
+def _authority(
+    project: Path,
+) -> tuple[
     TimedAssetPresencePlan,
     Any,
     Any,
@@ -586,9 +589,7 @@ def test_orchestration_resume_reuses_checksum_pinned_span_outputs(tmp_path: Path
     assert second.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
     assert provider.calls == 2
     resume = json.loads(
-        (
-            tmp_path / ".vscs" / "automated_span_orchestration_state.json"
-        ).read_text(encoding="utf-8")
+        (tmp_path / ".vscs" / "automated_span_orchestration_state.json").read_text(encoding="utf-8")
     )
     spans = resume["tasks"]["PT-VIDEO-SHT-002"]["spans"]
     assert set(spans) == {"1", "2"}
@@ -759,9 +760,9 @@ def test_introduction_boundary_workflow_and_deployment_assets_are_versioned() ->
     assert workflow["9"]["inputs"]["image1"] == ["1", 0]
     assert workflow["9"]["inputs"]["image2"] == ["1", 1]
     assert workflow["20"]["inputs"]["latent_image"] == ["13", 0]
-    deploy = (
-        repository / "scripts" / "deploy_comfyui_introduction_boundary_v1.ps1"
-    ).read_text(encoding="utf-8")
+    deploy = (repository / "scripts" / "deploy_comfyui_introduction_boundary_v1.ps1").read_text(
+        encoding="utf-8"
+    )
     assert "VSCSIntroductionBoundaryPackageLoaderV1" in deploy
 
 

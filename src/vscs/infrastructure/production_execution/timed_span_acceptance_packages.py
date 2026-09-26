@@ -185,9 +185,7 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         span_manifest["parent_package_fingerprint"] = source_fingerprint
         span_manifest["span_id"] = span.span_id
         span_manifest["span_sequence_number"] = span.sequence_number
-        span_manifest["compiler"] = (
-            "VSCS Phase 20.18.2.3.6 / automated timed-span orchestration"
-        )
+        span_manifest["compiler"] = "VSCS Phase 20.18.2.3.6 / automated timed-span orchestration"
         payload["_vscs_manifest"] = span_manifest
         fingerprint_source = dict(payload)
         fingerprint_source.pop("_vscs_manifest", None)

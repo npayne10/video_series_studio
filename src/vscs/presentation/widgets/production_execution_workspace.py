@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -694,8 +694,7 @@ class ProductionExecutionWorkspace(QWidget):
             and self._automated_span_thread is None
         )
         self.approve_introduction_keyframe_button.setEnabled(
-            bool(status.pending_keyframe_requirement_ids)
-            and self._automated_span_thread is None
+            bool(status.pending_keyframe_requirement_ids) and self._automated_span_thread is None
         )
         self.assemble_span_outputs_button.setEnabled(
             status.applicable

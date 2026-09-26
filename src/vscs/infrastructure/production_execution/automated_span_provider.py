@@ -13,11 +13,11 @@ from vscs.application.rendering import (
     OutputSettings,
     PromptPackageReference,
     QualityLevel,
+    RendererKind,
     RenderJobStatus,
     RenderOutputKind,
     RenderRequest,
     RenderSettings,
-    RendererKind,
     WorkflowCompatibilityValidator,
     WorkflowManifest,
     WorkflowRegistry,
@@ -92,9 +92,9 @@ class LTX25AutomatedSpanProvider:
                         raise AutomatedSpanProviderError(
                             "LTX-2.5 completed without a production-video output"
                         )
-                    resolved = (
-                        self.comfyui_output_directory / video.relative_path
-                    ).resolve(strict=False)
+                    resolved = (self.comfyui_output_directory / video.relative_path).resolve(
+                        strict=False
+                    )
                     if not resolved.is_relative_to(self.comfyui_output_directory):
                         raise AutomatedSpanProviderError(
                             "Provider output escaped the configured ComfyUI output directory"
@@ -155,7 +155,9 @@ class LTX25AutomatedSpanProvider:
             raise AutomatedSpanProviderError("Internal span package has no VSCS manifest")
         execution = package.get("timed_span_execution")
         if not isinstance(execution, dict):
-            raise AutomatedSpanProviderError("Internal span package has no span execution authority")
+            raise AutomatedSpanProviderError(
+                "Internal span package has no span execution authority"
+            )
         task_id = str(manifest.get("task_id") or "").strip()
         shot_id = str(manifest.get("shot_id") or "").strip()
         scene_id = str(manifest.get("scene_id") or "").strip()
@@ -164,9 +166,7 @@ class LTX25AutomatedSpanProvider:
         span_id = str(execution.get("span_id") or "").strip()
         sequence = int(execution.get("sequence_number") or 0)
         if not all((task_id, shot_id, scene_id, episode_id, production_id, span_id, sequence)):
-            raise AutomatedSpanProviderError(
-                "Internal span package identity is incomplete"
-            )
+            raise AutomatedSpanProviderError("Internal span package identity is incomplete")
         width = int(package.get("width") or 0)
         height = int(package.get("height") or 0)
         fps = int(package.get("fps") or 0)
@@ -206,9 +206,7 @@ class LTX25AutomatedSpanProvider:
         try:
             raw = json.loads(candidate.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-            raise AutomatedSpanProviderError(
-                f"Cannot read internal span package: {exc}"
-            ) from exc
+            raise AutomatedSpanProviderError(f"Cannot read internal span package: {exc}") from exc
         if not isinstance(raw, dict):
             raise AutomatedSpanProviderError("Internal span package root must be an object")
         return raw
