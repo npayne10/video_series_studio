@@ -564,6 +564,115 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
     assert keyframe.target_global_frame_index == 96
 
 
+def test_orchestration_resume_reuses_checksum_pinned_span_outputs(tmp_path: Path) -> None:
+    package_path, _raw = _candidate_package(tmp_path)
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=_FakeSynthesizer(),
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+
+    first = service.run(package_path)
+    second = service.run(package_path)
+
+    assert first.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
+    assert second.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
+    assert provider.calls == 2
+    resume = json.loads(
+        (
+            tmp_path / ".vscs" / "automated_span_orchestration_state.json"
+        ).read_text(encoding="utf-8")
+    )
+    spans = resume["tasks"]["PT-VIDEO-SHT-002"]["spans"]
+    assert set(spans) == {"1", "2"}
+    assert spans["1"]["output_sha256"] == _sha(Path(spans["1"]["output_path"]))
+    assert spans["2"]["output_sha256"] == _sha(Path(spans["2"]["output_path"]))
+
+
+def test_orchestration_resume_rerenders_only_tampered_span_output(tmp_path: Path) -> None:
+    package_path, _raw = _candidate_package(tmp_path)
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=_FakeSynthesizer(),
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+    first = service.run(package_path)
+    first.span_paths[0].write_bytes(b"tampered")
+
+    service.run(package_path)
+
+    assert provider.calls == 3
+    assert first.span_paths[0].read_bytes() == b"span-1"
+
+
+class _ChangingExtractor(GovernedInternalBoundaryFrameExtractor):
+    def __init__(self, project_directory: Path) -> None:
+        super().__init__(project_directory)
+        self.calls = 0
+
+    def extract(
+        self,
+        span_path: Path,
+        *,
+        local_frame_index: int,
+        shot_id: str,
+        requirement_id: str,
+        global_frame_index: int,
+    ) -> Path:
+        del span_path, local_frame_index
+        self.calls += 1
+        value = 9 if self.calls == 1 else 19
+        return _png(
+            self.project_directory
+            / ".vscs"
+            / "automated_introduction_boundaries"
+            / shot_id
+            / requirement_id
+            / f"source-frame-{global_frame_index:06d}.png",
+            (value, value, value),
+        )
+
+
+class _CountingSynthesizer(_FakeSynthesizer):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def synthesize(self, request: Any) -> AutomatedIntroductionBoundaryResult:
+        self.calls += 1
+        return super().synthesize(request)
+
+
+def test_orchestration_regenerates_keyframe_when_current_boundary_checksum_changes(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(tmp_path)
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    synthesizer = _CountingSynthesizer()
+    extractor = _ChangingExtractor(tmp_path)
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=synthesizer,
+        extractor=extractor,
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+
+    service.run(package_path)
+    service.run(package_path)
+
+    assert provider.calls == 3
+    assert synthesizer.calls == 2
+
+
 class _FacadeBackend:
     def __init__(self) -> None:
         self.profile: str | None = None
