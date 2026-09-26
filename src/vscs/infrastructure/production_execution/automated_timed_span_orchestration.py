@@ -6,7 +6,6 @@ import hashlib
 import json
 import subprocess
 import time
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +13,7 @@ from typing import Any
 from vscs.application.production_execution.automated_introduction_boundaries import (
     AutomatedIntroductionBoundaryError,
     AutomatedSpanExecutionResult,
+    AutomatedTimedSpanOrchestrationResult,
     IntroductionBoundaryAutomationPlanner,
     IntroductionBoundarySynthesisRequest,
     IntroductionBoundarySynthesizer,
@@ -70,18 +70,6 @@ from .timed_span_acceptance_runtime import (
 
 class AutomatedTimedSpanOrchestrationError(RuntimeError):
     """Raised when automatic span production cannot continue safely."""
-
-
-@dataclass(frozen=True, slots=True)
-class AutomatedTimedSpanOrchestrationResult:
-    """Outcome of one automatic dynamic-Shot orchestration run."""
-
-    shot_id: str
-    state: TimedSpanAcceptanceState
-    span_outputs: tuple[Path, ...]
-    assembled_output: Path | None
-    manual_review_requirement_id: str | None = None
-    message: str = ""
 
 
 class LTX25AutomatedSpanExecutor(TimedSpanExecutor):
@@ -333,7 +321,7 @@ class AutomatedTimedSpanOrchestrationService:
                 )
                 return AutomatedTimedSpanOrchestrationResult(
                     shot_id=spans.shot_id,
-                    state=TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+                    state=TimedSpanAcceptanceState.KEYFRAME_REQUIRED.value,
                     span_outputs=tuple(span_outputs),
                     assembled_output=None,
                     manual_review_requirement_id=requirement.requirement_id,
@@ -353,7 +341,7 @@ class AutomatedTimedSpanOrchestrationService:
                 )
                 return AutomatedTimedSpanOrchestrationResult(
                     shot_id=spans.shot_id,
-                    state=TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+                    state=TimedSpanAcceptanceState.KEYFRAME_REQUIRED.value,
                     span_outputs=tuple(span_outputs),
                     assembled_output=None,
                     manual_review_requirement_id=requirement.requirement_id,
@@ -405,7 +393,7 @@ class AutomatedTimedSpanOrchestrationService:
             )
         return AutomatedTimedSpanOrchestrationResult(
             shot_id=spans.shot_id,
-            state=status.state,
+            state=status.state.value,
             span_outputs=tuple(span_outputs),
             assembled_output=Path(destination).resolve(strict=False),
             message="Automated timed-span orchestration completed and passed governed acceptance.",
