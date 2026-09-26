@@ -444,33 +444,53 @@ def request_from_requirement(
         raise AutomatedIntroductionBoundaryError(
             "Automated introduction synthesis requires Timed Asset Presence intervals"
         )
-    kinds_by_asset = {
-        str(item.get("asset_id") or "").strip(): str(item.get("asset_kind") or "").strip()
+    presence_by_asset = {
+        str(item.get("asset_id") or "").strip(): item
         for item in presences_raw
-        if isinstance(item, dict)
+        if isinstance(item, dict) and str(item.get("asset_id") or "").strip()
     }
     introduced_kinds = tuple(
-        kinds_by_asset.get(asset_id, "other") for asset_id in requirement.introduced_asset_ids
+        str(presence_by_asset.get(asset_id, {}).get("asset_kind") or "other").strip()
+        for asset_id in requirement.introduced_asset_ids
+    )
+    introduction_events = tuple(
+        str(presence_by_asset.get(asset_id, {}).get("introduction") or "appear")
+        .strip()
+        .casefold()
+        for asset_id in requirement.introduced_asset_ids
     )
     labels = tuple(
         str(references[reference_id].get("label") or reference_id).strip()
         for reference_id in requirement.introduced_reference_ids
     )
     subject_text = ", ".join(labels)
+    if introduction_events and all(event == "enter" for event in introduction_events):
+        transition_instruction = (
+            "This is an ENTER transition, not an appearance. Show the introduced character only "
+            "at the beginning of the physical entrance: just becoming visible from a plausible "
+            "edge, doorway, or access route, with part of the body still outside the established "
+            "scene and a natural walking-in pose. Do not place the character fully arrived, "
+            "centered, standing still, or suddenly materialized in the scene."
+        )
+    else:
+        transition_instruction = (
+            "The introduced asset must be newly visible from this frame and naturally integrated "
+            "into the existing scene."
+        )
     positive = (
         "Edit the source boundary frame minimally. Preserve the existing camera, framing, "
         "lighting, environment, existing people and objects, identities, positions, scale, "
         "wardrobe, and spatial continuity. Introduce the exact canonical asset shown in the "
-        f"supplied reference image at this governed transition: {subject_text}. The introduced "
-        "asset must be newly visible from this frame and naturally integrated into the existing "
-        "scene. Do not replace, duplicate, move, or redesign existing subjects. Keep the output "
+        f"supplied reference image at this governed transition: {subject_text}. "
+        f"{transition_instruction} "
+        "Do not replace, duplicate, move, or redesign existing subjects. Keep the output "
         "photorealistic and preserve the source image geometry."
     )
     negative = (
         "identity drift, changed existing face, changed wardrobe, moved existing subject, "
         "duplicate person, extra person, extra object, removed subject, camera change, zoom, "
         "reframe, lighting change, environment change, scene cut, split screen, contact sheet, "
-        "text overlay, redesign"
+        "text overlay, redesign, teleportation, sudden full-body appearance"
     )
     return AutomatedIntroductionBoundaryRequest(
         shot_id=requirement.shot_id,
