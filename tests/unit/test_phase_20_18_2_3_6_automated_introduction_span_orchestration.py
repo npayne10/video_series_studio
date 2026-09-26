@@ -725,7 +725,7 @@ def test_orchestration_rejects_keyframe_from_stale_synthesis_request(
     service.run(package_path)
 
     assert synthesizer.calls == 2
-    assert provider.calls == 3
+    assert provider.calls == 2
 
 
 def test_orchestration_resume_discards_spans_when_package_fingerprint_changes(
