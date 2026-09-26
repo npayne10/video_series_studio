@@ -450,8 +450,10 @@ class GovernedIntroductionKeyframe:
     approved_by: str
     approved_at: str
     acceptance_criteria: tuple[str, ...]
+    approval_mode: str = "human"
+    automation_record_path: str | None = None
     status: str = "approved"
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -509,6 +511,20 @@ class GovernedIntroductionKeyframe:
                 "Governed Introduction Keyframe acceptance criteria cannot contain duplicates"
             )
         object.__setattr__(self, "acceptance_criteria", criteria)
+        approval_mode = self.approval_mode.strip().lower()
+        if approval_mode not in {"human", "automated_validated"}:
+            raise GovernedIntroductionKeyframeError(
+                "Governed Introduction Keyframe approval_mode must be human or automated_validated"
+            )
+        object.__setattr__(self, "approval_mode", approval_mode)
+        if approval_mode == "automated_validated" and not (
+            self.automation_record_path and self.automation_record_path.strip()
+        ):
+            raise GovernedIntroductionKeyframeError(
+                "Automated Introduction Keyframe authority requires automation_record_path"
+            )
+        if self.automation_record_path is not None:
+            object.__setattr__(self, "automation_record_path", self.automation_record_path.strip())
 
     @property
     def approved(self) -> bool:
@@ -536,6 +552,8 @@ class GovernedIntroductionKeyframe:
             "approved_by": self.approved_by,
             "approved_at": self.approved_at,
             "acceptance_criteria": list(self.acceptance_criteria),
+            "approval_mode": self.approval_mode,
+            "automation_record_path": self.automation_record_path,
             "status": self.status,
         }
 
@@ -592,7 +610,7 @@ class GovernedIntroductionKeyframeStore:
     ) -> GovernedIntroductionKeyframe:
         if not record.approved:
             raise GovernedIntroductionKeyframeError(
-                "Governed Introduction Keyframe must be human-approved before registration"
+                "Governed Introduction Keyframe must be approved before registration"
             )
         self._require_identity(record)
         self._require_matches(record, requirement)
@@ -637,7 +655,10 @@ class GovernedIntroductionKeyframeStore:
         approved_by: str,
         approved_at: str,
         acceptance_criteria: tuple[str, ...] = INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
+        approval_mode: str = "human",
+        automation_record_path: str | None = None,
     ) -> GovernedIntroductionKeyframe:
+        mode = approval_mode.strip().lower()
         payload = {
             "requirement_id": requirement.requirement_id,
             "image_sha256": image_sha256.strip().lower(),
@@ -645,6 +666,9 @@ class GovernedIntroductionKeyframeStore:
             "approved_by": approved_by.strip(),
             "approved_at": approved_at.strip(),
         }
+        if mode != "human":
+            payload["approval_mode"] = mode
+            payload["automation_record_path"] = (automation_record_path or "").strip()
         keyframe_id = f"GIK-{_fingerprint(payload)[:16].upper()}"
         return GovernedIntroductionKeyframe(
             keyframe_id=keyframe_id,
@@ -662,6 +686,8 @@ class GovernedIntroductionKeyframeStore:
             approved_by=approved_by.strip(),
             approved_at=approved_at.strip(),
             acceptance_criteria=acceptance_criteria,
+            approval_mode=mode,
+            automation_record_path=automation_record_path,
         )
 
     @staticmethod
@@ -673,6 +699,9 @@ class GovernedIntroductionKeyframeStore:
             "approved_by": record.approved_by,
             "approved_at": record.approved_at,
         }
+        if record.approval_mode != "human":
+            payload["approval_mode"] = record.approval_mode
+            payload["automation_record_path"] = record.automation_record_path or ""
         expected = f"GIK-{_fingerprint(payload)[:16].upper()}"
         if record.keyframe_id != expected:
             raise GovernedIntroductionKeyframeError(
@@ -763,6 +792,10 @@ class GovernedIntroductionKeyframeStore:
             approved_by=str(raw.get("approved_by") or "").strip(),
             approved_at=str(raw.get("approved_at") or "").strip(),
             acceptance_criteria=_string_tuple(raw, "acceptance_criteria"),
+            approval_mode=str(raw.get("approval_mode") or "human").strip().lower(),
+            automation_record_path=(
+                str(raw.get("automation_record_path") or "").strip() or None
+            ),
             status=str(raw.get("status") or "").strip().lower(),
             schema_version=str(raw.get("schema_version") or "1.0"),
         )
