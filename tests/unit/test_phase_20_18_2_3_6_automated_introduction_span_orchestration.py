@@ -288,7 +288,11 @@ def test_request_compilation_pins_source_and_introduced_reference(tmp_path: Path
     assert request.introduced_reference_ids == ("REF-ROS",)
     assert len(request.introduced_reference_sha256) == 1
     assert "Major Ros Rohsgard" in request.positive_prompt
+    assert "This is an ENTER transition" in request.positive_prompt
+    assert "first visible phase" in request.positive_prompt
+    assert "fully arrived" in request.positive_prompt
     assert "Do not replace, duplicate" in request.positive_prompt
+    assert "teleportation" in request.negative_prompt
 
 
 def test_automated_structural_keyframe_can_condition_provider_before_final_visual_qc(
@@ -572,6 +576,19 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
     keyframe = store.require_approved(requirements.requirements[0])
     assert keyframe.approval_mode == "automated_structural"
     assert keyframe.target_global_frame_index == 96
+    span_two_package = json.loads(
+        (
+            tmp_path
+            / ".vscs"
+            / "timed_span_acceptance"
+            / "packages"
+            / "PT-VIDEO-SHT-002"
+            / "production"
+            / "span-002.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "walking naturally farther into the established scene" in span_two_package["motion_prompt"]
+    assert "Do not teleport" in span_two_package["motion_prompt"]
 
 
 def test_orchestration_resume_reuses_checksum_pinned_span_outputs(tmp_path: Path) -> None:
@@ -679,6 +696,34 @@ def test_orchestration_regenerates_keyframe_when_current_boundary_checksum_chang
 
     assert provider.calls == 3
     assert synthesizer.calls == 2
+
+
+def test_orchestration_rejects_keyframe_from_stale_synthesis_request(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(tmp_path)
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    synthesizer = _CountingSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=synthesizer,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+    service.run(package_path)
+    assert synthesizer.calls == 1
+
+    boundary_store = service.boundaries
+    root = json.loads(boundary_store.path.read_text(encoding="utf-8"))
+    root["results"][-1]["request_id"] = "AIBR-STALE-SEMANTICS"
+    boundary_store.path.write_text(json.dumps(root, indent=2), encoding="utf-8")
+
+    service.run(package_path)
+
+    assert synthesizer.calls == 2
+    assert provider.calls == 3
 
 
 def test_orchestration_resume_discards_spans_when_package_fingerprint_changes(
