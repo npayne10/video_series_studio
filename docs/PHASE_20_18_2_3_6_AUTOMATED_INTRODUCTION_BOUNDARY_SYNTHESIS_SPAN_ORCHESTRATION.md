@@ -254,6 +254,34 @@ This lets VSCS render SPAN-001 before the frame-96 Introduction Keyframe exists.
 
 Once frame 96 is synthesized and registered, SPAN-002 can be materialized and executed.
 
+## Resumability and stale-artifact handling
+
+Automated orchestration persists checksum-pinned span completion state in:
+
+```text
+.vscs/automated_span_orchestration_state.json
+```
+
+A previously completed span is reused only when all of the following still match:
+
+- current Production Package fingerprint;
+- governed span identity and sequence number;
+- current generated span-package checksum;
+- persisted provider-output path;
+- persisted provider-output checksum.
+
+If any check fails, that span is rerendered. Later spans may still be reused only if their
+own current package checksum and output checksum remain valid.
+
+Introduction Keyframe reuse has an additional boundary rule: the registered keyframe's
+`source_boundary_image_sha256` must equal the exact frame decoded from the current
+(reused or rerendered) preceding span. If it differs, VSCS regenerates the Introduction
+Keyframe and the changed conditioning package naturally invalidates the affected later
+span.
+
+This gives re-entry a fail-closed "resume from the first stale point" behaviour without
+creating another ProductionTask retry.
+
 ## Output assembly
 
 The existing Phase 20.18.2.3.5 exact assembly runtime remains authoritative.
