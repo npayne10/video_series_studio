@@ -454,9 +454,7 @@ def request_from_requirement(
         for asset_id in requirement.introduced_asset_ids
     )
     introduction_events = tuple(
-        str(presence_by_asset.get(asset_id, {}).get("introduction") or "appear")
-        .strip()
-        .casefold()
+        str(presence_by_asset.get(asset_id, {}).get("introduction") or "appear").strip().casefold()
         for asset_id in requirement.introduced_asset_ids
     )
     labels = tuple(
@@ -467,7 +465,7 @@ def request_from_requirement(
     if introduction_events and all(event == "enter" for event in introduction_events):
         transition_instruction = (
             "This is an ENTER transition, not an appearance. Show the introduced character only "
-            "at the beginning of the physical entrance: just becoming visible from a plausible "
+            "in the first visible phase of the physical entrance: just becoming visible from a plausible "
             "edge, doorway, or access route, with part of the body still outside the established "
             "scene and a natural walking-in pose. Do not place the character fully arrived, "
             "centered, standing still, or suddenly materialized in the scene."
