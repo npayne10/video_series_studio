@@ -249,7 +249,10 @@ def test_strategy_ladder_prefers_direct_then_synthesis_then_manual() -> None:
     )
     manual = IntroductionBoundaryProviderCapabilities(provider_id="legacy")
 
-    assert direct.strategy_for(("character",)) is IntroductionBoundaryStrategy.DIRECT_PROVIDER_REFERENCE
+    assert (
+        direct.strategy_for(("character",))
+        is IntroductionBoundaryStrategy.DIRECT_PROVIDER_REFERENCE
+    )
     assert synth.strategy_for(("character",)) is IntroductionBoundaryStrategy.SYNTHESIZED_KEYFRAME
     assert manual.strategy_for(("character",)) is IntroductionBoundaryStrategy.MANUAL_FALLBACK
 
