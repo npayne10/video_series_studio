@@ -246,5 +246,6 @@ class ComfyUIIntroductionBoundarySynthesizer:
                 return expected
             time.sleep(0.25)
         raise ComfyUIIntroductionBoundarySynthesisError(
-            f"ComfyUI completed without writing the expected introduction frame in {output_root}"
+            "ComfyUI completed without writing the expected introduction frame "
+            f"in {expected.parent}"
         )
