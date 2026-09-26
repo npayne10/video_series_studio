@@ -184,6 +184,38 @@ class IntroductionBoundaryValidator(Protocol):
     ) -> IntroductionBoundaryValidationResult: ...
 
 
+@dataclass(frozen=True, slots=True)
+class AutomatedSpanExecutionResult:
+    """One normalized internal-span provider output with complete provider provenance."""
+
+    span_sequence_number: int
+    package_path: Path
+    output_path: Path
+    provider_id: str
+    provider_job_id: str
+
+    def __post_init__(self) -> None:
+        if self.span_sequence_number <= 0:
+            raise AutomatedIntroductionBoundaryError("Span sequence number must be positive")
+        if not self.provider_id.strip() or not self.provider_job_id.strip():
+            raise AutomatedIntroductionBoundaryError(
+                "Automated span execution requires provider provenance"
+            )
+
+
+class TimedSpanExecutor(Protocol):
+    """Execute exactly one current governed internal-span package."""
+
+    provider_id: str
+
+    def execute(
+        self,
+        package_path: Path,
+        *,
+        span_sequence_number: int,
+    ) -> AutomatedSpanExecutionResult: ...
+
+
 class IntroductionBoundaryAutomationPlanner:
     """Choose the least-manual safe strategy from declared provider capabilities."""
 
