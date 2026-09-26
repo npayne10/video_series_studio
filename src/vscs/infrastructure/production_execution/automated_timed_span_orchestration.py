@@ -16,6 +16,7 @@ from vscs.application.production_execution.automated_introduction_boundaries imp
     AutomatedTimedSpanOrchestrationResult,
     IntroductionBoundaryAutomationPlanner,
     IntroductionBoundarySynthesisRequest,
+    IntroductionBoundarySynthesisResult,
     IntroductionBoundarySynthesizer,
     IntroductionBoundaryValidator,
     TimedSpanExecutor,
@@ -562,13 +563,13 @@ class AutomatedTimedSpanOrchestrationService:
                 source_frame,
                 working,
             )
-            actual = type("_ActualBoundaryResult", (), {
-                "image_path": target_frame,
-                "provider_id": self.executor.provider_id,
-                "provider_job_id": "rendered-span-first-frame",
-                "request_fingerprint": request.fingerprint,
-                "output_sha256": self._sha256(target_frame),
-            })()
+            actual = IntroductionBoundarySynthesisResult(
+                image_path=target_frame,
+                provider_id=self.executor.provider_id,
+                provider_job_id="rendered-span-first-frame",
+                request_fingerprint=request.fingerprint,
+                output_sha256=self._sha256(target_frame),
+            )
             validation = self.validator.validate(request, actual)
             if not validation.passed:
                 raise AutomatedTimedSpanOrchestrationError(
