@@ -808,7 +808,9 @@ def test_workspace_surfaces_timed_span_acceptance_and_blocks_monolithic_start(
 
     assert "KEYFRAME_REQUIRED" in workspace.timed_span_state.text()
     assert "Spans 2" in workspace.timed_span_detail.text()
+    assert workspace.automated_timed_span_button.isEnabled()
     assert workspace.approve_introduction_keyframe_button.isEnabled()
+    assert "manual" in workspace.approve_introduction_keyframe_button.toolTip().casefold()
     assert not workspace.start_button.isEnabled()
 
 
@@ -826,4 +828,5 @@ def test_workspace_preserves_start_for_monolithic_shot(qtbot, tmp_path: Path) ->
     workspace.table.selectRow(0)
 
     assert "NOT_APPLICABLE" in workspace.timed_span_state.text()
+    assert not workspace.automated_timed_span_button.isEnabled()
     assert workspace.start_button.isEnabled()
