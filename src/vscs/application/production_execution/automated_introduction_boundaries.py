@@ -216,6 +216,24 @@ class TimedSpanExecutor(Protocol):
     ) -> AutomatedSpanExecutionResult: ...
 
 
+@dataclass(frozen=True, slots=True)
+class AutomatedTimedSpanOrchestrationResult:
+    """Provider-neutral outcome of one automated dynamic-Shot orchestration run."""
+
+    shot_id: str
+    state: str
+    span_outputs: tuple[Path, ...]
+    assembled_output: Path | None
+    manual_review_requirement_id: str | None = None
+    message: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.shot_id.strip() or not self.state.strip():
+            raise AutomatedIntroductionBoundaryError(
+                "Automated timed-span orchestration result requires shot_id and state"
+            )
+
+
 class IntroductionBoundaryAutomationPlanner:
     """Choose the least-manual safe strategy from declared provider capabilities."""
 
