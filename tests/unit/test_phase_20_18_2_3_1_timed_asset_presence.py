@@ -11,6 +11,9 @@ from vscs.application.production_execution.package_compilation import (
     ProductionPackageCompilerService,
 )
 from vscs.application.production_package import ProductionPackageService
+from vscs.application.timed_asset_presence_authoring import (
+    TimedAssetPresenceAuthoringService,
+)
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     AssetPresenceRemoval,
@@ -375,3 +378,69 @@ def test_static_timed_presence_can_be_carried_without_changing_provider_behavior
     payload = LocalProductionPackageCompilationService._comfyui_payload(_compiled_package(static))
 
     assert payload["timed_asset_presence"] == static
+
+
+class _DefaultAuthoringPackage:
+    shot_id = "EP-001-SCN-001-SHT-002"
+    shot = {"target_runtime_seconds": 6}
+    timed_asset_presence = None
+    assets = (
+        {
+            "production": {
+                "asset_id": "CAP-CHR-001",
+                "category": "character",
+            }
+        },
+        {
+            "production": {
+                "asset_id": "CAP-CHR-001",
+                "category": "character",
+            }
+        },
+        {
+            "production": {
+                "asset_id": "CAP-CHR-003",
+                "category": "character",
+            }
+        },
+    )
+
+
+class _DefaultAuthoringPackages:
+    def current_package(self, _shot_id: str) -> _DefaultAuthoringPackage:
+        return _DefaultAuthoringPackage()
+
+
+class _DefaultReferenceSource:
+    def reference_plan_for_shot(self, _shot_id: str) -> dict[str, object]:
+        return {
+            "status": "passed",
+            "references": [
+                {
+                    "reference_id": "REF-JAMES",
+                    "asset_id": "CAP-CHR-001",
+                    "role": "primary_identity",
+                },
+                {
+                    "reference_id": "REF-SANDRA",
+                    "asset_id": "CAP-CHR-003",
+                    "role": "primary_identity",
+                },
+            ],
+        }
+
+
+def test_default_authoring_deduplicates_repeated_governed_asset_records() -> None:
+    service = TimedAssetPresenceAuthoringService(
+        _DefaultAuthoringPackages(),  # type: ignore[arg-type]
+        _DefaultReferenceSource(),  # type: ignore[arg-type]
+    )
+
+    context = service.default_context("EP-001-SCN-001-SHT-002")
+
+    assert tuple(item.asset_id for item in context.plan.presences) == (
+        "CAP-CHR-001",
+        "CAP-CHR-003",
+    )
+    james = next(item for item in context.plan.presences if item.asset_id == "CAP-CHR-001")
+    assert james.canonical_reference_ids == ("REF-JAMES",)
