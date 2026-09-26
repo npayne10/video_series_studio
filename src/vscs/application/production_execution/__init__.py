@@ -129,6 +129,8 @@ __all__ = [
     "GovernedIntroductionKeyframeError",
     "GovernedIntroductionKeyframeRequirementCompiler",
     "GovernedIntroductionKeyframeStore",
+    "IntroductionBoundaryProviderCapabilities",
+    "IntroductionBoundaryStrategy",
     "GovernedRetryAuthorization",
     "GovernedRetryOverrideState",
     "GovernedRetryOverrideStatus",
