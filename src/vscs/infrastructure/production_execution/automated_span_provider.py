@@ -196,7 +196,10 @@ class LTX25AutomatedSpanProvider:
                 relative_directory="vscs-automated-spans",
                 filename_stem=f"{task_id}-span-{sequence:03d}",
             ),
-            metadata={"production_package": str(Path(package_path).resolve(strict=False))},
+            metadata={
+                "production_package": str(Path(package_path).resolve(strict=False)),
+                "generation_mode": "image_to_video",
+            },
         )
 
     @staticmethod
