@@ -129,7 +129,7 @@ class GovernedInternalBoundaryFrameExtractor:
             "-i",
             str(source),
             "-vf",
-            f"select=eq(n\,{local_frame_index})",
+            rf"select=eq(n\,{local_frame_index})",
             "-vsync",
             "0",
             "-frames:v",
