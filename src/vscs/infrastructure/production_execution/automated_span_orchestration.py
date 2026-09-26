@@ -296,10 +296,6 @@ class AutomatedTimedSpanOrchestrationService:
                 global_frame_index=requirement.source_global_frame_index,
             )
             boundary_sha256 = file_sha256(boundary_image)
-            if self._has_current_keyframe_for_boundary(requirement, boundary_sha256):
-                continue
-
-            self._release_provider_memory()
             request = request_from_requirement(
                 requirement,
                 source_boundary_image_path=boundary_image,
@@ -311,6 +307,14 @@ class AutomatedTimedSpanOrchestrationService:
                 source_package_fingerprint=package_fingerprint,
                 seed=int(raw.get("seed") or 0) + requirement.target_global_frame_index,
             )
+            if self._has_current_keyframe_for_request(
+                requirement,
+                request,
+                boundary_sha256,
+            ):
+                continue
+
+            self._release_provider_memory()
             self.boundaries.save_request(request)
             try:
                 result = self.synthesizer.synthesize(request)
@@ -411,16 +415,26 @@ class AutomatedTimedSpanOrchestrationService:
                 f"Cannot register automated Introduction Keyframe: {exc}"
             ) from exc
 
-    def _has_current_keyframe_for_boundary(
+    def _has_current_keyframe_for_request(
         self,
         requirement: IntroductionKeyframeRequirement,
+        request: AutomatedIntroductionBoundaryRequest,
         source_boundary_sha256: str,
     ) -> bool:
         try:
             current = self.keyframes.require_approved(requirement)
         except GovernedIntroductionKeyframeError:
             return False
-        return current.source_boundary_image_sha256 == source_boundary_sha256.strip().lower()
+        if current.source_boundary_image_sha256 != source_boundary_sha256.strip().lower():
+            return False
+        latest = self.boundaries.latest_result_for_requirement(requirement.requirement_id)
+        if latest is None:
+            return False
+        return (
+            latest.request_id == request.request_id
+            and latest.image_sha256 == current.image_sha256
+            and latest.source_boundary_image_sha256 == current.source_boundary_image_sha256
+        )
 
     def _resume_state_path(self) -> Path:
         return self.project_directory / ".vscs" / "automated_span_orchestration_state.json"
