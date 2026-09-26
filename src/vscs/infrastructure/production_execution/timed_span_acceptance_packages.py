@@ -146,7 +146,9 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         payload["status"] = "READY"
         payload["frame_count"] = span.frame_count
         payload["governed_keyframe"] = deepcopy(opening_keyframe)
-        payload["motion_prompt"] = self._span_motion_prompt(span.sequence_number, span.start_frame, timed)
+        payload["motion_prompt"] = self._span_motion_prompt(
+            span.sequence_number, span.start_frame, timed
+        )
         payload["shot_prompt"] = payload["motion_prompt"]
         base_prefix = str(root.get("filename_prefix") or task_id).rstrip("/")
         payload["filename_prefix"] = f"{base_prefix}/SPAN-{span.sequence_number:03d}"
@@ -335,7 +337,9 @@ class LTX25TimedSpanAcceptancePackageBuilder:
             payload["status"] = "READY"
             payload["frame_count"] = span.frame_count
             payload["governed_keyframe"] = keyframe
-            payload["motion_prompt"] = self._span_motion_prompt(span.sequence_number)
+            payload["motion_prompt"] = self._span_motion_prompt(
+                span.sequence_number, span.start_frame, timed
+            )
             payload["shot_prompt"] = payload["motion_prompt"]
             base_prefix = str(root.get("filename_prefix") or task_id).rstrip("/")
             payload["filename_prefix"] = f"{base_prefix}/SPAN-{span.sequence_number:03d}"
@@ -447,8 +451,7 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         entering = tuple(
             presence.asset_id
             for presence in timed.presences
-            if presence.from_frame == global_start_frame
-            and presence.introduction.value == "enter"
+            if presence.from_frame == global_start_frame and presence.introduction.value == "enter"
         )
         if entering:
             return (
