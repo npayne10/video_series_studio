@@ -243,7 +243,9 @@ class AutomatedTimedSpanOrchestrationService:
             )
             if span_output is None:
                 try:
-                    span_output = Path(self.span_provider.render(span_package)).resolve(strict=False)
+                    span_output = Path(self.span_provider.render(span_package)).resolve(
+                        strict=False
+                    )
                 except Exception as exc:
                     raise AutomatedSpanOrchestrationError(
                         f"Provider execution failed for governed span {sequence_number}: {exc}"
