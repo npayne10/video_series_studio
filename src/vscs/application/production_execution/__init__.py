@@ -1,5 +1,19 @@
 """Operator-facing Production Execution application boundary."""
 
+from .automated_introduction_boundaries import (
+    AutomatedIntroductionBoundaryError,
+    AutomatedSpanExecutionResult,
+    IntroductionBoundaryAutomationPlanner,
+    IntroductionBoundaryAutomationState,
+    IntroductionBoundaryProviderCapabilities,
+    IntroductionBoundaryStrategy,
+    IntroductionBoundarySynthesisRequest,
+    IntroductionBoundarySynthesisResult,
+    IntroductionBoundarySynthesizer,
+    IntroductionBoundaryValidationResult,
+    IntroductionBoundaryValidator,
+    TimedSpanExecutor,
+)
 from .functional_acceptance import (
     LiveShotFunctionalAcceptanceError,
     LiveShotFunctionalAcceptanceReconciliation,
@@ -99,6 +113,18 @@ from .video_workflow_rebaseline import (
 
 __all__ = [
     "INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA",
+    "AutomatedIntroductionBoundaryError",
+    "AutomatedSpanExecutionResult",
+    "IntroductionBoundaryAutomationPlanner",
+    "IntroductionBoundaryAutomationState",
+    "IntroductionBoundaryProviderCapabilities",
+    "IntroductionBoundaryStrategy",
+    "IntroductionBoundarySynthesisRequest",
+    "IntroductionBoundarySynthesisResult",
+    "IntroductionBoundarySynthesizer",
+    "IntroductionBoundaryValidationResult",
+    "IntroductionBoundaryValidator",
+    "TimedSpanExecutor",
     "KEYFRAME_ACCEPTANCE_CRITERIA",
     "VISUAL_ACCEPTANCE_CRITERIA",
     "CompiledProductionPackage",
