@@ -3,6 +3,7 @@
 from .automated_introduction_boundaries import (
     AutomatedIntroductionBoundaryError,
     AutomatedSpanExecutionResult,
+    AutomatedTimedSpanOrchestrationResult,
     IntroductionBoundaryAutomationPlanner,
     IntroductionBoundaryAutomationState,
     IntroductionBoundaryProviderCapabilities,
@@ -115,6 +116,7 @@ __all__ = [
     "INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA",
     "AutomatedIntroductionBoundaryError",
     "AutomatedSpanExecutionResult",
+    "AutomatedTimedSpanOrchestrationResult",
     "IntroductionBoundaryAutomationPlanner",
     "IntroductionBoundaryAutomationState",
     "IntroductionBoundaryProviderCapabilities",
