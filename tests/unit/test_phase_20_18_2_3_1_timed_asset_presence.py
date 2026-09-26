@@ -11,9 +11,6 @@ from vscs.application.production_execution.package_compilation import (
     ProductionPackageCompilerService,
 )
 from vscs.application.production_package import ProductionPackageService
-from vscs.application.timed_asset_presence_authoring import (
-    TimedAssetPresenceAuthoringService,
-)
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     AssetPresenceRemoval,
@@ -21,6 +18,9 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresence,
     TimedAssetPresenceError,
     TimedAssetPresencePlan,
+)
+from vscs.application.timed_asset_presence_authoring import (
+    TimedAssetPresenceAuthoringService,
 )
 from vscs.application.universal_production_description_compiler import (
     UniversalProductionDescriptionCompilerService,
@@ -381,29 +381,30 @@ def test_static_timed_presence_can_be_carried_without_changing_provider_behavior
 
 
 class _DefaultAuthoringPackage:
-    shot_id = "EP-001-SCN-001-SHT-002"
-    shot = {"target_runtime_seconds": 6}
-    timed_asset_presence = None
-    assets = (
-        {
-            "production": {
-                "asset_id": "CAP-CHR-001",
-                "category": "character",
-            }
-        },
-        {
-            "production": {
-                "asset_id": "CAP-CHR-001",
-                "category": "character",
-            }
-        },
-        {
-            "production": {
-                "asset_id": "CAP-CHR-003",
-                "category": "character",
-            }
-        },
-    )
+    def __init__(self) -> None:
+        self.shot_id = "EP-001-SCN-001-SHT-002"
+        self.shot = {"target_runtime_seconds": 6}
+        self.timed_asset_presence = None
+        self.assets = (
+            {
+                "production": {
+                    "asset_id": "CAP-CHR-001",
+                    "category": "character",
+                }
+            },
+            {
+                "production": {
+                    "asset_id": "CAP-CHR-001",
+                    "category": "character",
+                }
+            },
+            {
+                "production": {
+                    "asset_id": "CAP-CHR-003",
+                    "category": "character",
+                }
+            },
+        )
 
 
 class _DefaultAuthoringPackages:
