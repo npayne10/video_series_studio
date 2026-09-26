@@ -107,11 +107,16 @@ class TimedAssetPresenceAuthoringService:
         frame_count = self._default_frame_count(package.shot, fps)
         references = self._reference_ids_by_asset(normalized)
         presences: list[TimedAssetPresence] = []
+        seen_asset_ids: set[str] = set()
         for asset in package.assets:
             production = self._production_record(asset)
             asset_id = str(production.get("asset_id") or "").strip()
             if not asset_id:
                 continue
+            normalized_asset_id = asset_id.upper()
+            if normalized_asset_id in seen_asset_ids:
+                continue
+            seen_asset_ids.add(normalized_asset_id)
             kind = self._asset_kind(str(production.get("category") or ""))
             presences.append(
                 TimedAssetPresence(
@@ -121,7 +126,7 @@ class TimedAssetPresenceAuthoringService:
                     through_frame=frame_count - 1,
                     introduction=AssetPresenceIntroduction.PRESENT,
                     removal=AssetPresenceRemoval.THROUGH_SHOT,
-                    canonical_reference_ids=references.get(asset_id.upper(), ()),
+                    canonical_reference_ids=references.get(normalized_asset_id, ()),
                     required=True,
                 )
             )
@@ -129,12 +134,17 @@ class TimedAssetPresenceAuthoringService:
             raise TimedAssetPresenceAuthoringError(
                 "Current Production Package has no governed Asset authority"
             )
-        plan = TimedAssetPresencePlan(
-            shot_id=normalized,
-            frames_per_second=fps,
-            frame_count=frame_count,
-            presences=tuple(presences),
-        )
+        try:
+            plan = TimedAssetPresencePlan(
+                shot_id=normalized,
+                frames_per_second=fps,
+                frame_count=frame_count,
+                presences=tuple(presences),
+            )
+        except TimedAssetPresenceError as exc:
+            raise TimedAssetPresenceAuthoringError(
+                f"Default Timed Asset Presence authority is invalid: {exc}"
+            ) from exc
         return TimedAssetPresenceAuthoringContext(
             shot_id=normalized,
             frames_per_second=fps,
