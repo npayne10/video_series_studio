@@ -9,6 +9,7 @@ from typing import Protocol, cast
 
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
+from .automated_introduction_boundaries import AutomatedTimedSpanOrchestrationResult
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
@@ -84,6 +85,28 @@ class ProductionExecutionBackend(Protocol):
         authorized_by: str,
         reason: str,
     ) -> GovernedRetryOverrideStatus: ...
+
+    def run_automated_timed_span_orchestration(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> AutomatedTimedSpanOrchestrationResult:
+        normalized = self._task_id(task_id, "running automated timed-span orchestration")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "run_automated_timed_span_orchestration_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support automated timed-span orchestration."
+            )
+        return cast(_RunAutomatedTimedSpanOrchestrationForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
 
     def package_status(
         self,
@@ -212,6 +235,15 @@ class _RecordTimedSpanQcForProfile(Protocol):
         approved_by: str,
         notes: str,
     ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _RunAutomatedTimedSpanOrchestrationForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> AutomatedTimedSpanOrchestrationResult: ...
 
 
 class _RetryOverrideStatusOperation(Protocol):
