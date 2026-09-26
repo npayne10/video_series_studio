@@ -887,11 +887,7 @@ def test_automated_span_request_declares_governed_keyframe_image_to_video(
     repository = Path(__file__).resolve().parents[2]
     manifest_raw = json.loads(
         (
-            repository
-            / "resources"
-            / "workflows"
-            / "manifests"
-            / "ltx25_i2v_keyframe_v1.json"
+            repository / "resources" / "workflows" / "manifests" / "ltx25_i2v_keyframe_v1.json"
         ).read_text(encoding="utf-8")
     )
     report = WorkflowCompatibilityValidator().validate(
@@ -900,8 +896,6 @@ def test_automated_span_request_declares_governed_keyframe_image_to_video(
     )
 
     errors = tuple(
-        diagnostic
-        for diagnostic in report.diagnostics
-        if diagnostic.severity.value == "error"
+        diagnostic for diagnostic in report.diagnostics if diagnostic.severity.value == "error"
     )
     assert errors == ()
