@@ -679,11 +679,17 @@ class ProductionExecutionWorkspace(QWidget):
         )
         automation_ready = (
             status.applicable
-            and status.state
-            in {
-                TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
-                TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
-            }
+            and (
+                status.state
+                in {
+                    TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+                    TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
+                }
+                or (
+                    status.state is TimedSpanAcceptanceState.QC_REQUIRED
+                    and bool(status.pending_qc_requirement_ids)
+                )
+            )
             and self._automated_span_thread is None
         )
         self.run_automated_spans_button.setEnabled(automation_ready)
