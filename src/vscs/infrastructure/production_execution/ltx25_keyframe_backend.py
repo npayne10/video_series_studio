@@ -68,6 +68,14 @@ from .current_authority_backend import (
 from .current_authority_backend import (
     LocalComfyUIProductionExecutionBackend as _CurrentAuthorityBackend,
 )
+from .ltx25_keyframe_contract import (
+    LTX25_KEYFRAME_LOADER_CLASS,
+    LTX25_KEYFRAME_LOADER_TITLE,
+    LTX25_KEYFRAME_MANIFEST_FILE,
+    LTX25_KEYFRAME_SCHEMA,
+    LTX25_KEYFRAME_WORKFLOW_FILE,
+    LTX25_KEYFRAME_WORKFLOW_ID,
+)
 from .ltx25_span_conditioning import (
     LTX25SpanConditioningError,
     LTX25SpanProviderConditioningCompiler,
@@ -82,13 +90,6 @@ from .timed_span_acceptance_service import (
     TimedSpanFunctionalAcceptanceService,
     TimedSpanFunctionalAcceptanceServiceError,
 )
-
-LTX25_KEYFRAME_WORKFLOW_ID = "ltx25_i2v_keyframe_v1"
-LTX25_KEYFRAME_WORKFLOW_FILE = "workflows/ltx25_i2v_keyframe_v1_api.json"
-LTX25_KEYFRAME_MANIFEST_FILE = "ltx25_i2v_keyframe_v1.json"
-LTX25_KEYFRAME_SCHEMA = "7.2.2-vscs-1"
-LTX25_KEYFRAME_LOADER_CLASS = "VSCSLTX25GovernedKeyframePackageLoaderV1"
-LTX25_KEYFRAME_LOADER_TITLE = "VSCS LTX-2.5 Governed Keyframe Package Loader v1"
 
 
 @dataclass(frozen=True, slots=True)
