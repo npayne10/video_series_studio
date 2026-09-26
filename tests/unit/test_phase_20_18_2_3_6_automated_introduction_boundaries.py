@@ -10,6 +10,8 @@ from vscs.application.production_execution import (
     INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
     KEYFRAME_ACCEPTANCE_CRITERIA,
     AutomatedIntroductionBoundaryError,
+    AutomatedTimedSpanOrchestrationResult,
+    ProductionExecutionUiService,
     GovernedInternalRenderSpanCompiler,
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeRequirementCompiler,
@@ -311,3 +313,37 @@ def test_human_keyframe_records_remain_backward_compatible(tmp_path: Path) -> No
     restored = store.require_approved(requirement)
     assert restored.approval_mode == "human"
     assert restored.automation_record_path is None
+
+
+class _AutomationFacadeBackend:
+    def __init__(self) -> None:
+        self.profile: str | None = None
+
+    def run_automated_timed_span_orchestration_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> AutomatedTimedSpanOrchestrationResult:
+        assert task_id == "PT-TIMED"
+        self.profile = profile
+        return AutomatedTimedSpanOrchestrationResult(
+            shot_id="EP-001-SCN-001-SHT-002",
+            state="accepted",
+            span_outputs=(Path("span-001.mp4"), Path("span-002.mp4")),
+            assembled_output=Path("assembled.mp4"),
+            message="Automated.",
+        )
+
+
+def test_ui_facade_delegates_automated_orchestration_with_normalized_profile() -> None:
+    backend = _AutomationFacadeBackend()
+    service = ProductionExecutionUiService(backend)  # type: ignore[arg-type]
+
+    result = service.run_automated_timed_span_orchestration(
+        "PT-TIMED",
+        profile="Production",
+    )
+
+    assert result.state == "accepted"
+    assert backend.profile == "production"
