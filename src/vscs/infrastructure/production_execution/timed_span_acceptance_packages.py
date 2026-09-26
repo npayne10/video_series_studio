@@ -146,7 +146,7 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         payload["status"] = "READY"
         payload["frame_count"] = span.frame_count
         payload["governed_keyframe"] = deepcopy(opening_keyframe)
-        payload["motion_prompt"] = self._span_motion_prompt(span.sequence_number)
+        payload["motion_prompt"] = self._span_motion_prompt(span.sequence_number, span.start_frame, timed)
         payload["shot_prompt"] = payload["motion_prompt"]
         base_prefix = str(root.get("filename_prefix") or task_id).rstrip("/")
         payload["filename_prefix"] = f"{base_prefix}/SPAN-{span.sequence_number:03d}"
@@ -433,12 +433,32 @@ class LTX25TimedSpanAcceptancePackageBuilder:
             )
 
     @staticmethod
-    def _span_motion_prompt(sequence_number: int) -> str:
+    def _span_motion_prompt(
+        sequence_number: int,
+        global_start_frame: int,
+        timed: TimedAssetPresencePlan,
+    ) -> str:
         if sequence_number == 1:
             return (
                 "Continue this exact approved opening composition with the governed active "
                 "subjects only. Preserve camera, identities, environment, positions, scale, "
                 "lighting, and physical continuity. Do not introduce any new subject."
+            )
+        entering = tuple(
+            presence.asset_id
+            for presence in timed.presences
+            if presence.from_frame == global_start_frame
+            and presence.introduction.value == "enter"
+        )
+        if entering:
+            return (
+                "Continue from this exact approved Introduction Keyframe. The newly introduced "
+                "character is in the first visible phase of a physical entrance. Animate the "
+                "character walking naturally farther into the established scene from the entry "
+                "edge or access route during the opening part of this span, then settling into "
+                "the scene. Do not teleport, pop in, dissolve in, or begin already fully arrived. "
+                "Preserve the governed identities, camera, environment, lighting, scale, and "
+                "physical continuity. Do not add any unapproved subject."
             )
         return (
             "Continue from this exact approved Introduction Keyframe. Preserve the visible "
