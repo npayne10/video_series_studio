@@ -8,6 +8,8 @@ The project follows semantic versioning where practical.
 
 ### Added
 
+- Phase 20.18.2.3.6 Automated Introduction Boundary Synthesis & Span Orchestration: sequential governed span execution, exact preceding-frame extraction, canonical-reference-driven boundary synthesis, automated vision validation, automated-validated Introduction Keyframe provenance, and exception-based manual fallback.
+- Phase 20.18.2.3.6 Production Execution adds a primary automated timed-span orchestration action while retaining Phase 3.5 controls as manual recovery tools.
 - Phase 20.18.2.3.5 Timed Asset Presence authoring bridge: explicit frame-interval editing from governed assets, direct governed ReferencePlan linkage, no prose-based timing inference, and persistence through ProductionPackage authority.
 - Phase 20.18.2.3.5 UI, QC and Functional Acceptance: operator-visible timed-span acceptance states, Introduction Keyframe approval controls, Candidate C span acceptance-package generation, exact normalized-span assembly evidence, and human boundary QC.
 - Phase 20.18.2.3.5 verifies approved internal-boundary evidence against the actual decoded final frame of the preceding normalized span and checksum-pins both span sources and the final assembled Shot.
@@ -49,6 +51,8 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.3.6 changes routine Introduction Keyframe governance from mandatory manual image preparation to automated synthesis plus explicit automated validation; human approval remains the fail-closed fallback.
+- Phase 20.18.2.3.6 permits Candidate C span packages to materialize one span at a time so later spans can depend on boundary authority produced from the actual preceding normalized span.
 - Phase 20.18.2.3.5 Candidate C can compile dynamic timed-span Shots into acceptance-ready authority while ordinary monolithic Start Production remains fail-closed.
 - Phase 20.18.2.3.5 Production Execution disables monolithic Start for dynamic Shots and exposes the governed keyframe/package/assembly/QC workflow without consuming or resetting ProductionTask retry authority.
 
@@ -72,6 +76,7 @@ The project follows semantic versioning where practical.
 
 ### In progress
 
+- Phase 20.18.2.3.6 local/static validation, boundary image-edit workflow configuration, and live SHT-002 automated Ros frame-96 acceptance.
 - Phase 20.18.2.3.5 local verification and SHT-002 Ros frame-96 UI/QC/functional acceptance.
 
 - Phase 20.18.2.2g provider deployment assurance and live Candidate C SHT-001 acceptance.
