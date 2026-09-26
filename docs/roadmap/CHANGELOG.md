@@ -51,6 +51,7 @@ The project follows semantic versioning where practical.
 
 ### Changed
 
+- Phase 20.18.2.3.6 automated span orchestration is resumable: checksum-pinned completed spans are reused only when the current package and output evidence still match, while stale package fingerprints, changed span packages, tampered outputs, or changed source-boundary checksums invalidate reuse from the affected point.
 - Phase 20.18.2.3.6 dynamic multi-span Candidate C packages declare automated internal orchestration while continuing to prohibit ordinary monolithic Start Production.
 - Phase 20.18.2.3.6 distinguishes automated structural Introduction Keyframe authority from final human semantic visual acceptance.
 - Phase 20.18.2.3.5 Candidate C can compile dynamic timed-span Shots into acceptance-ready authority while ordinary monolithic Start Production remains fail-closed.
