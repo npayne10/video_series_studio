@@ -587,7 +587,9 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
             / "span-002.json"
         ).read_text(encoding="utf-8")
     )
-    assert "walking naturally farther into the established scene" in span_two_package["motion_prompt"]
+    assert (
+        "walking naturally farther into the established scene" in span_two_package["motion_prompt"]
+    )
     assert "Do not teleport" in span_two_package["motion_prompt"]
 
 
