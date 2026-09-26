@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from vscs.application.production_execution import (
+    AutomatedTimedSpanOrchestrationResult,
     CompiledProductionPackage,
     GovernedClosingBoundaryFrame,
     GovernedInternalRenderSpanError,
@@ -46,11 +47,26 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresencePlan,
 )
 from vscs.domain.generated_media import GeneratedMediaKind, GeneratedMediaState
+from vscs.infrastructure.ai import AICredentialStore
+from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.rendering import (
+    ComfyUIClient,
     ComfyUIWorkflowCompiler,
+    LiveComfyUIAdapter,
     ProductionPackageComfyUIAdapter,
+    UrllibComfyUITransport,
 )
 
+from .automated_introduction_boundary_runtime import (
+    MappedComfyUIBoundarySynthesisConfiguration,
+    MappedComfyUIIntroductionBoundarySynthesizer,
+    OpenAIIntroductionBoundaryValidator,
+)
+from .automated_timed_span_orchestration import (
+    AutomatedTimedSpanOrchestrationError,
+    AutomatedTimedSpanOrchestrationService,
+    LTX25AutomatedSpanExecutor,
+)
 from .current_authority_backend import (
     CurrentAuthorityLTX23V721ProductionPackageCompilationService,
 )
@@ -744,6 +760,70 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         except (
             LocalProductionPackageCompilationError,
             TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def run_automated_timed_span_orchestration_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> AutomatedTimedSpanOrchestrationResult:
+        """Execute dynamic internal spans without routine manual boundary-image preparation."""
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        active = task.task_id in self._active
+        nonterminal = any(not job.terminal for job in self._ordered_jobs(task.task_id))
+        if active or nonterminal:
+            raise ProductionExecutionError(
+                "Automated timed-span orchestration cannot run while provider execution is active."
+            )
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            output_root = self._require_comfyui_output_directory()
+            transport = UrllibComfyUITransport(self.endpoint)
+            live = LiveComfyUIAdapter(
+                self._workflow_foundation(),
+                ComfyUIClient(transport, self.endpoint),
+            )
+            executor = LTX25AutomatedSpanExecutor(
+                live,
+                workflow_id=LTX25_KEYFRAME_WORKFLOW_ID,
+                comfyui_output_directory=output_root,
+            )
+            synthesis_config = MappedComfyUIBoundarySynthesisConfiguration.from_environment(
+                output_directory=output_root,
+                endpoint=self.endpoint,
+            )
+            synthesizer = MappedComfyUIIntroductionBoundarySynthesizer(
+                self.project_directory,
+                synthesis_config,
+            )
+            configuration = ConfigurationService()
+            configuration.load()
+            api_key = AICredentialStore().get_openai_api_key()
+            if not api_key:
+                raise AutomatedTimedSpanOrchestrationError(
+                    "Automated boundary validation requires the configured OpenAI API key. "
+                    "Without it, VSCS fails closed to manual boundary review."
+                )
+            validator = OpenAIIntroductionBoundaryValidator(
+                api_key=api_key,
+                model=configuration.settings.ai.openai_model,
+            )
+            return AutomatedTimedSpanOrchestrationService(
+                self.project_directory,
+                executor=executor,
+                synthesizer=synthesizer,
+                validator=validator,
+            ).run(package.path)
+        except (
+            LocalProductionPackageCompilationError,
+            AutomatedTimedSpanOrchestrationError,
+            OSError,
+            ValueError,
+            RuntimeError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
