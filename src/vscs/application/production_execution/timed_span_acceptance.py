@@ -684,7 +684,7 @@ class TimedSpanAcceptanceEvaluator:
                     and review.decision is IntroductionIdentityDecision.APPROVED
                     and review.image_sha256 == result.image_sha256
                 )
-                if not identity_approved:
+                if not identity_approved or result is None:
                     pending_keyframes.append(requirement.requirement_id)
                     pending_qc.append(requirement.requirement_id)
                     continue
