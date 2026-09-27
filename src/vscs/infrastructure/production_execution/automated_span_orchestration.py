@@ -440,6 +440,60 @@ class AutomatedTimedSpanOrchestrationService:
             acceptance_status=status,
         )
 
+    @staticmethod
+    def _requires_identity_gate(
+        requirement: IntroductionKeyframeRequirement,
+        timed: TimedAssetPresencePlan,
+    ) -> bool:
+        introduced = set(requirement.introduced_asset_ids)
+        return any(
+            presence.asset_id in introduced
+            and presence.from_frame == requirement.target_global_frame_index
+            and presence.asset_kind.value == "character"
+            and presence.introduction.value == "enter"
+            for presence in timed.presences
+        )
+
+    def _has_human_identity_keyframe(
+        self,
+        requirement: IntroductionKeyframeRequirement,
+        result: AutomatedIntroductionBoundaryResult,
+        source_boundary_sha256: str,
+    ) -> bool:
+        try:
+            current = self.keyframes.require_approved(requirement)
+        except GovernedIntroductionKeyframeError:
+            return False
+        return (
+            current.approval_mode == "human"
+            and current.image_sha256 == result.image_sha256
+            and current.source_boundary_image_sha256 == source_boundary_sha256.strip().lower()
+        )
+
+    def _identity_gate_result(
+        self,
+        *,
+        spans: GovernedInternalRenderSpanPlan,
+        task_id: str,
+        span_outputs: list[Path],
+        synthesized_ids: list[str],
+        package_path: Path,
+    ) -> AutomatedSpanOrchestrationResult:
+        status = self.acceptance.status(package_path)
+        if status.state is not TimedSpanAcceptanceState.KEYFRAME_REQUIRED:
+            raise AutomatedSpanOrchestrationError(
+                "Identity-gated character entrance did not stop at KEYFRAME_REQUIRED: "
+                f"{status.state.value} — {status.message}"
+            )
+        return AutomatedSpanOrchestrationResult(
+            shot_id=spans.shot_id,
+            task_id=task_id,
+            span_paths=tuple(span_outputs),
+            synthesized_keyframe_ids=tuple(synthesized_ids),
+            final_path=None,
+            acceptance_status=status,
+        )
+
     def _register_automated_keyframe(
         self,
         requirement: IntroductionKeyframeRequirement,
