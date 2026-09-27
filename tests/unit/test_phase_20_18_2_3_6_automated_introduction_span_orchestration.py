@@ -46,15 +46,15 @@ from vscs.infrastructure.production_execution.automated_span_orchestration impor
 from vscs.infrastructure.production_execution.automated_span_provider import (
     LTX25AutomatedSpanProvider,
 )
-from vscs.infrastructure.production_execution.timed_span_acceptance_service import (
-    TimedSpanFunctionalAcceptanceService,
-)
 from vscs.infrastructure.production_execution.timed_span_acceptance_packages import (
     LTX25TimedSpanAcceptancePackageBuilder,
 )
 from vscs.infrastructure.production_execution.timed_span_acceptance_runtime import (
     GovernedSpanAssemblyRuntime,
     SpanMediaObservation,
+)
+from vscs.infrastructure.production_execution.timed_span_acceptance_service import (
+    TimedSpanFunctionalAcceptanceService,
 )
 from vscs.presentation.widgets.production_execution_workspace import ProductionExecutionWorkspace
 
