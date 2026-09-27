@@ -31,6 +31,13 @@ from .internal_render_spans import (
     GovernedInternalRenderSpanPlan,
     GovernedInternalSpanBoundary,
 )
+from .introduction_identity_gate import (
+    IntroductionIdentityCandidateStatus,
+    IntroductionIdentityDecision,
+    IntroductionIdentityGateError,
+    IntroductionIdentityReview,
+    IntroductionIdentityReviewStore,
+)
 from .introduction_keyframes import (
     INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
     GovernedIntroductionKeyframe,
@@ -139,6 +146,11 @@ __all__ = [
     "GovernedShotKeyframeStore",
     "IntroductionBoundaryProviderCapabilities",
     "IntroductionBoundaryStrategy",
+    "IntroductionIdentityCandidateStatus",
+    "IntroductionIdentityDecision",
+    "IntroductionIdentityGateError",
+    "IntroductionIdentityReview",
+    "IntroductionIdentityReviewStore",
     "IntroductionKeyframeRequirement",
     "IntroductionKeyframeRequirementPlan",
     "LiveShotFunctionalAcceptanceError",
