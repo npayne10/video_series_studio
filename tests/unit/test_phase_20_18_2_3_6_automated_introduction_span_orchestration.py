@@ -589,7 +589,10 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
     assert result.final_path.is_file()
     assert result.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
     store = GovernedIntroductionKeyframeStore(tmp_path)
-    _timed_plan, _spans, _activation, requirements, _plan = _authority(tmp_path)
+    _timed_plan, _spans, _activation, requirements, _plan = _authority(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.APPEAR,
+    )
     keyframe = store.require_approved(requirements.requirements[0])
     assert keyframe.approval_mode == "automated_structural"
     assert keyframe.target_global_frame_index == 96
@@ -604,12 +607,140 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
             / "span-002.json"
         ).read_text(encoding="utf-8")
     )
-    assert (
-        "walking naturally farther into the established scene" in span_two_package["motion_prompt"]
+    assert "Continue from this exact approved Introduction Keyframe" in span_two_package[
+        "motion_prompt"
+    ]
+    assert "Do not add any unapproved subject" in span_two_package["motion_prompt"]
+
+
+def test_character_enter_pauses_for_identity_approval_before_target_span(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    synthesizer = _CountingSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=synthesizer,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+
+    result = service.run(package_path)
+
+    assert provider.calls == 1
+    assert synthesizer.calls == 1
+    assert len(result.span_paths) == 1
+    assert result.final_path is None
+    assert result.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    candidate = TimedSpanFunctionalAcceptanceService(tmp_path).identity_candidate(package_path)
+    assert candidate is not None
+    assert candidate.pending
+    assert candidate.introduced_asset_ids == ("CAP-CHR-005",)
+    assert candidate.introduced_reference_ids == ("REF-ROS",)
+    assert candidate.target_global_frame_index == 96
+    assert candidate.attempt_number == 1
+
+
+def test_approved_character_identity_resumes_target_span_and_assembly(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    synthesizer = _CountingSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=synthesizer,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+    first = service.run(package_path)
+    candidate = TimedSpanFunctionalAcceptanceService(tmp_path).identity_candidate(package_path)
+    assert candidate is not None
+
+    status = TimedSpanFunctionalAcceptanceService(tmp_path).approve_identity_candidate(
+        package_path,
+        requirement_id=candidate.requirement_id,
+        approved_by="Neill Payne",
+        notes="Canonical Ros identity confirmed.",
+    )
+    assert status.state in {
+        TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
+        TimedSpanAcceptanceState.QC_REQUIRED,
+    }
+
+    second = service.run(package_path)
+
+    assert first.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert provider.calls == 2
+    assert synthesizer.calls == 1
+    assert second.final_path is not None
+    assert second.final_path.is_file()
+    assert second.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
+    span_two_package = json.loads(
+        (
+            tmp_path
+            / ".vscs"
+            / "timed_span_acceptance"
+            / "packages"
+            / "PT-VIDEO-SHT-002"
+            / "production"
+            / "span-002.json"
+        ).read_text(encoding="utf-8")
     )
     assert "that exact same person" in span_two_package["motion_prompt"]
     assert "Do not create, replace, duplicate" in span_two_package["motion_prompt"]
-    assert "Do not teleport" in span_two_package["motion_prompt"]
+
+
+def test_rejected_character_identity_regenerates_without_rendering_target_span(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    synthesizer = _CountingSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=synthesizer,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+    first = service.run(package_path)
+    acceptance = TimedSpanFunctionalAcceptanceService(tmp_path)
+    candidate_one = acceptance.identity_candidate(package_path)
+    assert candidate_one is not None
+    acceptance.reject_identity_candidate(
+        package_path,
+        requirement_id=candidate_one.requirement_id,
+        rejected_by="Neill Payne",
+        notes="Identity does not match canonical Ros.",
+    )
+
+    second = service.run(package_path)
+    candidate_two = acceptance.identity_candidate(package_path)
+
+    assert first.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert second.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert provider.calls == 1
+    assert synthesizer.calls == 2
+    assert candidate_two is not None
+    assert candidate_two.pending
+    assert candidate_two.result_id != candidate_one.result_id
+    assert candidate_two.attempt_number == 2
 
 
 def test_orchestration_resume_reuses_checksum_pinned_span_outputs(tmp_path: Path) -> None:
