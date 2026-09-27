@@ -541,8 +541,10 @@ def request_from_requirement(
     subject_text = ", ".join(labels)
     if introduction_events and all(event == "enter" for event in introduction_events):
         transition_instruction = (
-            "This is an ENTER transition, not an appearance. The supplied introduced reference "
-            "image is immutable identity authority for the entering character. Match that exact "
+            "This is an ENTER transition, not an appearance. This output is an identity-review "
+            "candidate for Phase 20.18.2.3.6.1 and must not be treated as downstream authority "
+            "until a human approves it. The supplied introduced reference image is immutable "
+            "identity authority for the entering character. Match that exact "
             "person's face, facial structure, age, ethnicity, hairstyle, hair colour, body "
             "proportions, uniform, insignia, and other identity-defining features. Do not create "
             "a generic substitute or reinterpret the person's identity. Show that exact person "
