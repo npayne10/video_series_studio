@@ -25,6 +25,8 @@ from vscs.application.production_execution import (
     TimedSpanAcceptanceStore,
 )
 
+from vscs.application.timed_asset_presence import TimedAssetPresencePlan
+
 from .timed_span_acceptance_packages import (
     LTX25TimedSpanAcceptancePackageBuilder,
     TimedSpanAcceptancePackageError,
@@ -80,6 +82,31 @@ class TimedSpanFunctionalAcceptanceService:
             raise TimedSpanFunctionalAcceptanceServiceError(
                 f"Introduction Keyframe requirements are invalid: {exc}"
             ) from exc
+
+    def identity_gate_required(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str | None = None,
+    ) -> bool:
+        raw = self._read_package(compiled_package_path)
+        timed_raw = raw.get("timed_asset_presence")
+        if not isinstance(timed_raw, dict):
+            return False
+        try:
+            timed = TimedAssetPresencePlan.from_dict(timed_raw)
+        except Exception:
+            return False
+        requirements = self.requirements(compiled_package_path)
+        selected = tuple(
+            requirement
+            for requirement in requirements
+            if requirement_id is None or requirement.requirement_id == requirement_id.strip()
+        )
+        return any(
+            self.evaluator._requires_identity_gate(requirement, timed)
+            for requirement in selected
+        )
 
     def identity_candidate(
         self,
