@@ -78,6 +78,7 @@ class AutomatedIntroductionBoundaryRequest:
     negative_prompt: str
     seed: int
     source_package_fingerprint: str
+    identity_gate_version: str = "3.6.1"
     strategy: IntroductionBoundaryStrategy = IntroductionBoundaryStrategy.SYNTHESIZED_KEYFRAME
     schema_version: str = "1.0"
 
@@ -105,6 +106,12 @@ class AutomatedIntroductionBoundaryRequest:
             if field_name.endswith("sha256") or field_name.endswith("fingerprint"):
                 value = value.lower()
             object.__setattr__(self, field_name, value)
+        identity_gate_version = self.identity_gate_version.strip()
+        if not identity_gate_version:
+            raise AutomatedIntroductionBoundaryError(
+                "Automated introduction boundary requires identity_gate_version"
+            )
+        object.__setattr__(self, "identity_gate_version", identity_gate_version)
         if self.source_global_frame_index < 0:
             raise AutomatedIntroductionBoundaryError(
                 "Automated introduction source frame cannot be negative"
@@ -203,6 +210,7 @@ class AutomatedIntroductionBoundaryRequest:
             "negative_prompt": self.negative_prompt,
             "seed": self.seed,
             "source_package_fingerprint": self.source_package_fingerprint,
+            "identity_gate_version": self.identity_gate_version,
             "strategy": self.strategy.value,
         }
 
@@ -345,6 +353,8 @@ class AutomatedIntroductionBoundaryStore:
                 continue
             if str(raw.get("request_id") or "").strip() != normalized:
                 continue
+            if str(raw.get("identity_gate_version") or "").strip() != "3.6.1":
+                return None
             request = AutomatedIntroductionBoundaryRequest(
                 shot_id=str(raw.get("shot_id") or ""),
                 requirement_id=str(raw.get("requirement_id") or ""),
@@ -378,6 +388,7 @@ class AutomatedIntroductionBoundaryStore:
                 negative_prompt=str(raw.get("negative_prompt") or ""),
                 seed=int(raw.get("seed") or 0),
                 source_package_fingerprint=str(raw.get("source_package_fingerprint") or ""),
+                identity_gate_version=str(raw.get("identity_gate_version") or ""),
                 strategy=IntroductionBoundaryStrategy(str(raw.get("strategy") or "")),
                 schema_version=str(raw.get("schema_version") or "1.0"),
             )
