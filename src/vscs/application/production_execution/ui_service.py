@@ -9,6 +9,7 @@ from typing import Protocol, cast
 
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
+from .introduction_identity_gate import IntroductionIdentityCandidateStatus
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
@@ -170,6 +171,39 @@ class _RunAutomatedTimedSpanOrchestrationForProfile(Protocol):
         task_id: str,
         *,
         profile: str,
+    ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _IntroductionIdentityCandidateForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> IntroductionIdentityCandidateStatus | None: ...
+
+
+class _ApproveIntroductionIdentityForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _RejectIntroductionIdentityForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
     ) -> TimedSpanAcceptanceStatus: ...
 
 
@@ -398,6 +432,84 @@ class ProductionExecutionUiService:
         return cast(_RunAutomatedTimedSpanOrchestrationForProfile, operation)(
             normalized,
             profile=execution_profile,
+        )
+
+    def introduction_identity_candidate(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> IntroductionIdentityCandidateStatus | None:
+        normalized = self._task_id(task_id, "inspecting an introduction identity candidate")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "introduction_identity_candidate_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not expose introduction identity candidates."
+            )
+        return cast(_IntroductionIdentityCandidateForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def approve_introduction_identity(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "approving an introduction identity candidate")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "approve_introduction_identity_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support introduction identity approval."
+            )
+        return cast(_ApproveIntroductionIdentityForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            requirement_id=requirement_id,
+            approved_by=approved_by,
+            notes=notes,
+        )
+
+    def reject_introduction_identity(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "rejecting an introduction identity candidate")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "reject_introduction_identity_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support introduction identity rejection."
+            )
+        return cast(_RejectIntroductionIdentityForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            requirement_id=requirement_id,
+            rejected_by=rejected_by,
+            notes=notes,
         )
 
     def approve_introduction_keyframe(
