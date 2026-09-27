@@ -16,6 +16,7 @@ from vscs.application.production_execution import (
     GovernedShotBoundaryStore,
     GovernedShotKeyframeError,
     GovernedShotKeyframeStore,
+    IntroductionIdentityCandidateStatus,
     IntroductionKeyframeRequirementPlan,
     ProductionExecutionError,
     ProductionExecutionResult,
@@ -687,6 +688,82 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             LocalProductionPackageCompilationError,
             AutomatedSpanProviderError,
             AutomatedSpanOrchestrationError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def introduction_identity_candidate_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> IntroductionIdentityCandidateStatus | None:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).identity_candidate(package.path)
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def approve_introduction_identity_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).approve_identity_candidate(
+                package.path,
+                requirement_id=requirement_id,
+                approved_by=approved_by,
+                notes=notes,
+            )
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def reject_introduction_identity_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).reject_identity_candidate(
+                package.path,
+                requirement_id=requirement_id,
+                rejected_by=rejected_by,
+                notes=notes,
+            )
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
