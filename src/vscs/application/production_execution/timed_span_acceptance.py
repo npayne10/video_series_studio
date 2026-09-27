@@ -727,8 +727,8 @@ class TimedSpanAcceptanceEvaluator:
                 requirement_count=requirements.requirement_count,
                 approved_keyframe_count=approved,
                 qc_passed_count=qc_passed,
-                assembly_present=assembly_valid,
-                final_frame_count=current_final_frame_count,
+                assembly_present=False,
+                final_frame_count=None,
                 message=(
                     f"{requirements.requirement_count - approved} governed Introduction "
                     "Keyframe approval(s) remain."
