@@ -224,13 +224,6 @@ class AutomatedTimedSpanOrchestrationService:
                 "for every non-initial span"
             )
         reference_plan = self._reference_plan(raw)
-        try:
-            self.synthesizer.preflight()
-        except Exception as exc:
-            raise AutomatedSpanOrchestrationError(
-                f"Automated Introduction Keyframe provider is not ready: {exc}"
-            ) from exc
-
         resume = self._load_resume_state(task_id, package_fingerprint)
         span_outputs: list[Path] = []
         synthesized_ids: list[str] = []
@@ -349,6 +342,12 @@ class AutomatedTimedSpanOrchestrationService:
                 continue
 
             self._release_provider_memory()
+            try:
+                self.synthesizer.preflight()
+            except Exception as exc:
+                raise AutomatedSpanOrchestrationError(
+                    f"Automated Introduction Keyframe provider is not ready: {exc}"
+                ) from exc
             self.boundaries.save_request(request)
             try:
                 result = self.synthesizer.synthesize(request)
