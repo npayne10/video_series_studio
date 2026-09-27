@@ -89,7 +89,7 @@ def _timed() -> TimedAssetPresencePlan:
                 asset_kind=TimedAssetKind.CHARACTER,
                 from_frame=96,
                 through_frame=143,
-                introduction=AssetPresenceIntroduction.ENTER,
+                introduction=AssetPresenceIntroduction.APPEAR,
                 canonical_reference_ids=("REF-ROS-PRIMARY",),
             ),
         ),
