@@ -45,6 +45,9 @@ from vscs.infrastructure.production_execution.automated_span_orchestration impor
 from vscs.infrastructure.production_execution.automated_span_provider import (
     LTX25AutomatedSpanProvider,
 )
+from vscs.infrastructure.production_execution.timed_span_acceptance_service import (
+    TimedSpanFunctionalAcceptanceService,
+)
 from vscs.infrastructure.production_execution.timed_span_acceptance_packages import (
     LTX25TimedSpanAcceptancePackageBuilder,
 )
@@ -65,7 +68,9 @@ def _png(path: Path, value: tuple[int, int, int] = (10, 20, 30)) -> Path:
     return path
 
 
-def _timed() -> TimedAssetPresencePlan:
+def _timed(
+    introduction: AssetPresenceIntroduction = AssetPresenceIntroduction.ENTER,
+) -> TimedAssetPresencePlan:
     return TimedAssetPresencePlan(
         shot_id="EP-001-SCN-001-SHT-002",
         frames_per_second=24,
@@ -96,7 +101,7 @@ def _timed() -> TimedAssetPresencePlan:
                 asset_kind=TimedAssetKind.CHARACTER,
                 from_frame=96,
                 through_frame=143,
-                introduction=AssetPresenceIntroduction.ENTER,
+                introduction=introduction,
                 canonical_reference_ids=("REF-ROS",),
             ),
         ),
@@ -158,6 +163,8 @@ def _reference_plan(project: Path) -> dict[str, object]:
 
 def _authority(
     project: Path,
+    *,
+    introduction: AssetPresenceIntroduction = AssetPresenceIntroduction.ENTER,
 ) -> tuple[
     TimedAssetPresencePlan,
     Any,
@@ -165,7 +172,7 @@ def _authority(
     Any,
     dict[str, object],
 ]:
-    timed = _timed()
+    timed = _timed(introduction)
     spans = GovernedInternalRenderSpanCompiler().compile(timed)
     reference_plan = _reference_plan(project)
     activation = TimedCanonicalReferenceActivationCompiler().compile(
@@ -180,8 +187,15 @@ def _authority(
     return timed, spans, activation, requirements, reference_plan
 
 
-def _candidate_package(project: Path) -> tuple[Path, dict[str, object]]:
-    timed, spans, activation, requirements, reference_plan = _authority(project)
+def _candidate_package(
+    project: Path,
+    *,
+    introduction: AssetPresenceIntroduction = AssetPresenceIntroduction.APPEAR,
+) -> tuple[Path, dict[str, object]]:
+    timed, spans, activation, requirements, reference_plan = _authority(
+        project,
+        introduction=introduction,
+    )
     opening = _png(project / "keyframes" / "opening.png", (5, 5, 5))
     raw: dict[str, object] = {
         "schema_version": "7.2.2-vscs-1",
