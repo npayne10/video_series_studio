@@ -89,7 +89,8 @@ class ComfyUIIntroductionBoundarySynthesizer:
             / request.shot_id
             / request.requirement_id
         )
-        root.mkdir(parents=True, exist_ok=True)
+        attempt_root = root / request.request_id
+        attempt_root.mkdir(parents=True, exist_ok=True)
 
         current_source = source
         current_source_sha = request.source_boundary_image_sha256
@@ -114,7 +115,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
                     )
 
                 output_name = f"pass-{index:03d}.png"
-                output_path = root / output_name
+                output_path = attempt_root / output_name
                 if output_path.exists():
                     output_path.unlink()
                 pass_request = replace(
@@ -131,9 +132,9 @@ class ComfyUIIntroductionBoundarySynthesizer:
                     ),
                     seed=request.seed + index - 1,
                 )
-                request_path = root / f"pass-{index:03d}-request.json"
+                request_path = attempt_root / f"pass-{index:03d}-request.json"
                 payload = pass_request.to_dict()
-                payload["output_directory"] = str(root)
+                payload["output_directory"] = str(attempt_root)
                 payload["output_filename"] = output_name
                 payload["enable_lightning_lora"] = True
                 request_path.write_text(
@@ -156,7 +157,7 @@ class ComfyUIIntroductionBoundarySynthesizer:
         ) as exc:
             raise ComfyUIIntroductionBoundarySynthesisError(str(exc)) from exc
 
-        final_path = root / f"frame-{request.target_global_frame_index:06d}.png"
+        final_path = attempt_root / f"frame-{request.target_global_frame_index:06d}.png"
         if current_source != final_path:
             final_path.write_bytes(current_source.read_bytes())
         final_sha = file_sha256(final_path)
