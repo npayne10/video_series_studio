@@ -35,7 +35,6 @@ from PySide6.QtWidgets import (
 from vscs.application.production_execution import (
     GovernedRetryOverrideStatus,
     IntroductionIdentityCandidateStatus,
-    IntroductionIdentityDecision,
     ProductionDeviceTelemetry,
     ProductionExecutionCandidate,
     ProductionExecutionResult,
