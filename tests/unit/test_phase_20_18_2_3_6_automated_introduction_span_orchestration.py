@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -446,6 +447,45 @@ def test_qwen_synthesizer_uses_boundary_plus_canonical_reference_without_manual_
     runtime_request = json.loads(request_file.read_text(encoding="utf-8"))
     assert runtime_request["introduced_reference_ids"] == ["REF-ROS"]
     assert runtime_request["source_boundary_image_path"] == str(source.resolve())
+
+
+def test_qwen_synthesis_attempts_use_immutable_request_scoped_paths(
+    tmp_path: Path,
+) -> None:
+    timed, _spans, _activation, requirements, reference_plan = _authority(tmp_path)
+    requirement = requirements.requirements[0]
+    source = _png(tmp_path / "boundary" / "frame-95.png", (11, 12, 13))
+    request = request_from_requirement(
+        requirement,
+        source_boundary_image_path=source,
+        source_boundary_image_sha256=_sha(source),
+        reference_plan=reference_plan,
+        timed_asset_presence=timed.to_dict(),
+        width=1280,
+        height=720,
+        source_package_fingerprint="package-fingerprint",
+        seed=96,
+    )
+    synth = ComfyUIIntroductionBoundarySynthesizer(
+        tmp_path,
+        client=_SynthesisClient(),  # type: ignore[arg-type]
+    )
+
+    first = synth.synthesize(request)
+    first_path = Path(first.image_path)
+    first_sha = _sha(first_path)
+
+    retry_request = replace(request, seed=request.seed + 1)
+    second = synth.synthesize(retry_request)
+    second_path = Path(second.image_path)
+
+    assert retry_request.request_id != request.request_id
+    assert second_path != first_path
+    assert first_path.is_file()
+    assert second_path.is_file()
+    assert _sha(first_path) == first_sha
+    assert request.request_id in first_path.parts
+    assert retry_request.request_id in second_path.parts
 
 
 def test_incremental_builder_emits_span_one_before_intro_keyframe_exists(
