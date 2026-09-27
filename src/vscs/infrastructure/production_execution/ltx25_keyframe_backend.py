@@ -691,6 +691,26 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def introduction_identity_gate_required_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> bool:
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            package = self.package_compilation.require_current(task, profile=normalized)
+            assert package.path is not None
+            return TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).identity_gate_required(package.path)
+        except (
+            LocalProductionPackageCompilationError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
     def introduction_identity_candidate_for_profile(
         self,
         task_id: str,
