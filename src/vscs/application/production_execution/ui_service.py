@@ -174,6 +174,15 @@ class _RunAutomatedTimedSpanOrchestrationForProfile(Protocol):
     ) -> TimedSpanAcceptanceStatus: ...
 
 
+class _IntroductionIdentityGateRequiredForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> bool: ...
+
+
 class _IntroductionIdentityCandidateForProfile(Protocol):
     def __call__(
         self,
@@ -430,6 +439,26 @@ class ProductionExecutionUiService:
                 "This execution backend does not support automated timed-span orchestration."
             )
         return cast(_RunAutomatedTimedSpanOrchestrationForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def introduction_identity_gate_required(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> bool:
+        normalized = self._task_id(task_id, "checking introduction identity gating")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "introduction_identity_gate_required_for_profile",
+            None,
+        )
+        if operation is None:
+            return False
+        return cast(_IntroductionIdentityGateRequiredForProfile, operation)(
             normalized,
             profile=execution_profile,
         )
