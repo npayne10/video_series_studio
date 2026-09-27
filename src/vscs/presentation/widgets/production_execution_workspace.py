@@ -6,7 +6,8 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -33,6 +34,8 @@ from PySide6.QtWidgets import (
 
 from vscs.application.production_execution import (
     GovernedRetryOverrideStatus,
+    IntroductionIdentityCandidateStatus,
+    IntroductionIdentityDecision,
     ProductionDeviceTelemetry,
     ProductionExecutionCandidate,
     ProductionExecutionResult,
@@ -140,6 +143,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._retry_status: GovernedRetryOverrideStatus | None = None
         self._boundary_status: ShotBoundaryAuthorityStatus | None = None
         self._timed_span_status: TimedSpanAcceptanceStatus | None = None
+        self._identity_candidate: IntroductionIdentityCandidateStatus | None = None
         self._automated_span_thread: QThread | None = None
         self._automated_span_worker: _AutomatedSpanWorker | None = None
         self._poll_timer = QTimer(self)
@@ -197,6 +201,11 @@ class ProductionExecutionWorkspace(QWidget):
             "new-asset Introduction Keyframes from canonical references, and assemble the Shot. "
             "Manual controls below remain available for governed recovery."
         )
+        self.identity_candidate_state = QLabel("Introduction Identity QC: -")
+        self.identity_candidate_state.setWordWrap(True)
+        self.view_identity_candidate_button = QPushButton("View Identity Candidate")
+        self.approve_identity_candidate_button = QPushButton("Approve Identity")
+        self.reject_identity_candidate_button = QPushButton("Reject & Regenerate")
         self.build_span_packages_button = QPushButton("Build Span Packages — Manual Recovery")
         self.approve_introduction_keyframe_button = QPushButton(
             "Approve Introduction Keyframe — Manual Recovery"
@@ -207,6 +216,9 @@ class ProductionExecutionWorkspace(QWidget):
         self.record_span_qc_button = QPushButton("Record Visual QC")
         for button in (
             self.run_automated_spans_button,
+            self.view_identity_candidate_button,
+            self.approve_identity_candidate_button,
+            self.reject_identity_candidate_button,
             self.build_span_packages_button,
             self.approve_introduction_keyframe_button,
             self.assemble_span_outputs_button,
@@ -214,6 +226,9 @@ class ProductionExecutionWorkspace(QWidget):
         ):
             button.setEnabled(False)
         self.run_automated_spans_button.clicked.connect(self._run_automated_span_orchestration)
+        self.view_identity_candidate_button.clicked.connect(self._view_identity_candidate)
+        self.approve_identity_candidate_button.clicked.connect(self._approve_identity_candidate)
+        self.reject_identity_candidate_button.clicked.connect(self._reject_identity_candidate)
         self.build_span_packages_button.clicked.connect(self._build_span_packages)
         self.approve_introduction_keyframe_button.clicked.connect(
             self._approve_introduction_keyframe
@@ -222,11 +237,15 @@ class ProductionExecutionWorkspace(QWidget):
         self.record_span_qc_button.clicked.connect(self._record_span_qc)
         timed_span_layout.addWidget(self.timed_span_state, 0, 0, 1, 3)
         timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
-        timed_span_layout.addWidget(self.run_automated_spans_button, 2, 0, 1, 2)
-        timed_span_layout.addWidget(self.build_span_packages_button, 3, 0)
-        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 3, 1)
-        timed_span_layout.addWidget(self.assemble_span_outputs_button, 4, 0)
-        timed_span_layout.addWidget(self.record_span_qc_button, 4, 1)
+        timed_span_layout.addWidget(self.run_automated_spans_button, 2, 0, 1, 3)
+        timed_span_layout.addWidget(self.identity_candidate_state, 3, 0, 1, 3)
+        timed_span_layout.addWidget(self.view_identity_candidate_button, 4, 0)
+        timed_span_layout.addWidget(self.approve_identity_candidate_button, 4, 1)
+        timed_span_layout.addWidget(self.reject_identity_candidate_button, 4, 2)
+        timed_span_layout.addWidget(self.build_span_packages_button, 5, 0)
+        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 5, 1)
+        timed_span_layout.addWidget(self.assemble_span_outputs_button, 6, 0)
+        timed_span_layout.addWidget(self.record_span_qc_button, 6, 1)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -330,6 +349,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._retry_status = None
         self._boundary_status = None
         self._timed_span_status = None
+        self._identity_candidate = None
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
@@ -391,6 +411,7 @@ class ProductionExecutionWorkspace(QWidget):
             self._retry_status = None
             self._boundary_status = None
             self._timed_span_status = None
+            self._identity_candidate = None
             self.compile_package_button.setEnabled(False)
             self.retry_button.setEnabled(False)
             self.retry_state.setText("Retry Override: -")
@@ -653,6 +674,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._timed_span_status = status
         self._render_timed_span_status(status)
+        self._refresh_identity_candidate()
         self._update_start_enabled()
 
     def _render_timed_span_status(self, status: TimedSpanAcceptanceStatus) -> None:
@@ -719,11 +741,183 @@ class ProductionExecutionWorkspace(QWidget):
         self.timed_span_detail.setText(
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
+        self._identity_candidate = None
+        self.identity_candidate_state.setText("Introduction Identity QC: -")
         self.run_automated_spans_button.setEnabled(False)
+        self.view_identity_candidate_button.setEnabled(False)
+        self.approve_identity_candidate_button.setEnabled(False)
+        self.reject_identity_candidate_button.setEnabled(False)
         self.build_span_packages_button.setEnabled(False)
         self.approve_introduction_keyframe_button.setEnabled(False)
         self.assemble_span_outputs_button.setEnabled(False)
         self.record_span_qc_button.setEnabled(False)
+
+    def _refresh_identity_candidate(self) -> None:
+        self._identity_candidate = None
+        self.identity_candidate_state.setText("Introduction Identity QC: no candidate")
+        self.view_identity_candidate_button.setEnabled(False)
+        self.approve_identity_candidate_button.setEnabled(False)
+        self.reject_identity_candidate_button.setEnabled(False)
+        if self._selected_task_id is None or self._automated_span_thread is not None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            candidate = service.introduction_identity_candidate(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self.identity_candidate_state.setText(
+                f"Introduction Identity QC: unavailable — {exc}"
+            )
+            return
+        self._identity_candidate = candidate
+        if candidate is None:
+            return
+        decision = (
+            "REVIEW_REQUIRED"
+            if candidate.pending
+            else candidate.decision.value.upper()
+            if candidate.decision is not None
+            else "UNKNOWN"
+        )
+        references = ", ".join(candidate.introduced_reference_ids) or "-"
+        reference_paths = ", ".join(candidate.introduced_reference_paths) or "-"
+        self.identity_candidate_state.setText(
+            f"Introduction Identity QC: {decision} • Frame "
+            f"{candidate.target_global_frame_index} • Attempt {candidate.attempt_number}\n"
+            f"Introduced Asset(s): {', '.join(candidate.introduced_asset_ids)} • "
+            f"Canonical Reference(s): {references}\n"
+            f"Reference Path(s): {reference_paths}\n"
+            f"Candidate: {candidate.image_path}\n"
+            f"Candidate SHA256: {candidate.image_sha256}"
+        )
+        self.view_identity_candidate_button.setEnabled(True)
+        if candidate.pending:
+            self.approve_identity_candidate_button.setEnabled(True)
+            self.reject_identity_candidate_button.setEnabled(True)
+            self.run_automated_spans_button.setEnabled(False)
+            self.approve_introduction_keyframe_button.setEnabled(False)
+
+    def _view_identity_candidate(self) -> None:
+        candidate = self._identity_candidate
+        if candidate is None:
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(candidate.image_path))
+
+    def _approve_identity_candidate(self) -> None:
+        if self._selected_task_id is None or self._identity_candidate is None:
+            return
+        candidate = self._identity_candidate
+        if not candidate.pending:
+            return
+        approved_by, accepted = QInputDialog.getText(
+            self,
+            "Approve Introduction Identity",
+            "Approved by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = approved_by.strip()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Approve Introduction Identity",
+                "Human reviewer identity is required.",
+            )
+            return
+        notes, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Approve Introduction Identity",
+            "Identity review notes (optional):",
+        )
+        if not accepted:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.approve_introduction_identity(
+                self._selected_task_id,
+                requirement_id=candidate.requirement_id,
+                approved_by=actor,
+                notes=notes.strip(),
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Approve Introduction Identity", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self._refresh_identity_candidate()
+        self.summary.setText(
+            "Introduction identity approved. Continuing automated target-span rendering."
+        )
+        if self.run_automated_spans_button.isEnabled():
+            self._run_automated_span_orchestration()
+
+    def _reject_identity_candidate(self) -> None:
+        if self._selected_task_id is None or self._identity_candidate is None:
+            return
+        candidate = self._identity_candidate
+        if not candidate.pending:
+            return
+        rejected_by, accepted = QInputDialog.getText(
+            self,
+            "Reject Introduction Identity",
+            "Rejected by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = rejected_by.strip()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Reject Introduction Identity",
+                "Human reviewer identity is required.",
+            )
+            return
+        notes, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Reject Introduction Identity",
+            "Reason for rejection:",
+        )
+        if not accepted:
+            return
+        reason = notes.strip()
+        if not reason:
+            QMessageBox.warning(
+                self,
+                "Reject Introduction Identity",
+                "A rejection reason is required.",
+            )
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.reject_introduction_identity(
+                self._selected_task_id,
+                requirement_id=candidate.requirement_id,
+                rejected_by=actor,
+                notes=reason,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Reject Introduction Identity", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self._refresh_identity_candidate()
+        self.summary.setText(
+            "Introduction identity rejected. Regenerating a new governed candidate."
+        )
+        if self.run_automated_spans_button.isEnabled():
+            self._run_automated_span_orchestration()
 
     def _select_timed_requirement(
         self,
@@ -827,6 +1021,9 @@ class ProductionExecutionWorkspace(QWidget):
         if busy:
             for button in (
                 self.run_automated_spans_button,
+                self.view_identity_candidate_button,
+                self.approve_identity_candidate_button,
+                self.reject_identity_candidate_button,
                 self.build_span_packages_button,
                 self.approve_introduction_keyframe_button,
                 self.assemble_span_outputs_button,
