@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -191,7 +192,7 @@ class TimedSpanFunctionalAcceptanceService:
             source_boundary_image_path=source.relative_to(self.project_directory).as_posix(),
             source_boundary_image_sha256=result.source_boundary_image_sha256,
             approved_by=actor,
-            approved_at=result.generated_at,
+            approved_at=datetime.now(UTC).isoformat(),
             acceptance_criteria=INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
             approval_mode="human",
         )
