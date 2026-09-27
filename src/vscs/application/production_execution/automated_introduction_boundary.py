@@ -335,6 +335,73 @@ class AutomatedIntroductionBoundaryStore:
         self._write(root)
         return result
 
+    def request_for_id(
+        self,
+        request_id: str,
+    ) -> AutomatedIntroductionBoundaryRequest | None:
+        normalized = request_id.strip()
+        for raw in reversed(self._root().get("requests", [])):
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("request_id") or "").strip() != normalized:
+                continue
+            request = AutomatedIntroductionBoundaryRequest(
+                shot_id=str(raw.get("shot_id") or ""),
+                requirement_id=str(raw.get("requirement_id") or ""),
+                boundary_id=str(raw.get("boundary_id") or ""),
+                source_span_id=str(raw.get("source_span_id") or ""),
+                target_span_id=str(raw.get("target_span_id") or ""),
+                source_global_frame_index=int(raw.get("source_global_frame_index") or 0),
+                target_global_frame_index=int(raw.get("target_global_frame_index") or 0),
+                source_boundary_image_path=str(raw.get("source_boundary_image_path") or ""),
+                source_boundary_image_sha256=str(raw.get("source_boundary_image_sha256") or ""),
+                introduced_asset_ids=tuple(str(value) for value in raw.get("introduced_asset_ids", [])),
+                introduced_asset_kinds=tuple(
+                    str(value) for value in raw.get("introduced_asset_kinds", [])
+                ),
+                introduced_reference_ids=tuple(
+                    str(value) for value in raw.get("introduced_reference_ids", [])
+                ),
+                introduced_reference_paths=tuple(
+                    str(value) for value in raw.get("introduced_reference_paths", [])
+                ),
+                introduced_reference_sha256=tuple(
+                    str(value) for value in raw.get("introduced_reference_sha256", [])
+                ),
+                active_asset_ids=tuple(str(value) for value in raw.get("active_asset_ids", [])),
+                active_reference_ids=tuple(
+                    str(value) for value in raw.get("active_reference_ids", [])
+                ),
+                width=int(raw.get("width") or 0),
+                height=int(raw.get("height") or 0),
+                positive_prompt=str(raw.get("positive_prompt") or ""),
+                negative_prompt=str(raw.get("negative_prompt") or ""),
+                seed=int(raw.get("seed") or 0),
+                source_package_fingerprint=str(raw.get("source_package_fingerprint") or ""),
+                strategy=IntroductionBoundaryStrategy(str(raw.get("strategy") or "")),
+                schema_version=str(raw.get("schema_version") or "1.0"),
+            )
+            supplied_id = str(raw.get("request_id") or "").strip()
+            if supplied_id and supplied_id != request.request_id:
+                raise AutomatedIntroductionBoundaryError(
+                    "Automated introduction request identity does not match governed content"
+                )
+            return request
+        return None
+
+    def latest_result_for_request(
+        self,
+        request_id: str,
+    ) -> AutomatedIntroductionBoundaryResult | None:
+        normalized = request_id.strip()
+        for raw in reversed(self._root().get("results", [])):
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("request_id") or "").strip() != normalized:
+                continue
+            return self._result_from_raw(raw)
+        return None
+
     def latest_result_for_requirement(
         self,
         requirement_id: str,
@@ -345,30 +412,40 @@ class AutomatedIntroductionBoundaryStore:
                 continue
             if str(raw.get("requirement_id") or "").strip() != normalized:
                 continue
-            return AutomatedIntroductionBoundaryResult(
-                request_id=str(raw.get("request_id") or ""),
-                requirement_id=str(raw.get("requirement_id") or ""),
-                image_path=str(raw.get("image_path") or ""),
-                image_sha256=str(raw.get("image_sha256") or ""),
-                provider_name=str(raw.get("provider_name") or ""),
-                model=str(raw.get("model") or ""),
-                source_boundary_image_path=str(raw.get("source_boundary_image_path") or ""),
-                source_boundary_image_sha256=str(raw.get("source_boundary_image_sha256") or ""),
-                introduced_reference_ids=tuple(
-                    str(value) for value in raw.get("introduced_reference_ids", [])
-                ),
-                width=int(raw.get("width") or 0),
-                height=int(raw.get("height") or 0),
-                generated_at=str(raw.get("generated_at") or ""),
-                validation_state=AutomatedBoundaryValidationState(
-                    str(raw.get("validation_state") or "")
-                ),
-                validation_findings=tuple(
-                    str(value) for value in raw.get("validation_findings", [])
-                ),
-                schema_version=str(raw.get("schema_version") or "1.0"),
-            )
+            return self._result_from_raw(raw)
         return None
+
+    @staticmethod
+    def _result_from_raw(raw: dict[str, Any]) -> AutomatedIntroductionBoundaryResult:
+        result = AutomatedIntroductionBoundaryResult(
+            request_id=str(raw.get("request_id") or ""),
+            requirement_id=str(raw.get("requirement_id") or ""),
+            image_path=str(raw.get("image_path") or ""),
+            image_sha256=str(raw.get("image_sha256") or ""),
+            provider_name=str(raw.get("provider_name") or ""),
+            model=str(raw.get("model") or ""),
+            source_boundary_image_path=str(raw.get("source_boundary_image_path") or ""),
+            source_boundary_image_sha256=str(raw.get("source_boundary_image_sha256") or ""),
+            introduced_reference_ids=tuple(
+                str(value) for value in raw.get("introduced_reference_ids", [])
+            ),
+            width=int(raw.get("width") or 0),
+            height=int(raw.get("height") or 0),
+            generated_at=str(raw.get("generated_at") or ""),
+            validation_state=AutomatedBoundaryValidationState(
+                str(raw.get("validation_state") or "")
+            ),
+            validation_findings=tuple(
+                str(value) for value in raw.get("validation_findings", [])
+            ),
+            schema_version=str(raw.get("schema_version") or "1.0"),
+        )
+        supplied_id = str(raw.get("result_id") or "").strip()
+        if supplied_id and supplied_id != result.result_id:
+            raise AutomatedIntroductionBoundaryError(
+                "Automated introduction result identity does not match governed content"
+            )
+        return result
 
     def _root(self) -> dict[str, Any]:
         if not self.path.is_file():
