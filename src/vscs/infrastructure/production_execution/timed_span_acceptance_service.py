@@ -8,10 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.production_execution import (
+    INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
+    AutomatedIntroductionBoundaryStore,
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
     IntroductionKeyframeRequirement,
     IntroductionKeyframeRequirementPlan,
+    IntroductionIdentityCandidateStatus,
+    IntroductionIdentityDecision,
+    IntroductionIdentityReviewStore,
     TimedSpanAcceptanceError,
     TimedSpanAcceptanceEvaluator,
     TimedSpanAcceptanceState,
@@ -40,6 +45,8 @@ class TimedSpanFunctionalAcceptanceService:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
         self.acceptance = TimedSpanAcceptanceStore(self.project_directory)
+        self.boundaries = AutomatedIntroductionBoundaryStore(self.project_directory)
+        self.identity_reviews = IntroductionIdentityReviewStore(self.project_directory)
         self.evaluator = TimedSpanAcceptanceEvaluator(self.project_directory)
 
     def status(self, compiled_package_path: Path | None) -> TimedSpanAcceptanceStatus:
@@ -72,6 +79,171 @@ class TimedSpanFunctionalAcceptanceService:
             raise TimedSpanFunctionalAcceptanceServiceError(
                 f"Introduction Keyframe requirements are invalid: {exc}"
             ) from exc
+
+    def identity_candidate(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str | None = None,
+    ) -> IntroductionIdentityCandidateStatus | None:
+        requirements = self.requirements(compiled_package_path)
+        selected = tuple(
+            requirement
+            for requirement in requirements
+            if requirement_id is None or requirement.requirement_id == requirement_id.strip()
+        )
+        for requirement in selected:
+            result = self.boundaries.latest_result_for_requirement(requirement.requirement_id)
+            if result is None:
+                continue
+            request = self.boundaries.request_for_id(result.request_id)
+            if request is None or request.requirement_id != requirement.requirement_id:
+                continue
+            review = self.identity_reviews.review_for_result(result.result_id)
+            return IntroductionIdentityCandidateStatus(
+                requirement_id=requirement.requirement_id,
+                result_id=result.result_id,
+                image_path=result.image_path,
+                image_sha256=result.image_sha256,
+                introduced_asset_ids=request.introduced_asset_ids,
+                introduced_reference_ids=request.introduced_reference_ids,
+                introduced_reference_paths=request.introduced_reference_paths,
+                introduced_reference_sha256=request.introduced_reference_sha256,
+                target_global_frame_index=request.target_global_frame_index,
+                attempt_number=self.identity_reviews.rejected_count(requirement.requirement_id) + (
+                    0
+                    if review is not None
+                    and review.decision is IntroductionIdentityDecision.REJECTED
+                    else 1
+                ),
+                decision=None if review is None else review.decision,
+            )
+        return None
+
+    def approve_identity_candidate(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        requirement = self._require_requirement(compiled_package_path, requirement_id)
+        candidate = self.identity_candidate(
+            compiled_package_path,
+            requirement_id=requirement.requirement_id,
+        )
+        if candidate is None:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "No synthesized identity candidate exists for this requirement."
+            )
+        if not candidate.pending:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "The latest identity candidate has already been reviewed."
+            )
+        result = self.boundaries.latest_result_for_requirement(requirement.requirement_id)
+        if result is None or result.result_id != candidate.result_id:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Identity candidate changed before approval."
+            )
+        request = self.boundaries.request_for_id(result.request_id)
+        if request is None:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Identity candidate has no current synthesis request."
+            )
+        actor = approved_by.strip()
+        if not actor:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Identity candidate approval requires a human reviewer."
+            )
+        image = self._project_file(Path(result.image_path), "identity candidate image")
+        source = self._project_file(
+            Path(result.source_boundary_image_path),
+            "identity candidate source boundary",
+        )
+        if self._sha256(image) != result.image_sha256:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Identity candidate image checksum changed before approval."
+            )
+        if self._sha256(source) != result.source_boundary_image_sha256:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Identity candidate source-boundary checksum changed before approval."
+            )
+        for reference_id, raw_path, checksum in zip(
+            request.introduced_reference_ids,
+            request.introduced_reference_paths,
+            request.introduced_reference_sha256,
+            strict=True,
+        ):
+            reference = self._project_file(
+                Path(raw_path),
+                f"canonical identity reference {reference_id}",
+            )
+            if self._sha256(reference) != checksum:
+                raise TimedSpanFunctionalAcceptanceServiceError(
+                    f"Canonical identity reference checksum changed: {reference_id}"
+                )
+
+        record = self.keyframes.create_record(
+            requirement,
+            image_path=image.relative_to(self.project_directory).as_posix(),
+            image_sha256=result.image_sha256,
+            source_boundary_image_path=source.relative_to(self.project_directory).as_posix(),
+            source_boundary_image_sha256=result.source_boundary_image_sha256,
+            approved_by=actor,
+            approved_at=result.generated_at,
+            acceptance_criteria=INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
+            approval_mode="human",
+        )
+        try:
+            self.keyframes.save(record, requirement)
+            self.identity_reviews.record(
+                requirement_id=requirement.requirement_id,
+                result_id=result.result_id,
+                image_sha256=result.image_sha256,
+                decision=IntroductionIdentityDecision.APPROVED,
+                reviewed_by=actor,
+                notes=notes,
+            )
+        except Exception as exc:
+            raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
+        return self.status(compiled_package_path)
+
+    def reject_identity_candidate(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        requirement = self._require_requirement(compiled_package_path, requirement_id)
+        candidate = self.identity_candidate(
+            compiled_package_path,
+            requirement_id=requirement.requirement_id,
+        )
+        if candidate is None:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "No synthesized identity candidate exists for this requirement."
+            )
+        if not candidate.pending:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "The latest identity candidate has already been reviewed."
+            )
+        actor = rejected_by.strip()
+        if not actor:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Identity candidate rejection requires a human reviewer."
+            )
+        self.identity_reviews.record(
+            requirement_id=requirement.requirement_id,
+            result_id=candidate.result_id,
+            image_sha256=candidate.image_sha256,
+            decision=IntroductionIdentityDecision.REJECTED,
+            reviewed_by=actor,
+            notes=notes,
+        )
+        return self.status(compiled_package_path)
 
     def approve_introduction_keyframe(
         self,
