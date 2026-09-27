@@ -455,13 +455,16 @@ class LTX25TimedSpanAcceptancePackageBuilder:
         )
         if entering:
             return (
-                "Continue from this exact approved Introduction Keyframe. The newly introduced "
-                "character is in the first visible phase of a physical entrance. Animate the "
-                "character walking naturally farther into the established scene from the entry "
-                "edge or access route during the opening part of this span, then settling into "
-                "the scene. Do not teleport, pop in, dissolve in, or begin already fully arrived. "
-                "Preserve the governed identities, camera, environment, lighting, scale, and "
-                "physical continuity. Do not add any unapproved subject."
+                "Continue from this exact approved Introduction Keyframe. The partially visible "
+                "entering character already present in the first frame is the only entering "
+                "subject. Animate that exact same person walking naturally farther into the "
+                "established scene from the same entry edge or access route during the opening "
+                "part of this span, then settling into the scene. Preserve that person's exact "
+                "face, hairstyle, age, body proportions, uniform, insignia, and identity from "
+                "the Introduction Keyframe. Do not create, replace, duplicate, or add a second "
+                "entrant or any other person. Do not teleport, pop in, dissolve in, or begin "
+                "already fully arrived. Preserve the governed identities, camera, environment, "
+                "lighting, scale, and physical continuity."
             )
         return (
             "Continue from this exact approved Introduction Keyframe. Preserve the visible "
