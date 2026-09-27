@@ -206,6 +206,14 @@ class TimedSpanFunctionalAcceptanceService:
                 reviewed_by=actor,
                 notes=notes,
             )
+            self.acceptance.invalidate_qc(
+                requirement.requirement_id,
+                reason="Introduction identity authority changed after human approval.",
+            )
+            self.acceptance.invalidate_assembly(
+                requirement.shot_id,
+                reason="Introduction identity authority changed after human approval.",
+            )
         except Exception as exc:
             raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
         return self.status(compiled_package_path)
@@ -243,6 +251,14 @@ class TimedSpanFunctionalAcceptanceService:
             decision=IntroductionIdentityDecision.REJECTED,
             reviewed_by=actor,
             notes=notes,
+        )
+        self.acceptance.invalidate_qc(
+            requirement.requirement_id,
+            reason="Introduction identity candidate was rejected.",
+        )
+        self.acceptance.invalidate_assembly(
+            requirement.shot_id,
+            reason="Introduction identity candidate was rejected.",
         )
         return self.status(compiled_package_path)
 
