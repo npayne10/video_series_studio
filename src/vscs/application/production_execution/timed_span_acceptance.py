@@ -335,11 +335,22 @@ class TimedSpanAcceptanceStore:
         self.path = self.project_directory / self.RELATIVE_PATH
 
     def qc_for_requirement(self, requirement_id: str) -> TimedSpanVisualQCRecord | None:
-        for raw in reversed(self._root().get("qc_records", [])):
+        root = self._root()
+        normalized = requirement_id.strip()
+        invalidated_at = self._latest_invalidation_time(
+            root.get("qc_invalidations", []),
+            key="requirement_id",
+            value=normalized,
+        )
+        for raw in reversed(root.get("qc_records", [])):
             if not isinstance(raw, dict):
                 continue
-            if str(raw.get("requirement_id") or "").strip() == requirement_id.strip():
-                return TimedSpanVisualQCRecord.from_dict(raw)
+            if str(raw.get("requirement_id") or "").strip() != normalized:
+                continue
+            record = TimedSpanVisualQCRecord.from_dict(raw)
+            if invalidated_at is not None and record.approved_at <= invalidated_at:
+                return None
+            return record
         return None
 
     def save_qc(self, record: TimedSpanVisualQCRecord) -> TimedSpanVisualQCRecord:
@@ -354,6 +365,64 @@ class TimedSpanAcceptanceStore:
         stored = self.qc_for_requirement(record.requirement_id)
         assert stored is not None
         return stored
+
+    def invalidate_qc(
+        self,
+        requirement_id: str,
+        *,
+        reason: str,
+        invalidated_at: str | None = None,
+    ) -> None:
+        normalized = requirement_id.strip()
+        justification = reason.strip()
+        if not normalized or not justification:
+            raise TimedSpanAcceptanceError(
+                "Timed-span QC invalidation requires requirement_id and reason"
+            )
+        root = self._root()
+        rows = [
+            dict(item)
+            for item in root.get("qc_invalidations", [])
+            if isinstance(item, dict)
+        ]
+        rows.append(
+            {
+                "requirement_id": normalized,
+                "reason": justification,
+                "invalidated_at": invalidated_at or datetime.now(UTC).isoformat(),
+            }
+        )
+        root["qc_invalidations"] = rows
+        self._write(root)
+
+    def invalidate_assembly(
+        self,
+        shot_id: str,
+        *,
+        reason: str,
+        invalidated_at: str | None = None,
+    ) -> None:
+        normalized = shot_id.strip().upper()
+        justification = reason.strip()
+        if not normalized or not justification:
+            raise TimedSpanAcceptanceError(
+                "Timed-span assembly invalidation requires shot_id and reason"
+            )
+        root = self._root()
+        rows = [
+            dict(item)
+            for item in root.get("assembly_invalidations", [])
+            if isinstance(item, dict)
+        ]
+        rows.append(
+            {
+                "shot_id": normalized,
+                "reason": justification,
+                "invalidated_at": invalidated_at or datetime.now(UTC).isoformat(),
+            }
+        )
+        root["assembly_invalidations"] = rows
+        self._write(root)
 
     def assembly_for_shot(self, shot_id: str) -> TimedSpanAssemblyEvidence | None:
         normalized = shot_id.strip().upper()
@@ -370,6 +439,14 @@ class TimedSpanAcceptanceStore:
     ) -> TimedSpanAssemblyEvidence | None:
         evidence = self.assembly_for_shot(shot_id)
         if evidence is None:
+            return None
+        root = self._root()
+        invalidated_at = self._latest_invalidation_time(
+            root.get("assembly_invalidations", []),
+            key="shot_id",
+            value=shot_id.strip().upper(),
+        )
+        if invalidated_at is not None and evidence.recorded_at <= invalidated_at:
             return None
         for raw_path, checksum in zip(
             evidence.span_paths,
@@ -406,7 +483,13 @@ class TimedSpanAcceptanceStore:
 
     def _root(self) -> dict[str, Any]:
         if not self.path.is_file():
-            return {"schema_version": "1.0", "qc_records": [], "assemblies": []}
+            return {
+                "schema_version": "1.0",
+                "qc_records": [],
+                "assemblies": [],
+                "qc_invalidations": [],
+                "assembly_invalidations": [],
+            }
         try:
             root = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
@@ -417,7 +500,17 @@ class TimedSpanAcceptanceStore:
             raise TimedSpanAcceptanceError("Timed-span acceptance store root must be an object")
         qc = root.get("qc_records", [])
         assemblies = root.get("assemblies", [])
-        if not isinstance(qc, list) or not isinstance(assemblies, list):
+        qc_invalidations = root.get("qc_invalidations", [])
+        assembly_invalidations = root.get("assembly_invalidations", [])
+        if not all(
+            isinstance(value, list)
+            for value in (
+                qc,
+                assemblies,
+                qc_invalidations,
+                assembly_invalidations,
+            )
+        ):
             raise TimedSpanAcceptanceError("Timed-span acceptance store is invalid")
         return dict(root)
 
