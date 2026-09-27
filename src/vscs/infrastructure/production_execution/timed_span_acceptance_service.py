@@ -13,11 +13,11 @@ from vscs.application.production_execution import (
     AutomatedIntroductionBoundaryStore,
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
-    IntroductionKeyframeRequirement,
-    IntroductionKeyframeRequirementPlan,
     IntroductionIdentityCandidateStatus,
     IntroductionIdentityDecision,
     IntroductionIdentityReviewStore,
+    IntroductionKeyframeRequirement,
+    IntroductionKeyframeRequirementPlan,
     TimedSpanAcceptanceError,
     TimedSpanAcceptanceEvaluator,
     TimedSpanAcceptanceState,
@@ -111,7 +111,8 @@ class TimedSpanFunctionalAcceptanceService:
                 introduced_reference_paths=request.introduced_reference_paths,
                 introduced_reference_sha256=request.introduced_reference_sha256,
                 target_global_frame_index=request.target_global_frame_index,
-                attempt_number=self.identity_reviews.rejected_count(requirement.requirement_id) + (
+                attempt_number=self.identity_reviews.rejected_count(requirement.requirement_id)
+                + (
                     0
                     if review is not None
                     and review.decision is IntroductionIdentityDecision.REJECTED

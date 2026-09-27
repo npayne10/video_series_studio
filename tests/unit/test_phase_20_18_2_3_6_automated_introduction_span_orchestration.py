@@ -609,9 +609,10 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
             / "span-002.json"
         ).read_text(encoding="utf-8")
     )
-    assert "Continue from this exact approved Introduction Keyframe" in span_two_package[
-        "motion_prompt"
-    ]
+    assert (
+        "Continue from this exact approved Introduction Keyframe"
+        in span_two_package["motion_prompt"]
+    )
     assert "Do not add any unapproved subject" in span_two_package["motion_prompt"]
 
 

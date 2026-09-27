@@ -380,11 +380,7 @@ class TimedSpanAcceptanceStore:
                 "Timed-span QC invalidation requires requirement_id and reason"
             )
         root = self._root()
-        rows = [
-            dict(item)
-            for item in root.get("qc_invalidations", [])
-            if isinstance(item, dict)
-        ]
+        rows = [dict(item) for item in root.get("qc_invalidations", []) if isinstance(item, dict)]
         rows.append(
             {
                 "requirement_id": normalized,
@@ -410,9 +406,7 @@ class TimedSpanAcceptanceStore:
             )
         root = self._root()
         rows = [
-            dict(item)
-            for item in root.get("assembly_invalidations", [])
-            if isinstance(item, dict)
+            dict(item) for item in root.get("assembly_invalidations", []) if isinstance(item, dict)
         ]
         rows.append(
             {
@@ -694,7 +688,10 @@ class TimedSpanAcceptanceEvaluator:
                     pending_keyframes.append(requirement.requirement_id)
                     pending_qc.append(requirement.requirement_id)
                     continue
-                if keyframe.approval_mode != "human" or keyframe.image_sha256 != result.image_sha256:
+                if (
+                    keyframe.approval_mode != "human"
+                    or keyframe.image_sha256 != result.image_sha256
+                ):
                     pending_keyframes.append(requirement.requirement_id)
                     pending_qc.append(requirement.requirement_id)
                     continue

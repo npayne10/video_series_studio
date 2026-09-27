@@ -365,7 +365,9 @@ class AutomatedIntroductionBoundaryStore:
                 target_global_frame_index=int(raw.get("target_global_frame_index") or 0),
                 source_boundary_image_path=str(raw.get("source_boundary_image_path") or ""),
                 source_boundary_image_sha256=str(raw.get("source_boundary_image_sha256") or ""),
-                introduced_asset_ids=tuple(str(value) for value in raw.get("introduced_asset_ids", [])),
+                introduced_asset_ids=tuple(
+                    str(value) for value in raw.get("introduced_asset_ids", [])
+                ),
                 introduced_asset_kinds=tuple(
                     str(value) for value in raw.get("introduced_asset_kinds", [])
                 ),
@@ -446,9 +448,7 @@ class AutomatedIntroductionBoundaryStore:
             validation_state=AutomatedBoundaryValidationState(
                 str(raw.get("validation_state") or "")
             ),
-            validation_findings=tuple(
-                str(value) for value in raw.get("validation_findings", [])
-            ),
+            validation_findings=tuple(str(value) for value in raw.get("validation_findings", [])),
             schema_version=str(raw.get("schema_version") or "1.0"),
         )
         supplied_id = str(raw.get("result_id") or "").strip()

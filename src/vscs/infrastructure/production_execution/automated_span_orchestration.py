@@ -18,12 +18,12 @@ from vscs.application.production_execution.automated_introduction_boundary impor
     file_sha256,
     request_from_requirement,
 )
+from vscs.application.production_execution.internal_render_spans import (
+    GovernedInternalRenderSpanPlan,
+)
 from vscs.application.production_execution.introduction_identity_gate import (
     IntroductionIdentityDecision,
     IntroductionIdentityReviewStore,
-)
-from vscs.application.production_execution.internal_render_spans import (
-    GovernedInternalRenderSpanPlan,
 )
 from vscs.application.production_execution.introduction_keyframes import (
     GovernedIntroductionKeyframeError,

@@ -768,9 +768,7 @@ class ProductionExecutionWorkspace(QWidget):
                 profile=self.profile.currentText(),
             )
         except Exception as exc:
-            self.identity_candidate_state.setText(
-                f"Introduction Identity QC: unavailable — {exc}"
-            )
+            self.identity_candidate_state.setText(f"Introduction Identity QC: unavailable — {exc}")
             return
         self._identity_candidate = candidate
         if candidate is None:

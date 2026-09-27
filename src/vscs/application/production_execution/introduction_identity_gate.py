@@ -75,7 +75,7 @@ class IntroductionIdentityReview:
         return payload
 
     @classmethod
-    def from_dict(cls, raw: dict[str, Any]) -> "IntroductionIdentityReview":
+    def from_dict(cls, raw: dict[str, Any]) -> IntroductionIdentityReview:
         review = cls(
             requirement_id=str(raw.get("requirement_id") or ""),
             result_id=str(raw.get("result_id") or ""),
@@ -187,7 +187,10 @@ class IntroductionIdentityReviewStore:
                 continue
             if str(raw.get("requirement_id") or "").strip() != normalized:
                 continue
-            if str(raw.get("decision") or "").strip() == IntroductionIdentityDecision.REJECTED.value:
+            if (
+                str(raw.get("decision") or "").strip()
+                == IntroductionIdentityDecision.REJECTED.value
+            ):
                 count += 1
         return count
 

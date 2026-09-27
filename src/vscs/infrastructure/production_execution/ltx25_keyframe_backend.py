@@ -702,9 +702,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            return TimedSpanFunctionalAcceptanceService(
-                self.project_directory
-            ).identity_candidate(package.path)
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).identity_candidate(
+                package.path
+            )
         except (
             LocalProductionPackageCompilationError,
             TimedSpanFunctionalAcceptanceServiceError,
