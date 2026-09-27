@@ -18,6 +18,10 @@ from vscs.application.production_execution.automated_introduction_boundary impor
     file_sha256,
     request_from_requirement,
 )
+from vscs.application.production_execution.introduction_identity_gate import (
+    IntroductionIdentityDecision,
+    IntroductionIdentityReviewStore,
+)
 from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanPlan,
 )
@@ -71,13 +75,14 @@ class AutomatedSpanOrchestrationResult:
     task_id: str
     span_paths: tuple[Path, ...]
     synthesized_keyframe_ids: tuple[str, ...]
-    final_path: Path
+    final_path: Path | None
     acceptance_status: TimedSpanAcceptanceStatus
 
     @property
     def completed_provider_work(self) -> bool:
         return (
             bool(self.span_paths)
+            and self.final_path is not None
             and self.final_path.is_file()
             and self.acceptance_status.state
             in {
@@ -172,6 +177,7 @@ class AutomatedTimedSpanOrchestrationService:
         self.managed_media_directory = Path(managed_media_directory)
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
         self.boundaries = AutomatedIntroductionBoundaryStore(self.project_directory)
+        self.identity_reviews = IntroductionIdentityReviewStore(self.project_directory)
         self.packages = LTX25TimedSpanAcceptancePackageBuilder(self.project_directory)
         self.acceptance = TimedSpanFunctionalAcceptanceService(self.project_directory)
 
@@ -305,9 +311,37 @@ class AutomatedTimedSpanOrchestrationService:
                 width=int(raw.get("width") or 0),
                 height=int(raw.get("height") or 0),
                 source_package_fingerprint=package_fingerprint,
-                seed=int(raw.get("seed") or 0) + requirement.target_global_frame_index,
+                seed=(
+                    int(raw.get("seed") or 0)
+                    + requirement.target_global_frame_index
+                    + self.identity_reviews.rejected_count(requirement.requirement_id)
+                ),
             )
-            if self._has_current_keyframe_for_request(
+            identity_gate = self._requires_identity_gate(requirement, timed)
+            if identity_gate:
+                current_candidate = self.boundaries.latest_result_for_request(request.request_id)
+                if current_candidate is not None:
+                    review = self.identity_reviews.review_for_result(current_candidate.result_id)
+                    if (
+                        review is not None
+                        and review.decision is IntroductionIdentityDecision.APPROVED
+                        and review.image_sha256 == current_candidate.image_sha256
+                        and self._has_human_identity_keyframe(
+                            requirement,
+                            current_candidate,
+                            boundary_sha256,
+                        )
+                    ):
+                        continue
+                    if review is None:
+                        return self._identity_gate_result(
+                            spans=spans,
+                            task_id=task_id,
+                            span_outputs=span_outputs,
+                            synthesized_ids=synthesized_ids,
+                            package_path=package_path,
+                        )
+            elif self._has_current_keyframe_for_request(
                 requirement,
                 request,
                 boundary_sha256,
@@ -325,8 +359,31 @@ class AutomatedTimedSpanOrchestrationService:
             self.boundaries.save_result(result)
             if result.validation_state is not AutomatedBoundaryValidationState.PASSED:
                 raise AutomatedSpanOrchestrationError(
-                    "Automated introduction-boundary synthesis requires human review before "
-                    f"continuing: {', '.join(result.validation_findings)}"
+                    "Automated introduction-boundary synthesis failed structural validation: "
+                    f"{', '.join(result.validation_findings)}"
+                )
+            if identity_gate:
+                self._audit(
+                    task_id,
+                    {
+                        "event": "introduction_identity_candidate_generated",
+                        "requirement_id": requirement.requirement_id,
+                        "result_id": result.result_id,
+                        "target_global_frame_index": requirement.target_global_frame_index,
+                        "image_path": result.image_path,
+                        "image_sha256": result.image_sha256,
+                        "introduced_reference_ids": list(result.introduced_reference_ids),
+                        "provider": result.provider_name,
+                        "model": result.model,
+                    },
+                )
+                self._release_provider_memory()
+                return self._identity_gate_result(
+                    spans=spans,
+                    task_id=task_id,
+                    span_outputs=span_outputs,
+                    synthesized_ids=synthesized_ids,
+                    package_path=package_path,
                 )
             self._register_automated_keyframe(requirement, result)
             synthesized = self.keyframes.require_approved(requirement)
