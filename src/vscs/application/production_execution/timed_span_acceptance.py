@@ -10,6 +10,14 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from vscs.application.production_execution.automated_introduction_boundary import (
+    AutomatedBoundaryValidationState,
+    AutomatedIntroductionBoundaryStore,
+)
+from vscs.application.production_execution.introduction_identity_gate import (
+    IntroductionIdentityDecision,
+    IntroductionIdentityReviewStore,
+)
 from vscs.application.timed_asset_presence import (
     TimedAssetPresenceError,
     TimedAssetPresencePlan,
@@ -444,6 +452,8 @@ class TimedSpanAcceptanceEvaluator:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
         self.acceptance = TimedSpanAcceptanceStore(self.project_directory)
+        self.introduction_boundaries = AutomatedIntroductionBoundaryStore(self.project_directory)
+        self.identity_reviews = IntroductionIdentityReviewStore(self.project_directory)
 
     def evaluate(self, compiled_package: dict[str, Any]) -> TimedSpanAcceptanceStatus:
         shot_id = _shot_id(compiled_package)
@@ -547,13 +557,45 @@ class TimedSpanAcceptanceEvaluator:
         pending_keyframes: list[str] = []
         pending_qc: list[str] = []
         for requirement in requirements.requirements:
-            try:
-                self.keyframes.require_approved(requirement)
+            if self._requires_identity_gate(requirement, timed):
+                result = self.introduction_boundaries.latest_result_for_requirement(
+                    requirement.requirement_id
+                )
+                review = (
+                    None
+                    if result is None
+                    else self.identity_reviews.review_for_result(result.result_id)
+                )
+                identity_approved = (
+                    result is not None
+                    and result.validation_state is AutomatedBoundaryValidationState.PASSED
+                    and review is not None
+                    and review.decision is IntroductionIdentityDecision.APPROVED
+                    and review.image_sha256 == result.image_sha256
+                )
+                if not identity_approved:
+                    pending_keyframes.append(requirement.requirement_id)
+                    pending_qc.append(requirement.requirement_id)
+                    continue
+                try:
+                    keyframe = self.keyframes.require_approved(requirement)
+                except GovernedIntroductionKeyframeError:
+                    pending_keyframes.append(requirement.requirement_id)
+                    pending_qc.append(requirement.requirement_id)
+                    continue
+                if keyframe.approval_mode != "human" or keyframe.image_sha256 != result.image_sha256:
+                    pending_keyframes.append(requirement.requirement_id)
+                    pending_qc.append(requirement.requirement_id)
+                    continue
                 approved += 1
-            except GovernedIntroductionKeyframeError:
-                pending_keyframes.append(requirement.requirement_id)
-                pending_qc.append(requirement.requirement_id)
-                continue
+            else:
+                try:
+                    self.keyframes.require_approved(requirement)
+                    approved += 1
+                except GovernedIntroductionKeyframeError:
+                    pending_keyframes.append(requirement.requirement_id)
+                    pending_qc.append(requirement.requirement_id)
+                    continue
             qc = self.acceptance.qc_for_requirement(requirement.requirement_id)
             if qc is not None and self._qc_matches(requirement, qc) and qc.passed:
                 qc_passed += 1
