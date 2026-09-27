@@ -784,12 +784,14 @@ class ProductionExecutionWorkspace(QWidget):
         )
         references = ", ".join(candidate.introduced_reference_ids) or "-"
         reference_paths = ", ".join(candidate.introduced_reference_paths) or "-"
+        reference_hashes = ", ".join(candidate.introduced_reference_sha256) or "-"
         self.identity_candidate_state.setText(
             f"Introduction Identity QC: {decision} • Frame "
             f"{candidate.target_global_frame_index} • Attempt {candidate.attempt_number}\n"
             f"Introduced Asset(s): {', '.join(candidate.introduced_asset_ids)} • "
             f"Canonical Reference(s): {references}\n"
             f"Reference Path(s): {reference_paths}\n"
+            f"Reference SHA256: {reference_hashes}\n"
             f"Candidate: {candidate.image_path}\n"
             f"Candidate SHA256: {candidate.image_sha256}"
         )
