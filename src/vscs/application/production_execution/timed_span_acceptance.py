@@ -715,9 +715,6 @@ class TimedSpanAcceptanceEvaluator:
         except TimedSpanAcceptanceError:
             assembly = None
         assembly_valid = assembly is not None and self._assembly_matches(spans, assembly)
-        current_final_frame_count = (
-            assembly.final_frame_count if assembly is not None and assembly_valid else None
-        )
         if approved < requirements.requirement_count:
             return TimedSpanAcceptanceStatus(
                 shot_id=shot_id,
