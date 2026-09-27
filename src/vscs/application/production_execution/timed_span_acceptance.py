@@ -10,11 +10,11 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from vscs.application.production_execution.automated_introduction_boundary import (
+from .automated_introduction_boundary import (
     AutomatedBoundaryValidationState,
     AutomatedIntroductionBoundaryStore,
 )
-from vscs.application.production_execution.introduction_identity_gate import (
+from .introduction_identity_gate import (
     IntroductionIdentityDecision,
     IntroductionIdentityReviewStore,
 )
