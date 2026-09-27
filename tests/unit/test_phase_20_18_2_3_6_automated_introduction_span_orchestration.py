@@ -15,6 +15,7 @@ from vscs.application.production_execution import (
     GovernedIntroductionKeyframeStore,
     IntroductionBoundaryProviderCapabilities,
     IntroductionBoundaryStrategy,
+    IntroductionIdentityCandidateStatus,
     ProductionExecutionCandidate,
     ProductionExecutionUiService,
     ProductionPackageCompilationState,
@@ -1045,6 +1046,58 @@ def test_workspace_prefers_automated_orchestration_and_keeps_manual_recovery(
     assert "Manual Recovery" in workspace.approve_introduction_keyframe_button.text()
     assert workspace.approve_introduction_keyframe_button.isEnabled()
     assert not workspace.start_button.isEnabled()
+
+
+class _IdentityGateUiService(_UiService):
+    def __init__(self, root: Path) -> None:
+        super().__init__()
+        candidate_path = _png(root / "identity-candidate.png", (120, 90, 70))
+        reference_path = _png(root / "ros-reference.png", (100, 110, 120))
+        self.identity_candidate = IntroductionIdentityCandidateStatus(
+            requirement_id="GIKR-1",
+            result_id="AIBS-1",
+            image_path=str(candidate_path),
+            image_sha256=_sha(candidate_path),
+            introduced_asset_ids=("CAP-CHR-005",),
+            introduced_reference_ids=("REF-ROS",),
+            introduced_reference_paths=(str(reference_path),),
+            introduced_reference_sha256=(_sha(reference_path),),
+            target_global_frame_index=96,
+            attempt_number=1,
+        )
+
+    def introduction_identity_candidate(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> IntroductionIdentityCandidateStatus:
+        assert task_id == "PT-AUTO-SPAN"
+        assert profile == "production"
+        return self.identity_candidate
+
+
+def test_workspace_pauses_automation_for_pending_identity_candidate(
+    qtbot: Any,
+    tmp_path: Path,
+) -> None:
+    service = _IdentityGateUiService(tmp_path)
+    workspace = ProductionExecutionWorkspace(lambda: service)  # type: ignore[arg-type]
+    qtbot.addWidget(workspace)
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    assert not workspace.run_automated_spans_button.isEnabled()
+    assert workspace.view_identity_candidate_button.isEnabled()
+    assert workspace.approve_identity_candidate_button.isEnabled()
+    assert workspace.reject_identity_candidate_button.isEnabled()
+    assert not workspace.approve_introduction_keyframe_button.isEnabled()
+    assert "REVIEW_REQUIRED" in workspace.identity_candidate_state.text()
+    assert "CAP-CHR-005" in workspace.identity_candidate_state.text()
+    assert "REF-ROS" in workspace.identity_candidate_state.text()
+    assert _sha(Path(service.identity_candidate.introduced_reference_paths[0])) in (
+        workspace.identity_candidate_state.text()
+    )
 
 
 def test_workspace_allows_automated_rerun_while_visual_qc_is_pending(
