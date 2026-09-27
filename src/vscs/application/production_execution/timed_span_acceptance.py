@@ -798,6 +798,20 @@ class TimedSpanAcceptanceEvaluator:
         )
 
     @staticmethod
+    def _requires_identity_gate(
+        requirement: IntroductionKeyframeRequirement,
+        timed: TimedAssetPresencePlan,
+    ) -> bool:
+        introduced = set(requirement.introduced_asset_ids)
+        return any(
+            presence.asset_id in introduced
+            and presence.from_frame == requirement.target_global_frame_index
+            and presence.asset_kind.value == "character"
+            and presence.introduction.value == "enter"
+            for presence in timed.presences
+        )
+
+    @staticmethod
     def _require_activation_structural_sources(
         timed: TimedAssetPresencePlan,
         spans: GovernedInternalRenderSpanPlan,
