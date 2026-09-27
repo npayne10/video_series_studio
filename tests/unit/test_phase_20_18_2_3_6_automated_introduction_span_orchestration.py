@@ -308,6 +308,13 @@ def test_request_compilation_pins_source_and_introduced_reference(tmp_path: Path
     assert "immutable identity authority" in request.positive_prompt
     assert "generic substitute" in request.positive_prompt
     assert "first visible phase" in request.positive_prompt
+    assert "exactly one new human figure" in request.positive_prompt
+    assert "extreme left or right edge" in request.positive_prompt
+    assert "outside the central half" in request.positive_prompt
+    assert "only a partial body is visible" in request.positive_prompt
+    assert "no additional background crew" in request.positive_prompt
+    assert "oversized entrant" in request.negative_prompt
+    assert "second entrant" in request.negative_prompt
     assert "fully arrived" in request.positive_prompt
     assert "Do not replace, duplicate" in request.positive_prompt
     assert "teleportation" in request.negative_prompt
