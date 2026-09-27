@@ -514,6 +514,24 @@ class TimedSpanAcceptanceStore:
             raise TimedSpanAcceptanceError("Timed-span acceptance store is invalid")
         return dict(root)
 
+    @staticmethod
+    def _latest_invalidation_time(
+        rows: object,
+        *,
+        key: str,
+        value: str,
+    ) -> str | None:
+        if not isinstance(rows, list):
+            return None
+        times = tuple(
+            str(item.get("invalidated_at") or "").strip()
+            for item in rows
+            if isinstance(item, dict)
+            and str(item.get(key) or "").strip() == value
+            and str(item.get("invalidated_at") or "").strip()
+        )
+        return max(times) if times else None
+
     def _resolve_file(self, value: str) -> Path:
         path = Path(value).expanduser()
         if not path.is_absolute():
