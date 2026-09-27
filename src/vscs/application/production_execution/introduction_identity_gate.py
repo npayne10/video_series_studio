@@ -36,7 +36,13 @@ class IntroductionIdentityReview:
     schema_version: str = "1.0"
 
     def __post_init__(self) -> None:
-        for field_name in ("requirement_id", "result_id", "image_sha256", "reviewed_by", "reviewed_at"):
+        for field_name in (
+            "requirement_id",
+            "result_id",
+            "image_sha256",
+            "reviewed_by",
+            "reviewed_at",
+        ):
             value = str(getattr(self, field_name)).strip()
             if not value:
                 raise IntroductionIdentityGateError(
