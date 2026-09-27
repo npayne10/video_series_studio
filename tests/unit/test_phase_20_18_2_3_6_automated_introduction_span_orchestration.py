@@ -895,7 +895,6 @@ def test_workspace_prefers_automated_orchestration_and_keeps_manual_recovery(
     assert not workspace.start_button.isEnabled()
 
 
-
 def test_workspace_allows_automated_rerun_while_visual_qc_is_pending(
     qtbot: Any,
 ) -> None:
