@@ -559,10 +559,17 @@ def request_from_requirement(
             "person's face, facial structure, age, ethnicity, hairstyle, hair colour, body "
             "proportions, uniform, insignia, and other identity-defining features. Do not create "
             "a generic substitute or reinterpret the person's identity. Show that exact person "
-            "only in the first visible phase of the physical entrance: just becoming visible "
-            "from a plausible edge, doorway, or access route, with part of the body still outside "
-            "the established scene and a natural walking-in pose. Do not place the character "
-            "fully arrived, centered, standing still, or suddenly materialized in the scene."
+            "only in the first visible phase of the physical entrance. Add exactly one new "
+            "human figure to the entire image: the canonical entering character, and no other new "
+            "person anywhere in the frame. The entrant must first appear at the extreme left or "
+            "right edge, doorway, or access route and must remain outside the central half of the "
+            "image. Keep most of the entrant outside the established scene so only a partial body "
+            "is visible at this frame; do not show a complete settled full-body pose or both feet "
+            "fully established on the bridge floor. Match the entrant's apparent scale to nearby "
+            "standing crew and keep the entrant smaller than a dominant foreground subject. The "
+            "source-frame people must remain exactly where they already are and no additional "
+            "background crew may be invented. Do not place the entrant fully arrived, centered, "
+            "standing still, oversized, foreground-dominant, or suddenly materialized in the scene."
         )
     else:
         transition_instruction = (
@@ -584,7 +591,9 @@ def request_from_requirement(
         "reframe, lighting change, environment change, scene cut, split screen, contact sheet, "
         "text overlay, redesign, teleportation, sudden full-body appearance, wrong face, "
         "different person, generic substitute, wrong age, wrong ethnicity, wrong hairstyle, "
-        "wrong uniform, identity reinterpretation"
+        "wrong uniform, identity reinterpretation, second entrant, extra background crew, "
+        "central entrant, oversized entrant, dominant foreground entrant, complete full-body "
+        "entrant at first visible frame, both feet fully established, settled standing pose"
     )
     return AutomatedIntroductionBoundaryRequest(
         shot_id=requirement.shot_id,
