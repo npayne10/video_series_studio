@@ -676,10 +676,15 @@ def test_approved_character_identity_resumes_target_span_and_assembly(
         approved_by="Neill Payne",
         notes="Canonical Ros identity confirmed.",
     )
-    assert status.state in {
-        TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
-        TimedSpanAcceptanceState.QC_REQUIRED,
-    }
+    assert status.state is TimedSpanAcceptanceState.OUTPUTS_REQUIRED
+    keyframe = GovernedIntroductionKeyframeStore(tmp_path).require_approved(
+        _authority(
+            tmp_path,
+            introduction=AssetPresenceIntroduction.ENTER,
+        )[3].requirements[0]
+    )
+    assert keyframe.approval_mode == "human"
+    assert keyframe.image_sha256 == candidate.image_sha256
 
     second = service.run(package_path)
 
