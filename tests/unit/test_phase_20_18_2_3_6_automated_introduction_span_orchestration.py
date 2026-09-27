@@ -871,6 +871,7 @@ def test_orchestration_rejects_keyframe_from_stale_synthesis_request(
     boundary_store = service.boundaries
     root = json.loads(boundary_store.path.read_text(encoding="utf-8"))
     root["results"][-1]["request_id"] = "AIBR-STALE-SEMANTICS"
+    root["results"][-1].pop("result_id", None)
     boundary_store.path.write_text(json.dumps(root, indent=2), encoding="utf-8")
 
     service.run(package_path)
