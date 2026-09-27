@@ -289,10 +289,13 @@ def test_request_compilation_pins_source_and_introduced_reference(tmp_path: Path
     assert len(request.introduced_reference_sha256) == 1
     assert "Major Ros Rohsgard" in request.positive_prompt
     assert "This is an ENTER transition" in request.positive_prompt
+    assert "immutable identity authority" in request.positive_prompt
+    assert "generic substitute" in request.positive_prompt
     assert "first visible phase" in request.positive_prompt
     assert "fully arrived" in request.positive_prompt
     assert "Do not replace, duplicate" in request.positive_prompt
     assert "teleportation" in request.negative_prompt
+    assert "wrong face" in request.negative_prompt
 
 
 def test_automated_structural_keyframe_can_condition_provider_before_final_visual_qc(
@@ -590,6 +593,8 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
     assert (
         "walking naturally farther into the established scene" in span_two_package["motion_prompt"]
     )
+    assert "that exact same person" in span_two_package["motion_prompt"]
+    assert "Do not create, replace, duplicate" in span_two_package["motion_prompt"]
     assert "Do not teleport" in span_two_package["motion_prompt"]
 
 
