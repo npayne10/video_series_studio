@@ -24,7 +24,6 @@ from vscs.application.production_execution import (
     TimedSpanAcceptanceStatus,
     TimedSpanAcceptanceStore,
 )
-
 from vscs.application.timed_asset_presence import TimedAssetPresencePlan
 
 from .timed_span_acceptance_packages import (
@@ -104,8 +103,7 @@ class TimedSpanFunctionalAcceptanceService:
             if requirement_id is None or requirement.requirement_id == requirement_id.strip()
         )
         return any(
-            self.evaluator._requires_identity_gate(requirement, timed)
-            for requirement in selected
+            self.evaluator._requires_identity_gate(requirement, timed) for requirement in selected
         )
 
     def identity_candidate(
