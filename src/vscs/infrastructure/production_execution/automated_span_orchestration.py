@@ -362,6 +362,14 @@ class AutomatedTimedSpanOrchestrationService:
                     f"{', '.join(result.validation_findings)}"
                 )
             if identity_gate:
+                self.acceptance.acceptance.invalidate_qc(
+                    requirement.requirement_id,
+                    reason="A new introduction identity candidate requires fresh visual QC.",
+                )
+                self.acceptance.acceptance.invalidate_assembly(
+                    requirement.shot_id,
+                    reason="A new introduction identity candidate makes prior Shot assembly stale.",
+                )
                 self._audit(
                     task_id,
                     {
