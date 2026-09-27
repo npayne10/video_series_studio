@@ -586,6 +586,7 @@ def test_orchestration_renders_extracts_synthesizes_continues_and_assembles(
     assert provider.calls == 2
     assert len(result.span_paths) == 2
     assert len(result.synthesized_keyframe_ids) == 1
+    assert result.final_path is not None
     assert result.final_path.is_file()
     assert result.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
     store = GovernedIntroductionKeyframeStore(tmp_path)
