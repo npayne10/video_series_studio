@@ -674,6 +674,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._timed_span_status = status
         self._render_timed_span_status(status)
         self._refresh_identity_candidate()
+        self._apply_identity_gate_controls()
         self._update_start_enabled()
 
     def _render_timed_span_status(self, status: TimedSpanAcceptanceStatus) -> None:
@@ -750,6 +751,22 @@ class ProductionExecutionWorkspace(QWidget):
         self.approve_introduction_keyframe_button.setEnabled(False)
         self.assemble_span_outputs_button.setEnabled(False)
         self.record_span_qc_button.setEnabled(False)
+
+    def _apply_identity_gate_controls(self) -> None:
+        if self._selected_task_id is None or self._automated_span_thread is not None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            identity_gate_required = service.introduction_identity_gate_required(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception:
+            identity_gate_required = False
+        if identity_gate_required:
+            self.approve_introduction_keyframe_button.setEnabled(False)
 
     def _refresh_identity_candidate(self) -> None:
         self._identity_candidate = None
