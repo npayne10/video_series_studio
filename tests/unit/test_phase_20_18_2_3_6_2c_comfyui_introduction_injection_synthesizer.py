@@ -133,8 +133,15 @@ def test_synthesizer_edits_only_governed_region_and_preserves_scene_outside(
         source = source_image.convert("RGB")
         with Image.open(candidate) as candidate_image:
             output = candidate_image.convert("RGB")
-            assert output.getpixel((100, 100)) == source.getpixel((100, 100))
-            assert output.getpixel((640, 360)) == source.getpixel((640, 360))
+            assert output.crop((0, 0, 1056, 720)).tobytes() == source.crop(
+                (0, 0, 1056, 720)
+            ).tobytes()
+            assert output.crop((1056, 0, 1280, 64)).tobytes() == source.crop(
+                (1056, 0, 1280, 64)
+            ).tobytes()
+            assert output.crop((1056, 688, 1280, 720)).tobytes() == source.crop(
+                (1056, 688, 1280, 720)
+            ).tobytes()
             assert output.getpixel((1270, 360)) == client.fill
 
     assert client.runtime_payload is not None
@@ -142,8 +149,9 @@ def test_synthesizer_edits_only_governed_region_and_preserves_scene_outside(
     assert runtime["canonical_asset_id"] == "CAP-CHR-005"
     assert runtime["introduced_reference_ids"] == ["REF-ROS"]
     assert runtime["injection_pixel_box"] == [1050, 58, 1280, 691]
-    assert runtime["width"] == 230
-    assert runtime["height"] == 633
+    assert runtime["provider_edit_box"] == [1056, 64, 1280, 688]
+    assert runtime["width"] == 224
+    assert runtime["height"] == 624
     assert "first visible phase" in runtime["positive_prompt"]
     assert "RIGHT edge" in runtime["positive_prompt"]
     assert "Add no other person or asset" in runtime["positive_prompt"]
