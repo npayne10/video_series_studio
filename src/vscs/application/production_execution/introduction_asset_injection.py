@@ -510,7 +510,10 @@ class IntroductionInjectionCandidateStatus:
     """Operator-facing injected-boundary candidate with exact authority evidence."""
 
     requirement_id: str
+    request_id: str
     result_id: str
+    source_boundary_image_path: str
+    source_boundary_image_sha256: str
     image_path: str
     image_sha256: str
     canonical_asset: CanonicalInjectionAsset
