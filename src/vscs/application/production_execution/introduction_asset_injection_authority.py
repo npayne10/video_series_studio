@@ -75,8 +75,8 @@ class CanonicalInjectionAssetResolver:
 
         references = self._reference_records(reference_plan)
         references_by_id: dict[str, dict[str, Any]] = {}
-        for reference in references:
-            reference_id = str(reference.get("reference_id") or "").strip()
+        for reference_record in references:
+            reference_id = str(reference_record.get("reference_id") or "").strip()
             if not reference_id:
                 raise CanonicalInjectionAssetResolutionError(
                     "Governed ReferencePlan contains a reference without reference_id"
@@ -85,7 +85,7 @@ class CanonicalInjectionAssetResolver:
                 raise CanonicalInjectionAssetResolutionError(
                     f"Governed ReferencePlan contains duplicate reference ID: {reference_id}"
                 )
-            references_by_id[reference_id] = reference
+            references_by_id[reference_id] = reference_record
 
         paths: list[str] = []
         checksums: list[str] = []
