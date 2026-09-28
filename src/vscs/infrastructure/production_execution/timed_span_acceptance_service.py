@@ -326,7 +326,10 @@ class TimedSpanFunctionalAcceptanceService:
             review = self.injection_reviews.review_for_result(result.result_id)
             return IntroductionInjectionCandidateStatus(
                 requirement_id=requirement.requirement_id,
+                request_id=request.request_id,
                 result_id=result.result_id,
+                source_boundary_image_path=request.source_boundary_image_path,
+                source_boundary_image_sha256=request.source_boundary_image_sha256,
                 image_path=result.image_path,
                 image_sha256=result.image_sha256,
                 canonical_asset=request.canonical_asset,
