@@ -299,10 +299,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
             raise ComfyUIIntroductionInjectionSynthesisError(
                 "Identity-locked injection workflow has the wrong loader"
             )
-        if (
-            loader["inputs"].get("request_file")
-            != "__VSCS_INTRODUCTION_INJECTION_REQUEST__"
-        ):
+        if loader["inputs"].get("request_file") != "__VSCS_INTRODUCTION_INJECTION_REQUEST__":
             raise ComfyUIIntroductionInjectionSynthesisError(
                 "Identity-locked injection workflow template marker changed"
             )
@@ -318,9 +315,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
                 f"{label} must remain inside the VSCS project"
             )
         if not resolved.is_file():
-            raise ComfyUIIntroductionInjectionSynthesisError(
-                f"{label} does not exist: {resolved}"
-            )
+            raise ComfyUIIntroductionInjectionSynthesisError(f"{label} does not exist: {resolved}")
         return resolved
 
     @staticmethod

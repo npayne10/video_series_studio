@@ -4,10 +4,6 @@ from .automated_introduction_boundary import (
     ComfyUIIntroductionBoundarySynthesisError,
     ComfyUIIntroductionBoundarySynthesizer,
 )
-from .introduction_asset_injection import (
-    ComfyUIIntroductionInjectionSynthesisError,
-    ComfyUIIntroductionInjectionSynthesizer,
-)
 from .automated_span_orchestration import (
     AutomatedSpanOrchestrationError,
     AutomatedSpanOrchestrationResult,
@@ -25,6 +21,10 @@ from .hardware_shot_capability import (
     HardwareShotCapabilityError,
     LocalComfyUIHardwareCapabilityResolver,
     capability_for_vram,
+)
+from .introduction_asset_injection import (
+    ComfyUIIntroductionInjectionSynthesisError,
+    ComfyUIIntroductionInjectionSynthesizer,
 )
 from .ltx23_v721_backend import LTX23V721DeploymentAssurance
 from .ltx25_keyframe_backend import (

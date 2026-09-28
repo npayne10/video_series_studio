@@ -133,15 +133,17 @@ def test_synthesizer_edits_only_governed_region_and_preserves_scene_outside(
         source = source_image.convert("RGB")
         with Image.open(candidate) as candidate_image:
             output = candidate_image.convert("RGB")
-            assert output.crop((0, 0, 1056, 720)).tobytes() == source.crop(
-                (0, 0, 1056, 720)
-            ).tobytes()
-            assert output.crop((1056, 0, 1280, 64)).tobytes() == source.crop(
-                (1056, 0, 1280, 64)
-            ).tobytes()
-            assert output.crop((1056, 688, 1280, 720)).tobytes() == source.crop(
-                (1056, 688, 1280, 720)
-            ).tobytes()
+            assert (
+                output.crop((0, 0, 1056, 720)).tobytes() == source.crop((0, 0, 1056, 720)).tobytes()
+            )
+            assert (
+                output.crop((1056, 0, 1280, 64)).tobytes()
+                == source.crop((1056, 0, 1280, 64)).tobytes()
+            )
+            assert (
+                output.crop((1056, 688, 1280, 720)).tobytes()
+                == source.crop((1056, 688, 1280, 720)).tobytes()
+            )
             assert output.getpixel((1270, 360)) == client.fill
 
     assert client.runtime_payload is not None
