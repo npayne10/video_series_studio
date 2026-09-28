@@ -126,10 +126,11 @@ class ComfyUIIntroductionInjectionSynthesizer:
             width=request.width,
             height=request.height,
         )
+        provider_box = self._provider_edit_box(pixel_box)
         crop_path = root / "source-region.png"
-        self._write_source_crop(source, crop_path, pixel_box)
-        crop_width = pixel_box[2] - pixel_box[0]
-        crop_height = pixel_box[3] - pixel_box[1]
+        self._write_source_crop(source, crop_path, provider_box)
+        crop_width = provider_box[2] - provider_box[0]
+        crop_height = provider_box[3] - provider_box[1]
 
         current_source = crop_path
         workflow = self._workflow()
@@ -166,6 +167,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
                     width=crop_width,
                     height=crop_height,
                     pixel_box=pixel_box,
+                    provider_box=provider_box,
                     pass_index=index,
                 )
                 request_path.write_text(
@@ -191,7 +193,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
             source=source,
             injected_region=current_source,
             destination=final_path,
-            pixel_box=pixel_box,
+            pixel_box=provider_box,
         )
         self._validate_geometry(final_path, request.width, request.height, "injected boundary")
         return IntroductionInjectionResult(
@@ -220,6 +222,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
         width: int,
         height: int,
         pixel_box: tuple[int, int, int, int],
+        provider_box: tuple[int, int, int, int],
         pass_index: int,
     ) -> dict[str, object]:
         side = request.injection_region.side.value.upper()
@@ -261,6 +264,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
             "canonical_asset_authority_id": request.canonical_asset.authority_id,
             "injection_region": request.injection_region.to_dict(),
             "injection_pixel_box": list(pixel_box),
+            "provider_edit_box": list(provider_box),
             "positive_prompt": positive_prompt,
             "negative_prompt": negative_prompt,
             "width": width,
@@ -318,6 +322,23 @@ class ComfyUIIntroductionInjectionSynthesizer:
                 f"{label} does not exist: {resolved}"
             )
         return resolved
+
+    @staticmethod
+    def _provider_edit_box(
+        pixel_box: tuple[int, int, int, int],
+        *,
+        alignment: int = 8,
+    ) -> tuple[int, int, int, int]:
+        left, top, right, bottom = pixel_box
+        aligned_left = ((left + alignment - 1) // alignment) * alignment
+        aligned_top = ((top + alignment - 1) // alignment) * alignment
+        aligned_right = (right // alignment) * alignment
+        aligned_bottom = (bottom // alignment) * alignment
+        if aligned_left >= aligned_right or aligned_top >= aligned_bottom:
+            raise ComfyUIIntroductionInjectionSynthesisError(
+                "Governed injection region is too small after provider geometry alignment"
+            )
+        return (aligned_left, aligned_top, aligned_right, aligned_bottom)
 
     @staticmethod
     def _write_source_crop(
