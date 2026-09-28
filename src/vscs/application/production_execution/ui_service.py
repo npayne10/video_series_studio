@@ -519,6 +519,16 @@ class ProductionExecutionUiService:
             profile=execution_profile,
         )
 
+    def introduction_injection_review_supported(self) -> bool:
+        return all(
+            getattr(self.backend, name, None) is not None
+            for name in (
+                "introduction_injection_candidate_for_profile",
+                "approve_introduction_injection_for_profile",
+                "reject_introduction_injection_for_profile",
+            )
+        )
+
     def introduction_injection_candidate(
         self,
         task_id: str,
