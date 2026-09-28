@@ -624,9 +624,7 @@ class AutomatedTimedSpanOrchestrationService:
             injection_region=region,
             width=width,
             height=height,
-            seed=int(raw.get("seed") or 0)
-            + requirement.target_global_frame_index
-            + rejected,
+            seed=int(raw.get("seed") or 0) + requirement.target_global_frame_index + rejected,
             timed_asset_presence_fingerprint=timed.fingerprint,
             source_package_fingerprint=package_fingerprint,
         )

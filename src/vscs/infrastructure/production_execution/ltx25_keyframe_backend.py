@@ -64,13 +64,13 @@ from .automated_span_provider import (
     AutomatedSpanProviderError,
     LTX25AutomatedSpanProvider,
 )
-from .introduction_asset_injection import ComfyUIIntroductionInjectionSynthesizer
 from .current_authority_backend import (
     CurrentAuthorityLTX23V721ProductionPackageCompilationService,
 )
 from .current_authority_backend import (
     LocalComfyUIProductionExecutionBackend as _CurrentAuthorityBackend,
 )
+from .introduction_asset_injection import ComfyUIIntroductionInjectionSynthesizer
 from .ltx25_keyframe_contract import (
     LTX25_KEYFRAME_LOADER_CLASS,
     LTX25_KEYFRAME_LOADER_TITLE,
@@ -365,9 +365,7 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
                 "hidden_segmentation": True,
                 "keyframe_conditioning": "per_span_governed_keyframe_i2v",
                 "introduction_boundary_synthesis": "qwen_image_edit_2511",
-                "character_enter_boundary_authority": (
-                    "identity_locked_asset_injection_v3_6_2"
-                ),
+                "character_enter_boundary_authority": ("identity_locked_asset_injection_v3_6_2"),
                 "automatic_provider_submission": True,
                 "monolithic_submission_permitted": False,
                 "manual_recovery_controls": True,
@@ -752,9 +750,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            return TimedSpanFunctionalAcceptanceService(
-                self.project_directory
-            ).injection_candidate(package.path)
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).injection_candidate(
+                package.path
+            )
         except (
             LocalProductionPackageCompilationError,
             TimedSpanFunctionalAcceptanceServiceError,

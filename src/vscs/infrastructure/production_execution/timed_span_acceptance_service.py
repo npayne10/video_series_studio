@@ -358,9 +358,7 @@ class TimedSpanFunctionalAcceptanceService:
             raise TimedSpanFunctionalAcceptanceServiceError(
                 "The latest injection candidate has already been reviewed."
             )
-        result = self.injection_boundaries.latest_result_for_requirement(
-            requirement.requirement_id
-        )
+        result = self.injection_boundaries.latest_result_for_requirement(requirement.requirement_id)
         if result is None or result.result_id != candidate.result_id:
             raise TimedSpanFunctionalAcceptanceServiceError(
                 "Injection candidate changed before approval."
