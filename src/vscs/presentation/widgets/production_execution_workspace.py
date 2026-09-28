@@ -429,6 +429,7 @@ class ProductionExecutionWorkspace(QWidget):
             self._boundary_status = None
             self._timed_span_status = None
             self._identity_candidate = None
+            self._injection_candidate = None
             self.compile_package_button.setEnabled(False)
             self.retry_button.setEnabled(False)
             self.retry_state.setText("Retry Override: -")
