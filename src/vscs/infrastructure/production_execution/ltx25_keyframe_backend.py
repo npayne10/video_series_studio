@@ -365,6 +365,9 @@ class CurrentAuthorityLTX25GovernedKeyframeCompilationService(
                 "hidden_segmentation": True,
                 "keyframe_conditioning": "per_span_governed_keyframe_i2v",
                 "introduction_boundary_synthesis": "qwen_image_edit_2511",
+                "character_enter_boundary_authority": (
+                    "identity_locked_asset_injection_v3_6_2"
+                ),
                 "automatic_provider_submission": True,
                 "monolithic_submission_permitted": False,
                 "manual_recovery_controls": True,
