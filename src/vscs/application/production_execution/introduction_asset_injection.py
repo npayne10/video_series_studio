@@ -524,6 +524,118 @@ class IntroductionInjectionCandidateStatus:
         return self.decision is None
 
 
+class IntroductionInjectionBoundaryStore:
+    """Persist immutable injection requests/results for orchestration and human review."""
+
+    RELATIVE_PATH = Path(".vscs") / "introduction_injection_boundaries.json"
+
+    def __init__(self, project_directory: Path) -> None:
+        self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
+        self.path = self.project_directory / self.RELATIVE_PATH
+
+    def save_request(self, request: IntroductionInjectionRequest) -> IntroductionInjectionRequest:
+        root = self._root()
+        rows = [dict(item) for item in root.get("requests", []) if isinstance(item, dict)]
+        if not any(str(item.get("request_id") or "") == request.request_id for item in rows):
+            rows.append(request.to_dict())
+        root["requests"] = rows
+        self._write(root)
+        stored = self.request_for_id(request.request_id)
+        assert stored is not None
+        return stored
+
+    def save_result(self, result: IntroductionInjectionResult) -> IntroductionInjectionResult:
+        if self.request_for_id(result.request_id) is None:
+            raise IntroductionAssetInjectionError(
+                "Injection result cannot be stored without its immutable request"
+            )
+        root = self._root()
+        rows = [dict(item) for item in root.get("results", []) if isinstance(item, dict)]
+        if not any(str(item.get("result_id") or "") == result.result_id for item in rows):
+            rows.append(result.to_dict())
+        root["results"] = rows
+        self._write(root)
+        stored = self.result_for_id(result.result_id)
+        assert stored is not None
+        return stored
+
+    def request_for_id(self, request_id: str) -> IntroductionInjectionRequest | None:
+        normalized = request_id.strip()
+        for raw in reversed(self._root().get("requests", [])):
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("request_id") or "").strip() == normalized:
+                return IntroductionInjectionRequest.from_dict(raw)
+        return None
+
+    def result_for_id(self, result_id: str) -> IntroductionInjectionResult | None:
+        normalized = result_id.strip()
+        for raw in reversed(self._root().get("results", [])):
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("result_id") or "").strip() == normalized:
+                return IntroductionInjectionResult.from_dict(raw)
+        return None
+
+    def latest_result_for_requirement(
+        self,
+        requirement_id: str,
+    ) -> IntroductionInjectionResult | None:
+        normalized = requirement_id.strip()
+        for raw in reversed(self._root().get("results", [])):
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("requirement_id") or "").strip() == normalized:
+                return IntroductionInjectionResult.from_dict(raw)
+        return None
+
+    def latest_result_for_request(
+        self,
+        request_id: str,
+    ) -> IntroductionInjectionResult | None:
+        normalized = request_id.strip()
+        for raw in reversed(self._root().get("results", [])):
+            if not isinstance(raw, dict):
+                continue
+            if str(raw.get("request_id") or "").strip() == normalized:
+                return IntroductionInjectionResult.from_dict(raw)
+        return None
+
+    def _root(self) -> dict[str, Any]:
+        if not self.path.is_file():
+            return {"schema_version": "1.0", "requests": [], "results": []}
+        try:
+            root = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise IntroductionAssetInjectionError(
+                f"Cannot read introduction injection-boundary store: {exc}"
+            ) from exc
+        if not isinstance(root, dict):
+            raise IntroductionAssetInjectionError(
+                "Introduction injection-boundary store root must be an object"
+            )
+        for field_name in ("requests", "results"):
+            if not isinstance(root.get(field_name, []), list):
+                raise IntroductionAssetInjectionError(
+                    f"Introduction injection-boundary store {field_name} must be an array"
+                )
+        return dict(root)
+
+    def _write(self, root: dict[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        output = {
+            "schema_version": "1.0",
+            "requests": list(root.get("requests", [])),
+            "results": list(root.get("results", [])),
+        }
+        temporary = self.path.with_suffix(self.path.suffix + ".tmp")
+        temporary.write_text(
+            json.dumps(output, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(self.path)
+
+
 class IntroductionInjectionReviewStore:
     """Append-only human review authority for injection candidates."""
 
