@@ -339,11 +339,13 @@ class AutomatedTimedSpanOrchestrationService:
                     injection_request.request_id
                 )
                 if current_injection is not None:
-                    review = self.injection_reviews.review_for_result(current_injection.result_id)
+                    injection_review = self.injection_reviews.review_for_result(
+                        current_injection.result_id
+                    )
                     if (
-                        review is not None
-                        and review.decision is IntroductionInjectionDecision.APPROVED
-                        and review.image_sha256 == current_injection.image_sha256
+                        injection_review is not None
+                        and injection_review.decision is IntroductionInjectionDecision.APPROVED
+                        and injection_review.image_sha256 == current_injection.image_sha256
                         and self._has_human_injection_keyframe(
                             requirement,
                             current_injection,
@@ -351,7 +353,7 @@ class AutomatedTimedSpanOrchestrationService:
                         )
                     ):
                         continue
-                    if review is None:
+                    if injection_review is None:
                         return self._identity_gate_result(
                             spans=spans,
                             task_id=task_id,
@@ -434,11 +436,13 @@ class AutomatedTimedSpanOrchestrationService:
             if identity_gate:
                 current_candidate = self.boundaries.latest_result_for_request(request.request_id)
                 if current_candidate is not None:
-                    review = self.identity_reviews.review_for_result(current_candidate.result_id)
+                    identity_review = self.identity_reviews.review_for_result(
+                        current_candidate.result_id
+                    )
                     if (
-                        review is not None
-                        and review.decision is IntroductionIdentityDecision.APPROVED
-                        and review.image_sha256 == current_candidate.image_sha256
+                        identity_review is not None
+                        and identity_review.decision is IntroductionIdentityDecision.APPROVED
+                        and identity_review.image_sha256 == current_candidate.image_sha256
                         and self._has_human_identity_keyframe(
                             requirement,
                             current_candidate,
@@ -446,7 +450,7 @@ class AutomatedTimedSpanOrchestrationService:
                         )
                     ):
                         continue
-                    if review is None:
+                    if identity_review is None:
                         return self._identity_gate_result(
                             spans=spans,
                             task_id=task_id,
