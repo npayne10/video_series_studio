@@ -4,6 +4,10 @@ from .automated_introduction_boundary import (
     ComfyUIIntroductionBoundarySynthesisError,
     ComfyUIIntroductionBoundarySynthesizer,
 )
+from .introduction_asset_injection import (
+    ComfyUIIntroductionInjectionSynthesisError,
+    ComfyUIIntroductionInjectionSynthesizer,
+)
 from .automated_span_orchestration import (
     AutomatedSpanOrchestrationError,
     AutomatedSpanOrchestrationResult,
@@ -74,6 +78,8 @@ __all__ = [
     "ComfyUIInputTrace",
     "ComfyUIIntroductionBoundarySynthesisError",
     "ComfyUIIntroductionBoundarySynthesizer",
+    "ComfyUIIntroductionInjectionSynthesisError",
+    "ComfyUIIntroductionInjectionSynthesizer",
     "ComfyUIV714InputAssurance",
     "GovernedInternalBoundaryFrameExtractor",
     "GovernedProviderOutputs",
