@@ -23,6 +23,11 @@ from .internal_render_spans import (
     GovernedInternalRenderSpanError,
     GovernedInternalRenderSpanPlan,
 )
+from .introduction_asset_injection import (
+    IntroductionInjectionBoundaryStore,
+    IntroductionInjectionDecision,
+    IntroductionInjectionReviewStore,
+)
 from .introduction_identity_gate import (
     IntroductionIdentityDecision,
     IntroductionIdentityReviewStore,
@@ -559,6 +564,8 @@ class TimedSpanAcceptanceEvaluator:
         self.acceptance = TimedSpanAcceptanceStore(self.project_directory)
         self.introduction_boundaries = AutomatedIntroductionBoundaryStore(self.project_directory)
         self.identity_reviews = IntroductionIdentityReviewStore(self.project_directory)
+        self.injection_boundaries = IntroductionInjectionBoundaryStore(self.project_directory)
+        self.injection_reviews = IntroductionInjectionReviewStore(self.project_directory)
 
     def evaluate(self, compiled_package: dict[str, Any]) -> TimedSpanAcceptanceStatus:
         shot_id = _shot_id(compiled_package)
@@ -663,39 +670,70 @@ class TimedSpanAcceptanceEvaluator:
         pending_qc: list[str] = []
         for requirement in requirements.requirements:
             if self._requires_identity_gate(requirement, timed):
-                result = self.introduction_boundaries.latest_result_for_requirement(
+                injection_result = self.injection_boundaries.latest_result_for_requirement(
                     requirement.requirement_id
                 )
-                review = (
-                    None
-                    if result is None
-                    else self.identity_reviews.review_for_result(result.result_id)
-                )
-                identity_approved = (
-                    result is not None
-                    and result.validation_state is AutomatedBoundaryValidationState.PASSED
-                    and review is not None
-                    and review.decision is IntroductionIdentityDecision.APPROVED
-                    and review.image_sha256 == result.image_sha256
-                )
-                if not identity_approved or result is None:
-                    pending_keyframes.append(requirement.requirement_id)
-                    pending_qc.append(requirement.requirement_id)
-                    continue
-                try:
-                    keyframe = self.keyframes.require_approved(requirement)
-                except GovernedIntroductionKeyframeError:
-                    pending_keyframes.append(requirement.requirement_id)
-                    pending_qc.append(requirement.requirement_id)
-                    continue
-                if (
-                    keyframe.approval_mode != "human"
-                    or keyframe.image_sha256 != result.image_sha256
-                ):
-                    pending_keyframes.append(requirement.requirement_id)
-                    pending_qc.append(requirement.requirement_id)
-                    continue
-                approved += 1
+                if injection_result is not None:
+                    injection_review = self.injection_reviews.review_for_result(
+                        injection_result.result_id
+                    )
+                    injection_approved = (
+                        injection_review is not None
+                        and injection_review.decision is IntroductionInjectionDecision.APPROVED
+                        and injection_review.image_sha256 == injection_result.image_sha256
+                    )
+                    if not injection_approved:
+                        pending_keyframes.append(requirement.requirement_id)
+                        pending_qc.append(requirement.requirement_id)
+                        continue
+                    try:
+                        keyframe = self.keyframes.require_approved(requirement)
+                    except GovernedIntroductionKeyframeError:
+                        pending_keyframes.append(requirement.requirement_id)
+                        pending_qc.append(requirement.requirement_id)
+                        continue
+                    if (
+                        keyframe.approval_mode != "human"
+                        or keyframe.image_sha256 != injection_result.image_sha256
+                    ):
+                        pending_keyframes.append(requirement.requirement_id)
+                        pending_qc.append(requirement.requirement_id)
+                        continue
+                    approved += 1
+                else:
+                    result = self.introduction_boundaries.latest_result_for_requirement(
+                        requirement.requirement_id
+                    )
+                    review = (
+                        None
+                        if result is None
+                        else self.identity_reviews.review_for_result(result.result_id)
+                    )
+                    identity_approved = (
+                        result is not None
+                        and result.validation_state is AutomatedBoundaryValidationState.PASSED
+                        and review is not None
+                        and review.decision is IntroductionIdentityDecision.APPROVED
+                        and review.image_sha256 == result.image_sha256
+                    )
+                    if not identity_approved or result is None:
+                        pending_keyframes.append(requirement.requirement_id)
+                        pending_qc.append(requirement.requirement_id)
+                        continue
+                    try:
+                        keyframe = self.keyframes.require_approved(requirement)
+                    except GovernedIntroductionKeyframeError:
+                        pending_keyframes.append(requirement.requirement_id)
+                        pending_qc.append(requirement.requirement_id)
+                        continue
+                    if (
+                        keyframe.approval_mode != "human"
+                        or keyframe.image_sha256 != result.image_sha256
+                    ):
+                        pending_keyframes.append(requirement.requirement_id)
+                        pending_qc.append(requirement.requirement_id)
+                        continue
+                    approved += 1
             else:
                 try:
                     self.keyframes.require_approved(requirement)
