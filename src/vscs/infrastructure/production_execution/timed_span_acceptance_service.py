@@ -16,6 +16,10 @@ from vscs.application.production_execution import (
     IntroductionIdentityCandidateStatus,
     IntroductionIdentityDecision,
     IntroductionIdentityReviewStore,
+    IntroductionInjectionBoundaryStore,
+    IntroductionInjectionCandidateStatus,
+    IntroductionInjectionDecision,
+    IntroductionInjectionReviewStore,
     IntroductionKeyframeRequirement,
     IntroductionKeyframeRequirementPlan,
     TimedSpanAcceptanceError,
@@ -49,6 +53,8 @@ class TimedSpanFunctionalAcceptanceService:
         self.acceptance = TimedSpanAcceptanceStore(self.project_directory)
         self.boundaries = AutomatedIntroductionBoundaryStore(self.project_directory)
         self.identity_reviews = IntroductionIdentityReviewStore(self.project_directory)
+        self.injection_boundaries = IntroductionInjectionBoundaryStore(self.project_directory)
+        self.injection_reviews = IntroductionInjectionReviewStore(self.project_directory)
         self.evaluator = TimedSpanAcceptanceEvaluator(self.project_directory)
 
     def status(self, compiled_package_path: Path | None) -> TimedSpanAcceptanceStatus:
@@ -285,6 +291,193 @@ class TimedSpanFunctionalAcceptanceService:
         self.acceptance.invalidate_assembly(
             requirement.shot_id,
             reason="Introduction identity candidate was rejected.",
+        )
+        return self.status(compiled_package_path)
+
+    def injection_candidate(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str | None = None,
+    ) -> IntroductionInjectionCandidateStatus | None:
+        requirements = self.requirements(compiled_package_path)
+        selected = tuple(
+            requirement
+            for requirement in requirements
+            if requirement_id is None or requirement.requirement_id == requirement_id.strip()
+        )
+        for requirement in selected:
+            result = self.injection_boundaries.latest_result_for_requirement(
+                requirement.requirement_id
+            )
+            if result is None:
+                continue
+            request = self.injection_boundaries.request_for_id(result.request_id)
+            if request is None or request.requirement_id != requirement.requirement_id:
+                continue
+            if result.canonical_asset_id != request.canonical_asset.authority_id:
+                raise TimedSpanFunctionalAcceptanceServiceError(
+                    "Injection candidate canonical asset authority does not match its request."
+                )
+            if result.injection_region_id != request.injection_region.region_id:
+                raise TimedSpanFunctionalAcceptanceServiceError(
+                    "Injection candidate region authority does not match its request."
+                )
+            review = self.injection_reviews.review_for_result(result.result_id)
+            return IntroductionInjectionCandidateStatus(
+                requirement_id=requirement.requirement_id,
+                result_id=result.result_id,
+                image_path=result.image_path,
+                image_sha256=result.image_sha256,
+                canonical_asset=request.canonical_asset,
+                injection_region=request.injection_region,
+                target_global_frame_index=request.target_global_frame_index,
+                attempt_number=result.attempt_number,
+                decision=None if review is None else review.decision,
+            )
+        return None
+
+    def approve_injection_candidate(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        requirement = self._require_requirement(compiled_package_path, requirement_id)
+        candidate = self.injection_candidate(
+            compiled_package_path,
+            requirement_id=requirement.requirement_id,
+        )
+        if candidate is None:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "No identity-locked injection candidate exists for this requirement."
+            )
+        if not candidate.pending:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "The latest injection candidate has already been reviewed."
+            )
+        result = self.injection_boundaries.latest_result_for_requirement(
+            requirement.requirement_id
+        )
+        if result is None or result.result_id != candidate.result_id:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Injection candidate changed before approval."
+            )
+        request = self.injection_boundaries.request_for_id(result.request_id)
+        if request is None:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Injection candidate has no immutable injection request."
+            )
+        actor = approved_by.strip()
+        if not actor:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Injection candidate approval requires a human reviewer."
+            )
+
+        image = self._project_file(Path(result.image_path), "injection candidate image")
+        source = self._project_file(
+            Path(request.source_boundary_image_path),
+            "injection candidate source boundary",
+        )
+        if self._sha256(image) != result.image_sha256:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Injection candidate image checksum changed before approval."
+            )
+        if self._sha256(source) != request.source_boundary_image_sha256:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Injection candidate source-boundary checksum changed before approval."
+            )
+        for reference_id, raw_path, checksum in zip(
+            request.canonical_asset.reference_ids,
+            request.canonical_asset.reference_paths,
+            request.canonical_asset.reference_sha256,
+            strict=True,
+        ):
+            reference = self._project_file(
+                Path(raw_path),
+                f"canonical injection reference {reference_id}",
+            )
+            if self._sha256(reference) != checksum:
+                raise TimedSpanFunctionalAcceptanceServiceError(
+                    f"Canonical injection reference checksum changed: {reference_id}"
+                )
+
+        record = self.keyframes.create_record(
+            requirement,
+            image_path=image.relative_to(self.project_directory).as_posix(),
+            image_sha256=result.image_sha256,
+            source_boundary_image_path=source.relative_to(self.project_directory).as_posix(),
+            source_boundary_image_sha256=request.source_boundary_image_sha256,
+            approved_by=actor,
+            approved_at=datetime.now(UTC).isoformat(),
+            acceptance_criteria=INTRODUCTION_KEYFRAME_ACCEPTANCE_CRITERIA,
+            approval_mode="human",
+        )
+        try:
+            self.keyframes.save(record, requirement)
+            self.injection_reviews.record(
+                requirement_id=requirement.requirement_id,
+                result_id=result.result_id,
+                image_sha256=result.image_sha256,
+                decision=IntroductionInjectionDecision.APPROVED,
+                reviewed_by=actor,
+                notes=notes,
+            )
+            self.acceptance.invalidate_qc(
+                requirement.requirement_id,
+                reason="Identity-locked injection authority changed after human approval.",
+            )
+            self.acceptance.invalidate_assembly(
+                requirement.shot_id,
+                reason="Identity-locked injection authority changed after human approval.",
+            )
+        except Exception as exc:
+            raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
+        return self.status(compiled_package_path)
+
+    def reject_injection_candidate(
+        self,
+        compiled_package_path: Path,
+        *,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        requirement = self._require_requirement(compiled_package_path, requirement_id)
+        candidate = self.injection_candidate(
+            compiled_package_path,
+            requirement_id=requirement.requirement_id,
+        )
+        if candidate is None:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "No identity-locked injection candidate exists for this requirement."
+            )
+        if not candidate.pending:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "The latest injection candidate has already been reviewed."
+            )
+        actor = rejected_by.strip()
+        if not actor:
+            raise TimedSpanFunctionalAcceptanceServiceError(
+                "Injection candidate rejection requires a human reviewer."
+            )
+        self.injection_reviews.record(
+            requirement_id=requirement.requirement_id,
+            result_id=candidate.result_id,
+            image_sha256=candidate.image_sha256,
+            decision=IntroductionInjectionDecision.REJECTED,
+            reviewed_by=actor,
+            notes=notes,
+        )
+        self.acceptance.invalidate_qc(
+            requirement.requirement_id,
+            reason="Identity-locked injection candidate was rejected.",
+        )
+        self.acceptance.invalidate_assembly(
+            requirement.shot_id,
+            reason="Identity-locked injection candidate was rejected.",
         )
         return self.status(compiled_package_path)
 
