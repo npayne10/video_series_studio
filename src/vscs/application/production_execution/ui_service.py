@@ -9,6 +9,7 @@ from typing import Protocol, cast
 
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 
+from .introduction_asset_injection import IntroductionInjectionCandidateStatus
 from .introduction_identity_gate import IntroductionIdentityCandidateStatus
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
@@ -190,6 +191,39 @@ class _IntroductionIdentityCandidateForProfile(Protocol):
         *,
         profile: str,
     ) -> IntroductionIdentityCandidateStatus | None: ...
+
+
+class _IntroductionInjectionCandidateForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> IntroductionInjectionCandidateStatus | None: ...
+
+
+class _ApproveIntroductionInjectionForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus: ...
+
+
+class _RejectIntroductionInjectionForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus: ...
 
 
 class _ApproveIntroductionIdentityForProfile(Protocol):
@@ -483,6 +517,82 @@ class ProductionExecutionUiService:
         return cast(_IntroductionIdentityCandidateForProfile, operation)(
             normalized,
             profile=execution_profile,
+        )
+
+    def introduction_injection_candidate(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> IntroductionInjectionCandidateStatus | None:
+        normalized = self._task_id(task_id, "inspecting an introduction injection candidate")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "introduction_injection_candidate_for_profile",
+            None,
+        )
+        if operation is None:
+            return None
+        return cast(_IntroductionInjectionCandidateForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def approve_introduction_injection(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "approving an introduction injection candidate")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "approve_introduction_injection_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support introduction injection approval."
+            )
+        return cast(_ApproveIntroductionInjectionForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            requirement_id=requirement_id,
+            approved_by=approved_by,
+            notes=notes,
+        )
+
+    def reject_introduction_injection(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        normalized = self._task_id(task_id, "rejecting an introduction injection candidate")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "reject_introduction_injection_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support introduction injection rejection."
+            )
+        return cast(_RejectIntroductionInjectionForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            requirement_id=requirement_id,
+            rejected_by=rejected_by,
+            notes=notes,
         )
 
     def approve_introduction_identity(
