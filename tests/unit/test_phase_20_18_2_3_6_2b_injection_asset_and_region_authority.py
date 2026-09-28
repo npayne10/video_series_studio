@@ -127,6 +127,19 @@ def test_resolver_pins_exact_character_reference_evidence_in_requirement_order()
     assert asset.authority_id.startswith("CIA-")
 
 
+@pytest.mark.parametrize("status", ["failed", ""])
+def test_resolver_requires_explicitly_passed_reference_plan(status: str) -> None:
+    reference_plan = _reference_plan()
+    reference_plan["status"] = status
+
+    with pytest.raises(CanonicalInjectionAssetResolutionError, match="passed governed ReferencePlan"):
+        CanonicalInjectionAssetResolver().resolve(
+            _requirement(),
+            _timed(),
+            reference_plan,
+        )
+
+
 def test_resolver_rejects_reference_bound_to_wrong_asset() -> None:
     reference_plan = _reference_plan()
     references = reference_plan["references"]
