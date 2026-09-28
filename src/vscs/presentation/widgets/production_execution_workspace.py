@@ -783,6 +783,14 @@ class ProductionExecutionWorkspace(QWidget):
         service = self._service_provider()
         if service is None:
             return
+        injection_supported = getattr(
+            service,
+            "introduction_injection_review_supported",
+            None,
+        )
+        if callable(injection_supported) and injection_supported():
+            self.approve_introduction_keyframe_button.setEnabled(False)
+            return
         try:
             identity_gate_required = service.introduction_identity_gate_required(
                 self._selected_task_id,
