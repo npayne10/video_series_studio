@@ -202,9 +202,9 @@ class IntroductionInjectionRegionCompiler:
 
         if side is IntroductionInjectionSide.LEFT:
             left = 0.0
-            right = self.edge_width_ratio
+            right = round(self.edge_width_ratio, 12)
         elif side is IntroductionInjectionSide.RIGHT:
-            left = 1.0 - self.edge_width_ratio
+            left = round(1.0 - self.edge_width_ratio, 12)
             right = 1.0
         else:
             raise IntroductionInjectionRegionError(
