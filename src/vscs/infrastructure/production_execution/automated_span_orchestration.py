@@ -21,6 +21,18 @@ from vscs.application.production_execution.automated_introduction_boundary impor
 from vscs.application.production_execution.internal_render_spans import (
     GovernedInternalRenderSpanPlan,
 )
+from vscs.application.production_execution.introduction_asset_injection import (
+    IntroductionInjectionBoundaryStore,
+    IntroductionInjectionDecision,
+    IntroductionInjectionRequest,
+    IntroductionInjectionResult,
+    IntroductionInjectionReviewStore,
+    IntroductionInjectionSide,
+)
+from vscs.application.production_execution.introduction_asset_injection_authority import (
+    CanonicalInjectionAssetResolver,
+    IntroductionInjectionRegionCompiler,
+)
 from vscs.application.production_execution.introduction_identity_gate import (
     IntroductionIdentityDecision,
     IntroductionIdentityReviewStore,
@@ -65,6 +77,17 @@ class IntroductionBoundarySynthesizer(Protocol):
         self,
         request: AutomatedIntroductionBoundaryRequest,
     ) -> AutomatedIntroductionBoundaryResult: ...
+
+
+class IntroductionInjectionSynthesizer(Protocol):
+    def preflight(self) -> None: ...
+
+    def synthesize(
+        self,
+        request: IntroductionInjectionRequest,
+        *,
+        attempt_number: int,
+    ) -> IntroductionInjectionResult: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +186,7 @@ class AutomatedTimedSpanOrchestrationService:
         *,
         span_provider: SpanVideoProvider,
         synthesizer: IntroductionBoundarySynthesizer,
+        injection_synthesizer: IntroductionInjectionSynthesizer | None = None,
         extractor: GovernedInternalBoundaryFrameExtractor | None = None,
         assembly_runtime: GovernedSpanAssemblyRuntime | None = None,
         managed_media_directory: str | Path = "Media Output",
@@ -170,6 +194,7 @@ class AutomatedTimedSpanOrchestrationService:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.span_provider = span_provider
         self.synthesizer = synthesizer
+        self.injection_synthesizer = injection_synthesizer
         self.extractor = extractor or GovernedInternalBoundaryFrameExtractor(self.project_directory)
         self.assembly_runtime = assembly_runtime or GovernedSpanAssemblyRuntime(
             self.project_directory
@@ -178,6 +203,10 @@ class AutomatedTimedSpanOrchestrationService:
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
         self.boundaries = AutomatedIntroductionBoundaryStore(self.project_directory)
         self.identity_reviews = IntroductionIdentityReviewStore(self.project_directory)
+        self.injection_boundaries = IntroductionInjectionBoundaryStore(self.project_directory)
+        self.injection_reviews = IntroductionInjectionReviewStore(self.project_directory)
+        self.injection_assets = CanonicalInjectionAssetResolver()
+        self.injection_regions = IntroductionInjectionRegionCompiler()
         self.packages = LTX25TimedSpanAcceptancePackageBuilder(self.project_directory)
         self.acceptance = TimedSpanFunctionalAcceptanceService(self.project_directory)
 
@@ -295,6 +324,98 @@ class AutomatedTimedSpanOrchestrationService:
                 global_frame_index=requirement.source_global_frame_index,
             )
             boundary_sha256 = file_sha256(boundary_image)
+            identity_gate = self._requires_identity_gate(requirement, timed)
+            if identity_gate and self.injection_synthesizer is not None:
+                injection_request = self._injection_request(
+                    raw=raw,
+                    requirement=requirement,
+                    timed=timed,
+                    reference_plan=reference_plan,
+                    boundary_image=boundary_image,
+                    boundary_sha256=boundary_sha256,
+                    package_fingerprint=package_fingerprint,
+                )
+                current_injection = self.injection_boundaries.latest_result_for_request(
+                    injection_request.request_id
+                )
+                if current_injection is not None:
+                    review = self.injection_reviews.review_for_result(current_injection.result_id)
+                    if (
+                        review is not None
+                        and review.decision is IntroductionInjectionDecision.APPROVED
+                        and review.image_sha256 == current_injection.image_sha256
+                        and self._has_human_injection_keyframe(
+                            requirement,
+                            current_injection,
+                            boundary_sha256,
+                        )
+                    ):
+                        continue
+                    if review is None:
+                        return self._identity_gate_result(
+                            spans=spans,
+                            task_id=task_id,
+                            span_outputs=span_outputs,
+                            synthesized_ids=synthesized_ids,
+                            package_path=package_path,
+                        )
+
+                self._release_provider_memory()
+                try:
+                    self.injection_synthesizer.preflight()
+                except Exception as exc:
+                    raise AutomatedSpanOrchestrationError(
+                        f"Identity-locked injection provider is not ready: {exc}"
+                    ) from exc
+                self.injection_boundaries.save_request(injection_request)
+                attempt_number = (
+                    self.injection_reviews.rejected_count(requirement.requirement_id) + 1
+                )
+                try:
+                    injection_result = self.injection_synthesizer.synthesize(
+                        injection_request,
+                        attempt_number=attempt_number,
+                    )
+                except Exception as exc:
+                    raise AutomatedSpanOrchestrationError(
+                        f"Identity-locked Introduction injection failed safely: {exc}"
+                    ) from exc
+                self.injection_boundaries.save_result(injection_result)
+                self.acceptance.acceptance.invalidate_qc(
+                    requirement.requirement_id,
+                    reason="A new identity-locked injection candidate requires fresh visual QC.",
+                )
+                self.acceptance.acceptance.invalidate_assembly(
+                    requirement.shot_id,
+                    reason="A new identity-locked injection candidate makes prior Shot assembly stale.",
+                )
+                self._audit(
+                    task_id,
+                    {
+                        "event": "introduction_injection_candidate_generated",
+                        "requirement_id": requirement.requirement_id,
+                        "result_id": injection_result.result_id,
+                        "request_id": injection_request.request_id,
+                        "target_global_frame_index": requirement.target_global_frame_index,
+                        "image_path": injection_result.image_path,
+                        "image_sha256": injection_result.image_sha256,
+                        "canonical_asset_id": injection_result.canonical_asset_id,
+                        "injection_region_id": injection_result.injection_region_id,
+                        "injection_side": injection_request.injection_region.side.value,
+                        "attempt_number": injection_result.attempt_number,
+                        "provider": injection_result.provider_name,
+                        "model": injection_result.model,
+                    },
+                )
+                self._release_provider_memory()
+                return self._identity_gate_result(
+                    spans=spans,
+                    task_id=task_id,
+                    span_outputs=span_outputs,
+                    synthesized_ids=synthesized_ids,
+                    package_path=package_path,
+                )
+
             request = request_from_requirement(
                 requirement,
                 source_boundary_image_path=boundary_image,
@@ -310,7 +431,6 @@ class AutomatedTimedSpanOrchestrationService:
                     + self.identity_reviews.rejected_count(requirement.requirement_id)
                 ),
             )
-            identity_gate = self._requires_identity_gate(requirement, timed)
             if identity_gate:
                 current_candidate = self.boundaries.latest_result_for_request(request.request_id)
                 if current_candidate is not None:
@@ -459,6 +579,94 @@ class AutomatedTimedSpanOrchestrationService:
             and presence.asset_kind.value == "character"
             and presence.introduction.value == "enter"
             for presence in timed.presences
+        )
+
+    def _injection_request(
+        self,
+        *,
+        raw: dict[str, Any],
+        requirement: IntroductionKeyframeRequirement,
+        timed: TimedAssetPresencePlan,
+        reference_plan: dict[str, Any],
+        boundary_image: Path,
+        boundary_sha256: str,
+        package_fingerprint: str,
+    ) -> IntroductionInjectionRequest:
+        canonical_asset = self.injection_assets.resolve(
+            requirement,
+            timed,
+            reference_plan,
+        )
+        side = self._injection_side(raw, requirement)
+        width = int(raw.get("width") or 0)
+        height = int(raw.get("height") or 0)
+        region = self.injection_regions.compile(
+            width=width,
+            height=height,
+            side=side,
+        )
+        rejected = self.injection_reviews.rejected_count(requirement.requirement_id)
+        return IntroductionInjectionRequest(
+            shot_id=requirement.shot_id,
+            requirement_id=requirement.requirement_id,
+            boundary_id=requirement.boundary_id,
+            source_span_id=requirement.source_span_id,
+            target_span_id=requirement.target_span_id,
+            source_global_frame_index=requirement.source_global_frame_index,
+            target_global_frame_index=requirement.target_global_frame_index,
+            source_boundary_image_path=str(boundary_image),
+            source_boundary_image_sha256=boundary_sha256,
+            canonical_asset=canonical_asset,
+            injection_region=region,
+            width=width,
+            height=height,
+            seed=int(raw.get("seed") or 0)
+            + requirement.target_global_frame_index
+            + rejected,
+            timed_asset_presence_fingerprint=timed.fingerprint,
+            source_package_fingerprint=package_fingerprint,
+        )
+
+    @staticmethod
+    def _injection_side(
+        raw: dict[str, Any],
+        requirement: IntroductionKeyframeRequirement,
+    ) -> IntroductionInjectionSide:
+        authority = raw.get("introduction_injection_authority")
+        if isinstance(authority, dict):
+            sides = authority.get("sides")
+            if isinstance(sides, dict):
+                value = str(sides.get(requirement.requirement_id) or "").strip().casefold()
+                if value:
+                    try:
+                        side = IntroductionInjectionSide(value)
+                    except ValueError as exc:
+                        raise AutomatedSpanOrchestrationError(
+                            f"Unsupported governed injection side for "
+                            f"{requirement.requirement_id}: {value!r}"
+                        ) from exc
+                    if side is IntroductionInjectionSide.AUTO:
+                        raise AutomatedSpanOrchestrationError(
+                            "Governed injection authority cannot delegate AUTO placement "
+                            "to the provider"
+                        )
+                    return side
+        return IntroductionInjectionSide.RIGHT
+
+    def _has_human_injection_keyframe(
+        self,
+        requirement: IntroductionKeyframeRequirement,
+        result: IntroductionInjectionResult,
+        source_boundary_sha256: str,
+    ) -> bool:
+        try:
+            current = self.keyframes.require_approved(requirement)
+        except GovernedIntroductionKeyframeError:
+            return False
+        return (
+            current.approval_mode == "human"
+            and current.image_sha256 == result.image_sha256
+            and current.source_boundary_image_sha256 == source_boundary_sha256.strip().lower()
         )
 
     def _has_human_identity_keyframe(
