@@ -132,7 +132,9 @@ def test_resolver_requires_explicitly_passed_reference_plan(status: str) -> None
     reference_plan = _reference_plan()
     reference_plan["status"] = status
 
-    with pytest.raises(CanonicalInjectionAssetResolutionError, match="passed governed ReferencePlan"):
+    with pytest.raises(
+        CanonicalInjectionAssetResolutionError, match="passed governed ReferencePlan"
+    ):
         CanonicalInjectionAssetResolver().resolve(
             _requirement(),
             _timed(),

@@ -130,8 +130,7 @@ class CanonicalInjectionAssetResolver:
         matches = tuple(
             presence
             for presence in timed_presence.presences
-            if presence.asset_id == asset_id
-            and presence.from_frame == target_global_frame_index
+            if presence.asset_id == asset_id and presence.from_frame == target_global_frame_index
         )
         if len(matches) != 1:
             raise CanonicalInjectionAssetResolutionError(
@@ -207,9 +206,7 @@ class IntroductionInjectionRegionCompiler:
             left = round(1.0 - self.edge_width_ratio, 12)
             right = 1.0
         else:
-            raise IntroductionInjectionRegionError(
-                f"Unsupported injection side: {side!s}"
-            )
+            raise IntroductionInjectionRegionError(f"Unsupported injection side: {side!s}")
 
         region = InjectionRegionAuthority(
             side=side,
