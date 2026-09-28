@@ -10,6 +10,7 @@ from vscs.application.production_execution import (
     CanonicalInjectionAsset,
     InjectionRegionAuthority,
     IntroductionAssetInjectionError,
+    IntroductionInjectionBoundaryStore,
     IntroductionInjectionCandidateStatus,
     IntroductionInjectionDecision,
     IntroductionInjectionMode,
@@ -274,3 +275,27 @@ def test_review_round_trip_detects_decision_tampering() -> None:
     tampered["decision"] = IntroductionInjectionDecision.REJECTED.value
     with pytest.raises(IntroductionAssetInjectionError, match="identity"):
         IntroductionInjectionReview.from_dict(tampered)
+
+
+def test_injection_boundary_store_binds_result_to_exact_request_authority(
+    tmp_path: Path,
+) -> None:
+    request = _request()
+    result = _result(request)
+    store = IntroductionInjectionBoundaryStore(tmp_path)
+
+    stored_request = store.save_request(request)
+    stored_result = store.save_result(result)
+
+    assert stored_request.request_id == request.request_id
+    assert stored_result.result_id == result.result_id
+    assert store.latest_result_for_requirement(request.requirement_id) == result
+    assert store.latest_result_for_request(request.request_id) == result
+
+    with pytest.raises(IntroductionAssetInjectionError, match="canonical asset authority"):
+        store.save_result(
+            replace(
+                result,
+                canonical_asset_id="CIA-TAMPERED",
+            )
+        )
