@@ -63,6 +63,7 @@ from .automated_span_provider import (
     AutomatedSpanProviderError,
     LTX25AutomatedSpanProvider,
 )
+from .introduction_asset_injection import ComfyUIIntroductionInjectionSynthesizer
 from .current_authority_backend import (
     CurrentAuthorityLTX23V721ProductionPackageCompilationService,
 )
@@ -677,10 +678,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 self.project_directory,
                 base_url=self.endpoint,
             )
+            injection_synthesizer = ComfyUIIntroductionInjectionSynthesizer(
+                self.project_directory,
+                base_url=self.endpoint,
+            )
             result = AutomatedTimedSpanOrchestrationService(
                 self.project_directory,
                 span_provider=span_provider,
                 synthesizer=synthesizer,
+                injection_synthesizer=injection_synthesizer,
                 managed_media_directory=self.managed_media_directory,
             ).run(package.path)
             return result.acceptance_status
