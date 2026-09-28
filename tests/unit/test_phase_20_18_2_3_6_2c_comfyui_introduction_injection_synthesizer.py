@@ -170,7 +170,7 @@ def test_synthesizer_rejects_canonical_reference_checksum_drift(tmp_path: Path) 
 
     with pytest.raises(
         ComfyUIIntroductionInjectionSynthesisError,
-        match="canonical injection reference checksum changed",
+        match="Canonical injection reference checksum changed",
     ):
         synthesizer.synthesize(request, attempt_number=1)
 
