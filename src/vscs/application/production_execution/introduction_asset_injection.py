@@ -165,7 +165,9 @@ class CanonicalInjectionAsset:
             raise IntroductionAssetInjectionError(
                 "Canonical injection reference checksums cannot be blank"
             )
-        object.__setattr__(self, "reference_ids", tuple(value.strip() for value in self.reference_ids))
+        object.__setattr__(
+            self, "reference_ids", tuple(value.strip() for value in self.reference_ids)
+        )
         object.__setattr__(
             self,
             "reference_paths",
@@ -252,16 +254,12 @@ class IntroductionInjectionRequest:
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
-                raise IntroductionAssetInjectionError(
-                    f"Injection request requires {field_name}"
-                )
+                raise IntroductionAssetInjectionError(f"Injection request requires {field_name}")
             if field_name.endswith("sha256") or field_name.endswith("fingerprint"):
                 value = value.lower()
             object.__setattr__(self, field_name, value)
         if self.source_global_frame_index < 0:
-            raise IntroductionAssetInjectionError(
-                "Injection source frame index cannot be negative"
-            )
+            raise IntroductionAssetInjectionError("Injection source frame index cannot be negative")
         if self.target_global_frame_index != self.source_global_frame_index + 1:
             raise IntroductionAssetInjectionError(
                 "Injection target frame must immediately follow the source boundary"
@@ -335,9 +333,7 @@ class IntroductionInjectionRequest:
             width=int(raw.get("width") or 0),
             height=int(raw.get("height") or 0),
             seed=int(raw.get("seed") or 0),
-            timed_asset_presence_fingerprint=str(
-                raw.get("timed_asset_presence_fingerprint") or ""
-            ),
+            timed_asset_presence_fingerprint=str(raw.get("timed_asset_presence_fingerprint") or ""),
             source_package_fingerprint=str(raw.get("source_package_fingerprint") or ""),
             mode=IntroductionInjectionMode(
                 str(raw.get("mode") or IntroductionInjectionMode.CHARACTER_ENTER.value)
@@ -383,9 +379,7 @@ class IntroductionInjectionResult:
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
-                raise IntroductionAssetInjectionError(
-                    f"Injection result requires {field_name}"
-                )
+                raise IntroductionAssetInjectionError(f"Injection result requires {field_name}")
             if field_name == "image_sha256":
                 value = value.lower()
             object.__setattr__(self, field_name, value)
@@ -464,9 +458,7 @@ class IntroductionInjectionReview:
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
-                raise IntroductionAssetInjectionError(
-                    f"Injection review requires {field_name}"
-                )
+                raise IntroductionAssetInjectionError(f"Injection review requires {field_name}")
             if field_name == "image_sha256":
                 value = value.lower()
             object.__setattr__(self, field_name, value)

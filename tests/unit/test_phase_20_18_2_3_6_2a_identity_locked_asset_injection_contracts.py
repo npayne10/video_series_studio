@@ -27,8 +27,7 @@ def _asset() -> CanonicalInjectionAsset:
         asset_kind="character",
         reference_ids=("LIVE-SECONDARY_IDENTITY-CAP-CHR-005",),
         reference_paths=(
-            "CAP/characters/CAP-CHR-005_Major_Ros_Rohsgard/approved/"
-            "CAP-CHR-005 V2.png",
+            "CAP/characters/CAP-CHR-005_Major_Ros_Rohsgard/approved/CAP-CHR-005 V2.png",
         ),
         reference_sha256=("ABCDEF1234",),
     )
@@ -70,7 +69,9 @@ def _request() -> IntroductionInjectionRequest:
     )
 
 
-def _result(request: IntroductionInjectionRequest, *, attempt: int = 1) -> IntroductionInjectionResult:
+def _result(
+    request: IntroductionInjectionRequest, *, attempt: int = 1
+) -> IntroductionInjectionResult:
     return IntroductionInjectionResult(
         request_id=request.request_id,
         requirement_id=request.requirement_id,
