@@ -44,6 +44,12 @@ from .introduction_asset_injection import (
     IntroductionInjectionReviewStore,
     IntroductionInjectionSide,
 )
+from .introduction_asset_injection_authority import (
+    CanonicalInjectionAssetResolutionError,
+    CanonicalInjectionAssetResolver,
+    IntroductionInjectionRegionCompiler,
+    IntroductionInjectionRegionError,
+)
 from .introduction_identity_gate import (
     IntroductionIdentityCandidateStatus,
     IntroductionIdentityDecision,
@@ -139,6 +145,10 @@ __all__ = [
     "AutomatedIntroductionBoundaryResult",
     "AutomatedIntroductionBoundaryStore",
     "CanonicalInjectionAsset",
+    "IntroductionInjectionRegionError",
+    "IntroductionInjectionRegionCompiler",
+    "CanonicalInjectionAssetResolver",
+    "CanonicalInjectionAssetResolutionError",
     "CompiledProductionPackage",
     "GovernedClosingBoundaryFrame",
     "GovernedInternalRenderSpan",
