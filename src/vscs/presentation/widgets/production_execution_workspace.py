@@ -985,6 +985,16 @@ class ProductionExecutionWorkspace(QWidget):
         service = self._service_provider()
         if service is None:
             return
+        injection_supported = getattr(
+            service,
+            "introduction_injection_review_supported",
+            None,
+        )
+        if callable(injection_supported) and injection_supported():
+            self.identity_candidate_state.setText(
+                "Introduction Identity QC: superseded by identity-locked injection authority"
+            )
+            return
         try:
             candidate = service.introduction_identity_candidate(
                 self._selected_task_id,
