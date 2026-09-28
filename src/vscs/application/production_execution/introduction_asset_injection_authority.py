@@ -143,7 +143,7 @@ class CanonicalInjectionAssetResolver:
     @staticmethod
     def _reference_records(reference_plan: dict[str, Any]) -> tuple[dict[str, Any], ...]:
         status = str(reference_plan.get("status") or "").strip().casefold()
-        if status and status != "passed":
+        if status != "passed":
             raise CanonicalInjectionAssetResolutionError(
                 "Canonical injection requires a passed governed ReferencePlan"
             )
