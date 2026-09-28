@@ -17,6 +17,8 @@ from vscs.application.production_execution import (
     IntroductionBoundaryProviderCapabilities,
     IntroductionBoundaryStrategy,
     IntroductionIdentityCandidateStatus,
+    IntroductionInjectionDecision,
+    IntroductionInjectionResult,
     ProductionExecutionCandidate,
     ProductionExecutionUiService,
     ProductionPackageCompilationState,
@@ -1234,3 +1236,167 @@ def test_automated_span_request_declares_governed_keyframe_image_to_video(
         diagnostic for diagnostic in report.diagnostics if diagnostic.severity.value == "error"
     )
     assert errors == ()
+
+
+class _FakeInjectionSynthesizer:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.preflight_calls = 0
+
+    def preflight(self) -> None:
+        self.preflight_calls += 1
+
+    def synthesize(
+        self,
+        request: Any,
+        *,
+        attempt_number: int,
+    ) -> IntroductionInjectionResult:
+        self.calls += 1
+        target = (
+            Path(request.source_boundary_image_path).parents[0]
+            / request.request_id
+            / f"frame-{request.target_global_frame_index:06d}.png"
+        )
+        _png(target, (120 + attempt_number, 20, 30))
+        return IntroductionInjectionResult(
+            request_id=request.request_id,
+            requirement_id=request.requirement_id,
+            image_path=str(target),
+            image_sha256=_sha(target),
+            canonical_asset_id=request.canonical_asset.authority_id,
+            injection_region_id=request.injection_region.region_id,
+            provider_name="Fake Identity-Locked Injection",
+            model="Fake Qwen Edit",
+            generated_at=f"2026-09-28T20:0{attempt_number}:00+02:00",
+            attempt_number=attempt_number,
+        )
+
+
+def test_character_enter_uses_identity_locked_injection_and_pauses_for_review(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    legacy_synthesizer = _CountingSynthesizer()
+    injection = _FakeInjectionSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=legacy_synthesizer,
+        injection_synthesizer=injection,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+
+    result = service.run(package_path)
+    candidate = TimedSpanFunctionalAcceptanceService(tmp_path).injection_candidate(package_path)
+
+    assert result.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert provider.calls == 1
+    assert legacy_synthesizer.calls == 0
+    assert injection.calls == 1
+    assert candidate is not None
+    assert candidate.pending
+    assert candidate.canonical_asset.asset_id == "CAP-CHR-005"
+    assert candidate.injection_region.side.value == "right"
+    assert candidate.target_global_frame_index == 96
+    assert candidate.attempt_number == 1
+
+
+def test_approved_injection_promotes_human_keyframe_then_resumes_target_span(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    injection = _FakeInjectionSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=_CountingSynthesizer(),
+        injection_synthesizer=injection,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+
+    first = service.run(package_path)
+    acceptance = TimedSpanFunctionalAcceptanceService(tmp_path)
+    candidate = acceptance.injection_candidate(package_path)
+    assert candidate is not None
+
+    status = acceptance.approve_injection_candidate(
+        package_path,
+        requirement_id=candidate.requirement_id,
+        approved_by="Neill Payne",
+        notes="Canonical identity, edge placement, partial visibility, and scale approved.",
+    )
+    assert status.state is TimedSpanAcceptanceState.OUTPUTS_REQUIRED
+
+    second = service.run(package_path)
+    requirement = _authority(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )[3].requirements[0]
+    keyframe = GovernedIntroductionKeyframeStore(tmp_path).require_approved(requirement)
+
+    assert first.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert provider.calls == 2
+    assert injection.calls == 1
+    assert keyframe.approval_mode == "human"
+    assert keyframe.image_sha256 == candidate.image_sha256
+    assert second.final_path is not None
+    assert second.acceptance_status.state is TimedSpanAcceptanceState.QC_REQUIRED
+
+
+def test_rejected_injection_regenerates_new_attempt_without_rerendering_span_one(
+    tmp_path: Path,
+) -> None:
+    package_path, _raw = _candidate_package(
+        tmp_path,
+        introduction=AssetPresenceIntroduction.ENTER,
+    )
+    provider = _FakeSpanProvider(tmp_path / "provider")
+    injection = _FakeInjectionSynthesizer()
+    service = AutomatedTimedSpanOrchestrationService(
+        tmp_path,
+        span_provider=provider,
+        synthesizer=_CountingSynthesizer(),
+        injection_synthesizer=injection,
+        extractor=_FakeExtractor(tmp_path),
+        assembly_runtime=_FakeAssemblyRuntime(tmp_path),
+        managed_media_directory="Media Output",
+    )
+
+    service.run(package_path)
+    acceptance = TimedSpanFunctionalAcceptanceService(tmp_path)
+    first = acceptance.injection_candidate(package_path)
+    assert first is not None
+    acceptance.reject_injection_candidate(
+        package_path,
+        requirement_id=first.requirement_id,
+        rejected_by="Neill Payne",
+        notes="Entrance framing is not acceptable.",
+    )
+
+    second_result = service.run(package_path)
+    second = acceptance.injection_candidate(package_path)
+
+    assert second_result.acceptance_status.state is TimedSpanAcceptanceState.KEYFRAME_REQUIRED
+    assert provider.calls == 1
+    assert injection.calls == 2
+    assert second is not None
+    assert second.pending
+    assert second.result_id != first.result_id
+    assert second.attempt_number == 2
+    assert first.decision is None
+    first_review = acceptance.injection_reviews.review_for_result(first.result_id)
+    assert first_review is not None
+    assert first_review.decision is IntroductionInjectionDecision.REJECTED
