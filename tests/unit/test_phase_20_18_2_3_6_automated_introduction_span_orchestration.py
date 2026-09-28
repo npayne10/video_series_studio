@@ -1256,6 +1256,42 @@ class _InjectionGateUiService(_UiService):
         return self.timed_span_acceptance_status(task_id, profile=profile)
 
 
+class _LegacyCandidateOnInjectionCapableUiService(_IdentityGateUiService):
+    def introduction_injection_review_supported(self) -> bool:
+        return True
+
+    def introduction_injection_candidate(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> IntroductionInjectionCandidateStatus | None:
+        assert task_id == "PT-AUTO-SPAN"
+        assert profile == "production"
+        return None
+
+
+def test_workspace_ignores_stale_legacy_identity_candidate_when_injection_is_supported(
+    qtbot: Any,
+    tmp_path: Path,
+) -> None:
+    service = _LegacyCandidateOnInjectionCapableUiService(tmp_path)
+    workspace = ProductionExecutionWorkspace(lambda: service)  # type: ignore[arg-type]
+    qtbot.addWidget(workspace)
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    assert workspace.injection_candidate_state.text() == "Injected Boundary QC: no candidate"
+    assert "superseded by identity-locked injection authority" in (
+        workspace.identity_candidate_state.text()
+    )
+    assert workspace.run_automated_spans_button.isEnabled()
+    assert not workspace.view_identity_candidate_button.isEnabled()
+    assert not workspace.approve_identity_candidate_button.isEnabled()
+    assert not workspace.reject_identity_candidate_button.isEnabled()
+    assert not workspace.approve_introduction_keyframe_button.isEnabled()
+
+
 def test_workspace_exposes_identity_locked_injection_review_gate(
     qtbot: Any,
     tmp_path: Path,
