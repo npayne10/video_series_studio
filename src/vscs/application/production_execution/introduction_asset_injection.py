@@ -545,9 +545,22 @@ class IntroductionInjectionBoundaryStore:
         return stored
 
     def save_result(self, result: IntroductionInjectionResult) -> IntroductionInjectionResult:
-        if self.request_for_id(result.request_id) is None:
+        request = self.request_for_id(result.request_id)
+        if request is None:
             raise IntroductionAssetInjectionError(
                 "Injection result cannot be stored without its immutable request"
+            )
+        if result.requirement_id != request.requirement_id:
+            raise IntroductionAssetInjectionError(
+                "Injection result requirement does not match its immutable request"
+            )
+        if result.canonical_asset_id != request.canonical_asset.authority_id:
+            raise IntroductionAssetInjectionError(
+                "Injection result canonical asset authority does not match its immutable request"
+            )
+        if result.injection_region_id != request.injection_region.region_id:
+            raise IntroductionAssetInjectionError(
+                "Injection result region authority does not match its immutable request"
             )
         root = self._root()
         rows = [dict(item) for item in root.get("results", []) if isinstance(item, dict)]
