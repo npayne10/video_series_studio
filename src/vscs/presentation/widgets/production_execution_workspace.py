@@ -839,6 +839,9 @@ class ProductionExecutionWorkspace(QWidget):
             f"Partial first visibility: "
             f"{'required' if region.partial_visibility_required else 'not required'} • "
             f"Max subject scale: {region.max_subject_scale_ratio:.2f}\n"
+            f"Source Boundary: {candidate.source_boundary_image_path}\n"
+            f"Source SHA256: {candidate.source_boundary_image_sha256}\n"
+            f"Request Authority: {candidate.request_id}\n"
             f"Candidate: {candidate.image_path}\n"
             f"Candidate SHA256: {candidate.image_sha256}"
         )
