@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
 from vscs.application.production_execution import (
     GovernedRetryOverrideStatus,
     IntroductionIdentityCandidateStatus,
+    IntroductionInjectionCandidateStatus,
     ProductionDeviceTelemetry,
     ProductionExecutionCandidate,
     ProductionExecutionResult,
@@ -143,6 +144,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._boundary_status: ShotBoundaryAuthorityStatus | None = None
         self._timed_span_status: TimedSpanAcceptanceStatus | None = None
         self._identity_candidate: IntroductionIdentityCandidateStatus | None = None
+        self._injection_candidate: IntroductionInjectionCandidateStatus | None = None
         self._automated_span_thread: QThread | None = None
         self._automated_span_worker: _AutomatedSpanWorker | None = None
         self._poll_timer = QTimer(self)
@@ -200,6 +202,11 @@ class ProductionExecutionWorkspace(QWidget):
             "new-asset Introduction Keyframes from canonical references, and assemble the Shot. "
             "Manual controls below remain available for governed recovery."
         )
+        self.injection_candidate_state = QLabel("Injected Boundary QC: -")
+        self.injection_candidate_state.setWordWrap(True)
+        self.view_injection_candidate_button = QPushButton("View Injected Candidate")
+        self.approve_injection_candidate_button = QPushButton("Approve Injection")
+        self.reject_injection_candidate_button = QPushButton("Reject & Regenerate")
         self.identity_candidate_state = QLabel("Introduction Identity QC: -")
         self.identity_candidate_state.setWordWrap(True)
         self.view_identity_candidate_button = QPushButton("View Identity Candidate")
@@ -215,6 +222,9 @@ class ProductionExecutionWorkspace(QWidget):
         self.record_span_qc_button = QPushButton("Record Visual QC")
         for button in (
             self.run_automated_spans_button,
+            self.view_injection_candidate_button,
+            self.approve_injection_candidate_button,
+            self.reject_injection_candidate_button,
             self.view_identity_candidate_button,
             self.approve_identity_candidate_button,
             self.reject_identity_candidate_button,
@@ -225,6 +235,9 @@ class ProductionExecutionWorkspace(QWidget):
         ):
             button.setEnabled(False)
         self.run_automated_spans_button.clicked.connect(self._run_automated_span_orchestration)
+        self.view_injection_candidate_button.clicked.connect(self._view_injection_candidate)
+        self.approve_injection_candidate_button.clicked.connect(self._approve_injection_candidate)
+        self.reject_injection_candidate_button.clicked.connect(self._reject_injection_candidate)
         self.view_identity_candidate_button.clicked.connect(self._view_identity_candidate)
         self.approve_identity_candidate_button.clicked.connect(self._approve_identity_candidate)
         self.reject_identity_candidate_button.clicked.connect(self._reject_identity_candidate)
@@ -237,14 +250,18 @@ class ProductionExecutionWorkspace(QWidget):
         timed_span_layout.addWidget(self.timed_span_state, 0, 0, 1, 3)
         timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
         timed_span_layout.addWidget(self.run_automated_spans_button, 2, 0, 1, 3)
-        timed_span_layout.addWidget(self.identity_candidate_state, 3, 0, 1, 3)
-        timed_span_layout.addWidget(self.view_identity_candidate_button, 4, 0)
-        timed_span_layout.addWidget(self.approve_identity_candidate_button, 4, 1)
-        timed_span_layout.addWidget(self.reject_identity_candidate_button, 4, 2)
-        timed_span_layout.addWidget(self.build_span_packages_button, 5, 0)
-        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 5, 1)
-        timed_span_layout.addWidget(self.assemble_span_outputs_button, 6, 0)
-        timed_span_layout.addWidget(self.record_span_qc_button, 6, 1)
+        timed_span_layout.addWidget(self.injection_candidate_state, 3, 0, 1, 3)
+        timed_span_layout.addWidget(self.view_injection_candidate_button, 4, 0)
+        timed_span_layout.addWidget(self.approve_injection_candidate_button, 4, 1)
+        timed_span_layout.addWidget(self.reject_injection_candidate_button, 4, 2)
+        timed_span_layout.addWidget(self.identity_candidate_state, 5, 0, 1, 3)
+        timed_span_layout.addWidget(self.view_identity_candidate_button, 6, 0)
+        timed_span_layout.addWidget(self.approve_identity_candidate_button, 6, 1)
+        timed_span_layout.addWidget(self.reject_identity_candidate_button, 6, 2)
+        timed_span_layout.addWidget(self.build_span_packages_button, 7, 0)
+        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 7, 1)
+        timed_span_layout.addWidget(self.assemble_span_outputs_button, 8, 0)
+        timed_span_layout.addWidget(self.record_span_qc_button, 8, 1)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -349,6 +366,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._boundary_status = None
         self._timed_span_status = None
         self._identity_candidate = None
+        self._injection_candidate = None
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
@@ -673,6 +691,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._timed_span_status = status
         self._render_timed_span_status(status)
+        self._refresh_injection_candidate()
         self._refresh_identity_candidate()
         self._apply_identity_gate_controls()
         self._update_start_enabled()
@@ -742,8 +761,13 @@ class ProductionExecutionWorkspace(QWidget):
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
         self._identity_candidate = None
+        self._injection_candidate = None
+        self.injection_candidate_state.setText("Injected Boundary QC: -")
         self.identity_candidate_state.setText("Introduction Identity QC: -")
         self.run_automated_spans_button.setEnabled(False)
+        self.view_injection_candidate_button.setEnabled(False)
+        self.approve_injection_candidate_button.setEnabled(False)
+        self.reject_injection_candidate_button.setEnabled(False)
         self.view_identity_candidate_button.setEnabled(False)
         self.approve_identity_candidate_button.setEnabled(False)
         self.reject_identity_candidate_button.setEnabled(False)
@@ -768,6 +792,184 @@ class ProductionExecutionWorkspace(QWidget):
         if identity_gate_required:
             self.approve_introduction_keyframe_button.setEnabled(False)
 
+    def _refresh_injection_candidate(self) -> None:
+        self._injection_candidate = None
+        self.injection_candidate_state.setText("Injected Boundary QC: no candidate")
+        self.view_injection_candidate_button.setEnabled(False)
+        self.approve_injection_candidate_button.setEnabled(False)
+        self.reject_injection_candidate_button.setEnabled(False)
+        if self._selected_task_id is None or self._automated_span_thread is not None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            candidate = service.introduction_injection_candidate(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self.injection_candidate_state.setText(f"Injected Boundary QC: unavailable — {exc}")
+            return
+        self._injection_candidate = candidate
+        if candidate is None:
+            return
+        decision = (
+            "REVIEW_REQUIRED"
+            if candidate.pending
+            else candidate.decision.value.upper()
+            if candidate.decision is not None
+            else "UNKNOWN"
+        )
+        asset = candidate.canonical_asset
+        region = candidate.injection_region
+        references = ", ".join(asset.reference_ids) or "-"
+        reference_paths = ", ".join(asset.reference_paths) or "-"
+        reference_hashes = ", ".join(asset.reference_sha256) or "-"
+        self.injection_candidate_state.setText(
+            f"Injected Boundary QC: {decision} • Frame "
+            f"{candidate.target_global_frame_index} • Attempt {candidate.attempt_number}\n"
+            f"Canonical Asset: {asset.asset_id} ({asset.asset_kind}) • "
+            f"Authority: {asset.authority_id}\n"
+            f"Canonical Reference(s): {references}\n"
+            f"Reference Path(s): {reference_paths}\n"
+            f"Reference SHA256: {reference_hashes}\n"
+            f"Injection Region: {region.side.value.upper()} • "
+            f"{region.normalized_box} • Region Authority: {region.region_id}\n"
+            f"Partial first visibility: "
+            f"{'required' if region.partial_visibility_required else 'not required'} • "
+            f"Max subject scale: {region.max_subject_scale_ratio:.2f}\n"
+            f"Candidate: {candidate.image_path}\n"
+            f"Candidate SHA256: {candidate.image_sha256}"
+        )
+        self.view_injection_candidate_button.setEnabled(True)
+        if candidate.pending:
+            self.approve_injection_candidate_button.setEnabled(True)
+            self.reject_injection_candidate_button.setEnabled(True)
+            self.run_automated_spans_button.setEnabled(False)
+            self.approve_introduction_keyframe_button.setEnabled(False)
+
+    def _view_injection_candidate(self) -> None:
+        candidate = self._injection_candidate
+        if candidate is None:
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(candidate.image_path))
+
+    def _approve_injection_candidate(self) -> None:
+        if self._selected_task_id is None or self._injection_candidate is None:
+            return
+        candidate = self._injection_candidate
+        if not candidate.pending:
+            return
+        approved_by, accepted = QInputDialog.getText(
+            self,
+            "Approve Injected Boundary",
+            "Approved by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = approved_by.strip()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Approve Injected Boundary",
+                "Human reviewer identity is required.",
+            )
+            return
+        notes, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Approve Injected Boundary",
+            (
+                "Review identity, exactly one introduced asset, governed edge placement, "
+                "partial first visibility, scale, and scene preservation. Notes (optional):"
+            ),
+        )
+        if not accepted:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.approve_introduction_injection(
+                self._selected_task_id,
+                requirement_id=candidate.requirement_id,
+                approved_by=actor,
+                notes=notes.strip(),
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Approve Injected Boundary", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self._refresh_injection_candidate()
+        self.summary.setText(
+            "Injected boundary approved. Continuing automated target-span rendering."
+        )
+        if self.run_automated_spans_button.isEnabled():
+            self._run_automated_span_orchestration()
+
+    def _reject_injection_candidate(self) -> None:
+        if self._selected_task_id is None or self._injection_candidate is None:
+            return
+        candidate = self._injection_candidate
+        if not candidate.pending:
+            return
+        rejected_by, accepted = QInputDialog.getText(
+            self,
+            "Reject Injected Boundary",
+            "Rejected by (human operator):",
+        )
+        if not accepted:
+            return
+        actor = rejected_by.strip()
+        if not actor:
+            QMessageBox.warning(
+                self,
+                "Reject Injected Boundary",
+                "Human reviewer identity is required.",
+            )
+            return
+        notes, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Reject Injected Boundary",
+            "Reason for rejection:",
+        )
+        if not accepted:
+            return
+        reason = notes.strip()
+        if not reason:
+            QMessageBox.warning(
+                self,
+                "Reject Injected Boundary",
+                "A rejection reason is required.",
+            )
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            status = service.reject_introduction_injection(
+                self._selected_task_id,
+                requirement_id=candidate.requirement_id,
+                rejected_by=actor,
+                notes=reason,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Reject Injected Boundary", str(exc))
+            self._refresh_timed_span_status()
+            return
+        self._timed_span_status = status
+        self._render_timed_span_status(status)
+        self._refresh_injection_candidate()
+        self.summary.setText(
+            "Injected boundary rejected. Regenerating a new immutable injection attempt."
+        )
+        if self.run_automated_spans_button.isEnabled():
+            self._run_automated_span_orchestration()
+
     def _refresh_identity_candidate(self) -> None:
         self._identity_candidate = None
         self.identity_candidate_state.setText("Introduction Identity QC: no candidate")
@@ -788,7 +990,7 @@ class ProductionExecutionWorkspace(QWidget):
             self.identity_candidate_state.setText(f"Introduction Identity QC: unavailable — {exc}")
             return
         self._identity_candidate = candidate
-        if candidate is None:
+        if candidate is None or self._injection_candidate is not None:
             return
         decision = (
             "REVIEW_REQUIRED"
@@ -1037,6 +1239,9 @@ class ProductionExecutionWorkspace(QWidget):
         if busy:
             for button in (
                 self.run_automated_spans_button,
+                self.view_injection_candidate_button,
+                self.approve_injection_candidate_button,
+                self.reject_injection_candidate_button,
                 self.view_identity_candidate_button,
                 self.approve_identity_candidate_button,
                 self.reject_identity_candidate_button,
