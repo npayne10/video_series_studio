@@ -11,14 +11,18 @@ from PIL import Image
 
 from vscs.application.production_execution import (
     AutomatedBoundaryValidationState,
+    CanonicalInjectionAsset,
     GovernedInternalRenderSpanCompiler,
     GovernedIntroductionKeyframeRequirementCompiler,
     GovernedIntroductionKeyframeStore,
+    InjectionRegionAuthority,
     IntroductionBoundaryProviderCapabilities,
     IntroductionBoundaryStrategy,
     IntroductionIdentityCandidateStatus,
+    IntroductionInjectionCandidateStatus,
     IntroductionInjectionDecision,
     IntroductionInjectionResult,
+    IntroductionInjectionSide,
     ProductionExecutionCandidate,
     ProductionExecutionUiService,
     ProductionPackageCompilationState,
@@ -1153,6 +1157,245 @@ def test_workspace_pauses_automation_for_pending_identity_candidate(
     assert _sha(Path(service.identity_candidate.introduced_reference_paths[0])) in (
         workspace.identity_candidate_state.text()
     )
+
+
+class _InjectionGateUiService(_UiService):
+    def __init__(self, root: Path) -> None:
+        super().__init__()
+        candidate_path = _png(root / "injected-boundary.png", (130, 90, 60))
+        source_path = _png(root / "source-boundary.png", (30, 40, 50))
+        reference_path = _png(root / "ros-reference-injection.png", (100, 110, 120))
+        asset = CanonicalInjectionAsset(
+            asset_id="CAP-CHR-005",
+            asset_kind="character",
+            reference_ids=("REF-ROS",),
+            reference_paths=(str(reference_path),),
+            reference_sha256=(_sha(reference_path),),
+        )
+        region = InjectionRegionAuthority(
+            side=IntroductionInjectionSide.RIGHT,
+            left=0.82,
+            top=0.08,
+            right=1.0,
+            bottom=0.96,
+            partial_visibility_required=True,
+            max_subject_scale_ratio=0.55,
+        )
+        self.injection_candidate = IntroductionInjectionCandidateStatus(
+            requirement_id="GIKR-1",
+            request_id="IIAR-ROS-1",
+            result_id="IIAS-ROS-1",
+            source_boundary_image_path=str(source_path),
+            source_boundary_image_sha256=_sha(source_path),
+            image_path=str(candidate_path),
+            image_sha256=_sha(candidate_path),
+            canonical_asset=asset,
+            injection_region=region,
+            target_global_frame_index=96,
+            attempt_number=1,
+        )
+        self.approved: tuple[str, str, str] | None = None
+        self.rejected: tuple[str, str, str] | None = None
+
+    def introduction_injection_candidate(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> IntroductionInjectionCandidateStatus:
+        assert task_id == "PT-AUTO-SPAN"
+        assert profile == "production"
+        return self.injection_candidate
+
+    def introduction_identity_candidate(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> IntroductionIdentityCandidateStatus | None:
+        return None
+
+    def approve_introduction_injection(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        assert task_id == "PT-AUTO-SPAN"
+        assert profile == "production"
+        self.approved = (requirement_id, approved_by, notes)
+        return TimedSpanAcceptanceStatus(
+            shot_id="EP-001-SCN-001-SHT-002",
+            state=TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
+            span_count=2,
+            boundary_count=1,
+            requirement_count=1,
+            approved_keyframe_count=1,
+            qc_passed_count=0,
+            assembly_present=False,
+            message="Injection approved; target span output required.",
+            requirement_ids=("GIKR-1",),
+            pending_qc_requirement_ids=("GIKR-1",),
+        )
+
+    def reject_introduction_injection(
+        self,
+        task_id: str,
+        *,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+        profile: str | None = None,
+    ) -> TimedSpanAcceptanceStatus:
+        assert task_id == "PT-AUTO-SPAN"
+        assert profile == "production"
+        self.rejected = (requirement_id, rejected_by, notes)
+        return self.timed_span_acceptance_status(task_id, profile=profile)
+
+
+def test_workspace_exposes_identity_locked_injection_review_gate(
+    qtbot: Any,
+    tmp_path: Path,
+) -> None:
+    service = _InjectionGateUiService(tmp_path)
+    workspace = ProductionExecutionWorkspace(lambda: service)  # type: ignore[arg-type]
+    qtbot.addWidget(workspace)
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    candidate = service.injection_candidate
+    text = workspace.injection_candidate_state.text()
+    assert "REVIEW_REQUIRED" in text
+    assert candidate.canonical_asset.asset_id in text
+    assert candidate.canonical_asset.authority_id in text
+    assert candidate.canonical_asset.reference_sha256[0] in text
+    assert candidate.source_boundary_image_sha256 in text
+    assert candidate.image_sha256 in text
+    assert candidate.request_id in text
+    assert candidate.injection_region.region_id in text
+    assert "RIGHT" in text
+    assert "Attempt 1" in text
+    assert workspace.view_injection_candidate_button.isEnabled()
+    assert workspace.approve_injection_candidate_button.isEnabled()
+    assert workspace.reject_injection_candidate_button.isEnabled()
+    assert not workspace.run_automated_spans_button.isEnabled()
+    assert not workspace.approve_introduction_keyframe_button.isEnabled()
+    assert not workspace.view_identity_candidate_button.isEnabled()
+    assert workspace.view_injection_candidate_button.text() == "View Injected Candidate"
+    assert workspace.approve_injection_candidate_button.text() == "Approve Injection"
+    assert workspace.reject_injection_candidate_button.text() == "Reject & Regenerate"
+
+
+class _InjectionFacadeBackend(_FacadeBackend):
+    def __init__(self, candidate: IntroductionInjectionCandidateStatus) -> None:
+        super().__init__()
+        self.candidate = candidate
+        self.approved: tuple[str, str, str, str] | None = None
+        self.rejected: tuple[str, str, str, str] | None = None
+
+    def introduction_injection_candidate_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> IntroductionInjectionCandidateStatus:
+        assert task_id == "PT-AUTO"
+        self.profile = profile
+        return self.candidate
+
+    def approve_introduction_injection_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        approved_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        self.approved = (profile, requirement_id, approved_by, notes)
+        return self.run_automated_timed_span_orchestration_for_profile(
+            task_id,
+            profile=profile,
+        )
+
+    def reject_introduction_injection_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        requirement_id: str,
+        rejected_by: str,
+        notes: str = "",
+    ) -> TimedSpanAcceptanceStatus:
+        self.rejected = (profile, requirement_id, rejected_by, notes)
+        return self.run_automated_timed_span_orchestration_for_profile(
+            task_id,
+            profile=profile,
+        )
+
+
+def test_ui_service_delegates_injection_review_actions_with_normalized_profile(
+    tmp_path: Path,
+) -> None:
+    source = _png(tmp_path / "source.png", (10, 20, 30))
+    image = _png(tmp_path / "candidate.png", (40, 50, 60))
+    reference = _png(tmp_path / "reference.png", (70, 80, 90))
+    asset = CanonicalInjectionAsset(
+        asset_id="CAP-CHR-005",
+        asset_kind="character",
+        reference_ids=("REF-ROS",),
+        reference_paths=(str(reference),),
+        reference_sha256=(_sha(reference),),
+    )
+    region = InjectionRegionAuthority(
+        side=IntroductionInjectionSide.RIGHT,
+        left=0.82,
+        top=0.08,
+        right=1.0,
+        bottom=0.96,
+        partial_visibility_required=True,
+        max_subject_scale_ratio=0.55,
+    )
+    candidate = IntroductionInjectionCandidateStatus(
+        requirement_id="GIKR-1",
+        request_id="IIAR-1",
+        result_id="IIAS-1",
+        source_boundary_image_path=str(source),
+        source_boundary_image_sha256=_sha(source),
+        image_path=str(image),
+        image_sha256=_sha(image),
+        canonical_asset=asset,
+        injection_region=region,
+        target_global_frame_index=96,
+        attempt_number=1,
+    )
+    backend = _InjectionFacadeBackend(candidate)
+    service = ProductionExecutionUiService(backend)  # type: ignore[arg-type]
+
+    observed = service.introduction_injection_candidate("PT-AUTO", profile="Production")
+    approved = service.approve_introduction_injection(
+        "PT-AUTO",
+        requirement_id="GIKR-1",
+        approved_by="Neill Payne",
+        notes="Approved.",
+        profile="Production",
+    )
+    rejected = service.reject_introduction_injection(
+        "PT-AUTO",
+        requirement_id="GIKR-1",
+        rejected_by="Neill Payne",
+        notes="Reject test.",
+        profile="Production",
+    )
+
+    assert observed == candidate
+    assert approved.state is TimedSpanAcceptanceState.QC_REQUIRED
+    assert rejected.state is TimedSpanAcceptanceState.QC_REQUIRED
+    assert backend.approved == ("production", "GIKR-1", "Neill Payne", "Approved.")
+    assert backend.rejected == ("production", "GIKR-1", "Neill Payne", "Reject test.")
 
 
 def test_workspace_allows_automated_rerun_while_visual_qc_is_pending(
