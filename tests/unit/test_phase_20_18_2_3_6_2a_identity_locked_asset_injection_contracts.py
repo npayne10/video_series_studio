@@ -205,7 +205,10 @@ def test_candidate_status_exposes_exact_authority_and_pending_state() -> None:
     result = _result(request)
     status = IntroductionInjectionCandidateStatus(
         requirement_id=request.requirement_id,
+        request_id=request.request_id,
         result_id=result.result_id,
+        source_boundary_image_path=request.source_boundary_image_path,
+        source_boundary_image_sha256=request.source_boundary_image_sha256,
         image_path=result.image_path,
         image_sha256=result.image_sha256,
         canonical_asset=request.canonical_asset,
@@ -215,6 +218,8 @@ def test_candidate_status_exposes_exact_authority_and_pending_state() -> None:
     )
 
     assert status.pending
+    assert status.request_id == request.request_id
+    assert status.source_boundary_image_sha256 == request.source_boundary_image_sha256
     assert status.canonical_asset.authority_id == result.canonical_asset_id
     assert status.injection_region.region_id == result.injection_region_id
 
