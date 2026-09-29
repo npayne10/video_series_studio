@@ -396,3 +396,86 @@ The first hands-on objective is not SHT-002 generation. It is:
 7. only then run the governed SHT-002 benchmark.
 
 This protects VSCS from investing architecture around a provider before proving it can operate economically on the actual production hardware.
+
+
+## 17. Phase 3.6.3b.1 — Local H3 R2V smoke-test evidence
+
+Date: 2026-09-29
+
+### Runtime configuration
+
+- Provider: MiniMax H3 native Reference-to-Video (ComfyUI)
+- GPU: NVIDIA GeForce RTX 5060 Ti, 15.9 GiB VRAM
+- PyTorch: 2.13.0+cu130
+- CUDA runtime reported by PyTorch: 13.0
+- Diffusion model: `minimax_h3_ref2va_pruned_int8_convrot.safetensors`
+- Text encoder: `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors`
+- Video VAE: `minimax_h3_video_vae_fp16.safetensors`
+- Audio VAE: `minimax_h3_audio_vae_fp32.safetensors`
+- Reference image count: 1
+- Reference authority: CAP-CHR-005 Ros
+- Resolution: 608x352
+- FPS: 24
+- Frames: 56
+- Duration: 2.333333 seconds
+- Sampler: res_multistep
+- Scheduler: simple
+- Steps: 20
+- Reference image size: match
+- Turbo LoRA: not used in this baseline
+- Paid inference: none
+
+### Provider execution evidence
+
+ComfyUI successfully:
+- staged the H3 video VAE for dynamic VRAM loading;
+- staged the quantized Qwen3-VL H3 text encoder for dynamic VRAM loading;
+- detected mixed-precision quantization and native NVFP4 / INT8 operations;
+- staged the H3 Ref2VA diffusion model for dynamic VRAM loading;
+- completed all 20 sampling steps;
+- staged and decoded the H3 audio VAE;
+- completed the full prompt in 262.04 seconds.
+
+Reported staged model sizes included approximately:
+- H3 Video VAE: 4965 MB;
+- H3 text encoder: 14956 MB;
+- H3 Ref2VA diffusion model: 19995 MB;
+- H3 Audio VAE: 576 MB.
+
+This proves that the official H3 native Ref2VA stack can execute locally on the owned RTX 5060 Ti 16 GB system using ComfyUI dynamic VRAM loading/offload.
+
+### Output verification
+
+The generated MP4 was verified as:
+- H.264 video;
+- 608x352;
+- 24 fps;
+- 56 frames;
+- duration 2.333333 seconds;
+- AAC stereo audio at 32 kHz.
+
+### Visual findings
+
+Positive:
+- Ros remained visually stable across sampled frames;
+- face, hair, uniform and overall identity remained coherent;
+- motion was restrained and temporally stable;
+- no obvious frame-to-frame identity collapse was observed;
+- the result was substantially more coherent than the prior still-image injection experiments.
+
+Failure relative to the strict smoke-test prompt:
+- additional background crew were generated even though the prompt requested exactly one person.
+
+Interpretation:
+- H3 local R2V hardware/runtime feasibility: PASS.
+- Single-reference identity-conditioning feasibility: PRELIMINARY PASS.
+- Exact person-count / exclusion authority from prompt alone: FAIL.
+- The next experiment must test whether explicit multi-reference scene authority improves or worsens controlled multi-character composition before any VSCS provider-adoption decision.
+
+Peak VRAM was not captured in this run and remains required evidence for the hardware characterization.
+
+### 3.6.3b.1 status
+
+PASS for local execution and basic reference identity conditioning.
+
+Proceed to 3.6.3b.2 production-aligned multi-reference test only after recording a clean pre-run VRAM baseline and maintaining deterministic seed/configuration.
