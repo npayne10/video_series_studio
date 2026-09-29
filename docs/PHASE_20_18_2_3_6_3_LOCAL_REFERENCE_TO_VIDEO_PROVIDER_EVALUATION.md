@@ -479,3 +479,99 @@ Peak VRAM was not captured in this run and remains required evidence for the har
 PASS for local execution and basic reference identity conditioning.
 
 Proceed to 3.6.3b.2 production-aligned multi-reference test only after recording a clean pre-run VRAM baseline and maintaining deterministic seed/configuration.
+
+
+## 18. Phase 3.6.3b.2 — Production-aligned five-reference H3 R2V test
+
+Date: 2026-09-29
+
+### Test configuration
+
+The production-aligned test used five reference images in deterministic order:
+
+1. James canonical identity
+2. Sandra canonical identity
+3. Ros canonical identity
+4. Iron Horizon bridge environment
+5. Xorix planetary visual
+
+Baseline generation settings remained intentionally unchanged from the successful 3.6.3b.1 local smoke test except for reference complexity:
+
+- resolution: 608x352;
+- 24 fps;
+- 56 frames / 2.333333 seconds;
+- sampler: res_multistep;
+- scheduler: simple;
+- steps: 20;
+- denoise: 1.0;
+- reference image size: match;
+- Turbo LoRA: not used;
+- local native H3 Ref2VA execution;
+- zero paid inference.
+
+### Provider execution evidence
+
+ComfyUI successfully staged all five reference-image conditioning paths and the H3 runtime stack under dynamic VRAM loading.
+
+Reported execution:
+- MiniMax H3 Video VAE staged: approximately 4965 MB;
+- MiniMax H3 text encoder staged: approximately 14956 MB;
+- MiniMax H3 Ref2VA diffusion model staged: approximately 19995 MB;
+- MiniMax H3 Audio VAE staged: approximately 576 MB;
+- all 20 sampling steps completed;
+- sampling duration: approximately 4 minutes 12 seconds;
+- total prompt execution: 343.81 seconds.
+
+The generated media was verified as:
+- 608x352;
+- 24 fps;
+- 56 frames;
+- duration 2.333333 seconds.
+
+### Visual findings
+
+Across sampled frames from the beginning, middle, and end of the generated video:
+
+- exactly three human subjects are present;
+- the seated right-side character remains stable and does not disappear;
+- the central established character remains stable;
+- the entering foreground character begins partially outside the left edge and moves progressively inward;
+- no additional background crew are visible;
+- no duplicate Ros is visible;
+- no grey-card, rectangular patch, or pasted-background artifact appears;
+- all three subjects remain integrated into the same bridge lighting/environment;
+- the forward planetary visual remains present throughout;
+- the bridge layout is temporally stable;
+- the entry motion is continuous rather than a one-frame pop-in.
+
+This is a material improvement over both:
+1. the Phase 3.6.2 still-image injection approach, which replaced scene regions and obscured existing characters; and
+2. the single-reference H3 smoke test, which generated unwanted background crew.
+
+### Acceptance result
+
+- Runtime / local execution: PASS
+- Exact visible human count: PASS
+- No duplicate entrant: PASS
+- Established-character persistence: PASS
+- Continuous edge-entry motion: PASS
+- Environment temporal continuity: PASS
+- No rectangular compositing artifact: PASS
+- Multi-reference identity conditioning: PRELIMINARY PASS, subject to higher-resolution facial inspection
+- Production resolution: NOT TESTED
+- Exact 6-second SHT-002 timing / frame-96 event authority: NOT TESTED
+- Peak VRAM evidence: still required if not separately captured
+
+### Interpretation
+
+Phase 3.6.3b.2 provides the first evidence that native local H3 Reference-to-Video can solve the core VSCS multi-character introduction problem as a single coherent generation task rather than through downstream still-image injection.
+
+This does not yet authorize H3 as the production default. The next experiments must determine:
+- identity fidelity at higher resolution;
+- whether reference-image-size=max materially improves identity;
+- whether scheduler changes improve reference fidelity;
+- whether the full six-second SHT-002 timing can be governed reliably;
+- whether temporal guide anchoring can control the Ros introduction near the required frame without manual asset manufacture;
+- peak VRAM / system-RAM behavior.
+
+The result is strong enough to continue the H3 evaluation before investing further in masked-compositing architecture.
