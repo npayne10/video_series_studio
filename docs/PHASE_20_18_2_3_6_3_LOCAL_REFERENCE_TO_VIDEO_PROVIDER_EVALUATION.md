@@ -575,3 +575,80 @@ This does not yet authorize H3 as the production default. The next experiments m
 - peak VRAM / system-RAM behavior.
 
 The result is strong enough to continue the H3 evaluation before investing further in masked-compositing architecture.
+
+
+## 19. Phase 3.6.3b.3 — Higher-resolution identity fidelity test
+
+Date: 2026-09-29
+
+### Test configuration
+
+The five-reference production-aligned H3 Ref2VA configuration from 3.6.3b.2 was retained, with the principal change being output resolution:
+
+- resolution increased from 608x352 to 864x480;
+- 24 fps;
+- 56 frames / 2.333333 seconds;
+- sampler: res_multistep;
+- scheduler: simple;
+- steps: 20;
+- denoise: 1.0;
+- reference image size: match;
+- Turbo LoRA: not used;
+- local native H3 Ref2VA execution;
+- zero paid inference.
+
+### Provider execution evidence
+
+ComfyUI successfully completed the higher-resolution run using dynamic VRAM loading.
+
+Reported:
+- MiniMax H3 Video VAE staged: approximately 4965 MB;
+- MiniMax H3 text encoder staged: approximately 14956 MB;
+- MiniMax H3 Ref2VA diffusion model staged: approximately 19995 MB;
+- MiniMax H3 Audio VAE staged: approximately 576 MB;
+- all 20 sampling steps completed;
+- sampling duration: approximately 12 minutes 21 seconds;
+- total prompt execution: 14 minutes 34 seconds.
+
+The generated media was verified as:
+- 864x480;
+- 24 fps;
+- 56 frames;
+- duration 2.333333 seconds.
+
+### Visual findings
+
+Across frames sampled from the beginning, middle, and end of the video:
+
+- exactly three people remain visible;
+- the seated right-side character persists throughout;
+- the established central standing character remains stable;
+- the entering character begins at the left edge and moves progressively into the shot;
+- no extra background crew are visible;
+- no duplicate entrant is visible;
+- no grey-card or rectangular patch artifact appears;
+- bridge geometry and the forward planetary visual remain stable;
+- the higher resolution materially improves facial, uniform, console, and environment detail relative to the 608x352 test;
+- entry motion remains continuous rather than a single-frame appearance.
+
+### Acceptance result
+
+- Local execution at 864x480: PASS
+- Exact visible human count: PASS
+- Established-character persistence: PASS
+- Continuous edge-entry motion: PASS
+- Environment continuity: PASS
+- No compositing/card artifact: PASS
+- Multi-reference identity fidelity: PASS at evaluation resolution, subject to canonical close comparison before production adoption
+- Runtime cost: ACCEPTABLE but materially higher than 608x352
+- Paid inference: none
+- Peak VRAM evidence: still required if not separately captured
+- Full six-second SHT-002 timing / frame-96 event authority: NOT TESTED
+
+### Interpretation
+
+The higher-resolution run strengthens the evidence that H3 native Ref2VA is a viable local multi-character provider for VSCS. The increase from 608x352 to 864x480 preserved the successful composition and entry behavior while improving visible detail.
+
+The principal trade-off is runtime. Total execution increased from 343.81 seconds in the lower-resolution five-reference test to 874 seconds in this run, approximately 2.54x longer.
+
+The next evaluation should target temporal authority rather than immediately increasing resolution again: test a longer governed shot and determine whether Ros can be kept absent initially and introduced near the required SHT-002 event time using prompt timing and/or MiniMax H3 guide anchoring.
