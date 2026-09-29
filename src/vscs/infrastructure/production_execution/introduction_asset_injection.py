@@ -147,15 +147,7 @@ class ComfyUIIntroductionInjectionSynthesizer:
             ):
                 output_name = f"pass-{index:03d}.png"
                 output_path = root / output_name
-                if output_path.exists():
-                    raise ComfyUIIntroductionInjectionSynthesisError(
-                        f"Immutable injection pass already exists: {output_path.name}"
-                    )
                 request_path = root / f"pass-{index:03d}-request.json"
-                if request_path.exists():
-                    raise ComfyUIIntroductionInjectionSynthesisError(
-                        f"Immutable injection request already exists: {request_path.name}"
-                    )
                 payload = self._runtime_payload(
                     request,
                     source_path=current_source,
@@ -170,10 +162,29 @@ class ComfyUIIntroductionInjectionSynthesizer:
                     provider_box=provider_box,
                     pass_index=index,
                 )
-                request_path.write_text(
-                    json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-                    encoding="utf-8",
-                )
+                request_exists = request_path.exists()
+                if request_exists:
+                    self._require_matching_request(request_path, payload)
+                elif output_path.exists():
+                    raise ComfyUIIntroductionInjectionSynthesisError(
+                        f"Immutable injection pass has no request authority: {output_path.name}"
+                    )
+                else:
+                    request_path.write_text(
+                        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                        encoding="utf-8",
+                    )
+
+                if output_path.exists():
+                    self._validate_geometry(
+                        output_path,
+                        crop_width,
+                        crop_height,
+                        f"injection pass {index}",
+                    )
+                    current_source = output_path
+                    continue
+
                 prompt = json.loads(json.dumps(workflow))
                 prompt[self.LOADER_NODE]["inputs"]["request_file"] = str(request_path)
                 prompt_id = self.client.submit(prompt)
@@ -208,6 +219,22 @@ class ComfyUIIntroductionInjectionSynthesizer:
             generated_at=now_iso(),
             attempt_number=attempt_number,
         )
+
+    @staticmethod
+    def _require_matching_request(
+        request_path: Path,
+        expected_payload: dict[str, object],
+    ) -> None:
+        try:
+            persisted = json.loads(request_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ComfyUIIntroductionInjectionSynthesisError(
+                f"Cannot resume immutable injection request {request_path.name}: {exc}"
+            ) from exc
+        if persisted != expected_payload:
+            raise ComfyUIIntroductionInjectionSynthesisError(
+                f"Immutable injection request changed since interruption: {request_path.name}"
+            )
 
     def _runtime_payload(
         self,
