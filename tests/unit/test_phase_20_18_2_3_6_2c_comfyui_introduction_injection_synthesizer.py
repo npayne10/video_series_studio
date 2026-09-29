@@ -109,6 +109,20 @@ class _InjectionClient:
         return {"status": {"completed": True}}
 
 
+class _FailBeforeOutputClient(_InjectionClient):
+    def submit(self, prompt: dict[str, Any]) -> str:
+        self.submit_calls += 1
+        self.prompt = prompt
+        request_file = Path(prompt["1"]["inputs"]["request_file"])
+        self.runtime_payload = json.loads(request_file.read_text(encoding="utf-8"))
+        raise OSError("simulated provider interruption before output")
+
+
+class _FailAfterOutputClient(_InjectionClient):
+    def wait(self, prompt_id: str, timeout_seconds: float = 3600.0) -> dict[str, Any]:
+        raise OSError("simulated interruption after provider output")
+
+
 def test_synthesizer_edits_only_governed_region_and_preserves_scene_outside(
     tmp_path: Path,
 ) -> None:
@@ -238,3 +252,118 @@ def test_same_request_cannot_overwrite_immutable_candidate(tmp_path: Path) -> No
         match="already contains a final candidate",
     ):
         synthesizer.synthesize(request, attempt_number=1)
+
+
+def test_interrupted_request_without_output_resumes_same_immutable_pass(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+    interrupted = ComfyUIIntroductionInjectionSynthesizer(
+        tmp_path,
+        client=_FailBeforeOutputClient(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        ComfyUIIntroductionInjectionSynthesisError,
+        match="simulated provider interruption before output",
+    ):
+        interrupted.synthesize(request, attempt_number=1)
+
+    root = (
+        tmp_path
+        / ".vscs"
+        / "introduction_injection"
+        / request.shot_id
+        / request.requirement_id
+        / request.request_id
+    )
+    request_path = root / "pass-001-request.json"
+    output_path = root / "pass-001.png"
+    assert request_path.is_file()
+    assert not output_path.exists()
+
+    client = _InjectionClient()
+    resumed = ComfyUIIntroductionInjectionSynthesizer(
+        tmp_path,
+        client=client,  # type: ignore[arg-type]
+    ).synthesize(request, attempt_number=1)
+
+    assert Path(resumed.image_path).is_file()
+    assert client.submit_calls == 1
+    assert request_path.is_file()
+
+
+def test_interrupted_pass_with_existing_output_reuses_output_without_resubmit(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+    interrupted = ComfyUIIntroductionInjectionSynthesizer(
+        tmp_path,
+        client=_FailAfterOutputClient((180, 70, 60)),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        ComfyUIIntroductionInjectionSynthesisError,
+        match="simulated interruption after provider output",
+    ):
+        interrupted.synthesize(request, attempt_number=1)
+
+    root = (
+        tmp_path
+        / ".vscs"
+        / "introduction_injection"
+        / request.shot_id
+        / request.requirement_id
+        / request.request_id
+    )
+    output_path = root / "pass-001.png"
+    assert output_path.is_file()
+    output_sha = _sha(output_path)
+
+    client = _InjectionClient((10, 240, 20))
+    resumed = ComfyUIIntroductionInjectionSynthesizer(
+        tmp_path,
+        client=client,  # type: ignore[arg-type]
+    ).synthesize(request, attempt_number=1)
+
+    assert client.submit_calls == 0
+    assert _sha(output_path) == output_sha
+    assert Path(resumed.image_path).is_file()
+
+
+def test_interrupted_request_fails_closed_when_persisted_authority_changes(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+    interrupted = ComfyUIIntroductionInjectionSynthesizer(
+        tmp_path,
+        client=_FailBeforeOutputClient(),  # type: ignore[arg-type]
+    )
+    with pytest.raises(ComfyUIIntroductionInjectionSynthesisError):
+        interrupted.synthesize(request, attempt_number=1)
+
+    request_path = (
+        tmp_path
+        / ".vscs"
+        / "introduction_injection"
+        / request.shot_id
+        / request.requirement_id
+        / request.request_id
+        / "pass-001-request.json"
+    )
+    raw = json.loads(request_path.read_text(encoding="utf-8"))
+    raw["seed"] = int(raw["seed"]) + 1
+    request_path.write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    client = _InjectionClient()
+    synthesizer = ComfyUIIntroductionInjectionSynthesizer(
+        tmp_path,
+        client=client,  # type: ignore[arg-type]
+    )
+    with pytest.raises(
+        ComfyUIIntroductionInjectionSynthesisError,
+        match="Immutable injection request changed since interruption",
+    ):
+        synthesizer.synthesize(request, attempt_number=1)
+
+    assert client.submit_calls == 0
