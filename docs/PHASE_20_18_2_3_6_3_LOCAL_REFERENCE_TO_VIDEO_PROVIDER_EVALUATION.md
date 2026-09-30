@@ -708,3 +708,106 @@ A stronger VSCS-aligned test is:
 - reduce redundant character reference inputs where the guide already contains established characters, to avoid encouraging extra human synthesis.
 
 This shifts temporal and composition authority from prose into explicit visual conditioning.
+
+
+## 21. Phase 3.6.3b.5 — Prompt simplification control test
+
+Date: 2026-09-30
+
+### Purpose
+
+This control test was run after 3.6.3b.4 produced unwanted background crew. The objective was to isolate whether that failure was inherent to H3 five-reference conditioning or was primarily induced by the later long/complex temporal prompt.
+
+The same five semantic reference roles were retained:
+
+1. James canonical identity
+2. Sandra canonical identity
+3. Ros canonical identity
+4. Iron Horizon bridge environment
+5. Xorix planetary visual
+
+The prompt was reverted to the earlier, simpler five-reference wording that had succeeded in 3.6.3b.2.
+
+### Output inspected
+
+- File: `MiniMax_H3_00008_(2).mp4`
+- Resolution: 608x352
+- FPS: 24
+- Frames: 175
+- Duration: approximately 7.29 seconds
+
+### Visual findings
+
+Across opening, intermediate, and final sampled frames:
+
+- exactly three intended people are present;
+- no additional background crew are visible;
+- no duplicate Ros is visible;
+- the central established male character remains temporally stable;
+- the seated right-side female character remains present and temporally stable;
+- the entering male character remains visually stable through the sequence;
+- Ros enters progressively from the left edge and moves inward continuously;
+- no teleport/pop-in event was observed;
+- bridge geometry remains coherent and stable;
+- Xorix remains present and visually coherent in the forward view;
+- no grey-card, rectangular insertion, pasted-cutout, or scene-replacement artifact is visible;
+- no material temporal identity collapse was observed.
+
+Important timing limitation:
+
+- Ros is already partially visible at the extreme left edge from frame 0;
+- therefore this result does NOT prove governed pre-entry absence;
+- it also does NOT prove frame-96 introduction authority.
+
+Canonical facial fidelity was not independently re-scored against the source reference images during this control review. This test establishes temporal stability and role consistency, while the prior higher-resolution evaluation remains the stronger identity-fidelity evidence.
+
+### Comparison with 3.6.3b.2 and 3.6.3b.4
+
+3.6.3b.2 used the simpler five-reference prompt and produced exactly three people with stable composition.
+
+3.6.3b.4 retained five-reference conditioning but introduced a substantially longer and more repetitive temporal/exclusion prompt. That run produced extra background crew from frame 0 and failed exact initial human count.
+
+3.6.3b.5 returned to the simpler prompt while retaining the five-reference concept and again produced exactly the three intended people with no background crew.
+
+The repeated success pattern is therefore:
+
+```text
+five references + simpler prompt
+-> exact intended human count
+
+five references + long/repetitive temporal prompt
+-> extra people
+
+five references + simpler prompt again
+-> exact intended human count
+```
+
+### Acceptance
+
+- local execution: PASS
+- exact visible human count: PASS
+- no unwanted/background people: PASS
+- established-character persistence: PASS
+- entrant temporal stability: PASS
+- continuous Ros entrance motion: PASS
+- bridge continuity: PASS
+- Xorix continuity: PASS
+- no compositing/card artifact: PASS
+- governed Ros absence before the event: FAIL
+- exact frame-96 introduction authority: NOT PROVEN
+
+### Conclusion
+
+The evidence is now strong enough to conclude that the extra-people failure observed in 3.6.3b.4 was primarily associated with the structure/wording of the long temporal prompt rather than with H3 five-reference conditioning itself.
+
+This is not evidence that prompt-only temporal governance is sufficient. The control test still exposes Ros from the opening frame, so exact timed introduction remains unresolved.
+
+Architecturally:
+
+- retain five-reference conditioning as a viable H3 capability;
+- do not reduce canonical references merely to avoid the b.4 extra-person failure;
+- treat prompt construction as a governed provider-adapter responsibility with regression-tested prompt templates;
+- keep temporal event authority separate from descriptive prompt complexity;
+- continue evaluation of explicit guide/temporal conditioning for frame-accurate introduction rather than attempting to solve timing by repeatedly adding prose constraints.
+
+This control result changes the interpretation of 3.6.3b.4 but does not yet authorize H3 as the VSCS production default.
