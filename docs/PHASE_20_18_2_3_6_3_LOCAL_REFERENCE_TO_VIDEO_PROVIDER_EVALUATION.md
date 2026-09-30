@@ -652,3 +652,59 @@ The higher-resolution run strengthens the evidence that H3 native Ref2VA is a vi
 The principal trade-off is runtime. Total execution increased from 343.81 seconds in the lower-resolution five-reference test to 874 seconds in this run, approximately 2.54x longer.
 
 The next evaluation should target temporal authority rather than immediately increasing resolution again: test a longer governed shot and determine whether Ros can be kept absent initially and introduced near the required SHT-002 event time using prompt timing and/or MiniMax H3 guide anchoring.
+
+
+## 20. Phase 3.6.3b.4 — Prompt-only temporal introduction authority
+
+Date: 2026-09-30
+
+### Test configuration
+
+- five-reference H3 Ref2VA production-aligned configuration;
+- 608x352;
+- 24 fps;
+- 158 frames / approximately 6.58 seconds;
+- sampler: res_multistep;
+- scheduler: simple;
+- steps: 20;
+- ref_image_size: match;
+- fixed seed;
+- no Turbo LoRA;
+- prompt requested James and Sandra only until approximately four seconds, then Ros entering from the right edge.
+
+### Result
+
+The run completed successfully, but the generated shot contained too many people.
+
+Observed across the generated sequence:
+- extra background people are already present from frame 0;
+- therefore the strict two-person pre-entry state is not preserved;
+- Ros does begin entering from the right edge later in the shot;
+- first obvious right-edge Ros presence appears around frames 76-80, approximately 3.2-3.3 seconds;
+- this is earlier than the governed frame-96 / 4.0-second target;
+- Ros's entry motion itself is progressive rather than a one-frame pop-in;
+- bridge and planetary continuity remain visually stable.
+
+### Acceptance
+
+- local execution: PASS
+- long-shot runtime feasibility: PASS
+- prompt-only exact person-count authority: FAIL
+- prompt-only pre-entry absence authority: FAIL
+- prompt-only temporal targeting: PARTIAL
+- continuous Ros entry motion: PASS
+- environment continuity: PASS
+
+### Interpretation
+
+Prompt text alone is insufficient to guarantee exact character count and temporal absence over a longer multi-character H3 Ref2VA shot.
+
+The next experiment should use explicit MiniMax H3 guide anchoring rather than adding more prompt constraints.
+
+A stronger VSCS-aligned test is:
+- use the exact governed pre-entry source frame as a scene/composition guide before Ros appears;
+- retain Ros as an explicit identity reference;
+- anchor a governed guide at or near the intended introduction frame;
+- reduce redundant character reference inputs where the guide already contains established characters, to avoid encouraging extra human synthesis.
+
+This shifts temporal and composition authority from prose into explicit visual conditioning.
