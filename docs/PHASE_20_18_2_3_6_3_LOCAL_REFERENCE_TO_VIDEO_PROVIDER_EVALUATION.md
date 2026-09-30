@@ -811,3 +811,77 @@ Architecturally:
 - continue evaluation of explicit guide/temporal conditioning for frame-accurate introduction rather than attempting to solve timing by repeatedly adding prose constraints.
 
 This control result changes the interpretation of 3.6.3b.4 but does not yet authorize H3 as the VSCS production default.
+
+
+## 22. Governed H3 prompt template authority
+
+Date: 2026-09-30
+
+The concise five-reference prompt used successfully in 3.6.3b.2 and again in the 3.6.3b.5 prompt-simplification control is now retained as the baseline H3 prompt template for subsequent VSCS evaluation and provider-adapter design.
+
+### Template authority
+
+The following structure is the approved baseline pattern:
+
+```text
+<Picture 1> is the authoritative identity reference for Commander James Spence.
+<Picture 2> is the authoritative identity reference for Sandra Crawford.
+<Picture 3> is the authoritative identity reference for Major Ros Rohsgard.
+<Picture 4> is the authoritative environment and composition reference for the Iron Horizon bridge.
+<Picture 5> is the authoritative planetary reference for Xorix.
+
+Create a short photorealistic cinematic science-fiction video set on the bridge of the Iron Horizon.
+
+There must be exactly three people in the shot, and only these three people:
+Commander James Spence, Sandra Crawford, and Major Ros Rohsgard.
+Do not create any additional crew, background people, duplicate people, reflections that look like people, or partial extra bodies.
+
+Use <Picture 4> to preserve the bridge layout, materials, lighting mood, and overall environment.
+Use <Picture 5> so that Xorix is clearly visible through the forward front window or on the main forward display as an important visual element.
+
+Character placement and action:
+- James is already present near the centre of the bridge, standing and facing generally toward the front of the bridge.
+- Sandra is already present at her control station on the right side of the frame, seated or working with her instruments.
+- Ros enters naturally from the left edge of the frame and moves inward during the shot. He must walk into the scene; he must not teleport, pop in, fade in, or suddenly appear fully formed.
+
+Identity preservation:
+Preserve the face, age, hairstyle, uniform, insignia, body proportions, and overall appearance of each character from their respective reference image.
+James must remain James.
+Sandra must remain Sandra.
+Ros must remain Ros.
+Do not merge identities or substitute one character for another.
+
+Shot style:
+Static eye-level camera.
+No cuts.
+No zooms.
+No pans.
+Natural subtle motion only.
+Ros should have clear entry motion from the left side.
+James and Sandra should remain stable and believable in their positions.
+
+Visual quality requirements:
+Photorealistic, physically plausible lighting, realistic skin, realistic fabric, realistic materials, clean cinematic science-fiction look, neutral colour grading.
+No compositing artifacts.
+No pasted cutout look.
+No grey box or background plate around Ros.
+No warped faces.
+No extra limbs.
+No visible glitches.
+
+The result must look like a coherent single live-action-style shot on the Iron Horizon bridge.
+```
+
+### Governance rules
+
+- This template is the current baseline for H3 multi-reference scene generation.
+- Future H3 prompts should preserve this concise structure unless a controlled experiment demonstrates a better pattern.
+- New requirements must be added minimally and semantically, not by accumulating repetitive exclusions or long temporal prose.
+- Temporal control should be delegated to explicit provider capabilities such as guides/anchors whenever practical rather than encoded through increasingly verbose prompt text.
+- Provider-specific prompt syntax remains infrastructure-layer behavior and must not leak into the VSCS domain model.
+- Prompt-template changes must be regression-tested against the successful multi-reference human-count and continuity behavior established in 3.6.3b.2 and 3.6.3b.5.
+- The template is a provider-adapter baseline, not a universal prompt for every shot class. Shot-specific content may vary while preserving the successful structural pattern.
+
+### Architectural implication
+
+VSCS should treat prompt construction as governed, versioned provider behavior. The eventual H3 adapter should compile provider-neutral semantic authority into this stable prompt structure deterministically, with template versioning and regression evidence rather than free-form operator prompt authoring.
