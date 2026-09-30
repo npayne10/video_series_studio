@@ -885,3 +885,150 @@ The result must look like a coherent single live-action-style shot on the Iron H
 ### Architectural implication
 
 VSCS should treat prompt construction as governed, versioned provider behavior. The eventual H3 adapter should compile provider-neutral semantic authority into this stable prompt structure deterministically, with template versioning and regression evidence rather than free-form operator prompt authoring.
+
+
+## 23. Phase 20.18.2.3.6.3d.1 — Governed Pre-Entry Guide Anchoring
+
+Date: 2026-09-30  
+Status: READY FOR CONTROLLED LOCAL RUN
+
+### Objective
+
+Determine whether explicit MiniMax H3 guide authority can enforce the governed opening state of SHT-002 without altering the successful five-reference prompt structure.
+
+This subphase deliberately does **not** attempt to solve exact frame-96 introduction timing yet.
+
+The first question is narrower:
+
+> Can H3 begin from a governed visual state in which James and Sandra are present, Ros is absent, and the Iron Horizon bridge/Xorix composition is preserved?
+
+### Controlled-variable rule
+
+Retain unchanged:
+
+- five reference-image roles and order;
+- successful concise baseline prompt structure;
+- 608x352 evaluation resolution;
+- 24 fps;
+- 20 steps;
+- `res_multistep` sampler;
+- `simple` scheduler;
+- `ref_image_size=match`;
+- no Turbo LoRA;
+- same local Ref2VA model stack.
+
+Introduce one major new variable only:
+
+- one explicit `MiniMaxH3AddGuide` image guide at `frame_idx=0`.
+
+### Guide authority
+
+The guide image must come from existing governed continuity authority, not from a newly manufactured operator image.
+
+Preferred source:
+
+- exact accepted SHT-001 closing visual / inherited SHT-002 opening state;
+- corresponding governed boundary authority: `GBF-36A2A8CA2E4D8452C20765FF`;
+- accepted SHT-001 final-frame SHA: `c4b083314cb06b7c6884029827cd9c3eb1d784bea7f7d9f5fbddcb4e32abd3ef`.
+
+If the exact accepted frame cannot be located, stop and recover that governed source image before running the experiment. Do not substitute a manually recreated bridge image.
+
+### Native ComfyUI guide wiring
+
+Use the native `MiniMaxH3AddGuide` node.
+
+Wire:
+
+1. `MiniMaxH3ReferenceToVideo.positive` -> `MiniMaxH3AddGuide.positive`
+2. `MiniMaxH3ReferenceToVideo.latent` -> `MiniMaxH3AddGuide.latent`
+3. H3 video VAE -> `MiniMaxH3AddGuide.vae`
+4. governed SHT-001 accepted final frame -> `MiniMaxH3AddGuide.image`
+5. `frame_idx = 0`
+6. `MiniMaxH3AddGuide.positive` -> existing `BasicGuider`
+7. Keep the original H3 latent path to the sampler unchanged.
+
+Do not attach audio to the guide in this test.
+
+Do not add a second guide in d.1.
+
+### Prompt governance
+
+Use the frozen five-reference baseline prompt template from Section 22.
+
+For this test:
+
+- retain the same reference declarations;
+- retain the same exact-person-count language;
+- retain the same identity-preservation block;
+- retain the same camera and visual-quality blocks;
+- do not add long temporal exclusions;
+- do not repeat “Ros absent” throughout the prompt;
+- do not add frame numbers to the prompt.
+
+The guide is responsible for opening-state authority. Prompt prose remains descriptive rather than being used as the temporal-control mechanism.
+
+### Expected generated duration
+
+Use the same longer-shot duration class used for temporal evaluation so that the opening-state effect can be observed over enough time.
+
+Target:
+- approximately 6–7 seconds;
+- 24 fps;
+- native H3 frame-grid length as produced by the existing duration expression.
+
+Exact frame-96 authority is explicitly out of scope for d.1.
+
+### PASS criteria
+
+d.1 passes only if:
+
+- frame 0 starts from the governed bridge/opening composition;
+- James is present;
+- Sandra is present;
+- Ros is genuinely absent at frame 0;
+- no unwanted/background people are introduced at frame 0;
+- James and Sandra remain visually coherent after the guide frame;
+- bridge composition remains coherent;
+- Xorix remains coherent;
+- no guide-induced cut, card, patch, rectangle, or pasted-frame artifact appears;
+- Ros, if introduced later by the model, enters continuously rather than appearing as a one-frame teleport;
+- the result remains visually at least comparable to the successful 3.6.3b.2 / 3.6.3b.5 baseline.
+
+### FAIL criteria
+
+Automatic fail if:
+
+- Ros is visible in the guided opening frame;
+- additional people appear in the opening state;
+- the guide replaces or damages the bridge composition;
+- James or Sandra is lost/replaced;
+- a visible discontinuity occurs immediately after the guide frame;
+- the model treats the guide as a static card rather than integrated shot authority.
+
+### Evidence to capture
+
+Return:
+
+- generated MP4;
+- screenshot of the modified ComfyUI workflow showing the `MiniMaxH3AddGuide` node and its connections;
+- screenshot or file identity of the exact governed guide image used;
+- exact `frame_idx`;
+- generated frame count and duration;
+- seed;
+- total runtime;
+- any ComfyUI warnings/errors;
+- sampled observations at frame 0, early motion, mid-shot, and final frames.
+
+### Decision rule
+
+If d.1 passes, proceed to 20.18.2.3.6.3d.2 and test temporal placement by adding/moving explicit guide authority near the governed introduction point.
+
+If d.1 fails, do not immediately add more prompt wording. First determine whether the failure is:
+
+- guide-strength/conditioning behavior;
+- incorrect source guide;
+- reference conflict;
+- guide placement;
+- or H3 inability to preserve a governed opening state under Ref2VA.
+
+No provider-adoption decision is made by d.1 alone.
