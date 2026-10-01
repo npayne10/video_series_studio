@@ -1032,3 +1032,97 @@ If d.1 fails, do not immediately add more prompt wording. First determine whethe
 - or H3 inability to preserve a governed opening state under Ref2VA.
 
 No provider-adoption decision is made by d.1 alone.
+
+
+## 24. Phase 20.18.2.3.6.3d.1 — Governed Pre-Entry Guide Anchoring Results
+
+Date: 2026-10-01  
+Status: PASS
+
+### Runtime configuration
+
+- Provider: MiniMax H3 native Ref2VA
+- Guide node: `MiniMaxH3AddGuide`
+- Guide frame index: 0
+- Governed guide source: `GBF-36A2A8CA2E4D8452C20765FF.png`
+- Resolution: 608x352
+- FPS: 24
+- Frames: 175
+- Duration: approximately 7.29 seconds
+- Sampler: `res_multistep`
+- Scheduler: `simple`
+- Steps: 20
+- Denoise: 1.0
+- Ref image size: `match`
+- Seed: 123456
+- Turbo LoRA: not used
+- Paid inference: none
+
+### Provider execution evidence
+
+ComfyUI reported:
+
+- H3 Video VAE staged: approximately 4965 MB;
+- H3 Ref2VA diffusion model staged: approximately 19995 MB;
+- 20/20 sampling steps completed;
+- sampling duration: approximately 18 minutes 24 seconds;
+- H3 Audio VAE staged: approximately 576 MB;
+- total prompt execution: 20 minutes 5 seconds;
+- compiler graph breaks: 1;
+- rogues: 0.
+
+The run completed successfully.
+
+### Visual findings
+
+Frame-by-frame inspection of the generated MP4 established:
+
+- frame 0 matches the governed opening-state composition closely;
+- James is present at frame 0;
+- Sandra is present at frame 0;
+- Ros is absent at frame 0;
+- no unwanted/background crew are visible in the governed opening state;
+- bridge geometry remains coherent;
+- Xorix remains present and visually coherent;
+- no grey card, rectangular insert, pasted-frame artifact, or guide-card failure is visible;
+- the guided frame transitions into generated motion without an obvious first-frame discontinuity;
+- James and Sandra remain present and visually coherent as motion develops;
+- Ros first becomes visibly detectable at approximately frame 18 (~0.75 s);
+- Ros then enters progressively from the left edge rather than teleporting into a completed pose;
+- no duplicate Ros or additional crew were observed through the inspected sequence;
+- the shot remains temporally stable through the end of the generated clip.
+
+### Acceptance
+
+- governed frame-0 composition: PASS
+- James present at frame 0: PASS
+- Sandra present at frame 0: PASS
+- Ros absent at frame 0: PASS
+- no unwanted people at frame 0: PASS
+- established-character persistence: PASS
+- bridge continuity: PASS
+- Xorix continuity: PASS
+- guide integration without card/patch artifact: PASS
+- continuous Ros entrance: PASS
+- exact frame-96 introduction authority: NOT TESTED / NOT PROVEN
+
+### Interpretation
+
+Phase 20.18.2.3.6.3d.1 proves that explicit H3 guide authority can enforce a governed pre-entry opening state while preserving the successful five-reference prompt and multi-reference scene behavior.
+
+This is materially stronger than prompt-only temporal control because the model begins from the correct two-person governed state without adding extra crew.
+
+The remaining problem is no longer whether Ros can be absent initially. It is whether VSCS can control *when* Ros first becomes visible.
+
+Observed first visibility in this d.1 run is approximately frame 18 (~0.75 s), far earlier than the production requirement of frame 96 (~4.0 s).
+
+### Architectural implication
+
+- retain the frozen concise five-reference H3 prompt template;
+- retain frame-0 governed guide anchoring as valid opening-state authority;
+- do not add long temporal prose;
+- proceed to 20.18.2.3.6.3d.2 to test explicit temporal placement;
+- d.2 should vary guide timing/authority rather than altering the successful prompt structure;
+- exact frame-96 authority remains an unresolved acceptance gate.
+
+No H3 production-default decision is authorized by d.1 alone.
