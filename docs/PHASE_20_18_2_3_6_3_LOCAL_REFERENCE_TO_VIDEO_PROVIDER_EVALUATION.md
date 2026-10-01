@@ -1126,3 +1126,61 @@ Observed first visibility in this d.1 run is approximately frame 18 (~0.75 s), f
 - exact frame-96 authority remains an unresolved acceptance gate.
 
 No H3 production-default decision is authorized by d.1 alone.
+
+
+## 25. Phase 20.18.2.3.6.3d.2 — Explicit Temporal Placement
+
+Date: 2026-10-01  
+Status: READY FOR GOVERNED GUIDE RECOVERY
+
+Objective: test whether a second H3 guide anchored at frame 96 can move Ros's first visible introduction toward the governed SHT-002 target while preserving the successful d.1 opening anchor and frozen five-reference prompt.
+
+Keep unchanged from d.1:
+- five references and order;
+- frozen prompt template;
+- frame-0 governed guide;
+- 608x352, 24 fps, ~7 s native-grid duration;
+- 20 steps, res_multistep, simple scheduler, denoise 1.0;
+- ref_image_size=match;
+- seed 123456;
+- no Turbo LoRA.
+
+New variable only:
+- chain a second MiniMaxH3AddGuide at frame_idx=96.
+
+Guide 1:
+- GBF-36A2A8CA2E4D8452C20765FF.png
+- frame_idx=0.
+
+Guide 2:
+- existing governed SHT-002 introduction image showing Ros's intended first-visible entrance state;
+- frame_idx=96.
+- Do not manually manufacture or composite a replacement image.
+
+Wiring:
+MiniMaxH3ReferenceToVideo.positive -> Guide 1.positive
+Guide 1.positive -> Guide 2.positive
+MiniMaxH3ReferenceToVideo.latent -> Guide 1.latent and Guide 2.latent
+Video VAE -> both guide VAE inputs
+Guide 1 image = governed SHT-001 closing frame
+Guide 2 image = governed SHT-002 introduction image
+Guide 2.positive -> BasicGuider.conditioning
+Sampler latent path remains unchanged.
+
+Prompt rule:
+Use the frozen successful prompt unchanged. Do not add frame numbers or repeated temporal exclusions.
+
+Recover Guide 2 from governed project evidence before running. Search especially:
+- .vscs/automated_introduction_boundaries/EP-001-SCN-001-SHT-002
+- assets/governed_keyframes/EP-001-SCN-001-SHT-002
+- .vscs/introduction_injection/EP-001-SCN-001-SHT-002
+
+Primary timing result:
+- PASS: Ros first visible at frame 96 +/- 8 frames, with all continuity gates passing.
+- PARTIAL: Ros materially delayed versus d.1 but outside that range.
+- FAIL: no material delay, severe early appearance, teleportation, duplication, or continuity failure.
+
+Continuity gates remain:
+James and Sandra persist; no extra people; no duplicate Ros; bridge and Xorix remain coherent; no guide-card or patch artifact; no abrupt cut at the second guide.
+
+If d.2 passes, proceed to d.3 reproducibility/exact-production timing. If partial or fail, analyze guide placement/image/interpolation before changing prompt text.
