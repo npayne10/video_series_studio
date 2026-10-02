@@ -1241,3 +1241,44 @@ The experiment remains blocked until frame-96 authority is either recovered exac
 This exposes a persistence defect: governed metadata retained an approved checksum while the file at the recorded path was later overwritten.
 
 A future VSCS hardening phase must make governed visual authorities immutable/content-addressed or version-preserved so an approved record can never silently resolve to different bytes.
+
+
+## 27. Phase 20.18.2.3.6.3d.2a — Recovery Search Exhausted; Governed Regeneration Required
+
+Date: 2026-10-02  
+Status: EXACT HISTORICAL BINARY UNAVAILABLE; REGENERATION REQUIRED
+
+The recursive SHA-256 recovery search was expanded beyond the VSCS TSR2 project to likely local preservation locations including the production ComfyUI tree, VSCS working tree, Downloads, Desktop, and Pictures. No file matching the governed approved SHA-256 was found:
+
+`741587fbcea7e34d1fd57cee6d8f0100cff60209e8ad38489cf70ad19f102b12`
+
+The current root frame-96 file remains a later overwritten candidate with SHA-256:
+
+`784c6b65d2326e9c64bca0abf68136d3a86e2f96d76102ab2eb6df2e596052f1`
+
+Therefore the historical approved binary cannot currently be recovered from the searched local stores.
+
+### Required next action
+
+Recreate the intended frame-96 introduction candidate from the original governed request inputs, but treat the output as a new candidate requiring a new approval event.
+
+Original governed regeneration inputs:
+
+- shot: `EP-001-SCN-001-SHT-002`
+- requirement: `GIKR-3E9D1CB2BE227C25`
+- original request: `AIBR-4B219567711D8CCE`
+- source frame: `source-frame-000095.png`
+- source frame SHA-256: `d3a0cd603396947d25742c7752d9de8e666826954876a52bb6883b840f5d851f`
+- introduced asset: `CAP-CHR-005`
+- canonical Ros reference: `CAP-CHR-005 V2.png`
+- Ros reference SHA-256: `281065ea0c3e8f09cbed68486b0c119d50d8a326f6f264729f6cb89f490e50ec`
+- original seed: `5030796884446973964`
+- provider/model: ComfyUI — Qwen Introduction Boundary v1 / Qwen Image Edit 2511 + Lightning 4-step
+- target geometry: 1280x720
+- target global frame: 96.
+
+The regenerated output must not inherit the lost historical approval. It must be visually reviewed, explicitly accepted, assigned its actual new SHA-256, and persisted immutably before it is used as H3 d.2 Guide 2 authority.
+
+### Persistence defect
+
+This recovery confirms that governed metadata can currently outlive and disagree with the bytes at its recorded image path. A future hardening change is required so governed approved media is immutable or content-addressed and later generation attempts cannot overwrite an approved authority path.
