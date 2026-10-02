@@ -1184,3 +1184,60 @@ Continuity gates remain:
 James and Sandra persist; no extra people; no duplicate Ros; bridge and Xorix remain coherent; no guide-card or patch artifact; no abrupt cut at the second guide.
 
 If d.2 passes, proceed to d.3 reproducibility/exact-production timing. If partial or fail, analyze guide placement/image/interpolation before changing prompt text.
+
+
+## 26. Phase 20.18.2.3.6.3d.2a — Governed Frame-96 Authority Recovery
+
+Date: 2026-10-02  
+Status: REQUIRED BEFORE d.2 EXECUTION
+
+### Finding
+
+The governed introduction metadata for SHT-002 identifies the approved frame-96 authority as:
+
+- requirement: `GIKR-3E9D1CB2BE227C25`
+- target frame: 96
+- approved SHA-256: `741587fbcea7e34d1fd57cee6d8f0100cff60209e8ad38489cf70ad19f102b12`
+- recorded path: `.vscs/automated_introduction_boundaries/EP-001-SCN-001-SHT-002/GIKR-3E9D1CB2BE227C25/frame-000096.png`
+
+The current file at that path hashes to:
+
+`784c6b65d2326e9c64bca0abf68136d3a86e2f96d76102ab2eb6df2e596052f1`
+
+That later candidate is not the approved binary. A recursive hash search of the VSCS TSR2 project returned no surviving file matching the governed SHA.
+
+### Decision
+
+Do not run d.2 using the current root `frame-000096.png`.
+
+Do not substitute any later AIBR or IIAR candidate merely because it is available.
+
+The experiment remains blocked until frame-96 authority is either recovered exactly or re-established through a new governed approval event.
+
+### Recovery order
+
+1. Search likely external/local preservation locations for the original SHA:
+   - ComfyUI output and temp directories;
+   - ComfyUI input/history copies;
+   - VSCS repository/worktree backups;
+   - Downloads/Desktop/manual export folders;
+   - Windows backup/version-history locations if available.
+
+2. If the exact binary cannot be recovered, reconstruct the candidate from the original governed inputs:
+   - source frame 95 SHA `d3a0cd603396947d25742c7752d9de8e666826954876a52bb6883b840f5d851f`;
+   - Ros canonical reference SHA `281065ea0c3e8f09cbed68486b0c119d50d8a326f6f264729f6cb89f490e50ec`;
+   - original request `AIBR-4B219567711D8CCE`;
+   - original seed `5030796884446973964`;
+   - original Qwen Image Edit 2511 + Lightning 4-step workflow/prompt.
+
+3. A regenerated image is a new candidate, not the historical governed binary. It must receive:
+   - visual review;
+   - explicit approval;
+   - a new authoritative checksum and governed record;
+   - then it may be used as d.2 Guide 2 authority.
+
+### Architectural implication
+
+This exposes a persistence defect: governed metadata retained an approved checksum while the file at the recorded path was later overwritten.
+
+A future VSCS hardening phase must make governed visual authorities immutable/content-addressed or version-preserved so an approved record can never silently resolve to different bytes.
