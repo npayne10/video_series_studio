@@ -1282,3 +1282,39 @@ The regenerated output must not inherit the lost historical approval. It must be
 ### Persistence defect
 
 This recovery confirms that governed metadata can currently outlive and disagree with the bytes at its recorded image path. A future hardening change is required so governed approved media is immutable or content-addressed and later generation attempts cannot overwrite an approved authority path.
+
+
+## 28. Phase 20.18.2.3.6.3d.2a.1 — Regenerated Frame-96 Candidate Review
+
+Date: 2026-10-02  
+Status: REJECTED
+
+A controlled regeneration of the original Qwen introduction-boundary request completed successfully from the verified source boundary and Ros canonical reference.
+
+Regenerated candidate:
+
+- file: `AIBR-4B219567711D8CCE/pass-001.png`
+- SHA-256: `e7f15ee7dd3e726db88920d1330d666ac59033137249a99ad781290f98245b8c`
+- source boundary SHA-256: `d3a0cd603396947d25742c7752d9de8e666826954876a52bb6883b840f5d851f`
+- Ros canonical reference SHA-256: `281065ea0c3e8f09cbed68486b0c119d50d8a326f6f264729f6cb89f490e50ec`
+
+### Visual review
+
+The regenerated candidate fails the frame-96 semantic acceptance gate.
+
+Observed defects:
+
+- four human figures are visible rather than the required three;
+- an additional background/left-side human figure is present;
+- the newly introduced character is not represented only in the first-visible entrance phase;
+- a full-body character is already fully established in the central foreground;
+- the entrant is centered/foreground-dominant rather than emerging partially from an edge or access route;
+- therefore the candidate reads as an already-arrived subject rather than a governed first-visible entrance frame.
+
+The candidate must not be promoted to governed frame-96 authority and must not be used as H3 d.2 Guide 2.
+
+### Decision
+
+`pass-001.png` SHA `e7f15ee7...` = REJECTED.
+
+The d.2 experiment remains blocked pending a visually acceptable frame-96 introduction candidate. The next regeneration attempt must strengthen the composition constraint so that exactly one new person is added, Ros remains partially outside the scene at the edge/access route, and no extra crew are invented.
