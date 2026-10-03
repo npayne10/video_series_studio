@@ -43,6 +43,15 @@ from .minimax_h3_span_adapter import (
     MiniMaxH3SpanExecution,
     MiniMaxH3SpanExecutionPlan,
 )
+from .minimax_h3_span_orchestration import (
+    FFmpegMiniMaxH3SpanNormalizer,
+    GovernedMiniMaxH3SpanOrchestrationService,
+    MiniMaxH3SpanAssembler,
+    MiniMaxH3SpanNormalizer,
+    MiniMaxH3SpanOrchestrationError,
+    MiniMaxH3SpanOrchestrationResult,
+    MiniMaxH3SpanProvider,
+)
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
@@ -108,6 +117,13 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "FFmpegMiniMaxH3SpanNormalizer",
+    "GovernedMiniMaxH3SpanOrchestrationService",
+    "MiniMaxH3SpanAssembler",
+    "MiniMaxH3SpanNormalizer",
+    "MiniMaxH3SpanOrchestrationError",
+    "MiniMaxH3SpanOrchestrationResult",
+    "MiniMaxH3SpanProvider",
     "MiniMaxH3SpanAdapterCompiler",
     "MiniMaxH3SpanAdapterError",
     "MiniMaxH3SpanExecution",
