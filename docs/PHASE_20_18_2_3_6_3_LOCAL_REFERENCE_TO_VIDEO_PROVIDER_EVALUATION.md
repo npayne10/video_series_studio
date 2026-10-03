@@ -1419,3 +1419,65 @@ Therefore:
 - `34b090b47b1d5187eb37912acf2051cf1512d49a3181c2a21e62a89224c391ed` is the authoritative accepted checksum for the attempt-4 frame-96 recovery image.
 - the previously recorded `525dd5e9...` checksum is superseded and must not be used for governance or Guide-2 verification.
 - the accepted visual decision remains unchanged; only the governing checksum is corrected.
+
+
+## 32. Phase 20.18.2.3.6.3d.2 — Explicit Temporal Placement Result
+
+Date: 2026-10-03  
+Status: FAIL — MONOLITHIC H3 TEMPORAL REFERENCE GATING REJECTED
+
+### Runtime evidence
+
+The d.2 two-guide MiniMax H3 run used:
+
+- the successful frame-0 governed opening guide;
+- a second guide at `frame_idx = 96`;
+- the same global five-reference Ref2VA set;
+- Ros canonical identity reference present globally;
+- the frozen baseline prompt;
+- 608x352 output;
+- 24 fps;
+- 175 generated frames;
+- seed 123456.
+
+Frame-by-frame review established:
+
+- frame 0 begins correctly with James and Sandra present, Ros absent, central bridge composition coherent;
+- Ros becomes visible by frame 1, approximately 0.04 seconds;
+- therefore the frame-96 guide does not suppress a globally supplied Ros identity reference before frame 96;
+- frame 96 still shows the bridge composition with Ros already present;
+- frame 97 changes abruptly to a full-frame Xorix view and the bridge/characters disappear;
+- the second guide therefore does not behave as a hard asset-activation boundary and can destabilize the visual state immediately after its target frame.
+
+### Acceptance
+
+- governed opening state: PASS;
+- Ros absent through frame 95: FAIL;
+- Ros first visible at frame 96 +/- 8: FAIL;
+- exact-person-count before target: FAIL because Ros leaks early;
+- bridge continuity after second guide: FAIL;
+- no abrupt guide-boundary scene change: FAIL;
+- single coherent bridge shot: FAIL.
+
+Overall d.2 result: **FAIL**.
+
+### Root cause conclusion
+
+The experiment disproves the assumption that `MiniMaxH3AddGuide(frame_idx=N)` can be used as a temporal asset-activation gate inside one monolithic Ref2VA render.
+
+H3 reference images and prompt conditioning are effectively shot-global for this use case. If Ros's identity reference is supplied to the monolithic run, Ros can leak into frames before the governed introduction boundary. A later guide can anchor or bias visual state near its frame index, but it does not revoke earlier access to global identity conditioning.
+
+### Architectural consequence
+
+Do not attempt to repair this failure with longer prompt timing prose or additional in-shot H3 guide nodes.
+
+Dynamic timed-asset Shots must execute through provider-isolated internal spans:
+
+- SPAN-001 receives only references active during frames 0-95 and therefore receives no Ros identity reference and no Ros prompt mention;
+- SPAN-002 begins at global frame 96, receives the approved frame-96 Introduction Keyframe as its local frame-0 guide, and may then receive Ros's identity reference because Ros is active in that span;
+- each span is normalized to its governed frame count;
+- normalized span outputs are concatenated into the single editorial Shot.
+
+This restores the original Phase 20.18.2.3.1 through 20.18.2.3.3 rule that future assets must be structurally unavailable to a provider before their governed activation frame.
+
+The follow-on architecture is defined in Phase 20.18.2.3.6.4 — Provider-Enforced Temporal Reference Isolation.
