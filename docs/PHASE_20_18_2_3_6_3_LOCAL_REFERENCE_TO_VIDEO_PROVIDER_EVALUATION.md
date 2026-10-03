@@ -1396,3 +1396,26 @@ This image is accepted as the new human-reviewed recovery authority for the Phas
 The lost historical SHA `741587fb...` remains historical evidence only and is not being reasserted.
 
 The accepted recovery image must be persisted immutably under its own checksum-specific filename before d.2 execution and then loaded as H3 Guide 2 at `frame_idx = 96`.
+
+
+## 31. Phase 20.18.2.3.6.3d.2a.4 — Checksum Correction for Accepted Attempt-4 Authority
+
+Date: 2026-10-03  
+Status: CORRECTED — LOCAL FILESYSTEM SHA IS AUTHORITATIVE
+
+The previously recorded SHA-256 for the accepted attempt-4 recovery candidate was calculated from the image copy uploaded into ChatGPT rather than from the original local PNG. The uploaded/displayed copy was not byte-identical to the local source.
+
+Direct local verification established that both:
+
+- `RECOVERY-ATTEMPT-004/pass-001.png`
+- `RECOVERY-ATTEMPT-004/frame-000096-approved-525DD5E9.png`
+
+have identical size (1,146,990 bytes) and identical SHA-256:
+
+`34b090b47b1d5187eb37912acf2051cf1512d49a3181c2a21e62a89224c391ed`
+
+Therefore:
+
+- `34b090b47b1d5187eb37912acf2051cf1512d49a3181c2a21e62a89224c391ed` is the authoritative accepted checksum for the attempt-4 frame-96 recovery image.
+- the previously recorded `525dd5e9...` checksum is superseded and must not be used for governance or Guide-2 verification.
+- the accepted visual decision remains unchanged; only the governing checksum is corrected.
