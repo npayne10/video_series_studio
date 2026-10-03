@@ -8,8 +8,8 @@ import pytest
 
 from vscs.application.production_execution import (
     GovernedInternalRenderSpanCompiler,
-    GovernedIntroductionKeyframeStore,
     GovernedIntroductionKeyframeRequirementCompiler,
+    GovernedIntroductionKeyframeStore,
     TimedCanonicalReferenceActivationCompiler,
 )
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
@@ -241,9 +241,12 @@ def test_h3_span_adapter_isolates_references_and_uses_only_local_frame_zero_guid
     assert first.guide_frame_idx == 0
     assert first.guide_source_kind == "shot_opening_authority"
     assert "REF-ROS" not in tuple(slot.reference_id for slot in first.reference_slots)
-    assert "ros" not in " ".join(
-        (first.positive_prompt, first.negative_prompt, first.motion_prompt)
-    ).casefold()
+    assert (
+        "ros"
+        not in " ".join(
+            (first.positive_prompt, first.negative_prompt, first.motion_prompt)
+        ).casefold()
+    )
 
     assert (second.global_start_frame, second.global_through_frame) == (96, 143)
     assert second.governed_frame_count == 48
@@ -347,7 +350,5 @@ def test_h3_plan_is_deterministic(tmp_path: Path) -> None:
 
     assert first.fingerprint == second.fingerprint
     assert first.plan_id == second.plan_id
-    assert first.spans[0].reference_slot_fingerprint == (
-        second.spans[0].reference_slot_fingerprint
-    )
+    assert first.spans[0].reference_slot_fingerprint == (second.spans[0].reference_slot_fingerprint)
     assert first.spans[1].prompt_fingerprint == second.spans[1].prompt_fingerprint

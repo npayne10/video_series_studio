@@ -75,18 +75,14 @@ class MiniMaxH3SpanExecution:
                 "H3 provider frame count must satisfy (frames + 1) % 8 == 0"
             )
         if self.guide_frame_idx != 0:
-            raise MiniMaxH3SpanAdapterError(
-                "H3 isolated spans may use only a local frame-0 guide"
-            )
+            raise MiniMaxH3SpanAdapterError("H3 isolated spans may use only a local frame-0 guide")
         expected_guide_kind = (
             "shot_opening_authority"
             if self.sequence_number == 1
             else "governed_introduction_keyframe"
         )
         if self.guide_source_kind != expected_guide_kind:
-            raise MiniMaxH3SpanAdapterError(
-                "H3 guide source kind does not match span sequence"
-            )
+            raise MiniMaxH3SpanAdapterError("H3 guide source kind does not match span sequence")
         for field_name in (
             "positive_prompt",
             "negative_prompt",
@@ -101,13 +97,17 @@ class MiniMaxH3SpanExecution:
                 raise MiniMaxH3SpanAdapterError(f"H3 span execution requires {field_name}")
             object.__setattr__(self, field_name, value)
         checksum = self.guide_image_sha256.lower()
-        if len(checksum) != 64 or any(character not in "0123456789abcdef" for character in checksum):
+        if len(checksum) != 64 or any(
+            character not in "0123456789abcdef" for character in checksum
+        ):
             raise MiniMaxH3SpanAdapterError("H3 guide image SHA-256 is invalid")
         object.__setattr__(self, "guide_image_sha256", checksum)
         if self.normalization_policy != "retain_first_governed_frames":
             raise MiniMaxH3SpanAdapterError("Unsupported H3 span normalization policy")
         if self.reference_image_size != "match":
-            raise MiniMaxH3SpanAdapterError("H3 governed span adapter requires ref_image_size=match")
+            raise MiniMaxH3SpanAdapterError(
+                "H3 governed span adapter requires ref_image_size=match"
+            )
 
     @property
     def provider_trim_frames(self) -> int:
@@ -189,9 +189,7 @@ class MiniMaxH3SpanExecutionPlan:
         ):
             value = str(getattr(self, field_name)).strip().lower()
             if not value:
-                raise MiniMaxH3SpanAdapterError(
-                    f"H3 span execution plan requires {field_name}"
-                )
+                raise MiniMaxH3SpanAdapterError(f"H3 span execution plan requires {field_name}")
             object.__setattr__(self, field_name, value)
         if not self.spans:
             raise MiniMaxH3SpanAdapterError("H3 span execution plan requires at least one span")
@@ -269,8 +267,7 @@ class MiniMaxH3SpanAdapterCompiler:
 
         requirements = self._requirements(compiled)
         requirement_by_target = {
-            requirement.target_span_id: requirement
-            for requirement in requirements.requirements
+            requirement.target_span_id: requirement for requirement in requirements.requirements
         }
 
         temporal_plan = ProviderTemporalSpanExecutionCompiler().compile(compiled)
