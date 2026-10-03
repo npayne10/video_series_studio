@@ -13,7 +13,6 @@ from vscs.application.production_execution.provider_temporal_span_execution impo
     ProviderTemporalSpanExecution,
     ProviderTemporalSpanExecutionCompiler,
     ProviderTemporalSpanExecutionError,
-    ProviderTemporalSpanExecutionPlan,
 )
 
 
@@ -50,9 +49,7 @@ class SpanReferenceSlot:
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
-                raise SpanScopedProviderCompilationError(
-                    f"Picture slot requires {field_name}"
-                )
+                raise SpanScopedProviderCompilationError(f"Picture slot requires {field_name}")
             object.__setattr__(self, field_name, value)
 
     def to_dict(self) -> dict[str, object]:
@@ -100,9 +97,7 @@ class SpanScopedProviderInputs:
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
-                raise SpanScopedProviderCompilationError(
-                    f"Span-scoped inputs require {field_name}"
-                )
+                raise SpanScopedProviderCompilationError(f"Span-scoped inputs require {field_name}")
             object.__setattr__(self, field_name, value)
 
         for field_name in (
@@ -189,9 +184,7 @@ class SpanScopedProviderInputPlan:
     def __post_init__(self) -> None:
         shot_id = self.shot_id.strip().upper()
         if not shot_id:
-            raise SpanScopedProviderCompilationError(
-                "Span-scoped input plan requires shot_id"
-            )
+            raise SpanScopedProviderCompilationError("Span-scoped input plan requires shot_id")
         object.__setattr__(self, "shot_id", shot_id)
         if self.schema_version != "1.0" or self.provider_neutral is not True:
             raise SpanScopedProviderCompilationError(
@@ -298,8 +291,7 @@ class SpanScopedProviderInputCompiler:
 
         references = self._reference_records(compiled.reference_plan)
         references_by_id = {
-            self._required_text(reference, "reference_id"): reference
-            for reference in references
+            self._required_text(reference, "reference_id"): reference for reference in references
         }
         if len(references_by_id) != len(references):
             raise SpanScopedProviderCompilationError(
@@ -502,19 +494,11 @@ class SpanScopedProviderInputCompiler:
         if delimiter == "negative":
             parts = [part.strip() for part in cleaned.split(";") if part.strip()]
             retained = [
-                part
-                for part in parts
-                if not self._contains_any_alias(part, future_aliases)
+                part for part in parts if not self._contains_any_alias(part, future_aliases)
             ]
             return "; ".join(retained)
-        parts = [
-            part.strip()
-            for part in re.split(r"(?<=[.!?])\s+", cleaned)
-            if part.strip()
-        ]
-        retained = [
-            part for part in parts if not self._contains_any_alias(part, future_aliases)
-        ]
+        parts = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+        retained = [part for part in parts if not self._contains_any_alias(part, future_aliases)]
         return " ".join(retained)
 
     def _require_no_future_semantics(
@@ -528,9 +512,7 @@ class SpanScopedProviderInputCompiler:
     ) -> None:
         provider_text = " ".join((positive, negative, motion))
         leaking_aliases = tuple(
-            alias
-            for alias in future_aliases
-            if self._contains_alias(provider_text, alias)
+            alias for alias in future_aliases if self._contains_alias(provider_text, alias)
         )
         if leaking_aliases:
             raise SpanScopedProviderCompilationError(
@@ -553,7 +535,9 @@ class SpanScopedProviderInputCompiler:
         if not candidate:
             return False
         escaped = re.escape(candidate)
-        return re.search(rf"(?<![A-Za-z0-9]){escaped}(?![A-Za-z0-9])", text, re.IGNORECASE) is not None
+        return (
+            re.search(rf"(?<![A-Za-z0-9]){escaped}(?![A-Za-z0-9])", text, re.IGNORECASE) is not None
+        )
 
     @staticmethod
     def _reference_records(reference_plan: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -586,9 +570,7 @@ class SpanScopedProviderInputCompiler:
     def _required_text(raw: dict[str, Any], key: str) -> str:
         value = str(raw.get(key) or "").strip()
         if not value:
-            raise SpanScopedProviderCompilationError(
-                f"Governed reference requires {key}"
-            )
+            raise SpanScopedProviderCompilationError(f"Governed reference requires {key}")
         return value
 
     @staticmethod

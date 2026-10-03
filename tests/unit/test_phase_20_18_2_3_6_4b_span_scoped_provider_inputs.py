@@ -144,12 +144,8 @@ def _compiled() -> CompiledProductionPackage:
             "Ros Rohsgard enters naturally from the far left edge. "
             "Xorix remains visible through the forward display."
         ),
-        negative_prompt=(
-            "extra people; identity swap; do not duplicate Ros; warped faces"
-        ),
-        motion_prompt=(
-            "James and Sandra remain stable. Ros enters naturally from the left edge."
-        ),
+        negative_prompt=("extra people; identity swap; do not duplicate Ros; warped faces"),
+        motion_prompt=("James and Sandra remain stable. Ros enters naturally from the left edge."),
         previous_approved_final_frame=None,
         filename_prefix="XORIX/EP-001/PT-VIDEO-SHT-002",
         width=1280,
@@ -263,11 +259,7 @@ def test_reference_slot_fingerprint_changes_when_reference_order_changes() -> No
 def test_missing_active_reference_fails_closed() -> None:
     compiled = _compiled()
     references = dict(compiled.reference_plan or {})
-    records = [
-        item
-        for item in references["references"]
-        if item["reference_id"] != "REF-XORIX"
-    ]
+    records = [item for item in references["references"] if item["reference_id"] != "REF-XORIX"]
     references["references"] = records
     changed = replace(compiled, reference_plan=references)
 
