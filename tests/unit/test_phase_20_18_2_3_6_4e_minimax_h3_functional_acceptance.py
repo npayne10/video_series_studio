@@ -314,7 +314,9 @@ def test_h3_functional_acceptance_fails_if_ros_appears_before_frame_96(tmp_path:
     assert "Ros absent through frames 0-95" in report.visual_failures
 
 
-def test_h3_functional_acceptance_detects_manifest_reference_or_prompt_tamper(tmp_path: Path) -> None:
+def test_h3_functional_acceptance_detects_manifest_reference_or_prompt_tamper(
+    tmp_path: Path,
+) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
     probe = _prepare_evidence(tmp_path, compiled)
@@ -344,8 +346,8 @@ def test_h3_functional_acceptance_detects_wrong_final_frame_count(tmp_path: Path
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
     probe = _prepare_evidence(tmp_path, compiled)
-    probe.facts[f"{compiled.shot_id}-governed-h3-assembled.mp4"] = (
-        MiniMaxH3MediaObservation(143, 24, 1280, 720)
+    probe.facts[f"{compiled.shot_id}-governed-h3-assembled.mp4"] = MiniMaxH3MediaObservation(
+        143, 24, 1280, 720
     )
 
     report = MiniMaxH3FunctionalAcceptanceService(

@@ -141,7 +141,7 @@ class FFprobeMiniMaxH3MediaProbe:
                 raise ValueError("no video stream")
             stream = streams[0]
             numerator, denominator = str(stream["r_frame_rate"]).split("/", maxsplit=1)
-            fps = int(round(int(numerator) / int(denominator)))
+            fps = round(int(numerator) / int(denominator))
             return MiniMaxH3MediaObservation(
                 frame_count=int(stream["nb_read_frames"]),
                 frames_per_second=fps,
@@ -302,9 +302,7 @@ class MiniMaxH3FunctionalAcceptanceService:
             visual_observation_present=visual_observation is not None,
             visual_passed=visual_passed,
             final_path=str(final_path),
-            final_frame_count=(
-                0 if final_observation is None else final_observation.frame_count
-            ),
+            final_frame_count=(0 if final_observation is None else final_observation.frame_count),
             frames_per_second=(
                 0 if final_observation is None else final_observation.frames_per_second
             ),
@@ -312,9 +310,7 @@ class MiniMaxH3FunctionalAcceptanceService:
             visual_failures=(
                 () if visual_observation is None else visual_observation.failed_criteria
             ),
-            approved_by=(
-                None if visual_observation is None else visual_observation.approved_by
-            ),
+            approved_by=(None if visual_observation is None else visual_observation.approved_by),
             notes="" if visual_observation is None else visual_observation.notes,
         )
         self._persist_report(manifest_path.parent, report, visual_observation)
@@ -341,9 +337,7 @@ class MiniMaxH3FunctionalAcceptanceService:
         }
         for key, expected in expected_scalars.items():
             if manifest.get(key) != expected:
-                failures.append(
-                    f"Orchestration manifest {key} does not match governed authority."
-                )
+                failures.append(f"Orchestration manifest {key} does not match governed authority.")
 
         expected_spans = plan["spans"]
         actual_spans = manifest.get("spans")

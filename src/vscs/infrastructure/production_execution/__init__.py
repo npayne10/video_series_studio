@@ -37,12 +37,6 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
-from .minimax_h3_span_adapter import (
-    MiniMaxH3SpanAdapterCompiler,
-    MiniMaxH3SpanAdapterError,
-    MiniMaxH3SpanExecution,
-    MiniMaxH3SpanExecutionPlan,
-)
 from .minimax_h3_functional_acceptance import (
     FFprobeMiniMaxH3MediaProbe,
     MiniMaxH3FunctionalAcceptanceError,
@@ -52,6 +46,12 @@ from .minimax_h3_functional_acceptance import (
     MiniMaxH3MediaObservation,
     MiniMaxH3MediaProbe,
     MiniMaxH3VisualObservation,
+)
+from .minimax_h3_span_adapter import (
+    MiniMaxH3SpanAdapterCompiler,
+    MiniMaxH3SpanAdapterError,
+    MiniMaxH3SpanExecution,
+    MiniMaxH3SpanExecutionPlan,
 )
 from .minimax_h3_span_orchestration import (
     FFmpegMiniMaxH3SpanNormalizer,
@@ -107,6 +107,7 @@ __all__ = [
     "ComfyUIIntroductionInjectionSynthesizer",
     "ComfyUIV714InputAssurance",
     "FFmpegMiniMaxH3SpanNormalizer",
+    "FFprobeMiniMaxH3MediaProbe",
     "GovernedInternalBoundaryFrameExtractor",
     "GovernedMiniMaxH3SpanOrchestrationService",
     "GovernedProviderOutputs",
@@ -129,14 +130,12 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
-    "FFprobeMiniMaxH3MediaProbe",
     "MiniMaxH3FunctionalAcceptanceError",
     "MiniMaxH3FunctionalAcceptanceReport",
     "MiniMaxH3FunctionalAcceptanceService",
     "MiniMaxH3FunctionalAcceptanceState",
     "MiniMaxH3MediaObservation",
     "MiniMaxH3MediaProbe",
-    "MiniMaxH3VisualObservation",
     "MiniMaxH3SpanAdapterCompiler",
     "MiniMaxH3SpanAdapterError",
     "MiniMaxH3SpanAssembler",
@@ -146,6 +145,7 @@ __all__ = [
     "MiniMaxH3SpanOrchestrationError",
     "MiniMaxH3SpanOrchestrationResult",
     "MiniMaxH3SpanProvider",
+    "MiniMaxH3VisualObservation",
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
     "SpanMediaObservation",
