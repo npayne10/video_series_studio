@@ -1318,3 +1318,38 @@ The candidate must not be promoted to governed frame-96 authority and must not b
 `pass-001.png` SHA `e7f15ee7...` = REJECTED.
 
 The d.2 experiment remains blocked pending a visually acceptable frame-96 introduction candidate. The next regeneration attempt must strengthen the composition constraint so that exactly one new person is added, Ros remains partially outside the scene at the edge/access route, and no extra crew are invented.
+
+
+## 29. Phase 20.18.2.3.6.3d.2a.2 — Strengthened Frame-96 Candidate Review
+
+Date: 2026-10-03  
+Status: REJECTED (IMPROVED COMPOSITION, WRONG ENTRANCE STATE)
+
+A second controlled Qwen regeneration was executed with strengthened current VSCS entrance constraints.
+
+Uploaded candidate SHA-256:
+
+`09c62708081fbc48d24108f64bb151917d4870aeb0f9bb0b4934bdd3e9e05b3c`
+
+### Visual review
+
+This candidate materially improves person count:
+
+- exactly three human figures are visible;
+- no additional background crew are visible.
+
+However, it still fails the governed frame-96 first-visible entrance requirement:
+
+- the left-side entrant is fully visible from head to feet;
+- both feet are established on the bridge floor;
+- the entrant is already well inside the scene rather than just crossing the edge/access route;
+- the pose reads as stationary/already-arrived rather than first-visible walking entry;
+- therefore the candidate does not represent the first emitted frame of the Ros introduction transition.
+
+The candidate must not be promoted to governed frame-96 authority and must not be used as H3 d.2 Guide 2.
+
+### Decision
+
+Second strengthened candidate SHA `09c62708...` = REJECTED.
+
+Compared with attempt 1, the exact-person-count defect is corrected. The remaining defect is now narrowly localized to entrance phase / spatial placement. The next candidate should preserve this three-person composition while moving Ros farther outside the frame so only a partial body is visible at the extreme edge or doorway at frame 96.
