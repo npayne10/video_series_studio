@@ -1,1 +1,398 @@
-{"92":{"inputs":{"filename_prefix":"video/MiniMax_H3","format":"auto","format.codec":"auto","codec":"auto","video":["130",0]},"class_type":"SaveVideo","_meta":{"title":"Save Video"}},"115":{"inputs":{"aspect_ratio":"16:9 (Widescreen)","megapixels":0.2,"multiple":32},"class_type":"ResolutionSelector","_meta":{"title":"Resolution Selector (Size)"}},"119":{"inputs":{"vae_name":"minimax\\minimax_h3_video_vae_fp16.safetensors"},"class_type":"VAELoader","_meta":{"title":"Load VAE"}},"120":{"inputs":{"vae_name":"minimax\\minimax_h3_audio_vae_fp32.safetensors"},"class_type":"VAELoader","_meta":{"title":"Load VAE"}},"121":{"inputs":{"samples":["125",0],"vae":["120",0]},"class_type":"VAEDecodeAudio","_meta":{"title":"VAE Decode Audio"}},"122":{"inputs":{"samples":["125",0],"vae":["119",0]},"class_type":"VAEDecode","_meta":{"title":"VAE Decode"}},"123":{"inputs":{"sampler_name":"res_multistep"},"class_type":"KSamplerSelect","_meta":{"title":"KSamplerSelect"}},"124":{"inputs":{"scheduler":"simple","steps":20,"denoise":1,"model":["127",0]},"class_type":"BasicScheduler","_meta":{"title":"BasicScheduler"}},"125":{"inputs":{"noise":["129",0],"guider":["126",0],"sampler":["123",0],"sigmas":["124",0],"latent_image":["136",1]},"class_type":"SamplerCustomAdvanced","_meta":{"title":"SamplerCustomAdvanced"}},"126":{"inputs":{"model":["127",0],"conditioning":["147",0]},"class_type":"BasicGuider","_meta":{"title":"Basic Guider"}},"127":{"inputs":{"unet_name":"minimax\\minimax_h3_ref2va_pruned_int8_convrot.safetensors","weight_dtype":"default"},"class_type":"UNETLoader","_meta":{"title":"Load Diffusion Model"}},"128":{"inputs":{"clip_name":"minimax\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors","type":"minimax","device":"default"},"class_type":"CLIPLoader","_meta":{"title":"Load CLIP"}},"129":{"inputs":{"noise_seed":123456},"class_type":"RandomNoise","_meta":{"title":"RandomNoise"}},"130":{"inputs":{"fps":24,"bit_depth":8,"color_space":"sRGB","codec":"none","images":["122",0],"audio":["121",0]},"class_type":"CreateVideo","_meta":{"title":"Create Video"}},"131":{"inputs":{"expression":"max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17","values.a":["132",0]},"class_type":"ComfyMathExpression","_meta":{"title":"Math Expression"}},"132":{"inputs":{"value":7},"class_type":"PrimitiveFloat","_meta":{"title":"Float (Duration)"}},"136":{"inputs":{"prompt":["138",0],"width":["115",0],"height":["115",1],"length":["131",1],"ref_image_size":"match","clip":["128",0],"vae":["119",0],"audio_vae":["120",0],"ref_images.ref_image_0":["137",0],"ref_images.ref_image_1":["139",0],"ref_images.ref_image_2":["141",0],"ref_images.ref_image_3":["142",0],"ref_images.ref_image_4":["143",0]},"class_type":"MiniMaxH3ReferenceToVideo","_meta":{"title":"MiniMax H3 Reference to Video"}},"137":{"inputs":{"image":"CAP-CHR-001-Master-V2.png"},"class_type":"LoadImage","_meta":{"title":"Load Image"}},"138":{"inputs":{"value":"BASELINE PROMPT REPLACED BY VSCS"},"class_type":"PrimitiveStringMultiline","_meta":{"title":"Input Text (Prompt)"}},"139":{"inputs":{"image":"CAP-CHR-003 V2.png"},"class_type":"LoadImage","_meta":{"title":"Load Image"}},"141":{"inputs":{"image":"CAP-CHR-005 V2.png"},"class_type":"LoadImage","_meta":{"title":"Load Image"}},"142":{"inputs":{"image":"CAP-LOC-021_V2_1280x720.png"},"class_type":"LoadImage","_meta":{"title":"Load Image"}},"143":{"inputs":{"image":"CAP-PLN-002_V2.png"},"class_type":"LoadImage","_meta":{"title":"Load Image"}},"144":{"inputs":{"frame_idx":0,"positive":["136",0],"latent":["136",1],"vae":["119",0],"image":["145",0]},"class_type":"MiniMaxH3AddGuide","_meta":{"title":"Add Guide for MiniMax H3"}},"145":{"inputs":{"image":"GBF-36A2A8CA2E4D8452C20765FF.png"},"class_type":"LoadImage","_meta":{"title":"GUIDE: Accepted SHT-001 Final Frame — SELECT REQUIRED"}},"146":{"inputs":{"image":"frame-000096-approved-34B090B4.png"},"class_type":"LoadImage","_meta":{"title":"GUIDE 2: Approved SHT-002 Frame 96 — GIKR-3E9D1CB2BE227C25"}},"147":{"inputs":{"frame_idx":96,"positive":["144",0],"latent":["136",1],"vae":["119",0],"image":["146",0]},"class_type":"MiniMaxH3AddGuide","_meta":{"title":"GUIDE 2: Ros Introduction @ Frame 96"}}}
+{
+  "92": {
+    "inputs": {
+      "filename_prefix": "video/MiniMax_H3",
+      "format": "auto",
+      "format.codec": "auto",
+      "codec": "auto",
+      "video": [
+        "130",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save Video"
+    }
+  },
+  "115": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 0.2,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector (Size)"
+    }
+  },
+  "119": {
+    "inputs": {
+      "vae_name": "minimax\\minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "120": {
+    "inputs": {
+      "vae_name": "minimax\\minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "121": {
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "120",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "122": {
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "119",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "123": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "124": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 20,
+      "denoise": 1,
+      "model": [
+        "127",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "125": {
+    "inputs": {
+      "noise": [
+        "129",
+        0
+      ],
+      "guider": [
+        "126",
+        0
+      ],
+      "sampler": [
+        "123",
+        0
+      ],
+      "sigmas": [
+        "124",
+        0
+      ],
+      "latent_image": [
+        "136",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "126": {
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ],
+      "conditioning": [
+        "147",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "127": {
+    "inputs": {
+      "unet_name": "minimax\\minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "128": {
+    "inputs": {
+      "clip_name": "minimax\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "129": {
+    "inputs": {
+      "noise_seed": 123456
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "130": {
+    "inputs": {
+      "fps": 24,
+      "bit_depth": 8,
+      "color_space": "sRGB",
+      "codec": "none",
+      "images": [
+        "122",
+        0
+      ],
+      "audio": [
+        "121",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  },
+  "131": {
+    "inputs": {
+      "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+      "values.a": [
+        "132",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "132": {
+    "inputs": {
+      "value": 7
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float (Duration)"
+    }
+  },
+  "136": {
+    "inputs": {
+      "prompt": [
+        "138",
+        0
+      ],
+      "width": [
+        "115",
+        0
+      ],
+      "height": [
+        "115",
+        1
+      ],
+      "length": [
+        "131",
+        1
+      ],
+      "ref_image_size": "match",
+      "clip": [
+        "128",
+        0
+      ],
+      "vae": [
+        "119",
+        0
+      ],
+      "audio_vae": [
+        "120",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "137",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "139",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "141",
+        0
+      ],
+      "ref_images.ref_image_3": [
+        "142",
+        0
+      ],
+      "ref_images.ref_image_4": [
+        "143",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Reference to Video"
+    }
+  },
+  "137": {
+    "inputs": {
+      "image": "CAP-CHR-001-Master-V2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "138": {
+    "inputs": {
+      "value": "<Picture 1> is the authoritative identity reference for Commander James Spence.\n<Picture 2> is the authoritative identity reference for Sandra Crawford.\n<Picture 3> is the authoritative identity reference for Major Ros Rohsgard.\n<Picture 4> is the authoritative environment and composition reference for the Iron Horizon bridge.\n<Picture 5> is the authoritative planetary reference for Xorix.\n\nCreate a short photorealistic cinematic science-fiction video set on the bridge of the Iron Horizon.\n\nThere must be exactly three people in the shot, and only these three people:\nCommander James Spence, Sandra Crawford, and Major Ros Rohsgard.\nDo not create any additional crew, background people, duplicate people, reflections that look like people, or partial extra bodies.\n\nUse <Picture 4> to preserve the bridge layout, materials, lighting mood, and overall environment.\nUse <Picture 5> so that Xorix is clearly visible through the forward front window or on the main forward display as an important visual element.\n\nCharacter placement and action:\n- James is already present near the centre of the bridge, standing and facing generally toward the front of the bridge.\n- Sandra is already present at her control station on the right side of the frame, seated or working with her instruments.\n- Ros enters naturally from the left edge of the frame and moves inward during the shot. He must walk into the scene; he must not teleport, pop in, fade in, or suddenly appear fully formed.\n\nIdentity preservation:\nPreserve the face, age, hairstyle, uniform, insignia, body proportions, and overall appearance of each character from their respective reference image.\nJames must remain James.\nSandra must remain Sandra.\nRos must remain Ros.\nDo not merge identities or substitute one character for another.\n\nShot style:\nStatic eye-level camera.\nNo cuts.\nNo zooms.\nNo pans.\nNatural subtle motion only.\nRos should have clear entry motion from the left side.\nJames and Sandra should remain stable and believable in their positions.\n\nVisual quality requirements:\nPhotorealistic, physically plausible lighting, realistic skin, realistic fabric, realistic materials, clean cinematic science-fiction look, neutral colour grading.\nNo compositing artifacts.\nNo pasted cutout look.\nNo grey box or background plate around Ros.\nNo warped faces.\nNo extra limbs.\nNo visible glitches.\n\nThe result must look like a coherent single live-action-style shot on the Iron Horizon bridge."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Input Text (Prompt)"
+    }
+  },
+  "139": {
+    "inputs": {
+      "image": "CAP-CHR-003 V2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "141": {
+    "inputs": {
+      "image": "CAP-CHR-005 V2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "142": {
+    "inputs": {
+      "image": "CAP-LOC-021_V2_1280x720.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "143": {
+    "inputs": {
+      "image": "CAP-PLN-002_V2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "144": {
+    "inputs": {
+      "frame_idx": 0,
+      "positive": [
+        "136",
+        0
+      ],
+      "latent": [
+        "136",
+        1
+      ],
+      "vae": [
+        "119",
+        0
+      ],
+      "image": [
+        "145",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3AddGuide",
+    "_meta": {
+      "title": "Add Guide for MiniMax H3"
+    }
+  },
+  "145": {
+    "inputs": {
+      "image": "GBF-36A2A8CA2E4D8452C20765FF.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "GUIDE: Accepted SHT-001 Final Frame — SELECT REQUIRED"
+    }
+  },
+  "146": {
+    "inputs": {
+      "image": "frame-000096-approved-34B090B4.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "GUIDE 2: Approved SHT-002 Frame 96 — GIKR-3E9D1CB2BE227C25"
+    }
+  },
+  "147": {
+    "inputs": {
+      "frame_idx": 96,
+      "positive": [
+        "144",
+        0
+      ],
+      "latent": [
+        "136",
+        1
+      ],
+      "vae": [
+        "119",
+        0
+      ],
+      "image": [
+        "146",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3AddGuide",
+    "_meta": {
+      "title": "GUIDE 2: Ros Introduction @ Frame 96"
+    }
+  }
+}
