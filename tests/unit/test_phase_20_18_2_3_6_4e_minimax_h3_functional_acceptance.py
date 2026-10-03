@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from vscs.application.production_execution import (
@@ -302,12 +303,7 @@ def test_h3_functional_acceptance_fails_if_ros_appears_before_frame_96(tmp_path:
     _approve_intro(tmp_path, compiled)
     probe = _prepare_evidence(tmp_path, compiled)
     visual = _passing_visual()
-    failing = MiniMaxH3VisualObservation(
-        **{
-            **visual.__dict__,
-            "ros_absent_frames_0_95": False,
-        }
-    )
+    failing = replace(visual, ros_absent_frames_0_95=False)
 
     report = MiniMaxH3FunctionalAcceptanceService(
         tmp_path,
