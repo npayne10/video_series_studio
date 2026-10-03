@@ -43,6 +43,16 @@ from .minimax_h3_span_adapter import (
     MiniMaxH3SpanExecution,
     MiniMaxH3SpanExecutionPlan,
 )
+from .minimax_h3_functional_acceptance import (
+    FFprobeMiniMaxH3MediaProbe,
+    MiniMaxH3FunctionalAcceptanceError,
+    MiniMaxH3FunctionalAcceptanceReport,
+    MiniMaxH3FunctionalAcceptanceService,
+    MiniMaxH3FunctionalAcceptanceState,
+    MiniMaxH3MediaObservation,
+    MiniMaxH3MediaProbe,
+    MiniMaxH3VisualObservation,
+)
 from .minimax_h3_span_orchestration import (
     FFmpegMiniMaxH3SpanNormalizer,
     GovernedMiniMaxH3SpanOrchestrationService,
@@ -119,6 +129,14 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "FFprobeMiniMaxH3MediaProbe",
+    "MiniMaxH3FunctionalAcceptanceError",
+    "MiniMaxH3FunctionalAcceptanceReport",
+    "MiniMaxH3FunctionalAcceptanceService",
+    "MiniMaxH3FunctionalAcceptanceState",
+    "MiniMaxH3MediaObservation",
+    "MiniMaxH3MediaProbe",
+    "MiniMaxH3VisualObservation",
     "MiniMaxH3SpanAdapterCompiler",
     "MiniMaxH3SpanAdapterError",
     "MiniMaxH3SpanAssembler",
