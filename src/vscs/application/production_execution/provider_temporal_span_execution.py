@@ -315,9 +315,10 @@ class ProviderTemporalSpanExecutionPlan:
             provider_neutral=provider_neutral,
         )
         supplied_count = raw.get("execution_count")
-        if supplied_count is not None and _integer_value(
-            supplied_count, "execution_count"
-        ) != plan.execution_count:
+        if (
+            supplied_count is not None
+            and _integer_value(supplied_count, "execution_count") != plan.execution_count
+        ):
             raise ProviderTemporalSpanExecutionError(
                 "Temporal span execution_count does not match persisted executions"
             )
@@ -510,9 +511,7 @@ def _integer_value(value: object, field_name: str) -> int:
     try:
         number = int(value)
     except (TypeError, ValueError) as exc:
-        raise ProviderTemporalSpanExecutionError(
-            f"{field_name} must be an integer"
-        ) from exc
+        raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer") from exc
     if isinstance(value, float) and not value.is_integer():
         raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer")
     return number
