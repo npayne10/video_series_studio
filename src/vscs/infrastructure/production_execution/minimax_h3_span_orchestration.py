@@ -81,9 +81,7 @@ class MiniMaxH3SpanOrchestrationResult:
             raise MiniMaxH3SpanOrchestrationError(
                 "H3 orchestration result requires execution-plan authority"
             )
-        if not self.raw_span_paths or len(self.raw_span_paths) != len(
-            self.normalized_span_paths
-        ):
+        if not self.raw_span_paths or len(self.raw_span_paths) != len(self.normalized_span_paths):
             raise MiniMaxH3SpanOrchestrationError(
                 "H3 orchestration result requires matching raw and normalized spans"
             )
@@ -117,23 +115,17 @@ class FFmpegMiniMaxH3SpanNormalizer:
         frames_per_second: int,
     ) -> Path:
         if provider_frame_count <= 0 or governed_frame_count <= 0:
-            raise MiniMaxH3SpanOrchestrationError(
-                "H3 normalization frame counts must be positive"
-            )
+            raise MiniMaxH3SpanOrchestrationError("H3 normalization frame counts must be positive")
         if governed_frame_count > provider_frame_count:
             raise MiniMaxH3SpanOrchestrationError(
                 "H3 governed frame count cannot exceed provider frame count"
             )
         if frames_per_second <= 0:
-            raise MiniMaxH3SpanOrchestrationError(
-                "H3 normalization frame rate must be positive"
-            )
+            raise MiniMaxH3SpanOrchestrationError("H3 normalization frame rate must be positive")
 
         source = Path(source_path).expanduser().resolve(strict=False)
         if not source.is_file():
-            raise MiniMaxH3SpanOrchestrationError(
-                f"H3 provider output does not exist: {source}"
-            )
+            raise MiniMaxH3SpanOrchestrationError(f"H3 provider output does not exist: {source}")
         observed_source_frames = self._frame_count(source)
         if observed_source_frames != provider_frame_count:
             raise MiniMaxH3SpanOrchestrationError(
@@ -179,9 +171,7 @@ class FFmpegMiniMaxH3SpanNormalizer:
             ) from exc
 
         if not destination.is_file() or destination.stat().st_size <= 0:
-            raise MiniMaxH3SpanOrchestrationError(
-                "H3 span normalization produced no output"
-            )
+            raise MiniMaxH3SpanOrchestrationError("H3 span normalization produced no output")
         observed_normalized_frames = self._frame_count(destination)
         if observed_normalized_frames != governed_frame_count:
             raise MiniMaxH3SpanOrchestrationError(
@@ -347,9 +337,7 @@ class GovernedMiniMaxH3SpanOrchestrationService:
         root: Path,
         requested: Path | None,
     ) -> Path:
-        candidate = requested or (
-            root / f"{compiled.shot_id}-governed-h3-assembled.mp4"
-        )
+        candidate = requested or (root / f"{compiled.shot_id}-governed-h3-assembled.mp4")
         candidate = Path(candidate).expanduser()
         if not candidate.is_absolute():
             candidate = self.project_directory / candidate

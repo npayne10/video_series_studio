@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -305,15 +305,15 @@ def test_h3_orchestration_persists_provider_plan_and_output_manifest(tmp_path: P
 
     result = service.run(compiled)
 
-    manifest = next(
-        (tmp_path / ".vscs" / "h3_span_orchestration").rglob("orchestration.json")
-    )
+    manifest = next((tmp_path / ".vscs" / "h3_span_orchestration").rglob("orchestration.json"))
     content = manifest.read_text(encoding="utf-8")
-    assert '"provider": "minimax-h3-ref2va"' in content
-    assert '"assembly_policy": "concatenate_normalized_span_outputs_in_sequence"' in content
-    assert '"guide_frame_idx": 0' in content
-    assert '"temporal_asset_gate": false' in content
-    assert str(result.final_path) in content
+    payload = json.loads(content)
+
+    assert payload["provider"] == "minimax-h3-ref2va"
+    assert payload["assembly_policy"] == "concatenate_normalized_span_outputs_in_sequence"
+    assert all(span["guide_frame_idx"] == 0 for span in payload["spans"])
+    assert all(span["temporal_asset_gate"] is False for span in payload["spans"])
+    assert payload["final_path"] == str(result.final_path)
 
 
 def test_h3_orchestration_frees_provider_memory_when_second_span_fails(tmp_path: Path) -> None:
