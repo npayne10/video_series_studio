@@ -82,6 +82,13 @@ from .provider_audio_policy import (
     ProviderAudioPolicyMode,
     resolve_provider_audio_policy,
 )
+from .span_scoped_provider_inputs import (
+    SpanReferenceSlot,
+    SpanScopedProviderCompilationError,
+    SpanScopedProviderInputCompiler,
+    SpanScopedProviderInputPlan,
+    SpanScopedProviderInputs,
+)
 from .provider_temporal_span_execution import (
     ProviderTemporalSpanExecution,
     ProviderTemporalSpanExecutionCompiler,
@@ -229,6 +236,11 @@ __all__ = [
     "ReferencePlanRenderRequestBinder",
     "ShotBoundaryAuthorityStatus",
     "ShotBoundaryContinuityMode",
+    "SpanReferenceSlot",
+    "SpanScopedProviderCompilationError",
+    "SpanScopedProviderInputCompiler",
+    "SpanScopedProviderInputPlan",
+    "SpanScopedProviderInputs",
     "SpanCanonicalReferenceActivation",
     "TimedCanonicalReferenceActivationCompiler",
     "TimedCanonicalReferenceActivationError",
