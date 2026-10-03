@@ -1353,3 +1353,46 @@ The candidate must not be promoted to governed frame-96 authority and must not b
 Second strengthened candidate SHA `09c62708...` = REJECTED.
 
 Compared with attempt 1, the exact-person-count defect is corrected. The remaining defect is now narrowly localized to entrance phase / spatial placement. The next candidate should preserve this three-person composition while moving Ros farther outside the frame so only a partial body is visible at the extreme edge or doorway at frame 96.
+
+
+## 30. Phase 20.18.2.3.6.3d.2a.4 — Attempt-4 Frame-96 Continuity Acceptance
+
+Date: 2026-10-03  
+Status: PASS — ACCEPTED AS NEW RECOVERY AUTHORITY CANDIDATE
+
+The attempt-4 Qwen recovery candidate was compared directly against the exact source boundary frame.
+
+Verified source boundary:
+
+- file: `source-frame-000095.png`
+- SHA-256: `d3a0cd603396947d25742c7752d9de8e666826954876a52bb6883b840f5d851f`
+
+Attempt-4 candidate:
+
+- file: `RECOVERY-ATTEMPT-004/pass-001.png`
+- SHA-256: `525dd5e9fbfe70cbb50f125346f794285d977dbc4407824f2b3218b0a97e4c0f`
+
+### Visual continuity review
+
+The source-to-target transition preserves the intended established subjects sufficiently for the d.2 guide experiment:
+
+- James remains standing on the left side with the same rear-facing orientation and substantially the same scale and placement;
+- Sandra remains seated at the right-side console with substantially the same orientation and placement;
+- the central chair remains unoccupied;
+- bridge framing, forward-window composition and Xorix remain coherent;
+- no extra background crew are introduced;
+- Ros appears only at the extreme left boundary and is clipped by the frame edge;
+- Ros is no longer centered, oversized or foreground-dominant;
+- the frame reads as a first-visible entrance state rather than an already-arrived pose.
+
+Minor generative differences in local bridge/text/detail rendering are present, but they do not materially alter the governed spatial continuity required for this controlled H3 timing experiment.
+
+### Decision
+
+Attempt-4 candidate SHA `525dd5e9...` = PASS for recovery use.
+
+This image is accepted as the new human-reviewed recovery authority for the Phase 20.18.2.3.6.3d.2 H3 explicit temporal-placement experiment.
+
+The lost historical SHA `741587fb...` remains historical evidence only and is not being reasserted.
+
+The accepted recovery image must be persisted immutably under its own checksum-specific filename before d.2 execution and then loaded as H3 Guide 2 at `frame_idx = 96`.
