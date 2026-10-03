@@ -508,13 +508,22 @@ def _required_int(raw: dict[str, Any], key: str) -> int:
 def _integer_value(value: object, field_name: str) -> int:
     if isinstance(value, bool):
         raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer")
-    try:
-        number = int(value)
-    except (TypeError, ValueError) as exc:
-        raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer") from exc
-    if isinstance(value, float) and not value.is_integer():
-        raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer")
-    return number
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, float):
+        if not value.is_integer():
+            raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer")
+        return int(value)
+
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer") from exc
+
+    raise ProviderTemporalSpanExecutionError(f"{field_name} must be an integer")
 
 
 def _string_tuple(raw: dict[str, Any], key: str) -> tuple[str, ...]:
