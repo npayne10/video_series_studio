@@ -37,6 +37,12 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
+from .minimax_h3_comfyui_provider import (
+    LiveMiniMaxH3ComfyUISpanProvider,
+    MiniMaxH3ComfyUICompiledJob,
+    MiniMaxH3ComfyUIProviderError,
+    MiniMaxH3ComfyUIWorkflowCompiler,
+)
 from .minimax_h3_functional_acceptance import (
     FFprobeMiniMaxH3MediaProbe,
     MiniMaxH3FunctionalAcceptanceError,
@@ -130,6 +136,10 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "LiveMiniMaxH3ComfyUISpanProvider",
+    "MiniMaxH3ComfyUICompiledJob",
+    "MiniMaxH3ComfyUIProviderError",
+    "MiniMaxH3ComfyUIWorkflowCompiler",
     "MiniMaxH3FunctionalAcceptanceError",
     "MiniMaxH3FunctionalAcceptanceReport",
     "MiniMaxH3FunctionalAcceptanceService",
