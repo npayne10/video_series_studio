@@ -37,6 +37,12 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
+from .minimax_h3_span_adapter import (
+    MiniMaxH3SpanAdapterCompiler,
+    MiniMaxH3SpanAdapterError,
+    MiniMaxH3SpanExecution,
+    MiniMaxH3SpanExecutionPlan,
+)
 from .package_compilation import (
     ComfyUIInputAssuranceReport,
     ComfyUIInputTrace,
@@ -98,6 +104,10 @@ __all__ = [
     "LTX25SpanProviderConditioningCompiler",
     "LTX25SpanProviderConditioningPlan",
     "LTX25TimedSpanAcceptancePackageBuilder",
+    "MiniMaxH3SpanAdapterCompiler",
+    "MiniMaxH3SpanAdapterError",
+    "MiniMaxH3SpanExecution",
+    "MiniMaxH3SpanExecutionPlan",
     "LocalComfyUIHardwareCapabilityResolver",
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
