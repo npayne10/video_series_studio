@@ -215,6 +215,29 @@ def test_span_001_removes_ros_semantics_from_every_prompt_channel() -> None:
     assert "xorix" in combined
 
 
+def test_generic_supporting_role_word_is_not_treated_as_future_ros_alias() -> None:
+    compiled = replace(
+        _compiled(),
+        positive_prompt=(
+            "Create a photorealistic bridge shot. "
+            "James remains as the supporting officer on the left side of the bridge. "
+            "Sandra remains at the right control station. "
+            "Ros Rohsgard enters naturally from the far left edge. "
+            "Xorix remains visible through the forward display."
+        ),
+    )
+
+    first = SpanScopedProviderInputCompiler().compile(compiled).spans[0]
+
+    combined = " ".join(
+        (first.positive_prompt, first.negative_prompt, first.motion_prompt)
+    ).casefold()
+    assert "supporting officer" in combined
+    assert "ros" not in combined
+    assert "rohsgard" not in combined
+    assert "cap-chr-005" not in combined
+
+
 def test_span_002_contains_ros_and_compact_picture_mapping() -> None:
     second = SpanScopedProviderInputCompiler().compile(_compiled()).spans[1]
 

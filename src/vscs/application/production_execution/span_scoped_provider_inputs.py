@@ -275,6 +275,7 @@ class SpanScopedProviderInputCompiler:
             "identity",
             "primary",
             "secondary",
+            "supporting",
             "environment",
             "character",
             "asset",
