@@ -256,6 +256,85 @@ def test_reference_slot_fingerprint_changes_when_reference_order_changes() -> No
     assert original.spans[0].reference_slot_fingerprint
 
 
+def test_unscoped_frame_state_reference_without_asset_id_is_ignored() -> None:
+    compiled = _compiled()
+    references = dict(compiled.reference_plan or {})
+    records = list(references["references"])
+    records.append(
+        {
+            "reference_id": "REF-COMPOSITION",
+            "asset_id": None,
+            "role": "scene_composition_anchor",
+            "label": "Shot composition — EP-001-SCN-001-SHT-002",
+            "reference_class": "shot_composite",
+            "priority": "required",
+            "subject_type": "multi_subject_scene",
+            "source_path": "references/shot-composition.png",
+            "provider_ready": True,
+            "file_checksum": "sha-composition",
+            "reference_fingerprint": "fp-composition",
+            "contains_environments": ["CAP-LOC-021"],
+        }
+    )
+    references["references"] = records
+    changed = replace(compiled, reference_plan=references)
+
+    timed = _timed()
+    spans = GovernedInternalRenderSpanCompiler().compile(timed)
+    activation = TimedCanonicalReferenceActivationCompiler().compile(
+        timed,
+        spans,
+        references,
+    )
+    changed = replace(changed, timed_reference_activation=activation.to_dict())
+
+    plan = SpanScopedProviderInputCompiler().compile(changed)
+    first, second = plan.spans
+
+    assert all(slot.reference_id != "REF-COMPOSITION" for slot in first.reference_slots)
+    assert all(slot.reference_id != "REF-COMPOSITION" for slot in second.reference_slots)
+    assert "REF-COMPOSITION" not in first.active_reference_ids
+    assert "REF-COMPOSITION" not in second.active_reference_ids
+
+
+def test_active_reference_without_asset_id_still_fails_closed() -> None:
+    compiled = _compiled()
+    activation = dict(compiled.timed_reference_activation or {})
+    activations = [dict(item) for item in activation["activations"]]
+    first_refs = list(activations[0]["active_reference_ids"])
+    first_refs.append("REF-ASSETLESS")
+    activations[0]["active_reference_ids"] = first_refs
+    activation["activations"] = activations
+
+    references = dict(compiled.reference_plan or {})
+    records = list(references["references"])
+    records.append(
+        {
+            "reference_id": "REF-ASSETLESS",
+            "asset_id": None,
+            "role": "environment_reference",
+            "label": "Invalid active reference",
+            "reference_class": "canonical_master",
+            "priority": "required",
+            "subject_type": "environment",
+            "source_path": "references/invalid.png",
+            "provider_ready": True,
+            "file_checksum": "sha-invalid",
+            "reference_fingerprint": "fp-invalid",
+        }
+    )
+    references["references"] = records
+
+    changed = replace(
+        compiled,
+        reference_plan=references,
+        timed_reference_activation=activation,
+    )
+
+    with pytest.raises(SpanScopedProviderCompilationError):
+        SpanScopedProviderInputCompiler().compile(changed)
+
+
 def test_missing_active_reference_fails_closed() -> None:
     compiled = _compiled()
     references = dict(compiled.reference_plan or {})

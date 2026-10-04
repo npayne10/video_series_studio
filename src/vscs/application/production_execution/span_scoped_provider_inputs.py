@@ -306,8 +306,9 @@ class SpanScopedProviderInputCompiler:
         }
 
         all_reference_asset_ids = {
-            reference_id: self._required_text(reference, "asset_id").upper()
+            reference_id: asset_id
             for reference_id, reference in references_by_id.items()
+            if (asset_id := self._optional_text(reference.get("asset_id")).upper())
         }
 
         compiled_spans: list[SpanScopedProviderInputs] = []
@@ -445,8 +446,8 @@ class SpanScopedProviderInputCompiler:
                 reference = references_by_id.get(reference_id)
                 if reference is None:
                     continue
-                reference_asset_id = self._required_text(reference, "asset_id").upper()
-                if reference_asset_id != asset_id:
+                reference_asset_id = self._optional_text(reference.get("asset_id")).upper()
+                if not reference_asset_id or reference_asset_id != asset_id:
                     continue
                 aliases.append(reference_id)
                 for field_name in self._REFERENCE_LABEL_FIELDS:
