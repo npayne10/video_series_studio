@@ -7,7 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from vscs.application.production_tasks import ProductionTaskType
+from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 from vscs.infrastructure.production import JsonProductionTaskRepository
 from vscs.infrastructure.production_execution import (
     FFmpegMiniMaxH3SpanNormalizer,
@@ -18,7 +18,6 @@ from vscs.infrastructure.production_execution import (
 from vscs.infrastructure.production_execution.package_compilation import (
     LocalProductionPackageCompilationService,
 )
-
 
 SHT002 = "EP-001-SCN-001-SHT-002"
 SHT002_OPENING_SHA256 = "c4b083314cb06b7c6884029827cd9c3eb1d784bea7f7d9f5fbddcb4e32abd3ef"
@@ -40,10 +39,12 @@ def _task(project: Path, shot_id: str):
         for task in repository.list_all()
         if (task.shot_id or "").strip().upper() == shot_id
         and task.task_type is ProductionTaskType.VIDEO_GENERATION
+        and task.state is ProductionTaskState.READY
     )
     if len(matches) != 1:
         raise RuntimeError(
-            f"Expected exactly one VIDEO_GENERATION ProductionTask for {shot_id}; found {len(matches)}"
+            f"Expected exactly one READY VIDEO_GENERATION ProductionTask "
+            f"for {shot_id}; found {len(matches)}"
         )
     return matches[0]
 
@@ -115,9 +116,7 @@ def main() -> int:
     print(f"Guide SHA256: {execution.guide_image_sha256}")
     print("References:")
     for slot in execution.reference_slots:
-        print(
-            f"  {slot.picture_tag}: {slot.asset_id} / {slot.reference_id} / {slot.source_path}"
-        )
+        print(f"  {slot.picture_tag}: {slot.asset_id} / {slot.reference_id} / {slot.source_path}")
     print(f"Workflow fingerprint: {provider_job.workflow_fingerprint}")
     print(f"Model/config fingerprint: {provider_job.model_config_fingerprint}")
 
@@ -138,11 +137,7 @@ def main() -> int:
     try:
         raw_output = provider.render(execution)
         acceptance_root = (
-            project
-            / ".vscs"
-            / "h3_span_acceptance"
-            / compiled.task_id
-            / execution.job_id
+            project / ".vscs" / "h3_span_acceptance" / compiled.task_id / execution.job_id
         )
         normalized_output = FFmpegMiniMaxH3SpanNormalizer(project).normalize(
             raw_output,

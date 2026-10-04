@@ -59,9 +59,11 @@ class GovernedShotBoundaryResolver:
                 "Shot does not declare continuous previous-Shot boundary inheritance"
             )
 
-        previous_shot_id = str(
-            continuity.get("previous_shot_id") or continuity.get("source_shot_id") or ""
-        ).strip().upper()
+        previous_shot_id = (
+            str(continuity.get("previous_shot_id") or continuity.get("source_shot_id") or "")
+            .strip()
+            .upper()
+        )
         if not previous_shot_id:
             raise GovernedShotBoundaryError(
                 "Continuous Shot continuity does not declare previous_shot_id/source_shot_id"
@@ -109,9 +111,7 @@ class GovernedShotBoundaryResolver:
                 ) from exc
 
         if not resolved.is_file():
-            raise GovernedShotBoundaryError(
-                f"Governed boundary image does not exist: {resolved}"
-            )
+            raise GovernedShotBoundaryError(f"Governed boundary image does not exist: {resolved}")
         actual_sha256 = _file_sha256(resolved)
         if actual_sha256 != image_sha256:
             raise GovernedShotBoundaryError(
@@ -142,9 +142,7 @@ class GovernedShotBoundaryResolver:
                 "Governed Shot boundary registry root must be an object"
             )
         if str(raw.get("schema_version") or "").strip() != "1.0":
-            raise GovernedShotBoundaryError(
-                "Unsupported governed Shot boundary registry schema"
-            )
+            raise GovernedShotBoundaryError("Unsupported governed Shot boundary registry schema")
         return raw
 
     @staticmethod

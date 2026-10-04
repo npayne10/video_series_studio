@@ -30,19 +30,12 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-
 def _write_governed_boundary_registry(
     project: Path,
     *,
     source_shot_id: str = "EP-001-SCN-001-SHT-001",
 ) -> Path:
-    image = (
-        project
-        / ".vscs"
-        / "governed_shot_boundaries"
-        / source_shot_id
-        / "GBF-TEST.png"
-    )
+    image = project / ".vscs" / "governed_shot_boundaries" / source_shot_id / "GBF-TEST.png"
     image.parent.mkdir(parents=True, exist_ok=True)
     image.write_bytes(b"published-governed-shot-boundary")
     registry = project / ".vscs" / "governed_shot_boundaries.json"

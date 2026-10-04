@@ -16,17 +16,17 @@ from vscs.application.production_execution.package_compilation import CompiledPr
 from vscs.application.production_execution.provider_temporal_span_execution import (
     ProviderTemporalSpanExecutionCompiler,
 )
-from .governed_shot_boundaries import (
-    GovernedShotBoundaryError,
-    GovernedShotBoundaryResolver,
-)
-
 from vscs.application.production_execution.span_scoped_provider_inputs import (
     SpanReferenceSlot,
     SpanScopedProviderCompilationError,
     SpanScopedProviderInputCompiler,
     SpanScopedProviderInputPlan,
     SpanScopedProviderInputs,
+)
+
+from .governed_shot_boundaries import (
+    GovernedShotBoundaryError,
+    GovernedShotBoundaryResolver,
 )
 
 
@@ -471,9 +471,9 @@ class MiniMaxH3SpanAdapterCompiler:
             return candidate, _file_sha256(candidate)
 
         try:
-            resolved = GovernedShotBoundaryResolver(
-                self.project_directory
-            ).resolve_previous_for(compiled)
+            resolved = GovernedShotBoundaryResolver(self.project_directory).resolve_previous_for(
+                compiled
+            )
         except GovernedShotBoundaryError as exc:
             raise MiniMaxH3SpanAdapterError(
                 f"H3 first span requires governed Shot opening image authority: {exc}"
