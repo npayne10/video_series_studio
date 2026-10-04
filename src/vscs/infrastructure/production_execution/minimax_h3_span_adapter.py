@@ -257,6 +257,87 @@ class MiniMaxH3SpanAdapterCompiler:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
 
+    def compile_execution(
+        self,
+        compiled: CompiledProductionPackage,
+        *,
+        sequence_number: int,
+    ) -> MiniMaxH3SpanExecution:
+        """Compile one isolated H3 span without requiring future-span visual authority."""
+        if sequence_number <= 0:
+            raise MiniMaxH3SpanAdapterError("H3 span sequence must be positive")
+        try:
+            span_inputs = SpanScopedProviderInputCompiler().compile(compiled)
+        except SpanScopedProviderCompilationError as exc:
+            raise MiniMaxH3SpanAdapterError(
+                f"H3 span adapter source authority is invalid: {exc}"
+            ) from exc
+
+        span_input = next(
+            (
+                candidate
+                for candidate in span_inputs.spans
+                if candidate.sequence_number == sequence_number
+            ),
+            None,
+        )
+        if span_input is None:
+            raise MiniMaxH3SpanAdapterError(
+                f"No governed H3 span exists for sequence {sequence_number}"
+            )
+
+        temporal_plan = ProviderTemporalSpanExecutionCompiler().compile(compiled)
+        temporal = next(
+            (
+                candidate
+                for candidate in temporal_plan.executions
+                if candidate.span_id == span_input.span_id
+            ),
+            None,
+        )
+        if temporal is None:
+            raise MiniMaxH3SpanAdapterError(
+                f"No temporal execution authority exists for H3 span {span_input.span_id}"
+            )
+
+        if sequence_number == 1:
+            guide_path = self._resolve_opening_authority(compiled)
+            guide_sha256 = _file_sha256(guide_path)
+            guide_kind = "shot_opening_authority"
+        else:
+            requirements = self._requirements(compiled)
+            requirement = next(
+                (
+                    candidate
+                    for candidate in requirements.requirements
+                    if candidate.target_span_id == span_input.span_id
+                ),
+                None,
+            )
+            if requirement is None:
+                raise MiniMaxH3SpanAdapterError(
+                    f"No Introduction Keyframe requirement exists for H3 span {span_input.span_id}"
+                )
+            try:
+                keyframe = self.keyframes.require_approved(requirement)
+            except GovernedIntroductionKeyframeError as exc:
+                raise MiniMaxH3SpanAdapterError(
+                    f"H3 span {span_input.span_id} has no approved Introduction Keyframe: {exc}"
+                ) from exc
+            guide_path = self.keyframes.image_path(keyframe)
+            guide_sha256 = keyframe.image_sha256
+            guide_kind = "governed_introduction_keyframe"
+
+        return self._execution_for_input(
+            span_inputs,
+            span_input,
+            global_start_frame=temporal.global_start_frame,
+            global_through_frame=temporal.global_through_frame,
+            guide_path=guide_path,
+            guide_sha256=guide_sha256,
+            guide_kind=guide_kind,
+        )
+
     def compile(self, compiled: CompiledProductionPackage) -> MiniMaxH3SpanExecutionPlan:
         try:
             span_inputs = SpanScopedProviderInputCompiler().compile(compiled)

@@ -133,6 +133,16 @@ class LocalProductionPackageCompilationService:
                 message=f"Compiled Production Package is invalid: {exc}",
             )
 
+    def compile_current(
+        self,
+        task: ProductionTask,
+        *,
+        profile: str = "production",
+    ) -> CompiledProductionPackage:
+        """Compile current approved authority in memory without persisting provider payload."""
+        source = self._authority_source(task)
+        return self.compiler.compile(task, source, profile=profile)
+
     def compile(
         self, task: ProductionTask, *, profile: str = "production"
     ) -> ProductionPackageStatus:

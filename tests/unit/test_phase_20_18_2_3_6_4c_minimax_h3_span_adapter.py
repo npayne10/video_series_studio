@@ -270,6 +270,40 @@ def test_h3_provider_grid_reproduces_observed_175_frame_native_class(tmp_path: P
         assert (span.provider_frame_count + 1) % 8 == 0
 
 
+def test_h3_first_span_can_compile_without_future_introduction_keyframe(tmp_path: Path) -> None:
+    compiled = _compiled(tmp_path)
+
+    first = MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+        compiled,
+        sequence_number=1,
+    )
+
+    assert first.sequence_number == 1
+    assert (first.global_start_frame, first.global_through_frame) == (0, 95)
+    assert first.provider_frame_count == 103
+    assert first.governed_frame_count == 96
+    assert "REF-ROS" not in tuple(slot.reference_id for slot in first.reference_slots)
+    assert (
+        "ros"
+        not in " ".join(
+            (first.positive_prompt, first.negative_prompt, first.motion_prompt)
+        ).casefold()
+    )
+
+
+def test_h3_second_span_single_compile_still_requires_approved_intro(tmp_path: Path) -> None:
+    compiled = _compiled(tmp_path)
+
+    with pytest.raises(
+        MiniMaxH3SpanAdapterError,
+        match="no approved Introduction Keyframe",
+    ):
+        MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+            compiled,
+            sequence_number=2,
+        )
+
+
 def test_h3_second_span_requires_approved_introduction_keyframe(tmp_path: Path) -> None:
     compiled = _compiled(tmp_path)
 
