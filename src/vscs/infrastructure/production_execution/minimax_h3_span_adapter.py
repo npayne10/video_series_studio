@@ -16,6 +16,11 @@ from vscs.application.production_execution.package_compilation import CompiledPr
 from vscs.application.production_execution.provider_temporal_span_execution import (
     ProviderTemporalSpanExecutionCompiler,
 )
+from .governed_shot_boundaries import (
+    GovernedShotBoundaryError,
+    GovernedShotBoundaryResolver,
+)
+
 from vscs.application.production_execution.span_scoped_provider_inputs import (
     SpanReferenceSlot,
     SpanScopedProviderCompilationError,
@@ -301,8 +306,7 @@ class MiniMaxH3SpanAdapterCompiler:
             )
 
         if sequence_number == 1:
-            guide_path = self._resolve_opening_authority(compiled)
-            guide_sha256 = _file_sha256(guide_path)
+            guide_path, guide_sha256 = self._resolve_opening_authority(compiled)
             guide_kind = "shot_opening_authority"
         else:
             requirements = self._requirements(compiled)
@@ -362,8 +366,7 @@ class MiniMaxH3SpanAdapterCompiler:
                     f"No temporal execution authority exists for H3 span {span_input.span_id}"
                 )
             if span_input.sequence_number == 1:
-                guide_path = self._resolve_opening_authority(compiled)
-                guide_sha256 = _file_sha256(guide_path)
+                guide_path, guide_sha256 = self._resolve_opening_authority(compiled)
                 guide_kind = "shot_opening_authority"
             else:
                 requirement = requirement_by_target.get(span_input.span_id)
@@ -451,21 +454,31 @@ class MiniMaxH3SpanAdapterCompiler:
                 f"H3 Introduction Keyframe requirements are invalid: {exc}"
             ) from exc
 
-    def _resolve_opening_authority(self, compiled: CompiledProductionPackage) -> Path:
+    def _resolve_opening_authority(
+        self,
+        compiled: CompiledProductionPackage,
+    ) -> tuple[Path, str]:
         value = str(compiled.previous_approved_final_frame or "").strip()
-        if not value:
+        if value:
+            candidate = Path(value).expanduser()
+            if not candidate.is_absolute():
+                candidate = self.project_directory / candidate
+            candidate = candidate.resolve(strict=False)
+            if not candidate.is_file():
+                raise MiniMaxH3SpanAdapterError(
+                    f"H3 governed Shot opening image does not exist: {candidate}"
+                )
+            return candidate, _file_sha256(candidate)
+
+        try:
+            resolved = GovernedShotBoundaryResolver(
+                self.project_directory
+            ).resolve_previous_for(compiled)
+        except GovernedShotBoundaryError as exc:
             raise MiniMaxH3SpanAdapterError(
-                "H3 first span requires governed Shot opening image authority"
-            )
-        candidate = Path(value).expanduser()
-        if not candidate.is_absolute():
-            candidate = self.project_directory / candidate
-        candidate = candidate.resolve(strict=False)
-        if not candidate.is_file():
-            raise MiniMaxH3SpanAdapterError(
-                f"H3 governed Shot opening image does not exist: {candidate}"
-            )
-        return candidate
+                f"H3 first span requires governed Shot opening image authority: {exc}"
+            ) from exc
+        return resolved.image_path, resolved.image_sha256
 
 
 def _h3_provider_frame_count(governed_frames: int) -> int:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -27,6 +28,44 @@ from vscs.infrastructure.production_execution import (
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+
+def _write_governed_boundary_registry(
+    project: Path,
+    *,
+    source_shot_id: str = "EP-001-SCN-001-SHT-001",
+) -> Path:
+    image = (
+        project
+        / ".vscs"
+        / "governed_shot_boundaries"
+        / source_shot_id
+        / "GBF-TEST.png"
+    )
+    image.parent.mkdir(parents=True, exist_ok=True)
+    image.write_bytes(b"published-governed-shot-boundary")
+    registry = project / ".vscs" / "governed_shot_boundaries.json"
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "boundaries": [
+                    {
+                        "schema_version": "1.0",
+                        "boundary_id": "GBF-TEST",
+                        "shot_id": source_shot_id,
+                        "status": "published",
+                        "image_path": image.relative_to(project).as_posix(),
+                        "image_sha256": _sha(image),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return image
 
 
 def _timed() -> TimedAssetPresencePlan:
@@ -289,6 +328,63 @@ def test_h3_first_span_can_compile_without_future_introduction_keyframe(tmp_path
             (first.positive_prompt, first.negative_prompt, first.motion_prompt)
         ).casefold()
     )
+
+
+def test_h3_first_span_resolves_published_previous_shot_boundary_when_legacy_path_missing(
+    tmp_path: Path,
+) -> None:
+    compiled = _compiled(tmp_path)
+    governed = _write_governed_boundary_registry(tmp_path)
+    compiled = replace(
+        compiled,
+        previous_approved_final_frame=None,
+        production_authority={
+            **compiled.production_authority,
+            "continuity": {
+                "shot_boundary_mode": "continuous",
+                "inheritance_mode": "previous-shot-closing-state",
+                "previous_shot_id": "EP-001-SCN-001-SHT-001",
+                "source_shot_id": "EP-001-SCN-001-SHT-001",
+            },
+        },
+    )
+
+    first = MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+        compiled,
+        sequence_number=1,
+    )
+
+    assert Path(first.guide_image_path) == governed.resolve(strict=False)
+    assert first.guide_image_sha256 == _sha(governed)
+    assert first.guide_source_kind == "shot_opening_authority"
+
+
+def test_h3_published_previous_shot_boundary_checksum_mismatch_fails_closed(
+    tmp_path: Path,
+) -> None:
+    compiled = _compiled(tmp_path)
+    governed = _write_governed_boundary_registry(tmp_path)
+    compiled = replace(
+        compiled,
+        previous_approved_final_frame=None,
+        production_authority={
+            **compiled.production_authority,
+            "continuity": {
+                "shot_boundary_mode": "continuous",
+                "previous_shot_id": "EP-001-SCN-001-SHT-001",
+            },
+        },
+    )
+    governed.write_bytes(b"tampered-after-publication")
+
+    with pytest.raises(
+        MiniMaxH3SpanAdapterError,
+        match="SHA-256 mismatch",
+    ):
+        MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+            compiled,
+            sequence_number=1,
+        )
 
 
 def test_h3_second_span_single_compile_still_requires_approved_intro(tmp_path: Path) -> None:

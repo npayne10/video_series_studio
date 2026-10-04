@@ -167,3 +167,9 @@ __all__ = [
     "VideoBoundaryObservation",
     "capability_for_vram",
 ]
+
+from .governed_shot_boundaries import (
+    GovernedShotBoundaryError,
+    GovernedShotBoundaryResolver,
+    ResolvedGovernedShotBoundary,
+)
