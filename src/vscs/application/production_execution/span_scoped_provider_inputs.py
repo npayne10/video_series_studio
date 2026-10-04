@@ -276,6 +276,13 @@ class SpanScopedProviderInputCompiler:
             "primary",
             "secondary",
             "supporting",
+            "major",
+            "commander",
+            "captain",
+            "lieutenant",
+            "colonel",
+            "admiral",
+            "sergeant",
             "environment",
             "character",
             "asset",
@@ -441,8 +448,8 @@ class SpanScopedProviderInputCompiler:
             aliases.append(asset_id)
             asset = asset_by_id.get(asset_id)
             if asset is not None:
-                for field_name in self._ASSET_NAME_FIELDS:
-                    self._append_alias(aliases, asset.get(field_name))
+                for alias in self._asset_identity_aliases(asset, asset_id):
+                    self._append_alias(aliases, alias)
             for reference_id in execution.future_reference_ids:
                 reference = references_by_id.get(reference_id)
                 if reference is None:
@@ -461,6 +468,32 @@ class SpanScopedProviderInputCompiler:
                 if lowered not in self._ALIAS_STOP_WORDS:
                     expanded.append(token)
         return tuple(dict.fromkeys(value.strip() for value in expanded if value.strip()))
+
+    def _asset_identity_aliases(
+        self,
+        asset: dict[str, Any],
+        asset_id: str,
+    ) -> tuple[str, ...]:
+        aliases: list[str] = []
+        for field_name in self._ASSET_NAME_FIELDS:
+            self._append_alias(aliases, asset.get(field_name))
+
+        requirement = self._optional_text(asset.get("requirement"))
+        if requirement:
+            match = re.match(r"^(.+?)\s+is\s+required\b", requirement, re.IGNORECASE)
+            if match is not None:
+                self._append_alias(aliases, match.group(1))
+
+        canonical_reference = self._optional_text(asset.get("canonical_reference"))
+        if canonical_reference:
+            for component in re.split(r"[\\/]+", canonical_reference):
+                if not component.casefold().startswith(asset_id.casefold() + "_"):
+                    continue
+                identity = component[len(asset_id) + 1 :].replace("_", " ").strip()
+                if identity:
+                    self._append_alias(aliases, identity)
+
+        return tuple(dict.fromkeys(alias for alias in aliases if alias))
 
     def _append_alias(self, aliases: list[str], value: object) -> None:
         text = self._optional_text(value)

@@ -238,6 +238,61 @@ def test_generic_supporting_role_word_is_not_treated_as_future_ros_alias() -> No
     assert "cap-chr-005" not in combined
 
 
+def test_live_shaped_future_asset_identity_is_removed_from_span_001_prompts() -> None:
+    compiled = _compiled()
+
+    references = dict(compiled.reference_plan or {})
+    records = [dict(item) for item in references["references"]]
+    ros_reference = next(item for item in records if item["reference_id"] == "REF-ROS")
+    ros_reference["label"] = "CAP-CHR-005 — Supporting Character"
+    references["references"] = records
+
+    live_assets = [
+        dict(item)
+        for item in compiled.production_authority["assets"]
+        if isinstance(item, dict)
+    ]
+    for asset in live_assets:
+        if asset.get("asset_id") != "CAP-CHR-005":
+            continue
+        asset.pop("name", None)
+        asset["role"] = "Supporting Character"
+        asset["requirement"] = (
+            "Major Ros Rohsgard is required by the governed Shot/Scene contract and "
+            "must remain canonically identifiable where visible."
+        )
+        asset["canonical_reference"] = (
+            r"assets\characters\CAP-CHR-005_Major_Ros_Rohsgard\approved\CAP-CHR-005 V2.png"
+        )
+
+    timed = _timed()
+    spans = GovernedInternalRenderSpanCompiler().compile(timed)
+    activation = TimedCanonicalReferenceActivationCompiler().compile(
+        timed,
+        spans,
+        references,
+    )
+    changed = replace(
+        compiled,
+        reference_plan=references,
+        timed_reference_activation=activation.to_dict(),
+        production_authority={"assets": live_assets},
+        composition_plan={"assets": live_assets},
+    )
+
+    first = SpanScopedProviderInputCompiler().compile(changed).spans[0]
+    combined = " ".join(
+        (first.positive_prompt, first.negative_prompt, first.motion_prompt)
+    ).casefold()
+
+    assert "ros" not in combined
+    assert "rohsgard" not in combined
+    assert "cap-chr-005" not in combined
+    assert "major ros rohsgard" in {
+        alias.casefold() for alias in first.omitted_future_aliases
+    }
+
+
 def test_span_002_contains_ros_and_compact_picture_mapping() -> None:
     second = SpanScopedProviderInputCompiler().compile(_compiled()).spans[1]
 
