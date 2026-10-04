@@ -9,7 +9,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, ClassVar
 
 from vscs.infrastructure.rendering import (
     ComfyUIClient,
@@ -40,7 +40,7 @@ class MiniMaxH3ComfyUIWorkflowCompiler:
     """Bind one governed H3 span to the proven Ref2VA API workflow."""
 
     REFERENCE_LOADER_IDS = ("137", "139", "141", "142", "143")
-    REQUIRED_NODE_TYPES = {
+    REQUIRED_NODE_TYPES: ClassVar[dict[str, str]] = {
         "92": "SaveVideo",
         "115": "ResolutionSelector",
         "119": "VAELoader",
@@ -166,9 +166,7 @@ class MiniMaxH3ComfyUIWorkflowCompiler:
         try:
             raw = json.loads(self.workflow_path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-            raise MiniMaxH3ComfyUIProviderError(
-                f"Cannot load H3 API workflow: {exc}"
-            ) from exc
+            raise MiniMaxH3ComfyUIProviderError(f"Cannot load H3 API workflow: {exc}") from exc
         if not isinstance(raw, dict):
             raise MiniMaxH3ComfyUIProviderError("H3 API workflow root must be an object")
         return copy.deepcopy({str(key): value for key, value in raw.items()})
@@ -223,9 +221,7 @@ class MiniMaxH3ComfyUIWorkflowCompiler:
             resolved = possibility.resolve(strict=False)
             if resolved.is_file():
                 return resolved
-        raise MiniMaxH3ComfyUIProviderError(
-            f"H3 governed input image does not exist: {raw_path}"
-        )
+        raise MiniMaxH3ComfyUIProviderError(f"H3 governed input image does not exist: {raw_path}")
 
     def _stage(self, source: Path, job_id: str, filename: str) -> str:
         destination_directory = self.comfyui_input_directory / "vscs_h3" / job_id
@@ -234,9 +230,7 @@ class MiniMaxH3ComfyUIWorkflowCompiler:
         if destination.resolve(strict=False) != source.resolve(strict=False):
             shutil.copy2(source, destination)
         if _sha256(destination) != _sha256(source):
-            raise MiniMaxH3ComfyUIProviderError(
-                f"H3 staged input checksum changed: {destination}"
-            )
+            raise MiniMaxH3ComfyUIProviderError(f"H3 staged input checksum changed: {destination}")
         return (PurePosixPath("vscs_h3") / job_id / destination.name).as_posix()
 
     @staticmethod
@@ -258,12 +252,9 @@ class MiniMaxH3ComfyUIWorkflowCompiler:
                 "H3 isolated span payload retained the historical second guide"
             )
         inputs = self._node_inputs(workflow, "136")
-        ref_keys = sorted(
-            key for key in inputs if key.startswith("ref_images.ref_image_")
-        )
+        ref_keys = sorted(key for key in inputs if key.startswith("ref_images.ref_image_"))
         expected_keys = [
-            f"ref_images.ref_image_{index}"
-            for index in range(len(execution.reference_slots))
+            f"ref_images.ref_image_{index}" for index in range(len(execution.reference_slots))
         ]
         if ref_keys != expected_keys:
             raise MiniMaxH3ComfyUIProviderError(
@@ -307,14 +298,10 @@ class MiniMaxH3ComfyUIWorkflowCompiler:
     def _node_inputs(workflow: dict[str, object], node_id: str) -> dict[str, Any]:
         node = workflow.get(node_id)
         if not isinstance(node, dict):
-            raise MiniMaxH3ComfyUIProviderError(
-                f"H3 workflow node is missing: {node_id}"
-            )
+            raise MiniMaxH3ComfyUIProviderError(f"H3 workflow node is missing: {node_id}")
         inputs = node.get("inputs")
         if not isinstance(inputs, dict):
-            raise MiniMaxH3ComfyUIProviderError(
-                f"H3 workflow node has no inputs: {node_id}"
-            )
+            raise MiniMaxH3ComfyUIProviderError(f"H3 workflow node has no inputs: {node_id}")
         return inputs
 
 
@@ -392,9 +379,7 @@ class LiveMiniMaxH3ComfyUISpanProvider:
                     return output
             if self.poll_interval_seconds:
                 time.sleep(self.poll_interval_seconds)
-        raise MiniMaxH3ComfyUIProviderError(
-            f"H3 provider execution timed out: {execution.job_id}"
-        )
+        raise MiniMaxH3ComfyUIProviderError(f"H3 provider execution timed out: {execution.job_id}")
 
     def free_models_and_memory(self) -> None:
         self.client.free_models_and_memory()
@@ -408,17 +393,13 @@ class LiveMiniMaxH3ComfyUISpanProvider:
                 f"Cannot read H3 provider execution evidence: {exc}"
             ) from exc
         if not isinstance(raw, dict):
-            raise MiniMaxH3ComfyUIProviderError(
-                "H3 provider execution evidence must be an object"
-            )
+            raise MiniMaxH3ComfyUIProviderError("H3 provider execution evidence must be an object")
         return raw
 
     def _output_path(self, history: dict[str, object]) -> Path:
         outputs = history.get("outputs")
         if not isinstance(outputs, dict):
-            raise MiniMaxH3ComfyUIProviderError(
-                "Completed H3 execution has no ComfyUI outputs"
-            )
+            raise MiniMaxH3ComfyUIProviderError("Completed H3 execution has no ComfyUI outputs")
         candidates: list[Path] = []
         for raw_node in outputs.values():
             if not isinstance(raw_node, dict):
@@ -434,9 +415,9 @@ class LiveMiniMaxH3ComfyUISpanProvider:
                     if not filename.lower().endswith(".mp4"):
                         continue
                     subfolder = str(row.get("subfolder") or "").strip()
-                    candidate = (
-                        self.comfyui_output_directory / subfolder / filename
-                    ).resolve(strict=False)
+                    candidate = (self.comfyui_output_directory / subfolder / filename).resolve(
+                        strict=False
+                    )
                     if candidate.is_file():
                         candidates.append(candidate)
         if len(candidates) != 1:
@@ -481,9 +462,7 @@ class LiveMiniMaxH3ComfyUISpanProvider:
 
 def _safe_filename(value: str) -> str:
     cleaned = "".join(
-        character
-        if character.isalnum() or character in {".", "-", "_"}
-        else "_"
+        character if character.isalnum() or character in {".", "-", "_"} else "_"
         for character in value
     )
     return cleaned or "input.png"

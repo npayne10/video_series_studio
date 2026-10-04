@@ -13,21 +13,77 @@ from vscs.infrastructure.production_execution import (
 
 def _workflow() -> dict[str, object]:
     return {
-        "92": {"inputs": {"filename_prefix": "video/MiniMax_H3", "video": ["130", 0]}, "class_type": "SaveVideo"},
-        "115": {"inputs": {"aspect_ratio": "16:9 (Widescreen)", "megapixels": 0.2, "multiple": 32}, "class_type": "ResolutionSelector"},
-        "119": {"inputs": {"vae_name": r"minimax\minimax_h3_video_vae_fp16.safetensors"}, "class_type": "VAELoader"},
-        "120": {"inputs": {"vae_name": r"minimax\minimax_h3_audio_vae_fp32.safetensors"}, "class_type": "VAELoader"},
-        "121": {"inputs": {"samples": ["125", 0], "vae": ["120", 0]}, "class_type": "VAEDecodeAudio"},
+        "92": {
+            "inputs": {"filename_prefix": "video/MiniMax_H3", "video": ["130", 0]},
+            "class_type": "SaveVideo",
+        },
+        "115": {
+            "inputs": {"aspect_ratio": "16:9 (Widescreen)", "megapixels": 0.2, "multiple": 32},
+            "class_type": "ResolutionSelector",
+        },
+        "119": {
+            "inputs": {"vae_name": r"minimax\minimax_h3_video_vae_fp16.safetensors"},
+            "class_type": "VAELoader",
+        },
+        "120": {
+            "inputs": {"vae_name": r"minimax\minimax_h3_audio_vae_fp32.safetensors"},
+            "class_type": "VAELoader",
+        },
+        "121": {
+            "inputs": {"samples": ["125", 0], "vae": ["120", 0]},
+            "class_type": "VAEDecodeAudio",
+        },
         "122": {"inputs": {"samples": ["125", 0], "vae": ["119", 0]}, "class_type": "VAEDecode"},
         "123": {"inputs": {"sampler_name": "res_multistep"}, "class_type": "KSamplerSelect"},
-        "124": {"inputs": {"scheduler": "simple", "steps": 20, "denoise": 1, "model": ["127", 0]}, "class_type": "BasicScheduler"},
-        "125": {"inputs": {"noise": ["129", 0], "guider": ["126", 0], "sampler": ["123", 0], "sigmas": ["124", 0], "latent_image": ["136", 1]}, "class_type": "SamplerCustomAdvanced"},
-        "126": {"inputs": {"model": ["127", 0], "conditioning": ["147", 0]}, "class_type": "BasicGuider"},
-        "127": {"inputs": {"unet_name": r"minimax\minimax_h3_ref2va_pruned_int8_convrot.safetensors", "weight_dtype": "default"}, "class_type": "UNETLoader"},
-        "128": {"inputs": {"clip_name": r"minimax\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors", "type": "minimax", "device": "default"}, "class_type": "CLIPLoader"},
+        "124": {
+            "inputs": {"scheduler": "simple", "steps": 20, "denoise": 1, "model": ["127", 0]},
+            "class_type": "BasicScheduler",
+        },
+        "125": {
+            "inputs": {
+                "noise": ["129", 0],
+                "guider": ["126", 0],
+                "sampler": ["123", 0],
+                "sigmas": ["124", 0],
+                "latent_image": ["136", 1],
+            },
+            "class_type": "SamplerCustomAdvanced",
+        },
+        "126": {
+            "inputs": {"model": ["127", 0], "conditioning": ["147", 0]},
+            "class_type": "BasicGuider",
+        },
+        "127": {
+            "inputs": {
+                "unet_name": r"minimax\minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+                "weight_dtype": "default",
+            },
+            "class_type": "UNETLoader",
+        },
+        "128": {
+            "inputs": {
+                "clip_name": r"minimax\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+                "type": "minimax",
+                "device": "default",
+            },
+            "class_type": "CLIPLoader",
+        },
         "129": {"inputs": {"noise_seed": 123456}, "class_type": "RandomNoise"},
-        "130": {"inputs": {"fps": 24, "bit_depth": 8, "color_space": "sRGB", "codec": "none", "images": ["122", 0], "audio": ["121", 0]}, "class_type": "CreateVideo"},
-        "131": {"inputs": {"expression": "old", "values.a": ["132", 0]}, "class_type": "ComfyMathExpression"},
+        "130": {
+            "inputs": {
+                "fps": 24,
+                "bit_depth": 8,
+                "color_space": "sRGB",
+                "codec": "none",
+                "images": ["122", 0],
+                "audio": ["121", 0],
+            },
+            "class_type": "CreateVideo",
+        },
+        "131": {
+            "inputs": {"expression": "old", "values.a": ["132", 0]},
+            "class_type": "ComfyMathExpression",
+        },
         "132": {"inputs": {"value": 7}, "class_type": "PrimitiveFloat"},
         "136": {
             "inputs": {
@@ -53,10 +109,28 @@ def _workflow() -> dict[str, object]:
         "141": {"inputs": {"image": "ros.png"}, "class_type": "LoadImage"},
         "142": {"inputs": {"image": "bridge.png"}, "class_type": "LoadImage"},
         "143": {"inputs": {"image": "xorix.png"}, "class_type": "LoadImage"},
-        "144": {"inputs": {"frame_idx": 0, "positive": ["136", 0], "latent": ["136", 1], "vae": ["119", 0], "image": ["145", 0]}, "class_type": "MiniMaxH3AddGuide"},
+        "144": {
+            "inputs": {
+                "frame_idx": 0,
+                "positive": ["136", 0],
+                "latent": ["136", 1],
+                "vae": ["119", 0],
+                "image": ["145", 0],
+            },
+            "class_type": "MiniMaxH3AddGuide",
+        },
         "145": {"inputs": {"image": "opening.png"}, "class_type": "LoadImage"},
         "146": {"inputs": {"image": "rejected-frame96.png"}, "class_type": "LoadImage"},
-        "147": {"inputs": {"frame_idx": 96, "positive": ["144", 0], "latent": ["136", 1], "vae": ["119", 0], "image": ["146", 0]}, "class_type": "MiniMaxH3AddGuide"},
+        "147": {
+            "inputs": {
+                "frame_idx": 96,
+                "positive": ["144", 0],
+                "latent": ["136", 1],
+                "vae": ["119", 0],
+                "image": ["146", 0],
+            },
+            "class_type": "MiniMaxH3AddGuide",
+        },
     }
 
 
@@ -70,7 +144,13 @@ def _write_inputs(tmp_path: Path) -> tuple[Path, Path, dict[str, Path]]:
         path = project / f"{name}.png"
         path.write_bytes(name.encode())
         files[name] = path
-    workflow = project / "resources" / "workflows" / "manual" / "minimax_h3_ref2va_sht002_baseline_api.json"
+    workflow = (
+        project
+        / "resources"
+        / "workflows"
+        / "manual"
+        / "minimax_h3_ref2va_sht002_baseline_api.json"
+    )
     workflow.parent.mkdir(parents=True)
     workflow.write_text(json.dumps(_workflow()), encoding="utf-8")
     return project, input_root, files
@@ -172,9 +252,7 @@ def test_h3_workflow_compiler_removes_future_ros_and_second_guide_from_span1(
     assert "131" not in compiled.workflow
     assert "132" not in compiled.workflow
     ref_keys = sorted(
-        key
-        for key in compiled.workflow["136"]["inputs"]
-        if key.startswith("ref_images.ref_image_")
+        key for key in compiled.workflow["136"]["inputs"] if key.startswith("ref_images.ref_image_")
     )
     assert ref_keys == [
         "ref_images.ref_image_0",
