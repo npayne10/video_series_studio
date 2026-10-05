@@ -269,9 +269,7 @@ class ProviderSpanGovernancePlan:
             "provider_neutral": self.provider_neutral,
             "shot_id": self.shot_id,
             "source_package_fingerprint": self.source_package_fingerprint,
-            "source_execution_plan_fingerprint": (
-                self.source_execution_plan_fingerprint
-            ),
+            "source_execution_plan_fingerprint": (self.source_execution_plan_fingerprint),
             "spans": [span.to_dict() for span in self.spans],
         }
 
