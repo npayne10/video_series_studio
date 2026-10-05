@@ -88,6 +88,12 @@ from .provider_temporal_span_execution import (
     ProviderTemporalSpanExecutionError,
     ProviderTemporalSpanExecutionPlan,
 )
+from .provider_span_governance import (
+    ProviderSpanGovernance,
+    ProviderSpanGovernanceCompiler,
+    ProviderSpanGovernanceError,
+    ProviderSpanGovernancePlan,
+)
 from .reference_plan_rendering import (
     ReferencePlanRenderBinding,
     ReferencePlanRenderBindingError,
@@ -225,6 +231,10 @@ __all__ = [
     "ProviderAudioPolicy",
     "ProviderAudioPolicyError",
     "ProviderAudioPolicyMode",
+    "ProviderSpanGovernance",
+    "ProviderSpanGovernanceCompiler",
+    "ProviderSpanGovernanceError",
+    "ProviderSpanGovernancePlan",
     "ProviderTemporalSpanExecution",
     "ProviderTemporalSpanExecutionCompiler",
     "ProviderTemporalSpanExecutionError",
