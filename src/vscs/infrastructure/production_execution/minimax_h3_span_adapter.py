@@ -333,6 +333,7 @@ class MiniMaxH3SpanAdapterCompiler:
             guide_kind = "governed_introduction_keyframe"
 
         return self._execution_for_input(
+            compiled,
             span_inputs,
             span_input,
             global_start_frame=temporal.global_start_frame,
@@ -385,6 +386,7 @@ class MiniMaxH3SpanAdapterCompiler:
                 guide_kind = "governed_introduction_keyframe"
 
             execution = self._execution_for_input(
+                compiled,
                 span_inputs,
                 span_input,
                 global_start_frame=temporal.global_start_frame,
@@ -409,6 +411,7 @@ class MiniMaxH3SpanAdapterCompiler:
 
     def _execution_for_input(
         self,
+        compiled: CompiledProductionPackage,
         plan: SpanScopedProviderInputPlan,
         span_input: SpanScopedProviderInputs,
         *,
@@ -419,6 +422,10 @@ class MiniMaxH3SpanAdapterCompiler:
         guide_kind: str,
     ) -> MiniMaxH3SpanExecution:
         governed_frames = global_through_frame - global_start_frame + 1
+        reference_slots, positive_prompt = self._project_reference_slots(
+            compiled,
+            span_input,
+        )
         return MiniMaxH3SpanExecution(
             span_id=span_input.span_id,
             sequence_number=span_input.sequence_number,
@@ -426,8 +433,8 @@ class MiniMaxH3SpanAdapterCompiler:
             global_through_frame=global_through_frame,
             governed_frame_count=governed_frames,
             provider_frame_count=_h3_provider_frame_count(governed_frames),
-            reference_slots=span_input.reference_slots,
-            positive_prompt=span_input.positive_prompt,
+            reference_slots=reference_slots,
+            positive_prompt=positive_prompt,
             negative_prompt=span_input.negative_prompt,
             motion_prompt=span_input.motion_prompt,
             guide_source_kind=guide_kind,
@@ -437,6 +444,312 @@ class MiniMaxH3SpanAdapterCompiler:
             source_span_input_id=span_input.input_id,
             source_span_input_plan_fingerprint=plan.fingerprint,
         )
+
+    def _project_reference_slots(
+        self,
+        compiled: CompiledProductionPackage,
+        span_input: SpanScopedProviderInputs,
+    ) -> tuple[tuple[SpanReferenceSlot, ...], str]:
+        """Project governed references into MiniMax H3's finite picture-slot budget."""
+        references = self._reference_records(compiled)
+        frame_state_ids = self._frame_state_reference_ids(compiled)
+        active_asset_ids = set(span_input.active_asset_ids)
+        asset_kinds = self._asset_kinds(compiled)
+
+        anchors = tuple(
+            reference
+            for reference in references
+            if self._text(reference.get("reference_id")) in frame_state_ids
+            and self._text(reference.get("role")) == "scene_composition_anchor"
+            and self._text(reference.get("priority")).casefold() == "required"
+            and reference.get("provider_ready") is True
+            and self._active_contained_environments(reference, active_asset_ids)
+        )
+        if not anchors:
+            if len(span_input.reference_slots) > 5:
+                raise MiniMaxH3SpanAdapterError(
+                    "H3 reference projection exceeds five slots without a required "
+                    "scene-composition anchor"
+                )
+            return span_input.reference_slots, span_input.positive_prompt
+        if len(anchors) != 1:
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection requires exactly one active required "
+                "scene-composition anchor"
+            )
+
+        anchor_reference = anchors[0]
+        contained = self._active_contained_environments(anchor_reference, active_asset_ids)
+        if len(contained) != 1:
+            raise MiniMaxH3SpanAdapterError(
+                "H3 scene-composition anchor must resolve exactly one active environment/location"
+            )
+        anchor_asset_id = contained[0]
+
+        character_slots = tuple(
+            slot
+            for slot in span_input.reference_slots
+            if asset_kinds.get(slot.asset_id) == "character"
+        )
+        planet_slots = tuple(
+            slot
+            for slot in span_input.reference_slots
+            if asset_kinds.get(slot.asset_id) == "planet"
+        )
+        required_other_slots = tuple(
+            slot
+            for slot in span_input.reference_slots
+            if slot not in character_slots
+            and slot not in planet_slots
+            and self._reference_priority(references, slot.reference_id) == "required"
+        )
+
+        projected_raw: list[SpanReferenceSlot] = list(character_slots)
+        projected_raw.append(
+            SpanReferenceSlot(
+                picture_index=len(projected_raw) + 1,
+                picture_tag=f"<Picture {len(projected_raw) + 1}>",
+                reference_id=self._required_reference_text(anchor_reference, "reference_id"),
+                asset_id=anchor_asset_id,
+                role=self._required_reference_text(anchor_reference, "role"),
+                source_path=self._required_reference_text(anchor_reference, "source_path"),
+                semantic_label=self._frame_state_semantic_label(
+                    compiled,
+                    anchor_asset_id,
+                    anchor_reference,
+                ),
+            )
+        )
+        projected_raw.extend(planet_slots)
+        projected_raw.extend(required_other_slots)
+
+        deduplicated: list[SpanReferenceSlot] = []
+        seen_reference_ids: set[str] = set()
+        for slot in projected_raw:
+            if slot.reference_id in seen_reference_ids:
+                continue
+            deduplicated.append(slot)
+            seen_reference_ids.add(slot.reference_id)
+
+        if len(deduplicated) > 5:
+            raise MiniMaxH3SpanAdapterError(
+                "H3 governed reference projection cannot fit the five-slot provider budget"
+            )
+
+        projected = tuple(
+            SpanReferenceSlot(
+                picture_index=index,
+                picture_tag=f"<Picture {index}>",
+                reference_id=slot.reference_id,
+                asset_id=slot.asset_id,
+                role=slot.role,
+                source_path=slot.source_path,
+                semantic_label=slot.semantic_label,
+            )
+            for index, slot in enumerate(deduplicated, start=1)
+        )
+        projected_ids = {slot.reference_id for slot in projected}
+        original_ids = {slot.reference_id for slot in span_input.reference_slots}
+        if not {slot.reference_id for slot in character_slots}.issubset(projected_ids):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection removed an active character identity reference"
+            )
+        if not {slot.reference_id for slot in planet_slots}.issubset(projected_ids):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection removed an active planet reference"
+            )
+        if projected_ids & set(self._future_reference_ids(compiled, span_input.sequence_number)):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection introduced future canonical authority"
+            )
+        if not projected_ids - original_ids == {
+            self._required_reference_text(anchor_reference, "reference_id")
+        }:
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection introduced ungoverned supporting references"
+            )
+
+        positive_prompt = self._replace_reference_declarations(
+            span_input,
+            projected,
+        )
+        return projected, positive_prompt
+
+    def _replace_reference_declarations(
+        self,
+        span_input: SpanScopedProviderInputs,
+        projected: tuple[SpanReferenceSlot, ...],
+    ) -> str:
+        original_declaration = " ".join(
+            f"{slot.picture_tag} is the authoritative reference for {slot.semantic_label}."
+            for slot in span_input.reference_slots
+        )
+        positive = span_input.positive_prompt.strip()
+        if not positive.startswith(original_declaration):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection cannot identify governed picture declarations"
+            )
+        remainder = positive[len(original_declaration) :].strip()
+        projected_declaration = " ".join(
+            f"{slot.picture_tag} is the authoritative reference for {slot.semantic_label}."
+            for slot in projected
+        )
+        return " ".join(
+            value for value in (projected_declaration, remainder) if value
+        ).strip()
+
+    def _frame_state_reference_ids(
+        self,
+        compiled: CompiledProductionPackage,
+    ) -> set[str]:
+        raw = compiled.timed_reference_activation
+        if not isinstance(raw, dict):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection requires timed reference activation authority"
+            )
+        values = raw.get("frame_state_reference_ids", [])
+        if not isinstance(values, list):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 frame-state reference IDs must be an array"
+            )
+        return {self._text(value) for value in values if self._text(value)}
+
+    def _future_reference_ids(
+        self,
+        compiled: CompiledProductionPackage,
+        sequence_number: int,
+    ) -> tuple[str, ...]:
+        temporal = ProviderTemporalSpanExecutionCompiler().compile(compiled)
+        execution = next(
+            (
+                item
+                for item in temporal.executions
+                if item.sequence_number == sequence_number
+            ),
+            None,
+        )
+        if execution is None:
+            raise MiniMaxH3SpanAdapterError(
+                f"No temporal execution exists for H3 sequence {sequence_number}"
+            )
+        return execution.future_reference_ids
+
+    def _asset_kinds(self, compiled: CompiledProductionPackage) -> dict[str, str]:
+        raw = compiled.timed_asset_presence
+        if not isinstance(raw, dict):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection requires Timed Asset Presence authority"
+            )
+        presences = raw.get("presences", [])
+        if not isinstance(presences, list):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 Timed Asset Presence records must be an array"
+            )
+        kinds: dict[str, str] = {}
+        for presence in presences:
+            if not isinstance(presence, dict):
+                continue
+            asset_id = self._text(presence.get("asset_id")).upper()
+            asset_kind = self._text(presence.get("asset_kind")).casefold()
+            if asset_id and asset_kind:
+                kinds[asset_id] = asset_kind
+        return kinds
+
+    def _frame_state_semantic_label(
+        self,
+        compiled: CompiledProductionPackage,
+        asset_id: str,
+        reference: dict[str, object],
+    ) -> str:
+        for source in (compiled.production_authority, compiled.composition_plan):
+            if not isinstance(source, dict):
+                continue
+            assets = source.get("assets", [])
+            if not isinstance(assets, list):
+                continue
+            for asset in assets:
+                if not isinstance(asset, dict):
+                    continue
+                if self._text(asset.get("asset_id")).upper() != asset_id:
+                    continue
+                for key in (
+                    "name",
+                    "label",
+                    "display_name",
+                    "canonical_name",
+                    "location_name",
+                    "title",
+                ):
+                    value = self._text(asset.get(key))
+                    if value:
+                        return value
+                requirement = self._text(asset.get("requirement"))
+                if requirement:
+                    prefix = requirement.split(" is required", 1)[0].strip()
+                    if prefix and prefix != requirement:
+                        return prefix
+        label = self._text(reference.get("label"))
+        if label and not label.casefold().startswith("shot composition"):
+            return label
+        return f"{asset_id} scene composition"
+
+    def _active_contained_environments(
+        self,
+        reference: dict[str, object],
+        active_asset_ids: set[str],
+    ) -> tuple[str, ...]:
+        raw = reference.get("contains_environments", [])
+        if not isinstance(raw, list):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 scene-composition anchor contains_environments must be an array"
+            )
+        return tuple(
+            asset_id
+            for value in raw
+            if (asset_id := self._text(value).upper()) in active_asset_ids
+        )
+
+    def _reference_priority(
+        self,
+        references: tuple[dict[str, object], ...],
+        reference_id: str,
+    ) -> str:
+        for reference in references:
+            if self._text(reference.get("reference_id")) == reference_id:
+                return self._text(reference.get("priority")).casefold()
+        return ""
+
+    def _reference_records(
+        self,
+        compiled: CompiledProductionPackage,
+    ) -> tuple[dict[str, object], ...]:
+        raw_plan = compiled.reference_plan
+        if not isinstance(raw_plan, dict):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection requires a governed ReferencePlan"
+            )
+        raw = raw_plan.get("references", [])
+        if not isinstance(raw, list) or not all(isinstance(item, dict) for item in raw):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 governed ReferencePlan references must be an array of objects"
+            )
+        return tuple(dict(item) for item in raw)
+
+    def _required_reference_text(
+        self,
+        reference: dict[str, object],
+        key: str,
+    ) -> str:
+        value = self._text(reference.get(key))
+        if not value:
+            raise MiniMaxH3SpanAdapterError(
+                f"H3 scene-composition anchor requires {key}"
+            )
+        return value
+
+    @staticmethod
+    def _text(value: object) -> str:
+        return value.strip() if isinstance(value, str) else ""
 
     def _requirements(
         self,

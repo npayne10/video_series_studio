@@ -225,6 +225,136 @@ def _compiled(project: Path) -> CompiledProductionPackage:
     )
 
 
+def _live_shaped_projection_compiled(project: Path) -> CompiledProductionPackage:
+    base = _compiled(project)
+    timed = TimedAssetPresencePlan(
+        shot_id="EP-001-SCN-001-SHT-002",
+        frames_per_second=24,
+        frame_count=144,
+        presences=(
+            TimedAssetPresence(
+                asset_id="CAP-CHR-001",
+                asset_kind=TimedAssetKind.CHARACTER,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=("REF-JAMES",),
+            ),
+            TimedAssetPresence(
+                asset_id="CAP-CHR-003",
+                asset_kind=TimedAssetKind.CHARACTER,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=("REF-SANDRA",),
+            ),
+            TimedAssetPresence(
+                asset_id="CAP-ENV-004",
+                asset_kind=TimedAssetKind.ENVIRONMENT,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=("REF-ENV",),
+            ),
+            TimedAssetPresence(
+                asset_id="CAP-LOC-021",
+                asset_kind=TimedAssetKind.LOCATION,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=(),
+            ),
+            TimedAssetPresence(
+                asset_id="CAP-PLN-002",
+                asset_kind=TimedAssetKind.PLANET,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=("REF-XORIX",),
+            ),
+            TimedAssetPresence(
+                asset_id="CAP-SHP-002",
+                asset_kind=TimedAssetKind.SHIP,
+                from_frame=0,
+                through_frame=143,
+                canonical_reference_ids=("REF-SHIP",),
+            ),
+            TimedAssetPresence(
+                asset_id="CAP-CHR-005",
+                asset_kind=TimedAssetKind.CHARACTER,
+                from_frame=96,
+                through_frame=143,
+                introduction=AssetPresenceIntroduction.ENTER,
+                canonical_reference_ids=("REF-ROS",),
+            ),
+        ),
+    )
+    spans = GovernedInternalRenderSpanCompiler().compile(timed)
+    references = {
+        "schema_version": "1.0",
+        "status": "passed",
+        "references": [
+            _reference("REF-JAMES", "CAP-CHR-001", "secondary_identity", "Commander James Spence"),
+            _reference("REF-SANDRA", "CAP-CHR-003", "primary_identity", "Sandra Crawford"),
+            {
+                **_reference("REF-ENV", "CAP-ENV-004", "environment_reference", "Environment Context"),
+                "priority": "preferred",
+                "subject_type": "environment",
+            },
+            {
+                **_reference("REF-XORIX", "CAP-PLN-002", "environment_reference", "Xorix"),
+                "priority": "preferred",
+                "subject_type": "environment",
+            },
+            {
+                **_reference("REF-SHIP", "CAP-SHP-002", "background_identity", "Iron Horizon exterior"),
+                "priority": "preferred",
+                "subject_type": "ship",
+            },
+            _reference("REF-ROS", "CAP-CHR-005", "secondary_identity", "Major Ros Rohsgard"),
+            {
+                "reference_id": "REF-BRIDGE-COMPOSITION",
+                "asset_id": None,
+                "canonical_source_id": None,
+                "role": "scene_composition_anchor",
+                "label": "Shot composition — EP-001-SCN-001-SHT-002",
+                "reference_class": "shot_composite",
+                "priority": "required",
+                "subject_type": "multi_subject_scene",
+                "source_path": "references/CAP-LOC-021_V2_1280x720.png",
+                "provider_ready": True,
+                "file_checksum": "sha-bridge-composition",
+                "reference_fingerprint": "fp-bridge-composition",
+                "contains_environments": ["CAP-LOC-021"],
+                "contains_subjects": [],
+                "contains_props": [],
+            },
+        ],
+        "diagnostics": [],
+    }
+    activation = TimedCanonicalReferenceActivationCompiler().compile(
+        timed,
+        spans,
+        references,
+    )
+    requirements = GovernedIntroductionKeyframeRequirementCompiler().compile(
+        spans,
+        activation,
+    )
+    assets = list(base.production_authority["assets"])
+    assets.extend(
+        [
+            {"asset_id": "CAP-ENV-004", "name": "Environment Context", "category": "environment"},
+            {"asset_id": "CAP-SHP-002", "name": "Iron Horizon exterior", "category": "ship"},
+        ]
+    )
+    return replace(
+        base,
+        timed_asset_presence=timed.to_dict(),
+        internal_render_spans=spans.to_dict(),
+        timed_reference_activation=activation.to_dict(),
+        reference_plan=references,
+        introduction_keyframe_requirements=requirements.to_dict(),
+        production_authority={"assets": assets},
+        composition_plan={"assets": assets},
+    )
+
+
 def _approve_intro(project: Path, compiled: CompiledProductionPackage) -> Path:
     raw = compiled.introduction_keyframe_requirements
     assert isinstance(raw, dict)
@@ -291,6 +421,72 @@ def test_h3_span_adapter_isolates_references_and_uses_only_local_frame_zero_guid
     assert "REF-ROS" in tuple(slot.reference_id for slot in second.reference_slots)
     assert second.to_dict()["guide_semantics"] == "frame_state_anchor"
     assert second.to_dict()["temporal_asset_gate"] is False
+
+
+def test_h3_live_shaped_projection_prefers_required_bridge_composition_anchor(
+    tmp_path: Path,
+) -> None:
+    compiled = _live_shaped_projection_compiled(tmp_path)
+
+    first = MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+        compiled,
+        sequence_number=1,
+    )
+
+    assert tuple(slot.asset_id for slot in first.reference_slots) == (
+        "CAP-CHR-001",
+        "CAP-CHR-003",
+        "CAP-LOC-021",
+        "CAP-PLN-002",
+    )
+    assert tuple(slot.reference_id for slot in first.reference_slots) == (
+        "REF-JAMES",
+        "REF-SANDRA",
+        "REF-BRIDGE-COMPOSITION",
+        "REF-XORIX",
+    )
+    serialized = " ".join(
+        (
+            first.positive_prompt,
+            first.negative_prompt,
+            first.motion_prompt,
+            *(slot.reference_id for slot in first.reference_slots),
+        )
+    ).casefold()
+    assert "ref-env" not in serialized
+    assert "ref-ship" not in serialized
+    assert "ref-ros" not in serialized
+    assert "<picture 5>" not in first.positive_prompt.casefold()
+
+
+def test_h3_live_shaped_projection_fills_five_slots_when_ros_becomes_active(
+    tmp_path: Path,
+) -> None:
+    compiled = _live_shaped_projection_compiled(tmp_path)
+    _approve_intro(tmp_path, compiled)
+
+    second = MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+        compiled,
+        sequence_number=2,
+    )
+
+    assert tuple(slot.asset_id for slot in second.reference_slots) == (
+        "CAP-CHR-001",
+        "CAP-CHR-003",
+        "CAP-CHR-005",
+        "CAP-LOC-021",
+        "CAP-PLN-002",
+    )
+    assert tuple(slot.reference_id for slot in second.reference_slots) == (
+        "REF-JAMES",
+        "REF-SANDRA",
+        "REF-ROS",
+        "REF-BRIDGE-COMPOSITION",
+        "REF-XORIX",
+    )
+    assert len(second.reference_slots) == 5
+    assert "REF-ENV" not in {slot.reference_id for slot in second.reference_slots}
+    assert "REF-SHIP" not in {slot.reference_id for slot in second.reference_slots}
 
 
 def test_h3_provider_grid_reproduces_observed_175_frame_native_class(tmp_path: Path) -> None:
