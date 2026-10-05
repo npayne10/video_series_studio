@@ -22,6 +22,14 @@ from vscs.infrastructure.production_execution.package_compilation import (
 SHT002 = "EP-001-SCN-001-SHT-002"
 SHT002_OPENING_SHA256 = "c4b083314cb06b7c6884029827cd9c3eb1d784bea7f7d9f5fbddcb4e32abd3ef"
 FORBIDDEN_SPAN1_ALIASES = ("ros", "rohsgard", "cap-chr-005")
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+H3_WORKFLOW_PATH = (
+    REPOSITORY_ROOT
+    / "resources"
+    / "workflows"
+    / "manual"
+    / "minimax_h3_ref2va_sht002_baseline_api.json"
+)
 
 
 def _sha256(path: Path) -> str:
@@ -74,6 +82,8 @@ def main() -> int:
         raise RuntimeError(
             "ComfyUI input/output directories were not found below the supplied portable root"
         )
+    if not H3_WORKFLOW_PATH.is_file():
+        raise RuntimeError(f"Proven H3 API workflow does not exist: {H3_WORKFLOW_PATH}")
 
     task = _task(project, shot_id)
     compiled = LocalProductionPackageCompilationService(project).compile_current(task)
@@ -93,6 +103,7 @@ def main() -> int:
     workflow_compiler = MiniMaxH3ComfyUIWorkflowCompiler(
         project,
         comfyui_input_directory=input_directory,
+        workflow_path=H3_WORKFLOW_PATH,
     )
     provider_job = workflow_compiler.compile(execution)
     serialized = json.dumps(provider_job.workflow, sort_keys=True).casefold()
@@ -129,6 +140,7 @@ def main() -> int:
         endpoint=args.endpoint,
         comfyui_input_directory=input_directory,
         comfyui_output_directory=output_directory,
+        workflow_path=H3_WORKFLOW_PATH,
     )
     health = provider.client.health()
     if not health.healthy:
