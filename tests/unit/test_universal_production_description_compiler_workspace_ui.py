@@ -148,8 +148,7 @@ def test_universal_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     assert widget.package_table.horizontalHeaderItem(9).text() == "Provider"
     assert widget.package_table.item(0, 8).text() == "Draft"
     tab_names = tuple(
-        widget.compiler_tabs.tabText(index)
-        for index in range(widget.compiler_tabs.count())
+        widget.compiler_tabs.tabText(index) for index in range(widget.compiler_tabs.count())
     )
     assert tab_names.count("Universal Description") == 1
     assert tab_names.count("Provider Output") == 1
