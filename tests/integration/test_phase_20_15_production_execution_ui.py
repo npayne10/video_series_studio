@@ -28,7 +28,9 @@ from vscs.application.provider_execution import (
     ProviderExecutionState,
     QueueProviderExecutionReconciliation,
 )
-from vscs.infrastructure.production_execution import LocalComfyUIProductionExecutionBackend
+from vscs.infrastructure.production_execution.comfyui_backend import (
+    LocalComfyUIProductionExecutionBackend,
+)
 
 NOW = datetime(2026, 8, 19, 18, 30, tzinfo=UTC)
 

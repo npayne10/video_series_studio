@@ -5,11 +5,9 @@ from pathlib import Path
 
 from vscs.application.production_execution import CompiledProductionPackage
 from vscs.application.rendering.workflows import WorkflowManifest
-from vscs.infrastructure.production_execution import (
-    LocalComfyUIProductionExecutionBackend,
-    LTX23V721DeploymentAssurance,
-)
+from vscs.infrastructure.production_execution import LTX23V721DeploymentAssurance
 from vscs.infrastructure.production_execution.ltx23_v721_backend import (
+    LocalComfyUIProductionExecutionBackend,
     LTX23_V721_PACKAGE_LOADER_CLASS,
     LTX23_V721_PACKAGE_LOADER_TITLE,
     LTX23_V721_REFERENCE_RESOLVER_CLASS,

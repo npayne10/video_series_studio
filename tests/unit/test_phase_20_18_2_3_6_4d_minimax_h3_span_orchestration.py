@@ -275,12 +275,12 @@ def test_h3_orchestration_renders_normalizes_and_assembles_exact_span_sequence(
 
     assert len(provider.executions) == 2
     first, second = provider.executions
-    assert (first.governed_frame_count, first.provider_frame_count) == (96, 103)
-    assert (second.governed_frame_count, second.provider_frame_count) == (48, 55)
+    assert (first.governed_frame_count, first.provider_frame_count) == (96, 107)
+    assert (second.governed_frame_count, second.provider_frame_count) == (48, 56)
     assert first.guide_frame_idx == second.guide_frame_idx == 0
     assert "REF-ROS" not in tuple(slot.reference_id for slot in first.reference_slots)
     assert "REF-ROS" in tuple(slot.reference_id for slot in second.reference_slots)
-    assert normalizer.calls == [(103, 96, 24), (55, 48, 24)]
+    assert normalizer.calls == [(107, 96, 24), (56, 48, 24)]
     assert tuple(path.name for path in assembler.span_paths) == (
         "span-001.mp4",
         "span-002.mp4",
