@@ -402,8 +402,8 @@ def test_h3_span_adapter_isolates_references_and_uses_only_local_frame_zero_guid
 
     assert (first.global_start_frame, first.global_through_frame) == (0, 95)
     assert first.governed_frame_count == 96
-    assert first.provider_frame_count == 103
-    assert first.provider_trim_frames == 7
+    assert first.provider_frame_count == 107
+    assert first.provider_trim_frames == 11
     assert first.guide_frame_idx == 0
     assert first.guide_source_kind == "shot_opening_authority"
     assert "REF-ROS" not in tuple(slot.reference_id for slot in first.reference_slots)
@@ -416,8 +416,8 @@ def test_h3_span_adapter_isolates_references_and_uses_only_local_frame_zero_guid
 
     assert (second.global_start_frame, second.global_through_frame) == (96, 143)
     assert second.governed_frame_count == 48
-    assert second.provider_frame_count == 55
-    assert second.provider_trim_frames == 7
+    assert second.provider_frame_count == 56
+    assert second.provider_trim_frames == 8
     assert second.guide_frame_idx == 0
     assert second.guide_source_kind == "governed_introduction_keyframe"
     assert Path(second.guide_image_path) == intro.resolve(strict=False)
@@ -493,13 +493,13 @@ def test_h3_live_shaped_projection_fills_five_slots_when_ros_becomes_active(
     assert "REF-SHIP" not in {slot.reference_id for slot in second.reference_slots}
 
 
-def test_h3_provider_grid_reproduces_observed_175_frame_native_class(tmp_path: Path) -> None:
+def test_h3_provider_grid_uses_native_17k_plus_5_frame_class(tmp_path: Path) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
     plan = MiniMaxH3SpanAdapterCompiler(tmp_path).compile(compiled)
 
     for span in plan.spans:
-        assert (span.provider_frame_count + 1) % 8 == 0
+        assert span.provider_frame_count % 17 == 5
 
 
 def test_h3_first_span_can_compile_without_future_introduction_keyframe(tmp_path: Path) -> None:
@@ -512,7 +512,7 @@ def test_h3_first_span_can_compile_without_future_introduction_keyframe(tmp_path
 
     assert first.sequence_number == 1
     assert (first.global_start_frame, first.global_through_frame) == (0, 95)
-    assert first.provider_frame_count == 103
+    assert first.provider_frame_count == 107
     assert first.governed_frame_count == 96
     assert "REF-ROS" not in tuple(slot.reference_id for slot in first.reference_slots)
     assert (

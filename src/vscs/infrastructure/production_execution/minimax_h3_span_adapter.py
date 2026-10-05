@@ -75,10 +75,8 @@ class MiniMaxH3SpanExecution:
             raise MiniMaxH3SpanAdapterError(
                 "H3 provider frame count cannot be smaller than governed frame count"
             )
-        if (self.provider_frame_count + 1) % 8 != 0:
-            raise MiniMaxH3SpanAdapterError(
-                "H3 provider frame count must satisfy (frames + 1) % 8 == 0"
-            )
+        if self.provider_frame_count % 17 != 5:
+            raise MiniMaxH3SpanAdapterError("H3 provider frame count must satisfy frames % 17 == 5")
         if self.guide_frame_idx != 0:
             raise MiniMaxH3SpanAdapterError("H3 isolated spans may use only a local frame-0 guide")
         expected_guide_kind = (
@@ -781,13 +779,12 @@ class MiniMaxH3SpanAdapterCompiler:
 
 
 def _h3_provider_frame_count(governed_frames: int) -> int:
-    """Return the smallest H3-native frame count covering the governed interval."""
+    """Return the smallest H3-native 17k+5 frame count covering the governed interval."""
     if governed_frames <= 0:
         raise MiniMaxH3SpanAdapterError("H3 governed frame count must be positive")
     candidate = governed_frames
-    remainder = (candidate + 1) % 8
-    if remainder:
-        candidate += 8 - remainder
+    while candidate % 17 != 5:
+        candidate += 1
     return candidate
 
 

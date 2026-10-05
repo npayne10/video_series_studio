@@ -186,7 +186,7 @@ def _execution(
             global_start_frame=0,
             global_through_frame=95,
             governed_frame_count=96,
-            provider_frame_count=103,
+            provider_frame_count=107,
             reference_slots=refs,
             positive_prompt="James left. Sandra right. Bridge and Xorix stable.",
             negative_prompt="extra people; cuts",
@@ -211,7 +211,7 @@ def _execution(
         global_start_frame=96,
         global_through_frame=143,
         governed_frame_count=48,
-        provider_frame_count=55,
+        provider_frame_count=56,
         reference_slots=refs,
         positive_prompt="James left. Sandra right. Ros enters from far left.",
         negative_prompt="extra people; cuts",
@@ -248,7 +248,7 @@ def test_h3_workflow_compiler_removes_future_ros_and_second_guide_from_span1(
     assert "147" not in compiled.workflow
     assert compiled.workflow["126"]["inputs"]["conditioning"] == ["144", 0]
     assert compiled.workflow["144"]["inputs"]["frame_idx"] == 0
-    assert compiled.workflow["136"]["inputs"]["length"] == 103
+    assert compiled.workflow["136"]["inputs"]["length"] == 107
     assert "131" not in compiled.workflow
     assert "132" not in compiled.workflow
     ref_keys = sorted(
@@ -271,7 +271,7 @@ def test_h3_workflow_compiler_adds_ros_only_to_span2(tmp_path: Path) -> None:
 
     serialized = json.dumps(compiled.workflow)
     assert "Ros enters from far left" in serialized
-    assert compiled.workflow["136"]["inputs"]["length"] == 55
+    assert compiled.workflow["136"]["inputs"]["length"] == 56
     assert "ref_images.ref_image_4" in compiled.workflow["136"]["inputs"]
     assert "146" not in compiled.workflow
     assert "147" not in compiled.workflow
@@ -361,7 +361,7 @@ def test_live_h3_provider_submits_exact_isolated_workflow_and_persists_evidence(
 
     assert output.is_file()
     assert evidence["job_id"] == execution.job_id
-    assert evidence["provider_frame_count"] == 103
+    assert evidence["provider_frame_count"] == 107
     assert evidence["governed_frame_count"] == 96
     assert len(str(evidence["workflow_fingerprint"])) == 64
     assert len(str(evidence["model_config_fingerprint"])) == 64
