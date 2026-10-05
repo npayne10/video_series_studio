@@ -82,6 +82,10 @@ from .provider_audio_policy import (
     ProviderAudioPolicyMode,
     resolve_provider_audio_policy,
 )
+from .provider_prompt_policy import (
+    ProviderPromptPolicyError,
+    ProviderPromptPolicyResult,
+)
 from .provider_span_governance import (
     ProviderSpanGovernance,
     ProviderSpanGovernanceCompiler,
@@ -231,6 +235,8 @@ __all__ = [
     "ProviderAudioPolicy",
     "ProviderAudioPolicyError",
     "ProviderAudioPolicyMode",
+    "ProviderPromptPolicyError",
+    "ProviderPromptPolicyResult",
     "ProviderSpanGovernance",
     "ProviderSpanGovernanceCompiler",
     "ProviderSpanGovernanceError",

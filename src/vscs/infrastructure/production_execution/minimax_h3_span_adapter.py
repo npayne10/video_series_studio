@@ -13,6 +13,10 @@ from vscs.application.production_execution.introduction_keyframes import (
     IntroductionKeyframeRequirementPlan,
 )
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
+from vscs.application.production_execution.provider_span_governance import (
+    ProviderSpanGovernanceCompiler,
+    ProviderSpanGovernanceError,
+)
 from vscs.application.production_execution.provider_temporal_span_execution import (
     ProviderTemporalSpanExecutionCompiler,
 )
@@ -28,6 +32,7 @@ from .governed_shot_boundaries import (
     GovernedShotBoundaryError,
     GovernedShotBoundaryResolver,
 )
+from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
 
 
 class MiniMaxH3SpanAdapterError(RuntimeError):
@@ -424,12 +429,34 @@ class MiniMaxH3SpanAdapterCompiler:
             compiled,
             span_input,
         )
-        positive_prompt, negative_prompt, motion_prompt = self._h3_span_prompts(
-            compiled,
-            span_input,
-            reference_slots,
-            positive_prompt,
+        try:
+            governance_plan = ProviderSpanGovernanceCompiler().compile(compiled)
+        except ProviderSpanGovernanceError as exc:
+            raise MiniMaxH3SpanAdapterError(
+                f"H3 prompt governance source authority is invalid: {exc}"
+            ) from exc
+        governance = next(
+            (
+                item
+                for item in governance_plan.spans
+                if item.span_id == span_input.span_id
+            ),
+            None,
         )
+        if governance is None:
+            raise MiniMaxH3SpanAdapterError(
+                f"No provider-span governance exists for H3 span {span_input.span_id}"
+            )
+        prompt_policy = MiniMaxH3PromptPolicyCompiler().compile(
+            governance=governance,
+            reference_slots=reference_slots,
+            base_positive_prompt=positive_prompt,
+            base_negative_prompt=span_input.negative_prompt,
+            base_motion_prompt=span_input.motion_prompt,
+        )
+        positive_prompt = prompt_policy.positive_prompt
+        negative_prompt = prompt_policy.negative_prompt
+        motion_prompt = prompt_policy.motion_prompt
 
         return MiniMaxH3SpanExecution(
             span_id=span_input.span_id,
@@ -449,110 +476,6 @@ class MiniMaxH3SpanAdapterCompiler:
             source_span_input_id=span_input.input_id,
             source_span_input_plan_fingerprint=plan.fingerprint,
         )
-
-    def _h3_span_prompts(
-        self,
-        compiled: CompiledProductionPackage,
-        span_input: SpanScopedProviderInputs,
-        reference_slots: tuple[SpanReferenceSlot, ...],
-        projected_positive_prompt: str,
-    ) -> tuple[str, str, str]:
-        """Compile concise H3-local prompts for introduction spans."""
-
-        temporal_plan = ProviderTemporalSpanExecutionCompiler().compile(compiled)
-        execution = next(
-            (
-                item
-                for item in temporal_plan.executions
-                if item.sequence_number == span_input.sequence_number
-            ),
-            None,
-        )
-        if execution is None:
-            raise MiniMaxH3SpanAdapterError(
-                f"No temporal execution exists for H3 sequence {span_input.sequence_number}"
-            )
-
-        asset_kinds = self._asset_kinds(compiled)
-
-        character_slots = tuple(
-            slot for slot in reference_slots if asset_kinds.get(slot.asset_id) == "character"
-        )
-
-        introduced_character_slots = tuple(
-            slot
-            for slot in character_slots
-            if slot.reference_id in execution.introduced_reference_ids
-        )
-
-        # Initial spans retain the already-validated span-scoped prompt.
-        if not introduced_character_slots:
-            return (
-                projected_positive_prompt,
-                span_input.negative_prompt,
-                span_input.motion_prompt,
-            )
-
-        declaration = " ".join(
-            f"{slot.picture_tag} is the authoritative reference for {slot.semantic_label}."
-            for slot in reference_slots
-        )
-
-        character_tags = ", ".join(slot.picture_tag for slot in character_slots)
-        introduced_tags = ", ".join(slot.picture_tag for slot in introduced_character_slots)
-
-        positive = " ".join(
-            (
-                declaration,
-                "Use the local frame-0 guide as the authoritative starting composition.",
-                "Preserve the exact established bridge layout, locked camera, lighting, "
-                "Xorix view, spatial relationships, and character identities.",
-                f"Exactly {len(character_slots)} people are visible, corresponding only "
-                f"to these active character references: {character_tags}.",
-                "Do not create any additional person or crew member.",
-                f"The character introduced at this span opening ({introduced_tags}) is already "
-                "visible in the frame-0 guide and continues natural motion from that guide position.",
-                "All other established characters remain continuous with only natural motion.",
-                "The central command chair remains unoccupied.",
-            )
-        )
-
-        negative = "; ".join(
-            (
-                "extra people",
-                "additional bridge crew",
-                "unidentified people",
-                "background people",
-                "duplicate human figure",
-                "duplicated character",
-                "identity swap",
-                "merged identity",
-                "character replacement",
-                "reflections resembling people",
-                "new human figure",
-                "camera cut",
-                "scene cut",
-                "split screen",
-                "contact sheet",
-                "tiled references",
-                "generated speech",
-                "invented dialogue",
-                "unscripted voice",
-            )
-        )
-
-        motion = " ".join(
-            (
-                "Keep the camera locked to the frame-0 guide composition.",
-                f"The introduced character ({introduced_tags}) continues natural movement "
-                "from the guide position.",
-                "The other established characters use only subtle natural movement.",
-                "No additional person enters or appears.",
-                "The bridge environment and Xorix remain visually stable.",
-            )
-        )
-
-        return positive, negative, motion
 
     def _project_reference_slots(
         self,

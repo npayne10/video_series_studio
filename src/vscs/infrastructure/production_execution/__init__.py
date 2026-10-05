@@ -43,6 +43,7 @@ from .minimax_h3_comfyui_provider import (
     MiniMaxH3ComfyUIProviderError,
     MiniMaxH3ComfyUIWorkflowCompiler,
 )
+from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
 from .minimax_h3_functional_acceptance import (
     FFprobeMiniMaxH3MediaProbe,
     MiniMaxH3FunctionalAcceptanceError,
@@ -148,6 +149,7 @@ __all__ = [
     "MiniMaxH3FunctionalAcceptanceState",
     "MiniMaxH3MediaObservation",
     "MiniMaxH3MediaProbe",
+    "MiniMaxH3PromptPolicyCompiler",
     "MiniMaxH3SpanAdapterCompiler",
     "MiniMaxH3SpanAdapterError",
     "MiniMaxH3SpanAssembler",
