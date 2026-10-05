@@ -147,15 +147,19 @@ def test_universal_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     assert widget.package_table.horizontalHeaderItem(8).text() == "Universal"
     assert widget.package_table.horizontalHeaderItem(9).text() == "Provider"
     assert widget.package_table.item(0, 8).text() == "Draft"
-    assert widget.compiler_tabs.tabText(7) == "Universal Description"
-    assert widget.compiler_tabs.tabText(8) == "Provider Output"
+    tab_names = tuple(
+        widget.compiler_tabs.tabText(index)
+        for index in range(widget.compiler_tabs.count())
+    )
+    assert tab_names.count("Universal Description") == 1
+    assert tab_names.count("Provider Output") == 1
+    assert tab_names.count("Production Review") == 1
     assert "SHOT\n" in preview
     assert "Title: Bridge Dialogue" in preview
     assert "CAMERA\n" in preview
     assert "Movement: static" in preview
     assert not preview.startswith("SHOT: {")
     assert widget.universal_ready_button.isEnabled()
-    assert widget.compiler_tabs.tabText(9) == "Production Review"
 
 
 def test_universal_final_approval_is_blocked_until_upstream_ready(qtbot) -> None:
