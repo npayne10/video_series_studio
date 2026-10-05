@@ -52,9 +52,7 @@ class ProviderSpanGovernance:
                 "Provider-span governance requires schema version 1.0"
             )
         if self.sequence_number <= 0:
-            raise ProviderSpanGovernanceError(
-                "Provider-span governance sequence must be positive"
-            )
+            raise ProviderSpanGovernanceError("Provider-span governance sequence must be positive")
         if self.global_start_frame < 0 or self.global_through_frame < self.global_start_frame:
             raise ProviderSpanGovernanceError(
                 "Provider-span governance has an invalid global frame interval"
@@ -67,10 +65,7 @@ class ProviderSpanGovernance:
             raise ProviderSpanGovernanceError(
                 "Provider-span governance local frame interval is inconsistent"
             )
-        if (
-            self.local_frame_count
-            != self.global_through_frame - self.global_start_frame + 1
-        ):
+        if self.local_frame_count != self.global_through_frame - self.global_start_frame + 1:
             raise ProviderSpanGovernanceError(
                 "Provider-span governance local and global frame counts differ"
             )
@@ -102,9 +97,7 @@ class ProviderSpanGovernance:
         future_characters = set(self.future_character_asset_ids)
 
         if not active_characters.issubset(active):
-            raise ProviderSpanGovernanceError(
-                "Active character assets must be active in the span"
-            )
+            raise ProviderSpanGovernanceError("Active character assets must be active in the span")
         if not introduced.issubset(active):
             raise ProviderSpanGovernanceError(
                 "Introduced assets must be active in their target span"
@@ -114,9 +107,7 @@ class ProviderSpanGovernance:
                 "Introduced character assets must be introduced active characters"
             )
         if not future_characters.issubset(future):
-            raise ProviderSpanGovernanceError(
-                "Future character assets must be future assets"
-            )
+            raise ProviderSpanGovernanceError("Future character assets must be future assets")
         if active & future:
             raise ProviderSpanGovernanceError(
                 "Future assets must be structurally absent from the active span"
@@ -142,8 +133,7 @@ class ProviderSpanGovernance:
     @property
     def governance_id(self) -> str:
         return (
-            f"PSG-{self.sequence_number:03d}-"
-            f"{_fingerprint(self._authority_payload())[:12].upper()}"
+            f"PSG-{self.sequence_number:03d}-{_fingerprint(self._authority_payload())[:12].upper()}"
         )
 
     @property
@@ -163,17 +153,13 @@ class ProviderSpanGovernance:
             "active_asset_ids": list(self.active_asset_ids),
             "active_character_asset_ids": list(self.active_character_asset_ids),
             "introduced_asset_ids": list(self.introduced_asset_ids),
-            "introduced_character_asset_ids": list(
-                self.introduced_character_asset_ids
-            ),
+            "introduced_character_asset_ids": list(self.introduced_character_asset_ids),
             "future_asset_ids": list(self.future_asset_ids),
             "future_character_asset_ids": list(self.future_character_asset_ids),
             "exact_active_character_count": self.exact_active_character_count,
             "has_character_introduction": self.has_character_introduction,
             "source_execution_id": self.source_execution_id,
-            "source_execution_plan_fingerprint": (
-                self.source_execution_plan_fingerprint
-            ),
+            "source_execution_plan_fingerprint": (self.source_execution_plan_fingerprint),
         }
 
     def to_dict(self) -> dict[str, object]:
@@ -193,23 +179,13 @@ class ProviderSpanGovernance:
             local_through_frame=_required_int(raw, "local_through_frame"),
             local_frame_count=_required_int(raw, "local_frame_count"),
             active_asset_ids=_string_tuple(raw, "active_asset_ids"),
-            active_character_asset_ids=_string_tuple(
-                raw, "active_character_asset_ids"
-            ),
+            active_character_asset_ids=_string_tuple(raw, "active_character_asset_ids"),
             introduced_asset_ids=_string_tuple(raw, "introduced_asset_ids"),
-            introduced_character_asset_ids=_string_tuple(
-                raw, "introduced_character_asset_ids"
-            ),
+            introduced_character_asset_ids=_string_tuple(raw, "introduced_character_asset_ids"),
             future_asset_ids=_string_tuple(raw, "future_asset_ids"),
-            future_character_asset_ids=_string_tuple(
-                raw, "future_character_asset_ids"
-            ),
-            exact_active_character_count=_required_int(
-                raw, "exact_active_character_count"
-            ),
-            has_character_introduction=_required_bool(
-                raw, "has_character_introduction"
-            ),
+            future_character_asset_ids=_string_tuple(raw, "future_character_asset_ids"),
+            exact_active_character_count=_required_int(raw, "exact_active_character_count"),
+            has_character_introduction=_required_bool(raw, "has_character_introduction"),
             source_execution_id=str(raw.get("source_execution_id") or ""),
             source_execution_plan_fingerprint=str(
                 raw.get("source_execution_plan_fingerprint") or ""
@@ -243,9 +219,7 @@ class ProviderSpanGovernancePlan:
     def __post_init__(self) -> None:
         shot_id = self.shot_id.strip().upper()
         if not shot_id:
-            raise ProviderSpanGovernanceError(
-                "Provider-span governance plan requires shot_id"
-            )
+            raise ProviderSpanGovernanceError("Provider-span governance plan requires shot_id")
         object.__setattr__(self, "shot_id", shot_id)
         if self.schema_version != "1.0" or self.provider_neutral is not True:
             raise ProviderSpanGovernanceError(
@@ -258,12 +232,8 @@ class ProviderSpanGovernancePlan:
             raise ProviderSpanGovernanceError(
                 "Provider-span governance plan requires source fingerprints"
             )
-        object.__setattr__(
-            self, "source_package_fingerprint", package_fingerprint
-        )
-        object.__setattr__(
-            self, "source_execution_plan_fingerprint", execution_fingerprint
-        )
+        object.__setattr__(self, "source_package_fingerprint", package_fingerprint)
+        object.__setattr__(self, "source_execution_plan_fingerprint", execution_fingerprint)
 
         if not self.spans:
             raise ProviderSpanGovernanceError(
@@ -279,10 +249,7 @@ class ProviderSpanGovernancePlan:
                 raise ProviderSpanGovernanceError(
                     "Provider-span governance contains a global gap or overlap"
                 )
-            if (
-                span.source_execution_plan_fingerprint
-                != self.source_execution_plan_fingerprint
-            ):
+            if span.source_execution_plan_fingerprint != self.source_execution_plan_fingerprint:
                 raise ProviderSpanGovernanceError(
                     "Provider-span governance source execution fingerprint is inconsistent"
                 )
@@ -335,9 +302,7 @@ class ProviderSpanGovernancePlan:
             raise ProviderSpanGovernanceError("provider_neutral must be a boolean")
         plan = cls(
             shot_id=str(raw.get("shot_id") or ""),
-            source_package_fingerprint=str(
-                raw.get("source_package_fingerprint") or ""
-            ),
+            source_package_fingerprint=str(raw.get("source_package_fingerprint") or ""),
             source_execution_plan_fingerprint=str(
                 raw.get("source_execution_plan_fingerprint") or ""
             ),
@@ -446,9 +411,7 @@ class ProviderSpanGovernanceCompiler:
             )
         presences = raw.get("presences")
         if not isinstance(presences, list):
-            raise ProviderSpanGovernanceError(
-                "Timed Asset Presence records must be an array"
-            )
+            raise ProviderSpanGovernanceError("Timed Asset Presence records must be an array")
 
         kinds: dict[str, str] = {}
         for presence in presences:
@@ -470,16 +433,12 @@ class ProviderSpanGovernanceCompiler:
             )
         raw = reference_plan.get("references")
         if not isinstance(raw, list):
-            raise ProviderSpanGovernanceError(
-                "Governed ReferencePlan references must be an array"
-            )
+            raise ProviderSpanGovernanceError("Governed ReferencePlan references must be an array")
 
         result: dict[str, str] = {}
         for reference in raw:
             if not isinstance(reference, dict):
-                raise ProviderSpanGovernanceError(
-                    "Every governed reference must be an object"
-                )
+                raise ProviderSpanGovernanceError("Every governed reference must be an object")
             reference_id = str(reference.get("reference_id") or "").strip()
             asset_id = str(reference.get("asset_id") or "").strip().upper()
             if not reference_id or not asset_id:
