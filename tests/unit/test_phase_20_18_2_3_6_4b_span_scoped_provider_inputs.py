@@ -248,9 +248,7 @@ def test_live_shaped_future_asset_identity_is_removed_from_span_001_prompts() ->
     references["references"] = records
 
     live_assets = [
-        dict(item)
-        for item in compiled.production_authority["assets"]
-        if isinstance(item, dict)
+        dict(item) for item in compiled.production_authority["assets"] if isinstance(item, dict)
     ]
     for asset in live_assets:
         if asset.get("asset_id") != "CAP-CHR-005":
@@ -288,9 +286,7 @@ def test_live_shaped_future_asset_identity_is_removed_from_span_001_prompts() ->
     assert "ros" not in combined
     assert "rohsgard" not in combined
     assert "cap-chr-005" not in combined
-    assert "major ros rohsgard" in {
-        alias.casefold() for alias in first.omitted_future_aliases
-    }
+    assert "major ros rohsgard" in {alias.casefold() for alias in first.omitted_future_aliases}
 
 
 def test_span_002_contains_ros_and_compact_picture_mapping() -> None:

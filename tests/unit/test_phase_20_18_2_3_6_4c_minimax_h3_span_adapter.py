@@ -292,7 +292,9 @@ def _live_shaped_projection_compiled(project: Path) -> CompiledProductionPackage
             _reference("REF-JAMES", "CAP-CHR-001", "secondary_identity", "Commander James Spence"),
             _reference("REF-SANDRA", "CAP-CHR-003", "primary_identity", "Sandra Crawford"),
             {
-                **_reference("REF-ENV", "CAP-ENV-004", "environment_reference", "Environment Context"),
+                **_reference(
+                    "REF-ENV", "CAP-ENV-004", "environment_reference", "Environment Context"
+                ),
                 "priority": "preferred",
                 "subject_type": "environment",
             },
@@ -302,7 +304,9 @@ def _live_shaped_projection_compiled(project: Path) -> CompiledProductionPackage
                 "subject_type": "environment",
             },
             {
-                **_reference("REF-SHIP", "CAP-SHP-002", "background_identity", "Iron Horizon exterior"),
+                **_reference(
+                    "REF-SHIP", "CAP-SHP-002", "background_identity", "Iron Horizon exterior"
+                ),
                 "priority": "preferred",
                 "subject_type": "ship",
             },

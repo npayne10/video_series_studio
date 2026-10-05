@@ -594,9 +594,7 @@ class MiniMaxH3SpanAdapterCompiler:
             f"{slot.picture_tag} is the authoritative reference for {slot.semantic_label}."
             for slot in projected
         )
-        return " ".join(
-            value for value in (projected_declaration, remainder) if value
-        ).strip()
+        return " ".join(value for value in (projected_declaration, remainder) if value).strip()
 
     def _frame_state_reference_ids(
         self,
@@ -609,9 +607,7 @@ class MiniMaxH3SpanAdapterCompiler:
             )
         values = raw.get("frame_state_reference_ids", [])
         if not isinstance(values, list):
-            raise MiniMaxH3SpanAdapterError(
-                "H3 frame-state reference IDs must be an array"
-            )
+            raise MiniMaxH3SpanAdapterError("H3 frame-state reference IDs must be an array")
         return {self._text(value) for value in values if self._text(value)}
 
     def _future_reference_ids(
@@ -621,11 +617,7 @@ class MiniMaxH3SpanAdapterCompiler:
     ) -> tuple[str, ...]:
         temporal = ProviderTemporalSpanExecutionCompiler().compile(compiled)
         execution = next(
-            (
-                item
-                for item in temporal.executions
-                if item.sequence_number == sequence_number
-            ),
+            (item for item in temporal.executions if item.sequence_number == sequence_number),
             None,
         )
         if execution is None:
@@ -642,9 +634,7 @@ class MiniMaxH3SpanAdapterCompiler:
             )
         presences = raw.get("presences", [])
         if not isinstance(presences, list):
-            raise MiniMaxH3SpanAdapterError(
-                "H3 Timed Asset Presence records must be an array"
-            )
+            raise MiniMaxH3SpanAdapterError("H3 Timed Asset Presence records must be an array")
         kinds: dict[str, str] = {}
         for presence in presences:
             if not isinstance(presence, dict):
@@ -704,9 +694,7 @@ class MiniMaxH3SpanAdapterCompiler:
                 "H3 scene-composition anchor contains_environments must be an array"
             )
         return tuple(
-            asset_id
-            for value in raw
-            if (asset_id := self._text(value).upper()) in active_asset_ids
+            asset_id for value in raw if (asset_id := self._text(value).upper()) in active_asset_ids
         )
 
     def _reference_priority(
@@ -742,9 +730,7 @@ class MiniMaxH3SpanAdapterCompiler:
     ) -> str:
         value = self._text(reference.get(key))
         if not value:
-            raise MiniMaxH3SpanAdapterError(
-                f"H3 scene-composition anchor requires {key}"
-            )
+            raise MiniMaxH3SpanAdapterError(f"H3 scene-composition anchor requires {key}")
         return value
 
     @staticmethod
