@@ -61,6 +61,60 @@ def _write_governed_boundary_registry(
     return image
 
 
+def test_h3_introduction_span_uses_local_person_count_prompt(
+    tmp_path: Path,
+) -> None:
+    compiled = _live_shaped_projection_compiled(tmp_path)
+    compiled = replace(
+        compiled,
+        positive_prompt=(
+            "Show the Iron Horizon bridge with Xorix visible. "
+            "Major Ros Rohsgard must be absent during the opening portion and enter "
+            "exactly at 4.000 seconds / global frame 96. "
+            "Hold one continuous wide, static, eye-level bridge shot. "
+            "Frames 0-95: Ros is absent. "
+            "At frame 96 Ros enters naturally. "
+            "Frames 96-143: Ros remains present. "
+            "Use a medium close eye level 50 mm shot."
+        ),
+        motion_prompt=(
+            "Frames 0-95 Ros is absent. At frame 96 Ros enters. Frames 96-143 Ros remains present."
+        ),
+        negative_prompt=(
+            "identity swap; duplicated character; "
+            "Do not introduce Ros early.; "
+            "Do not add extra bridge crew or other people."
+        ),
+    )
+    _approve_intro(tmp_path, compiled)
+
+    second = MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+        compiled,
+        sequence_number=2,
+    )
+
+    combined = " ".join(
+        (
+            second.positive_prompt,
+            second.motion_prompt,
+            second.negative_prompt,
+        )
+    ).casefold()
+
+    assert "exactly 3 people" in combined
+    assert "local frame-0 guide" in combined
+    assert "no additional person" in combined
+
+    assert "frames 0-95" not in combined
+    assert "frame 96" not in combined
+    assert "4.000 seconds" not in combined
+    assert "global frame 96" not in combined
+    assert "ros is absent" not in combined
+    assert "introduce ros early" not in combined
+    assert "medium close" not in combined
+    assert "50 mm" not in combined
+
+
 def _timed() -> TimedAssetPresencePlan:
     return TimedAssetPresencePlan(
         shot_id="EP-001-SCN-001-SHT-002",
