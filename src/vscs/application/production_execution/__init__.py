@@ -82,17 +82,17 @@ from .provider_audio_policy import (
     ProviderAudioPolicyMode,
     resolve_provider_audio_policy,
 )
-from .provider_temporal_span_execution import (
-    ProviderTemporalSpanExecution,
-    ProviderTemporalSpanExecutionCompiler,
-    ProviderTemporalSpanExecutionError,
-    ProviderTemporalSpanExecutionPlan,
-)
 from .provider_span_governance import (
     ProviderSpanGovernance,
     ProviderSpanGovernanceCompiler,
     ProviderSpanGovernanceError,
     ProviderSpanGovernancePlan,
+)
+from .provider_temporal_span_execution import (
+    ProviderTemporalSpanExecution,
+    ProviderTemporalSpanExecutionCompiler,
+    ProviderTemporalSpanExecutionError,
+    ProviderTemporalSpanExecutionPlan,
 )
 from .reference_plan_rendering import (
     ReferencePlanRenderBinding,
