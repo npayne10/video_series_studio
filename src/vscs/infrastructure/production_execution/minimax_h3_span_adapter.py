@@ -63,6 +63,9 @@ class MiniMaxH3SpanExecution:
     guide_frame_idx: int
     source_span_input_id: str
     source_span_input_plan_fingerprint: str
+    prompt_validation_id: str
+    prompt_validation_fingerprint: str
+    prompt_validated_rules: tuple[str, ...]
     provider_id: str = "minimax-h3-ref2va"
     mode: str = "governed_isolated_span_ref2va"
     normalization_policy: str = "retain_first_governed_frames"
@@ -103,6 +106,8 @@ class MiniMaxH3SpanExecution:
             "guide_image_sha256",
             "source_span_input_id",
             "source_span_input_plan_fingerprint",
+            "prompt_validation_id",
+            "prompt_validation_fingerprint",
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
@@ -120,6 +125,16 @@ class MiniMaxH3SpanExecution:
             raise MiniMaxH3SpanAdapterError(
                 "H3 governed span adapter requires ref_image_size=match"
             )
+        rules = tuple(str(rule).strip() for rule in self.prompt_validated_rules)
+        if not rules or any(not rule for rule in rules):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 span execution requires prompt validation rules"
+            )
+        if len(set(rules)) != len(rules):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 span execution prompt validation rules cannot contain duplicates"
+            )
+        object.__setattr__(self, "prompt_validated_rules", rules)
 
     @property
     def provider_trim_frames(self) -> int:
@@ -163,6 +178,9 @@ class MiniMaxH3SpanExecution:
             "guide_frame_idx": self.guide_frame_idx,
             "source_span_input_id": self.source_span_input_id,
             "source_span_input_plan_fingerprint": self.source_span_input_plan_fingerprint,
+            "prompt_validation_id": self.prompt_validation_id,
+            "prompt_validation_fingerprint": self.prompt_validation_fingerprint,
+            "prompt_validated_rules": list(self.prompt_validated_rules),
             "normalization_policy": self.normalization_policy,
             "reference_image_size": self.reference_image_size,
         }
@@ -456,7 +474,7 @@ class MiniMaxH3SpanAdapterCompiler:
         )
         provider_frame_count = _h3_provider_frame_count(governed_frames)
         try:
-            MiniMaxH3PromptMetadataValidator().validate(
+            prompt_validation = MiniMaxH3PromptMetadataValidator().validate(
                 governance=governance,
                 policy=prompt_policy,
                 reference_slots=reference_slots,
@@ -489,6 +507,9 @@ class MiniMaxH3SpanAdapterCompiler:
             guide_frame_idx=0,
             source_span_input_id=span_input.input_id,
             source_span_input_plan_fingerprint=plan.fingerprint,
+            prompt_validation_id=prompt_validation.validation_id,
+            prompt_validation_fingerprint=prompt_validation.fingerprint,
+            prompt_validated_rules=prompt_validation.validated_rules,
         )
 
     def _project_reference_slots(
