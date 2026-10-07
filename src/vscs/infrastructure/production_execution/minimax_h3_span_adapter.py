@@ -132,9 +132,7 @@ class MiniMaxH3SpanExecution:
             )
         rules = tuple(str(rule).strip() for rule in self.prompt_validated_rules)
         if not rules or any(not rule for rule in rules):
-            raise MiniMaxH3SpanAdapterError(
-                "H3 span execution requires prompt validation rules"
-            )
+            raise MiniMaxH3SpanAdapterError("H3 span execution requires prompt validation rules")
         if len(set(rules)) != len(rules):
             raise MiniMaxH3SpanAdapterError(
                 "H3 span execution prompt validation rules cannot contain duplicates"
