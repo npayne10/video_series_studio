@@ -197,6 +197,18 @@ def _execution(
             guide_frame_idx=0,
             source_span_input_id="INPUT-1",
             source_span_input_plan_fingerprint="plan-fingerprint",
+            prompt_validation_id="PPV-MINIMAX-H3-REF2VA-TEST",
+            prompt_validation_fingerprint="a" * 64,
+            prompt_validated_rules=(
+                "H3-001-future-assets-structurally-absent",
+                "H3-002-span-local-timing-only",
+                "H3-003-exact-character-authority",
+                "H3-004-no-unapproved-people",
+                "H3-005-frame-zero-guide-is-state-anchor",
+                "H3-006-native-17k-plus-5-frame-grid",
+                "H3-007-camera-instructions-consistent",
+                "H3-008-introduction-continues-from-local-guide",
+            ),
         )
     refs = (
         _slot(1, "james", "CAP-CHR-001", files["james"]),
@@ -222,6 +234,18 @@ def _execution(
         guide_frame_idx=0,
         source_span_input_id="INPUT-2",
         source_span_input_plan_fingerprint="plan-fingerprint",
+        prompt_validation_id="PPV-MINIMAX-H3-REF2VA-TEST",
+        prompt_validation_fingerprint="b" * 64,
+        prompt_validated_rules=(
+            "H3-001-future-assets-structurally-absent",
+            "H3-002-span-local-timing-only",
+            "H3-003-exact-character-authority",
+            "H3-004-no-unapproved-people",
+            "H3-005-frame-zero-guide-is-state-anchor",
+            "H3-006-native-17k-plus-5-frame-grid",
+            "H3-007-camera-instructions-consistent",
+            "H3-008-introduction-continues-from-local-guide",
+        ),
     )
 
 
