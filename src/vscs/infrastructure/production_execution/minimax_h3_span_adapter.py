@@ -37,6 +37,11 @@ from .governed_shot_boundaries import (
 )
 from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
 from .minimax_h3_prompt_validation import MiniMaxH3PromptMetadataValidator
+from .provider_policy_profiles import (
+    MINIMAX_H3_EXECUTION_ADAPTER_ID,
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
+)
 
 
 class MiniMaxH3SpanAdapterError(RuntimeError):
@@ -161,6 +166,9 @@ class MiniMaxH3SpanExecution:
     def _authority_payload(self) -> dict[str, object]:
         return {
             "provider_id": self.provider_id,
+            "provider_profile_id": self.provider_profile_id,
+            "provider_profile_fingerprint": self.provider_profile_fingerprint,
+            "execution_adapter_id": self.execution_adapter_id,
             "mode": self.mode,
             "span_id": self.span_id,
             "sequence_number": self.sequence_number,
@@ -204,6 +212,9 @@ class MiniMaxH3SpanExecutionPlan:
     source_package_fingerprint: str
     source_span_input_plan_fingerprint: str
     spans: tuple[MiniMaxH3SpanExecution, ...]
+    provider_profile_id: str
+    provider_profile_fingerprint: str
+    execution_adapter_id: str
     provider_id: str = "minimax-h3-ref2va"
     mode: str = "governed_isolated_span_ref2va"
     schema_version: str = "1.0"
@@ -216,6 +227,9 @@ class MiniMaxH3SpanExecutionPlan:
         for field_name in (
             "source_package_fingerprint",
             "source_span_input_plan_fingerprint",
+            "provider_profile_id",
+            "provider_profile_fingerprint",
+            "execution_adapter_id",
         ):
             value = str(getattr(self, field_name)).strip().lower()
             if not value:
@@ -422,11 +436,22 @@ class MiniMaxH3SpanAdapterCompiler:
             )
             executions.append(execution)
 
+        policy_profile = default_provider_policy_profile_registry().require(
+            MINIMAX_H3_POLICY_PROFILE_ID
+        )
+        if policy_profile.execution_adapter_id != MINIMAX_H3_EXECUTION_ADAPTER_ID:
+            raise MiniMaxH3SpanAdapterError(
+                "Installed H3 provider profile is bound to the wrong execution adapter"
+            )
         plan = MiniMaxH3SpanExecutionPlan(
             shot_id=compiled.shot_id,
             source_package_fingerprint=compiled.package_fingerprint,
             source_span_input_plan_fingerprint=span_inputs.fingerprint,
             spans=tuple(executions),
+            provider_profile_id=policy_profile.profile_id,
+            provider_profile_fingerprint=policy_profile.fingerprint,
+            execution_adapter_id=policy_profile.execution_adapter_id,
+            provider_id=policy_profile.provider_id,
         )
         if plan.governed_frame_count != compiled.frame_count:
             raise MiniMaxH3SpanAdapterError(
