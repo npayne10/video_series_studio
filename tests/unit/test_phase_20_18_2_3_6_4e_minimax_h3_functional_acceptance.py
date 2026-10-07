@@ -227,6 +227,9 @@ def _prepare_evidence(project: Path, compiled: CompiledProductionPackage) -> _Pr
     manifest = {
         "schema_version": "1.0",
         "provider": plan.provider_id,
+        "provider_profile_id": plan.provider_profile_id,
+        "provider_profile_fingerprint": plan.provider_profile_fingerprint,
+        "execution_adapter_id": plan.execution_adapter_id,
         "mode": plan.mode,
         "shot_id": compiled.shot_id,
         "task_id": compiled.task_id,
@@ -340,6 +343,37 @@ def test_h3_functional_acceptance_detects_manifest_reference_or_prompt_tamper(
 
     assert report.state is MiniMaxH3FunctionalAcceptanceState.FAILED
     assert any("positive_prompt" in item for item in report.technical_failures)
+
+
+def test_h3_functional_acceptance_detects_provider_profile_tamper(
+    tmp_path: Path,
+) -> None:
+    compiled = _compiled(tmp_path)
+    _approve_intro(tmp_path, compiled)
+    probe = _prepare_evidence(tmp_path, compiled)
+    plan = MiniMaxH3SpanAdapterCompiler(tmp_path).compile(compiled)
+    manifest_path = (
+        tmp_path
+        / ".vscs"
+        / "h3_span_orchestration"
+        / compiled.task_id
+        / plan.plan_id
+        / "orchestration.json"
+    )
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["provider_profile_fingerprint"] = "0" * 64
+    manifest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    report = MiniMaxH3FunctionalAcceptanceService(
+        tmp_path,
+        media_probe=probe,
+    ).evaluate(compiled)
+
+    assert report.state is MiniMaxH3FunctionalAcceptanceState.FAILED
+    assert any(
+        "provider_profile_fingerprint" in item
+        for item in report.technical_failures
+    )
 
 
 def test_h3_functional_acceptance_detects_validation_evidence_tamper(
