@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from vscs.application.production_execution.provider_prompt_policy import (
     ProviderPromptPolicyError,
     ProviderPromptPolicyResult,
@@ -157,7 +158,10 @@ class MiniMaxH3PromptPolicyCompiler:
         )
 
     _SHOT_SIZE_PATTERNS = (
-        ("wide", re.compile(r"\\b(?:wide|wide shot|long shot|establishing shot)\\b", re.IGNORECASE)),
+        (
+            "wide",
+            re.compile(r"\\b(?:wide|wide shot|long shot|establishing shot)\\b", re.IGNORECASE),
+        ),
         ("full", re.compile(r"\\bfull shot\\b", re.IGNORECASE)),
         ("medium", re.compile(r"\\bmedium shot\\b", re.IGNORECASE)),
         (
