@@ -43,14 +43,10 @@ class ProviderPolicyProfile:
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
-                raise ProviderPolicyProfileError(
-                    f"Provider policy profile requires {field_name}"
-                )
+                raise ProviderPolicyProfileError(f"Provider policy profile requires {field_name}")
             object.__setattr__(self, field_name, value)
         if self.schema_version != "1.0":
-            raise ProviderPolicyProfileError(
-                "Provider policy profile requires schema version 1.0"
-            )
+            raise ProviderPolicyProfileError("Provider policy profile requires schema version 1.0")
         if self.max_reference_images < 0:
             raise ProviderPolicyProfileError(
                 "Provider policy profile max_reference_images cannot be negative"
@@ -113,9 +109,7 @@ class ProviderPolicyProfileRegistry:
     def require(self, profile_id: str) -> ProviderPolicyProfile:
         normalized = profile_id.strip().casefold()
         if not normalized:
-            raise ProviderPolicyProfileError(
-                "Provider policy profile selection cannot be blank"
-            )
+            raise ProviderPolicyProfileError("Provider policy profile selection cannot be blank")
         profile = self._by_id.get(normalized)
         if profile is None:
             supported = ", ".join(profile.profile_id for profile in self._profiles)
