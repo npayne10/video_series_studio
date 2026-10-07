@@ -1,0 +1,191 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
+
+import vscs.infrastructure.production_execution.ltx25_keyframe_backend as backend_module
+from vscs.application.production_execution import ProductionExecutionUiService
+from vscs.application.production_tasks import (
+    ProductionAuthorityType,
+    ProductionCapability,
+    ProductionTask,
+    ProductionTaskAuthority,
+    ProductionTaskState,
+    ProductionTaskType,
+)
+from vscs.infrastructure.production_execution import (
+    LTX25_CANDIDATE_C_POLICY_PROFILE_ID,
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    LocalComfyUIProductionExecutionBackend,
+    ProviderPolicySelectionStore,
+    default_provider_policy_profile_registry,
+)
+
+
+def _task() -> ProductionTask:
+    return ProductionTask(
+        task_id="PT-PROVIDER-SELECTION-001",
+        production_id="XORIX",
+        episode_id="EP-001",
+        scene_id="SCN-001",
+        shot_id="SHT-002",
+        task_type=ProductionTaskType.VIDEO_GENERATION,
+        authority=ProductionTaskAuthority(
+            authority_type=ProductionAuthorityType.UNIVERSAL_PRODUCTION_DESCRIPTION,
+            authority_id="UPD-SHT-002",
+            revision=1,
+            fingerprint="authority",
+            approved=True,
+            approved_by="Neill Payne",
+        ),
+        capabilities=(ProductionCapability.VIDEO_GENERATION,),
+        expected_outputs=("production_video",),
+        state=ProductionTaskState.READY,
+        created_at=datetime(2026, 10, 7, 12, 0, tzinfo=UTC),
+    )
+
+
+def test_provider_policy_selection_store_defaults_to_ltx_and_persists_per_profile(
+    tmp_path: Path,
+) -> None:
+    store = ProviderPolicySelectionStore(tmp_path)
+
+    default = store.selected_profile("PT-001", "production")
+    assert default.profile_id == LTX25_CANDIDATE_C_POLICY_PROFILE_ID
+
+    selected = store.select("PT-001", "production", MINIMAX_H3_POLICY_PROFILE_ID)
+    assert selected.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+
+    reloaded = ProviderPolicySelectionStore(tmp_path)
+    assert (
+        reloaded.selected_profile("PT-001", "production").profile_id
+        == MINIMAX_H3_POLICY_PROFILE_ID
+    )
+    assert (
+        reloaded.selected_profile("PT-001", "preview").profile_id
+        == LTX25_CANDIDATE_C_POLICY_PROFILE_ID
+    )
+
+
+class _SelectionBackend:
+    def __init__(self, project: Path) -> None:
+        self.store = ProviderPolicySelectionStore(project)
+        self.registry = default_provider_policy_profile_registry()
+
+    def provider_policy_profiles(self):
+        return self.registry.enabled_profiles
+
+    def provider_policy_profile_for_profile(self, task_id: str, *, profile: str):
+        return self.store.selected_profile(task_id, profile)
+
+    def select_provider_policy_profile_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        provider_profile_id: str,
+    ):
+        return self.store.select(task_id, profile, provider_profile_id)
+
+
+def test_execution_ui_service_selects_governed_provider_profile(tmp_path: Path) -> None:
+    service = ProductionExecutionUiService(_SelectionBackend(tmp_path))  # type: ignore[arg-type]
+
+    profiles = service.provider_policy_profiles()
+    assert {item.profile_id for item in profiles} == {
+        LTX25_CANDIDATE_C_POLICY_PROFILE_ID,
+        MINIMAX_H3_POLICY_PROFILE_ID,
+    }
+
+    selected = service.select_provider_policy_profile(
+        "PT-001",
+        MINIMAX_H3_POLICY_PROFILE_ID,
+        profile="production",
+    )
+    assert selected.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+    assert (
+        service.provider_policy_profile("PT-001", profile="production").fingerprint
+        == selected.fingerprint
+    )
+
+
+class _PackageCompilation:
+    def __init__(self, package_path: Path) -> None:
+        self.package_path = package_path
+
+    def require_current(self, task: ProductionTask, *, profile: str = "production"):
+        assert task.task_id == "PT-PROVIDER-SELECTION-001"
+        assert profile == "production"
+        return SimpleNamespace(path=self.package_path)
+
+
+class _H3Execution:
+    calls: list[tuple[str, str]] = []
+
+    def __init__(self, project_directory: Path, **kwargs) -> None:
+        assert kwargs["execution_profile"] == "production"
+        assert kwargs["policy_profile"].profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+        assert Path(kwargs["comfyui_input_directory"]).name == "input"
+        assert Path(kwargs["comfyui_output_directory"]).name == "output"
+
+    def execute(self, task_id: str):
+        self.calls.append((task_id, "execute"))
+        return SimpleNamespace(final_path="assembled.mp4")
+
+
+class _Acceptance:
+    def __init__(self, project_directory: Path) -> None:
+        self.project_directory = project_directory
+
+    def status(self, package_path: Path):
+        return SimpleNamespace(marker="h3-normal-flow", package_path=package_path)
+
+
+def test_normal_backend_routes_selected_h3_profile_without_acceptance_harness(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    project = tmp_path / "project"
+    comfyui = tmp_path / "ComfyUI"
+    input_dir = comfyui / "input"
+    output_dir = comfyui / "output"
+    project.mkdir()
+    input_dir.mkdir(parents=True)
+    output_dir.mkdir(parents=True)
+    package_path = project / "production-package.json"
+    package_path.write_text("{}", encoding="utf-8")
+
+    backend = LocalComfyUIProductionExecutionBackend(
+        project,
+        endpoint="http://127.0.0.1:8188",
+        comfyui_output_directory=output_dir,
+    )
+    task = _task()
+    backend.tasks.save(task)
+    backend.package_compilation = _PackageCompilation(package_path)  # type: ignore[assignment]
+    backend.provider_policy_selections.select(
+        task.task_id,
+        "production",
+        MINIMAX_H3_POLICY_PROFILE_ID,
+    )
+
+    _H3Execution.calls.clear()
+    monkeypatch.setattr(
+        backend_module,
+        "MiniMaxH3AutomatedExecutionService",
+        _H3Execution,
+    )
+    monkeypatch.setattr(
+        backend_module,
+        "TimedSpanFunctionalAcceptanceService",
+        _Acceptance,
+    )
+
+    status = backend.run_automated_timed_span_orchestration_for_profile(
+        task.task_id,
+        profile="production",
+    )
+
+    assert status.marker == "h3-normal-flow"
+    assert _H3Execution.calls == [(task.task_id, "execute")]
