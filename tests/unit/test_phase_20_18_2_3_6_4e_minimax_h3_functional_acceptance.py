@@ -342,6 +342,37 @@ def test_h3_functional_acceptance_detects_manifest_reference_or_prompt_tamper(
     assert any("positive_prompt" in item for item in report.technical_failures)
 
 
+def test_h3_functional_acceptance_detects_validation_evidence_tamper(
+    tmp_path: Path,
+) -> None:
+    compiled = _compiled(tmp_path)
+    _approve_intro(tmp_path, compiled)
+    probe = _prepare_evidence(tmp_path, compiled)
+    plan = MiniMaxH3SpanAdapterCompiler(tmp_path).compile(compiled)
+    manifest_path = (
+        tmp_path
+        / ".vscs"
+        / "h3_span_orchestration"
+        / compiled.task_id
+        / plan.plan_id
+        / "orchestration.json"
+    )
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["spans"][0]["prompt_validation_fingerprint"] = "0" * 64
+    manifest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    report = MiniMaxH3FunctionalAcceptanceService(
+        tmp_path,
+        media_probe=probe,
+    ).evaluate(compiled)
+
+    assert report.state is MiniMaxH3FunctionalAcceptanceState.FAILED
+    assert any(
+        "prompt_validation_fingerprint" in item
+        for item in report.technical_failures
+    )
+
+
 def test_h3_functional_acceptance_detects_wrong_final_frame_count(tmp_path: Path) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
