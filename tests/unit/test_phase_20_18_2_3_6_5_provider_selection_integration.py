@@ -135,11 +135,23 @@ class _H3Execution:
 
 
 class _Acceptance:
+    calls: ClassVar[list[bool]] = []
+
     def __init__(self, project_directory: Path) -> None:
         self.project_directory = project_directory
 
-    def status(self, package_path: Path):
-        return SimpleNamespace(marker="h3-normal-flow", package_path=package_path)
+    def status(
+        self,
+        package_path: Path,
+        *,
+        direct_approved_keyframes: bool = False,
+    ):
+        self.calls.append(direct_approved_keyframes)
+        return SimpleNamespace(
+            marker="h3-normal-flow",
+            package_path=package_path,
+            direct_approved_keyframes=direct_approved_keyframes,
+        )
 
 
 def test_normal_backend_routes_selected_h3_profile_without_acceptance_harness(
@@ -171,6 +183,7 @@ def test_normal_backend_routes_selected_h3_profile_without_acceptance_harness(
     )
 
     _H3Execution.calls.clear()
+    _Acceptance.calls.clear()
     monkeypatch.setattr(
         backend_module,
         "MiniMaxH3AutomatedExecutionService",
@@ -188,4 +201,48 @@ def test_normal_backend_routes_selected_h3_profile_without_acceptance_harness(
     )
 
     assert status.marker == "h3-normal-flow"
+    assert status.direct_approved_keyframes is True
     assert _H3Execution.calls == [(task.task_id, "execute")]
+    assert _Acceptance.calls == [True]
+
+
+def test_h3_selected_status_uses_direct_approved_keyframe_authority(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    project = tmp_path / "project"
+    output_dir = tmp_path / "ComfyUI" / "output"
+    project.mkdir()
+    output_dir.mkdir(parents=True)
+    package_path = project / "production-package.json"
+    package_path.write_text("{}", encoding="utf-8")
+
+    backend = LocalComfyUIProductionExecutionBackend(
+        project,
+        endpoint="http://127.0.0.1:8188",
+        comfyui_output_directory=output_dir,
+    )
+    task = _task()
+    backend.tasks.save(task)
+    backend.package_compilation = _PackageCompilation(package_path)  # type: ignore[assignment]
+    backend.provider_policy_selections.select(
+        task.task_id,
+        "production",
+        MINIMAX_H3_POLICY_PROFILE_ID,
+    )
+
+    _Acceptance.calls.clear()
+    monkeypatch.setattr(
+        backend_module,
+        "TimedSpanFunctionalAcceptanceService",
+        _Acceptance,
+    )
+
+    status = backend.timed_span_acceptance_status_for_profile(
+        task.task_id,
+        profile="production",
+    )
+
+    assert status.marker == "h3-normal-flow"
+    assert status.direct_approved_keyframes is True
+    assert _Acceptance.calls == [True]
