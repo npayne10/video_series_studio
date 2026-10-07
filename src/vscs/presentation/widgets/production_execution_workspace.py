@@ -528,6 +528,17 @@ class ProductionExecutionWorkspace(QWidget):
             self.provider_policy.setCurrentIndex(selected_index)
             self._provider_policy_profile = selected
             self.provider_policy.setEnabled(True)
+            if selected.execution_adapter_id == "minimax_h3_automated_execution":
+                self.run_automated_spans_button.setToolTip(
+                    "MiniMax H3 executes governed isolated spans after every required "
+                    "Introduction Keyframe has been approved. It does not synthesize the "
+                    "Introduction Keyframe inside the H3 provider job."
+                )
+            else:
+                self.run_automated_spans_button.setToolTip(
+                    "LTX-2.5 automatically renders governed spans and may synthesize "
+                    "Introduction Keyframes from canonical authority before final assembly."
+                )
         self.provider_policy.blockSignals(False)
 
     def _provider_policy_changed(self, index: int) -> None:
@@ -871,6 +882,12 @@ class ProductionExecutionWorkspace(QWidget):
     def _apply_identity_gate_controls(self) -> None:
         if self._selected_task_id is None or self._automated_span_thread is not None:
             return
+        if (
+            self._provider_policy_profile is not None
+            and self._provider_policy_profile.execution_adapter_id
+            == "minimax_h3_automated_execution"
+        ):
+            return
         service = self._service_provider()
         if service is None:
             return
@@ -899,6 +916,15 @@ class ProductionExecutionWorkspace(QWidget):
         self.approve_injection_candidate_button.setEnabled(False)
         self.reject_injection_candidate_button.setEnabled(False)
         if self._selected_task_id is None or self._automated_span_thread is not None:
+            return
+        if (
+            self._provider_policy_profile is not None
+            and self._provider_policy_profile.execution_adapter_id
+            == "minimax_h3_automated_execution"
+        ):
+            self.injection_candidate_state.setText(
+                "Injected Boundary QC: not used by selected MiniMax H3 profile"
+            )
             return
         service = self._service_provider()
         if service is None:
@@ -1080,6 +1106,16 @@ class ProductionExecutionWorkspace(QWidget):
         self.approve_identity_candidate_button.setEnabled(False)
         self.reject_identity_candidate_button.setEnabled(False)
         if self._selected_task_id is None or self._automated_span_thread is not None:
+            return
+        if (
+            self._provider_policy_profile is not None
+            and self._provider_policy_profile.execution_adapter_id
+            == "minimax_h3_automated_execution"
+        ):
+            self.identity_candidate_state.setText(
+                "Introduction Identity QC: governed Introduction Keyframe approval is required "
+                "before MiniMax H3 execution"
+            )
             return
         service = self._service_provider()
         if service is None:
