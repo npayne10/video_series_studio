@@ -87,7 +87,7 @@ def test_ltx25_conditioning_rejects_h3_policy_profile(tmp_path: Path) -> None:
 
     with pytest.raises(
         LTX25SpanConditioningError,
-        match="incompatible with LTX-2.5 conditioning",
+        match=r"incompatible with LTX-2.5 conditioning",
     ):
         LTX25SpanProviderConditioningCompiler(
             tmp_path,
