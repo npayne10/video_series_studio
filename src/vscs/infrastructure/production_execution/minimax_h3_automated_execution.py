@@ -174,9 +174,7 @@ class MiniMaxH3AutomatedExecutionService:
         self.package_compiler = package_compiler or LocalProductionPackageCompilationService(
             self.project_directory
         )
-        self.plan_compiler = plan_compiler or MiniMaxH3SpanAdapterCompiler(
-            self.project_directory
-        )
+        self.plan_compiler = plan_compiler or MiniMaxH3SpanAdapterCompiler(self.project_directory)
         self.workflow_compiler = workflow_compiler or MiniMaxH3ComfyUIWorkflowCompiler(
             self.project_directory,
             comfyui_input_directory=self.comfyui_input_directory,
@@ -266,9 +264,7 @@ class MiniMaxH3AutomatedExecutionService:
             plan_id=plan.plan_id,
             plan_fingerprint=plan.fingerprint,
             span_job_ids=tuple(execution.job_id for execution in plan.spans),
-            prompt_fingerprints=tuple(
-                execution.prompt_fingerprint for execution in plan.spans
-            ),
+            prompt_fingerprints=tuple(execution.prompt_fingerprint for execution in plan.spans),
             reference_slot_fingerprints=tuple(
                 execution.reference_slot_fingerprint for execution in plan.spans
             ),
