@@ -43,7 +43,6 @@ from .minimax_h3_comfyui_provider import (
     MiniMaxH3ComfyUIProviderError,
     MiniMaxH3ComfyUIWorkflowCompiler,
 )
-from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
 from .minimax_h3_functional_acceptance import (
     FFprobeMiniMaxH3MediaProbe,
     MiniMaxH3FunctionalAcceptanceError,
@@ -54,6 +53,7 @@ from .minimax_h3_functional_acceptance import (
     MiniMaxH3MediaProbe,
     MiniMaxH3VisualObservation,
 )
+from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
 from .minimax_h3_span_adapter import (
     MiniMaxH3SpanAdapterCompiler,
     MiniMaxH3SpanAdapterError,

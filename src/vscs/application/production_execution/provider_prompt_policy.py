@@ -47,9 +47,7 @@ class ProviderPromptPolicyResult:
 
         rules = tuple(str(rule).strip() for rule in self.learned_rules)
         if not rules or any(not rule for rule in rules):
-            raise ProviderPromptPolicyError(
-                "Provider prompt policy result requires learned rules"
-            )
+            raise ProviderPromptPolicyError("Provider prompt policy result requires learned rules")
         if len(set(rules)) != len(rules):
             raise ProviderPromptPolicyError(
                 "Provider prompt policy learned rules cannot contain duplicates"
@@ -64,8 +62,7 @@ class ProviderPromptPolicyResult:
     @property
     def policy_id(self) -> str:
         return (
-            f"PPP-{self.provider_id.upper()}-"
-            f"{_fingerprint(self._authority_payload())[:12].upper()}"
+            f"PPP-{self.provider_id.upper()}-{_fingerprint(self._authority_payload())[:12].upper()}"
         )
 
     @property

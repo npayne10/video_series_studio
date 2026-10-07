@@ -436,11 +436,7 @@ class MiniMaxH3SpanAdapterCompiler:
                 f"H3 prompt governance source authority is invalid: {exc}"
             ) from exc
         governance = next(
-            (
-                item
-                for item in governance_plan.spans
-                if item.span_id == span_input.span_id
-            ),
+            (item for item in governance_plan.spans if item.span_id == span_input.span_id),
             None,
         )
         if governance is None:
