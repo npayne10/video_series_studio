@@ -428,6 +428,9 @@ class LTX25SpanProviderConditioningCompiler:
             )
         expected = {
             "provider_id": "ltx-2.5",
+            "model_family": "LTX-2.5",
+            "prompt_policy_id": "motion_only_v2",
+            "validation_policy_id": "governed_keyframe_candidate_c_v1",
             "execution_adapter_id": LTX25_EXECUTION_ADAPTER_ID,
             "guide_semantics": "first_frame_i2v",
             "native_frame_rule": "8k+1",
