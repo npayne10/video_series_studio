@@ -164,9 +164,6 @@ class MiniMaxH3SpanExecution:
     def _authority_payload(self) -> dict[str, object]:
         return {
             "provider_id": self.provider_id,
-            "provider_profile_id": self.provider_profile_id,
-            "provider_profile_fingerprint": self.provider_profile_fingerprint,
-            "execution_adapter_id": self.execution_adapter_id,
             "mode": self.mode,
             "span_id": self.span_id,
             "sequence_number": self.sequence_number,
@@ -263,6 +260,9 @@ class MiniMaxH3SpanExecutionPlan:
         return {
             "schema_version": self.schema_version,
             "provider_id": self.provider_id,
+            "provider_profile_id": self.provider_profile_id,
+            "provider_profile_fingerprint": self.provider_profile_fingerprint,
+            "execution_adapter_id": self.execution_adapter_id,
             "mode": self.mode,
             "shot_id": self.shot_id,
             "source_package_fingerprint": self.source_package_fingerprint,
