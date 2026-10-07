@@ -466,9 +466,7 @@ class MiniMaxH3SpanAdapterCompiler:
                 temporal_asset_gate=False,
             )
         except ProviderPromptValidationError as exc:
-            raise MiniMaxH3SpanAdapterError(
-                f"H3 prompt/metadata validation failed: {exc}"
-            ) from exc
+            raise MiniMaxH3SpanAdapterError(f"H3 prompt/metadata validation failed: {exc}") from exc
 
         positive_prompt = prompt_policy.positive_prompt
         negative_prompt = prompt_policy.negative_prompt

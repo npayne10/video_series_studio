@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import ClassVar
 
 from vscs.application.production_execution.provider_prompt_policy import (
     ProviderPromptPolicyResult,
@@ -34,7 +35,7 @@ class MiniMaxH3PromptMetadataValidator:
         "H3-008-introduction-continues-from-local-guide",
     )
 
-    _SHOT_SIZE_PATTERNS = {
+    _SHOT_SIZE_PATTERNS: ClassVar[dict[str, re.Pattern[str]]] = {
         "wide": re.compile(r"\b(?:wide|wide shot|long shot|establishing shot)\b", re.IGNORECASE),
         "full": re.compile(r"\bfull shot\b", re.IGNORECASE),
         "medium": re.compile(r"\bmedium shot\b", re.IGNORECASE),
@@ -55,9 +56,7 @@ class MiniMaxH3PromptMetadataValidator:
         temporal_asset_gate: bool,
     ) -> ProviderPromptValidationResult:
         self._require_source_identity(governance, policy)
-        combined = " ".join(
-            (policy.positive_prompt, policy.negative_prompt, policy.motion_prompt)
-        )
+        combined = " ".join((policy.positive_prompt, policy.negative_prompt, policy.motion_prompt))
 
         self._require_future_assets_absent(governance, reference_slots, combined)
         self._require_span_local_timing(governance, combined)
@@ -110,7 +109,8 @@ class MiniMaxH3PromptMetadataValidator:
         if inactive_slots:
             self._fail(
                 "H3-001",
-                "inactive assets leaked into provider reference slots: " + ", ".join(inactive_slots),
+                "inactive assets leaked into provider reference slots: "
+                + ", ".join(inactive_slots),
             )
         lowered = combined_prompt.casefold()
         leaked_text = sorted(
@@ -131,7 +131,7 @@ class MiniMaxH3PromptMetadataValidator:
             return
         timing_patterns = (
             re.compile(r"\bglobal\s+frames?\b", re.IGNORECASE),
-            re.compile(r"\bframes?\s+\d+\s*(?:-|–|to|through)\s*\d+\b", re.IGNORECASE),
+            re.compile(r"\bframes?\s+\d+\s*(?:-|\\u2013|to|through)\s*\d+\b", re.IGNORECASE),
             re.compile(r"(?<![-\w])frame\s+\d+\b", re.IGNORECASE),
             re.compile(r"\b\d+(?:\.\d+)?\s*seconds?\b", re.IGNORECASE),
         )
@@ -230,9 +230,7 @@ class MiniMaxH3PromptMetadataValidator:
                 "provider prompt contains conflicting shot-size instructions: "
                 + ", ".join(sorted(shot_sizes)),
             )
-        focal_lengths = set(
-            re.findall(r"\b(\d{2,3})\s*mm\b", text, flags=re.IGNORECASE)
-        )
+        focal_lengths = set(re.findall(r"\b(\d{2,3})\s*mm\b", text, flags=re.IGNORECASE))
         if len(focal_lengths) > 1:
             self._fail(
                 "H3-007",

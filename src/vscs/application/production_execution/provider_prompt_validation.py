@@ -65,8 +65,7 @@ class ProviderPromptValidationResult:
     @property
     def validation_id(self) -> str:
         return (
-            f"PPV-{self.provider_id.upper()}-"
-            f"{_fingerprint(self._authority_payload())[:12].upper()}"
+            f"PPV-{self.provider_id.upper()}-{_fingerprint(self._authority_payload())[:12].upper()}"
         )
 
     @property
