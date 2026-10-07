@@ -7,7 +7,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from vscs.application.production_execution.profiles import normalize_execution_profile
-from vscs.application.production_execution.provider_policy_profiles import ProviderPolicyProfile
+from vscs.application.production_execution.provider_policy_profiles import (
+    ProviderPolicyProfile,
+    ProviderPolicyProfileError,
+)
 
 from .provider_policy_profiles import (
     LTX25_CANDIDATE_C_POLICY_PROFILE_ID,
@@ -77,7 +80,10 @@ class ProviderPolicySelectionStore:
         selection = self._records().get(f"{task}|{profile}")
         if selection is None:
             return self.registry.require(LTX25_CANDIDATE_C_POLICY_PROFILE_ID)
-        provider_profile = self.registry.require(selection.provider_profile_id)
+        try:
+            provider_profile = self.registry.require(selection.provider_profile_id)
+        except ProviderPolicyProfileError as exc:
+            raise ProviderPolicySelectionError(str(exc)) from exc
         if provider_profile.fingerprint != selection.provider_profile_fingerprint:
             raise ProviderPolicySelectionError(
                 "Persisted provider-policy selection fingerprint is stale: "
@@ -95,7 +101,10 @@ class ProviderPolicySelectionStore:
         if not task:
             raise ProviderPolicySelectionError("Provider-policy selection requires task_id")
         profile = normalize_execution_profile(execution_profile)
-        provider_profile = self.registry.require(provider_profile_id)
+        try:
+            provider_profile = self.registry.require(provider_profile_id)
+        except ProviderPolicyProfileError as exc:
+            raise ProviderPolicySelectionError(str(exc)) from exc
         records = self._records()
         selection = ProviderPolicySelection(
             task_id=task,
