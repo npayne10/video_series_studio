@@ -370,10 +370,7 @@ def test_h3_functional_acceptance_detects_provider_profile_tamper(
     ).evaluate(compiled)
 
     assert report.state is MiniMaxH3FunctionalAcceptanceState.FAILED
-    assert any(
-        "provider_profile_fingerprint" in item
-        for item in report.technical_failures
-    )
+    assert any("provider_profile_fingerprint" in item for item in report.technical_failures)
 
 
 def test_h3_functional_acceptance_detects_validation_evidence_tamper(
@@ -401,10 +398,7 @@ def test_h3_functional_acceptance_detects_validation_evidence_tamper(
     ).evaluate(compiled)
 
     assert report.state is MiniMaxH3FunctionalAcceptanceState.FAILED
-    assert any(
-        "prompt_validation_fingerprint" in item
-        for item in report.technical_failures
-    )
+    assert any("prompt_validation_fingerprint" in item for item in report.technical_failures)
 
 
 def test_h3_functional_acceptance_detects_wrong_final_frame_count(tmp_path: Path) -> None:
