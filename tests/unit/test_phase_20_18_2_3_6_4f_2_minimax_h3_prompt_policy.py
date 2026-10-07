@@ -49,7 +49,7 @@ def _slot(index: int, asset_id: str, label: str) -> SpanReferenceSlot:
     )
 
 
-def test_initial_span_preserves_validated_span_scoped_prompts() -> None:
+def test_initial_span_preserves_nonconflicting_span_scoped_prompts() -> None:
     governance = _governance(
         introduced=(),
         active=("CAP-CHR-001", "CAP-CHR-003"),
@@ -74,6 +74,43 @@ def test_initial_span_preserves_validated_span_scoped_prompts() -> None:
     assert result.negative_prompt == "validated negative"
     assert result.motion_prompt == "validated motion"
     assert "preserve_validated_span_scoped_prompt" in result.learned_rules
+    assert "resolve_conflicting_camera_instructions" in result.learned_rules
+
+
+def test_initial_span_resolves_conflicting_camera_instructions_deterministically() -> None:
+    governance = _governance(
+        introduced=(),
+        active=("CAP-CHR-001", "CAP-CHR-003"),
+        future=("CAP-CHR-005",),
+    )
+
+    result = MiniMaxH3PromptPolicyCompiler().compile(
+        governance=governance,
+        reference_slots=(
+            _slot(1, "CAP-CHR-001", "James"),
+            _slot(2, "CAP-CHR-003", "Sandra"),
+            _slot(3, "CAP-LOC-021", "Bridge"),
+            _slot(4, "CAP-PLN-002", "Xorix"),
+        ),
+        base_positive_prompt=(
+            "Show the bridge with the two active characters. "
+            "Hold one continuous wide, static, eye-level bridge shot. "
+            "Preserve governed dialogue and identities. "
+            "Use a medium close eye level 50 mm shot with a static camera, "
+            "preserve eye-line and natural headroom."
+        ),
+        base_negative_prompt="no extras",
+        base_motion_prompt=(
+            "Hold one continuous wide, static, eye-level bridge shot. "
+            "The camera remains locked in place throughout the shot."
+        ),
+    )
+
+    combined = f"{result.positive_prompt} {result.motion_prompt}".casefold()
+    assert "wide" in combined
+    assert "medium close" not in combined
+    assert "50 mm" not in combined
+    assert "camera remains locked" in combined
 
 
 def test_introduction_span_compiles_local_prompt_from_governed_metadata() -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from vscs.application.production_execution.provider_prompt_policy import (
     ProviderPromptPolicyError,
     ProviderPromptPolicyResult,
@@ -21,6 +22,7 @@ class MiniMaxH3PromptPolicyCompiler:
 
     INITIAL_RULES = (
         "preserve_validated_span_scoped_prompt",
+        "resolve_conflicting_camera_instructions",
         "future_assets_structurally_absent",
         "frame_zero_guide_is_state_anchor_not_temporal_gate",
     )
@@ -44,12 +46,19 @@ class MiniMaxH3PromptPolicyCompiler:
         base_motion_prompt: str,
     ) -> ProviderPromptPolicyResult:
         if not governance.has_character_introduction:
+            positive_prompt, camera_authority = self._resolve_camera_instructions(
+                base_positive_prompt
+            )
+            motion_prompt, _ = self._resolve_camera_instructions(
+                base_motion_prompt,
+                camera_authority=camera_authority,
+            )
             return ProviderPromptPolicyResult(
                 provider_id=self.PROVIDER_ID,
                 span_id=governance.span_id,
-                positive_prompt=base_positive_prompt,
+                positive_prompt=positive_prompt,
                 negative_prompt=base_negative_prompt,
-                motion_prompt=base_motion_prompt,
+                motion_prompt=motion_prompt,
                 learned_rules=self.INITIAL_RULES,
                 source_governance_fingerprint=governance.fingerprint,
             )
@@ -146,3 +155,70 @@ class MiniMaxH3PromptPolicyCompiler:
             learned_rules=self.INTRODUCTION_RULES,
             source_governance_fingerprint=governance.fingerprint,
         )
+
+    _SHOT_SIZE_PATTERNS = (
+        ("wide", re.compile(r"\\b(?:wide|wide shot|long shot|establishing shot)\\b", re.IGNORECASE)),
+        ("full", re.compile(r"\\bfull shot\\b", re.IGNORECASE)),
+        ("medium", re.compile(r"\\bmedium shot\\b", re.IGNORECASE)),
+        (
+            "medium_close",
+            re.compile(r"\\bmedium[- ]close(?: shot)?\\b", re.IGNORECASE),
+        ),
+        ("close", re.compile(r"\\bclose[- ]?up(?: shot)?\\b", re.IGNORECASE)),
+        (
+            "extreme_close",
+            re.compile(r"\\bextreme close[- ]?up(?: shot)?\\b", re.IGNORECASE),
+        ),
+    )
+    _FOCAL_LENGTH_PATTERN = re.compile(r"\\b(\\d{2,3})\\s*mm\\b", re.IGNORECASE)
+    _SENTENCE_BOUNDARY_PATTERN = re.compile(r"(?<=[.!?])\\s+")
+
+    def _resolve_camera_instructions(
+        self,
+        prompt: str,
+        *,
+        camera_authority: tuple[frozenset[str], frozenset[str]] | None = None,
+    ) -> tuple[str, tuple[frozenset[str], frozenset[str]]]:
+        """Keep the first coherent camera instruction and drop later conflicts."""
+        shot_sizes = set(camera_authority[0]) if camera_authority is not None else set()
+        focal_lengths = set(camera_authority[1]) if camera_authority is not None else set()
+        kept: list[str] = []
+
+        for sentence in self._SENTENCE_BOUNDARY_PATTERN.split(prompt.strip()):
+            normalized = sentence.strip()
+            if not normalized:
+                continue
+
+            sentence_sizes = {
+                label
+                for label, pattern in self._SHOT_SIZE_PATTERNS
+                if pattern.search(normalized) is not None
+            }
+            sentence_focals = set(self._FOCAL_LENGTH_PATTERN.findall(normalized))
+
+            if len(sentence_sizes) > 1:
+                raise ProviderPromptPolicyError(
+                    "H3 prompt policy received one camera instruction with conflicting shot sizes"
+                )
+            if len(sentence_focals) > 1:
+                raise ProviderPromptPolicyError(
+                    "H3 prompt policy received one camera instruction with conflicting focal lengths"
+                )
+
+            if shot_sizes and sentence_sizes and sentence_sizes != shot_sizes:
+                continue
+            if focal_lengths and sentence_focals and sentence_focals != focal_lengths:
+                continue
+
+            if not shot_sizes and sentence_sizes:
+                shot_sizes.update(sentence_sizes)
+            if not focal_lengths and sentence_focals:
+                focal_lengths.update(sentence_focals)
+            kept.append(normalized)
+
+        resolved = " ".join(kept).strip()
+        if not resolved:
+            raise ProviderPromptPolicyError(
+                "H3 prompt policy removed every initial-span prompt instruction"
+            )
+        return resolved, (frozenset(shot_sizes), frozenset(focal_lengths))

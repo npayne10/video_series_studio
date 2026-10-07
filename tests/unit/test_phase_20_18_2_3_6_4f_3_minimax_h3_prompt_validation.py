@@ -163,6 +163,58 @@ def test_h3_validation_rejects_conflicting_camera_instructions() -> None:
         _validate(governance=governed, policy=bad)
 
 
+def test_h3_validation_accepts_initial_span_after_camera_policy_resolution() -> None:
+    governed = ProviderSpanGovernance(
+        span_id="IRS-SHT-002-001",
+        sequence_number=1,
+        global_start_frame=0,
+        global_through_frame=95,
+        local_start_frame=0,
+        local_through_frame=95,
+        local_frame_count=96,
+        active_asset_ids=("CAP-CHR-001", "CAP-CHR-003", "CAP-LOC-021", "CAP-PLN-002"),
+        active_character_asset_ids=("CAP-CHR-001", "CAP-CHR-003"),
+        introduced_asset_ids=(),
+        introduced_character_asset_ids=(),
+        future_asset_ids=("CAP-CHR-005",),
+        future_character_asset_ids=("CAP-CHR-005",),
+        exact_active_character_count=2,
+        has_character_introduction=False,
+        source_execution_id="PTSE-SHT-002-001",
+        source_execution_plan_fingerprint="b" * 64,
+    )
+    slots = (
+        _slot(1, "CAP-CHR-001", "James"),
+        _slot(2, "CAP-CHR-003", "Sandra"),
+        _slot(3, "CAP-LOC-021", "Bridge"),
+        _slot(4, "CAP-PLN-002", "Xorix"),
+    )
+    policy = MiniMaxH3PromptPolicyCompiler().compile(
+        governance=governed,
+        reference_slots=slots,
+        base_positive_prompt=(
+            "Hold one continuous wide, static, eye-level bridge shot. "
+            "Use a medium close eye level 50 mm shot with a static camera."
+        ),
+        base_negative_prompt="no extras",
+        base_motion_prompt="Hold one continuous wide, static, eye-level bridge shot.",
+    )
+
+    result = MiniMaxH3PromptMetadataValidator().validate(
+        governance=governed,
+        policy=policy,
+        reference_slots=slots,
+        provider_frame_count=107,
+        guide_frame_idx=0,
+        guide_semantics="frame_state_anchor",
+        temporal_asset_gate=False,
+    )
+
+    assert result.span_id == governed.span_id
+    assert "medium close" not in policy.positive_prompt.casefold()
+    assert "50 mm" not in policy.positive_prompt.casefold()
+
+
 def test_h3_validation_rejects_invalid_introduction_semantics() -> None:
     governed = _governance()
     valid = _policy(governed)
