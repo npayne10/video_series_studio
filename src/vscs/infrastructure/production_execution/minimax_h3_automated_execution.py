@@ -81,6 +81,7 @@ class MiniMaxH3AutomatedExecutionPreflight:
     span_job_ids: tuple[str, ...]
     prompt_fingerprints: tuple[str, ...]
     reference_slot_fingerprints: tuple[str, ...]
+    prompt_validation_fingerprints: tuple[str, ...]
     workflow_fingerprints: tuple[str, ...]
     model_config_fingerprints: tuple[str, ...]
     provider_profile_id: str
@@ -114,6 +115,7 @@ class MiniMaxH3AutomatedExecutionPreflight:
             len(self.span_job_ids),
             len(self.prompt_fingerprints),
             len(self.reference_slot_fingerprints),
+            len(self.prompt_validation_fingerprints),
             len(self.workflow_fingerprints),
             len(self.model_config_fingerprints),
         }
@@ -294,6 +296,9 @@ class MiniMaxH3AutomatedExecutionService:
             prompt_fingerprints=tuple(execution.prompt_fingerprint for execution in plan.spans),
             reference_slot_fingerprints=tuple(
                 execution.reference_slot_fingerprint for execution in plan.spans
+            ),
+            prompt_validation_fingerprints=tuple(
+                execution.prompt_validation_fingerprint for execution in plan.spans
             ),
             workflow_fingerprints=tuple(job.workflow_fingerprint for job in jobs),
             model_config_fingerprints=tuple(job.model_config_fingerprint for job in jobs),
