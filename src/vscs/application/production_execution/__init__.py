@@ -86,6 +86,10 @@ from .provider_prompt_policy import (
     ProviderPromptPolicyError,
     ProviderPromptPolicyResult,
 )
+from .provider_prompt_validation import (
+    ProviderPromptValidationError,
+    ProviderPromptValidationResult,
+)
 from .provider_span_governance import (
     ProviderSpanGovernance,
     ProviderSpanGovernanceCompiler,
@@ -237,6 +241,8 @@ __all__ = [
     "ProviderAudioPolicyMode",
     "ProviderPromptPolicyError",
     "ProviderPromptPolicyResult",
+    "ProviderPromptValidationError",
+    "ProviderPromptValidationResult",
     "ProviderSpanGovernance",
     "ProviderSpanGovernanceCompiler",
     "ProviderSpanGovernanceError",

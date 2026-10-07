@@ -54,6 +54,7 @@ from .minimax_h3_functional_acceptance import (
     MiniMaxH3VisualObservation,
 )
 from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
+from .minimax_h3_prompt_validation import MiniMaxH3PromptMetadataValidator
 from .minimax_h3_span_adapter import (
     MiniMaxH3SpanAdapterCompiler,
     MiniMaxH3SpanAdapterError,
@@ -149,6 +150,7 @@ __all__ = [
     "MiniMaxH3FunctionalAcceptanceState",
     "MiniMaxH3MediaObservation",
     "MiniMaxH3MediaProbe",
+    "MiniMaxH3PromptMetadataValidator",
     "MiniMaxH3PromptPolicyCompiler",
     "MiniMaxH3SpanAdapterCompiler",
     "MiniMaxH3SpanAdapterError",

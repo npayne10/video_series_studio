@@ -13,6 +13,9 @@ from vscs.application.production_execution.introduction_keyframes import (
     IntroductionKeyframeRequirementPlan,
 )
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
+from vscs.application.production_execution.provider_prompt_validation import (
+    ProviderPromptValidationError,
+)
 from vscs.application.production_execution.provider_span_governance import (
     ProviderSpanGovernanceCompiler,
     ProviderSpanGovernanceError,
@@ -33,6 +36,7 @@ from .governed_shot_boundaries import (
     GovernedShotBoundaryResolver,
 )
 from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
+from .minimax_h3_prompt_validation import MiniMaxH3PromptMetadataValidator
 
 
 class MiniMaxH3SpanAdapterError(RuntimeError):
@@ -450,6 +454,22 @@ class MiniMaxH3SpanAdapterCompiler:
             base_negative_prompt=span_input.negative_prompt,
             base_motion_prompt=span_input.motion_prompt,
         )
+        provider_frame_count = _h3_provider_frame_count(governed_frames)
+        try:
+            MiniMaxH3PromptMetadataValidator().validate(
+                governance=governance,
+                policy=prompt_policy,
+                reference_slots=reference_slots,
+                provider_frame_count=provider_frame_count,
+                guide_frame_idx=0,
+                guide_semantics="frame_state_anchor",
+                temporal_asset_gate=False,
+            )
+        except ProviderPromptValidationError as exc:
+            raise MiniMaxH3SpanAdapterError(
+                f"H3 prompt/metadata validation failed: {exc}"
+            ) from exc
+
         positive_prompt = prompt_policy.positive_prompt
         negative_prompt = prompt_policy.negative_prompt
         motion_prompt = prompt_policy.motion_prompt
@@ -460,7 +480,7 @@ class MiniMaxH3SpanAdapterCompiler:
             global_start_frame=global_start_frame,
             global_through_frame=global_through_frame,
             governed_frame_count=governed_frames,
-            provider_frame_count=_h3_provider_frame_count(governed_frames),
+            provider_frame_count=provider_frame_count,
             reference_slots=reference_slots,
             positive_prompt=positive_prompt,
             negative_prompt=negative_prompt,
