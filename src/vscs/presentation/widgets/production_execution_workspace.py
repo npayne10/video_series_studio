@@ -823,9 +823,7 @@ class ProductionExecutionWorkspace(QWidget):
             status.pending_keyframe_requirement_ids
         )
         h3_waiting_for_visual_qc = (
-            h3_selected
-            and status.assembly_present
-            and bool(status.pending_qc_requirement_ids)
+            h3_selected and status.assembly_present and bool(status.pending_qc_requirement_ids)
         )
         automation_ready = (
             status.applicable
