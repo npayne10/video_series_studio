@@ -814,11 +814,18 @@ class ProductionExecutionWorkspace(QWidget):
             f"Transitions: {boundaries}\n"
             f"Assembled Shot: {final_path}"
         )
-        h3_requires_approved_keyframes = (
+        h3_selected = (
             self._provider_policy_profile is not None
             and self._provider_policy_profile.execution_adapter_id
             == "minimax_h3_automated_execution"
-            and bool(status.pending_keyframe_requirement_ids)
+        )
+        h3_requires_approved_keyframes = h3_selected and bool(
+            status.pending_keyframe_requirement_ids
+        )
+        h3_waiting_for_visual_qc = (
+            h3_selected
+            and status.assembly_present
+            and bool(status.pending_qc_requirement_ids)
         )
         automation_ready = (
             status.applicable
@@ -834,6 +841,7 @@ class ProductionExecutionWorkspace(QWidget):
                 )
             )
             and not h3_requires_approved_keyframes
+            and not h3_waiting_for_visual_qc
             and self._automated_span_thread is None
         )
         self.run_automated_spans_button.setEnabled(automation_ready)
