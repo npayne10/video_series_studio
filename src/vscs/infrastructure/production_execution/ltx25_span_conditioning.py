@@ -420,7 +420,6 @@ class LTX25SpanProviderConditioningCompiler:
             )
         return plan
 
-
     @staticmethod
     def _require_ltx25_policy_profile(profile: ProviderPolicyProfile) -> None:
         if not profile.enabled:
