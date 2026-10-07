@@ -37,6 +37,11 @@ from .ltx25_span_conditioning import (
     LTX25SpanProviderConditioningCompiler,
     LTX25SpanProviderConditioningPlan,
 )
+from .minimax_h3_automated_execution import (
+    MiniMaxH3AutomatedExecutionError,
+    MiniMaxH3AutomatedExecutionPreflight,
+    MiniMaxH3AutomatedExecutionService,
+)
 from .minimax_h3_comfyui_provider import (
     LiveMiniMaxH3ComfyUISpanProvider,
     MiniMaxH3ComfyUICompiledJob,
@@ -141,6 +146,9 @@ __all__ = [
     "LocalComfyUIProductionExecutionBackend",
     "LocalProductionPackageCompilationError",
     "LocalProductionPackageCompilationService",
+    "MiniMaxH3AutomatedExecutionError",
+    "MiniMaxH3AutomatedExecutionPreflight",
+    "MiniMaxH3AutomatedExecutionService",
     "MiniMaxH3ComfyUICompiledJob",
     "MiniMaxH3ComfyUIProviderError",
     "MiniMaxH3ComfyUIWorkflowCompiler",
