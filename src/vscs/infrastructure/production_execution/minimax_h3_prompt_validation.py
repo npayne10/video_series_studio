@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import ClassVar
+from typing import ClassVar, NoReturn
 
 from vscs.application.production_execution.provider_prompt_policy import (
     ProviderPromptPolicyResult,
@@ -276,5 +276,5 @@ class MiniMaxH3PromptMetadataValidator:
                 )
 
     @staticmethod
-    def _fail(rule_id: str, message: str) -> None:
+    def _fail(rule_id: str, message: str) -> NoReturn:
         raise ProviderPromptValidationError(f"{rule_id}: {message}")
