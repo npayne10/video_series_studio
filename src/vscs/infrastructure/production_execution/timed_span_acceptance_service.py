@@ -57,7 +57,12 @@ class TimedSpanFunctionalAcceptanceService:
         self.injection_reviews = IntroductionInjectionReviewStore(self.project_directory)
         self.evaluator = TimedSpanAcceptanceEvaluator(self.project_directory)
 
-    def status(self, compiled_package_path: Path | None) -> TimedSpanAcceptanceStatus:
+    def status(
+        self,
+        compiled_package_path: Path | None,
+        *,
+        direct_approved_keyframes: bool = False,
+    ) -> TimedSpanAcceptanceStatus:
         if compiled_package_path is None or not Path(compiled_package_path).is_file():
             return TimedSpanAcceptanceStatus(
                 shot_id="SHOT-UNKNOWN",
@@ -71,7 +76,10 @@ class TimedSpanFunctionalAcceptanceService:
                 message="Compile the current Production Package before timed-span acceptance.",
             )
         raw = self._read_package(compiled_package_path)
-        return self.evaluator.evaluate(raw)
+        return self.evaluator.evaluate(
+            raw,
+            direct_approved_keyframes=direct_approved_keyframes,
+        )
 
     def requirements(
         self,
