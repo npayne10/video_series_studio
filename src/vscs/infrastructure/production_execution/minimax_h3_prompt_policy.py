@@ -160,22 +160,22 @@ class MiniMaxH3PromptPolicyCompiler:
     _SHOT_SIZE_PATTERNS = (
         (
             "wide",
-            re.compile(r"\\b(?:wide|wide shot|long shot|establishing shot)\\b", re.IGNORECASE),
+            re.compile(r"\b(?:wide|wide shot|long shot|establishing shot)\b", re.IGNORECASE),
         ),
-        ("full", re.compile(r"\\bfull shot\\b", re.IGNORECASE)),
-        ("medium", re.compile(r"\\bmedium shot\\b", re.IGNORECASE)),
+        ("full", re.compile(r"\bfull shot\b", re.IGNORECASE)),
+        ("medium", re.compile(r"\bmedium shot\b", re.IGNORECASE)),
         (
             "medium_close",
-            re.compile(r"\\bmedium[- ]close(?: shot)?\\b", re.IGNORECASE),
+            re.compile(r"\bmedium[- ]close(?: shot)?\b", re.IGNORECASE),
         ),
-        ("close", re.compile(r"\\bclose[- ]?up(?: shot)?\\b", re.IGNORECASE)),
+        ("close", re.compile(r"\bclose[- ]?up(?: shot)?\b", re.IGNORECASE)),
         (
             "extreme_close",
-            re.compile(r"\\bextreme close[- ]?up(?: shot)?\\b", re.IGNORECASE),
+            re.compile(r"\bextreme close[- ]?up(?: shot)?\b", re.IGNORECASE),
         ),
     )
-    _FOCAL_LENGTH_PATTERN = re.compile(r"\\b(\\d{2,3})\\s*mm\\b", re.IGNORECASE)
-    _SENTENCE_BOUNDARY_PATTERN = re.compile(r"(?<=[.!?])\\s+")
+    _FOCAL_LENGTH_PATTERN = re.compile(r"\b(\d{2,3})\s*mm\b", re.IGNORECASE)
+    _SENTENCE_BOUNDARY_PATTERN = re.compile(r"(?<=[.!?])\s+")
 
     def _resolve_camera_instructions(
         self,
