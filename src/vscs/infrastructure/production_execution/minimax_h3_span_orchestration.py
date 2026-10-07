@@ -370,6 +370,9 @@ class GovernedMiniMaxH3SpanOrchestrationService:
         payload = {
             "schema_version": "1.0",
             "provider": plan.provider_id,
+            "provider_profile_id": plan.provider_profile_id,
+            "provider_profile_fingerprint": plan.provider_profile_fingerprint,
+            "execution_adapter_id": plan.execution_adapter_id,
             "mode": plan.mode,
             "shot_id": compiled.shot_id,
             "task_id": compiled.task_id,
