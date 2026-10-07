@@ -34,9 +34,7 @@ def test_h3_functional_acceptance_profile_is_explicit_and_fingerprinted() -> Non
 
 
 def test_h3_regression_profile_does_not_reintroduce_temporal_guide_gating() -> None:
-    profile = default_provider_policy_profile_registry().require(
-        MINIMAX_H3_POLICY_PROFILE_ID
-    )
+    profile = default_provider_policy_profile_registry().require(MINIMAX_H3_POLICY_PROFILE_ID)
 
     assert profile.temporal_asset_gate is False
     assert profile.reference_projection_mode == "direct_span_scoped_canonical_refs"
