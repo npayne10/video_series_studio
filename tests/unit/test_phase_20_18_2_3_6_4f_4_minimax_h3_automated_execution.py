@@ -91,7 +91,7 @@ def _task() -> ProductionTask:
         shot_id="SHT-002",
         task_type=ProductionTaskType.VIDEO_GENERATION,
         authority=ProductionTaskAuthority(
-            authority_type=ProductionAuthorityType.SHOT,
+            authority_type=ProductionAuthorityType.UNIVERSAL_PRODUCTION_DESCRIPTION,
             authority_id="SHT-002",
             revision=1,
             fingerprint="authority",
