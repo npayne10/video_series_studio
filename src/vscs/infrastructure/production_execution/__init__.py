@@ -94,6 +94,11 @@ from .provider_policy_profiles import (
     MINIMAX_H3_POLICY_PROFILE_ID,
     default_provider_policy_profile_registry,
 )
+from .provider_policy_selection_store import (
+    ProviderPolicySelection,
+    ProviderPolicySelectionError,
+    ProviderPolicySelectionStore,
+)
 from .shot_boundary_runtime import (
     GovernedShotBoundaryRuntime,
     GovernedShotBoundaryRuntimeError,
@@ -183,6 +188,9 @@ __all__ = [
     "MiniMaxH3VisualObservation",
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
+    "ProviderPolicySelection",
+    "ProviderPolicySelectionError",
+    "ProviderPolicySelectionStore",
     "ResolvedGovernedShotBoundary",
     "SpanMediaObservation",
     "SpanVideoProvider",
