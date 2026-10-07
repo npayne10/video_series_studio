@@ -14,6 +14,10 @@ from vscs.application.production_execution import (
     ProductionTelemetryState,
 )
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
+from vscs.infrastructure.production_execution import (
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
+)
 from vscs.presentation.widgets.production_execution_workspace import ProductionExecutionWorkspace
 
 
@@ -249,3 +253,52 @@ def test_workspace_enables_status_for_existing_durable_execution(qtbot, tmp_path
     assert not workspace._poll_timer.isActive()
     assert "DURABLE SUMMARY" in workspace.monitor_state.text()
     assert workspace.monitor_health.text() == "Not live"
+
+
+class ProviderSelectionWorkspaceBackend(WorkspaceBackend):
+    def __init__(self, package_path: Path) -> None:
+        super().__init__(package_path)
+        self.registry = default_provider_policy_profile_registry()
+        self.selected_provider_profile_id = "ltx-2.5-candidate-c-v1"
+
+    def provider_policy_profiles(self):
+        return self.registry.enabled_profiles
+
+    def provider_policy_profile_for_profile(self, task_id: str, *, profile: str):
+        assert task_id == self.candidate.task_id
+        assert profile in {"preview", "production", "master"}
+        return self.registry.require(self.selected_provider_profile_id)
+
+    def select_provider_policy_profile_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        provider_profile_id: str,
+    ):
+        assert task_id == self.candidate.task_id
+        assert profile in {"preview", "production", "master"}
+        selected = self.registry.require(provider_profile_id)
+        self.selected_provider_profile_id = selected.profile_id
+        return selected
+
+
+def test_workspace_selects_governed_span_provider_profile(qtbot, tmp_path: Path) -> None:
+    backend = ProviderSelectionWorkspaceBackend(tmp_path / "production_package.json")
+    service = ProductionExecutionUiService(backend)
+    workspace = ProductionExecutionWorkspace(lambda: service)
+    qtbot.addWidget(workspace)
+
+    workspace.refresh()
+    workspace.table.selectRow(0)
+
+    assert workspace.provider_policy.isEnabled()
+    assert workspace.provider_policy.count() == 2
+    assert workspace.provider_policy.currentData() == "ltx-2.5-candidate-c-v1"
+
+    h3_index = workspace.provider_policy.findData(MINIMAX_H3_POLICY_PROFILE_ID)
+    assert h3_index >= 0
+    workspace.provider_policy.setCurrentIndex(h3_index)
+
+    assert backend.selected_provider_profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+    assert "MiniMax H3" in workspace.summary.text()
