@@ -13,6 +13,7 @@ from .introduction_asset_injection import IntroductionInjectionCandidateStatus
 from .introduction_identity_gate import IntroductionIdentityCandidateStatus
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
+from .provider_policy_profiles import ProviderPolicyProfile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
 from .shot_boundary_keyframes import GovernedClosingBoundaryFrame, ShotBoundaryAuthorityStatus
 from .telemetry import ProductionTelemetrySnapshot
@@ -160,6 +161,29 @@ class _PublishClosingBoundaryForProfile(Protocol):
         profile: str,
         published_by: str,
     ) -> GovernedClosingBoundaryFrame: ...
+
+
+class _ProviderPolicyProfiles(Protocol):
+    def __call__(self) -> tuple[ProviderPolicyProfile, ...]: ...
+
+
+class _ProviderPolicyProfileForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> ProviderPolicyProfile: ...
+
+
+class _SelectProviderPolicyProfileForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        provider_profile_id: str,
+    ) -> ProviderPolicyProfile: ...
 
 
 class _TimedSpanStatusForProfile(Protocol):
@@ -435,6 +459,61 @@ class ProductionExecutionUiService:
             normalized,
             profile=execution_profile,
             published_by=published_by,
+        )
+
+    def provider_policy_profiles(self) -> tuple[ProviderPolicyProfile, ...]:
+        operation = getattr(self.backend, "provider_policy_profiles", None)
+        if operation is None:
+            return ()
+        return cast(_ProviderPolicyProfiles, operation)()
+
+    def provider_policy_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> ProviderPolicyProfile:
+        normalized = self._task_id(task_id, "inspecting provider policy selection")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "provider_policy_profile_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not expose selectable provider policy profiles."
+            )
+        return cast(_ProviderPolicyProfileForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+        )
+
+    def select_provider_policy_profile(
+        self,
+        task_id: str,
+        provider_profile_id: str,
+        *,
+        profile: str | None = None,
+    ) -> ProviderPolicyProfile:
+        normalized = self._task_id(task_id, "selecting a provider policy profile")
+        execution_profile = self._resolve_profile(normalized, profile)
+        profile_id = provider_profile_id.strip()
+        if not profile_id:
+            raise ProductionExecutionError("Select a provider policy profile.")
+        operation = getattr(
+            self.backend,
+            "select_provider_policy_profile_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not support provider policy selection."
+            )
+        return cast(_SelectProviderPolicyProfileForProfile, operation)(
+            normalized,
+            profile=execution_profile,
+            provider_profile_id=profile_id,
         )
 
     def timed_span_acceptance_status(
