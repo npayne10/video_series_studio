@@ -277,7 +277,9 @@ class MiniMaxH3AutomatedExecutionService:
                 f"H3 automated execution provider payload preflight failed: {exc}"
             ) from exc
 
-        if any(execution.provider_id != self.policy_profile.provider_id for execution in plan.spans):
+        if any(
+            execution.provider_id != self.policy_profile.provider_id for execution in plan.spans
+        ):
             raise MiniMaxH3AutomatedExecutionError(
                 "H3 automated execution plan provider does not match selected policy profile"
             )
