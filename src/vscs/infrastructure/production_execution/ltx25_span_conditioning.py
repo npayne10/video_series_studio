@@ -19,6 +19,9 @@ from vscs.application.production_execution.introduction_keyframes import (
 from vscs.application.production_execution.package_compilation import (
     CompiledProductionPackage,
 )
+from vscs.application.production_execution.provider_policy_profiles import (
+    ProviderPolicyProfile,
+)
 from vscs.application.production_execution.timed_reference_activation import (
     TimedCanonicalReferenceActivationError,
     TimedCanonicalReferenceActivationPlan,
@@ -26,6 +29,12 @@ from vscs.application.production_execution.timed_reference_activation import (
 from vscs.application.timed_asset_presence import (
     TimedAssetPresenceError,
     TimedAssetPresencePlan,
+)
+
+from .provider_policy_profiles import (
+    LTX25_CANDIDATE_C_POLICY_PROFILE_ID,
+    LTX25_EXECUTION_ADAPTER_ID,
+    default_provider_policy_profile_registry,
 )
 
 
@@ -193,6 +202,9 @@ class LTX25SpanProviderConditioningPlan:
     source_activation_plan_fingerprint: str
     source_requirement_plan_fingerprint: str
     spans: tuple[LTX25SpanConditioning, ...]
+    provider_profile_id: str
+    provider_profile_fingerprint: str
+    execution_adapter_id: str
     provider_id: str = "ltx-2.5"
     mode: str = "governed_multi_span_keyframe_i2v"
     schema_version: str = "1.0"
@@ -207,6 +219,9 @@ class LTX25SpanProviderConditioningPlan:
             "source_span_plan_fingerprint",
             "source_activation_plan_fingerprint",
             "source_requirement_plan_fingerprint",
+            "provider_profile_id",
+            "provider_profile_fingerprint",
+            "execution_adapter_id",
         ):
             value = str(getattr(self, field_name)).strip().lower()
             if not value:
@@ -246,6 +261,9 @@ class LTX25SpanProviderConditioningPlan:
         return {
             "schema_version": self.schema_version,
             "provider_id": self.provider_id,
+            "provider_profile_id": self.provider_profile_id,
+            "provider_profile_fingerprint": self.provider_profile_fingerprint,
+            "execution_adapter_id": self.execution_adapter_id,
             "mode": self.mode,
             "shot_id": self.shot_id,
             "source_package_fingerprint": self.source_package_fingerprint,
@@ -267,9 +285,18 @@ class LTX25SpanProviderConditioningPlan:
 class LTX25SpanProviderConditioningCompiler:
     """Bind governed Introduction Keyframes into provider-safe LTX-2.5 span contracts."""
 
-    def __init__(self, project_directory: Path) -> None:
+    def __init__(
+        self,
+        project_directory: Path,
+        *,
+        policy_profile: ProviderPolicyProfile | None = None,
+    ) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.keyframes = GovernedIntroductionKeyframeStore(self.project_directory)
+        self.policy_profile = policy_profile or default_provider_policy_profile_registry().require(
+            LTX25_CANDIDATE_C_POLICY_PROFILE_ID
+        )
+        self._require_ltx25_policy_profile(self.policy_profile)
 
     def compile(self, compiled: CompiledProductionPackage) -> LTX25SpanProviderConditioningPlan:
         timed_raw = compiled.timed_asset_presence
@@ -382,12 +409,45 @@ class LTX25SpanProviderConditioningCompiler:
             source_activation_plan_fingerprint=activation.fingerprint,
             source_requirement_plan_fingerprint=requirements.fingerprint,
             spans=tuple(conditioned),
+            provider_profile_id=self.policy_profile.profile_id,
+            provider_profile_fingerprint=self.policy_profile.fingerprint,
+            execution_adapter_id=self.policy_profile.execution_adapter_id,
+            provider_id=self.policy_profile.provider_id,
         )
         if plan.governed_frame_count != compiled.frame_count:
             raise LTX25SpanConditioningError(
                 "Provider-conditioned span frame total does not match governed Shot frame count"
             )
         return plan
+
+
+    @staticmethod
+    def _require_ltx25_policy_profile(profile: ProviderPolicyProfile) -> None:
+        if not profile.enabled:
+            raise LTX25SpanConditioningError(
+                f"LTX-2.5 provider policy profile is disabled: {profile.profile_id}"
+            )
+        expected = {
+            "provider_id": "ltx-2.5",
+            "execution_adapter_id": LTX25_EXECUTION_ADAPTER_ID,
+            "guide_semantics": "first_frame_i2v",
+            "native_frame_rule": "8k+1",
+            "reference_projection_mode": "baked_into_governed_keyframe",
+        }
+        for field_name, expected_value in expected.items():
+            if getattr(profile, field_name) != expected_value:
+                raise LTX25SpanConditioningError(
+                    "Selected provider policy profile is incompatible with LTX-2.5 "
+                    f"conditioning: {field_name}={getattr(profile, field_name)!r}"
+                )
+        if profile.temporal_asset_gate:
+            raise LTX25SpanConditioningError(
+                "LTX-2.5 governed keyframes cannot be temporal asset gates"
+            )
+        if profile.max_reference_images != 0:
+            raise LTX25SpanConditioningError(
+                "LTX-2.5 Candidate C must bake identity changes into governed keyframes"
+            )
 
 
 def _provider_frame_count(governed_frames: int) -> int:

@@ -87,6 +87,13 @@ from .provider_audio_runtime import (
     ProviderAudioGovernanceRuntime,
     ProviderAudioGovernanceRuntimeError,
 )
+from .provider_policy_profiles import (
+    LTX25_CANDIDATE_C_POLICY_PROFILE_ID,
+    LTX25_EXECUTION_ADAPTER_ID,
+    MINIMAX_H3_EXECUTION_ADAPTER_ID,
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
+)
 from .shot_boundary_runtime import (
     GovernedShotBoundaryRuntime,
     GovernedShotBoundaryRuntimeError,
@@ -170,6 +177,11 @@ __all__ = [
     "MiniMaxH3SpanOrchestrationResult",
     "MiniMaxH3SpanProvider",
     "MiniMaxH3VisualObservation",
+    "LTX25_CANDIDATE_C_POLICY_PROFILE_ID",
+    "LTX25_EXECUTION_ADAPTER_ID",
+    "MINIMAX_H3_EXECUTION_ADAPTER_ID",
+    "MINIMAX_H3_POLICY_PROFILE_ID",
+    "default_provider_policy_profile_registry",
     "ProviderAudioGovernanceRuntime",
     "ProviderAudioGovernanceRuntimeError",
     "ResolvedGovernedShotBoundary",

@@ -82,6 +82,11 @@ from .provider_audio_policy import (
     ProviderAudioPolicyMode,
     resolve_provider_audio_policy,
 )
+from .provider_policy_profiles import (
+    ProviderPolicyProfile,
+    ProviderPolicyProfileError,
+    ProviderPolicyProfileRegistry,
+)
 from .provider_prompt_policy import (
     ProviderPromptPolicyError,
     ProviderPromptPolicyResult,
@@ -239,6 +244,9 @@ __all__ = [
     "ProviderAudioPolicy",
     "ProviderAudioPolicyError",
     "ProviderAudioPolicyMode",
+    "ProviderPolicyProfile",
+    "ProviderPolicyProfileError",
+    "ProviderPolicyProfileRegistry",
     "ProviderPromptPolicyError",
     "ProviderPromptPolicyResult",
     "ProviderPromptValidationError",

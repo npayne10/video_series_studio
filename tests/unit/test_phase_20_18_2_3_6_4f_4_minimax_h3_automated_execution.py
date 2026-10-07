@@ -122,6 +122,7 @@ def _execution(sequence: int):
         job_id=f"H3SPAN-{sequence:03d}",
         prompt_fingerprint=f"prompt-{sequence}",
         reference_slot_fingerprint=f"refs-{sequence}",
+        provider_id="minimax-h3-ref2va",
     )
 
 
@@ -188,6 +189,10 @@ def test_h3_automated_preflight_wires_all_governed_spans_to_provider_payloads(
     assert result.reference_slot_fingerprints == ("refs-1", "refs-2")
     assert result.workflow_fingerprints == ("workflow-1", "workflow-2")
     assert result.model_config_fingerprints == ("model-1", "model-2")
+    assert result.provider_profile_id == "minimax-h3-ref2va-v1"
+    assert len(result.provider_profile_fingerprint) == 64
+    assert result.execution_adapter_id == "minimax_h3_automated_execution"
+    assert result.provider_id == "minimax-h3-ref2va"
     assert packages.calls == 1
     assert plans.calls == 1
     assert workflows.calls == 2

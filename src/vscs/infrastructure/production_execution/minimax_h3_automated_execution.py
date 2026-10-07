@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Protocol
 
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
+from vscs.application.production_execution.provider_policy_profiles import (
+    ProviderPolicyProfile,
+)
 from vscs.application.production_tasks import ProductionTask
 from vscs.infrastructure.production import JsonProductionTaskRepository
 
@@ -30,6 +33,11 @@ from .minimax_h3_span_orchestration import (
 from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
+)
+from .provider_policy_profiles import (
+    MINIMAX_H3_EXECUTION_ADAPTER_ID,
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
 )
 
 
@@ -75,6 +83,9 @@ class MiniMaxH3AutomatedExecutionPreflight:
     reference_slot_fingerprints: tuple[str, ...]
     workflow_fingerprints: tuple[str, ...]
     model_config_fingerprints: tuple[str, ...]
+    provider_profile_id: str
+    provider_profile_fingerprint: str
+    execution_adapter_id: str
     provider_id: str = "minimax-h3-ref2va"
     schema_version: str = "1.0"
 
@@ -85,6 +96,9 @@ class MiniMaxH3AutomatedExecutionPreflight:
             "package_fingerprint",
             "plan_id",
             "plan_fingerprint",
+            "provider_profile_id",
+            "provider_profile_fingerprint",
+            "execution_adapter_id",
         ):
             value = str(getattr(self, field_name)).strip()
             if not value:
@@ -129,6 +143,7 @@ class MiniMaxH3AutomatedExecutionService:
         plan_compiler: _H3PlanCompiler | None = None,
         workflow_compiler: _H3WorkflowCompiler | None = None,
         orchestrator: _H3Orchestrator | None = None,
+        policy_profile: ProviderPolicyProfile | None = None,
     ) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.endpoint = endpoint.strip().rstrip("/")
@@ -150,6 +165,11 @@ class MiniMaxH3AutomatedExecutionService:
             raise MiniMaxH3AutomatedExecutionError(
                 "H3 automated execution requires the configured ComfyUI output directory"
             )
+
+        self.policy_profile = policy_profile or default_provider_policy_profile_registry().require(
+            MINIMAX_H3_POLICY_PROFILE_ID
+        )
+        self._require_h3_policy_profile(self.policy_profile)
 
         default_workflow = (
             Path(__file__).resolve().parents[4]
@@ -257,6 +277,11 @@ class MiniMaxH3AutomatedExecutionService:
                 f"H3 automated execution provider payload preflight failed: {exc}"
             ) from exc
 
+        if any(execution.provider_id != self.policy_profile.provider_id for execution in plan.spans):
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 automated execution plan provider does not match selected policy profile"
+            )
+
         return MiniMaxH3AutomatedExecutionPreflight(
             task_id=compiled.task_id,
             shot_id=compiled.shot_id,
@@ -270,4 +295,36 @@ class MiniMaxH3AutomatedExecutionService:
             ),
             workflow_fingerprints=tuple(job.workflow_fingerprint for job in jobs),
             model_config_fingerprints=tuple(job.model_config_fingerprint for job in jobs),
+            provider_profile_id=self.policy_profile.profile_id,
+            provider_profile_fingerprint=self.policy_profile.fingerprint,
+            execution_adapter_id=self.policy_profile.execution_adapter_id,
+            provider_id=self.policy_profile.provider_id,
         )
+
+    @staticmethod
+    def _require_h3_policy_profile(profile: ProviderPolicyProfile) -> None:
+        if not profile.enabled:
+            raise MiniMaxH3AutomatedExecutionError(
+                f"H3 provider policy profile is disabled: {profile.profile_id}"
+            )
+        expected = {
+            "provider_id": "minimax-h3-ref2va",
+            "execution_adapter_id": MINIMAX_H3_EXECUTION_ADAPTER_ID,
+            "guide_semantics": "frame_state_anchor",
+            "native_frame_rule": "17k+5",
+            "reference_projection_mode": "direct_span_scoped_canonical_refs",
+        }
+        for field_name, expected_value in expected.items():
+            if getattr(profile, field_name) != expected_value:
+                raise MiniMaxH3AutomatedExecutionError(
+                    "Selected provider policy profile is incompatible with H3 automated "
+                    f"execution: {field_name}={getattr(profile, field_name)!r}"
+                )
+        if profile.temporal_asset_gate:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 frame-state guides cannot be configured as temporal asset gates"
+            )
+        if profile.max_reference_images != 5:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 automated execution requires a five-reference policy limit"
+            )

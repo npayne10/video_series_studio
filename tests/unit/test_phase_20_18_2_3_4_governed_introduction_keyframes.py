@@ -297,6 +297,9 @@ def test_ltx25_conditioning_uses_97_and_49_provider_frames_without_duplicate_95(
     plan = LTX25SpanProviderConditioningCompiler(tmp_path).compile(compiled)
 
     assert plan.governed_frame_count == 144
+    assert plan.provider_profile_id == "ltx-2.5-candidate-c-v1"
+    assert len(plan.provider_profile_fingerprint) == 64
+    assert plan.execution_adapter_id == "ltx25_automated_span_orchestration"
     assert len(plan.spans) == 2
     first, second = plan.spans
 
@@ -330,6 +333,9 @@ def test_candidate_c_exposes_governed_span_conditioning_compilation(
     ).compile_span_provider_conditioning(_compiled(requirements=requirements.to_dict()))
 
     assert payload["provider_id"] == "ltx-2.5"
+    assert payload["provider_profile_id"] == "ltx-2.5-candidate-c-v1"
+    assert len(str(payload["provider_profile_fingerprint"])) == 64
+    assert payload["execution_adapter_id"] == "ltx25_automated_span_orchestration"
     assert payload["mode"] == "governed_multi_span_keyframe_i2v"
     spans = payload["spans"]
     assert isinstance(spans, list)
