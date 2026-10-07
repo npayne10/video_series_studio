@@ -144,9 +144,7 @@ class ProviderPolicySelectionStore:
                 task_id=str(item.get("task_id", "")),
                 execution_profile=str(item.get("execution_profile", "")),
                 provider_profile_id=str(item.get("provider_profile_id", "")),
-                provider_profile_fingerprint=str(
-                    item.get("provider_profile_fingerprint", "")
-                ),
+                provider_profile_fingerprint=str(item.get("provider_profile_fingerprint", "")),
                 schema_version=str(item.get("schema_version", "")),
             )
             if record.key in result:
@@ -160,10 +158,7 @@ class ProviderPolicySelectionStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema_version": "1.0",
-            "selections": [
-                records[key].to_dict()
-                for key in sorted(records)
-            ],
+            "selections": [records[key].to_dict() for key in sorted(records)],
         }
         temporary = self.path.with_suffix(self.path.suffix + ".tmp")
         temporary.write_text(
