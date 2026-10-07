@@ -114,6 +114,15 @@ class _PackageCompilation:
     def __init__(self, package_path: Path) -> None:
         self.package_path = package_path
 
+    def status(self, task: ProductionTask, *, profile: str = "production"):
+        assert task.task_id == "PT-PROVIDER-SELECTION-001"
+        assert profile == "production"
+        return SimpleNamespace(
+            executable=True,
+            path=self.package_path,
+            message="",
+        )
+
     def require_current(self, task: ProductionTask, *, profile: str = "production"):
         assert task.task_id == "PT-PROVIDER-SELECTION-001"
         assert profile == "production"
