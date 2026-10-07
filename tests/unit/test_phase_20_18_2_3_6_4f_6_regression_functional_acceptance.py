@@ -22,9 +22,7 @@ def test_h3_regression_catalog_is_complete_and_ordered() -> None:
 
 
 def test_h3_functional_acceptance_profile_is_explicit_and_fingerprinted() -> None:
-    profile = default_provider_policy_profile_registry().require(
-        MINIMAX_H3_POLICY_PROFILE_ID
-    )
+    profile = default_provider_policy_profile_registry().require(MINIMAX_H3_POLICY_PROFILE_ID)
 
     assert profile.provider_id == "minimax-h3-ref2va"
     assert profile.execution_adapter_id == MINIMAX_H3_EXECUTION_ADAPTER_ID
