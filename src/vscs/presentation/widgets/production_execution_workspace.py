@@ -42,6 +42,7 @@ from vscs.application.production_execution import (
     ProductionExecutionUiService,
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
+    ProviderPolicyProfile,
     ShotBoundaryAuthorityStatus,
     TimedSpanAcceptanceState,
     TimedSpanAcceptanceStatus,
@@ -145,6 +146,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._timed_span_status: TimedSpanAcceptanceStatus | None = None
         self._identity_candidate: IntroductionIdentityCandidateStatus | None = None
         self._injection_candidate: IntroductionInjectionCandidateStatus | None = None
+        self._provider_policy_profile: ProviderPolicyProfile | None = None
         self._automated_span_thread: QThread | None = None
         self._automated_span_worker: _AutomatedSpanWorker | None = None
         self._poll_timer = QTimer(self)
@@ -196,6 +198,12 @@ class ProductionExecutionWorkspace(QWidget):
             "Compile a dynamic Shot to inspect internal spans and Introduction Keyframes."
         )
         self.timed_span_detail.setWordWrap(True)
+        self.provider_policy = QComboBox()
+        self.provider_policy.setEnabled(False)
+        self.provider_policy.setToolTip(
+            "Select the governed provider policy profile used for automated span execution."
+        )
+        self.provider_policy.currentIndexChanged.connect(self._provider_policy_changed)
         self.run_automated_spans_button = QPushButton("Run Automated Span Orchestration")
         self.run_automated_spans_button.setToolTip(
             "Automatically render each governed span, extract exact boundary frames, synthesize "
@@ -249,7 +257,9 @@ class ProductionExecutionWorkspace(QWidget):
         self.record_span_qc_button.clicked.connect(self._record_span_qc)
         timed_span_layout.addWidget(self.timed_span_state, 0, 0, 1, 3)
         timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
-        timed_span_layout.addWidget(self.run_automated_spans_button, 2, 0, 1, 3)
+        timed_span_layout.addWidget(QLabel("Span Provider"), 2, 0)
+        timed_span_layout.addWidget(self.provider_policy, 2, 1)
+        timed_span_layout.addWidget(self.run_automated_spans_button, 2, 2)
         timed_span_layout.addWidget(self.injection_candidate_state, 3, 0, 1, 3)
         timed_span_layout.addWidget(self.view_injection_candidate_button, 4, 0)
         timed_span_layout.addWidget(self.approve_injection_candidate_button, 4, 1)
@@ -367,6 +377,11 @@ class ProductionExecutionWorkspace(QWidget):
         self._timed_span_status = None
         self._identity_candidate = None
         self._injection_candidate = None
+        self._provider_policy_profile = None
+        self.provider_policy.blockSignals(True)
+        self.provider_policy.clear()
+        self.provider_policy.blockSignals(False)
+        self.provider_policy.setEnabled(False)
         self.table.setRowCount(0)
         self.start_button.setEnabled(False)
         self.status_button.setEnabled(False)
@@ -430,6 +445,11 @@ class ProductionExecutionWorkspace(QWidget):
             self._timed_span_status = None
             self._identity_candidate = None
             self._injection_candidate = None
+            self._provider_policy_profile = None
+            self.provider_policy.blockSignals(True)
+            self.provider_policy.clear()
+            self.provider_policy.blockSignals(False)
+            self.provider_policy.setEnabled(False)
             self.compile_package_button.setEnabled(False)
             self.retry_button.setEnabled(False)
             self.retry_state.setText("Retry Override: -")
@@ -452,6 +472,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._selected_task_id = task_id
         self._execution_active = False
         self.compile_package_button.setEnabled(True)
+        self._refresh_provider_policy_selection()
         self._refresh_package_status()
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
@@ -465,6 +486,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         self._poll_timer.stop()
         self._execution_active = False
+        self._refresh_provider_policy_selection()
         self._refresh_package_status()
         self._refresh_execution_availability()
         self._refresh_retry_override_status()
@@ -473,6 +495,67 @@ class ProductionExecutionWorkspace(QWidget):
         candidate = self._candidates.get(self._selected_task_id)
         if candidate is not None:
             self._render_candidate(candidate)
+
+    def _refresh_provider_policy_selection(self) -> None:
+        self._provider_policy_profile = None
+        self.provider_policy.blockSignals(True)
+        self.provider_policy.clear()
+        self.provider_policy.setEnabled(False)
+        if self._selected_task_id is None:
+            self.provider_policy.blockSignals(False)
+            return
+        service = self._service_provider()
+        if service is None:
+            self.provider_policy.blockSignals(False)
+            return
+        try:
+            profiles = service.provider_policy_profiles()
+            selected = service.provider_policy_profile(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self.provider_policy.addItem(f"Unavailable — {exc}", None)
+            self.provider_policy.blockSignals(False)
+            return
+        selected_index = -1
+        for index, provider_profile in enumerate(profiles):
+            label = f"{provider_profile.model_family} — {provider_profile.provider_id}"
+            self.provider_policy.addItem(label, provider_profile.profile_id)
+            if provider_profile.profile_id == selected.profile_id:
+                selected_index = index
+        if selected_index >= 0:
+            self.provider_policy.setCurrentIndex(selected_index)
+            self._provider_policy_profile = selected
+            self.provider_policy.setEnabled(True)
+        self.provider_policy.blockSignals(False)
+
+    def _provider_policy_changed(self, index: int) -> None:
+        if index < 0 or self._selected_task_id is None:
+            return
+        profile_id = self.provider_policy.itemData(index)
+        if not isinstance(profile_id, str) or not profile_id.strip():
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        try:
+            selected = service.select_provider_policy_profile(
+                self._selected_task_id,
+                profile_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Select Span Provider", str(exc))
+            self._refresh_provider_policy_selection()
+            return
+        self._provider_policy_profile = selected
+        self.summary.setText(
+            "Span provider selected: "
+            f"{selected.model_family} / {selected.provider_id} "
+            f"({selected.profile_id})."
+        )
+        self._refresh_timed_span_status()
 
     def _refresh_execution_availability(self) -> None:
         if self._selected_task_id is None:
@@ -658,6 +741,7 @@ class ProductionExecutionWorkspace(QWidget):
         self.summary.setText(status.message)
         self._refresh_retry_override_status()
         self._refresh_execution_availability()
+        self._refresh_provider_policy_selection()
         self._refresh_package_status()
 
     def _refresh_timed_span_status(self) -> None:
@@ -719,6 +803,12 @@ class ProductionExecutionWorkspace(QWidget):
             f"Transitions: {boundaries}\n"
             f"Assembled Shot: {final_path}"
         )
+        h3_requires_approved_keyframes = (
+            self._provider_policy_profile is not None
+            and self._provider_policy_profile.execution_adapter_id
+            == "minimax_h3_automated_execution"
+            and bool(status.pending_keyframe_requirement_ids)
+        )
         automation_ready = (
             status.applicable
             and (
@@ -732,6 +822,7 @@ class ProductionExecutionWorkspace(QWidget):
                     and bool(status.pending_qc_requirement_ids)
                 )
             )
+            and not h3_requires_approved_keyframes
             and self._automated_span_thread is None
         )
         self.run_automated_spans_button.setEnabled(automation_ready)
@@ -1208,10 +1299,16 @@ class ProductionExecutionWorkspace(QWidget):
         thread.finished.connect(thread.deleteLater)
         self._automated_span_thread = thread
         self._automated_span_worker = worker
+        provider_label = (
+            f"{self._provider_policy_profile.model_family} / "
+            f"{self._provider_policy_profile.provider_id}"
+            if self._provider_policy_profile is not None
+            else "backend default"
+        )
         self.summary.setText(
-            "Automated timed-span orchestration is running: VSCS will render the preceding "
-            "span, extract its exact boundary frame, synthesize introduced assets from governed "
-            "canonical references, continue remaining spans, and assemble the Shot."
+            "Automated timed-span orchestration is running through "
+            f"{provider_label}. VSCS will preserve governed span, reference, boundary, "
+            "and provider-policy authority through final assembly."
         )
         self.timed_span_state.setText(
             "Timed Span Acceptance: AUTOMATION_RUNNING — provider work is in progress."
@@ -1257,6 +1354,9 @@ class ProductionExecutionWorkspace(QWidget):
     def _set_timed_span_controls_busy(self, busy: bool) -> None:
         self.table.setEnabled(not busy)
         self.profile.setEnabled(not busy)
+        self.provider_policy.setEnabled(
+            not busy and self._selected_task_id is not None and self.provider_policy.count() > 0
+        )
         self.refresh_button.setEnabled(not busy)
         if busy:
             for button in (
