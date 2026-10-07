@@ -748,12 +748,13 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 return result.acceptance_status
 
             if provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
-                if self.comfyui_output_directory is None:
+                comfyui_output_directory = self.comfyui_output_directory
+                if comfyui_output_directory is None:
                     raise ProductionExecutionError(
                         "Configure the ComfyUI output folder before H3 span orchestration."
                     )
                 comfyui_input_directory = (
-                    self.comfyui_output_directory.parent / "input"
+                    comfyui_output_directory.parent / "input"
                 ).resolve(strict=False)
                 if not comfyui_input_directory.is_dir():
                     raise ProductionExecutionError(
@@ -764,7 +765,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     self.project_directory,
                     endpoint=self.endpoint,
                     comfyui_input_directory=comfyui_input_directory,
-                    comfyui_output_directory=self.comfyui_output_directory,
+                    comfyui_output_directory=comfyui_output_directory,
                     task_repository=self.tasks,
                     package_compiler=self.package_compilation,
                     policy_profile=provider_profile,
