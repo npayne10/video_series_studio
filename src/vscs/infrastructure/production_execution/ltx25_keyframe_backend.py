@@ -700,8 +700,20 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 message=package.message or "Compile the current Production Package first.",
             )
         try:
-            return TimedSpanFunctionalAcceptanceService(self.project_directory).status(package.path)
-        except TimedSpanFunctionalAcceptanceServiceError as exc:
+            provider_profile = self.provider_policy_selections.selected_profile(
+                task.task_id,
+                normalized,
+            )
+            return TimedSpanFunctionalAcceptanceService(self.project_directory).status(
+                package.path,
+                direct_approved_keyframes=(
+                    provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+                ),
+            )
+        except (
+            ProviderPolicySelectionError,
+            TimedSpanFunctionalAcceptanceServiceError,
+        ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
     def run_automated_timed_span_orchestration_for_profile(
@@ -772,7 +784,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     execution_profile=normalized,
                 ).execute(task.task_id)
                 return TimedSpanFunctionalAcceptanceService(self.project_directory).status(
-                    package.path
+                    package.path,
+                    direct_approved_keyframes=True,
                 )
 
             raise ProductionExecutionError(
