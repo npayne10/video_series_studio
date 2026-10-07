@@ -753,9 +753,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     raise ProductionExecutionError(
                         "Configure the ComfyUI output folder before H3 span orchestration."
                     )
-                comfyui_input_directory = (
-                    comfyui_output_directory.parent / "input"
-                ).resolve(strict=False)
+                comfyui_input_directory = (comfyui_output_directory.parent / "input").resolve(
+                    strict=False
+                )
                 if not comfyui_input_directory.is_dir():
                     raise ProductionExecutionError(
                         "MiniMax H3 requires the ComfyUI input folder beside the configured "
@@ -771,9 +771,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     policy_profile=provider_profile,
                     execution_profile=normalized,
                 ).execute(task.task_id)
-                return TimedSpanFunctionalAcceptanceService(
-                    self.project_directory
-                ).status(package.path)
+                return TimedSpanFunctionalAcceptanceService(self.project_directory).status(
+                    package.path
+                )
 
             raise ProductionExecutionError(
                 "Selected provider policy profile has no normal Production Execution adapter: "
