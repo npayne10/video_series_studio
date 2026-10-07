@@ -346,6 +346,9 @@ class MiniMaxH3AutomatedExecutionService:
             )
         expected = {
             "provider_id": "minimax-h3-ref2va",
+            "model_family": "MiniMax H3",
+            "prompt_policy_id": "learned_span_local_v1",
+            "validation_policy_id": "h3-001-through-h3-008-v1",
             "execution_adapter_id": MINIMAX_H3_EXECUTION_ADAPTER_ID,
             "guide_semantics": "frame_state_anchor",
             "native_frame_rule": "17k+5",
