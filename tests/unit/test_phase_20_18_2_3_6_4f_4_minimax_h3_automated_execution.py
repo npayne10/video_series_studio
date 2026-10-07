@@ -30,7 +30,13 @@ class _Packages:
         self.compiled = compiled
         self.calls = 0
 
-    def compile_current(self, task: ProductionTask) -> CompiledProductionPackage:
+    def compile_current(
+        self,
+        task: ProductionTask,
+        *,
+        profile: str = "production",
+    ) -> CompiledProductionPackage:
+        assert profile in {"preview", "production", "master"}
         self.calls += 1
         return self.compiled
 
