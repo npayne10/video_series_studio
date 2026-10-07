@@ -567,7 +567,12 @@ class TimedSpanAcceptanceEvaluator:
         self.injection_boundaries = IntroductionInjectionBoundaryStore(self.project_directory)
         self.injection_reviews = IntroductionInjectionReviewStore(self.project_directory)
 
-    def evaluate(self, compiled_package: dict[str, Any]) -> TimedSpanAcceptanceStatus:
+    def evaluate(
+        self,
+        compiled_package: dict[str, Any],
+        *,
+        direct_approved_keyframes: bool = False,
+    ) -> TimedSpanAcceptanceStatus:
         shot_id = _shot_id(compiled_package)
         timed_raw = compiled_package.get("timed_asset_presence")
         spans_raw = compiled_package.get("internal_render_spans")
@@ -669,7 +674,19 @@ class TimedSpanAcceptanceEvaluator:
         pending_keyframes: list[str] = []
         pending_qc: list[str] = []
         for requirement in requirements.requirements:
-            if self._requires_identity_gate(requirement, timed):
+            if direct_approved_keyframes:
+                try:
+                    keyframe = self.keyframes.require_approved(requirement)
+                except GovernedIntroductionKeyframeError:
+                    pending_keyframes.append(requirement.requirement_id)
+                    pending_qc.append(requirement.requirement_id)
+                    continue
+                if keyframe.approval_mode != "human":
+                    pending_keyframes.append(requirement.requirement_id)
+                    pending_qc.append(requirement.requirement_id)
+                    continue
+                approved += 1
+            elif self._requires_identity_gate(requirement, timed):
                 injection_result = self.injection_boundaries.latest_result_for_requirement(
                     requirement.requirement_id
                 )
