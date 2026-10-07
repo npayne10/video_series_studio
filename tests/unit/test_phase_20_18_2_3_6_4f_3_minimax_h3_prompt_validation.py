@@ -163,6 +163,21 @@ def test_h3_validation_rejects_conflicting_camera_instructions() -> None:
         _validate(governance=governed, policy=bad)
 
 
+def test_h3_validation_rejects_locked_camera_with_movement_instruction() -> None:
+    governed = _governance()
+    valid = _policy(governed)
+    bad = replace(
+        valid,
+        motion_prompt=(
+            valid.motion_prompt
+            + " The camera remains locked in place throughout the shot. Camera pans right."
+        ),
+    )
+
+    with pytest.raises(ProviderPromptValidationError, match="H3-007"):
+        _validate(governance=governed, policy=bad)
+
+
 def test_h3_validation_accepts_initial_span_after_camera_policy_resolution() -> None:
     governed = ProviderSpanGovernance(
         span_id="IRS-SHT-002-001",
