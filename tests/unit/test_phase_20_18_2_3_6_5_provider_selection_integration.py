@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
+from typing import ClassVar
 
 import vscs.infrastructure.production_execution.ltx25_keyframe_backend as backend_module
 from vscs.application.production_execution import ProductionExecutionUiService
@@ -59,8 +60,7 @@ def test_provider_policy_selection_store_defaults_to_ltx_and_persists_per_profil
 
     reloaded = ProviderPolicySelectionStore(tmp_path)
     assert (
-        reloaded.selected_profile("PT-001", "production").profile_id
-        == MINIMAX_H3_POLICY_PROFILE_ID
+        reloaded.selected_profile("PT-001", "production").profile_id == MINIMAX_H3_POLICY_PROFILE_ID
     )
     assert (
         reloaded.selected_profile("PT-001", "preview").profile_id
@@ -121,7 +121,7 @@ class _PackageCompilation:
 
 
 class _H3Execution:
-    calls: list[tuple[str, str]] = []
+    calls: ClassVar[list[tuple[str, str]]] = []
 
     def __init__(self, project_directory: Path, **kwargs) -> None:
         assert kwargs["execution_profile"] == "production"
