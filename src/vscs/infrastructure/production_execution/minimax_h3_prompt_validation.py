@@ -51,8 +51,13 @@ class MiniMaxH3PromptMetadataValidator:
         re.compile(r"\blocked in place\b", re.IGNORECASE),
     )
     _MOVING_CAMERA_PATTERNS: ClassVar[tuple[re.Pattern[str], ...]] = (
-        re.compile(r"\bcamera (?:pans?|tilts?|zooms?|doll(?:y|ies)|tracks?|moves?|travels?)\b", re.IGNORECASE),
-        re.compile(r"\b(?:pan|tilt|zoom|dolly|track|crane) (?:in|out|left|right|up|down)\b", re.IGNORECASE),
+        re.compile(
+            r"\bcamera (?:pans?|tilts?|zooms?|doll(?:y|ies)|tracks?|moves?|travels?)\b",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"\b(?:pan|tilt|zoom|dolly|track|crane) (?:in|out|left|right|up|down)\b", re.IGNORECASE
+        ),
         re.compile(r"\btracking shot\b", re.IGNORECASE),
         re.compile(r"\bhandheld camera\b", re.IGNORECASE),
     )
@@ -249,8 +254,12 @@ class MiniMaxH3PromptMetadataValidator:
                 "H3-007",
                 "provider prompt contains conflicting focal-length instructions",
             )
-        static_camera = any(pattern.search(text) is not None for pattern in self._STATIC_CAMERA_PATTERNS)
-        moving_camera = any(pattern.search(text) is not None for pattern in self._MOVING_CAMERA_PATTERNS)
+        static_camera = any(
+            pattern.search(text) is not None for pattern in self._STATIC_CAMERA_PATTERNS
+        )
+        moving_camera = any(
+            pattern.search(text) is not None for pattern in self._MOVING_CAMERA_PATTERNS
+        )
         if static_camera and moving_camera:
             self._fail(
                 "H3-007",
