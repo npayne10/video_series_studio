@@ -11,6 +11,7 @@ from vscs.application.production_tasks import ProductionTask
 from vscs.infrastructure.production_execution import (
     MiniMaxH3AutomatedExecutionError,
     MiniMaxH3AutomatedExecutionService,
+    default_provider_policy_profile_registry,
 )
 
 
@@ -132,6 +133,14 @@ def _plan():
         plan_id="H3SPANPLAN-SHT-002",
         fingerprint="plan-fingerprint",
         spans=(_execution(1), _execution(2)),
+        provider_id="minimax-h3-ref2va",
+        provider_profile_id="minimax-h3-ref2va-v1",
+        provider_profile_fingerprint=(
+            default_provider_policy_profile_registry()
+            .require("minimax-h3-ref2va-v1")
+            .fingerprint
+        ),
+        execution_adapter_id="minimax_h3_automated_execution",
     )
 
 
