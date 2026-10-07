@@ -25,6 +25,7 @@ from vscs.application.production_execution import (
     ProductionPackageStatus,
     ProviderAudioPolicy,
     ProviderAudioPolicyError,
+    ProviderPolicyProfile,
     ShotBoundaryAuthorityStatus,
     TimedCanonicalReferenceActivationError,
     TimedCanonicalReferenceActivationPlan,
@@ -83,11 +84,24 @@ from .ltx25_span_conditioning import (
     LTX25SpanConditioningError,
     LTX25SpanProviderConditioningCompiler,
 )
+from .minimax_h3_automated_execution import (
+    MiniMaxH3AutomatedExecutionError,
+    MiniMaxH3AutomatedExecutionService,
+)
 from .package_compilation import (
     LocalProductionPackageCompilationError,
     LocalProductionPackageCompilationService,
 )
 from .provider_audio_runtime import ProviderAudioGovernanceRuntime
+from .provider_policy_profiles import (
+    LTX25_CANDIDATE_C_POLICY_PROFILE_ID,
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
+)
+from .provider_policy_selection_store import (
+    ProviderPolicySelectionError,
+    ProviderPolicySelectionStore,
+)
 from .shot_boundary_runtime import GovernedShotBoundaryRuntime, GovernedShotBoundaryRuntimeError
 from .timed_span_acceptance_service import (
     TimedSpanFunctionalAcceptanceService,
@@ -496,6 +510,41 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         self.package_compilation = CurrentAuthorityLTX25GovernedKeyframeCompilationService(
             self.project_directory
         )
+        self.provider_policy_registry = default_provider_policy_profile_registry()
+        self.provider_policy_selections = ProviderPolicySelectionStore(self.project_directory)
+
+    def provider_policy_profiles(self) -> tuple[ProviderPolicyProfile, ...]:
+        """Expose enabled governed video-provider profiles to the normal execution UI."""
+        return self.provider_policy_registry.enabled_profiles
+
+    def provider_policy_profile_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> ProviderPolicyProfile:
+        self._require_task(task_id)
+        try:
+            return self.provider_policy_selections.selected_profile(task_id, profile)
+        except ProviderPolicySelectionError as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
+    def select_provider_policy_profile_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        provider_profile_id: str,
+    ) -> ProviderPolicyProfile:
+        self._require_task(task_id)
+        try:
+            return self.provider_policy_selections.select(
+                task_id,
+                profile,
+                provider_profile_id,
+            )
+        except ProviderPolicySelectionError as exc:
+            raise ProductionExecutionError(str(exc)) from exc
 
     def publish_closing_boundary_for_profile(
         self,
@@ -661,41 +710,80 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         *,
         profile: str,
     ) -> TimedSpanAcceptanceStatus:
-        """Execute governed spans and synthesize internal introduction frames automatically."""
+        """Execute governed spans through the operator-selected provider policy profile."""
         task = self._require_task(task_id)
         normalized = normalize_execution_profile(profile)
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            if self.comfyui_output_directory is None:
-                raise ProductionExecutionError(
-                    "Configure the ComfyUI output folder before automated span orchestration."
+            provider_profile = self.provider_policy_selections.selected_profile(
+                task.task_id,
+                normalized,
+            )
+            if provider_profile.profile_id == LTX25_CANDIDATE_C_POLICY_PROFILE_ID:
+                if self.comfyui_output_directory is None:
+                    raise ProductionExecutionError(
+                        "Configure the ComfyUI output folder before automated span orchestration."
+                    )
+                span_provider = LTX25AutomatedSpanProvider(
+                    self.project_directory,
+                    endpoint=self.endpoint,
+                    comfyui_output_directory=self.comfyui_output_directory,
                 )
-            span_provider = LTX25AutomatedSpanProvider(
-                self.project_directory,
-                endpoint=self.endpoint,
-                comfyui_output_directory=self.comfyui_output_directory,
+                synthesizer = ComfyUIIntroductionBoundarySynthesizer(
+                    self.project_directory,
+                    base_url=self.endpoint,
+                )
+                injection_synthesizer = ComfyUIIntroductionInjectionSynthesizer(
+                    self.project_directory,
+                    base_url=self.endpoint,
+                )
+                result = AutomatedTimedSpanOrchestrationService(
+                    self.project_directory,
+                    span_provider=span_provider,
+                    synthesizer=synthesizer,
+                    injection_synthesizer=injection_synthesizer,
+                    managed_media_directory=self.managed_media_directory,
+                ).run(package.path)
+                return result.acceptance_status
+
+            if provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
+                if self.comfyui_output_directory is None:
+                    raise ProductionExecutionError(
+                        "Configure the ComfyUI output folder before H3 span orchestration."
+                    )
+                comfyui_input_directory = (
+                    self.comfyui_output_directory.parent / "input"
+                ).resolve(strict=False)
+                if not comfyui_input_directory.is_dir():
+                    raise ProductionExecutionError(
+                        "MiniMax H3 requires the ComfyUI input folder beside the configured "
+                        f"output folder: {comfyui_input_directory}"
+                    )
+                MiniMaxH3AutomatedExecutionService(
+                    self.project_directory,
+                    endpoint=self.endpoint,
+                    comfyui_input_directory=comfyui_input_directory,
+                    comfyui_output_directory=self.comfyui_output_directory,
+                    task_repository=self.tasks,
+                    package_compiler=self.package_compilation,
+                    policy_profile=provider_profile,
+                    execution_profile=normalized,
+                ).execute(task.task_id)
+                return TimedSpanFunctionalAcceptanceService(
+                    self.project_directory
+                ).status(package.path)
+
+            raise ProductionExecutionError(
+                "Selected provider policy profile has no normal Production Execution adapter: "
+                f"{provider_profile.profile_id}"
             )
-            synthesizer = ComfyUIIntroductionBoundarySynthesizer(
-                self.project_directory,
-                base_url=self.endpoint,
-            )
-            injection_synthesizer = ComfyUIIntroductionInjectionSynthesizer(
-                self.project_directory,
-                base_url=self.endpoint,
-            )
-            result = AutomatedTimedSpanOrchestrationService(
-                self.project_directory,
-                span_provider=span_provider,
-                synthesizer=synthesizer,
-                injection_synthesizer=injection_synthesizer,
-                managed_media_directory=self.managed_media_directory,
-            ).run(package.path)
-            return result.acceptance_status
         except (
             LocalProductionPackageCompilationError,
             AutomatedSpanProviderError,
             AutomatedSpanOrchestrationError,
+            MiniMaxH3AutomatedExecutionError,
+            ProviderPolicySelectionError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
