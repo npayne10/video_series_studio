@@ -46,7 +46,12 @@ class MiniMaxH3AutomatedExecutionError(RuntimeError):
 
 
 class _CurrentPackageCompiler(Protocol):
-    def compile_current(self, task: ProductionTask) -> CompiledProductionPackage: ...
+    def compile_current(
+        self,
+        task: ProductionTask,
+        *,
+        profile: str = "production",
+    ) -> CompiledProductionPackage: ...
 
 
 class _H3PlanCompiler(Protocol):
@@ -146,9 +151,15 @@ class MiniMaxH3AutomatedExecutionService:
         workflow_compiler: _H3WorkflowCompiler | None = None,
         orchestrator: _H3Orchestrator | None = None,
         policy_profile: ProviderPolicyProfile | None = None,
+        execution_profile: str = "production",
     ) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.endpoint = endpoint.strip().rstrip("/")
+        self.execution_profile = execution_profile.strip().lower() or "production"
+        if self.execution_profile not in {"preview", "production", "master"}:
+            raise MiniMaxH3AutomatedExecutionError(
+                f"Unsupported H3 execution profile: {execution_profile!r}"
+            )
         self.comfyui_input_directory = (
             Path(comfyui_input_directory).expanduser().resolve(strict=False)
         )
@@ -248,7 +259,10 @@ class MiniMaxH3AutomatedExecutionService:
                 f"H3 automated execution cannot find ProductionTask {normalized}"
             )
         try:
-            compiled = self.package_compiler.compile_current(task)
+            compiled = self.package_compiler.compile_current(
+                task,
+                profile=self.execution_profile,
+            )
         except LocalProductionPackageCompilationError as exc:
             raise MiniMaxH3AutomatedExecutionError(
                 f"H3 automated execution requires current compiled authority: {exc}"
