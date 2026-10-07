@@ -279,11 +279,27 @@ class MiniMaxH3AutomatedExecutionService:
                 f"H3 automated execution provider payload preflight failed: {exc}"
             ) from exc
 
+        if plan.provider_id != self.policy_profile.provider_id:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 automated execution plan provider does not match selected policy profile"
+            )
+        if plan.provider_profile_id != self.policy_profile.profile_id:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 automated execution plan profile identity does not match selected policy profile"
+            )
+        if plan.provider_profile_fingerprint != self.policy_profile.fingerprint:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 automated execution plan profile fingerprint is stale"
+            )
+        if plan.execution_adapter_id != self.policy_profile.execution_adapter_id:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 automated execution plan adapter does not match selected policy profile"
+            )
         if any(
             execution.provider_id != self.policy_profile.provider_id for execution in plan.spans
         ):
             raise MiniMaxH3AutomatedExecutionError(
-                "H3 automated execution plan provider does not match selected policy profile"
+                "H3 automated execution span provider does not match selected policy profile"
             )
 
         return MiniMaxH3AutomatedExecutionPreflight(
