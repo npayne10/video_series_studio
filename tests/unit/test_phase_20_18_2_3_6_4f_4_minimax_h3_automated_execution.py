@@ -78,6 +78,7 @@ def _task() -> ProductionTask:
 
     from vscs.application.production_tasks import (
         ProductionAuthorityType,
+        ProductionCapability,
         ProductionTaskAuthority,
         ProductionTaskState,
         ProductionTaskType,
@@ -98,6 +99,8 @@ def _task() -> ProductionTask:
             approved=True,
             approved_by="Neill",
         ),
+        capabilities=(ProductionCapability.VIDEO_GENERATION,),
+        expected_outputs=("production_video",),
         state=ProductionTaskState.READY,
         created_at=datetime(2026, 10, 7, tzinfo=UTC),
     )
