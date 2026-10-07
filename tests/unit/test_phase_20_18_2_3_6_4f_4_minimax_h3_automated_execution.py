@@ -136,9 +136,7 @@ def _plan():
         provider_id="minimax-h3-ref2va",
         provider_profile_id="minimax-h3-ref2va-v1",
         provider_profile_fingerprint=(
-            default_provider_policy_profile_registry()
-            .require("minimax-h3-ref2va-v1")
-            .fingerprint
+            default_provider_policy_profile_registry().require("minimax-h3-ref2va-v1").fingerprint
         ),
         execution_adapter_id="minimax_h3_automated_execution",
     )
