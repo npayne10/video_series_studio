@@ -11,6 +11,8 @@ from vscs.application.production_execution import (
     ProductionPackageCompilationState,
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
+    ProviderExecutionReadiness,
+    ProviderExecutionReadinessState,
     ProductionTelemetryState,
 )
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
@@ -282,6 +284,31 @@ class ProviderSelectionWorkspaceBackend(WorkspaceBackend):
         self.selected_provider_profile_id = selected.profile_id
         return selected
 
+    def provider_execution_readiness_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> ProviderExecutionReadiness:
+        selected = self.registry.require(self.selected_provider_profile_id)
+        return ProviderExecutionReadiness(
+            task_id=task_id,
+            shot_id=self.candidate.shot_id or "SHT-001",
+            execution_profile=profile,
+            provider_profile_id=selected.profile_id,
+            provider_profile_fingerprint=selected.fingerprint,
+            execution_adapter_id=selected.execution_adapter_id,
+            package_fingerprint="package-fingerprint",
+            timed_span_state="outputs_required",
+            span_count=2,
+            requirement_count=1,
+            approved_keyframe_count=1,
+            state=ProviderExecutionReadinessState.READY,
+            provider_plan_id="PLAN-READY",
+            provider_plan_fingerprint="a" * 64,
+        )
+
+
 
 def test_workspace_selects_governed_span_provider_profile(qtbot, tmp_path: Path) -> None:
     backend = ProviderSelectionWorkspaceBackend(tmp_path / "production_package.json")
@@ -302,3 +329,12 @@ def test_workspace_selects_governed_span_provider_profile(qtbot, tmp_path: Path)
 
     assert backend.selected_provider_profile_id == MINIMAX_H3_POLICY_PROFILE_ID
     assert "MiniMax H3" in workspace.summary.text()
+    assert workspace.validate_provider_readiness_button.isEnabled()
+
+    qtbot.mouseClick(
+        workspace.validate_provider_readiness_button,
+        Qt.MouseButton.LeftButton,
+    )
+
+    assert "READY" in workspace.provider_readiness_state.text()
+    assert "PLAN-READY" in workspace.provider_readiness_state.text()
