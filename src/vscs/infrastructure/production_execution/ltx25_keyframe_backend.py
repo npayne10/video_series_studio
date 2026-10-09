@@ -1258,7 +1258,14 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
                 ),
             )
-            if status.accepted:
+            if (
+                status.accepted
+                and self.provider_production_adoptions.adoption_for(
+                    task.task_id,
+                    normalized,
+                )
+                is not None
+            ):
                 self.provider_production_adoptions.mark_accepted(
                     task.task_id,
                     normalized,
