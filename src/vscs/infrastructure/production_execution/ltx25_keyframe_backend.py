@@ -872,6 +872,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         """Execute governed spans through the operator-selected provider policy profile."""
         task = self._require_task(task_id)
         normalized = normalize_execution_profile(profile)
+        readiness = self.provider_execution_readiness_for_profile(
+            task.task_id,
+            profile=normalized,
+        )
+        if not readiness.ready_to_execute:
+            detail = "; ".join(readiness.blockers) or readiness.state.value
+            raise ProductionExecutionError(
+                "Provider-selectable production is not ready to execute: " + detail
+            )
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
@@ -904,17 +913,16 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     injection_synthesizer=injection_synthesizer,
                     managed_media_directory=self.managed_media_directory,
                 ).run(package.path)
-                return result.acceptance_status
-
-            if provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
+                status = result.acceptance_status
+            elif provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
                 comfyui_output_directory = self.comfyui_output_directory
                 if comfyui_output_directory is None:
                     raise ProductionExecutionError(
                         "Configure the ComfyUI output folder before H3 span orchestration."
                     )
-                comfyui_input_directory = (comfyui_output_directory.parent / "input").resolve(
-                    strict=False
-                )
+                comfyui_input_directory = (
+                    comfyui_output_directory.parent / "input"
+                ).resolve(strict=False)
                 if not comfyui_input_directory.is_dir():
                     raise ProductionExecutionError(
                         "MiniMax H3 requires the ComfyUI input folder beside the configured "
@@ -930,21 +938,38 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     policy_profile=provider_profile,
                     execution_profile=normalized,
                 ).execute(task.task_id)
-                return TimedSpanFunctionalAcceptanceService(self.project_directory).status(
+                status = TimedSpanFunctionalAcceptanceService(self.project_directory).status(
                     package.path,
                     direct_approved_keyframes=True,
                 )
+            else:
+                raise ProductionExecutionError(
+                    "Selected provider policy profile has no normal Production Execution adapter: "
+                    f"{provider_profile.profile_id}"
+                )
 
-            raise ProductionExecutionError(
-                "Selected provider policy profile has no normal Production Execution adapter: "
-                f"{provider_profile.profile_id}"
+            if not status.assembly_present or not status.final_path:
+                raise ProductionExecutionError(
+                    "Provider-selectable production completed without governed assembled media."
+                )
+            self.provider_production_adoptions.record_generated(
+                readiness,
+                final_path=status.final_path,
+                final_frame_count=status.final_frame_count,
+                state=(
+                    "accepted"
+                    if status.accepted
+                    else "generated_pending_visual_qc"
+                ),
             )
+            return status
         except (
             LocalProductionPackageCompilationError,
             AutomatedSpanProviderError,
             AutomatedSpanOrchestrationError,
             MiniMaxH3AutomatedExecutionError,
             ProviderPolicySelectionError,
+            ProviderProductionAdoptionError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
