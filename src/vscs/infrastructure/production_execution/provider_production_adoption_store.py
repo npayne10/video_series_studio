@@ -229,7 +229,7 @@ class ProviderProductionAdoptionStore:
             final_frame_count=(
                 None
                 if item.get("final_frame_count") is None
-                else int(item["final_frame_count"])
+                else int(str(item["final_frame_count"]))
             ),
             approved_by=(
                 None
