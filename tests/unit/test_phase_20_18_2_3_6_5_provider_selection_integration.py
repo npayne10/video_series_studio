@@ -120,6 +120,7 @@ class _PackageCompilation:
         return SimpleNamespace(
             executable=True,
             path=self.package_path,
+            package_fingerprint="package-fingerprint",
             message="",
         )
 
