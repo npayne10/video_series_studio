@@ -609,6 +609,12 @@ class GovernedShotPlanningService:
                     piece_index,
                     piece_count,
                 )
+                carries_dialogue = self._carries_dialogue(
+                    source,
+                    role,
+                    piece_index,
+                    piece_count,
+                )
                 output.append(
                     ShotPlan(
                         shot_id=shot_id,
@@ -625,19 +631,13 @@ class GovernedShotPlanningService:
                         production_objective=source.production_objective,
                         target_runtime_seconds=runtime,
                         required_action=self._decomposed_action(
-                            source.required_action,
+                            source,
                             role,
+                            carries_dialogue=carries_dialogue,
                         ),
                         coverage_role=role,
                         dialogue_requirement=(
-                            source.dialogue_requirement
-                            if self._carries_dialogue(
-                                source,
-                                role,
-                                piece_index,
-                                piece_count,
-                            )
-                            else ""
+                            source.dialogue_requirement if carries_dialogue else ""
                         ),
                         continuity_in=(
                             source.continuity_in
@@ -792,11 +792,19 @@ class GovernedShotPlanningService:
         }
         return templates[role]
 
-    @staticmethod
+    @classmethod
     def _decomposed_action(
-        action: str,
+        cls,
+        source: ShotPlan,
         role: CinematicCoverageRole,
+        *,
+        carries_dialogue: bool,
     ) -> str:
+        """Create role-specific action without leaking dialogue into non-dialogue coverage."""
+        if source.dialogue_requirement.strip() and not carries_dialogue:
+            return cls._non_dialogue_decomposed_action(source, role)
+
+        action = source.required_action
         templates = {
             CinematicCoverageRole.ESTABLISHING: (
                 "Establish the full spatial relationship and initial state for: "
@@ -831,6 +839,54 @@ class GovernedShotPlanningService:
                 f"Shot: {action} Avoid introducing new story information."
             ),
             CinematicCoverageRole.UNSPECIFIED: action,
+        }
+        return templates[role]
+
+    @staticmethod
+    def _non_dialogue_decomposed_action(
+        source: ShotPlan,
+        role: CinematicCoverageRole,
+    ) -> str:
+        """Describe only observable non-dialogue coverage when dialogue belongs to another Shot."""
+        purpose = source.narrative_purpose
+        objective = source.production_objective
+        templates = {
+            CinematicCoverageRole.ESTABLISHING: (
+                "Establish the participants, spatial relationship and non-dialogue visual state "
+                f"required by the beat. Preserve the production objective: {objective}"
+            ),
+            CinematicCoverageRole.PRIMARY_SUBJECT: (
+                "Show the principal subject's non-dialogue physical action or attention state "
+                f"that advances: {purpose}"
+            ),
+            CinematicCoverageRole.SECONDARY_SUBJECT: (
+                "Show the secondary participant's non-dialogue physical action or attention "
+                f"state that advances: {purpose}"
+            ),
+            CinematicCoverageRole.DETAIL_INSERT: (
+                "Show a specific information-bearing visual detail, display, object, hand action "
+                f"or environmental cue that advances: {purpose} "
+                "Do not depict or imply spoken dialogue in this Shot."
+            ),
+            CinematicCoverageRole.REACTION: (
+                "Show the immediate nonverbal reaction, attention shift or physical consequence "
+                f"that advances: {purpose}"
+            ),
+            CinematicCoverageRole.PROGRESSION: (
+                "Advance the observable non-dialogue physical state of the beat without repeating "
+                f"the previous composition: {purpose}"
+            ),
+            CinematicCoverageRole.RESOLVE: (
+                "Resolve the beat through observable non-dialogue physical state and reaction, "
+                f"leaving a clean handoff to the next Shot: {purpose}"
+            ),
+            CinematicCoverageRole.DIALOGUE_DELIVERY: (
+                "Preserve the governed non-dialogue visual state for the beat without introducing "
+                f"spoken content: {purpose}"
+            ),
+            CinematicCoverageRole.UNSPECIFIED: (
+                f"Advance the observable non-dialogue action required by: {purpose}"
+            ),
         }
         return templates[role]
 
