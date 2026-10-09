@@ -171,9 +171,6 @@ class _Acceptance:
         return self._status(TimedSpanAcceptanceState.ACCEPTED)
 
 
-
-
-
 class _BlockedAcceptance(_Acceptance):
     def status(
         self,
@@ -319,7 +316,6 @@ def test_h3_normal_production_records_generated_and_accepted_adoption(
     assert adoption is not None
     assert adoption.state == "accepted"
     assert adoption.approved_by == "Neill Payne"
-
 
 
 def test_provider_execution_rechecks_readiness_and_blocks_missing_keyframe(
