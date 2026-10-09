@@ -13,6 +13,7 @@ from .introduction_asset_injection import IntroductionInjectionCandidateStatus
 from .introduction_identity_gate import IntroductionIdentityCandidateStatus
 from .package_compilation import ProductionPackageStatus
 from .profiles import normalize_execution_profile
+from .provider_execution_readiness import ProviderExecutionReadiness
 from .provider_policy_profiles import ProviderPolicyProfile
 from .retry_override import GovernedRetryOverrideState, GovernedRetryOverrideStatus
 from .shot_boundary_keyframes import GovernedClosingBoundaryFrame, ShotBoundaryAuthorityStatus
@@ -184,6 +185,15 @@ class _SelectProviderPolicyProfileForProfile(Protocol):
         profile: str,
         provider_profile_id: str,
     ) -> ProviderPolicyProfile: ...
+
+
+class _ProviderExecutionReadinessForProfile(Protocol):
+    def __call__(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> ProviderExecutionReadiness: ...
 
 
 class _TimedSpanStatusForProfile(Protocol):
@@ -514,6 +524,28 @@ class ProductionExecutionUiService:
             normalized,
             profile=execution_profile,
             provider_profile_id=profile_id,
+        )
+
+    def provider_execution_readiness(
+        self,
+        task_id: str,
+        *,
+        profile: str | None = None,
+    ) -> ProviderExecutionReadiness:
+        normalized = self._task_id(task_id, "validating provider execution readiness")
+        execution_profile = self._resolve_profile(normalized, profile)
+        operation = getattr(
+            self.backend,
+            "provider_execution_readiness_for_profile",
+            None,
+        )
+        if operation is None:
+            raise ProductionExecutionError(
+                "This execution backend does not expose provider execution readiness."
+            )
+        return cast(_ProviderExecutionReadinessForProfile, operation)(
+            normalized,
+            profile=execution_profile,
         )
 
     def timed_span_acceptance_status(
