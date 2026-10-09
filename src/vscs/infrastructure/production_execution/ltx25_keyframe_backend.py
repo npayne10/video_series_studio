@@ -649,11 +649,12 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                             provider_plan_id = preflight.plan_id
                             provider_plan_fingerprint = preflight.plan_fingerprint
                 elif provider_profile.profile_id == LTX25_CANDIDATE_C_POLICY_PROFILE_ID:
-                    payload = self.package_compilation.compile_span_provider_conditioning(compiled)
-                    provider_plan_id = str(payload.get("plan_id") or "").strip() or None
-                    provider_plan_fingerprint = (
-                        str(payload.get("fingerprint") or "").strip() or None
-                    )
+                    ltx_plan = LTX25SpanProviderConditioningCompiler(
+                        self.project_directory,
+                        policy_profile=provider_profile,
+                    ).compile(compiled)
+                    provider_plan_id = ltx_plan.plan_id
+                    provider_plan_fingerprint = ltx_plan.fingerprint
                 else:
                     blockers.append(
                         "Selected provider profile has no governed production preflight adapter: "
