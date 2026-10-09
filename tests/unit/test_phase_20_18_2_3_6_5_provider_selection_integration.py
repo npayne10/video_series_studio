@@ -6,7 +6,10 @@ from types import SimpleNamespace
 from typing import ClassVar
 
 import vscs.infrastructure.production_execution.ltx25_keyframe_backend as backend_module
-from vscs.application.production_execution import ProductionExecutionUiService
+from vscs.application.production_execution import (
+    ProductionExecutionUiService,
+    TimedSpanAcceptanceState,
+)
 from vscs.application.production_tasks import (
     ProductionAuthorityType,
     ProductionCapability,
@@ -157,10 +160,29 @@ class _Acceptance:
         direct_approved_keyframes: bool = False,
     ):
         self.calls.append(direct_approved_keyframes)
+        generated = bool(_H3Execution.calls)
         return SimpleNamespace(
             marker="h3-normal-flow",
             package_path=package_path,
             direct_approved_keyframes=direct_approved_keyframes,
+            applicable=True,
+            pending_keyframe_requirement_ids=(),
+            accepted=False,
+            assembly_present=generated,
+            state=(
+                TimedSpanAcceptanceState.QC_REQUIRED
+                if generated
+                else TimedSpanAcceptanceState.OUTPUTS_REQUIRED
+            ),
+            span_count=2,
+            requirement_count=1,
+            approved_keyframe_count=1,
+            final_path=(
+                "Media Output/provider-selection-h3.mp4"
+                if generated
+                else None
+            ),
+            final_frame_count=144 if generated else None,
         )
 
 
