@@ -168,6 +168,7 @@ class TimedSpanFunctionalAcceptanceService:
         requirement_id: str,
         approved_by: str,
         notes: str = "",
+        direct_approved_keyframes: bool = False,
     ) -> TimedSpanAcceptanceStatus:
         requirement = self._require_requirement(compiled_package_path, requirement_id)
         candidate = self.identity_candidate(
@@ -574,7 +575,10 @@ class TimedSpanFunctionalAcceptanceService:
                 f"Visual QC requires the current Governed Introduction Keyframe first: {exc}"
             ) from exc
 
-        current = self.status(compiled_package_path)
+        current = self.status(
+            compiled_package_path,
+            direct_approved_keyframes=direct_approved_keyframes,
+        )
         if not current.assembly_present:
             raise TimedSpanFunctionalAcceptanceServiceError(
                 "Visual QC requires verified normalized span assembly evidence first."
@@ -593,7 +597,10 @@ class TimedSpanFunctionalAcceptanceService:
             self.acceptance.save_qc(record)
         except TimedSpanAcceptanceError as exc:
             raise TimedSpanFunctionalAcceptanceServiceError(str(exc)) from exc
-        return self.status(compiled_package_path)
+        return self.status(
+            compiled_package_path,
+            direct_approved_keyframes=direct_approved_keyframes,
+        )
 
     def _require_requirement(
         self,
