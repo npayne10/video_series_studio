@@ -168,7 +168,6 @@ class TimedSpanFunctionalAcceptanceService:
         requirement_id: str,
         approved_by: str,
         notes: str = "",
-        direct_approved_keyframes: bool = False,
     ) -> TimedSpanAcceptanceStatus:
         requirement = self._require_requirement(compiled_package_path, requirement_id)
         candidate = self.identity_candidate(
@@ -566,6 +565,7 @@ class TimedSpanFunctionalAcceptanceService:
         no_unapproved_assets: bool,
         approved_by: str,
         notes: str = "",
+        direct_approved_keyframes: bool = False,
     ) -> TimedSpanAcceptanceStatus:
         requirement = self._require_requirement(compiled_package_path, requirement_id)
         try:
