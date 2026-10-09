@@ -1100,7 +1100,7 @@ def test_workspace_prefers_automated_orchestration_and_keeps_manual_recovery(
     workspace.refresh()
     workspace.table.selectRow(0)
 
-    assert workspace.run_automated_spans_button.isEnabled()
+    assert not workspace.run_automated_spans_button.isEnabled()
     assert workspace.run_automated_spans_button.text() == "Run Automated Span Orchestration"
     assert "Manual Recovery" in workspace.approve_introduction_keyframe_button.text()
     assert workspace.approve_introduction_keyframe_button.isEnabled()
@@ -1285,7 +1285,7 @@ def test_workspace_ignores_stale_legacy_identity_candidate_when_injection_is_sup
     assert "superseded by identity-locked injection authority" in (
         workspace.identity_candidate_state.text()
     )
-    assert workspace.run_automated_spans_button.isEnabled()
+    assert not workspace.run_automated_spans_button.isEnabled()
     assert not workspace.view_identity_candidate_button.isEnabled()
     assert not workspace.approve_identity_candidate_button.isEnabled()
     assert not workspace.reject_identity_candidate_button.isEnabled()
@@ -1434,7 +1434,7 @@ def test_ui_service_delegates_injection_review_actions_with_normalized_profile(
     assert backend.rejected == ("production", "GIKR-1", "Neill Payne", "Reject test.")
 
 
-def test_workspace_allows_automated_rerun_while_visual_qc_is_pending(
+def test_workspace_requires_readiness_revalidation_while_visual_qc_is_pending(
     qtbot: Any,
 ) -> None:
     service = _UiService()
@@ -1460,7 +1460,7 @@ def test_workspace_allows_automated_rerun_while_visual_qc_is_pending(
     workspace._timed_span_status = status
     workspace._render_timed_span_status(status)
 
-    assert workspace.run_automated_spans_button.isEnabled()
+    assert not workspace.run_automated_spans_button.isEnabled()
     assert workspace.record_span_qc_button.isEnabled()
 
 
