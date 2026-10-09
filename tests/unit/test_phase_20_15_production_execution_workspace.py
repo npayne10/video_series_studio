@@ -11,9 +11,9 @@ from vscs.application.production_execution import (
     ProductionPackageCompilationState,
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
+    ProductionTelemetryState,
     ProviderExecutionReadiness,
     ProviderExecutionReadinessState,
-    ProductionTelemetryState,
 )
 from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
 from vscs.infrastructure.production_execution import (
@@ -307,7 +307,6 @@ class ProviderSelectionWorkspaceBackend(WorkspaceBackend):
             provider_plan_id="PLAN-READY",
             provider_plan_fingerprint="a" * 64,
         )
-
 
 
 def test_workspace_selects_governed_span_provider_profile(qtbot, tmp_path: Path) -> None:
