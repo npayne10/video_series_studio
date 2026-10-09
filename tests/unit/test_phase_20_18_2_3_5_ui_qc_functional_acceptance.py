@@ -808,7 +808,7 @@ def test_workspace_surfaces_timed_span_acceptance_and_blocks_monolithic_start(
 
     assert "KEYFRAME_REQUIRED" in workspace.timed_span_state.text()
     assert "Spans 2" in workspace.timed_span_detail.text()
-    assert workspace.run_automated_spans_button.isEnabled()
+    assert not workspace.run_automated_spans_button.isEnabled()
     assert workspace.approve_introduction_keyframe_button.isEnabled()
     assert "Manual Recovery" in workspace.approve_introduction_keyframe_button.text()
     assert not workspace.start_button.isEnabled()
