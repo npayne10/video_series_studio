@@ -5,8 +5,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import ClassVar
 
+import pytest
+
 import vscs.infrastructure.production_execution.ltx25_keyframe_backend as backend_module
 from vscs.application.production_execution import (
+    ProductionExecutionError,
     ProviderExecutionReadiness,
     ProviderExecutionReadinessState,
     TimedSpanAcceptanceState,
@@ -168,6 +171,33 @@ class _Acceptance:
         return self._status(TimedSpanAcceptanceState.ACCEPTED)
 
 
+
+
+
+class _BlockedAcceptance(_Acceptance):
+    def status(
+        self,
+        package_path: Path,
+        *,
+        direct_approved_keyframes: bool = False,
+    ) -> TimedSpanAcceptanceStatus:
+        assert direct_approved_keyframes is True
+        return TimedSpanAcceptanceStatus(
+            shot_id="EP-001-SCN-002-SHT-001",
+            state=TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
+            span_count=2,
+            boundary_count=1,
+            requirement_count=1,
+            approved_keyframe_count=0,
+            qc_passed_count=0,
+            assembly_present=False,
+            message="1 governed Introduction Keyframe approval remains.",
+            requirement_ids=("REQ-001",),
+            pending_keyframe_requirement_ids=("REQ-001",),
+            pending_qc_requirement_ids=("REQ-001",),
+        )
+
+
 def _backend(tmp_path: Path, monkeypatch):
     project = tmp_path / "project"
     output_dir = tmp_path / "ComfyUI" / "output"
@@ -289,3 +319,35 @@ def test_h3_normal_production_records_generated_and_accepted_adoption(
     assert adoption is not None
     assert adoption.state == "accepted"
     assert adoption.approved_by == "Neill Payne"
+
+
+
+def test_provider_execution_rechecks_readiness_and_blocks_missing_keyframe(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    backend, task = _backend(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        backend_module,
+        "TimedSpanFunctionalAcceptanceService",
+        _BlockedAcceptance,
+    )
+
+    readiness = backend.provider_execution_readiness_for_profile(
+        task.task_id,
+        profile="production",
+    )
+    assert readiness.state is ProviderExecutionReadinessState.BLOCKED
+    assert not readiness.ready_to_execute
+    assert "Introduction Keyframe" in readiness.blockers[0]
+
+    with pytest.raises(
+        ProductionExecutionError,
+        match="not ready to execute",
+    ):
+        backend.run_automated_timed_span_orchestration_for_profile(
+            task.task_id,
+            profile="production",
+        )
+
+    assert _H3Execution.executed is False
