@@ -22,6 +22,8 @@ from vscs.application.production_execution import (
     ProductionExecutionError,
     ProductionExecutionResult,
     ProductionPackageCompilationState,
+    ProviderExecutionReadiness,
+    ProviderExecutionReadinessState,
     ProductionPackageStatus,
     ProviderAudioPolicy,
     ProviderAudioPolicyError,
@@ -101,6 +103,10 @@ from .provider_policy_profiles import (
 from .provider_policy_selection_store import (
     ProviderPolicySelectionError,
     ProviderPolicySelectionStore,
+)
+from .provider_production_adoption_store import (
+    ProviderProductionAdoptionError,
+    ProviderProductionAdoptionStore,
 )
 from .shot_boundary_runtime import GovernedShotBoundaryRuntime, GovernedShotBoundaryRuntimeError
 from .timed_span_acceptance_service import (
@@ -512,6 +518,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         )
         self.provider_policy_registry = default_provider_policy_profile_registry()
         self.provider_policy_selections = ProviderPolicySelectionStore(self.project_directory)
+        self.provider_production_adoptions = ProviderProductionAdoptionStore(
+            self.project_directory
+        )
 
     def provider_policy_profiles(self) -> tuple[ProviderPolicyProfile, ...]:
         """Expose enabled governed video-provider profiles to the normal execution UI."""
