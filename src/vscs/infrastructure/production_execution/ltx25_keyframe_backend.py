@@ -22,11 +22,11 @@ from vscs.application.production_execution import (
     ProductionExecutionError,
     ProductionExecutionResult,
     ProductionPackageCompilationState,
-    ProviderExecutionReadiness,
-    ProviderExecutionReadinessState,
     ProductionPackageStatus,
     ProviderAudioPolicy,
     ProviderAudioPolicyError,
+    ProviderExecutionReadiness,
+    ProviderExecutionReadinessState,
     ProviderPolicyProfile,
     ShotBoundaryAuthorityStatus,
     TimedCanonicalReferenceActivationError,
@@ -518,9 +518,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         )
         self.provider_policy_registry = default_provider_policy_profile_registry()
         self.provider_policy_selections = ProviderPolicySelectionStore(self.project_directory)
-        self.provider_production_adoptions = ProviderProductionAdoptionStore(
-            self.project_directory
-        )
+        self.provider_production_adoptions = ProviderProductionAdoptionStore(self.project_directory)
 
     def provider_policy_profiles(self) -> tuple[ProviderPolicyProfile, ...]:
         """Expose enabled governed video-provider profiles to the normal execution UI."""
@@ -651,9 +649,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                             provider_plan_id = preflight.plan_id
                             provider_plan_fingerprint = preflight.plan_fingerprint
                 elif provider_profile.profile_id == LTX25_CANDIDATE_C_POLICY_PROFILE_ID:
-                    payload = self.package_compilation.compile_span_provider_conditioning(
-                        compiled
-                    )
+                    payload = self.package_compilation.compile_span_provider_conditioning(compiled)
                     provider_plan_id = str(payload.get("plan_id") or "").strip() or None
                     provider_plan_fingerprint = (
                         str(payload.get("fingerprint") or "").strip() or None
@@ -920,9 +916,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     raise ProductionExecutionError(
                         "Configure the ComfyUI output folder before H3 span orchestration."
                     )
-                comfyui_input_directory = (
-                    comfyui_output_directory.parent / "input"
-                ).resolve(strict=False)
+                comfyui_input_directory = (comfyui_output_directory.parent / "input").resolve(
+                    strict=False
+                )
                 if not comfyui_input_directory.is_dir():
                     raise ProductionExecutionError(
                         "MiniMax H3 requires the ComfyUI input folder beside the configured "
@@ -956,11 +952,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 readiness,
                 final_path=status.final_path,
                 final_frame_count=status.final_frame_count,
-                state=(
-                    "accepted"
-                    if status.accepted
-                    else "generated_pending_visual_qc"
-                ),
+                state=("accepted" if status.accepted else "generated_pending_visual_qc"),
             )
             return status
         except (
@@ -1243,9 +1235,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 task.task_id,
                 normalized,
             )
-            status = TimedSpanFunctionalAcceptanceService(
-                self.project_directory
-            ).record_visual_qc(
+            status = TimedSpanFunctionalAcceptanceService(self.project_directory).record_visual_qc(
                 package.path,
                 requirement_id=requirement_id,
                 absent_before_boundary=absent_before_boundary,
