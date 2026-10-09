@@ -1239,7 +1239,13 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             package = self.package_compilation.require_current(task, profile=normalized)
             assert package.path is not None
-            return TimedSpanFunctionalAcceptanceService(self.project_directory).record_visual_qc(
+            provider_profile = self.provider_policy_selections.selected_profile(
+                task.task_id,
+                normalized,
+            )
+            status = TimedSpanFunctionalAcceptanceService(
+                self.project_directory
+            ).record_visual_qc(
                 package.path,
                 requirement_id=requirement_id,
                 absent_before_boundary=absent_before_boundary,
@@ -1248,9 +1254,23 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 no_unapproved_assets=no_unapproved_assets,
                 approved_by=approved_by,
                 notes=notes,
+                direct_approved_keyframes=(
+                    provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+                ),
             )
+            if status.accepted:
+                self.provider_production_adoptions.mark_accepted(
+                    task.task_id,
+                    normalized,
+                    approved_by=approved_by,
+                    final_path=status.final_path,
+                    final_frame_count=status.final_frame_count,
+                )
+            return status
         except (
             LocalProductionPackageCompilationError,
+            ProviderPolicySelectionError,
+            ProviderProductionAdoptionError,
             TimedSpanFunctionalAcceptanceServiceError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
