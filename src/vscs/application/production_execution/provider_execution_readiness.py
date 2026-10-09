@@ -55,7 +55,9 @@ class ProviderExecutionReadiness:
             object.__setattr__(self, field_name, value)
         if self.span_count < 0 or self.requirement_count < 0 or self.approved_keyframe_count < 0:
             raise ValueError("Provider execution readiness counts cannot be negative")
-        normalized_blockers = tuple(str(item).strip() for item in self.blockers if str(item).strip())
+        normalized_blockers = tuple(
+            str(item).strip() for item in self.blockers if str(item).strip()
+        )
         object.__setattr__(self, "blockers", normalized_blockers)
         if self.state is ProviderExecutionReadinessState.READY and normalized_blockers:
             raise ValueError("Ready provider execution cannot contain blockers")
