@@ -555,6 +555,144 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         except ProviderPolicySelectionError as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def provider_execution_readiness_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+    ) -> ProviderExecutionReadiness:
+        """Preflight the selected provider against current governed production authority."""
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        try:
+            provider_profile = self.provider_policy_selections.selected_profile(
+                task.task_id,
+                normalized,
+            )
+            package_status = self.package_compilation.status(task, profile=normalized)
+            package_fingerprint = package_status.package_fingerprint or "unavailable"
+            shot_id = task.shot_id or task.task_id
+            blockers: list[str] = []
+            provider_plan_id: str | None = None
+            provider_plan_fingerprint: str | None = None
+
+            if not package_status.executable or package_status.path is None:
+                blockers.append(
+                    package_status.message or "Compile the current Production Package first."
+                )
+                readiness = ProviderExecutionReadiness(
+                    task_id=task.task_id,
+                    shot_id=shot_id,
+                    execution_profile=normalized,
+                    provider_profile_id=provider_profile.profile_id,
+                    provider_profile_fingerprint=provider_profile.fingerprint,
+                    execution_adapter_id=provider_profile.execution_adapter_id,
+                    package_fingerprint=package_fingerprint,
+                    timed_span_state=TimedSpanAcceptanceState.PACKAGE_REQUIRED.value,
+                    span_count=0,
+                    requirement_count=0,
+                    approved_keyframe_count=0,
+                    state=ProviderExecutionReadinessState.BLOCKED,
+                    blockers=tuple(blockers),
+                )
+                return self.provider_production_adoptions.save_readiness(readiness)
+
+            timed_status = self.timed_span_acceptance_status_for_profile(
+                task.task_id,
+                profile=normalized,
+            )
+            if not timed_status.applicable:
+                blockers.append(
+                    "Selected provider orchestration currently requires a governed multi-span Shot."
+                )
+            if timed_status.pending_keyframe_requirement_ids:
+                blockers.append(
+                    f"{len(timed_status.pending_keyframe_requirement_ids)} governed "
+                    "Introduction Keyframe approval(s) remain."
+                )
+
+            state = ProviderExecutionReadinessState.BLOCKED
+            if timed_status.accepted:
+                state = ProviderExecutionReadinessState.ACCEPTED
+            elif timed_status.assembly_present:
+                state = ProviderExecutionReadinessState.QC_REQUIRED
+            elif not blockers:
+                compiled = self.package_compilation.compile_current(
+                    task,
+                    profile=normalized,
+                )
+                package_fingerprint = compiled.package_fingerprint
+                if provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
+                    comfyui_output_directory = self.comfyui_output_directory
+                    if comfyui_output_directory is None:
+                        blockers.append(
+                            "Configure the ComfyUI output folder before H3 provider preflight."
+                        )
+                    else:
+                        comfyui_input_directory = (
+                            comfyui_output_directory.parent / "input"
+                        ).resolve(strict=False)
+                        if not comfyui_input_directory.is_dir():
+                            blockers.append(
+                                "MiniMax H3 requires the ComfyUI input folder beside the "
+                                f"configured output folder: {comfyui_input_directory}"
+                            )
+                        else:
+                            preflight = MiniMaxH3AutomatedExecutionService(
+                                self.project_directory,
+                                endpoint=self.endpoint,
+                                comfyui_input_directory=comfyui_input_directory,
+                                comfyui_output_directory=comfyui_output_directory,
+                                task_repository=self.tasks,
+                                package_compiler=self.package_compilation,
+                                policy_profile=provider_profile,
+                                execution_profile=normalized,
+                            ).preflight(task.task_id)
+                            provider_plan_id = preflight.plan_id
+                            provider_plan_fingerprint = preflight.plan_fingerprint
+                elif provider_profile.profile_id == LTX25_CANDIDATE_C_POLICY_PROFILE_ID:
+                    payload = self.package_compilation.compile_span_provider_conditioning(
+                        compiled
+                    )
+                    provider_plan_id = str(payload.get("plan_id") or "").strip() or None
+                    provider_plan_fingerprint = (
+                        str(payload.get("fingerprint") or "").strip() or None
+                    )
+                else:
+                    blockers.append(
+                        "Selected provider profile has no governed production preflight adapter: "
+                        f"{provider_profile.profile_id}"
+                    )
+
+                if not blockers:
+                    state = ProviderExecutionReadinessState.READY
+
+            readiness = ProviderExecutionReadiness(
+                task_id=task.task_id,
+                shot_id=shot_id,
+                execution_profile=normalized,
+                provider_profile_id=provider_profile.profile_id,
+                provider_profile_fingerprint=provider_profile.fingerprint,
+                execution_adapter_id=provider_profile.execution_adapter_id,
+                package_fingerprint=package_fingerprint,
+                timed_span_state=timed_status.state.value,
+                span_count=timed_status.span_count,
+                requirement_count=timed_status.requirement_count,
+                approved_keyframe_count=timed_status.approved_keyframe_count,
+                state=state,
+                blockers=tuple(blockers),
+                provider_plan_id=provider_plan_id,
+                provider_plan_fingerprint=provider_plan_fingerprint,
+            )
+            return self.provider_production_adoptions.save_readiness(readiness)
+        except (
+            LocalProductionPackageCompilationError,
+            MiniMaxH3AutomatedExecutionError,
+            ProviderPolicySelectionError,
+            ProviderProductionAdoptionError,
+        ) as exc:
+            raise ProductionExecutionError(str(exc)) from exc
+
     def publish_closing_boundary_for_profile(
         self,
         task_id: str,
