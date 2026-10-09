@@ -210,9 +210,7 @@ class ProductionExecutionWorkspace(QWidget):
         self.provider_readiness_state.setWordWrap(True)
         self.validate_provider_readiness_button = QPushButton("Validate Provider Readiness")
         self.validate_provider_readiness_button.setEnabled(False)
-        self.validate_provider_readiness_button.clicked.connect(
-            self._validate_provider_readiness
-        )
+        self.validate_provider_readiness_button.clicked.connect(self._validate_provider_readiness)
         self.run_automated_spans_button = QPushButton("Run Automated Span Orchestration")
         self.run_automated_spans_button.setToolTip(
             "Automatically render each governed span, extract exact boundary frames, synthesize "
@@ -606,9 +604,7 @@ class ProductionExecutionWorkspace(QWidget):
             )
         except Exception as exc:
             self._provider_execution_readiness = None
-            self.provider_readiness_state.setText(
-                f"Provider Readiness: unavailable — {exc}"
-            )
+            self.provider_readiness_state.setText(f"Provider Readiness: unavailable — {exc}")
             self.validate_provider_readiness_button.setEnabled(True)
             self.run_automated_spans_button.setEnabled(False)
             return
@@ -616,10 +612,7 @@ class ProductionExecutionWorkspace(QWidget):
         detail = (
             "; ".join(readiness.blockers)
             if readiness.blockers
-            else (
-                f"{readiness.provider_profile_id} • "
-                f"plan {readiness.provider_plan_id or '-'}"
-            )
+            else (f"{readiness.provider_profile_id} • plan {readiness.provider_plan_id or '-'}")
         )
         self.provider_readiness_state.setText(
             f"Provider Readiness: {readiness.state.value.upper()} — {detail}"
@@ -1468,9 +1461,7 @@ class ProductionExecutionWorkspace(QWidget):
             not busy and self._selected_task_id is not None and self.provider_policy.count() > 0
         )
         self.validate_provider_readiness_button.setEnabled(
-            not busy
-            and self._selected_task_id is not None
-            and self.provider_policy.count() > 0
+            not busy and self._selected_task_id is not None and self.provider_policy.count() > 0
         )
         self.refresh_button.setEnabled(not busy)
         if busy:
