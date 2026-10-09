@@ -98,9 +98,12 @@ class ProviderProductionAdoptionStore:
 
     def save_readiness(self, readiness: ProviderExecutionReadiness) -> ProviderExecutionReadiness:
         root = self._read_root(self.readiness_path, "readiness")
+        raw_records = root.get("records", [])
+        if not isinstance(raw_records, list):
+            raise ProviderProductionAdoptionError("Provider readiness records must be an array")
         records = {
             self._record_key(item): item
-            for item in root.get("records", [])
+            for item in raw_records
             if isinstance(item, dict)
         }
         records[f"{readiness.task_id}|{readiness.execution_profile}"] = readiness.to_dict()
@@ -114,7 +117,10 @@ class ProviderProductionAdoptionStore:
     ) -> ProviderProductionAdoptionRecord | None:
         root = self._read_root(self.adoption_path, "adoption")
         key = f"{task_id.strip()}|{execution_profile.strip().lower()}"
-        for item in reversed(root.get("records", [])):
+        raw_records = root.get("records", [])
+        if not isinstance(raw_records, list):
+            raise ProviderProductionAdoptionError("Provider adoption records must be an array")
+        for item in reversed(raw_records):
             if not isinstance(item, dict) or self._record_key(item) != key:
                 continue
             return self._adoption_from_dict(item)
@@ -184,9 +190,12 @@ class ProviderProductionAdoptionStore:
 
     def _save_adoption(self, record: ProviderProductionAdoptionRecord) -> None:
         root = self._read_root(self.adoption_path, "adoption")
+        raw_records = root.get("records", [])
+        if not isinstance(raw_records, list):
+            raise ProviderProductionAdoptionError("Provider adoption records must be an array")
         records = {
             self._record_key(item): item
-            for item in root.get("records", [])
+            for item in raw_records
             if isinstance(item, dict)
         }
         records[record.key] = record.to_dict()
