@@ -127,6 +127,11 @@ class _PackageCompilation:
             message="",
         )
 
+    def compile_current(self, task: ProductionTask, *, profile: str = "production"):
+        assert task.task_id == "PT-PROVIDER-SELECTION-001"
+        assert profile == "production"
+        return SimpleNamespace(package_fingerprint="package-fingerprint")
+
     def require_current(self, task: ProductionTask, *, profile: str = "production"):
         assert task.task_id == "PT-PROVIDER-SELECTION-001"
         assert profile == "production"
@@ -141,6 +146,13 @@ class _H3Execution:
         assert kwargs["policy_profile"].profile_id == MINIMAX_H3_POLICY_PROFILE_ID
         assert Path(kwargs["comfyui_input_directory"]).name == "input"
         assert Path(kwargs["comfyui_output_directory"]).name == "output"
+
+    def preflight(self, task_id: str):
+        assert task_id == "PT-PROVIDER-SELECTION-001"
+        return SimpleNamespace(
+            plan_id="H3SPANPLAN-PROVIDER-SELECTION",
+            plan_fingerprint="a" * 64,
+        )
 
     def execute(self, task_id: str):
         self.calls.append((task_id, "execute"))
