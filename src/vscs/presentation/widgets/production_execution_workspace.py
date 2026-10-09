@@ -42,6 +42,7 @@ from vscs.application.production_execution import (
     ProductionExecutionUiService,
     ProductionPackageStatus,
     ProductionTelemetrySnapshot,
+    ProviderExecutionReadiness,
     ProviderPolicyProfile,
     ShotBoundaryAuthorityStatus,
     TimedSpanAcceptanceState,
@@ -147,6 +148,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._identity_candidate: IntroductionIdentityCandidateStatus | None = None
         self._injection_candidate: IntroductionInjectionCandidateStatus | None = None
         self._provider_policy_profile: ProviderPolicyProfile | None = None
+        self._provider_execution_readiness: ProviderExecutionReadiness | None = None
         self._automated_span_thread: QThread | None = None
         self._automated_span_worker: _AutomatedSpanWorker | None = None
         self._poll_timer = QTimer(self)
@@ -204,6 +206,13 @@ class ProductionExecutionWorkspace(QWidget):
             "Select the governed provider policy profile used for automated span execution."
         )
         self.provider_policy.currentIndexChanged.connect(self._provider_policy_changed)
+        self.provider_readiness_state = QLabel("Provider Readiness: not validated")
+        self.provider_readiness_state.setWordWrap(True)
+        self.validate_provider_readiness_button = QPushButton("Validate Provider Readiness")
+        self.validate_provider_readiness_button.setEnabled(False)
+        self.validate_provider_readiness_button.clicked.connect(
+            self._validate_provider_readiness
+        )
         self.run_automated_spans_button = QPushButton("Run Automated Span Orchestration")
         self.run_automated_spans_button.setToolTip(
             "Automatically render each governed span, extract exact boundary frames, synthesize "
@@ -259,19 +268,21 @@ class ProductionExecutionWorkspace(QWidget):
         timed_span_layout.addWidget(self.timed_span_detail, 1, 0, 1, 3)
         timed_span_layout.addWidget(QLabel("Span Provider"), 2, 0)
         timed_span_layout.addWidget(self.provider_policy, 2, 1)
-        timed_span_layout.addWidget(self.run_automated_spans_button, 2, 2)
-        timed_span_layout.addWidget(self.injection_candidate_state, 3, 0, 1, 3)
-        timed_span_layout.addWidget(self.view_injection_candidate_button, 4, 0)
-        timed_span_layout.addWidget(self.approve_injection_candidate_button, 4, 1)
-        timed_span_layout.addWidget(self.reject_injection_candidate_button, 4, 2)
-        timed_span_layout.addWidget(self.identity_candidate_state, 5, 0, 1, 3)
-        timed_span_layout.addWidget(self.view_identity_candidate_button, 6, 0)
-        timed_span_layout.addWidget(self.approve_identity_candidate_button, 6, 1)
-        timed_span_layout.addWidget(self.reject_identity_candidate_button, 6, 2)
-        timed_span_layout.addWidget(self.build_span_packages_button, 7, 0)
-        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 7, 1)
-        timed_span_layout.addWidget(self.assemble_span_outputs_button, 8, 0)
-        timed_span_layout.addWidget(self.record_span_qc_button, 8, 1)
+        timed_span_layout.addWidget(self.validate_provider_readiness_button, 2, 2)
+        timed_span_layout.addWidget(self.provider_readiness_state, 3, 0, 1, 2)
+        timed_span_layout.addWidget(self.run_automated_spans_button, 3, 2)
+        timed_span_layout.addWidget(self.injection_candidate_state, 4, 0, 1, 3)
+        timed_span_layout.addWidget(self.view_injection_candidate_button, 5, 0)
+        timed_span_layout.addWidget(self.approve_injection_candidate_button, 5, 1)
+        timed_span_layout.addWidget(self.reject_injection_candidate_button, 5, 2)
+        timed_span_layout.addWidget(self.identity_candidate_state, 6, 0, 1, 3)
+        timed_span_layout.addWidget(self.view_identity_candidate_button, 7, 0)
+        timed_span_layout.addWidget(self.approve_identity_candidate_button, 7, 1)
+        timed_span_layout.addWidget(self.reject_identity_candidate_button, 7, 2)
+        timed_span_layout.addWidget(self.build_span_packages_button, 8, 0)
+        timed_span_layout.addWidget(self.approve_introduction_keyframe_button, 8, 1)
+        timed_span_layout.addWidget(self.assemble_span_outputs_button, 9, 0)
+        timed_span_layout.addWidget(self.record_span_qc_button, 9, 1)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -378,6 +389,9 @@ class ProductionExecutionWorkspace(QWidget):
         self._identity_candidate = None
         self._injection_candidate = None
         self._provider_policy_profile = None
+        self._provider_execution_readiness = None
+        self.provider_readiness_state.setText("Provider Readiness: not validated")
+        self.validate_provider_readiness_button.setEnabled(False)
         self.provider_policy.blockSignals(True)
         self.provider_policy.clear()
         self.provider_policy.blockSignals(False)
@@ -446,6 +460,9 @@ class ProductionExecutionWorkspace(QWidget):
             self._identity_candidate = None
             self._injection_candidate = None
             self._provider_policy_profile = None
+            self._provider_execution_readiness = None
+            self.provider_readiness_state.setText("Provider Readiness: not validated")
+            self.validate_provider_readiness_button.setEnabled(False)
             self.provider_policy.blockSignals(True)
             self.provider_policy.clear()
             self.provider_policy.blockSignals(False)
@@ -498,6 +515,9 @@ class ProductionExecutionWorkspace(QWidget):
 
     def _refresh_provider_policy_selection(self) -> None:
         self._provider_policy_profile = None
+        self._provider_execution_readiness = None
+        self.provider_readiness_state.setText("Provider Readiness: not validated")
+        self.validate_provider_readiness_button.setEnabled(False)
         self.provider_policy.blockSignals(True)
         self.provider_policy.clear()
         self.provider_policy.setEnabled(False)
@@ -528,6 +548,7 @@ class ProductionExecutionWorkspace(QWidget):
             self.provider_policy.setCurrentIndex(selected_index)
             self._provider_policy_profile = selected
             self.provider_policy.setEnabled(True)
+            self.validate_provider_readiness_button.setEnabled(True)
             if selected.execution_adapter_id == "minimax_h3_automated_execution":
                 self.run_automated_spans_button.setToolTip(
                     "MiniMax H3 executes governed isolated spans after every required "
@@ -561,12 +582,51 @@ class ProductionExecutionWorkspace(QWidget):
             self._refresh_provider_policy_selection()
             return
         self._provider_policy_profile = selected
+        self._provider_execution_readiness = None
+        self.provider_readiness_state.setText("Provider Readiness: not validated")
+        self.validate_provider_readiness_button.setEnabled(True)
         self.summary.setText(
             "Span provider selected: "
             f"{selected.model_family} / {selected.provider_id} "
             f"({selected.profile_id})."
         )
         self._refresh_timed_span_status()
+
+    def _validate_provider_readiness(self) -> None:
+        if self._selected_task_id is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        self.validate_provider_readiness_button.setEnabled(False)
+        try:
+            readiness = service.provider_execution_readiness(
+                self._selected_task_id,
+                profile=self.profile.currentText(),
+            )
+        except Exception as exc:
+            self._provider_execution_readiness = None
+            self.provider_readiness_state.setText(
+                f"Provider Readiness: unavailable — {exc}"
+            )
+            self.validate_provider_readiness_button.setEnabled(True)
+            self.run_automated_spans_button.setEnabled(False)
+            return
+        self._provider_execution_readiness = readiness
+        detail = (
+            "; ".join(readiness.blockers)
+            if readiness.blockers
+            else (
+                f"{readiness.provider_profile_id} • "
+                f"plan {readiness.provider_plan_id or '-'}"
+            )
+        )
+        self.provider_readiness_state.setText(
+            f"Provider Readiness: {readiness.state.value.upper()} — {detail}"
+        )
+        self.validate_provider_readiness_button.setEnabled(True)
+        if self._timed_span_status is not None:
+            self._render_timed_span_status(self._timed_span_status)
 
     def _refresh_execution_availability(self) -> None:
         if self._selected_task_id is None:
@@ -842,7 +902,11 @@ class ProductionExecutionWorkspace(QWidget):
             and not h3_waiting_for_visual_qc
             and self._automated_span_thread is None
         )
-        self.run_automated_spans_button.setEnabled(automation_ready)
+        readiness_ready = (
+            self._provider_execution_readiness is not None
+            and self._provider_execution_readiness.ready_to_execute
+        )
+        self.run_automated_spans_button.setEnabled(automation_ready and readiness_ready)
         self.build_span_packages_button.setEnabled(
             status.applicable
             and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED
@@ -1398,6 +1462,11 @@ class ProductionExecutionWorkspace(QWidget):
         self.profile.setEnabled(not busy)
         self.provider_policy.setEnabled(
             not busy and self._selected_task_id is not None and self.provider_policy.count() > 0
+        )
+        self.validate_provider_readiness_button.setEnabled(
+            not busy
+            and self._selected_task_id is not None
+            and self.provider_policy.count() > 0
         )
         self.refresh_button.setEnabled(not busy)
         if busy:
