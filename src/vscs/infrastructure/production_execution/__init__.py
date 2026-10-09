@@ -99,6 +99,11 @@ from .provider_policy_selection_store import (
     ProviderPolicySelectionError,
     ProviderPolicySelectionStore,
 )
+from .provider_production_adoption_store import (
+    ProviderProductionAdoptionError,
+    ProviderProductionAdoptionRecord,
+    ProviderProductionAdoptionStore,
+)
 from .shot_boundary_runtime import (
     GovernedShotBoundaryRuntime,
     GovernedShotBoundaryRuntimeError,
@@ -191,6 +196,9 @@ __all__ = [
     "ProviderPolicySelection",
     "ProviderPolicySelectionError",
     "ProviderPolicySelectionStore",
+    "ProviderProductionAdoptionError",
+    "ProviderProductionAdoptionRecord",
+    "ProviderProductionAdoptionStore",
     "ResolvedGovernedShotBoundary",
     "SpanMediaObservation",
     "SpanVideoProvider",
