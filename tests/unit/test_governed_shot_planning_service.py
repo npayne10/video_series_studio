@@ -355,6 +355,8 @@ def test_semantic_decomposition_preserves_each_source_beat_without_dialogue_dupl
     assert [shot.dialogue_requirement for shot in proposal.proposed_shots].count(
         source.dialogue_requirement
     ) == 1
+    assert "reports" not in first.required_action.casefold()
+    assert "reports" in second.required_action.casefold()
     context.shutdown()
 
 
@@ -396,6 +398,8 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
     assert len({shot.required_action for shot in children}) == 4
     assert "Do not invent additional spoken content" in children[1].required_action
     assert "information-bearing visual detail" in children[2].required_action
+    assert "Do not depict or imply spoken dialogue" in children[2].required_action
+    assert source.required_action not in children[2].required_action
     assert [shot.dialogue_requirement for shot in children].count(source.dialogue_requirement) == 1
     assert all(
         f"Cinematic coverage role: {shot.coverage_role.value}." in shot.shot_constraints
