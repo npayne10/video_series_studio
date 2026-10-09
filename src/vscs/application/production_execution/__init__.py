@@ -75,6 +75,10 @@ from .package_compilation import (
     ProductionPackageStatus,
 )
 from .profiles import ProductionExecutionProfile, normalize_execution_profile
+from .provider_execution_readiness import (
+    ProviderExecutionReadiness,
+    ProviderExecutionReadinessState,
+)
 from .provider_audio_policy import (
     ProviderAudioAction,
     ProviderAudioPolicy,
@@ -240,6 +244,8 @@ __all__ = [
     "ProductionPackageStatus",
     "ProductionTelemetrySnapshot",
     "ProductionTelemetryState",
+    "ProviderExecutionReadiness",
+    "ProviderExecutionReadinessState",
     "ProviderAudioAction",
     "ProviderAudioPolicy",
     "ProviderAudioPolicyError",
