@@ -1430,6 +1430,10 @@ class ProductionExecutionWorkspace(QWidget):
             )
             return
         self._timed_span_status = value
+        self._provider_execution_readiness = None
+        self.provider_readiness_state.setText(
+            "Provider Readiness: execution completed — revalidate before any rerun"
+        )
         self._render_timed_span_status(value)
         if value.state is TimedSpanAcceptanceState.QC_REQUIRED:
             self.summary.setText(
