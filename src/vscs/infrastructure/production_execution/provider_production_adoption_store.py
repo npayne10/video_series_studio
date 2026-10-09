@@ -84,12 +84,8 @@ class ProviderProductionAdoptionRecord:
 class ProviderProductionAdoptionStore:
     """Project-local audit for provider readiness and first real-shot adoption."""
 
-    READINESS_PATH = (
-        Path(".vscs") / "production_execution" / "provider_execution_readiness.json"
-    )
-    ADOPTION_PATH = (
-        Path(".vscs") / "production_execution" / "provider_production_adoptions.json"
-    )
+    READINESS_PATH = Path(".vscs") / "production_execution" / "provider_execution_readiness.json"
+    ADOPTION_PATH = Path(".vscs") / "production_execution" / "provider_production_adoptions.json"
 
     def __init__(self, project_directory: Path) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
@@ -101,11 +97,7 @@ class ProviderProductionAdoptionStore:
         raw_records = root.get("records", [])
         if not isinstance(raw_records, list):
             raise ProviderProductionAdoptionError("Provider readiness records must be an array")
-        records = {
-            self._record_key(item): item
-            for item in raw_records
-            if isinstance(item, dict)
-        }
+        records = {self._record_key(item): item for item in raw_records if isinstance(item, dict)}
         records[f"{readiness.task_id}|{readiness.execution_profile}"] = readiness.to_dict()
         self._write_root(self.readiness_path, records)
         return readiness
@@ -193,11 +185,7 @@ class ProviderProductionAdoptionStore:
         raw_records = root.get("records", [])
         if not isinstance(raw_records, list):
             raise ProviderProductionAdoptionError("Provider adoption records must be an array")
-        records = {
-            self._record_key(item): item
-            for item in raw_records
-            if isinstance(item, dict)
-        }
+        records = {self._record_key(item): item for item in raw_records if isinstance(item, dict)}
         records[record.key] = record.to_dict()
         self._write_root(self.adoption_path, records)
 
@@ -222,9 +210,7 @@ class ProviderProductionAdoptionStore:
             readiness_fingerprint=str(item.get("readiness_fingerprint") or ""),
             state=str(item.get("state") or ""),
             final_path=(
-                None
-                if item.get("final_path") is None
-                else str(item.get("final_path") or "")
+                None if item.get("final_path") is None else str(item.get("final_path") or "")
             ),
             final_frame_count=(
                 None
@@ -232,9 +218,7 @@ class ProviderProductionAdoptionStore:
                 else int(str(item["final_frame_count"]))
             ),
             approved_by=(
-                None
-                if item.get("approved_by") is None
-                else str(item.get("approved_by") or "")
+                None if item.get("approved_by") is None else str(item.get("approved_by") or "")
             ),
             schema_version=str(item.get("schema_version") or ""),
         )
@@ -254,9 +238,7 @@ class ProviderProductionAdoptionStore:
             or raw.get("schema_version") != "1.0"
             or not isinstance(raw.get("records", []), list)
         ):
-            raise ProviderProductionAdoptionError(
-                f"Provider {label} evidence store is invalid"
-            )
+            raise ProviderProductionAdoptionError(f"Provider {label} evidence store is invalid")
         return raw
 
     @staticmethod
