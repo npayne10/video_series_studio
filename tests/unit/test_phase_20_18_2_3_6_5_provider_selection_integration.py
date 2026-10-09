@@ -247,7 +247,7 @@ def test_normal_backend_routes_selected_h3_profile_without_acceptance_harness(
     assert status.marker == "h3-normal-flow"
     assert status.direct_approved_keyframes is True
     assert _H3Execution.calls == [(task.task_id, "execute")]
-    assert _Acceptance.calls == [True]
+    assert _Acceptance.calls == [True, True]
 
 
 def test_h3_selected_status_uses_direct_approved_keyframe_authority(
