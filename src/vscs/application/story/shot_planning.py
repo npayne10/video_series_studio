@@ -23,6 +23,14 @@ class GovernedShotPlanningError(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
+class ShotReplanProtection:
+    """One current Shot that cannot be replaced because downstream production exists."""
+
+    shot_id: str
+    reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class HardwareAwareShotReplanProposal:
     """Preview of a hardware-bounded replacement Shot Plan for one Ready Scene."""
 
@@ -35,6 +43,8 @@ class HardwareAwareShotReplanProposal:
     semantic_source: str
     semantic_source_shot_count: int
     proposed_shots: tuple[ShotPlan, ...]
+    protected_shots: tuple[ShotReplanProtection, ...] = ()
+    regenerated_shot_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,8 +168,15 @@ class GovernedShotPlanningService:
     ) -> HardwareAwareShotReplanProposal:
         """Build a replacement plan without mutating current Shot authority."""
         scene = self._require_ready_scene(scene_id)
+        current = self.list_plans(scene_id=scene.scene_id)
         source_kind, semantic_source = self._semantic_source_plans(scene)
-        proposed = self._semantic_hardware_decomposition(scene, semantic_source)
+        regenerated = self._semantic_hardware_decomposition(scene, semantic_source)
+        protections = self._production_replan_protections(current)
+        proposed = self._merge_protected_prefix(
+            current=current,
+            regenerated=regenerated,
+            protections=protections,
+        )
         capability = self.hardware_capability()
         gpu = str(capability.get("gpu_name") or "Unknown GPU")
         vram = capability.get("vram_class_gb")
@@ -168,12 +185,14 @@ class GovernedShotPlanningService:
             scene_id=scene.scene_id,
             hardware_label=hardware_label,
             maximum_shot_runtime_seconds=self.hardware_shot_limit_seconds(),
-            current_shot_count=len(self.list_plans(scene_id=scene.scene_id)),
+            current_shot_count=len(current),
             proposed_shot_count=len(proposed),
             scene_runtime_seconds=scene.target_runtime_seconds,
             semantic_source=source_kind,
             semantic_source_shot_count=len(semantic_source),
             proposed_shots=proposed,
+            protected_shots=protections,
+            regenerated_shot_count=len(proposed) - len(protections),
         )
 
     def apply_hardware_aware_replan(
@@ -193,6 +212,14 @@ class GovernedShotPlanningService:
                 "semantic_source": proposal.semantic_source,
                 "semantic_source_shot_count": proposal.semantic_source_shot_count,
                 "decomposition_strategy": "semantic-cinematic-coverage-v1",
+                "protected_shot_ids": [
+                    item.shot_id for item in proposal.protected_shots
+                ],
+                "protected_shot_reasons": {
+                    item.shot_id: list(item.reasons)
+                    for item in proposal.protected_shots
+                },
+                "regenerated_shot_count": proposal.regenerated_shot_count,
             },
         )
         remaining = tuple(plan for plan in self.list_plans() if plan.scene_id != proposal.scene_id)
