@@ -24,7 +24,35 @@ from vscs.infrastructure.production_execution import (
     MiniMaxH3SpanAdapterCompiler,
     MiniMaxH3SpanAdapterError,
 )
+from vscs.infrastructure.production_execution.minimax_h3_span_adapter import (
+    MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS,
+    MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS,
+    _h3_provider_frame_count,
+    _require_h3_direct_duration,
+)
 
+
+
+def test_h3_direct_duration_policy_targets_rtx5060ti_revalidation_envelope() -> None:
+    assert MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS == 15
+    assert MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS == (8, 10, 12, 15)
+
+    expected_provider_frames = {
+        8: 192,
+        10: 243,
+        12: 294,
+        15: 362,
+    }
+    for seconds, provider_frames in expected_provider_frames.items():
+        governed_frames = seconds * 24
+        _require_h3_direct_duration(governed_frames, frames_per_second=24)
+        assert _h3_provider_frame_count(governed_frames) == provider_frames
+
+    with pytest.raises(
+        MiniMaxH3SpanAdapterError,
+        match="provider-capacity subdivision is required",
+    ):
+        _require_h3_direct_duration(361, frames_per_second=24)
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
