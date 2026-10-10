@@ -673,6 +673,57 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
     context.shutdown()
 
 
+
+def test_replan_recovers_scene_fallback_lineage_when_no_archive_exists(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=30,
+    )
+
+    first = shots.apply_hardware_aware_replan(scene.scene_id)
+    assert len(first.shots) == 2
+    assert first.archive_path is None
+
+    second = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert second.semantic_source == "scene-authority-fallback-lineage"
+    assert second.proposed_shot_count == 2
+    assert sum(shot.target_runtime_seconds for shot in second.proposed_shots) == 30
+    context.shutdown()
+
+
+def test_replan_fails_closed_when_hardware_lineage_authority_cannot_be_recovered(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=60,
+    )
+    plan = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Unrecoverable Beat — Progression",
+        narrative_purpose="Represent a deliberately invalid lineage case.",
+        production_objective="Prove fail-closed lineage recovery.",
+        target_runtime_seconds=60,
+        required_action="Hold the invalid test beat.",
+        shot_constraints=(
+            "Cinematic coverage role: progression.",
+            "Preserve semantic source Shot EP-001-SCN-001-SHT-999: Missing Authority.",
+        ),
+    )
+    shots._write((replace(plan, coverage_role=CinematicCoverageRole.PROGRESSION),))
+
+    with pytest.raises(
+        GovernedShotPlanningError,
+        match="semantic source authority cannot be recovered",
+    ):
+        shots.propose_hardware_aware_replan(scene.scene_id)
+    context.shutdown()
+
+
 def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
     tmp_path: Path,
 ) -> None:
