@@ -231,6 +231,10 @@ class GovernedShotPlanningService:
             previous,
             metadata={
                 "hardware_capability": self.hardware_capability(),
+                "duration_policy": "provider-neutral-cinematic-v1",
+                "governed_cinematic_maximum_shot_seconds": (
+                    proposal.maximum_shot_runtime_seconds
+                ),
                 "maximum_shot_runtime_seconds": proposal.maximum_shot_runtime_seconds,
                 "replacement_shot_count": proposal.proposed_shot_count,
                 "semantic_source": proposal.semantic_source,
