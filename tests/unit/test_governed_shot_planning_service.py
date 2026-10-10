@@ -555,6 +555,96 @@ def test_production_aware_replan_preserves_produced_prefix_and_regenerates_futur
     context.shutdown()
 
 
+def test_production_aware_replan_recovers_lineage_across_accepted_produced_override(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=28,
+    )
+    semantic = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Signal Discovery",
+        narrative_purpose="Reveal Sandra's discovery and James's response.",
+        production_objective="Advance the anomaly investigation.",
+        target_runtime_seconds=28,
+        required_action=(
+            "Sandra studies the signal, reports something unusual to James, "
+            "and James turns toward her station."
+        ),
+        dialogue_requirement="Commander, I have something unusual.",
+    )
+    first_replan = shots.apply_hardware_aware_replan(scene.scene_id)
+    assert len(first_replan.shots) == 4
+
+    current = list(shots.list_plans(scene_id=scene.scene_id))
+    accepted_second = replace(
+        current[1],
+        title="Signal Discovery — Accepted Production Override",
+        shot_constraints=tuple(
+            constraint
+            for constraint in current[1].shot_constraints
+            if not constraint.startswith("Preserve semantic source Shot ")
+        ),
+    )
+    stale_detail = replace(
+        current[2],
+        required_action=(
+            "Show a specific information-bearing visual detail that advances: "
+            f"{semantic.required_action} Do not repeat the master view."
+        ),
+    )
+    current[1] = accepted_second
+    current[2] = stale_detail
+    shots._write(tuple(current))
+
+    project = tmp_path / "Demo"
+    boundary_path = project / ".vscs" / "governed_shot_boundaries.json"
+    boundary_path.parent.mkdir(parents=True, exist_ok=True)
+    boundary_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "boundaries": [
+                    {
+                        "shot_id": current[0].shot_id,
+                        "status": "published",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    acceptance_path = project / ".vscs" / "timed_span_acceptance.json"
+    acceptance_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "assemblies": [{"shot_id": accepted_second.shot_id}],
+                "qc_records": [],
+                "qc_invalidations": [],
+                "assembly_invalidations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert proposal.semantic_source.startswith("archived:")
+    assert [item.shot_id for item in proposal.protected_shots] == [
+        current[0].shot_id,
+        accepted_second.shot_id,
+    ]
+    assert proposal.proposed_shots[0] == current[0]
+    assert proposal.proposed_shots[1] == accepted_second
+    assert proposal.proposed_shots[2].shot_id == stale_detail.shot_id
+    assert proposal.proposed_shots[2].required_action != stale_detail.required_action
+    assert "Do not depict or imply spoken dialogue" in proposal.proposed_shots[2].required_action
+    context.shutdown()
+
+
 def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
     tmp_path: Path,
 ) -> None:
