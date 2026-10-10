@@ -645,7 +645,13 @@ class GovernedShotPlanningService:
         current = self.list_plans(scene_id=scene.scene_id)
         if self._is_complete_semantic_source(scene, current):
             lineage_markers = self._hardware_lineage_markers(current)
-            if lineage_markers:
+            hardware_derived = self._has_hardware_decomposition_evidence(current)
+            if hardware_derived:
+                if not lineage_markers:
+                    raise GovernedShotPlanningError(
+                        "Hardware-derived Shot authority has no recoverable semantic lineage; "
+                        "automatic replanning is blocked."
+                    )
                 lineage = self._matching_hardware_lineage_archive(scene, current)
                 if lineage is not None:
                     return lineage
@@ -653,7 +659,7 @@ class GovernedShotPlanningService:
                 expected_fallback = frozenset(
                     self._semantic_source_marker(plan) for plan in fallback
                 )
-                if expected_fallback == lineage_markers:
+                if lineage_markers.issubset(expected_fallback):
                     return ("scene-authority-fallback-lineage", fallback)
                 raise GovernedShotPlanningError(
                     "Hardware-derived Shot lineage is present but its semantic source authority "
@@ -672,17 +678,32 @@ class GovernedShotPlanningService:
         scene: ScenePlan,
         current: tuple[ShotPlan, ...],
     ) -> tuple[str, tuple[ShotPlan, ...]] | None:
-        """Recover only an archive explicitly named by current hardware-derived Shots."""
+        """Recover an unambiguous semantic archive from surviving lineage evidence."""
         lineage = self._hardware_lineage_markers(current)
         if not lineage:
             return None
 
+        compatible: list[
+            tuple[frozenset[str], str, tuple[ShotPlan, ...]]
+        ] = []
         for source, plans in self._archived_scene_plan_candidates(scene.scene_id):
             if not self._is_complete_semantic_source(scene, plans):
                 continue
             expected = frozenset(self._semantic_source_marker(plan) for plan in plans)
             if expected == lineage:
                 return (source, plans)
+            if lineage.issubset(expected):
+                compatible.append((expected, source, plans))
+
+        expected_sets = {item[0] for item in compatible}
+        if len(expected_sets) == 1 and compatible:
+            _expected, source, plans = compatible[0]
+            return (source, plans)
+        if len(expected_sets) > 1:
+            raise GovernedShotPlanningError(
+                "Surviving hardware-derived Shot lineage matches multiple semantic archives; "
+                "automatic replanning is blocked."
+            )
         return None
 
     def _is_complete_semantic_source(
@@ -712,6 +733,19 @@ class GovernedShotPlanningService:
             ):
                 return False
         return self._semantic_density(plans) > 0.0
+
+    @staticmethod
+    def _has_hardware_decomposition_evidence(
+        plans: tuple[ShotPlan, ...],
+    ) -> bool:
+        """Return whether current authority still proves hardware/cinematic decomposition."""
+        for plan in plans:
+            if plan.coverage_role is CinematicCoverageRole.UNSPECIFIED:
+                continue
+            role_constraint = f"Cinematic coverage role: {plan.coverage_role.value}."
+            if role_constraint in plan.shot_constraints:
+                return True
+        return False
 
     def _hardware_lineage_markers(
         self,
