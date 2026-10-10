@@ -108,6 +108,7 @@ class GovernedShotPlanningService:
     SCHEMA_VERSION = "1.1"
     HISTORY_DIRECTORY = "shot_plan_history"
     DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS = 7
+    DEFAULT_GOVERNED_SHOT_LIMIT_SECONDS = 15
     HARDWARE_CAPABILITY_FILE = Path(".vscs") / "provider_executions" / "hardware_capability.json"
 
     def __init__(
@@ -151,32 +152,55 @@ class GovernedShotPlanningService:
             "source": "phase-20.18.2-safe-default",
         }
 
+    def governed_shot_limit_seconds(self) -> int:
+        """Return the provider-neutral cinematic Shot ceiling used by planning."""
+        return max(1, self.DEFAULT_GOVERNED_SHOT_LIMIT_SECONDS)
+
     def hardware_shot_limit_seconds(self) -> int:
-        """Return the integer governed Shot ceiling used by the current planner."""
-        raw = self.hardware_capability().get("validated_maximum_shot_seconds")
-        if raw is None:
-            return max(1, self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS)
-        try:
-            value = int(float(raw))
-        except (TypeError, ValueError):
-            value = self.DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS
-        return max(1, value)
+        """Backward-compatible alias for the governed cinematic Shot ceiling."""
+        return self.governed_shot_limit_seconds()
 
     def propose_hardware_aware_replan(
         self,
         scene_id: str,
     ) -> HardwareAwareShotReplanProposal:
-        """Build a replacement plan without mutating current Shot authority."""
+        """Build a cinematic replacement plan without mutating current Shot authority."""
         scene = self._require_ready_scene(scene_id)
         current = self.list_plans(scene_id=scene.scene_id)
-        source_kind, semantic_source = self._semantic_source_plans(scene)
-        regenerated = self._semantic_hardware_decomposition(scene, semantic_source)
         protections = self._production_replan_protections(current)
-        proposed = self._merge_protected_prefix(
+        protected = self._protected_produced_prefix(
             current=current,
-            regenerated=regenerated,
             protections=protections,
         )
+        source_kind, semantic_source = self._semantic_source_plans(scene)
+
+        protected_runtime = sum(plan.target_runtime_seconds for plan in protected)
+        if protected_runtime > scene.target_runtime_seconds:
+            raise GovernedShotPlanningError(
+                "Produced Shot prefix exceeds the authoritative Scene runtime; "
+                "automatic replanning is blocked."
+            )
+
+        semantic_suffix = self._semantic_suffix_after_protected_prefix(
+            semantic_source=semantic_source,
+            protected=protected,
+            protected_runtime_seconds=protected_runtime,
+        )
+        regenerated = self._semantic_hardware_decomposition(
+            scene,
+            semantic_suffix,
+            sequence_start=len(protected) + 1,
+            expected_runtime_seconds=scene.target_runtime_seconds - protected_runtime,
+        )
+        proposed = (*protected, *regenerated)
+
+        total = sum(plan.target_runtime_seconds for plan in proposed)
+        if total != scene.target_runtime_seconds:
+            raise GovernedShotPlanningError(
+                f"Production-aware Scene replan produced {total}s but Scene authority "
+                f"requires {scene.target_runtime_seconds}s"
+            )
+
         capability = self.hardware_capability()
         gpu = str(capability.get("gpu_name") or "Unknown GPU")
         vram = capability.get("vram_class_gb")
@@ -184,7 +208,7 @@ class GovernedShotPlanningService:
         return HardwareAwareShotReplanProposal(
             scene_id=scene.scene_id,
             hardware_label=hardware_label,
-            maximum_shot_runtime_seconds=self.hardware_shot_limit_seconds(),
+            maximum_shot_runtime_seconds=self.governed_shot_limit_seconds(),
             current_shot_count=len(current),
             proposed_shot_count=len(proposed),
             scene_runtime_seconds=scene.target_runtime_seconds,
@@ -192,7 +216,7 @@ class GovernedShotPlanningService:
             semantic_source_shot_count=len(semantic_source),
             proposed_shots=proposed,
             protected_shots=protections,
-            regenerated_shot_count=len(proposed) - len(protections),
+            regenerated_shot_count=len(regenerated),
         )
 
     def apply_hardware_aware_replan(
@@ -499,15 +523,14 @@ class GovernedShotPlanningService:
         return root
 
     @staticmethod
-    def _merge_protected_prefix(
+    def _protected_produced_prefix(
         *,
         current: tuple[ShotPlan, ...],
-        regenerated: tuple[ShotPlan, ...],
         protections: tuple[ShotReplanProtection, ...],
     ) -> tuple[ShotPlan, ...]:
-        """Preserve a contiguous produced prefix and replace only future unproduced Shots."""
+        """Return only a contiguous produced prefix; never regenerate it for comparison."""
         if not protections:
-            return regenerated
+            return ()
         protected_ids = tuple(item.shot_id for item in protections)
         expected_prefix = tuple(plan.shot_id for plan in current[: len(protected_ids)])
         if protected_ids != expected_prefix:
@@ -515,26 +538,100 @@ class GovernedShotPlanningService:
                 "Automatic Scene replanning is blocked because produced Shots do not form "
                 "a contiguous prefix. Use an explicit supersession workflow instead."
             )
-        if len(regenerated) < len(protections):
+        return current[: len(protections)]
+
+    def _semantic_suffix_after_protected_prefix(
+        self,
+        *,
+        semantic_source: tuple[ShotPlan, ...],
+        protected: tuple[ShotPlan, ...],
+        protected_runtime_seconds: int,
+    ) -> tuple[ShotPlan, ...]:
+        """Trim semantic authority at the produced temporal boundary and return future authority."""
+        if protected_runtime_seconds <= 0:
+            return semantic_source
+
+        semantic_total = sum(plan.target_runtime_seconds for plan in semantic_source)
+        if protected_runtime_seconds >= semantic_total:
+            if protected_runtime_seconds == semantic_total:
+                return ()
             raise GovernedShotPlanningError(
-                "Automatic Scene replanning would remove produced Shots; explicit supersession "
-                "is required."
+                "Produced Shot prefix extends beyond recovered semantic authority; "
+                "automatic replanning is blocked."
             )
-        for existing, candidate in zip(
-            current[: len(protections)],
-            regenerated[: len(protections)],
-            strict=True,
-        ):
-            if (
-                existing.shot_id != candidate.shot_id
-                or existing.target_runtime_seconds != candidate.target_runtime_seconds
-                or existing.coverage_role is not candidate.coverage_role
-            ):
-                raise GovernedShotPlanningError(
-                    f"Automatic Scene replanning would structurally change produced Shot "
-                    f"{existing.shot_id}; explicit supersession is required."
+
+        remaining_to_consume = protected_runtime_seconds
+        semantic_cursor = 0
+        suffix: list[ShotPlan] = []
+        last_protected_id = protected[-1].shot_id if protected else ""
+
+        for source in semantic_source:
+            source_start = semantic_cursor
+            source_end = source_start + source.target_runtime_seconds
+            semantic_cursor = source_end
+
+            if remaining_to_consume >= source.target_runtime_seconds:
+                remaining_to_consume -= source.target_runtime_seconds
+                continue
+
+            if remaining_to_consume > 0:
+                consumed_into_source = remaining_to_consume
+                residual_runtime = source.target_runtime_seconds - consumed_into_source
+                consumed_dialogue = self._protected_dialogue_overlaps(
+                    protected,
+                    source_start=source_start,
+                    consumed_through=source_start + consumed_into_source,
                 )
-        return (*current[: len(protections)], *regenerated[len(protections) :])
+                dialogue_requirement = source.dialogue_requirement
+                required_action = source.required_action
+                if consumed_dialogue and dialogue_requirement.strip():
+                    dialogue_requirement = ""
+                    required_action = (
+                        "Continue the observable non-dialogue physical state of the semantic beat: "
+                        f"{source.narrative_purpose}"
+                    )
+                suffix.append(
+                    replace(
+                        source,
+                        target_runtime_seconds=residual_runtime,
+                        required_action=required_action,
+                        dialogue_requirement=dialogue_requirement,
+                        continuity_in=(
+                            f"Continue directly from {last_protected_id}."
+                            if last_protected_id
+                            else source.continuity_in
+                        ),
+                    )
+                )
+                remaining_to_consume = 0
+                continue
+
+            suffix.append(source)
+
+        if remaining_to_consume != 0:
+            raise GovernedShotPlanningError(
+                "Produced Shot prefix cannot be aligned to recovered semantic authority; "
+                "automatic replanning is blocked."
+            )
+        return tuple(suffix)
+
+    @staticmethod
+    def _protected_dialogue_overlaps(
+        protected: tuple[ShotPlan, ...],
+        *,
+        source_start: int,
+        consumed_through: int,
+    ) -> bool:
+        cursor = 0
+        for shot in protected:
+            shot_start = cursor
+            shot_end = shot_start + shot.target_runtime_seconds
+            cursor = shot_end
+            if shot_end <= source_start or shot_start >= consumed_through:
+                continue
+            if shot.dialogue_requirement.strip():
+                return True
+        return False
 
     def _semantic_source_plans(
         self,
@@ -543,9 +640,15 @@ class GovernedShotPlanningService:
         """Select current semantic authority before considering historical recovery data."""
         current = self.list_plans(scene_id=scene.scene_id)
         if self._is_complete_semantic_source(scene, current):
-            lineage = self._matching_hardware_lineage_archive(scene, current)
-            if lineage is not None:
-                return lineage
+            lineage_markers = self._hardware_lineage_markers(current)
+            if lineage_markers:
+                lineage = self._matching_hardware_lineage_archive(scene, current)
+                if lineage is not None:
+                    return lineage
+                raise GovernedShotPlanningError(
+                    "Hardware-derived Shot lineage is present but its semantic source archive "
+                    "cannot be recovered; automatic replanning is blocked."
+                )
             return ("current-governed-plan", current)
 
         for source, plans in self._archived_scene_plan_candidates(scene.scene_id):
@@ -728,12 +831,15 @@ class GovernedShotPlanningService:
         self,
         scene: ScenePlan,
         semantic_source: tuple[ShotPlan, ...],
+        *,
+        sequence_start: int = 1,
+        expected_runtime_seconds: int | None = None,
     ) -> tuple[ShotPlan, ...]:
-        """Split each semantic Shot beat into intentional short editorial Shots."""
-        limit = self.hardware_shot_limit_seconds()
+        """Split semantic authority into provider-neutral cinematic Shots."""
+        limit = self.governed_shot_limit_seconds()
         scene_hash = self._scene_contract_hash(scene)
         output: list[ShotPlan] = []
-        sequence = 1
+        sequence = sequence_start
         for source in semantic_source:
             piece_count = max(1, ceil(source.target_runtime_seconds / limit))
             base, remainder = divmod(source.target_runtime_seconds, piece_count)
@@ -741,7 +847,7 @@ class GovernedShotPlanningService:
             if any(runtime <= 0 or runtime > limit for runtime in runtimes):
                 raise GovernedShotPlanningError(
                     f"Unable to decompose semantic Shot {source.shot_id} within "
-                    f"the active {limit}s hardware limit"
+                    f"the active {limit}s governed cinematic limit"
                 )
 
             for piece_index, runtime in enumerate(runtimes, start=1):
@@ -796,7 +902,10 @@ class GovernedShotPlanningService:
                         shot_constraints=self._values(
                             (
                                 *source.shot_constraints,
-                                (f"Hardware-aware Shot runtime must not exceed {limit} seconds."),
+                                (
+                                    f"Governed cinematic Shot runtime must not exceed "
+                                    f"{limit} seconds."
+                                ),
                                 (
                                     f"Preserve semantic source Shot {source.shot_id}: "
                                     f"{source.title}."
@@ -811,10 +920,15 @@ class GovernedShotPlanningService:
                 sequence += 1
 
         total = sum(plan.target_runtime_seconds for plan in output)
-        if total != scene.target_runtime_seconds:
+        expected = (
+            sum(plan.target_runtime_seconds for plan in semantic_source)
+            if expected_runtime_seconds is None
+            else expected_runtime_seconds
+        )
+        if total != expected:
             raise GovernedShotPlanningError(
-                f"Semantic hardware decomposition produced {total}s but Scene authority "
-                f"requires {scene.target_runtime_seconds}s"
+                f"Semantic cinematic decomposition produced {total}s but authority "
+                f"requires {expected}s"
             )
         return tuple(output)
 
