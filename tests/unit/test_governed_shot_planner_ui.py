@@ -141,7 +141,7 @@ def test_governed_shot_planner_shows_budget_governance_and_legacy_rows(
     context.shutdown()
 
 
-def test_governed_shot_planner_exposes_hardware_aware_replanning(
+def test_governed_shot_planner_exposes_provider_neutral_cinematic_replanning(
     qtbot,
     tmp_path: Path,
 ) -> None:
@@ -152,7 +152,9 @@ def test_governed_shot_planner_exposes_hardware_aware_replanning(
 
     assert dialog.replan_button.objectName() == "hardwareAwareSceneReplan"
     assert dialog.replan_button.isEnabled()
-    assert "maximum governed Shot 7s" in dialog.hardware_label.text()
+    assert "maximum governed Shot 15s" in dialog.hardware_label.text()
+    assert "provider-neutral" in dialog.hardware_label.text()
+    assert "Provider direct-generation limits" in dialog.hardware_label.text()
     context.shutdown()
 
 
@@ -206,7 +208,7 @@ def test_replan_button_archives_and_replaces_scene_after_human_confirmation(
     dialog.replan_button.click()
 
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 9
+    assert len(current) == 4
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     assert all(shot.status.value == "draft" for shot in current)
     assert any(
@@ -246,7 +248,7 @@ def test_replan_confirmation_uses_button_value_equality(
     dialog.replan_button.click()
 
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 9
+    assert len(current) == 4
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     context.shutdown()
 
@@ -295,6 +297,7 @@ def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
         target_runtime_seconds=60,
         required_action="Sandra studies the signal while James observes.",
     )
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
     shots.apply_hardware_aware_replan(scene.scene_id)
     current = list(shots.list_plans(scene_id=scene.scene_id))
     current[1] = replace(
@@ -343,6 +346,7 @@ def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
         captured.append(str(args[2]))
         return QMessageBox.StandardButton.No
 
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 15)
     monkeypatch.setattr(QMessageBox, "question", _question)
 
     dialog = GovernedShotPlannerDialog(shots, scene)
@@ -353,7 +357,8 @@ def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
     assert len(captured) == 1
     message = captured[0]
     assert "Protected produced Shots: 2" in message
-    assert "Regenerated future Shots: 7" in message
+    assert "Regenerated future Shots: 4" in message
+    assert "Governed cinematic Shot maximum: 15s" in message
     assert "001 —" in message and "PRESERVED" in message
     assert "002 —" in message and "PRESERVED" in message
     assert "003 —" in message and "REGENERATED" in message
