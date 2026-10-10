@@ -189,11 +189,7 @@ class _Acceptance:
             span_count=2,
             requirement_count=1,
             approved_keyframe_count=1,
-            final_path=(
-                "Media Output/provider-selection-h3.mp4"
-                if generated
-                else None
-            ),
+            final_path=("Media Output/provider-selection-h3.mp4" if generated else None),
             final_frame_count=144 if generated else None,
         )
 
