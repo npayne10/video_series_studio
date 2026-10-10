@@ -32,7 +32,7 @@ class ShotReplanProtection:
 
 @dataclass(frozen=True, slots=True)
 class HardwareAwareShotReplanProposal:
-    """Preview of a hardware-bounded replacement Shot Plan for one Ready Scene."""
+    """Preview of a provider-neutral cinematic replacement Shot Plan for one Ready Scene."""
 
     scene_id: str
     hardware_label: str
@@ -49,7 +49,7 @@ class HardwareAwareShotReplanProposal:
 
 @dataclass(frozen=True, slots=True)
 class HardwareAwareShotReplanResult:
-    """Durable result after a human-approved hardware-aware Scene replan."""
+    """Durable result after a human-approved cinematic Scene replan."""
 
     scene_id: str
     maximum_shot_runtime_seconds: int
@@ -223,7 +223,7 @@ class GovernedShotPlanningService:
         self,
         scene_id: str,
     ) -> HardwareAwareShotReplanResult:
-        """Archive current Shot Plans and replace them with hardware-bounded Draft authority."""
+        """Archive current Shot Plans and replace only unproduced future Draft authority."""
         proposal = self.propose_hardware_aware_replan(scene_id)
         previous = self.list_plans(scene_id=proposal.scene_id)
         archive = self._archive_scene_plans(
