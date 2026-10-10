@@ -153,9 +153,7 @@ class GovernedPlanningReviewService:
         payload["assets"] = [asdict(item) for item in bindings]
 
         camera = self.camera.plan(normalized)
-        camera_ready = (
-            shot_ready and camera is not None and self.camera.is_production_ready(camera)
-        )
+        camera_ready = shot_ready and camera is not None and self.camera.is_production_ready(camera)
         checks.append(
             self._check("Camera", camera_ready, "Ready and current", "Missing, Draft or stale")
         )
