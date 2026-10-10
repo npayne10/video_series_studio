@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtWidgets import QComboBox, QMessageBox, QPlainTextEdit, QScrollArea
@@ -295,6 +296,17 @@ def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
         required_action="Sandra studies the signal while James observes.",
     )
     shots.apply_hardware_aware_replan(scene.scene_id)
+    current = list(shots.list_plans(scene_id=scene.scene_id))
+    current[1] = replace(
+        current[1],
+        title="Signal Discovery — Accepted Production Override",
+        shot_constraints=tuple(
+            constraint
+            for constraint in current[1].shot_constraints
+            if not constraint.startswith("Preserve semantic source Shot ")
+        ),
+    )
+    shots._write(tuple(current))
     current = shots.list_plans(scene_id=scene.scene_id)
 
     project = tmp_path / "Demo"
@@ -343,6 +355,7 @@ def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
     assert "Protected produced Shots: 2" in message
     assert "Regenerated future Shots: 7" in message
     assert "001 —" in message and "PRESERVED" in message
+    assert "002 —" in message and "PRESERVED" in message
     assert "003 —" in message and "REGENERATED" in message
     assert shots.list_plans(scene_id=scene.scene_id) == current
     context.shutdown()
