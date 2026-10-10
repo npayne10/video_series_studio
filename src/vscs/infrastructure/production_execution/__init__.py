@@ -61,6 +61,8 @@ from .minimax_h3_functional_acceptance import (
 from .minimax_h3_prompt_policy import MiniMaxH3PromptPolicyCompiler
 from .minimax_h3_prompt_validation import MiniMaxH3PromptMetadataValidator
 from .minimax_h3_span_adapter import (
+    MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS,
+    MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS,
     MiniMaxH3SpanAdapterCompiler,
     MiniMaxH3SpanAdapterError,
     MiniMaxH3SpanExecution,
@@ -127,7 +129,9 @@ from .timed_span_acceptance_service import (
 __all__ = [
     "LTX25_CANDIDATE_C_POLICY_PROFILE_ID",
     "LTX25_EXECUTION_ADAPTER_ID",
+    "MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS",
     "MINIMAX_H3_EXECUTION_ADAPTER_ID",
+    "MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS",
     "MINIMAX_H3_POLICY_PROFILE_ID",
     "AutomatedSpanOrchestrationError",
     "AutomatedSpanOrchestrationResult",
