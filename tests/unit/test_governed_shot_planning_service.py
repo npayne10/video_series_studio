@@ -187,7 +187,8 @@ def test_legacy_shots_remain_visible_but_outside_governed_storage(tmp_path: Path
     context.shutdown()
 
 
-def test_hardware_aware_replan_covers_full_scene_with_short_governed_shots(
+
+def test_provider_neutral_replan_uses_fifteen_second_cinematic_ceiling(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
@@ -196,17 +197,21 @@ def test_hardware_aware_replan_covers_full_scene_with_short_governed_shots(
     )
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
-    assert proposal.maximum_shot_runtime_seconds == 7
-    assert proposal.proposed_shot_count == 26
+    assert proposal.maximum_shot_runtime_seconds == 15
+    assert proposal.proposed_shot_count == 12
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 180
-    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 15
     assert all(shot.status is ShotPlanStatus.DRAFT for shot in proposal.proposed_shots)
     assert proposal.proposed_shots[0].title.endswith("— Establish")
     assert proposal.proposed_shots[-1].title.endswith("— Resolve")
+    assert all(
+        "Governed cinematic Shot runtime must not exceed 15 seconds." in shot.shot_constraints
+        for shot in proposal.proposed_shots
+    )
     context.shutdown()
 
 
-def test_hardware_aware_replan_archives_previous_governed_authority(
+def test_provider_neutral_replan_archives_previous_governed_authority(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
@@ -219,35 +224,43 @@ def test_hardware_aware_replan_archives_previous_governed_authority(
     result = shots.apply_hardware_aware_replan(scene.scene_id)
 
     assert result.previous_shot_count == 1
-    assert result.new_shot_count == 9
+    assert result.new_shot_count == 4
+    assert result.maximum_shot_runtime_seconds == 15
     assert result.archive_path is not None
     assert result.archive_path.is_file()
     archived = result.archive_path.read_text(encoding="utf-8")
     assert previous.shot_id in archived
     assert "hardware-aware-scene-replan" in archived
+    assert '"duration_policy": "provider-neutral-cinematic-v1"' in archived
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 9
+    assert len(current) == 4
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     assert all(shot.status is ShotPlanStatus.DRAFT for shot in current)
     context.shutdown()
 
 
-def test_existing_or_accepted_long_shot_authority_can_be_replanned_for_hardware(
+def test_cinematic_planning_is_decoupled_from_legacy_provider_hardware_ceiling(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(tmp_path)
 
-    accepted = _create(shots, scene.scene_id, runtime=8)
-    assert accepted.target_runtime_seconds == 8
+    capability = shots.hardware_capability()
+    accepted = _create(shots, scene.scene_id, runtime=12)
+
+    assert capability["validated_maximum_shot_seconds"] == 7
+    assert accepted.target_runtime_seconds == 12
+    assert shots.governed_shot_limit_seconds() == 15
+    assert shots.hardware_shot_limit_seconds() == 15
 
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
-    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
+    assert proposal.maximum_shot_runtime_seconds == 15
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 15
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
     context.shutdown()
 
 
-def test_semantic_hardware_replan_prefers_richer_archived_narrative_authority(
+def test_semantic_replan_prefers_richer_archived_narrative_authority(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
@@ -313,13 +326,13 @@ def test_semantic_hardware_replan_prefers_richer_archived_narrative_authority(
 
     assert proposal.semantic_source.startswith("archived:")
     assert proposal.semantic_source_shot_count == 3
-    assert proposal.proposed_shot_count == 9
+    assert proposal.proposed_shot_count == 6
     assert any(shot.title.startswith("Sandra Finds the Signal") for shot in proposal.proposed_shots)
     assert any(
         shot.dialogue_requirement == "Commander, I have something unusual."
         for shot in proposal.proposed_shots
     )
-    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 7
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 15
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
     context.shutdown()
 
@@ -329,7 +342,7 @@ def test_semantic_decomposition_preserves_each_source_beat_without_dialogue_dupl
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=14,
+        scene_runtime=30,
     )
     source = shots.create(
         scene_id=scene.scene_id,
@@ -337,7 +350,7 @@ def test_semantic_decomposition_preserves_each_source_beat_without_dialogue_dupl
         title="Sandra Reports the Pattern",
         narrative_purpose="Let Sandra explain the repeating signal.",
         production_objective="Move the mystery into active investigation.",
-        target_runtime_seconds=14,
+        target_runtime_seconds=30,
         required_action="Sandra turns from the display and reports the forty-seven second pattern.",
         dialogue_requirement="Commander, I have something unusual.",
         continuity_in="Sandra is already studying the signal.",
@@ -349,6 +362,8 @@ def test_semantic_decomposition_preserves_each_source_beat_without_dialogue_dupl
     assert proposal.semantic_source == "current-governed-plan"
     assert proposal.proposed_shot_count == 2
     first, second = proposal.proposed_shots
+    assert first.target_runtime_seconds == 15
+    assert second.target_runtime_seconds == 15
     assert first.title == f"{source.title} — Establish"
     assert second.title == f"{source.title} — Resolve"
     assert first.continuity_in == source.continuity_in
@@ -366,7 +381,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=28,
+        scene_runtime=60,
     )
     source = shots.create(
         scene_id=scene.scene_id,
@@ -374,7 +389,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
         title="Weak Repeating Signal",
         narrative_purpose="Convey Sandra's analysis of the repeating transmission.",
         production_objective="Establish that the signal comes from the outer moon.",
-        target_runtime_seconds=28,
+        target_runtime_seconds=60,
         required_action=(
             "Sandra studies the repeating signal while James follows her analysis "
             "and the display shows the forty-seven second pattern."
@@ -386,6 +401,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
     children = proposal.proposed_shots
 
     assert len(children) == 4
+    assert [shot.target_runtime_seconds for shot in children] == [15, 15, 15, 15]
     assert [shot.coverage_role for shot in children] == [
         CinematicCoverageRole.ESTABLISHING,
         CinematicCoverageRole.DIALOGUE_DELIVERY,
@@ -407,7 +423,6 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
         for shot in children
     )
     context.shutdown()
-
 
 def test_semantic_cinematic_coverage_persists_role_backward_compatibly(
     tmp_path: Path,
@@ -437,12 +452,13 @@ def test_semantic_cinematic_coverage_persists_role_backward_compatibly(
     context.shutdown()
 
 
+
 def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=14,
+        scene_runtime=30,
     )
     source = shots.create(
         scene_id=scene.scene_id,
@@ -450,7 +466,7 @@ def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
         title="Sandra Reports",
         narrative_purpose="Sandra reports the anomaly.",
         production_objective="Move the investigation forward.",
-        target_runtime_seconds=14,
+        target_runtime_seconds=30,
         required_action="Sandra turns from the display and reports the signal.",
         dialogue_requirement="Commander, I have something unusual.",
     )
@@ -468,12 +484,13 @@ def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
     context.shutdown()
 
 
-def test_production_aware_replan_preserves_produced_prefix_and_regenerates_future_shots(
+def test_production_aware_replan_preserves_produced_prefix_and_regenerates_only_future_time(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=28,
+        scene_runtime=60,
     )
     semantic = shots.create(
         scene_id=scene.scene_id,
@@ -481,25 +498,27 @@ def test_production_aware_replan_preserves_produced_prefix_and_regenerates_futur
         title="Signal Discovery",
         narrative_purpose="Reveal Sandra's discovery and James's response.",
         production_objective="Advance the anomaly investigation.",
-        target_runtime_seconds=28,
+        target_runtime_seconds=60,
         required_action=(
             "Sandra studies the signal, reports something unusual to James, "
             "and James turns toward her station."
         ),
         dialogue_requirement="Commander, I have something unusual.",
     )
+
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
     first_replan = shots.apply_hardware_aware_replan(scene.scene_id)
-    assert len(first_replan.shots) == 4
+    assert len(first_replan.shots) == 9
 
     current = list(shots.list_plans(scene_id=scene.scene_id))
-    stale_detail = replace(
+    stale_future = replace(
         current[2],
         required_action=(
             "Show a specific information-bearing visual detail that advances: "
             f"{semantic.required_action} Do not repeat the master view."
         ),
     )
-    current[2] = stale_detail
+    current[2] = stale_future
     shots._write(tuple(current))
 
     project = tmp_path / "Demo"
@@ -509,12 +528,7 @@ def test_production_aware_replan_preserves_produced_prefix_and_regenerates_futur
         json.dumps(
             {
                 "schema_version": "1.0",
-                "boundaries": [
-                    {
-                        "shot_id": current[0].shot_id,
-                        "status": "published",
-                    }
-                ],
+                "boundaries": [{"shot_id": current[0].shot_id, "status": "published"}],
             }
         ),
         encoding="utf-8",
@@ -533,34 +547,47 @@ def test_production_aware_replan_preserves_produced_prefix_and_regenerates_futur
         encoding="utf-8",
     )
 
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 15)
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
     assert [item.shot_id for item in proposal.protected_shots] == [
         current[0].shot_id,
         current[1].shot_id,
     ]
-    assert proposal.regenerated_shot_count == 2
+    assert proposal.maximum_shot_runtime_seconds == 15
     assert proposal.proposed_shots[0] == current[0]
     assert proposal.proposed_shots[1] == current[1]
-    assert proposal.proposed_shots[2].shot_id == stale_detail.shot_id
-    assert proposal.proposed_shots[2].required_action != stale_detail.required_action
-    assert "Do not depict or imply spoken dialogue" in proposal.proposed_shots[2].required_action
+    assert proposal.proposed_shots[2].shot_id == stale_future.shot_id
+    assert proposal.proposed_shots[2].required_action != stale_future.required_action
+    assert proposal.regenerated_shot_count == len(proposal.proposed_shots) - 2
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
+    assert max(
+        shot.target_runtime_seconds for shot in proposal.proposed_shots[2:]
+    ) <= 15
+    assert all(
+        not shot.dialogue_requirement for shot in proposal.proposed_shots[2:]
+    )
+    assert all(
+        "reports" not in shot.required_action.casefold()
+        for shot in proposal.proposed_shots[2:]
+    )
 
     result = shots.apply_hardware_aware_replan(scene.scene_id)
     persisted = shots.list_plans(scene_id=scene.scene_id)
     assert result.shots == persisted
     assert persisted[0] == current[0]
     assert persisted[1] == current[1]
-    assert persisted[2] == proposal.proposed_shots[2]
+    assert persisted[2:] == proposal.proposed_shots[2:]
     context.shutdown()
 
 
 def test_production_aware_replan_recovers_lineage_across_accepted_produced_override(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=28,
+        scene_runtime=60,
     )
     semantic = shots.create(
         scene_id=scene.scene_id,
@@ -568,15 +595,17 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
         title="Signal Discovery",
         narrative_purpose="Reveal Sandra's discovery and James's response.",
         production_objective="Advance the anomaly investigation.",
-        target_runtime_seconds=28,
+        target_runtime_seconds=60,
         required_action=(
             "Sandra studies the signal, reports something unusual to James, "
             "and James turns toward her station."
         ),
         dialogue_requirement="Commander, I have something unusual.",
     )
+
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
     first_replan = shots.apply_hardware_aware_replan(scene.scene_id)
-    assert len(first_replan.shots) == 4
+    assert len(first_replan.shots) == 9
 
     current = list(shots.list_plans(scene_id=scene.scene_id))
     accepted_second = replace(
@@ -588,7 +617,7 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
             if not constraint.startswith("Preserve semantic source Shot ")
         ),
     )
-    stale_detail = replace(
+    stale_future = replace(
         current[2],
         required_action=(
             "Show a specific information-bearing visual detail that advances: "
@@ -596,7 +625,7 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
         ),
     )
     current[1] = accepted_second
-    current[2] = stale_detail
+    current[2] = stale_future
     shots._write(tuple(current))
 
     project = tmp_path / "Demo"
@@ -606,12 +635,7 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
         json.dumps(
             {
                 "schema_version": "1.0",
-                "boundaries": [
-                    {
-                        "shot_id": current[0].shot_id,
-                        "status": "published",
-                    }
-                ],
+                "boundaries": [{"shot_id": current[0].shot_id, "status": "published"}],
             }
         ),
         encoding="utf-8",
@@ -630,6 +654,7 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
         encoding="utf-8",
     )
 
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 15)
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
     assert proposal.semantic_source.startswith("archived:")
@@ -639,9 +664,12 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
     ]
     assert proposal.proposed_shots[0] == current[0]
     assert proposal.proposed_shots[1] == accepted_second
-    assert proposal.proposed_shots[2].shot_id == stale_detail.shot_id
-    assert proposal.proposed_shots[2].required_action != stale_detail.required_action
-    assert "Do not depict or imply spoken dialogue" in proposal.proposed_shots[2].required_action
+    assert proposal.proposed_shots[2].shot_id == stale_future.shot_id
+    assert proposal.proposed_shots[2].required_action != stale_future.required_action
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
+    assert all(
+        not shot.dialogue_requirement for shot in proposal.proposed_shots[2:]
+    )
     context.shutdown()
 
 
@@ -650,7 +678,7 @@ def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=28,
+        scene_runtime=60,
     )
     shots.create(
         scene_id=scene.scene_id,
@@ -658,11 +686,12 @@ def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
         title="Signal Discovery",
         narrative_purpose="Reveal the signal.",
         production_objective="Advance the investigation.",
-        target_runtime_seconds=28,
+        target_runtime_seconds=60,
         required_action="Sandra studies the signal while James observes.",
     )
     shots.apply_hardware_aware_replan(scene.scene_id)
     current = shots.list_plans(scene_id=scene.scene_id)
+    assert len(current) == 4
 
     project = tmp_path / "Demo"
     boundary_path = project / ".vscs" / "governed_shot_boundaries.json"
@@ -671,12 +700,7 @@ def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
         json.dumps(
             {
                 "schema_version": "1.0",
-                "boundaries": [
-                    {
-                        "shot_id": current[1].shot_id,
-                        "status": "published",
-                    }
-                ],
+                "boundaries": [{"shot_id": current[1].shot_id, "status": "published"}],
             }
         ),
         encoding="utf-8",
@@ -688,3 +712,4 @@ def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
     ):
         shots.propose_hardware_aware_replan(scene.scene_id)
     context.shutdown()
+
