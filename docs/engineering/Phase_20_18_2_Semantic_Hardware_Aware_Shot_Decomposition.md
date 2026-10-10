@@ -1,5 +1,10 @@
 # Phase 20.18.2 — Semantic Hardware-Aware Shot Decomposition
 
+> **Superseded planning-duration decision:** Phase 20.18.2.3.6.6b retains the
+> semantic-decomposition principles below but replaces the provider/GPU-bound
+> Shot ceiling with a provider-neutral cinematic planning ceiling. Provider
+> direct-duration constraints now belong to Production Execution.
+
 ## Decision
 
 Hardware-aware replanning must preserve narrative Shot authority before applying the
