@@ -851,4 +851,3 @@ def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
     ):
         shots.propose_hardware_aware_replan(scene.scene_id)
     context.shutdown()
-
