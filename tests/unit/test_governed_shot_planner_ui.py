@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from PySide6.QtWidgets import QComboBox, QMessageBox, QPlainTextEdit, QScrollArea
@@ -275,4 +276,74 @@ def test_governed_shot_planner_displays_cinematic_coverage_role_column(
     assert "Establishing" in roles
     assert "Resolve" in roles
     assert "Detail Insert" in roles or "Primary Subject" in roles
+    context.shutdown()
+
+
+
+def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
+    qtbot,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    context, shots, _legacy, scene = _planning(tmp_path)
+    shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Signal Discovery",
+        narrative_purpose="Reveal the signal and command response.",
+        production_objective="Advance the anomaly investigation.",
+        target_runtime_seconds=60,
+        required_action="Sandra studies the signal while James observes.",
+    )
+    shots.apply_hardware_aware_replan(scene.scene_id)
+    current = shots.list_plans(scene_id=scene.scene_id)
+
+    project = tmp_path / "Demo"
+    boundary_path = project / ".vscs" / "governed_shot_boundaries.json"
+    boundary_path.parent.mkdir(parents=True, exist_ok=True)
+    boundary_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "boundaries": [
+                    {"shot_id": current[0].shot_id, "status": "published"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    acceptance_path = project / ".vscs" / "timed_span_acceptance.json"
+    acceptance_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "assemblies": [{"shot_id": current[1].shot_id}],
+                "qc_records": [],
+                "qc_invalidations": [],
+                "assembly_invalidations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    captured: list[str] = []
+
+    def _question(*args, **kwargs):
+        captured.append(str(args[2]))
+        return QMessageBox.StandardButton.No
+
+    monkeypatch.setattr(QMessageBox, "question", _question)
+
+    dialog = GovernedShotPlannerDialog(shots, scene)
+    qtbot.addWidget(dialog)
+    dialog.show()
+    dialog.replan_button.click()
+
+    assert len(captured) == 1
+    message = captured[0]
+    assert "Protected produced Shots: 2" in message
+    assert "Regenerated future Shots: 7" in message
+    assert "001 —" in message and "PRESERVED" in message
+    assert "003 —" in message and "REGENERATED" in message
+    assert shots.list_plans(scene_id=scene.scene_id) == current
     context.shutdown()
