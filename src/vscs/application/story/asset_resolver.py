@@ -1232,6 +1232,10 @@ class GovernedAssetResolutionService:
 
     def shot_ready(self, shot_id: str) -> bool:
         """Return whether every declared asset requirement for a Shot is production-ready."""
+        shot = self.shots.plan(shot_id)
+        if shot is None or not self.shots.is_production_ready(shot):
+            return False
+
         bindings = self.list_bindings(shot_id=shot_id)
         if not bindings:
             return False
