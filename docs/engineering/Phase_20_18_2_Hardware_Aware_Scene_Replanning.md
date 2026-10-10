@@ -1,5 +1,11 @@
 # Phase 20.18.2 — Hardware-Aware Scene Replanning
 
+> **Superseded planning-duration decision:** Phase 20.18.2.3.6.6b decouples
+> governed cinematic Shot duration from provider/GPU direct-generation limits.
+> The historical 7-second decision below remains useful provenance for the
+> RTX 4060 / LTX execution baseline, but it is no longer the Shot Planner
+> duration policy.
+
 ## Decision
 
 Phase 20.18.2 no longer treats a long governed Shot as one provider job that is
