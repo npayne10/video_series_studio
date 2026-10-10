@@ -604,17 +604,17 @@ class GovernedShotPlanningService:
         self,
         plans: tuple[ShotPlan, ...],
     ) -> frozenset[str]:
-        """Return direct semantic-parent markers only for untouched hardware-derived Shots."""
+        """Return semantic-parent markers proven by intact hardware-derived Shots."""
         markers: set[str] = set()
         prefix = "Preserve semantic source Shot "
         for plan in plans:
             if plan.coverage_role is CinematicCoverageRole.UNSPECIFIED:
-                return frozenset()
+                continue
             role_constraint = f"Cinematic coverage role: {plan.coverage_role.value}."
             if role_constraint not in plan.shot_constraints:
-                return frozenset()
+                continue
             if not plan.title.endswith(f"— {self._coverage_label(plan.coverage_role)}"):
-                return frozenset()
+                continue
             marker = next(
                 (
                     constraint
@@ -624,7 +624,7 @@ class GovernedShotPlanningService:
                 None,
             )
             if marker is None:
-                return frozenset()
+                continue
             markers.add(marker)
         return frozenset(markers)
 
