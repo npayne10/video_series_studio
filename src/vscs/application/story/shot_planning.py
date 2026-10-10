@@ -685,6 +685,8 @@ class GovernedShotPlanningService:
         for source, plans in self._archived_scene_plan_candidates(scene.scene_id):
             if not self._is_complete_semantic_source(scene, plans):
                 continue
+            if self._has_hardware_decomposition_evidence(plans):
+                continue
             expected = frozenset(self._semantic_source_marker(plan) for plan in plans)
             if expected == lineage:
                 return (source, plans)
