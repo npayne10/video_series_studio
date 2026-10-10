@@ -134,23 +134,6 @@ def _write_mauritania_current(
     return current
 
 
-def _set_hardware_limit(project_directory: Path, seconds: int) -> None:
-    path = project_directory / ".vscs" / "provider_executions" / "hardware_capability.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(
-            {
-                "capability": {
-                    "gpu_name": "Test GPU",
-                    "vram_class_gb": 24,
-                    "validated_maximum_shot_seconds": seconds,
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-
-
 def test_valid_current_authority_beats_richer_archived_semantics(tmp_path: Path) -> None:
     context, _projects, shots, scene = _planning(tmp_path)
     archived = _archive_iron_horizon(shots, scene.scene_id)
@@ -187,10 +170,11 @@ def test_archive_is_fallback_when_current_authority_is_incomplete(tmp_path: Path
     context.shutdown()
 
 
-def test_hardware_replan_can_reexpand_only_through_matching_semantic_lineage(
+def test_cinematic_replan_can_reexpand_only_through_matching_semantic_lineage(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    context, projects, shots, scene = _planning(tmp_path, scene_runtime=14)
+    context, _projects, shots, scene = _planning(tmp_path, scene_runtime=14)
     original = shots.create(
         scene_id=scene.scene_id,
         sequence_number=1,
@@ -202,6 +186,7 @@ def test_hardware_replan_can_reexpand_only_through_matching_semantic_lineage(
         dialogue_requirement="Launch the Mauritania now.",
     )
 
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
     first = shots.apply_hardware_aware_replan(scene.scene_id)
     assert first.new_shot_count == 2
 
@@ -220,8 +205,7 @@ def test_hardware_replan_can_reexpand_only_through_matching_semantic_lineage(
     )
     assert unrelated_archive is not None
 
-    assert projects.project_directory is not None
-    _set_hardware_limit(projects.project_directory, 14)
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 15)
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
     assert proposal.semantic_source.startswith("archived:")
@@ -233,8 +217,11 @@ def test_hardware_replan_can_reexpand_only_through_matching_semantic_lineage(
     context.shutdown()
 
 
-def test_repeated_hardware_replanning_does_not_change_semantic_identity(tmp_path: Path) -> None:
-    context, projects, shots, scene = _planning(tmp_path, scene_runtime=14)
+def test_repeated_cinematic_replanning_does_not_change_semantic_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context, _projects, shots, scene = _planning(tmp_path, scene_runtime=14)
     original = shots.create(
         scene_id=scene.scene_id,
         sequence_number=1,
@@ -246,12 +233,13 @@ def test_repeated_hardware_replanning_does_not_change_semantic_identity(tmp_path
         dialogue_requirement="Launch the Mauritania now.",
     )
 
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
     shots.apply_hardware_aware_replan(scene.scene_id)
-    assert projects.project_directory is not None
-    _set_hardware_limit(projects.project_directory, 14)
-    shots.apply_hardware_aware_replan(scene.scene_id)
-    _set_hardware_limit(projects.project_directory, 7)
 
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 15)
+    shots.apply_hardware_aware_replan(scene.scene_id)
+
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
     combined = " ".join(
         value
@@ -264,6 +252,9 @@ def test_repeated_hardware_replanning_does_not_change_semantic_identity(tmp_path
         )
     )
 
+    assert proposal.semantic_source.startswith("archived:")
+    assert proposal.semantic_source_shot_count == 1
+    assert proposal.proposed_shot_count == 2
     assert original.title in combined
     assert original.dialogue_requirement in combined
     assert "Iron Horizon" not in combined
