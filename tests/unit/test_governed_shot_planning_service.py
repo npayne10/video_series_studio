@@ -187,7 +187,6 @@ def test_legacy_shots_remain_visible_but_outside_governed_storage(tmp_path: Path
     context.shutdown()
 
 
-
 def test_provider_neutral_replan_uses_fifteen_second_cinematic_ceiling(
     tmp_path: Path,
 ) -> None:
@@ -424,6 +423,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
     )
     context.shutdown()
 
+
 def test_semantic_cinematic_coverage_persists_role_backward_compatibly(
     tmp_path: Path,
 ) -> None:
@@ -450,7 +450,6 @@ def test_semantic_cinematic_coverage_persists_role_backward_compatibly(
     restored = shots.list_plans(scene_id=scene.scene_id)[0]
     assert restored.coverage_role is CinematicCoverageRole.PROGRESSION
     context.shutdown()
-
 
 
 def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
@@ -671,7 +670,6 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
         not shot.dialogue_requirement for shot in proposal.proposed_shots[2:]
     )
     context.shutdown()
-
 
 
 def test_replan_recovers_scene_fallback_lineage_when_no_archive_exists(
