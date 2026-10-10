@@ -419,6 +419,131 @@ class GovernedShotPlanningService:
         self._write(remaining)
         return True
 
+    def _production_replan_protections(
+        self,
+        plans: tuple[ShotPlan, ...],
+    ) -> tuple[ShotReplanProtection, ...]:
+        """Protect Shots with durable downstream production evidence from automatic replacement."""
+        if self.projects.project_directory is None:
+            raise ProjectNotOpenError("No VSCS project is currently open")
+        project = self.projects.project_directory
+        reasons_by_shot: dict[str, list[str]] = {plan.shot_id: [] for plan in plans}
+
+        boundary_path = project / ".vscs" / "governed_shot_boundaries.json"
+        if boundary_path.is_file():
+            root = self._read_replan_evidence(boundary_path, "governed Shot boundary")
+            boundaries = root.get("boundaries", [])
+            if not isinstance(boundaries, list):
+                raise GovernedShotPlanningError(
+                    "Governed Shot boundary evidence is invalid; automatic replanning is blocked"
+                )
+            for item in boundaries:
+                if not isinstance(item, dict):
+                    continue
+                shot_id = str(item.get("shot_id") or "").strip().upper()
+                status = str(item.get("status") or "").strip().casefold()
+                if shot_id in reasons_by_shot and status == "published":
+                    reasons_by_shot[shot_id].append("published governed closing boundary")
+
+        acceptance_path = project / ".vscs" / "timed_span_acceptance.json"
+        if acceptance_path.is_file():
+            root = self._read_replan_evidence(acceptance_path, "timed-span acceptance")
+            assemblies = root.get("assemblies", [])
+            if not isinstance(assemblies, list):
+                raise GovernedShotPlanningError(
+                    "Timed-span assembly evidence is invalid; automatic replanning is blocked"
+                )
+            for item in assemblies:
+                if not isinstance(item, dict):
+                    continue
+                shot_id = str(item.get("shot_id") or "").strip().upper()
+                if shot_id in reasons_by_shot:
+                    reasons_by_shot[shot_id].append("verified governed span assembly")
+
+        adoption_path = (
+            project
+            / ".vscs"
+            / "production_execution"
+            / "provider_production_adoptions.json"
+        )
+        if adoption_path.is_file():
+            root = self._read_replan_evidence(adoption_path, "provider production adoption")
+            records = root.get("records", [])
+            if not isinstance(records, list):
+                raise GovernedShotPlanningError(
+                    "Provider production adoption evidence is invalid; automatic replanning is blocked"
+                )
+            for item in records:
+                if not isinstance(item, dict):
+                    continue
+                shot_id = str(item.get("shot_id") or "").strip().upper()
+                state = str(item.get("state") or "").strip().casefold()
+                if shot_id in reasons_by_shot and state:
+                    reasons_by_shot[shot_id].append(
+                        f"provider production adoption: {state}"
+                    )
+
+        return tuple(
+            ShotReplanProtection(
+                shot_id=plan.shot_id,
+                reasons=tuple(dict.fromkeys(reasons_by_shot[plan.shot_id])),
+            )
+            for plan in plans
+            if reasons_by_shot[plan.shot_id]
+        )
+
+    @staticmethod
+    def _read_replan_evidence(path: Path, label: str) -> dict[str, Any]:
+        try:
+            root = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise GovernedShotPlanningError(
+                f"Unable to read {label} evidence; automatic replanning is blocked: {exc}"
+            ) from exc
+        if not isinstance(root, dict):
+            raise GovernedShotPlanningError(
+                f"{label.title()} evidence is invalid; automatic replanning is blocked"
+            )
+        return root
+
+    @staticmethod
+    def _merge_protected_prefix(
+        *,
+        current: tuple[ShotPlan, ...],
+        regenerated: tuple[ShotPlan, ...],
+        protections: tuple[ShotReplanProtection, ...],
+    ) -> tuple[ShotPlan, ...]:
+        """Preserve a contiguous produced prefix and replace only future unproduced Shots."""
+        if not protections:
+            return regenerated
+        protected_ids = tuple(item.shot_id for item in protections)
+        expected_prefix = tuple(plan.shot_id for plan in current[: len(protected_ids)])
+        if protected_ids != expected_prefix:
+            raise GovernedShotPlanningError(
+                "Automatic Scene replanning is blocked because produced Shots do not form "
+                "a contiguous prefix. Use an explicit supersession workflow instead."
+            )
+        if len(regenerated) < len(protections):
+            raise GovernedShotPlanningError(
+                "Automatic Scene replanning would remove produced Shots; explicit supersession "
+                "is required."
+            )
+        for existing, candidate in zip(
+            current[: len(protections)],
+            regenerated[: len(protections)],
+            strict=True,
+        ):
+            if (
+                existing.shot_id != candidate.shot_id
+                or existing.target_runtime_seconds != candidate.target_runtime_seconds
+                or existing.coverage_role is not candidate.coverage_role
+            ):
+                raise GovernedShotPlanningError(
+                    f"Automatic Scene replanning would structurally change produced Shot "
+                    f"{existing.shot_id}; explicit supersession is required."
+                )
+        return (*current[: len(protections)], *regenerated[len(protections) :])
+
     def _semantic_source_plans(
         self,
         scene: ScenePlan,
