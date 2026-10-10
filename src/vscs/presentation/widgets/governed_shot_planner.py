@@ -401,8 +401,13 @@ class GovernedShotPlannerDialog(QDialog):
             QMessageBox.warning(self, "Hardware-Aware Scene Replanning", str(exc))
             return
 
+        protected_ids = {item.shot_id for item in proposal.protected_shots}
         preview_titles = "\n".join(
-            f"  {shot.sequence_number:03d} — {shot.title} — {shot.target_runtime_seconds}s"
+            (
+                f"  {shot.sequence_number:03d} — {shot.title} — "
+                f"{shot.target_runtime_seconds}s"
+                + (" — PRESERVED" if shot.shot_id in protected_ids else " — REGENERATED")
+            )
             for shot in proposal.proposed_shots[:8]
         )
         if proposal.proposed_shot_count > 8:
@@ -420,9 +425,13 @@ class GovernedShotPlannerDialog(QDialog):
                 f"Current governed Shots: {proposal.current_shot_count}\n"
                 f"Semantic source: {proposal.semantic_source} "
                 f"({proposal.semantic_source_shot_count} narrative beats)\n"
-                f"Proposed governed Shots: {proposal.proposed_shot_count}\n\n"
-                "The current Shot Plan will be archived before replacement. "
-                "The new Shots will be Draft so they can be reviewed before downstream planning.\n\n"
+                f"Proposed governed Shots: {proposal.proposed_shot_count}\n"
+                f"Protected produced Shots: {len(proposal.protected_shots)}\n"
+                f"Regenerated future Shots: {proposal.regenerated_shot_count}\n\n"
+                "Shots with durable downstream production evidence are preserved exactly. "
+                "Only the remaining future Shots are regenerated. The current Shot Plan will "
+                "be archived before replacement. Regenerated Shots will be Draft so they can "
+                "be reviewed before downstream planning.\n\n"
                 f"Preview:\n{preview_titles}"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -443,6 +452,8 @@ class GovernedShotPlannerDialog(QDialog):
             (
                 f"Replanned {result.scene_id} into {result.new_shot_count} governed Shots, "
                 f"each no longer than {result.maximum_shot_runtime_seconds}s.\n\n"
+                f"Preserved produced Shots: {', '.join(item.shot_id for item in proposal.protected_shots) or 'None'}\n"
+                f"Regenerated future Shots: {proposal.regenerated_shot_count}\n"
                 f"Archived prior Shot Plan: {archive}"
             ),
         )
