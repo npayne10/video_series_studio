@@ -60,7 +60,7 @@ class HardwareAwareShotReplanResult:
 
 
 class CinematicCoverageRole(StrEnum):
-    """Editorial role assigned to a hardware-decomposed governed Shot."""
+    """Editorial role assigned to a cinematic-decomposed governed Shot."""
 
     UNSPECIFIED = "unspecified"
     ESTABLISHING = "establishing"
