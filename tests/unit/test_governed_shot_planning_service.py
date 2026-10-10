@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import json
 from pathlib import Path
 
 import pytest
@@ -464,4 +465,137 @@ def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
     assert [shot.dialogue_requirement for shot in proposal.proposed_shots].count(
         source.dialogue_requirement
     ) == 1
+    context.shutdown()
+
+
+
+def test_production_aware_replan_preserves_produced_prefix_and_regenerates_future_shots(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=28,
+    )
+    semantic = shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Signal Discovery",
+        narrative_purpose="Reveal Sandra's discovery and James's response.",
+        production_objective="Advance the anomaly investigation.",
+        target_runtime_seconds=28,
+        required_action=(
+            "Sandra studies the signal, reports something unusual to James, "
+            "and James turns toward her station."
+        ),
+        dialogue_requirement="Commander, I have something unusual.",
+    )
+    first_replan = shots.apply_hardware_aware_replan(scene.scene_id)
+    assert len(first_replan.shots) == 4
+
+    current = list(shots.list_plans(scene_id=scene.scene_id))
+    stale_detail = replace(
+        current[2],
+        required_action=(
+            "Show a specific information-bearing visual detail that advances: "
+            f"{semantic.required_action} Do not repeat the master view."
+        ),
+    )
+    current[2] = stale_detail
+    shots._write(tuple(current))
+
+    project = tmp_path / "Demo"
+    boundary_path = project / ".vscs" / "governed_shot_boundaries.json"
+    boundary_path.parent.mkdir(parents=True, exist_ok=True)
+    boundary_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "boundaries": [
+                    {
+                        "shot_id": current[0].shot_id,
+                        "status": "published",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    acceptance_path = project / ".vscs" / "timed_span_acceptance.json"
+    acceptance_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "assemblies": [{"shot_id": current[1].shot_id}],
+                "qc_records": [],
+                "qc_invalidations": [],
+                "assembly_invalidations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert [item.shot_id for item in proposal.protected_shots] == [
+        current[0].shot_id,
+        current[1].shot_id,
+    ]
+    assert proposal.regenerated_shot_count == 2
+    assert proposal.proposed_shots[0] == current[0]
+    assert proposal.proposed_shots[1] == current[1]
+    assert proposal.proposed_shots[2].shot_id == stale_detail.shot_id
+    assert proposal.proposed_shots[2].required_action != stale_detail.required_action
+    assert "Do not depict or imply spoken dialogue" in proposal.proposed_shots[2].required_action
+
+    result = shots.apply_hardware_aware_replan(scene.scene_id)
+    persisted = shots.list_plans(scene_id=scene.scene_id)
+    assert result.shots == persisted
+    assert persisted[0] == current[0]
+    assert persisted[1] == current[1]
+    assert persisted[2] == proposal.proposed_shots[2]
+    context.shutdown()
+
+
+def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=28,
+    )
+    shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Signal Discovery",
+        narrative_purpose="Reveal the signal.",
+        production_objective="Advance the investigation.",
+        target_runtime_seconds=28,
+        required_action="Sandra studies the signal while James observes.",
+    )
+    shots.apply_hardware_aware_replan(scene.scene_id)
+    current = shots.list_plans(scene_id=scene.scene_id)
+
+    project = tmp_path / "Demo"
+    boundary_path = project / ".vscs" / "governed_shot_boundaries.json"
+    boundary_path.parent.mkdir(parents=True, exist_ok=True)
+    boundary_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "boundaries": [
+                    {
+                        "shot_id": current[1].shot_id,
+                        "status": "published",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        GovernedShotPlanningError,
+        match="do not form a contiguous prefix",
+    ):
+        shots.propose_hardware_aware_replan(scene.scene_id)
     context.shutdown()
