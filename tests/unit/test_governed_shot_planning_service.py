@@ -672,6 +672,103 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
     context.shutdown()
 
 
+def test_replan_recovers_unique_archive_from_partial_surviving_lineage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=60,
+    )
+    semantic = (
+        shots.create(
+            scene_id=scene.scene_id,
+            sequence_number=1,
+            title="First Semantic Beat",
+            narrative_purpose="Establish the first half of the Scene.",
+            production_objective="Advance the first semantic beat.",
+            target_runtime_seconds=30,
+            required_action="James studies the first anomaly.",
+        ),
+        shots.create(
+            scene_id=scene.scene_id,
+            sequence_number=2,
+            title="Second Semantic Beat",
+            narrative_purpose="Resolve the second half of the Scene.",
+            production_objective="Advance the second semantic beat.",
+            target_runtime_seconds=30,
+            required_action="Sandra isolates the second anomaly.",
+        ),
+    )
+
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
+    first = shots.apply_hardware_aware_replan(scene.scene_id)
+    assert len(first.shots) == 10
+
+    current = list(shots.list_plans(scene_id=scene.scene_id))
+    first_marker = f"Preserve semantic source Shot {semantic[0].shot_id}: {semantic[0].title}."
+    for index in range(5):
+        current[index] = replace(
+            current[index],
+            title=f"Accepted Override {index + 1:03d}",
+            shot_constraints=tuple(
+                constraint
+                for constraint in current[index].shot_constraints
+                if constraint != first_marker
+            ),
+        )
+    shots._write(tuple(current))
+
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 15)
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert proposal.semantic_source.startswith("archived:")
+    assert proposal.semantic_source_shot_count == 2
+    assert proposal.proposed_shot_count == 4
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
+    context.shutdown()
+
+
+def test_replan_fails_closed_when_hardware_decomposition_has_no_lineage_markers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=30,
+    )
+    shots.create(
+        scene_id=scene.scene_id,
+        sequence_number=1,
+        title="Signal Discovery",
+        narrative_purpose="Reveal the signal.",
+        production_objective="Advance the investigation.",
+        target_runtime_seconds=30,
+        required_action="Sandra studies the signal while James observes.",
+    )
+
+    monkeypatch.setattr(shots, "governed_shot_limit_seconds", lambda: 7)
+    shots.apply_hardware_aware_replan(scene.scene_id)
+    current = list(shots.list_plans(scene_id=scene.scene_id))
+    for index, plan in enumerate(current):
+        current[index] = replace(
+            plan,
+            shot_constraints=tuple(
+                constraint
+                for constraint in plan.shot_constraints
+                if not constraint.startswith("Preserve semantic source Shot ")
+            ),
+        )
+    shots._write(tuple(current))
+
+    with pytest.raises(
+        GovernedShotPlanningError,
+        match="no recoverable semantic lineage",
+    ):
+        shots.propose_hardware_aware_replan(scene.scene_id)
+    context.shutdown()
+
+
 def test_replan_recovers_scene_fallback_lineage_when_no_archive_exists(
     tmp_path: Path,
 ) -> None:
