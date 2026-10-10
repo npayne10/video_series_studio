@@ -1,5 +1,10 @@
 # Phase 20.18.2.2b — RTX 5060 Ti 16GB Hardware Capability Revalidation
 
+> **Scope clarification after Phase 20.18.2.3.6.6b:** this document remains
+> authoritative for the historical LTX-2.3 provider/hardware revalidation
+> envelope. Its 7-second production ceiling is an execution capability record,
+> not the current provider-neutral Shot Planner ceiling.
+
 ## Purpose
 
 Phase 20.18.2 originally validated the LTX 2.3 one-Shot provider path on an
