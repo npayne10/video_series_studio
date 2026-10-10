@@ -102,6 +102,7 @@ def test_governed_shot_plan_persists_only_shot_level_intent(tmp_path: Path) -> N
     assert shots.list_plans(scene_id=scene.scene_id) == (shot,)
     context.shutdown()
 
+
 def test_shot_planning_requires_current_ready_scene(tmp_path: Path) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
