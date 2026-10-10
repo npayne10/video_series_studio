@@ -102,7 +102,6 @@ def test_governed_shot_plan_persists_only_shot_level_intent(tmp_path: Path) -> N
     assert shots.list_plans(scene_id=scene.scene_id) == (shot,)
     context.shutdown()
 
-
 def test_shot_planning_requires_current_ready_scene(tmp_path: Path) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
@@ -560,15 +559,10 @@ def test_production_aware_replan_preserves_produced_prefix_and_regenerates_only_
     assert proposal.proposed_shots[2].required_action != stale_future.required_action
     assert proposal.regenerated_shot_count == len(proposal.proposed_shots) - 2
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
-    assert max(
-        shot.target_runtime_seconds for shot in proposal.proposed_shots[2:]
-    ) <= 15
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots[2:]) <= 15
+    assert all(not shot.dialogue_requirement for shot in proposal.proposed_shots[2:])
     assert all(
-        not shot.dialogue_requirement for shot in proposal.proposed_shots[2:]
-    )
-    assert all(
-        "reports" not in shot.required_action.casefold()
-        for shot in proposal.proposed_shots[2:]
+        "reports" not in shot.required_action.casefold() for shot in proposal.proposed_shots[2:]
     )
 
     result = shots.apply_hardware_aware_replan(scene.scene_id)
@@ -666,9 +660,7 @@ def test_production_aware_replan_recovers_lineage_across_accepted_produced_overr
     assert proposal.proposed_shots[2].shot_id == stale_future.shot_id
     assert proposal.proposed_shots[2].required_action != stale_future.required_action
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
-    assert all(
-        not shot.dialogue_requirement for shot in proposal.proposed_shots[2:]
-    )
+    assert all(not shot.dialogue_requirement for shot in proposal.proposed_shots[2:])
     context.shutdown()
 
 
