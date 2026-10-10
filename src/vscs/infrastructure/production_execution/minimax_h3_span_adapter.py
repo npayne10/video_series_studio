@@ -43,7 +43,6 @@ from .provider_policy_profiles import (
     default_provider_policy_profile_registry,
 )
 
-
 MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS = 15
 MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS = (8, 10, 12, 15)
 
