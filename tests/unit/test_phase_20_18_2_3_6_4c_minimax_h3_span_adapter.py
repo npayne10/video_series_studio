@@ -32,7 +32,6 @@ from vscs.infrastructure.production_execution.minimax_h3_span_adapter import (
 )
 
 
-
 def test_h3_direct_duration_policy_targets_rtx5060ti_revalidation_envelope() -> None:
     assert MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS == 15
     assert MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS == (8, 10, 12, 15)
@@ -53,6 +52,7 @@ def test_h3_direct_duration_policy_targets_rtx5060ti_revalidation_envelope() -> 
         match="provider-capacity subdivision is required",
     ):
         _require_h3_direct_duration(361, frames_per_second=24)
+
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
