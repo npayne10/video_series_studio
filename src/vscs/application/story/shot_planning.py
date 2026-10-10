@@ -649,8 +649,14 @@ class GovernedShotPlanningService:
                 lineage = self._matching_hardware_lineage_archive(scene, current)
                 if lineage is not None:
                     return lineage
+                fallback = self._scene_semantic_fallback(scene)
+                expected_fallback = frozenset(
+                    self._semantic_source_marker(plan) for plan in fallback
+                )
+                if expected_fallback == lineage_markers:
+                    return ("scene-authority-fallback-lineage", fallback)
                 raise GovernedShotPlanningError(
-                    "Hardware-derived Shot lineage is present but its semantic source archive "
+                    "Hardware-derived Shot lineage is present but its semantic source authority "
                     "cannot be recovered; automatic replanning is blocked."
                 )
             return ("current-governed-plan", current)
