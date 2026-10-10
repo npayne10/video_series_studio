@@ -279,7 +279,6 @@ def test_governed_shot_planner_displays_cinematic_coverage_role_column(
     context.shutdown()
 
 
-
 def test_replan_preview_marks_produced_prefix_preserved_before_mutation(
     qtbot,
     monkeypatch,
