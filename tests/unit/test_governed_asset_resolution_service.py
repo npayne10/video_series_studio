@@ -226,6 +226,31 @@ def test_asset_resolution_requires_current_ready_shot(tmp_path: Path) -> None:
     context.shutdown()
 
 
+def test_shot_ready_returns_false_without_reinferring_for_non_ready_shot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    binding = _binding(service, shot.shot_id)
+    service._write(
+        (
+            replace(
+                binding,
+                inference_source=ShotAssetInferenceSource.DETERMINISTIC,
+            ),
+        )
+    )
+    shots.return_to_draft(shot.shot_id)
+
+    def _unexpected_inference(*_args, **_kwargs):
+        raise AssertionError("shot_ready must not infer requirements for a non-ready Shot")
+
+    monkeypatch.setattr(service, "infer_requirements", _unexpected_inference)
+
+    assert not service.shot_ready(shot.shot_id)
+    context.shutdown()
+
+
 def test_camera_and_lighting_categories_are_owned_by_later_planners(tmp_path: Path) -> None:
     context, _shots, service, shot = _planning(tmp_path)
 
