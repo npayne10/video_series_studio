@@ -468,7 +468,6 @@ def test_two_shot_semantic_beat_carries_dialogue_on_resolve_child(
     context.shutdown()
 
 
-
 def test_production_aware_replan_preserves_produced_prefix_and_regenerates_future_shots(
     tmp_path: Path,
 ) -> None:
