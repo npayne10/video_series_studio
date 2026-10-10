@@ -212,12 +212,9 @@ class GovernedShotPlanningService:
                 "semantic_source": proposal.semantic_source,
                 "semantic_source_shot_count": proposal.semantic_source_shot_count,
                 "decomposition_strategy": "semantic-cinematic-coverage-v1",
-                "protected_shot_ids": [
-                    item.shot_id for item in proposal.protected_shots
-                ],
+                "protected_shot_ids": [item.shot_id for item in proposal.protected_shots],
                 "protected_shot_reasons": {
-                    item.shot_id: list(item.reasons)
-                    for item in proposal.protected_shots
+                    item.shot_id: list(item.reasons) for item in proposal.protected_shots
                 },
                 "regenerated_shot_count": proposal.regenerated_shot_count,
             },
@@ -461,10 +458,7 @@ class GovernedShotPlanningService:
                     reasons_by_shot[shot_id].append("verified governed span assembly")
 
         adoption_path = (
-            project
-            / ".vscs"
-            / "production_execution"
-            / "provider_production_adoptions.json"
+            project / ".vscs" / "production_execution" / "provider_production_adoptions.json"
         )
         if adoption_path.is_file():
             root = self._read_replan_evidence(adoption_path, "provider production adoption")
@@ -479,9 +473,7 @@ class GovernedShotPlanningService:
                 shot_id = str(item.get("shot_id") or "").strip().upper()
                 state = str(item.get("state") or "").strip().casefold()
                 if shot_id in reasons_by_shot and state:
-                    reasons_by_shot[shot_id].append(
-                        f"provider production adoption: {state}"
-                    )
+                    reasons_by_shot[shot_id].append(f"provider production adoption: {state}")
 
         return tuple(
             ShotReplanProtection(
