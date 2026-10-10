@@ -232,9 +232,7 @@ class GovernedShotPlanningService:
             metadata={
                 "hardware_capability": self.hardware_capability(),
                 "duration_policy": "provider-neutral-cinematic-v1",
-                "governed_cinematic_maximum_shot_seconds": (
-                    proposal.maximum_shot_runtime_seconds
-                ),
+                "governed_cinematic_maximum_shot_seconds": (proposal.maximum_shot_runtime_seconds),
                 "maximum_shot_runtime_seconds": proposal.maximum_shot_runtime_seconds,
                 "replacement_shot_count": proposal.proposed_shot_count,
                 "semantic_source": proposal.semantic_source,
@@ -683,9 +681,7 @@ class GovernedShotPlanningService:
         if not lineage:
             return None
 
-        compatible: list[
-            tuple[frozenset[str], str, tuple[ShotPlan, ...]]
-        ] = []
+        compatible: list[tuple[frozenset[str], str, tuple[ShotPlan, ...]]] = []
         for source, plans in self._archived_scene_plan_candidates(scene.scene_id):
             if not self._is_complete_semantic_source(scene, plans):
                 continue
