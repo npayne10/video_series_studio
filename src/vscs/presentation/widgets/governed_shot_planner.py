@@ -297,14 +297,16 @@ class GovernedShotPlannerDialog(QDialog):
             else "Upstream Scene is not production-ready. Existing Shot Plans remain visible but cannot advance."
         )
         capability = self.service.hardware_capability()
-        limit = self.service.hardware_shot_limit_seconds()
+        limit = self.service.governed_shot_limit_seconds()
         gpu_name = str(capability.get("gpu_name") or "Unknown GPU")
         vram_class = capability.get("vram_class_gb")
         status = str(capability.get("validation_status") or "unknown")
         self.hardware_label.setText(
-            f"Hardware-aware planning: {gpu_name}"
+            f"Cinematic Shot planning: maximum governed Shot {limit}s • provider-neutral. "
+            f"Observed local hardware: {gpu_name}"
             + (f" • {vram_class} GB class" if vram_class is not None else "")
-            + f" • maximum governed Shot {limit}s • {status}"
+            + f" • {status}. Provider direct-generation limits are enforced during "
+            "Production Execution."
         )
 
         allocated = self.service.allocated_runtime_seconds(self.scene_id)
@@ -419,8 +421,8 @@ class GovernedShotPlannerDialog(QDialog):
             "Re-plan Scene from Story",
             (
                 f"Rebuild {proposal.scene_id} from current Ready Scene/story authority?\n\n"
-                f"Hardware: {proposal.hardware_label}\n"
-                f"Maximum Shot runtime: {proposal.maximum_shot_runtime_seconds}s\n"
+                f"Observed local hardware: {proposal.hardware_label}\n"
+                f"Governed cinematic Shot maximum: {proposal.maximum_shot_runtime_seconds}s\n"
                 f"Scene runtime: {proposal.scene_runtime_seconds}s\n"
                 f"Current governed Shots: {proposal.current_shot_count}\n"
                 f"Semantic source: {proposal.semantic_source} "
@@ -450,8 +452,8 @@ class GovernedShotPlannerDialog(QDialog):
             self,
             "Hardware-Aware Scene Replanning",
             (
-                f"Replanned {result.scene_id} into {result.new_shot_count} governed Shots, "
-                f"each no longer than {result.maximum_shot_runtime_seconds}s.\n\n"
+                f"Replanned {result.scene_id} into {result.new_shot_count} governed Shots "
+                f"under the {result.maximum_shot_runtime_seconds}s cinematic planning ceiling.\n\n"
                 f"Preserved produced Shots: {', '.join(item.shot_id for item in proposal.protected_shots) or 'None'}\n"
                 f"Regenerated future Shots: {proposal.regenerated_shot_count}\n"
                 f"Archived prior Shot Plan: {archive}"
@@ -467,12 +469,12 @@ class GovernedShotPlannerDialog(QDialog):
             scene,
             scene.scene_constraints,
             parent=self,
-            maximum_runtime_seconds=self.service.hardware_shot_limit_seconds(),
+            maximum_runtime_seconds=self.service.governed_shot_limit_seconds(),
         )
         dialog.sequence_spin.setValue(self.service.next_sequence_number(self.scene_id))
         remaining = self.service.remaining_runtime_seconds(self.scene_id)
         dialog.runtime_spin.setMaximum(
-            max(1, min(remaining, self.service.hardware_shot_limit_seconds()))
+            max(1, min(remaining, self.service.governed_shot_limit_seconds()))
         )
         dialog.runtime_spin.setValue(min(5, max(1, remaining)))
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -507,13 +509,13 @@ class GovernedShotPlannerDialog(QDialog):
             scene.scene_constraints,
             shot,
             self,
-            maximum_runtime_seconds=self.service.hardware_shot_limit_seconds(),
+            maximum_runtime_seconds=self.service.governed_shot_limit_seconds(),
         )
         remaining = (
             self.service.remaining_runtime_seconds(self.scene_id) + shot.target_runtime_seconds
         )
         dialog.runtime_spin.setMaximum(
-            max(1, min(remaining, self.service.hardware_shot_limit_seconds()))
+            max(1, min(remaining, self.service.governed_shot_limit_seconds()))
         )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
