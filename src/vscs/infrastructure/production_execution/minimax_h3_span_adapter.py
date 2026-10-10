@@ -44,6 +44,10 @@ from .provider_policy_profiles import (
 )
 
 
+MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS = 15
+MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS = (8, 10, 12, 15)
+
+
 class MiniMaxH3SpanAdapterError(RuntimeError):
     """Raised when governed span authority cannot become a safe H3 Ref2VA job plan."""
 
@@ -495,6 +499,10 @@ class MiniMaxH3SpanAdapterCompiler:
             base_negative_prompt=span_input.negative_prompt,
             base_motion_prompt=span_input.motion_prompt,
         )
+        _require_h3_direct_duration(
+            governed_frames,
+            frames_per_second=compiled.frames_per_second,
+        )
         provider_frame_count = _h3_provider_frame_count(governed_frames)
         try:
             prompt_validation = MiniMaxH3PromptMetadataValidator().validate(
@@ -868,6 +876,22 @@ class MiniMaxH3SpanAdapterCompiler:
                 f"H3 first span requires governed Shot opening image authority: {exc}"
             ) from exc
         return resolved.image_path, resolved.image_sha256
+
+
+def _require_h3_direct_duration(
+    governed_frames: int,
+    *,
+    frames_per_second: int,
+) -> None:
+    """Fail closed when one H3 provider job exceeds its direct-duration envelope."""
+    if frames_per_second <= 0:
+        raise MiniMaxH3SpanAdapterError("H3 frame rate must be positive")
+    maximum_frames = MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS * frames_per_second
+    if governed_frames > maximum_frames:
+        raise MiniMaxH3SpanAdapterError(
+            "H3 governed provider span exceeds the 15-second direct-generation envelope; "
+            "provider-capacity subdivision is required before execution."
+        )
 
 
 def _h3_provider_frame_count(governed_frames: int) -> int:
