@@ -42,10 +42,16 @@ class _Assets:
     def __init__(self) -> None:
         self.values = [_Plan("BIND-001")]
         self.ready = True
+        self.shot_ready_calls = 0
 
     def list_bindings(self, *, shot_id: str) -> tuple[_Plan, ...]:
         assert shot_id == "SHOT-001"
         return tuple(self.values)
+
+    def shot_ready(self, shot_id: str) -> bool:
+        assert shot_id == "SHOT-001"
+        self.shot_ready_calls += 1
+        return self.ready
 
     def is_production_ready(self, _binding: _Plan) -> bool:
         return self.ready
@@ -55,11 +61,13 @@ class _SinglePlanner:
     def __init__(self, identity: str) -> None:
         self.value = _Plan(identity)
         self.ready = True
+        self.ready_calls = 0
 
     def plan(self, _shot_id: str) -> _Plan:
         return self.value
 
     def is_production_ready(self, _plan: _Plan) -> bool:
+        self.ready_calls += 1
         return self.ready
 
 
@@ -102,6 +110,28 @@ def test_complete_planning_can_be_reviewed_and_approved(tmp_path: Path) -> None:
 
     reloaded = service.review("SHOT-001")
     assert reloaded == approved
+
+
+def test_snapshot_short_circuits_downstream_readiness_when_shot_is_not_ready(
+    tmp_path: Path,
+) -> None:
+    service, parts = _service(tmp_path)
+    parts["shots"].ready = False
+
+    snapshot = service.snapshot("SHOT-001")
+
+    assert not snapshot.is_ready
+    assert {check.area for check in snapshot.checks if check.status.value == "blocked"} == {
+        "Shot",
+        "Assets",
+        "Camera",
+        "Lighting",
+        "Environment",
+    }
+    assert parts["assets"].shot_ready_calls == 0
+    assert parts["camera"].ready_calls == 0
+    assert parts["lighting"].ready_calls == 0
+    assert parts["environment"].ready_calls == 0
 
 
 def test_blocker_prevents_approval(tmp_path: Path) -> None:
