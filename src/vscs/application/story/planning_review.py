@@ -137,7 +137,7 @@ class GovernedPlanningReviewService:
 
         bindings = self.assets.list_bindings(shot_id=normalized)
         asset_shot_ready = getattr(self.assets, "shot_ready", None)
-        assets_ready = (
+        assets_ready = shot_ready and (
             bool(asset_shot_ready(normalized))
             if callable(asset_shot_ready)
             else bool(bindings) and all(self.assets.is_production_ready(item) for item in bindings)
@@ -153,22 +153,28 @@ class GovernedPlanningReviewService:
         payload["assets"] = [asdict(item) for item in bindings]
 
         camera = self.camera.plan(normalized)
-        camera_ready = camera is not None and self.camera.is_production_ready(camera)
+        camera_ready = (
+            shot_ready and camera is not None and self.camera.is_production_ready(camera)
+        )
         checks.append(
             self._check("Camera", camera_ready, "Ready and current", "Missing, Draft or stale")
         )
         payload["camera"] = asdict(camera) if camera is not None else None
 
         lighting = self.lighting.plan(normalized)
-        lighting_ready = lighting is not None and self.lighting.is_production_ready(lighting)
+        lighting_ready = (
+            shot_ready and lighting is not None and self.lighting.is_production_ready(lighting)
+        )
         checks.append(
             self._check("Lighting", lighting_ready, "Ready and current", "Missing, Draft or stale")
         )
         payload["lighting"] = asdict(lighting) if lighting is not None else None
 
         environment = self.environment.plan(normalized)
-        environment_ready = environment is not None and self.environment.is_production_ready(
-            environment
+        environment_ready = (
+            shot_ready
+            and environment is not None
+            and self.environment.is_production_ready(environment)
         )
         checks.append(
             self._check(
