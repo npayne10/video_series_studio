@@ -124,5 +124,40 @@ stale. Do not retrofit such a live CAP merely to demonstrate this phase. Validat
 the inheritance path in a scratch/test project or on new, not-yet-produced
 authority unless an explicit production-supersession review has been approved.
 
-Phase 20.18.2.3.6.6b.1 remains **OPEN / PENDING VALIDATION** until automated
-validation and one live Environment Planner acceptance run are complete.
+## Acceptance evidence
+
+Validation completed successfully on 2026-10-11:
+
+- Ruff lint passed.
+- Ruff formatting check passed across 1312 files.
+- mypy passed across 594 source files.
+- Focused Environment/CAP validation passed: 46 tests.
+- Full repository regression passed: 1883 tests in 26.50 seconds.
+- `git diff --check` and `git status --short` were clean.
+- A disposable clone of the Xorix project was used for live acceptance so accepted
+  production authority in the real project was not disturbed.
+- After adding the controlled-interior physical metadata to `CAP-LOC-021` in the
+  clone, `Create Suggested Draft` populated:
+  - gravity `9.81 m/s²`;
+  - pressure `101.3 kPa`;
+  - temperature `21 °C`;
+  - visibility `30 m`.
+- The generated Environment Plan remained current against Shot, Asset, Camera and
+  Lighting authority and transitioned successfully from Draft to Ready with the
+  inherited physical values unchanged.
+
+## Phase state
+
+Implementation does not by itself promote existing Shot-level values into CAP
+authority. Existing projects must explicitly add the desired canonical facts or
+production metadata to the governing Location/Environment CAP once; future
+Suggested Environment Drafts then inherit them automatically.
+
+Because CAP checksums participate in current Asset dependency fingerprints,
+retrofitting physical metadata onto a CAP already used by accepted production is
+an intentional canonical change and can make existing planning dependencies
+stale. Do not retrofit such a live CAP merely to demonstrate this phase. Validate
+the inheritance path in a scratch/test project or on new, not-yet-produced
+authority unless an explicit production-supersession review has been approved.
+
+**Phase 20.18.2.3.6.6b.1 — COMPLETE / ACCEPTED.**
