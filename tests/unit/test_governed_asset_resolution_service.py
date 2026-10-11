@@ -455,6 +455,28 @@ def test_shot_ready_reuses_one_inference_pass_for_multiple_inferred_bindings(
     context.shutdown()
 
 
+def test_ready_binding_exposes_structured_cap_production_projection(
+    tmp_path: Path,
+) -> None:
+    context, _shots, service, shot = _planning(tmp_path)
+    asset_id = _approved_ship(context, tmp_path)
+    binding = service.create(
+        shot_id=shot.shot_id,
+        sequence_number=1,
+        role="Vehicle/Ship",
+        requirement="Iron Horizon is required.",
+        expected_category=AssetCategory.SHIP,
+        asset_id=asset_id,
+    )
+    ready = service.mark_ready(binding.binding_id)
+
+    projection = service.production_projection(ready)
+
+    assert projection is not None
+    assert projection.identity.asset_id == asset_id
+    context.shutdown()
+
+
 def test_inferred_requirements_materialize_only_as_draft_bindings(
     tmp_path: Path,
 ) -> None:
