@@ -4,6 +4,11 @@
 > physical defaults so regenerated future Shots can inherit known Location /
 > Environment physics from approved CAP production authority without weakening
 > the rule that unknown fictional physics remain unknown.
+>
+> Phase 20.18.2.3.6.6b.2 hardens Production Planning snapshot performance by
+> caching repeated governed authority reads only within one synchronous UI refresh.
+> It preserves all existing currentness/readiness decisions and discards the cache
+> before the next user action.
 
 ## Objective
 
