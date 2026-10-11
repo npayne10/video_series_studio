@@ -468,14 +468,34 @@ class GovernedAssetResolverDialog(QDialog):
         preview = "\n".join(self._proposal_line(proposal) for proposal in proposals[:12])
         if len(proposals) > 12:
             preview += f"\n... {len(proposals) - 12} additional proposal(s)"
+
+        reconciliation_counts = getattr(
+            self.service,
+            "inferred_reconciliation_counts",
+            None,
+        )
+        if callable(reconciliation_counts):
+            create_count, refresh_count, retire_count = reconciliation_counts(
+                self.shot_id,
+                proposals,
+            )
+        else:
+            create_count, refresh_count, retire_count = len(proposals), 0, 0
+
         answer = QMessageBox.question(
             self,
             "Automated Asset Requirement Inference",
             (
-                f"VSCS inferred {len(proposals)} requirement proposal(s) for {self.shot_id}.\n\n"
+                f"VSCS inferred {len(proposals)} current requirement proposal(s) for "
+                f"{self.shot_id}.\n\n"
                 f"{preview}\n\n"
-                "Create these as Draft governed bindings? No binding will be marked Ready; "
-                "you can edit or reject each binding before approval."
+                "Applying current inference will:\n"
+                f"• create {create_count} new Draft inferred binding(s)\n"
+                f"• refresh {refresh_count} supported inferred binding(s) as Draft\n"
+                f"• retire {retire_count} stale inferred binding(s) no longer supported "
+                "by the current Shot authority\n\n"
+                "Manual bindings are preserved. No binding will be marked Ready until "
+                "you review and approve it."
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -492,8 +512,9 @@ class GovernedAssetResolverDialog(QDialog):
             self,
             "Automated Asset Requirement Inference",
             (
-                f"Created {len(created)} Draft asset binding(s). "
-                "Review canonical matches and unresolved requirements before marking Ready."
+                f"Reconciled current inferred authority: {create_count} created, "
+                f"{refresh_count} refreshed, {retire_count} retired. "
+                "Review all Draft bindings before marking Ready."
             ),
         )
         self.refresh()
