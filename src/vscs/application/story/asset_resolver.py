@@ -21,6 +21,7 @@ from vscs.application.asset_resolution import (
 )
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.domain.assets import AssetCategory
+from vscs.domain.caps import ProductionProjection
 
 from .shot_planning import GovernedShotPlanningService, ShotPlan
 
@@ -1189,6 +1190,18 @@ class GovernedAssetResolutionService:
                 require_approved_references=True,
             )
         )
+
+    def production_projection(
+        self,
+        binding: ShotAssetBinding,
+    ) -> ProductionProjection | None:
+        """Return current structured CAP production authority for one Ready binding."""
+        if not self.is_production_ready(binding):
+            return None
+        projections = self.resolver.production_projections
+        if projections is None:
+            return None
+        return projections.project(binding.asset_id)
 
     def is_upstream_current(self, binding: ShotAssetBinding) -> bool:
         """Return whether the binding still matches its authoritative Shot contract."""
