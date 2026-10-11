@@ -9,12 +9,172 @@ and otherwise repeats the same governed-planning resolution many times per refre
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
 from PySide6.QtWidgets import QTableWidgetItem
+
+
+def _normalise_identity(value: object) -> str:
+    return str(value).strip().upper()
+
+
+def _memo_key(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+    """Return a deterministic in-refresh key for immutable/read-only service calls."""
+    return repr((args, tuple(sorted(kwargs.items()))))
+
+
+@contextmanager
+def _governed_authority_read_cache(planning: Any) -> Iterator[None]:
+    """Cache repeated governed authority reads for one Production Planning refresh.
+
+    The cache is intentionally scoped to a single synchronous UI refresh. It does
+    not persist across refreshes and therefore cannot hide authority changes made
+    between user actions. All currentness/readiness decisions still execute through
+    the existing governed service methods; only repeated file/database reads are
+    served from the first result observed during this refresh.
+    """
+
+    restorations: list[tuple[Any, str, Any]] = []
+
+    def install(obj: Any, name: str, replacement: Callable[..., Any]) -> None:
+        original = getattr(obj, name, None)
+        if not callable(original):
+            return
+        try:
+            setattr(obj, name, replacement)
+        except (AttributeError, TypeError):
+            return
+        restorations.append((obj, name, original))
+
+    def cache_sequence(
+        obj: Any,
+        name: str,
+        *,
+        filter_name: str | None = None,
+        filter_attr: str | None = None,
+        normalise_filter: bool = True,
+    ) -> None:
+        original = getattr(obj, name, None)
+        if not callable(original):
+            return
+        loaded = False
+        values: tuple[Any, ...] = ()
+
+        def all_values() -> tuple[Any, ...]:
+            nonlocal loaded, values
+            if not loaded:
+                values = tuple(original())
+                loaded = True
+            return values
+
+        def cached(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
+            if args:
+                return tuple(original(*args, **kwargs))
+            current = all_values()
+            if filter_name is None or filter_attr is None:
+                return current
+            requested = kwargs.get(filter_name)
+            if requested is None:
+                return current
+            expected = (
+                _normalise_identity(requested) if normalise_filter else str(requested)
+            )
+            return tuple(
+                item
+                for item in current
+                if (
+                    _normalise_identity(getattr(item, filter_attr))
+                    if normalise_filter
+                    else str(getattr(item, filter_attr))
+                )
+                == expected
+            )
+
+        install(obj, name, cached)
+
+    def memoize(
+        obj: Any,
+        name: str,
+        *,
+        key_builder: Callable[[tuple[Any, ...], dict[str, Any]], object] | None = None,
+    ) -> None:
+        original = getattr(obj, name, None)
+        if not callable(original):
+            return
+        cache: dict[object, Any] = {}
+
+        def cached(*args: Any, **kwargs: Any) -> Any:
+            key = (
+                key_builder(args, kwargs)
+                if key_builder is not None
+                else _memo_key(args, kwargs)
+            )
+            if key not in cache:
+                cache[key] = original(*args, **kwargs)
+            return cache[key]
+
+        install(obj, name, cached)
+
+    reviews = getattr(planning, "reviews", None)
+    shots = getattr(reviews, "shots", None)
+    assets = getattr(reviews, "assets", None)
+    camera = getattr(reviews, "camera", None)
+    lighting = getattr(reviews, "lighting", None)
+    environment = getattr(reviews, "environment", None)
+    scenes = getattr(shots, "scenes", None)
+    episodes = getattr(scenes, "episodes", None)
+
+    cache_sequence(planning, "list_packages", filter_name="shot_id", filter_attr="shot_id")
+    cache_sequence(reviews, "list_reviews")
+    cache_sequence(shots, "list_plans", filter_name="scene_id", filter_attr="scene_id")
+    cache_sequence(assets, "list_bindings", filter_name="shot_id", filter_attr="shot_id")
+    cache_sequence(camera, "list_plans")
+    cache_sequence(lighting, "list_plans")
+    cache_sequence(environment, "list_plans")
+    cache_sequence(scenes, "list_plans", filter_name="episode_id", filter_attr="episode_id")
+    cache_sequence(
+        episodes,
+        "list_plans",
+        filter_name="story_id",
+        filter_attr="story_id",
+        normalise_filter=False,
+    )
+
+    memoize(planning, "current_package")
+    memoize(reviews, "snapshot")
+    memoize(shots, "is_production_ready")
+    memoize(assets, "shot_ready")
+    memoize(assets, "is_production_ready")
+    memoize(
+        assets,
+        "resolution",
+        key_builder=lambda args, _kwargs: (
+            getattr(args[0], "asset_id", "") if args else "",
+            getattr(getattr(args[0], "expected_category", None), "value", "")
+            if args
+            else "",
+        ),
+    )
+    memoize(
+        assets,
+        "infer_requirements",
+        key_builder=lambda args, kwargs: (
+            _normalise_identity(args[0] if args else kwargs.get("shot_id", "")),
+            bool(kwargs.get("include_ai", True)),
+        ),
+    )
+    memoize(camera, "is_production_ready")
+    memoize(lighting, "is_production_ready")
+    memoize(environment, "is_production_ready")
+
+    try:
+        yield
+    finally:
+        for obj, name, original in reversed(restorations):
+            setattr(obj, name, original)
 
 
 @dataclass(slots=True)
@@ -30,40 +190,41 @@ class ProductionPlanningSnapshot:
     def capture(cls, workspace: Any) -> ProductionPlanningSnapshot:
         """Resolve current planning/package state once for all compiler views."""
         planning = workspace.packages.planning
-        integrated_history = tuple(planning.list_packages())
-        shot_ids = sorted({item.shot_id for item in integrated_history})
-        current_integrated: dict[str, Any] = {}
+        with _governed_authority_read_cache(planning):
+            integrated_history = tuple(planning.list_packages())
+            shot_ids = sorted({item.shot_id for item in integrated_history})
+            current_integrated: dict[str, Any] = {}
 
-        planning_current = getattr(planning, "current_package", None)
-        if callable(planning_current):
-            for shot_id in shot_ids:
-                integrated = planning_current(shot_id)
-                if integrated is not None:
-                    current_integrated[shot_id] = integrated
-        else:
-            for integrated in integrated_history:
-                if planning.is_current(integrated):
-                    current_integrated[integrated.shot_id] = integrated
+            planning_current = getattr(planning, "current_package", None)
+            if callable(planning_current):
+                for shot_id in shot_ids:
+                    integrated = planning_current(shot_id)
+                    if integrated is not None:
+                        current_integrated[shot_id] = integrated
+            else:
+                for integrated in integrated_history:
+                    if planning.is_current(integrated):
+                        current_integrated[integrated.shot_id] = integrated
 
-        package_list = getattr(workspace.packages, "list_packages", None)
-        production_values = list(package_list()) if callable(package_list) else []
-        current_packages: dict[str, Any] = {}
-        for shot_id, integrated in current_integrated.items():
-            package = next(
-                (
-                    item
-                    for item in reversed(production_values)
-                    if item.shot_id == shot_id
-                    and item.source_fingerprint == integrated.package_fingerprint
-                ),
-                None,
-            )
-            if package is None and not production_values:
-                package = workspace.packages.current_package(shot_id)
-            if package is None:
-                package = workspace.packages.materialize(shot_id)
-                production_values.append(package)
-            current_packages[shot_id] = package
+            package_list = getattr(workspace.packages, "list_packages", None)
+            production_values = list(package_list()) if callable(package_list) else []
+            current_packages: dict[str, Any] = {}
+            for shot_id, integrated in current_integrated.items():
+                package = next(
+                    (
+                        item
+                        for item in reversed(production_values)
+                        if item.shot_id == shot_id
+                        and item.source_fingerprint == integrated.package_fingerprint
+                    ),
+                    None,
+                )
+                if package is None and not production_values:
+                    package = workspace.packages.current_package(shot_id)
+                if package is None:
+                    package = workspace.packages.materialize(shot_id)
+                    production_values.append(package)
+                current_packages[shot_id] = package
 
         return cls(
             integrated_history,
