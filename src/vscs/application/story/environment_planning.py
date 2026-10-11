@@ -745,7 +745,7 @@ class GovernedEnvironmentPlanningService:
             "temperature_c",
             "visibility_m",
         )
-        merged: dict[str, float | None] = {name: None for name in field_names}
+        merged: dict[str, float | None] = dict.fromkeys(field_names)
         sources: list[str] = []
         for priority in (0, 1):
             group = [profile for profile in profiles if profile[0] == priority]
@@ -759,9 +759,7 @@ class GovernedEnvironmentPlanningService:
                         candidates.append((asset_id, value))
                 distinct = {value for _asset_id, value in candidates}
                 if len(distinct) > 1:
-                    detail = ", ".join(
-                        f"{asset_id}={value:g}" for asset_id, value in candidates
-                    )
+                    detail = ", ".join(f"{asset_id}={value:g}" for asset_id, value in candidates)
                     raise GovernedEnvironmentPlanningError(
                         "Conflicting canonical physical environment values for "
                         f"{field_name}: {detail}"
