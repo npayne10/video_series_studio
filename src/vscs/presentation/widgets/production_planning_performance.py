@@ -79,9 +79,7 @@ def _governed_authority_read_cache(planning: Any) -> Iterator[None]:
             requested = kwargs.get(filter_name)
             if requested is None:
                 return current
-            expected = (
-                _normalise_identity(requested) if normalise_filter else str(requested)
-            )
+            expected = _normalise_identity(requested) if normalise_filter else str(requested)
             return tuple(
                 item
                 for item in current
@@ -107,11 +105,7 @@ def _governed_authority_read_cache(planning: Any) -> Iterator[None]:
         cache: dict[object, Any] = {}
 
         def cached(*args: Any, **kwargs: Any) -> Any:
-            key = (
-                key_builder(args, kwargs)
-                if key_builder is not None
-                else _memo_key(args, kwargs)
-            )
+            key = key_builder(args, kwargs) if key_builder is not None else _memo_key(args, kwargs)
             if key not in cache:
                 cache[key] = original(*args, **kwargs)
             return cache[key]
@@ -153,9 +147,7 @@ def _governed_authority_read_cache(planning: Any) -> Iterator[None]:
         "resolution",
         key_builder=lambda args, _kwargs: (
             getattr(args[0], "asset_id", "") if args else "",
-            getattr(getattr(args[0], "expected_category", None), "value", "")
-            if args
-            else "",
+            getattr(getattr(args[0], "expected_category", None), "value", "") if args else "",
         ),
     )
     memoize(
