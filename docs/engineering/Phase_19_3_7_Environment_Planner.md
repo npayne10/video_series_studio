@@ -1,5 +1,11 @@
 # Phase 19.3.7 — Environment Planner
 
+> **Phase 20.18.2.3.6.6b.1 extension:** governed Suggested Environment Drafts may
+> now inherit explicit physical defaults from approved Location/Environment CAP
+> Production Projection authority. This does not weaken the original rule below:
+> fictional physics remain Unknown when canon is silent, and generic interiors
+> never receive automatic Earth-normal values merely because they are interiors.
+
 ## Purpose
 
 Introduce the single authoritative Environment Planning layer beneath governed Lighting Planning.
