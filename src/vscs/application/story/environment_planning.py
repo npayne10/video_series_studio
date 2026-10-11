@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
+from vscs.domain.assets import AssetCategory
+from vscs.domain.caps import ProductionProjection
 
-from .asset_resolver import GovernedAssetResolutionService
+from .asset_resolver import GovernedAssetResolutionService, ShotAssetBinding
 from .camera_planning import CameraPlan, GovernedCameraPlanningService
 from .lighting_planning import GovernedLightingPlanningService, LightingPlan
 from .scene_planning import ScenePlan, ScenePlanningService
@@ -103,6 +105,17 @@ class EnvironmentPlan:
     camera_context_hash: str = ""
     lighting_context_hash: str = ""
     status: EnvironmentPlanStatus = EnvironmentPlanStatus.DRAFT
+
+
+@dataclass(frozen=True, slots=True)
+class _CanonicalPhysicalDefaults:
+    """Merged physical environment authority inherited from current CAP projections."""
+
+    gravity_m_s2: float | None = None
+    pressure_kpa: float | None = None
+    temperature_c: float | None = None
+    visibility_m: float | None = None
+    source_asset_ids: tuple[str, ...] = ()
 
 
 class GovernedEnvironmentPlanningService:
@@ -316,6 +329,22 @@ class GovernedEnvironmentPlanningService:
             hazards = "atmosphere is hazardous to unprotected personnel"
         elif "breathable" in text:
             atmosphere = AtmosphereState.BREATHABLE
+
+        canonical_defaults = self._canonical_physical_defaults(shot.shot_id, context)
+        if canonical_defaults.gravity_m_s2 is not None:
+            gravity = canonical_defaults.gravity_m_s2
+        if canonical_defaults.pressure_kpa is not None:
+            pressure = canonical_defaults.pressure_kpa
+        if canonical_defaults.temperature_c is not None:
+            temperature = canonical_defaults.temperature_c
+        if canonical_defaults.visibility_m is not None:
+            visibility = canonical_defaults.visibility_m
+        if canonical_defaults.source_asset_ids:
+            constraints.append(
+                "Physical environment values inherit approved canonical asset authority from "
+                + ", ".join(canonical_defaults.source_asset_ids)
+                + "."
+            )
 
         return EnvironmentPlan(
             environment_plan_id=self._environment_plan_id(shot.shot_id),
@@ -618,6 +647,230 @@ class GovernedEnvironmentPlanningService:
             raise GovernedEnvironmentPlanningError(
                 f"Unable to save Environment Plans: {exc}"
             ) from exc
+
+    def _canonical_physical_defaults(
+        self,
+        shot_id: str,
+        context: EnvironmentContext,
+    ) -> _CanonicalPhysicalDefaults:
+        """Merge approved Location/Environment CAP physical values without guessing."""
+        projection_for_binding = getattr(self.assets, "production_projection", None)
+        if not callable(projection_for_binding):
+            return _CanonicalPhysicalDefaults()
+
+        profiles: list[
+            tuple[
+                int,
+                str,
+                float | None,
+                float | None,
+                float | None,
+                float | None,
+            ]
+        ] = []
+        for binding in self.assets.list_bindings(shot_id=shot_id):
+            if binding.expected_category not in {
+                AssetCategory.LOCATION,
+                AssetCategory.ENVIRONMENT,
+            }:
+                continue
+            if not self.assets.is_production_ready(binding):
+                continue
+            projection = projection_for_binding(binding)
+            if projection is None:
+                continue
+
+            declared_context = self._canonical_environment_context(
+                projection,
+                binding.asset_id,
+            )
+            has_values = self._projection_has_environment_physical_values(projection)
+            if not has_values:
+                continue
+
+            if binding.expected_category is AssetCategory.LOCATION:
+                if declared_context is not None and declared_context is not context:
+                    raise GovernedEnvironmentPlanningError(
+                        "Canonical Location environment context conflicts with the governed "
+                        f"Shot environment: {binding.asset_id} declares "
+                        f"{declared_context.value}, Shot requires {context.value}"
+                    )
+                priority = 0
+            else:
+                # Wider Environment authority may describe orbit/planetary conditions around
+                # an interior Location. Consume it only when it explicitly declares the same
+                # physical context as the governed Shot.
+                if declared_context is None or declared_context is not context:
+                    continue
+                priority = 1
+
+            profiles.append(
+                (
+                    priority,
+                    binding.asset_id,
+                    self._canonical_environment_number(
+                        projection,
+                        binding.asset_id,
+                        "environment.gravity_m_s2",
+                        minimum=0.0,
+                        maximum=100.0,
+                        label="Gravity",
+                    ),
+                    self._canonical_environment_number(
+                        projection,
+                        binding.asset_id,
+                        "environment.pressure_kpa",
+                        minimum=0.0,
+                        maximum=10000.0,
+                        label="Pressure",
+                    ),
+                    self._canonical_environment_number(
+                        projection,
+                        binding.asset_id,
+                        "environment.temperature_c",
+                        minimum=-273.15,
+                        maximum=5000.0,
+                        label="Temperature",
+                    ),
+                    self._canonical_environment_number(
+                        projection,
+                        binding.asset_id,
+                        "environment.visibility_m",
+                        minimum=0.0,
+                        maximum=1_000_000_000.0,
+                        label="Visibility",
+                    ),
+                )
+            )
+
+        if not profiles:
+            return _CanonicalPhysicalDefaults()
+
+        field_names = (
+            "gravity_m_s2",
+            "pressure_kpa",
+            "temperature_c",
+            "visibility_m",
+        )
+        merged: dict[str, float | None] = {name: None for name in field_names}
+        sources: list[str] = []
+        for priority in (0, 1):
+            group = [profile for profile in profiles if profile[0] == priority]
+            for field_index, field_name in enumerate(field_names, start=2):
+                if merged[field_name] is not None:
+                    continue
+                candidates = [
+                    (asset_id, profile[field_index])
+                    for profile in group
+                    for asset_id in (profile[1],)
+                    if profile[field_index] is not None
+                ]
+                distinct = {value for _asset_id, value in candidates}
+                if len(distinct) > 1:
+                    detail = ", ".join(
+                        f"{asset_id}={value:g}" for asset_id, value in candidates
+                    )
+                    raise GovernedEnvironmentPlanningError(
+                        "Conflicting canonical physical environment values for "
+                        f"{field_name}: {detail}"
+                    )
+                if candidates:
+                    asset_id, value = candidates[0]
+                    merged[field_name] = value
+                    if asset_id not in sources:
+                        sources.append(asset_id)
+
+        return _CanonicalPhysicalDefaults(
+            gravity_m_s2=merged["gravity_m_s2"],
+            pressure_kpa=merged["pressure_kpa"],
+            temperature_c=merged["temperature_c"],
+            visibility_m=merged["visibility_m"],
+            source_asset_ids=tuple(sources),
+        )
+
+    def _canonical_environment_context(
+        self,
+        projection: ProductionProjection,
+        asset_id: str,
+    ) -> EnvironmentContext | None:
+        raw = self._canonical_projection_value(projection, "environment.context")
+        if raw is None:
+            return None
+        normalized = raw.strip().casefold().replace("-", "_").replace(" ", "_")
+        try:
+            return EnvironmentContext(normalized)
+        except ValueError as exc:
+            raise GovernedEnvironmentPlanningError(
+                f"Canonical environment.context for {asset_id} is invalid: {raw!r}"
+            ) from exc
+
+    def _canonical_environment_number(
+        self,
+        projection: ProductionProjection,
+        asset_id: str,
+        key: str,
+        *,
+        minimum: float,
+        maximum: float,
+        label: str,
+    ) -> float | None:
+        raw = self._canonical_projection_value(projection, key)
+        if raw is None:
+            return None
+        try:
+            value = float(raw)
+        except ValueError as exc:
+            raise GovernedEnvironmentPlanningError(
+                f"Canonical {key} for {asset_id} must be numeric, got {raw!r}"
+            ) from exc
+        try:
+            return self._optional_range(value, minimum, maximum, label)
+        except GovernedEnvironmentPlanningError as exc:
+            raise GovernedEnvironmentPlanningError(
+                f"Canonical {key} for {asset_id} is invalid: {exc}"
+            ) from exc
+
+    @classmethod
+    def _projection_has_environment_physical_values(
+        cls,
+        projection: ProductionProjection,
+    ) -> bool:
+        return any(
+            cls._canonical_projection_value(projection, key) is not None
+            for key in (
+                "environment.gravity_m_s2",
+                "environment.pressure_kpa",
+                "environment.temperature_c",
+                "environment.visibility_m",
+            )
+        )
+
+    @staticmethod
+    def _canonical_projection_value(
+        projection: ProductionProjection,
+        key: str,
+    ) -> str | None:
+        normalized_key = key.strip().casefold()
+        fact_values = tuple(
+            fact.value.strip()
+            for fact in projection.facts
+            if fact.key.strip().casefold() == normalized_key and fact.value.strip()
+        )
+        distinct_facts = tuple(dict.fromkeys(fact_values))
+        if len(distinct_facts) > 1:
+            raise GovernedEnvironmentPlanningError(
+                f"Canonical projection {projection.identity.asset_id} contains conflicting "
+                f"approved facts for {key}: {', '.join(distinct_facts)}"
+            )
+        if distinct_facts:
+            return distinct_facts[0]
+
+        metadata = {
+            str(metadata_key).strip().casefold(): str(value).strip()
+            for metadata_key, value in projection.production_metadata.items()
+            if str(metadata_key).strip() and str(value).strip()
+        }
+        return metadata.get(normalized_key)
 
     def _asset_context_hash(self, shot_id: str) -> str:
         bindings = self.assets.list_bindings(shot_id=shot_id)
