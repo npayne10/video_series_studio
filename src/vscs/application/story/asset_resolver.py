@@ -281,10 +281,10 @@ class GovernedAssetResolutionService:
         plan = self._inferred_reconciliation_plan(shot, proposals)
 
         all_bindings = self.list_bindings()
-        current_ids = {
-            binding.binding_id for binding in self.list_bindings(shot_id=shot.shot_id)
-        }
-        retained_other = [binding for binding in all_bindings if binding.binding_id not in current_ids]
+        current_ids = {binding.binding_id for binding in self.list_bindings(shot_id=shot.shot_id)}
+        retained_other = [
+            binding for binding in all_bindings if binding.binding_id not in current_ids
+        ]
         manual = list(plan["manual"])
         refreshed: list[ShotAssetBinding] = []
         for binding, proposal in plan["refresh"]:
@@ -340,17 +340,15 @@ class GovernedAssetResolutionService:
             next_sequence += 1
 
         self._write(
-            tuple(
-                (
-                    *retained_other,
-                    *manual,
-                    *unchanged,
-                    *refreshed,
-                    *created,
-                )
+            (
+                *retained_other,
+                *manual,
+                *unchanged,
+                *refreshed,
+                *created,
             )
         )
-        return tuple((*refreshed, *created))
+        return (*refreshed, *created)
 
     def _inferred_reconciliation_plan(
         self,
@@ -369,7 +367,7 @@ class GovernedAssetResolutionService:
 
         existing = self.list_bindings(shot_id=shot.shot_id)
         manual = tuple(binding for binding in existing if binding.inference_source is None)
-        inferred = list(binding for binding in existing if binding.inference_source is not None)
+        inferred = [binding for binding in existing if binding.inference_source is not None]
 
         manual_keys = {
             (
