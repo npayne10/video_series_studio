@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -84,6 +85,7 @@ class FakeAssets:
             asset_dependency_hash="asset-v1",
             status=AssetBindingStatus.READY,
         )
+        self.projections: dict[str, object] = {}
 
     def shot_ready(self, shot_id: str) -> bool:
         return self.ready and shot_id == self.binding.shot_id
@@ -95,6 +97,9 @@ class FakeAssets:
 
     def is_production_ready(self, binding: ShotAssetBinding) -> bool:
         return self.ready and binding.asset_dependency_hash == self.binding.asset_dependency_hash
+
+    def production_projection(self, binding: ShotAssetBinding):
+        return self.projections.get(binding.asset_id)
 
 
 class FakeCamera:
@@ -260,6 +265,153 @@ def test_surface_suggestion_keeps_unknown_xorix_physics_unknown(tmp_path: Path) 
     assert plan.gravity_m_s2 is None
     assert plan.pressure_kpa is None
     assert plan.temperature_c is None
+
+
+def test_bridge_location_canonical_physical_defaults_populate_suggestion(
+    tmp_path: Path,
+) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        title="Nine Days in Xorix Orbit — Progression",
+        narrative_purpose="Continue the command-team beat on the Iron Horizon bridge.",
+        production_objective="Keep James and Sandra readable on the bridge.",
+        required_action="James remains beside Sandra at her bridge control station.",
+    )
+    shots.scene_shots = (shots.shot,)
+    assets.binding = replace(
+        assets.binding,
+        role="Location",
+        requirement="Bridge is required.",
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-021",
+    )
+    assets.projections["CAP-LOC-021"] = SimpleNamespace(
+        identity=SimpleNamespace(asset_id="CAP-LOC-021"),
+        facts=(),
+        production_metadata={
+            "environment.context": "interior",
+            "environment.gravity_m_s2": "9.81",
+            "environment.pressure_kpa": "101.3",
+            "environment.temperature_c": "21",
+            "environment.visibility_m": "30",
+        },
+    )
+
+    plan = service.suggested_plan(shots.shot.shot_id)
+
+    assert plan.environment_context is EnvironmentContext.INTERIOR
+    assert plan.gravity_m_s2 == 9.81
+    assert plan.pressure_kpa == 101.3
+    assert plan.temperature_c == 21.0
+    assert plan.visibility_m == 30.0
+    assert "CAP-LOC-021" in " ".join(plan.environment_constraints)
+
+
+def test_approved_structured_fact_overrides_cap_production_metadata(
+    tmp_path: Path,
+) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        required_action="Sandra remains at the bridge control station.",
+    )
+    shots.scene_shots = (shots.shot,)
+    assets.binding = replace(
+        assets.binding,
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-021",
+    )
+    assets.projections["CAP-LOC-021"] = SimpleNamespace(
+        identity=SimpleNamespace(asset_id="CAP-LOC-021"),
+        facts=(
+            SimpleNamespace(
+                key="environment.pressure_kpa",
+                value="101.3",
+            ),
+        ),
+        production_metadata={
+            "environment.context": "interior",
+            "environment.pressure_kpa": "88",
+        },
+    )
+
+    plan = service.suggested_plan(shots.shot.shot_id)
+
+    assert plan.pressure_kpa == 101.3
+
+
+def test_wider_environment_defaults_do_not_leak_into_local_interior(
+    tmp_path: Path,
+) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        required_action="Sandra remains at the bridge control station.",
+    )
+    shots.scene_shots = (shots.shot,)
+    assets.binding = replace(
+        assets.binding,
+        expected_category=AssetCategory.ENVIRONMENT,
+        asset_id="CAP-ENV-004",
+    )
+    assets.projections["CAP-ENV-004"] = SimpleNamespace(
+        identity=SimpleNamespace(asset_id="CAP-ENV-004"),
+        facts=(),
+        production_metadata={
+            "environment.context": "orbital_space",
+            "environment.pressure_kpa": "0",
+            "environment.temperature_c": "-120",
+        },
+    )
+
+    plan = service.suggested_plan(shots.shot.shot_id)
+
+    assert plan.environment_context is EnvironmentContext.INTERIOR
+    assert plan.pressure_kpa is None
+    assert plan.temperature_c is None
+
+
+def test_invalid_canonical_location_physics_fails_closed(
+    tmp_path: Path,
+) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        required_action="Sandra remains at the bridge control station.",
+    )
+    shots.scene_shots = (shots.shot,)
+    assets.binding = replace(
+        assets.binding,
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-021",
+    )
+    assets.projections["CAP-LOC-021"] = SimpleNamespace(
+        identity=SimpleNamespace(asset_id="CAP-LOC-021"),
+        facts=(),
+        production_metadata={
+            "environment.context": "interior",
+            "environment.gravity_m_s2": "not-a-number",
+        },
+    )
+
+    with pytest.raises(
+        GovernedEnvironmentPlanningError,
+        match="CAP-LOC-021.*must be numeric",
+    ):
+        service.suggested_plan(shots.shot.shot_id)
 
 
 def test_environment_planning_requires_current_ready_lighting(tmp_path: Path) -> None:
