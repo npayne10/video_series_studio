@@ -117,5 +117,12 @@ authority. Existing projects must explicitly add the desired canonical facts or
 production metadata to the governing Location/Environment CAP once; future
 Suggested Environment Drafts then inherit them automatically.
 
+Because CAP checksums participate in current Asset dependency fingerprints,
+retrofitting physical metadata onto a CAP already used by accepted production is
+an intentional canonical change and can make existing planning dependencies
+stale. Do not retrofit such a live CAP merely to demonstrate this phase. Validate
+the inheritance path in a scratch/test project or on new, not-yet-produced
+authority unless an explicit production-supersession review has been approved.
+
 Phase 20.18.2.3.6.6b.1 remains **OPEN / PENDING VALIDATION** until automated
 validation and one live Environment Planner acceptance run are complete.
