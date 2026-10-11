@@ -151,9 +151,11 @@ Validation completed on 2026-10-11:
 - Individual compiler-state and selected-editor loads remained in the
   millisecond range.
 
-Repository cleanliness after the full regression remains the final local
-acceptance check before formal phase closure.
+Repository cleanliness was verified after the full regression:
+
+- `git diff --check` returned no output.
+- `git status --short` returned no output.
 
 ## Phase state
 
-**OPEN / PERFORMANCE ACCEPTED / PENDING FINAL REPOSITORY CLEANLINESS CHECK.**
+**Phase 20.18.2.3.6.6b.2 — COMPLETE / ACCEPTED.**
