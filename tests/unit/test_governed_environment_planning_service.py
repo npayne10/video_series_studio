@@ -487,7 +487,7 @@ def test_conflicting_equal_priority_canonical_location_values_fail_closed(
 
     with pytest.raises(
         GovernedEnvironmentPlanningError,
-        match="Conflicting canonical physical environment values.*gravity_m_s2",
+        match=r"Conflicting canonical physical environment values.*gravity_m_s2",
     ):
         service.suggested_plan(shots.shot.shot_id)
 
@@ -520,7 +520,7 @@ def test_invalid_canonical_location_physics_fails_closed(
 
     with pytest.raises(
         GovernedEnvironmentPlanningError,
-        match="CAP-LOC-021.*must be numeric",
+        match=r"CAP-LOC-021.*must be numeric",
     ):
         service.suggested_plan(shots.shot.shot_id)
 
