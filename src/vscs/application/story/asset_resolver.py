@@ -257,50 +257,223 @@ class GovernedAssetResolutionService:
         without_placeholders = self._suppress_story_placeholders(deduplicated)
         return self._collapse_environment_overlaps(without_placeholders)
 
+    def inferred_reconciliation_counts(
+        self,
+        shot_id: str,
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+    ) -> tuple[int, int, int]:
+        """Preview create/refresh/retire counts for human-approved inferred authority."""
+        shot = self._require_ready_shot(shot_id)
+        plan = self._inferred_reconciliation_plan(shot, proposals)
+        return (
+            len(plan["create"]),
+            len(plan["refresh"]),
+            len(plan["retire"]),
+        )
+
     def apply_inferred_requirements(
         self,
         shot_id: str,
         proposals: tuple[ShotAssetRequirementProposal, ...],
     ) -> tuple[ShotAssetBinding, ...]:
-        """Human-approved materialization of inference proposals as Draft bindings."""
+        """Reconcile human-approved inference into current Draft governed bindings."""
         shot = self._require_ready_shot(shot_id)
-        existing = self.list_bindings(shot_id=shot.shot_id)
-        existing_keys = {
-            (binding.expected_category, binding.asset_id, binding.requirement.casefold())
-            for binding in existing
+        plan = self._inferred_reconciliation_plan(shot, proposals)
+
+        all_bindings = self.list_bindings()
+        current_ids = {
+            binding.binding_id for binding in self.list_bindings(shot_id=shot.shot_id)
         }
+        retained_other = [binding for binding in all_bindings if binding.binding_id not in current_ids]
+        manual = list(plan["manual"])
+        refreshed: list[ShotAssetBinding] = []
+        for binding, proposal in plan["refresh"]:
+            selected_asset = proposal.matched_asset_id.strip().upper()
+            refreshed.append(
+                replace(
+                    binding,
+                    role=self._required(proposal.role, "Production role"),
+                    requirement=self._required(proposal.requirement, "Asset requirement"),
+                    expected_category=proposal.expected_category,
+                    asset_id=selected_asset,
+                    notes=self._inference_notes(proposal),
+                    shot_contract_hash=self._shot_contract_hash(shot),
+                    asset_dependency_hash=self._dependency_hash(
+                        selected_asset,
+                        proposal.expected_category,
+                    ),
+                    inference_source=proposal.source,
+                    status=AssetBindingStatus.DRAFT,
+                )
+            )
+
+        unchanged = list(plan["unchanged"])
+        occupied_sequences = {
+            binding.sequence_number for binding in (*manual, *refreshed, *unchanged)
+        }
+        next_sequence = max(occupied_sequences, default=0) + 1
         created: list[ShotAssetBinding] = []
-        sequence = self.next_sequence_number(shot.shot_id)
+        for proposal in plan["create"]:
+            while next_sequence in occupied_sequences:
+                next_sequence += 1
+            selected_asset = proposal.matched_asset_id.strip().upper()
+            created.append(
+                ShotAssetBinding(
+                    binding_id=self._binding_id(shot.shot_id, next_sequence),
+                    shot_id=shot.shot_id,
+                    sequence_number=next_sequence,
+                    role=self._required(proposal.role, "Production role"),
+                    requirement=self._required(proposal.requirement, "Asset requirement"),
+                    expected_category=proposal.expected_category,
+                    asset_id=selected_asset,
+                    notes=self._inference_notes(proposal),
+                    shot_contract_hash=self._shot_contract_hash(shot),
+                    asset_dependency_hash=self._dependency_hash(
+                        selected_asset,
+                        proposal.expected_category,
+                    ),
+                    inference_source=proposal.source,
+                    status=AssetBindingStatus.DRAFT,
+                )
+            )
+            occupied_sequences.add(next_sequence)
+            next_sequence += 1
+
+        self._write(
+            tuple(
+                (
+                    *retained_other,
+                    *manual,
+                    *unchanged,
+                    *refreshed,
+                    *created,
+                )
+            )
+        )
+        return tuple((*refreshed, *created))
+
+    def _inferred_reconciliation_plan(
+        self,
+        shot: ShotPlan,
+        proposals: tuple[ShotAssetRequirementProposal, ...],
+    ) -> dict[str, Any]:
+        """Build a deterministic reconciliation plan without mutating binding authority."""
+        validated: list[ShotAssetRequirementProposal] = []
         for proposal in proposals:
             if proposal.shot_id.strip().upper() != shot.shot_id:
                 raise GovernedAssetResolutionError(
                     "Asset requirement proposal belongs to another Shot"
                 )
             self._validate_category(proposal.expected_category)
-            key = (
+            validated.append(proposal)
+
+        existing = self.list_bindings(shot_id=shot.shot_id)
+        manual = tuple(binding for binding in existing if binding.inference_source is None)
+        inferred = list(binding for binding in existing if binding.inference_source is not None)
+
+        manual_keys = {
+            (
+                binding.expected_category,
+                binding.asset_id,
+                binding.requirement.casefold(),
+            )
+            for binding in manual
+        }
+        remaining_proposals = [
+            proposal
+            for proposal in validated
+            if (
                 proposal.expected_category,
                 proposal.matched_asset_id.strip().upper(),
                 proposal.requirement.casefold(),
             )
-            if key in existing_keys:
-                continue
-            binding = self.create(
-                shot_id=shot.shot_id,
-                sequence_number=sequence,
-                role=proposal.role,
-                requirement=proposal.requirement,
-                expected_category=proposal.expected_category,
-                asset_id=proposal.matched_asset_id,
-                notes=(
-                    f"Inferred via {proposal.source.value}; confidence "
-                    f"{proposal.confidence:.2f}. {proposal.rationale}"
-                ).strip(),
-                inference_source=proposal.source,
+            not in manual_keys
+        ]
+
+        refresh: list[tuple[ShotAssetBinding, ShotAssetRequirementProposal]] = []
+        unchanged: list[ShotAssetBinding] = []
+        matched_ids: set[str] = set()
+        create: list[ShotAssetRequirementProposal] = []
+
+        for proposal in remaining_proposals:
+            identity = self._inferred_identity_for_proposal(proposal)
+            binding = next(
+                (
+                    candidate
+                    for candidate in inferred
+                    if candidate.binding_id not in matched_ids
+                    and self._inferred_identity_for_binding(candidate) == identity
+                ),
+                None,
             )
-            created.append(binding)
-            existing_keys.add(key)
-            sequence += 1
-        return tuple(created)
+            if binding is None:
+                create.append(proposal)
+                continue
+            matched_ids.add(binding.binding_id)
+            if self._inferred_binding_matches_current(binding, proposal, shot):
+                unchanged.append(binding)
+            else:
+                refresh.append((binding, proposal))
+
+        retire = tuple(binding for binding in inferred if binding.binding_id not in matched_ids)
+        return {
+            "manual": manual,
+            "unchanged": tuple(unchanged),
+            "refresh": tuple(refresh),
+            "create": tuple(create),
+            "retire": retire,
+        }
+
+    @staticmethod
+    def _inferred_identity_for_proposal(
+        proposal: ShotAssetRequirementProposal,
+    ) -> tuple[AssetCategory, str, str, str]:
+        asset_id = proposal.matched_asset_id.strip().upper()
+        return (
+            proposal.expected_category,
+            asset_id,
+            proposal.role.casefold(),
+            "" if asset_id else proposal.requirement.casefold(),
+        )
+
+    @staticmethod
+    def _inferred_identity_for_binding(
+        binding: ShotAssetBinding,
+    ) -> tuple[AssetCategory, str, str, str]:
+        asset_id = binding.asset_id.strip().upper()
+        return (
+            binding.expected_category,
+            asset_id,
+            binding.role.casefold(),
+            "" if asset_id else binding.requirement.casefold(),
+        )
+
+    def _inferred_binding_matches_current(
+        self,
+        binding: ShotAssetBinding,
+        proposal: ShotAssetRequirementProposal,
+        shot: ShotPlan,
+    ) -> bool:
+        selected_asset = proposal.matched_asset_id.strip().upper()
+        return (
+            binding.role == proposal.role
+            and binding.requirement == proposal.requirement
+            and binding.expected_category is proposal.expected_category
+            and binding.asset_id == selected_asset
+            and binding.notes == self._inference_notes(proposal)
+            and binding.shot_contract_hash == self._shot_contract_hash(shot)
+            and binding.asset_dependency_hash
+            == self._dependency_hash(selected_asset, proposal.expected_category)
+            and binding.inference_source is proposal.source
+            and binding.status is AssetBindingStatus.DRAFT
+        )
+
+    @staticmethod
+    def _inference_notes(proposal: ShotAssetRequirementProposal) -> str:
+        return (
+            f"Inferred via {proposal.source.value}; confidence "
+            f"{proposal.confidence:.2f}. {proposal.rationale}"
+        ).strip()
 
     def _deterministic_requirements(
         self,
