@@ -9,7 +9,11 @@ from vscs.application.production_package import (
     ProductionPackageProvenance,
     ProductionPackageStatus,
 )
-from vscs.presentation.widgets.production_planning_performance import _optimized_refresh
+from vscs.domain.assets import AssetCategory
+from vscs.presentation.widgets.production_planning_performance import (
+    ProductionPlanningSnapshot,
+    _optimized_refresh,
+)
 
 
 @dataclass(frozen=True)
@@ -202,3 +206,268 @@ def test_snapshot_refresh_avoids_rematerialization_and_loads_each_compiler_once(
     }
     assert selection_events == 0
     assert workspace.footer_updates == 1
+
+
+@dataclass(frozen=True)
+class _CurrentIntegrated:
+    shot_id: str
+    package_id: str
+    package_fingerprint: str
+
+
+@dataclass(frozen=True)
+class _AuthorityBinding:
+    binding_id: str
+    shot_id: str
+    asset_id: str = "CAP-LOC-021"
+    expected_category: AssetCategory = AssetCategory.LOCATION
+
+
+class _AuthorityAssets:
+    def __init__(self) -> None:
+        self.list_calls = 0
+        self.resolution_calls = 0
+        self.shot_ready_calls = 0
+        self.ready_calls = 0
+        self.bindings = (
+            _AuthorityBinding("SHT-001-AST-001", "SHT-001"),
+            _AuthorityBinding("SHT-002-AST-001", "SHT-002"),
+        )
+
+    def list_bindings(self, *, shot_id: str | None = None):
+        self.list_calls += 1
+        if shot_id is None:
+            return self.bindings
+        return tuple(item for item in self.bindings if item.shot_id == shot_id)
+
+    def resolution(self, _binding):
+        self.resolution_calls += 1
+        return object()
+
+    def shot_ready(self, _shot_id: str) -> bool:
+        self.shot_ready_calls += 1
+        return True
+
+    def is_production_ready(self, _binding) -> bool:
+        self.ready_calls += 1
+        return True
+
+
+class _AuthorityPlanCollection:
+    def __init__(self, attr_name: str, values: tuple[object, ...]) -> None:
+        self.attr_name = attr_name
+        self.values = values
+        self.list_calls = 0
+
+    def list_plans(self, **kwargs):
+        self.list_calls += 1
+        if not kwargs:
+            return self.values
+        key, requested = next(iter(kwargs.items()))
+        expected_attr = {
+            "scene_id": "scene_id",
+            "episode_id": "episode_id",
+            "story_id": "story_id",
+        }[key]
+        return tuple(
+            item for item in self.values if getattr(item, expected_attr) == requested
+        )
+
+    def is_production_ready(self, _value) -> bool:
+        return True
+
+
+class _AuthorityReviews:
+    def __init__(self) -> None:
+        self.list_calls = 0
+        self.snapshot_calls = 0
+        self.assets = _AuthorityAssets()
+        episode = type("Episode", (), {"episode_id": "EP-001", "story_id": "STORY-001"})()
+        scene = type(
+            "Scene",
+            (),
+            {"scene_id": "SCN-001", "episode_id": "EP-001"},
+        )()
+        shot_1 = type(
+            "Shot",
+            (),
+            {"shot_id": "SHT-001", "scene_id": "SCN-001"},
+        )()
+        shot_2 = type(
+            "Shot",
+            (),
+            {"shot_id": "SHT-002", "scene_id": "SCN-001"},
+        )()
+        self.shots = _AuthorityPlanCollection("shot_id", (shot_1, shot_2))
+        self.shots.scenes = _AuthorityPlanCollection("scene_id", (scene,))
+        self.shots.scenes.episodes = _AuthorityPlanCollection("episode_id", (episode,))
+        self.camera = _AuthorityPlanCollection("shot_id", ())
+        self.lighting = _AuthorityPlanCollection("shot_id", ())
+        self.environment = _AuthorityPlanCollection("shot_id", ())
+
+    def list_reviews(self):
+        self.list_calls += 1
+        return ()
+
+    def snapshot(self, shot_id: str):
+        self.snapshot_calls += 1
+        # Deliberately repeat the same governed reads. The refresh cache must make
+        # these operations cheap without changing their semantics.
+        self.assets.list_bindings(shot_id=shot_id)
+        self.assets.list_bindings(shot_id=shot_id)
+        self.assets.shot_ready(shot_id)
+        self.assets.shot_ready(shot_id)
+        for binding in self.assets.list_bindings(shot_id=shot_id):
+            self.assets.resolution(binding)
+            self.assets.resolution(binding)
+        return object()
+
+
+class _AuthorityPlanning:
+    def __init__(self) -> None:
+        self.reviews = _AuthorityReviews()
+        self.list_calls = 0
+        self.current_calls = 0
+        self.values = (
+            _CurrentIntegrated("SHT-001", "PIP-SHT-001", "source-1"),
+            _CurrentIntegrated("SHT-002", "PIP-SHT-002", "source-2"),
+        )
+
+    def list_packages(self, *, shot_id: str | None = None):
+        self.list_calls += 1
+        if shot_id is None:
+            return self.values
+        return tuple(item for item in self.values if item.shot_id == shot_id)
+
+    def current_package(self, shot_id: str):
+        self.current_calls += 1
+        # These calls mirror the expensive repeated governance traversal in the
+        # real integration service.
+        self.reviews.list_reviews()
+        self.reviews.list_reviews()
+        self.reviews.snapshot(shot_id)
+        self.reviews.snapshot(shot_id)
+        self.reviews.shots.list_plans(scene_id="SCN-001")
+        self.reviews.shots.list_plans(scene_id="SCN-001")
+        values = self.list_packages(shot_id=shot_id)
+        return values[-1] if values else None
+
+    def is_current(self, package) -> bool:
+        current = self.current_package(package.shot_id)
+        return current is not None and current.package_id == package.package_id
+
+
+class _AuthorityPackages:
+    def __init__(self) -> None:
+        self.planning = _AuthorityPlanning()
+        self.list_calls = 0
+        self.materialize_calls = 0
+        self.values = (
+            ProductionPackage(
+                package_id="PP-SHT-001",
+                shot_id="SHT-001",
+                schema_version="1.0",
+                source_fingerprint="source-1",
+                package_fingerprint="package-1",
+                provenance=ProductionPackageProvenance(
+                    "PIP-SHT-001", "source-1", "PRV-1", "review-1"
+                ),
+                story_context={},
+                shot={},
+                assets=(),
+                camera={},
+                lighting={},
+                environment={},
+                action_performance={},
+                continuity={},
+                style={},
+                dialogue=(),
+                effects=(),
+                references=(),
+                universal_description={},
+                provider_outputs={},
+                validation={},
+                status=ProductionPackageStatus.COMPILING,
+            ),
+            ProductionPackage(
+                package_id="PP-SHT-002",
+                shot_id="SHT-002",
+                schema_version="1.0",
+                source_fingerprint="source-2",
+                package_fingerprint="package-2",
+                provenance=ProductionPackageProvenance(
+                    "PIP-SHT-002", "source-2", "PRV-2", "review-2"
+                ),
+                story_context={},
+                shot={},
+                assets=(),
+                camera={},
+                lighting={},
+                environment={},
+                action_performance={},
+                continuity={},
+                style={},
+                dialogue=(),
+                effects=(),
+                references=(),
+                universal_description={},
+                provider_outputs={},
+                validation={},
+                status=ProductionPackageStatus.COMPILING,
+            ),
+        )
+
+    def list_packages(self):
+        self.list_calls += 1
+        return self.values
+
+    def current_package(self, shot_id: str):
+        return next((item for item in self.values if item.shot_id == shot_id), None)
+
+    def materialize(self, _shot_id: str):
+        self.materialize_calls += 1
+        raise AssertionError("existing current packages must not be rematerialized")
+
+
+class _AuthorityWorkspace:
+    def __init__(self) -> None:
+        self.packages = _AuthorityPackages()
+
+
+def test_snapshot_capture_caches_governed_authority_reads_across_shots() -> None:
+    workspace = _AuthorityWorkspace()
+
+    snapshot = ProductionPlanningSnapshot.capture(workspace)
+
+    planning = workspace.packages.planning
+    reviews = planning.reviews
+    assert tuple(snapshot.current_integrated) == ("SHT-001", "SHT-002")
+    assert tuple(snapshot.current_packages) == ("SHT-001", "SHT-002")
+    assert planning.list_calls == 1
+    assert planning.current_calls == 2
+    assert reviews.list_calls == 1
+    assert reviews.snapshot_calls == 2
+    assert reviews.assets.list_calls == 1
+    assert reviews.assets.shot_ready_calls == 2
+    # Both Shots resolve the same canonical asset/category; one authoritative
+    # resolution is sufficient for this immutable refresh scope.
+    assert reviews.assets.resolution_calls == 1
+    assert reviews.shots.list_calls == 1
+    assert workspace.packages.list_calls == 1
+    assert workspace.packages.materialize_calls == 0
+
+
+def test_snapshot_refresh_cache_is_not_reused_across_user_refreshes() -> None:
+    workspace = _AuthorityWorkspace()
+
+    ProductionPlanningSnapshot.capture(workspace)
+    ProductionPlanningSnapshot.capture(workspace)
+
+    planning = workspace.packages.planning
+    reviews = planning.reviews
+    assert planning.list_calls == 2
+    assert planning.current_calls == 4
+    assert reviews.list_calls == 2
+    assert reviews.snapshot_calls == 4
+    assert reviews.assets.list_calls == 2
+    assert reviews.assets.resolution_calls == 2
