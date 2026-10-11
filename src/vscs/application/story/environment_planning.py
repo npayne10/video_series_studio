@@ -658,16 +658,7 @@ class GovernedEnvironmentPlanningService:
         if not callable(projection_for_binding):
             return _CanonicalPhysicalDefaults()
 
-        profiles: list[
-            tuple[
-                int,
-                str,
-                float | None,
-                float | None,
-                float | None,
-                float | None,
-            ]
-        ] = []
+        profiles: list[tuple[int, str, dict[str, float | None]]] = []
         for binding in self.assets.list_bindings(shot_id=shot_id):
             if binding.expected_category not in {
                 AssetCategory.LOCATION,
@@ -708,38 +699,40 @@ class GovernedEnvironmentPlanningService:
                 (
                     priority,
                     binding.asset_id,
-                    self._canonical_environment_number(
-                        projection,
-                        binding.asset_id,
-                        "environment.gravity_m_s2",
-                        minimum=0.0,
-                        maximum=100.0,
-                        label="Gravity",
-                    ),
-                    self._canonical_environment_number(
-                        projection,
-                        binding.asset_id,
-                        "environment.pressure_kpa",
-                        minimum=0.0,
-                        maximum=10000.0,
-                        label="Pressure",
-                    ),
-                    self._canonical_environment_number(
-                        projection,
-                        binding.asset_id,
-                        "environment.temperature_c",
-                        minimum=-273.15,
-                        maximum=5000.0,
-                        label="Temperature",
-                    ),
-                    self._canonical_environment_number(
-                        projection,
-                        binding.asset_id,
-                        "environment.visibility_m",
-                        minimum=0.0,
-                        maximum=1_000_000_000.0,
-                        label="Visibility",
-                    ),
+                    {
+                        "gravity_m_s2": self._canonical_environment_number(
+                            projection,
+                            binding.asset_id,
+                            "environment.gravity_m_s2",
+                            minimum=0.0,
+                            maximum=100.0,
+                            label="Gravity",
+                        ),
+                        "pressure_kpa": self._canonical_environment_number(
+                            projection,
+                            binding.asset_id,
+                            "environment.pressure_kpa",
+                            minimum=0.0,
+                            maximum=10000.0,
+                            label="Pressure",
+                        ),
+                        "temperature_c": self._canonical_environment_number(
+                            projection,
+                            binding.asset_id,
+                            "environment.temperature_c",
+                            minimum=-273.15,
+                            maximum=5000.0,
+                            label="Temperature",
+                        ),
+                        "visibility_m": self._canonical_environment_number(
+                            projection,
+                            binding.asset_id,
+                            "environment.visibility_m",
+                            minimum=0.0,
+                            maximum=1_000_000_000.0,
+                            label="Visibility",
+                        ),
+                    },
                 )
             )
 
@@ -756,15 +749,14 @@ class GovernedEnvironmentPlanningService:
         sources: list[str] = []
         for priority in (0, 1):
             group = [profile for profile in profiles if profile[0] == priority]
-            for field_index, field_name in enumerate(field_names, start=2):
+            for field_name in field_names:
                 if merged[field_name] is not None:
                     continue
-                candidates = [
-                    (asset_id, profile[field_index])
-                    for profile in group
-                    for asset_id in (profile[1],)
-                    if profile[field_index] is not None
-                ]
+                candidates: list[tuple[str, float]] = []
+                for _profile_priority, asset_id, values in group:
+                    value = values[field_name]
+                    if value is not None:
+                        candidates.append((asset_id, value))
                 distinct = {value for _asset_id, value in candidates}
                 if len(distinct) > 1:
                     detail = ", ".join(
