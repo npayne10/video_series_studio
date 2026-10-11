@@ -504,7 +504,7 @@ class GovernedAssetResolverDialog(QDialog):
             self._refresh_inference_summary()
             return
         try:
-            created = self.service.apply_inferred_requirements(self.shot_id, proposals)
+            self.service.apply_inferred_requirements(self.shot_id, proposals)
         except GovernedAssetResolutionError as exc:
             QMessageBox.warning(self, "Automated Asset Requirement Inference", str(exc))
             return
