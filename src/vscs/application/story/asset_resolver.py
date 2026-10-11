@@ -465,7 +465,6 @@ class GovernedAssetResolutionService:
             and binding.asset_dependency_hash
             == self._dependency_hash(selected_asset, proposal.expected_category)
             and binding.inference_source is proposal.source
-            and binding.status is AssetBindingStatus.DRAFT
         )
 
     @staticmethod
