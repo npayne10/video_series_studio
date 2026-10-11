@@ -381,6 +381,117 @@ def test_wider_environment_defaults_do_not_leak_into_local_interior(
     assert plan.temperature_c is None
 
 
+def test_matching_environment_authority_fills_only_location_gaps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        required_action="Sandra remains at the bridge control station.",
+    )
+    shots.scene_shots = (shots.shot,)
+    location = replace(
+        assets.binding,
+        binding_id=f"{shots.shot.shot_id}-AST-001",
+        sequence_number=1,
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-021",
+    )
+    environment = replace(
+        assets.binding,
+        binding_id=f"{shots.shot.shot_id}-AST-002",
+        sequence_number=2,
+        expected_category=AssetCategory.ENVIRONMENT,
+        asset_id="CAP-ENV-BRIDGE",
+    )
+    assets.binding = location
+    assets.projections["CAP-LOC-021"] = SimpleNamespace(
+        identity=SimpleNamespace(asset_id="CAP-LOC-021"),
+        facts=(),
+        production_metadata={
+            "environment.context": "interior",
+            "environment.gravity_m_s2": "9.81",
+        },
+    )
+    assets.projections["CAP-ENV-BRIDGE"] = SimpleNamespace(
+        identity=SimpleNamespace(asset_id="CAP-ENV-BRIDGE"),
+        facts=(),
+        production_metadata={
+            "environment.context": "interior",
+            "environment.gravity_m_s2": "1.62",
+            "environment.pressure_kpa": "101.3",
+        },
+    )
+    monkeypatch.setattr(
+        assets,
+        "list_bindings",
+        lambda *, shot_id=None: (location, environment),
+    )
+    monkeypatch.setattr(assets, "is_production_ready", lambda _binding: True)
+
+    plan = service.suggested_plan(shots.shot.shot_id)
+
+    assert plan.gravity_m_s2 == 9.81
+    assert plan.pressure_kpa == 101.3
+    assert "CAP-LOC-021" in " ".join(plan.environment_constraints)
+    assert "CAP-ENV-BRIDGE" in " ".join(plan.environment_constraints)
+
+
+def test_conflicting_equal_priority_canonical_location_values_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, _scenes, shots, assets, _camera, _lighting = _service(
+        tmp_path,
+        setting="Xorix orbit",
+    )
+    shots.shot = replace(
+        shots.shot,
+        required_action="Sandra remains at the bridge control station.",
+    )
+    shots.scene_shots = (shots.shot,)
+    first = replace(
+        assets.binding,
+        binding_id=f"{shots.shot.shot_id}-AST-001",
+        sequence_number=1,
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-021",
+    )
+    second = replace(
+        assets.binding,
+        binding_id=f"{shots.shot.shot_id}-AST-002",
+        sequence_number=2,
+        expected_category=AssetCategory.LOCATION,
+        asset_id="CAP-LOC-022",
+    )
+    assets.binding = first
+    for asset_id, gravity in (("CAP-LOC-021", "9.81"), ("CAP-LOC-022", "1.62")):
+        assets.projections[asset_id] = SimpleNamespace(
+            identity=SimpleNamespace(asset_id=asset_id),
+            facts=(),
+            production_metadata={
+                "environment.context": "interior",
+                "environment.gravity_m_s2": gravity,
+            },
+        )
+    monkeypatch.setattr(
+        assets,
+        "list_bindings",
+        lambda *, shot_id=None: (first, second),
+    )
+    monkeypatch.setattr(assets, "is_production_ready", lambda _binding: True)
+
+    with pytest.raises(
+        GovernedEnvironmentPlanningError,
+        match="Conflicting canonical physical environment values.*gravity_m_s2",
+    ):
+        service.suggested_plan(shots.shot.shot_id)
+
+
 def test_invalid_canonical_location_physics_fails_closed(
     tmp_path: Path,
 ) -> None:
