@@ -88,6 +88,7 @@ def test_asset_resolver_exposes_automated_requirement_analysis_and_human_apply(
             semantic_provider=None,
             list_bindings=lambda **_kwargs: (),
             infer_requirements=lambda _shot_id: (proposal,),
+            inferred_reconciliation_counts=lambda _shot_id, _proposals: (0, 1, 2),
             apply_inferred_requirements=lambda _shot_id, proposals: (
                 applied.append(proposals) or (SimpleNamespace(),)
             ),
