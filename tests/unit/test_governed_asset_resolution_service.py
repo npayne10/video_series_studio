@@ -485,6 +485,88 @@ def test_inferred_requirements_materialize_only_as_draft_bindings(
     context.shutdown()
 
 
+def test_inferred_reconciliation_refreshes_supported_and_retires_stale_machine_bindings(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    asset_id = _approved_ship(context, tmp_path)
+
+    supported = service.create(
+        shot_id=shot.shot_id,
+        sequence_number=1,
+        role="Vehicle/Ship",
+        requirement="Iron Horizon is required by the governed Shot.",
+        expected_category=AssetCategory.SHIP,
+        asset_id=asset_id,
+        notes="Old inferred authority.",
+        inference_source=ShotAssetInferenceSource.CANONICAL_MATCH,
+    )
+    stale = service.create(
+        shot_id=shot.shot_id,
+        sequence_number=2,
+        role="Prop/Technology",
+        requirement="Legacy display detail is required.",
+        expected_category=AssetCategory.SHIP,
+        asset_id=asset_id,
+        notes="Old AI inference.",
+        inference_source=ShotAssetInferenceSource.AI_SEMANTIC,
+    )
+    manual = service.create(
+        shot_id=shot.shot_id,
+        sequence_number=3,
+        role="Manual Production Asset",
+        requirement="Human-authored requirement must be preserved.",
+        expected_category=AssetCategory.SHIP,
+        asset_id=asset_id,
+        notes="Human authority.",
+    )
+
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Iron Horizon Progression",
+        narrative_purpose="Continue the governed bridge beat.",
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="The Iron Horizon remains in the governed progression.",
+        dialogue_requirement="",
+        continuity_in=draft.continuity_in,
+        continuity_out=draft.continuity_out,
+        shot_constraints=draft.shot_constraints,
+    )
+    updated = shots.mark_ready(updated.shot_id)
+
+    proposal = ShotAssetRequirementProposal(
+        proposal_id=f"{updated.shot_id}-AIR-CURRENT",
+        shot_id=updated.shot_id,
+        role="Vehicle/Ship",
+        requirement="Iron Horizon is required by the governed Shot.",
+        expected_category=AssetCategory.SHIP,
+        matched_asset_id=asset_id,
+        matched_asset_name="Iron Horizon",
+        confidence=1.0,
+        source=ShotAssetInferenceSource.CANONICAL_MATCH,
+        rationale="Current governed Shot authority requires Iron Horizon.",
+        canonical_status="resolved",
+    )
+
+    assert service.inferred_reconciliation_counts(updated.shot_id, (proposal,)) == (0, 1, 1)
+
+    changed = service.apply_inferred_requirements(updated.shot_id, (proposal,))
+    assert len(changed) == 1
+    refreshed = changed[0]
+    assert refreshed.binding_id == supported.binding_id
+    assert refreshed.status is AssetBindingStatus.DRAFT
+    assert service.is_upstream_current(refreshed)
+
+    current = service.list_bindings(shot_id=updated.shot_id)
+    current_ids = {binding.binding_id for binding in current}
+    assert stale.binding_id not in current_ids
+    assert manual.binding_id in current_ids
+    assert service.binding(manual.binding_id) == manual
+    context.shutdown()
+
+
 def test_legacy_inferred_binding_becomes_stale_when_current_inference_drops_match(
     tmp_path: Path,
 ) -> None:
