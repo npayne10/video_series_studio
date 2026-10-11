@@ -1,5 +1,10 @@
 # Phase 20.18.2.3.6.6b — Provider-Aware Duration & Protected-Prefix Replanning
 
+> **Follow-on hardening:** Phase 20.18.2.3.6.6b.1 adds canonical Environment
+> physical defaults so regenerated future Shots can inherit known Location /
+> Environment physics from approved CAP production authority without weakening
+> the rule that unknown fictional physics remain unknown.
+
 ## Objective
 
 Remove the legacy coupling between governed cinematic Shot duration and the
