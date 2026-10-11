@@ -269,9 +269,7 @@ class _AuthorityPlanCollection:
             "episode_id": "episode_id",
             "story_id": "story_id",
         }[key]
-        return tuple(
-            item for item in self.values if getattr(item, expected_attr) == requested
-        )
+        return tuple(item for item in self.values if getattr(item, expected_attr) == requested)
 
     def is_production_ready(self, _value) -> bool:
         return True
