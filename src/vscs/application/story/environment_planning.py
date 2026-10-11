@@ -13,7 +13,7 @@ from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.domain.assets import AssetCategory
 from vscs.domain.caps import ProductionProjection
 
-from .asset_resolver import GovernedAssetResolutionService, ShotAssetBinding
+from .asset_resolver import GovernedAssetResolutionService
 from .camera_planning import CameraPlan, GovernedCameraPlanningService
 from .lighting_planning import GovernedLightingPlanningService, LightingPlan
 from .scene_planning import ScenePlan, ScenePlanningService
