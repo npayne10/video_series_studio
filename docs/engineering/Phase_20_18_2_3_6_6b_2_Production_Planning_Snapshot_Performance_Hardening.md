@@ -132,6 +132,28 @@ Phase 20.18.2.3.6.6b.2 is accepted when:
 8. SHT-001 and SHT-002 remain accepted and unchanged.
 9. SHT-003 remains current and can continue through downstream planning normally.
 
+## Acceptance evidence
+
+Validation completed on 2026-10-11:
+
+- Ruff lint passed.
+- Ruff formatting check passed across 1313 files.
+- mypy passed across 594 source files.
+- Focused Production Planning / Planning Integration / Planning Review /
+  Production Package validation passed: 26 tests.
+- Full repository regression passed: 1885 tests in 25.34 seconds.
+- The live `D:\VSCS TSR2` project opened successfully with no startup or
+  governance exception.
+- Live PPROF after hardening measured `snapshot.capture = 0.149 s` and
+  `REFRESH TOTAL = 0.186 s` with SHT-001, SHT-002 and SHT-003 participating.
+- Compared with the observed 9.379 s / 9.416 s later-refresh baseline, this is an
+  approximately 98% reduction in both snapshot and total-refresh latency.
+- Individual compiler-state and selected-editor loads remained in the
+  millisecond range.
+
+Repository cleanliness after the full regression remains the final local
+acceptance check before formal phase closure.
+
 ## Phase state
 
-**OPEN / PENDING LOCAL AND LIVE PERFORMANCE VALIDATION.**
+**OPEN / PERFORMANCE ACCEPTED / PENDING FINAL REPOSITORY CLEANLINESS CHECK.**
