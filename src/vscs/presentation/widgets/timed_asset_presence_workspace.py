@@ -128,8 +128,10 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
 
         actions = QHBoxLayout()
         self.timed_presence_reset_button = QPushButton("Reset from Governed Assets", group)
+        self.timed_presence_reference_button = QPushButton("Review Reference Suitability…", group)
         self.timed_presence_save_button = QPushButton("Save Timed Presence Authority", group)
         actions.addWidget(self.timed_presence_reset_button)
+        actions.addWidget(self.timed_presence_reference_button)
         actions.addWidget(self.timed_presence_save_button)
         actions.addStretch(1)
         group_layout.addLayout(actions)
@@ -137,6 +139,9 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
         self.compiler_tabs.insertTab(2, tab, "Timed Asset Presence")
 
         self.timed_presence_reset_button.clicked.connect(self._reset_timed_asset_presence)
+        self.timed_presence_reference_button.clicked.connect(
+            self._open_timed_presence_reference_suitability
+        )
         self.timed_presence_save_button.clicked.connect(self._save_timed_asset_presence)
         self.timed_presence_frame_count.valueChanged.connect(
             self._timed_presence_frame_count_changed
@@ -166,7 +171,18 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
             return
         self._populate_timed_presence_context(context)
         self.timed_presence_reset_button.setEnabled(True)
-        self.timed_presence_save_button.setEnabled(True)
+        opener = getattr(self, "_open_reference_suitability", None)
+        self.timed_presence_reference_button.setEnabled(callable(opener))
+        reference_plan = self.timed_asset_presence_authoring.passing_reference_plan(shot_id)
+        reference_ready = reference_plan is not None
+        self.timed_presence_save_button.setEnabled(reference_ready)
+        if not reference_ready:
+            self.timed_presence_status.setText(
+                "No passing governed ReferencePlan is persisted for this Shot. Full-shot "
+                "governed-asset defaults are shown for review only. Review and approve "
+                "Reference Suitability before Save Timed Presence Authority."
+            )
+            return
         if context.persisted:
             changes = ", ".join(str(value) for value in context.plan.change_frames) or "none"
             self.timed_presence_status.setText(
@@ -176,9 +192,9 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
             )
         else:
             self.timed_presence_status.setText(
-                "No Timed Asset Presence authority is persisted. Full-shot governed-asset "
-                "defaults are shown for review only and are NOT authority until you explicitly "
-                "save them. Set any governed entrance/reveal/appearance frame before saving."
+                "Passing governed ReferencePlan is current. No Timed Asset Presence authority "
+                "is persisted yet; full-shot governed-asset defaults are shown for review only "
+                "until explicitly saved."
             )
 
     def _populate_timed_presence_context(
@@ -255,6 +271,18 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
         finally:
             self.timed_presence_table.blockSignals(False)
         self._refresh_timed_presence_change_preview()
+
+    def _open_timed_presence_reference_suitability(self: Any) -> None:
+        opener = getattr(self, "_open_reference_suitability", None)
+        if not callable(opener):
+            QMessageBox.information(
+                self,
+                "Timed Asset Presence",
+                "Reference Suitability is unavailable in the current workspace.",
+            )
+            return
+        opener()
+        self._load_timed_asset_presence()
 
     def _reset_timed_asset_presence(self: Any) -> None:
         shot_id = getattr(self, "_selected_shot_id", None)
@@ -374,6 +402,9 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
     workspace_class._build_timed_asset_presence_tab = _build_timed_asset_presence_tab
     workspace_class._load_timed_asset_presence = _load_timed_asset_presence
     workspace_class._populate_timed_presence_context = _populate_timed_presence_context
+    workspace_class._open_timed_presence_reference_suitability = (
+        _open_timed_presence_reference_suitability
+    )
     workspace_class._reset_timed_asset_presence = _reset_timed_asset_presence
     workspace_class._save_timed_asset_presence = _save_timed_asset_presence
     workspace_class._timed_presence_plan_from_editor = _timed_presence_plan_from_editor
