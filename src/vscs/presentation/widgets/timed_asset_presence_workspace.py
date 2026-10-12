@@ -169,6 +169,7 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
             self.timed_presence_status.setText(str(exc))
             self.timed_presence_save_button.setEnabled(False)
             self.timed_presence_reset_button.setEnabled(False)
+            self.timed_presence_reference_button.setEnabled(False)
             return
         self._populate_timed_presence_context(context)
         self.timed_presence_reset_button.setEnabled(True)
