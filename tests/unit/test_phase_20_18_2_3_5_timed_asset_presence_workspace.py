@@ -65,6 +65,7 @@ class _Packages:
                 },
             ),
             timed_asset_presence={},
+            validation={},
         )
         self.saved: TimedAssetPresencePlan | None = None
 
@@ -80,7 +81,11 @@ class _Packages:
     ) -> Any:
         self.saved = plan
         self.value.timed_asset_presence = plan.to_dict()
-        self.value.production_notes = production_notes
+        self.value.validation["timed_asset_presence_complete"] = True
+        if production_notes.strip():
+            self.value.validation["timed_asset_presence_review_notes"] = production_notes.strip()
+        else:
+            self.value.validation.pop("timed_asset_presence_review_notes", None)
         return self.value
 
 
@@ -255,6 +260,7 @@ def test_workspace_exposes_explicit_timed_presence_editor_and_saves_ros_boundary
     from_spin.setValue(96)
     introduction.setCurrentIndex(introduction.findData("enter"))
 
+    widget.timed_presence_notes.setPlainText("Human reviewed.")
     qtbot.mouseClick(
         widget.timed_presence_save_button,
         Qt.MouseButton.LeftButton,
@@ -265,6 +271,46 @@ def test_workspace_exposes_explicit_timed_presence_editor_and_saves_ros_boundary
     ros = next(item for item in packages.saved.presences if item.asset_id == "CAP-CHR-005")
     assert ros.from_frame == 96
     assert ros.introduction is AssetPresenceIntroduction.ENTER
+    assert widget.timed_presence_notes.toPlainText() == "Human reviewed."
+
+
+def test_workspace_clears_stale_review_note_for_nonpersisted_shot(
+    qtbot: object,
+    tmp_path: Path,
+) -> None:
+    projects = _Projects(tmp_path)
+    packages = _Packages()
+    _persist_reference_plan(projects)
+
+    class _Workspace(QWidget):
+        def __init__(self, projects_arg: _Projects, packages_arg: _Packages) -> None:
+            super().__init__()
+            self.projects = projects_arg
+            self.packages = packages_arg
+            self._selected_shot_id = "EP-001-SCN-001-SHT-002"
+            layout = QVBoxLayout(self)
+            self.compiler_tabs = QTabWidget(self)
+            layout.addWidget(self.compiler_tabs)
+
+        def refresh(self) -> None:
+            return
+
+        def _selection_changed(self) -> None:
+            return
+
+    install_timed_asset_presence_workspace(_Workspace)
+    widget = _Workspace(projects, packages)
+    qtbot.addWidget(widget)  # type: ignore[attr-defined]
+
+    widget.timed_presence_notes.setPlainText(
+        "Static 10-second progression composition from a different Shot."
+    )
+    widget._load_timed_asset_presence()
+
+    assert widget.timed_presence_notes.toPlainText() == ""
+    assert "No Timed Asset Presence authority is persisted yet" in (
+        widget.timed_presence_status.text()
+    )
 
 
 def test_workspace_blocks_timed_presence_save_until_reference_plan_passes(
