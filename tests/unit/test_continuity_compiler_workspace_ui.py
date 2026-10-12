@@ -148,6 +148,51 @@ def test_continuity_tab_is_visible_and_requires_user_approval(qtbot) -> None:
     assert "final approval" in widget.continuity_status.text().lower()
 
 
+def test_blocking_asset_state_conflict_disables_ready_and_surfaces_guidance(qtbot) -> None:
+    packages = _Packages()
+    payload = _continuity_payload()
+    payload.update(
+        {
+            "previous_final_active_asset_ids": ["CAP-CHR-001", "CAP-CHR-005"],
+            "previous_boundary_exit_asset_ids": [],
+            "current_opening_active_asset_ids": ["CAP-CHR-001"],
+            "carry_forward_required_asset_ids": ["CAP-CHR-001", "CAP-CHR-005"],
+            "missing_carried_asset_ids": ["CAP-CHR-005"],
+            "blocking_continuity_conflicts": [
+                "Continuous Shot boundary drops CAP-CHR-005 without explicit exit authority."
+            ],
+            "continuity_conflicts": [
+                "Continuous Shot boundary drops CAP-CHR-005 without explicit exit authority."
+            ],
+        }
+    )
+    draft = ContinuityCompilationDraft(
+        shot_id="SHT-001",
+        source_package_id=packages.value.package_id,
+        dependency_fingerprint="dependency",
+        continuity=payload,
+        asset_state_governance_version="1.0",
+    )
+    widget = ContinuityCompilerWorkspace(
+        _Projects(),  # type: ignore[arg-type]
+        packages,  # type: ignore[arg-type]
+        _EmptyCompiler(),  # type: ignore[arg-type]
+        _EmptyCompiler(),  # type: ignore[arg-type]
+        _EmptyCompiler(),  # type: ignore[arg-type]
+        _EmptyCompiler(),  # type: ignore[arg-type]
+        _Continuity(draft),  # type: ignore[arg-type]
+    )
+    qtbot.addWidget(widget)
+
+    assert not widget.continuity_ready_button.isEnabled()
+    assert "blocked" in widget.continuity_status.text().lower()
+    labels = [
+        widget.continuity_table.item(row, 0).text()
+        for row in range(widget.continuity_table.rowCount())
+    ]
+    assert "Missing Carried Asset Ids" in labels
+
+
 def test_stale_continuity_exposes_inheritance_refresh_and_preserves_notes(qtbot) -> None:
     packages = _Packages()
     draft = ContinuityCompilationDraft(
