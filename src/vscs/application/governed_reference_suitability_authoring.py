@@ -49,7 +49,7 @@ class SuitabilityReviewTarget:
     width: int = 1280
     height: int = 720
     profile_id: str = "production-video-16x9"
-    provider_id: str | None = "ltx23-local"
+    provider_id: str | None = None
     aspect_tolerance: float = 0.03
 
 
