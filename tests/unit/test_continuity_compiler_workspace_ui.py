@@ -184,6 +184,7 @@ def test_blocking_asset_state_conflict_disables_ready_and_surfaces_guidance(qtbo
     )
     qtbot.addWidget(widget)
 
+    assert widget.package_table.item(0, 6).text() == "Draft / Blocked"
     assert not widget.continuity_ready_button.isEnabled()
     assert "blocked" in widget.continuity_status.text().lower()
     labels = [
