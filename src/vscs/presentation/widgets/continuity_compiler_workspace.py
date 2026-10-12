@@ -208,6 +208,8 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
         ready = draft.status is ContinuityCompilationStatus.READY
         conflicts = continuity.get("continuity_conflicts", [])
         conflict_count = len(conflicts) if isinstance(conflicts, list) else 0
+        blocking = continuity.get("blocking_continuity_conflicts", [])
+        blocking_count = len(blocking) if isinstance(blocking, list) else 0
         if stale:
             self.continuity_status.setText(
                 "Continuity compilation is stale because current or previous-Shot production state "
@@ -217,6 +219,13 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
         elif ready:
             self.continuity_status.setText(
                 "Continuity authority is Ready and compiled into the current Production Package."
+            )
+        elif blocking_count:
+            self.continuity_status.setText(
+                f"Continuity Draft is BLOCKED by {blocking_count} unresolved asset-state "
+                "carry-forward conflict(s). Restore the carried asset(s) in current governed "
+                "Asset + Timed Asset Presence authority, or explicitly govern EXIT/HIDE/"
+                "DISAPPEAR at the previous Shot boundary; then Refresh Inherited State."
             )
         elif conflict_count:
             self.continuity_status.setText(
@@ -232,7 +241,9 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
         self.continuity_create_button.setEnabled(False)
         self.continuity_refresh_button.setEnabled(stale and not ready)
         self.continuity_save_button.setEnabled(not stale and not ready)
-        self.continuity_ready_button.setEnabled(not stale and not ready)
+        self.continuity_ready_button.setEnabled(
+            not stale and not ready and blocking_count == 0
+        )
         self.continuity_draft_button.setEnabled(ready)
         self.continuity_notes.setReadOnly(stale or ready)
 
@@ -245,12 +256,18 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
             "current_closing_state",
             "previous_asset_ids",
             "current_asset_ids",
+            "previous_final_active_asset_ids",
+            "previous_boundary_exit_asset_ids",
+            "current_opening_active_asset_ids",
+            "carry_forward_required_asset_ids",
+            "missing_carried_asset_ids",
             "previous_screen_direction",
             "current_screen_direction",
             "previous_lighting_continuity",
             "current_lighting_continuity",
             "inheritance_mode",
             "continuity_conflicts",
+            "blocking_continuity_conflicts",
         )
         self.continuity_table.setRowCount(len(fields))
         for row, key in enumerate(fields):
