@@ -590,7 +590,6 @@ class MiniMaxH3SpanAdapterCompiler:
         )
         if not anchors:
             return self._priority_projected_reference_slots(
-                compiled,
                 span_input,
                 references,
             )
@@ -709,7 +708,6 @@ class MiniMaxH3SpanAdapterCompiler:
 
     def _priority_projected_reference_slots(
         self,
-        compiled: CompiledProductionPackage,
         span_input: SpanScopedProviderInputs,
         references: tuple[dict[str, object], ...],
     ) -> tuple[tuple[SpanReferenceSlot, ...], str, tuple[str, ...]]:
