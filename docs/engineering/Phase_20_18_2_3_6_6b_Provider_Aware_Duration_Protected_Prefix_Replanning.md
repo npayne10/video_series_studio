@@ -15,6 +15,11 @@
 > installed provider policy profiles, carries deterministic H3 preferred-reference
 > deferral into execution evidence, and exposes the ReferencePlan prerequisite before
 > Timed Asset Presence Save.
+>
+> Phase 20.18.2.3.6.6b.4 carries final active asset state across continuous Shot
+> boundaries, recognizes only explicit Timed Asset Presence EXIT/HIDE/DISAPPEAR authority
+> as a boundary removal, and blocks Continuity compilation when a carried asset silently
+> disappears from the current opening.
 
 ## Objective
 
