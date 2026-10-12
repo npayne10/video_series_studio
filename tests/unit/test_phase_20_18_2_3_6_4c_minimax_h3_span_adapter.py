@@ -14,6 +14,10 @@ from vscs.application.production_execution import (
     TimedCanonicalReferenceActivationCompiler,
 )
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
+from vscs.application.production_execution.span_scoped_provider_inputs import (
+    SpanReferenceSlot,
+    SpanScopedProviderInputs,
+)
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     TimedAssetKind,
@@ -757,3 +761,127 @@ def test_h3_plan_is_deterministic(tmp_path: Path) -> None:
     assert first.plan_id == second.plan_id
     assert first.spans[0].reference_slot_fingerprint == (second.spans[0].reference_slot_fingerprint)
     assert first.spans[1].prompt_fingerprint == second.spans[1].prompt_fingerprint
+
+
+def test_h3_priority_projection_defers_preferred_reference_beyond_five_slots(
+    tmp_path: Path,
+) -> None:
+    compiled = _compiled(tmp_path)
+    references = {
+        "schema_version": "1.0",
+        "status": "passed",
+        "references": [
+            {
+                **_reference(
+                    "REF-SANDRA",
+                    "CAP-CHR-003",
+                    "primary_identity",
+                    "Sandra Crawford",
+                ),
+                "priority": "required",
+            },
+            {
+                **_reference(
+                    "REF-JAMES",
+                    "CAP-CHR-001",
+                    "secondary_identity",
+                    "Commander James Spence",
+                ),
+                "priority": "required",
+            },
+            {
+                **_reference(
+                    "REF-BRIDGE",
+                    "CAP-LOC-021",
+                    "environment_reference",
+                    "Iron Horizon bridge",
+                ),
+                "priority": "required",
+            },
+            {
+                **_reference(
+                    "REF-XORIX",
+                    "CAP-PLN-002",
+                    "environment_reference",
+                    "Xorix",
+                ),
+                "priority": "required",
+            },
+            {
+                **_reference(
+                    "REF-ORBIT",
+                    "CAP-ENV-004",
+                    "environment_reference",
+                    "Xorix Orbit",
+                ),
+                "priority": "preferred",
+            },
+            {
+                **_reference(
+                    "REF-SHIP",
+                    "CAP-SHP-002",
+                    "background_identity",
+                    "Iron Horizon",
+                ),
+                "priority": "preferred",
+            },
+        ],
+        "diagnostics": [],
+    }
+    compiled = replace(compiled, reference_plan=references)
+    slot_specs = (
+        ("REF-SANDRA", "CAP-CHR-003", "primary_identity", "Sandra Crawford"),
+        ("REF-JAMES", "CAP-CHR-001", "secondary_identity", "Commander James Spence"),
+        ("REF-BRIDGE", "CAP-LOC-021", "environment_reference", "Iron Horizon bridge"),
+        ("REF-XORIX", "CAP-PLN-002", "environment_reference", "Xorix"),
+        ("REF-ORBIT", "CAP-ENV-004", "environment_reference", "Xorix Orbit"),
+        ("REF-SHIP", "CAP-SHP-002", "background_identity", "Iron Horizon"),
+    )
+    slots = tuple(
+        SpanReferenceSlot(
+            picture_index=index,
+            picture_tag=f"<Picture {index}>",
+            reference_id=reference_id,
+            asset_id=asset_id,
+            role=role,
+            source_path=f"references/{reference_id}.png",
+            semantic_label=label,
+        )
+        for index, (reference_id, asset_id, role, label) in enumerate(slot_specs, start=1)
+    )
+    declaration = " ".join(
+        f"{slot.picture_tag} is the authoritative reference for {slot.semantic_label}."
+        for slot in slots
+    )
+    span_input = SpanScopedProviderInputs(
+        span_id="SPAN-001",
+        sequence_number=1,
+        positive_prompt=f"{declaration} Preserve the governed bridge composition.",
+        negative_prompt="identity swap",
+        motion_prompt="Restrained natural movement.",
+        reference_slots=slots,
+        active_asset_ids=tuple(slot.asset_id for slot in slots),
+        active_reference_ids=tuple(slot.reference_id for slot in slots),
+        omitted_future_aliases=(),
+        source_execution_id="PTSE-TEST",
+        source_execution_plan_fingerprint="execution-fingerprint",
+    )
+
+    projected, positive_prompt, deferred = (
+        MiniMaxH3SpanAdapterCompiler(tmp_path)._priority_projected_reference_slots(
+            compiled,
+            span_input,
+            tuple(dict(item) for item in references["references"]),
+        )
+    )
+
+    assert tuple(slot.reference_id for slot in projected) == (
+        "REF-SANDRA",
+        "REF-JAMES",
+        "REF-BRIDGE",
+        "REF-XORIX",
+        "REF-ORBIT",
+    )
+    assert deferred == ("REF-SHIP",)
+    assert "<Picture 6>" not in positive_prompt
+    assert "REF-SHIP" not in tuple(slot.reference_id for slot in projected)
