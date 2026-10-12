@@ -85,9 +85,7 @@ def project_provider_reference_capacity(
     values = tuple(references)
     direct = tuple(item for item in values if item.role not in _NON_DIRECT_REFERENCE_ROLES)
     required = tuple(
-        item.reference_id
-        for item in direct
-        if item.priority is ReferencePriority.REQUIRED
+        item.reference_id for item in direct if item.priority is ReferencePriority.REQUIRED
     )
     preferred_ready = tuple(
         item.reference_id

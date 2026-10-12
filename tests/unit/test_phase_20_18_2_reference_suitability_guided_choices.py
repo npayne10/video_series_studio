@@ -3,15 +3,15 @@ from __future__ import annotations
 from PySide6.QtWidgets import QApplication, QComboBox
 
 from vscs.application.acpp.reference_roles import ReferenceRole
+from vscs.infrastructure.production_execution.provider_policy_profiles import (
+    default_provider_policy_profile_registry,
+)
 from vscs.presentation.widgets.governed_reference_suitability_guided_dialog import (
     COVERAGE_CHOICES,
     FRAMING_TYPE_CHOICES,
     GovernedReferenceSuitabilityGuidedDialog,
     _GuidedChoiceComboBox,
     _ProviderChoiceComboBox,
-)
-from vscs.infrastructure.production_execution.provider_policy_profiles import (
-    default_provider_policy_profile_registry,
 )
 
 

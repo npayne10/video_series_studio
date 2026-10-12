@@ -91,6 +91,7 @@ COVERAGE_CHOICES: tuple[tuple[str, str, str], ...] = (
     ("End frame", "end_frame", "Covers the exact governed ending frame state."),
 )
 
+
 class _ProviderChoiceComboBox(QComboBox):
     """Installed provider selector compatible with the base dialog line-edit API."""
 

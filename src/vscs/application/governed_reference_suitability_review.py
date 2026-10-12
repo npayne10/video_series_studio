@@ -164,8 +164,7 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
         projection = self.capacity_projection(target, references)
         if projection is not None and not projection.passed:
             raise GovernedReferenceSuitabilityAuthoringError(
-                "Provider direct-reference capacity blocks approval: "
-                f"{projection.blocked_reason}"
+                f"Provider direct-reference capacity blocks approval: {projection.blocked_reason}"
             )
         return super().approve_and_resolve(package, target=target, references=references)
 
@@ -208,9 +207,7 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
         package: ProductionPackage,
         references: tuple[SuitabilityReferenceReview, ...],
     ) -> None:
-        character_ids = {
-            asset_id for asset_id, _semantic_role in cls._character_records(package)
-        }
+        character_ids = {asset_id for asset_id, _semantic_role in cls._character_records(package)}
         if not character_ids:
             return
         primary = cls._primary_character_asset_id(package)

@@ -868,11 +868,11 @@ def test_h3_priority_projection_defers_preferred_reference_beyond_five_slots(
         source_execution_plan_fingerprint="execution-fingerprint",
     )
 
-    projected, positive_prompt, deferred = (
-        MiniMaxH3SpanAdapterCompiler(tmp_path)._priority_projected_reference_slots(
-            span_input,
-            tuple(dict(item) for item in references["references"]),
-        )
+    projected, positive_prompt, deferred = MiniMaxH3SpanAdapterCompiler(
+        tmp_path
+    )._priority_projected_reference_slots(
+        span_input,
+        tuple(dict(item) for item in references["references"]),
     )
 
     assert tuple(slot.reference_id for slot in projected) == (

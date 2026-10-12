@@ -675,8 +675,7 @@ class MiniMaxH3SpanAdapterCompiler:
         capacity = policy_profile.max_reference_images
         if len(deduplicated) > capacity:
             raise MiniMaxH3SpanAdapterError(
-                "H3 governed reference projection cannot fit the "
-                f"{capacity}-slot provider budget"
+                f"H3 governed reference projection cannot fit the {capacity}-slot provider budget"
             )
 
         projected = tuple(
@@ -738,9 +737,7 @@ class MiniMaxH3SpanAdapterCompiler:
                 "H3 provider-capacity projection authority must be an object"
             )
 
-        profile = default_provider_policy_profile_registry().require(
-            MINIMAX_H3_POLICY_PROFILE_ID
-        )
+        profile = default_provider_policy_profile_registry().require(MINIMAX_H3_POLICY_PROFILE_ID)
         expected: dict[str, object] = {
             "provider_id": profile.provider_id,
             "provider_profile_id": profile.profile_id,
@@ -779,9 +776,7 @@ class MiniMaxH3SpanAdapterCompiler:
                 )
             try:
                 role = ReferenceRole(self._required_reference_text(reference, "role"))
-                priority = ReferencePriority(
-                    self._required_reference_text(reference, "priority")
-                )
+                priority = ReferencePriority(self._required_reference_text(reference, "priority"))
             except ValueError as exc:
                 raise MiniMaxH3SpanAdapterError(
                     f"H3 reference capacity authority contains an unsupported enum: {exc}"
@@ -801,15 +796,12 @@ class MiniMaxH3SpanAdapterCompiler:
         )
         if not projection.passed:
             raise MiniMaxH3SpanAdapterError(
-                "H3 provider-aware reference projection is blocked: "
-                f"{projection.blocked_reason}"
+                f"H3 provider-aware reference projection is blocked: {projection.blocked_reason}"
             )
 
         selected = set(projection.selected_reference_ids)
         ordered_slots = tuple(
-            slot
-            for slot in span_input.reference_slots
-            if slot.reference_id in selected
+            slot for slot in span_input.reference_slots if slot.reference_id in selected
         )
         projected = tuple(
             SpanReferenceSlot(

@@ -55,8 +55,12 @@ def test_h3_capacity_selects_required_then_provider_ready_preferred() -> None:
     registry = default_provider_policy_profile_registry()
     profile = registry.require(MINIMAX_H3_POLICY_PROFILE_ID)
     references = (
-        _CapacityReference("REF-SANDRA", ReferenceRole.PRIMARY_IDENTITY, ReferencePriority.REQUIRED),
-        _CapacityReference("REF-JAMES", ReferenceRole.SECONDARY_IDENTITY, ReferencePriority.REQUIRED),
+        _CapacityReference(
+            "REF-SANDRA", ReferenceRole.PRIMARY_IDENTITY, ReferencePriority.REQUIRED
+        ),
+        _CapacityReference(
+            "REF-JAMES", ReferenceRole.SECONDARY_IDENTITY, ReferencePriority.REQUIRED
+        ),
         _CapacityReference(
             "REF-BRIDGE",
             ReferenceRole.ENVIRONMENT_REFERENCE,
@@ -335,8 +339,8 @@ def test_sht003_review_records_and_persists_h3_capacity_projection(tmp_path: Pat
     ]
     assert projection["deferred_preferred_reference_ids"] == ["REF-CAP-SHP-002"]
 
-    review_path = tmp_path / "production" / (
-        "governed_reference_suitability_EP-001-SCN-001-SHT-003.json"
+    review_path = (
+        tmp_path / "production" / ("governed_reference_suitability_EP-001-SCN-001-SHT-003.json")
     )
     review_payload = json.loads(review_path.read_text(encoding="utf-8"))
     assert review_payload["target"]["provider_id"] == "minimax-h3-ref2va"
@@ -349,8 +353,7 @@ def test_sht003_approval_blocks_when_required_references_exceed_h3_capacity(
     package = _package()
     paths = _write_assets(tmp_path)
     reviews = tuple(
-        replace(review, priority=ReferencePriority.REQUIRED)
-        for review in _sht003_reviews(paths)
+        replace(review, priority=ReferencePriority.REQUIRED) for review in _sht003_reviews(paths)
     )
     service = GovernedReferenceSuitabilityReviewService(
         _Projects(tmp_path),  # type: ignore[arg-type]
@@ -374,8 +377,7 @@ def test_saved_over_capacity_review_cannot_be_resolved_implicitly(
     package = _package()
     paths = _write_assets(tmp_path)
     reviews = tuple(
-        replace(review, priority=ReferencePriority.REQUIRED)
-        for review in _sht003_reviews(paths)
+        replace(review, priority=ReferencePriority.REQUIRED) for review in _sht003_reviews(paths)
     )
     service = GovernedReferenceSuitabilityReviewService(
         _Projects(tmp_path),  # type: ignore[arg-type]
