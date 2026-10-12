@@ -220,7 +220,8 @@ class MiniMaxH3SpanExecution:
 
     def to_dict(self) -> dict[str, object]:
         payload = self._authority_payload()
-        payload["deferred_reference_ids"] = list(self.deferred_reference_ids)
+        if self.deferred_reference_ids:
+            payload["deferred_reference_ids"] = list(self.deferred_reference_ids)
         payload["job_id"] = self.job_id
         payload["provider_trim_frames"] = self.provider_trim_frames
         payload["reference_slot_fingerprint"] = self.reference_slot_fingerprint
