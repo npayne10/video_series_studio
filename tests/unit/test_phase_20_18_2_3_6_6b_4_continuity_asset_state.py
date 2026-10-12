@@ -318,7 +318,7 @@ def test_legacy_ready_draft_remains_current_until_explicit_return_to_draft(
     legacy_fingerprint = service._legacy_dependency_fingerprint(
         package,
         previous,
-        referenced_previous_shot_id="",
+        referenced_previous_shot_id="SHT-001",
     )
     legacy = ContinuityCompilationDraft(
         shot_id="SHT-002",
