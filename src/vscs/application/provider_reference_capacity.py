@@ -11,12 +11,19 @@ from vscs.application.production_execution.provider_policy_profiles import Provi
 
 
 class ReferenceCapacityRecord(Protocol):
-    """Minimum reviewed-reference facts required for direct-slot projection."""
+    """Read-only facts required for deterministic direct-slot projection."""
 
-    reference_id: str
-    role: ReferenceRole
-    priority: ReferencePriority
-    provider_ready: bool
+    @property
+    def reference_id(self) -> str: ...
+
+    @property
+    def role(self) -> ReferenceRole: ...
+
+    @property
+    def priority(self) -> ReferencePriority: ...
+
+    @property
+    def provider_ready(self) -> bool: ...
 
 
 _NON_DIRECT_REFERENCE_ROLES = frozenset(
