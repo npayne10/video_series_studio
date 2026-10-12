@@ -445,6 +445,7 @@ class LiveMiniMaxH3ComfyUISpanProvider:
             "workflow_fingerprint": compiled.workflow_fingerprint,
             "model_config_fingerprint": compiled.model_config_fingerprint,
             "reference_slot_fingerprint": execution.reference_slot_fingerprint,
+            "deferred_reference_ids": list(execution.deferred_reference_ids),
             "prompt_fingerprint": execution.prompt_fingerprint,
             "guide_image_sha256": execution.guide_image_sha256,
             "provider_frame_count": execution.provider_frame_count,
