@@ -18,6 +18,9 @@ from vscs.application.style_compiler import StyleCompilerService
 from vscs.application.universal_production_description_compiler import (
     UniversalProductionDescriptionCompilerService,
 )
+from vscs.infrastructure.production_execution.provider_policy_profiles import (
+    default_provider_policy_profile_registry,
+)
 
 from .governed_reference_suitability_guided_dialog import (
     GovernedReferenceSuitabilityGuidedDialog,
@@ -43,7 +46,10 @@ class GovernedReferenceSuitabilityWorkspace(UniversalProductionDescriptionCompil
         universal_compiler: UniversalProductionDescriptionCompilerService,
         parent: QWidget | None = None,
     ) -> None:
-        self.reference_suitability_authoring = GovernedReferenceSuitabilityReviewService(projects)
+        self.reference_suitability_authoring = GovernedReferenceSuitabilityReviewService(
+            projects,
+            provider_policies=default_provider_policy_profile_registry(),
+        )
         super().__init__(
             projects,
             packages,
