@@ -157,6 +157,7 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
             self.timed_presence_status.setText("Select a governed Shot.")
             self.timed_presence_save_button.setEnabled(False)
             self.timed_presence_reset_button.setEnabled(False)
+            self.timed_presence_reference_button.setEnabled(False)
             return
         try:
             context = self.timed_asset_presence_authoring.context(
