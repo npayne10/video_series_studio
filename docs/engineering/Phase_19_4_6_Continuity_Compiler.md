@@ -16,13 +16,27 @@ The compiler consumes the current Production Package plus the immediately preced
 ## Inheritance behaviour
 
 - The previous Shot closing state is carried forward automatically.
+- Phase 20.18.2.3.6.6b.4 also carries structured asset state across continuous Shot
+  boundaries. Assets active on the previous final governed frame remain required at the
+  current opening unless the previous Timed Asset Presence authority explicitly governs
+  EXIT, HIDE or DISAPPEAR at the boundary.
+- A carried asset omitted from the current opening becomes a blocking conflict rather
+  than a review-only warning.
 - An explicit current opening state remains authoritative when present.
 - If explicit opening state differs from inherited previous closing state, the conflict is exposed for user review rather than silently rewritten.
 - Asset identities, screen direction, lighting continuity and environment state are carried as structured continuity evidence.
 - The first Shot has `series-entry` inheritance and no invented previous state.
 
 ## Dependency model
-Continuity staleness is based on a deterministic fingerprint of the continuity-relevant current and previous Production Package sections. Changes to either side invalidate a Draft and expose **Refresh Inherited State**. Human review notes are preserved during refresh.
+Continuity staleness is based on a deterministic fingerprint of the continuity-relevant
+current and previous Production Package sections. New asset-state-aware Drafts include
+current and previous Timed Asset Presence authority in that fingerprint. Changes to
+either side invalidate a Draft and expose **Refresh Inherited State**. Human review
+notes are preserved during refresh.
+
+Legacy Ready drafts retain their pre-6.6b.4 dependency model until explicitly returned
+to Draft, protecting accepted production from silent invalidation. A reopened legacy
+Draft must refresh into the new asset-state model before approval.
 
 ## Governed lifecycle
 
@@ -37,7 +51,11 @@ Continuity staleness is based on a deterministic fingerprint of the continuity-r
 The compiled Production Package Continuity section contains:
 
 - `governed`: the resolved inheritance evidence and conflict record;
-- `production`: effective opening state, closing state, previous Shot identity, current/previous asset identities, screen direction, lighting continuity, environment context, conflicts and inheritance mode;
+- `production`: effective opening state, closing state, previous Shot identity,
+  current/previous asset identities, previous-final/current-opening active asset IDs,
+  explicit boundary exits, carry-forward requirements, missing carried assets, screen
+  direction, lighting continuity, environment context, reviewable conflicts, blocking
+  conflicts and inheritance mode;
 - `provider_neutral=true`.
 
 Validation records `continuity_complete=true` and optional `continuity_review_notes`.
