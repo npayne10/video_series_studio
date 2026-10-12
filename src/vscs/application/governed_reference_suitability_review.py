@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
@@ -19,6 +20,7 @@ from vscs.application.production_execution.provider_policy_profiles import (
     ProviderPolicyProfileRegistry,
 )
 from vscs.application.production_package import ProductionPackage
+from vscs.application.projects import ProjectService
 from vscs.application.provider_reference_capacity import (
     ProviderReferenceCapacityProjection,
     project_provider_reference_capacity,
@@ -68,7 +70,7 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
 
     def __init__(
         self,
-        projects: Any,
+        projects: ProjectService,
         suitability: GovernedReferenceSuitabilityService | None = None,
         *,
         provider_policies: ProviderPolicyProfileRegistry | None = None,
@@ -133,7 +135,7 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
         *,
         target: SuitabilityReviewTarget,
         references: tuple[SuitabilityReferenceReview, ...],
-    ):
+    ) -> Path:
         """Persist explicit review plus deterministic provider-capacity projection."""
         path = super().save_review(package, target=target, references=references)
         projection = self.capacity_projection(target, references)
