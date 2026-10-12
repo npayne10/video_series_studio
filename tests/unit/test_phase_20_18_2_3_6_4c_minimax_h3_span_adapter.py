@@ -31,6 +31,7 @@ from vscs.infrastructure.production_execution import (
 from vscs.infrastructure.production_execution.minimax_h3_span_adapter import (
     MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS,
     MINIMAX_H3_MAXIMUM_DIRECT_DURATION_SECONDS,
+    MiniMaxH3SpanExecution,
     _h3_provider_frame_count,
     _require_h3_direct_duration,
 )
@@ -869,7 +870,6 @@ def test_h3_priority_projection_defers_preferred_reference_beyond_five_slots(
 
     projected, positive_prompt, deferred = (
         MiniMaxH3SpanAdapterCompiler(tmp_path)._priority_projected_reference_slots(
-            compiled,
             span_input,
             tuple(dict(item) for item in references["references"]),
         )
@@ -885,3 +885,42 @@ def test_h3_priority_projection_defers_preferred_reference_beyond_five_slots(
     assert deferred == ("REF-SHIP",)
     assert "<Picture 6>" not in positive_prompt
     assert "REF-SHIP" not in tuple(slot.reference_id for slot in projected)
+
+
+def test_h3_span_execution_serializes_deferred_reference_ids() -> None:
+    slot = SpanReferenceSlot(
+        picture_index=1,
+        picture_tag="<Picture 1>",
+        reference_id="REF-SANDRA",
+        asset_id="CAP-CHR-003",
+        role="primary_identity",
+        source_path="references/sandra.png",
+        semantic_label="Sandra Crawford",
+    )
+    execution = MiniMaxH3SpanExecution(
+        span_id="SPAN-001",
+        sequence_number=1,
+        global_start_frame=0,
+        global_through_frame=95,
+        governed_frame_count=96,
+        provider_frame_count=107,
+        reference_slots=(slot,),
+        positive_prompt="<Picture 1> is the authoritative reference for Sandra Crawford.",
+        negative_prompt="identity swap",
+        motion_prompt="Restrained natural motion.",
+        guide_source_kind="shot_opening_authority",
+        guide_image_path="boundaries/opening.png",
+        guide_image_sha256="a" * 64,
+        guide_frame_idx=0,
+        source_span_input_id="SSPI-TEST",
+        source_span_input_plan_fingerprint="input-plan-fingerprint",
+        prompt_validation_id="H3PV-TEST",
+        prompt_validation_fingerprint="validation-fingerprint",
+        prompt_validated_rules=("H3-001",),
+        deferred_reference_ids=("REF-SHIP",),
+    )
+
+    payload = execution.to_dict()
+
+    assert payload["deferred_reference_ids"] == ["REF-SHIP"]
+    assert "REF-SHIP" not in {item["reference_id"] for item in payload["reference_slots"]}
