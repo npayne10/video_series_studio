@@ -53,6 +53,15 @@ class TimedAssetPresenceAuthoringService:
         self.packages = packages
         self.reference_source = reference_source
 
+    def passing_reference_plan(self, shot_id: str) -> dict[str, Any] | None:
+        """Return current passing governed ReferencePlan authority when available."""
+        plan = self.reference_source.reference_plan_for_shot(shot_id)
+        if not isinstance(plan, dict):
+            return None
+        if str(plan.get("status") or "").strip().lower() != "passed":
+            return None
+        return plan
+
     def context(
         self,
         shot_id: str,
