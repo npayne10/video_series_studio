@@ -154,6 +154,7 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
         shot_id = getattr(self, "_selected_shot_id", None)
         if not shot_id:
             self.timed_presence_table.setRowCount(0)
+            self.timed_presence_notes.clear()
             self.timed_presence_status.setText("Select a governed Shot.")
             self.timed_presence_save_button.setEnabled(False)
             self.timed_presence_reset_button.setEnabled(False)
@@ -166,12 +167,19 @@ def install_timed_asset_presence_workspace(workspace_class: type[Any]) -> None:
             )
         except TimedAssetPresenceAuthoringError as exc:
             self.timed_presence_table.setRowCount(0)
+            self.timed_presence_notes.clear()
             self.timed_presence_status.setText(str(exc))
             self.timed_presence_save_button.setEnabled(False)
             self.timed_presence_reset_button.setEnabled(False)
             self.timed_presence_reference_button.setEnabled(False)
             return
         self._populate_timed_presence_context(context)
+        package = self.packages.current_package(shot_id)
+        validation = getattr(package, "validation", None)
+        review_note = ""
+        if context.persisted and isinstance(validation, dict):
+            review_note = str(validation.get("timed_asset_presence_review_notes") or "")
+        self.timed_presence_notes.setPlainText(review_note)
         self.timed_presence_reset_button.setEnabled(True)
         opener = getattr(self, "_open_reference_suitability", None)
         self.timed_presence_reference_button.setEnabled(callable(opener))
