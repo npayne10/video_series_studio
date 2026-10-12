@@ -158,6 +158,14 @@ reviewable and auditable.
 
 Timed Asset Presence now exposes the ReferencePlan dependency before Save.
 
+Live preservation validation also exposed a cross-Shot UI-state hazard: the authority review
+note editor retained the previous Shot's text when selecting a different Shot that had no
+persisted Timed Asset Presence authority. The note was editor state only and had not altered
+the protected Shot, but saving from that state could have copied the wrong human review note
+into another Shot. The workspace now clears the note for non-persisted/error/no-selection
+contexts and reloads the Shot-specific persisted review note from Production Package validation
+when Timed Asset Presence authority exists.
+
 When no passing governed ReferencePlan exists:
 
 - full-shot governed-asset defaults remain visible for review;
@@ -222,4 +230,5 @@ After automated validation passes:
 
 ## Phase state
 
-**OPEN / PENDING LOCAL AUTOMATED AND LIVE SHT-003 ACCEPTANCE VALIDATION.**
+**OPEN / PENDING LOCAL REVALIDATION AFTER LIVE CROSS-SHOT REVIEW-NOTE ISOLATION REPAIR,
+THEN FINAL SHT-001/SHT-002 PRESERVATION ACCEPTANCE.**
