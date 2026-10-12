@@ -314,6 +314,16 @@ def test_sht003_review_records_and_persists_h3_capacity_projection(tmp_path: Pat
         references=reviews,
     )
 
+    assert len(plan["references"]) == 6
+    assert {item["asset_id"] for item in plan["references"]} == {
+        "CAP-CHR-003",
+        "CAP-CHR-001",
+        "CAP-LOC-021",
+        "CAP-ENV-004",
+        "CAP-PLN-002",
+        "CAP-SHP-002",
+    }
+
     projection = plan["provider_capacity_projection"]
     assert projection["capacity"] == 5
     assert projection["selected_reference_ids"] == [
