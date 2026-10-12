@@ -83,8 +83,9 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
         group_layout = QVBoxLayout(group)
         guidance = QLabel(
             "Review inherited production state before compiling Continuity authority. Previous-Shot "
-            "closing state is carried forward automatically; conflicts are exposed for user review "
-            "rather than silently rewritten.",
+            "closing state is carried forward automatically. Reviewable conflicts are exposed "
+            "rather than silently rewritten; unresolved continuous-boundary asset-state drops "
+            "block final Continuity approval.",
             group,
         )
         guidance.setWordWrap(True)
@@ -180,6 +181,13 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
             return "Ready / Compiled"
         if not self.continuity_compiler.is_current(draft):
             return f"{draft.status.value.title()} / Stale"
+        blocking = draft.continuity_value().get("blocking_continuity_conflicts", [])
+        if (
+            draft.status is ContinuityCompilationStatus.DRAFT
+            and isinstance(blocking, list)
+            and blocking
+        ):
+            return "Draft / Blocked"
         return draft.status.value.title()
 
     def _load_continuity_draft(self) -> None:
