@@ -308,20 +308,20 @@ class ContinuityCompilerService:
             cls._boundary_exit_asset_ids(previous)
         ) if previous else []
         current_opening_active_asset_ids = list(cls._opening_active_asset_ids(package))
-        carry_forward_required_asset_ids = [
-            asset_id
-            for asset_id in previous_final_active_asset_ids
-            if asset_id not in previous_boundary_exit_asset_ids
-        ]
-        missing_carried_asset_ids = (
+        carry_forward_required_asset_ids = (
             [
                 asset_id
-                for asset_id in carry_forward_required_asset_ids
-                if asset_id not in current_opening_active_asset_ids
+                for asset_id in previous_final_active_asset_ids
+                if asset_id not in previous_boundary_exit_asset_ids
             ]
             if inherited_opening
             else []
         )
+        missing_carried_asset_ids = [
+            asset_id
+            for asset_id in carry_forward_required_asset_ids
+            if asset_id not in current_opening_active_asset_ids
+        ]
         blocking_conflicts: list[str] = []
         if missing_carried_asset_ids:
             message = (
