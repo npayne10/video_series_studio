@@ -137,6 +137,9 @@ For ordinary span-scoped references without a required scene-composition anchor:
 
 Existing governed scene-composition-anchor projection remains supported and now obtains
 its slot count from the installed H3 policy profile rather than a hard-coded literal.
+That accepted legacy anchor path deliberately does not add empty/deferred fields to its
+fingerprinted span serialization, so this hardening does not silently rewrite accepted
+SHT-001/SHT-002 H3 execution authority merely because the new audit concept exists.
 
 This means a six-reference SHT-003 ReferencePlan no longer fails later merely because all
 six governed references became active; the fifth-slot decision is deterministic,
