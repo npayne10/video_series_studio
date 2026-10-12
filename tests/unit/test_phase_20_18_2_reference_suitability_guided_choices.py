@@ -8,6 +8,10 @@ from vscs.presentation.widgets.governed_reference_suitability_guided_dialog impo
     FRAMING_TYPE_CHOICES,
     GovernedReferenceSuitabilityGuidedDialog,
     _GuidedChoiceComboBox,
+    _ProviderChoiceComboBox,
+)
+from vscs.infrastructure.production_execution.provider_policy_profiles import (
+    default_provider_policy_profile_registry,
 )
 
 
@@ -75,3 +79,22 @@ def test_suitability_enum_combo_data_is_normalized_back_to_str_enum(
 
     assert resolved is ReferenceRole.PRIMARY_IDENTITY
     assert resolved.value == "primary_identity"
+
+
+def test_provider_selector_exposes_installed_provider_policy_profiles(
+    qapp: QApplication,
+) -> None:
+    _ = qapp
+    registry = default_provider_policy_profile_registry()
+    combo = _ProviderChoiceComboBox(registry.enabled_profiles)
+
+    assert combo.text() == "minimax-h3-ref2va"
+    values = {str(combo.itemData(index)) for index in range(combo.count())}
+    assert values == {"minimax-h3-ref2va", "ltx-2.5"}
+
+    combo.setText("ltx-2.5")
+    assert combo.text() == "ltx-2.5"
+
+    combo.setText("ltx23-local")
+    assert combo.text() == "ltx23-local"
+    assert "Legacy / unavailable provider" in combo.currentText()
