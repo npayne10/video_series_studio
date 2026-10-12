@@ -593,6 +593,19 @@ class MiniMaxH3SpanAdapterCompiler:
             and self._active_contained_environments(reference, active_asset_ids)
         )
         if not anchors:
+            capacity_authority = self._provider_capacity_authority(compiled)
+            if capacity_authority is None:
+                # Compatibility boundary for accepted pre-6.6b.3 H3 authority.
+                policy_profile = default_provider_policy_profile_registry().require(
+                    MINIMAX_H3_POLICY_PROFILE_ID
+                )
+                if len(span_input.reference_slots) > policy_profile.max_reference_images:
+                    raise MiniMaxH3SpanAdapterError(
+                        "H3 reference projection exceeds "
+                        f"{policy_profile.max_reference_images} slots without reviewed "
+                        "provider-capacity authority"
+                    )
+                return span_input.reference_slots, span_input.positive_prompt, ()
             return self._priority_projected_reference_slots(
                 span_input,
                 references,
@@ -707,6 +720,43 @@ class MiniMaxH3SpanAdapterCompiler:
         # Provider-aware preferred-reference deferral is introduced only on the new
         # policy-driven no-anchor path used by provider-selectable SHT-003+ work.
         return projected, positive_prompt, ()
+
+    def _provider_capacity_authority(
+        self,
+        compiled: CompiledProductionPackage,
+    ) -> dict[str, object] | None:
+        raw_plan = compiled.reference_plan
+        if not isinstance(raw_plan, dict):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 reference projection requires a governed ReferencePlan"
+            )
+        raw = raw_plan.get("provider_capacity_projection")
+        if raw is None:
+            return None
+        if not isinstance(raw, dict):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 provider-capacity projection authority must be an object"
+            )
+
+        profile = default_provider_policy_profile_registry().require(
+            MINIMAX_H3_POLICY_PROFILE_ID
+        )
+        expected: dict[str, object] = {
+            "provider_id": profile.provider_id,
+            "provider_profile_id": profile.profile_id,
+            "provider_profile_fingerprint": profile.fingerprint,
+            "reference_projection_mode": profile.reference_projection_mode,
+            "capacity": profile.max_reference_images,
+            "passed": True,
+        }
+        for key, expected_value in expected.items():
+            actual = raw.get(key)
+            if actual != expected_value:
+                raise MiniMaxH3SpanAdapterError(
+                    "H3 provider-capacity projection is stale or targets a different "
+                    f"provider policy: {key} expected {expected_value!r}, got {actual!r}"
+                )
+        return dict(raw)
 
     def _priority_projected_reference_slots(
         self,
