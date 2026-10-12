@@ -14,6 +14,7 @@ from vscs.application.acpp.reference_roles import (
     ReferenceRole,
     ReferenceSubjectType,
 )
+from vscs.application.governed_reference_suitability import GovernedReferenceSuitabilityError
 from vscs.application.governed_reference_suitability_authoring import (
     GovernedReferenceSuitabilityAuthoringError,
     SuitabilityReferenceReview,
@@ -355,3 +356,29 @@ def test_sht003_approval_blocks_when_required_references_exceed_h3_capacity(
             target=SuitabilityReviewTarget(provider_id="minimax-h3-ref2va"),
             references=reviews,
         )
+
+
+def test_saved_over_capacity_review_cannot_be_resolved_implicitly(
+    tmp_path: Path,
+) -> None:
+    package = _package()
+    paths = _write_assets(tmp_path)
+    reviews = tuple(
+        replace(review, priority=ReferencePriority.REQUIRED)
+        for review in _sht003_reviews(paths)
+    )
+    service = GovernedReferenceSuitabilityReviewService(
+        _Projects(tmp_path),  # type: ignore[arg-type]
+        provider_policies=default_provider_policy_profile_registry(),
+    )
+    target = SuitabilityReviewTarget(provider_id="minimax-h3-ref2va")
+
+    path = service.save_review(package, target=target, references=reviews)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["provider_capacity_projection"]["passed"] is False
+
+    with pytest.raises(
+        GovernedReferenceSuitabilityError,
+        match="provider-capacity projection is blocked",
+    ):
+        service.suitability.ensure_for_package(package)
