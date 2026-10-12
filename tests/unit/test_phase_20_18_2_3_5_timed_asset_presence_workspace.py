@@ -240,7 +240,8 @@ def test_workspace_exposes_explicit_timed_presence_editor_and_saves_ros_boundary
         for index in range(widget.compiler_tabs.count())
     )
     assert widget.timed_presence_table.rowCount() == 5
-    assert "NOT authority" in widget.timed_presence_status.text()
+    assert "Passing governed ReferencePlan is current" in widget.timed_presence_status.text()
+    assert widget.timed_presence_save_button.isEnabled()
 
     ros_row = next(
         row
@@ -264,3 +265,36 @@ def test_workspace_exposes_explicit_timed_presence_editor_and_saves_ros_boundary
     ros = next(item for item in packages.saved.presences if item.asset_id == "CAP-CHR-005")
     assert ros.from_frame == 96
     assert ros.introduction is AssetPresenceIntroduction.ENTER
+
+
+def test_workspace_blocks_timed_presence_save_until_reference_plan_passes(
+    qtbot: object,
+    tmp_path: Path,
+) -> None:
+    projects = _Projects(tmp_path)
+    packages = _Packages()
+
+    class _Workspace(QWidget):
+        def __init__(self, projects_arg: _Projects, packages_arg: _Packages) -> None:
+            super().__init__()
+            self.projects = projects_arg
+            self.packages = packages_arg
+            self._selected_shot_id = "EP-001-SCN-001-SHT-002"
+            layout = QVBoxLayout(self)
+            self.compiler_tabs = QTabWidget(self)
+            layout.addWidget(self.compiler_tabs)
+
+        def refresh(self) -> None:
+            return
+
+        def _selection_changed(self) -> None:
+            return
+
+    install_timed_asset_presence_workspace(_Workspace)
+    widget = _Workspace(projects, packages)
+    qtbot.addWidget(widget)  # type: ignore[attr-defined]
+
+    assert widget.timed_presence_table.rowCount() == 5
+    assert not widget.timed_presence_save_button.isEnabled()
+    assert "No passing governed ReferencePlan" in widget.timed_presence_status.text()
+    assert hasattr(widget, "timed_presence_reference_button")
