@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from typing import Any
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
+from vscs.application.governed_reference_suitability import GovernedReferenceSuitabilityService
 from vscs.application.governed_reference_suitability_authoring import (
     GovernedReferenceCandidate,
     GovernedReferenceSuitabilityAuthoringError,
@@ -13,7 +15,14 @@ from vscs.application.governed_reference_suitability_authoring import (
     SuitabilityReferenceReview,
     SuitabilityReviewTarget,
 )
+from vscs.application.production_execution.provider_policy_profiles import (
+    ProviderPolicyProfileRegistry,
+)
 from vscs.application.production_package import ProductionPackage
+from vscs.application.provider_reference_capacity import (
+    ProviderReferenceCapacityProjection,
+    project_provider_reference_capacity,
+)
 
 
 def suggested_reference_priority(
@@ -57,21 +66,89 @@ def suggested_reference_priority(
 class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuthoringService):
     """Require complete governed visual coverage before approving a ReferencePlan."""
 
+    def __init__(
+        self,
+        projects: Any,
+        suitability: GovernedReferenceSuitabilityService | None = None,
+        *,
+        provider_policies: ProviderPolicyProfileRegistry | None = None,
+    ) -> None:
+        super().__init__(projects, suitability)
+        self.provider_policies = provider_policies
+
     def candidates_for_package(
         self,
         package: ProductionPackage,
     ) -> tuple[GovernedReferenceCandidate, ...]:
-        """Return candidates with production-semantic priority suggestions."""
-        return tuple(
-            replace(
-                candidate,
-                suggested_priority=suggested_reference_priority(
-                    candidate.category,
-                    candidate.semantic_role,
-                ),
+        """Return candidates with aligned identity-role and priority suggestions."""
+        primary_character = self._primary_character_asset_id(package)
+        values: list[GovernedReferenceCandidate] = []
+        for candidate in super().candidates_for_package(package):
+            role = candidate.suggested_role
+            if candidate.category.strip().lower() == "character":
+                role = (
+                    ReferenceRole.PRIMARY_IDENTITY
+                    if candidate.asset_id == primary_character
+                    else ReferenceRole.SECONDARY_IDENTITY
+                )
+            values.append(
+                replace(
+                    candidate,
+                    suggested_role=role,
+                    suggested_priority=suggested_reference_priority(
+                        candidate.category,
+                        candidate.semantic_role,
+                    ),
+                )
             )
-            for candidate in super().candidates_for_package(package)
+        return tuple(values)
+
+    def capacity_projection(
+        self,
+        target: SuitabilityReviewTarget,
+        references: tuple[SuitabilityReferenceReview, ...],
+    ) -> ProviderReferenceCapacityProjection | None:
+        """Return installed-provider capacity projection for the explicit review."""
+        if self.provider_policies is None:
+            return None
+        provider_id = (target.provider_id or "").strip()
+        if not provider_id:
+            raise GovernedReferenceSuitabilityAuthoringError(
+                "Reference suitability requires an installed provider selection"
+            )
+        profiles = self.provider_policies.for_provider(provider_id)
+        if len(profiles) != 1:
+            if not profiles:
+                raise GovernedReferenceSuitabilityAuthoringError(
+                    f"Reference suitability provider is not installed: {provider_id}"
+                )
+            raise GovernedReferenceSuitabilityAuthoringError(
+                f"Reference suitability provider is ambiguous: {provider_id}"
+            )
+        return project_provider_reference_capacity(profiles[0], references)
+
+    def save_review(
+        self,
+        package: ProductionPackage,
+        *,
+        target: SuitabilityReviewTarget,
+        references: tuple[SuitabilityReferenceReview, ...],
+    ):
+        """Persist explicit review plus deterministic provider-capacity projection."""
+        path = super().save_review(package, target=target, references=references)
+        projection = self.capacity_projection(target, references)
+        if projection is None:
+            return path
+
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["provider_capacity_projection"] = projection.to_dict()
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            encoding="utf-8",
         )
+        temporary.replace(path)
+        return path
 
     def approve_and_resolve(
         self,
@@ -82,6 +159,12 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
     ) -> dict[str, Any]:
         self._require_complete_visual_coverage(package, references)
         self._require_character_role_alignment(package, references)
+        projection = self.capacity_projection(target, references)
+        if projection is not None and not projection.passed:
+            raise GovernedReferenceSuitabilityAuthoringError(
+                "Provider direct-reference capacity blocks approval: "
+                f"{projection.blocked_reason}"
+            )
         return super().approve_and_resolve(package, target=target, references=references)
 
     @classmethod
@@ -123,30 +206,13 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
         package: ProductionPackage,
         references: tuple[SuitabilityReferenceReview, ...],
     ) -> None:
-        characters: list[tuple[str, str]] = []
-        for asset in package.assets:
-            production = asset.get("production")
-            view = production if isinstance(production, dict) else asset
-            if str(view.get("category") or "").strip().lower() != "character":
-                continue
-            asset_id = cls._normalized_asset_id(view.get("asset_id"))
-            if asset_id:
-                characters.append((asset_id, str(view.get("role") or "").strip().lower()))
-        if not characters:
+        character_ids = {
+            asset_id for asset_id, _semantic_role in cls._character_records(package)
+        }
+        if not character_ids:
             return
+        primary = cls._primary_character_asset_id(package)
 
-        primary = next(
-            (
-                asset_id
-                for asset_id, semantic_role in characters
-                if any(
-                    marker in semantic_role
-                    for marker in ("dialogue speaker", "primary", "lead", "principal")
-                )
-            ),
-            characters[0][0],
-        )
-        character_ids = {asset_id for asset_id, _role in characters}
         for review in references:
             asset_id = cls._normalized_asset_id(review.asset_id)
             if asset_id not in character_ids or review.role is ReferenceRole.GROUP_IDENTITY:
@@ -162,6 +228,39 @@ class GovernedReferenceSuitabilityReviewService(GovernedReferenceSuitabilityAuth
                     f"'{review.role.value}', but current Shot semantics require "
                     f"'{expected.value}'."
                 )
+
+    @classmethod
+    def _primary_character_asset_id(cls, package: ProductionPackage) -> str | None:
+        characters = cls._character_records(package)
+        if not characters:
+            return None
+        return next(
+            (
+                asset_id
+                for asset_id, semantic_role in characters
+                if any(
+                    marker in semantic_role
+                    for marker in ("dialogue speaker", "primary", "lead", "principal")
+                )
+            ),
+            characters[0][0],
+        )
+
+    @classmethod
+    def _character_records(
+        cls,
+        package: ProductionPackage,
+    ) -> tuple[tuple[str, str], ...]:
+        values: list[tuple[str, str]] = []
+        for asset in package.assets:
+            production = asset.get("production")
+            view = production if isinstance(production, dict) else asset
+            if str(view.get("category") or "").strip().lower() != "character":
+                continue
+            asset_id = cls._normalized_asset_id(view.get("asset_id"))
+            if asset_id:
+                values.append((asset_id, str(view.get("role") or "").strip().lower()))
+        return tuple(values)
 
     @classmethod
     def _required_visual_asset_ids(cls, package: ProductionPackage) -> set[str]:
