@@ -13,7 +13,11 @@ from vscs.application.continuity_compiler import (
     ContinuityCompilerError,
     ContinuityCompilerService,
 )
-from vscs.application.production_package import ProductionPackage
+from vscs.application.production_package import (
+    ProductionPackage,
+    ProductionPackageProvenance,
+    ProductionPackageStatus,
+)
 from vscs.application.timed_asset_presence import (
     AssetPresenceIntroduction,
     AssetPresenceRemoval,
@@ -22,7 +26,108 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresencePlan,
 )
 
-from .test_continuity_compiler import _service
+
+class _Projects:
+    def __init__(self, root: Path) -> None:
+        self.project_directory = root
+
+
+class _Integrated:
+    def __init__(self, shot_id: str) -> None:
+        self.shot_id = shot_id
+
+
+class _Planning:
+    def __init__(self, shot_ids: tuple[str, ...]) -> None:
+        self.values = tuple(_Integrated(value) for value in shot_ids)
+
+    def list_packages(self):
+        return self.values
+
+    def is_current(self, _item):
+        return True
+
+
+class _Packages:
+    def __init__(self) -> None:
+        self.planning = _Planning(("SHT-001", "SHT-002"))
+        self.values = {
+            "SHT-001": self._package(
+                "SHT-001",
+                "Previous closes beside viewport.",
+                opening="Previous opens on bridge.",
+            ),
+            "SHT-002": self._package(
+                "SHT-002",
+                "Current closes at console.",
+                opening="Previous closes beside viewport.",
+            ),
+        }
+        self.history: list[ProductionPackage] = []
+
+    @staticmethod
+    def _package(shot_id: str, closing: str, *, opening: str) -> ProductionPackage:
+        return ProductionPackage(
+            package_id=f"PP-{shot_id}-A",
+            shot_id=shot_id,
+            schema_version="1.0",
+            source_fingerprint=f"source-{shot_id}",
+            package_fingerprint=f"fingerprint-{shot_id}",
+            provenance=ProductionPackageProvenance("PIP", "source", "PRV", "review"),
+            story_context={},
+            shot={"shot_id": shot_id, "continuity_in": opening, "continuity_out": closing},
+            assets=(_asset("CAP-CHR-001"),),
+            camera={"production": {"screen_direction": "left_to_right"}},
+            lighting={"production": {"continuity_notes": "Keep bridge practicals stable."}},
+            environment={"environment_plan_id": "ENV-BRIDGE"},
+            action_performance={"opening_state": opening, "closing_state": closing},
+            continuity={},
+            style={},
+            dialogue=(),
+            effects=(),
+            references=(),
+            universal_description={},
+            provider_outputs={},
+            validation={
+                "action_performance_complete": True,
+                "assets_complete": True,
+                "camera_complete": True,
+                "lighting_complete": True,
+            },
+            timed_asset_presence={},
+            status=ProductionPackageStatus.COMPILING,
+        )
+
+    def current_package(self, shot_id: str):
+        return self.values.get(shot_id)
+
+    def materialize(self, shot_id: str):
+        return self.values[shot_id]
+
+    def require_current_package(self, shot_id: str):
+        return self.values[shot_id]
+
+    def _append_derived(self, current: ProductionPackage, data: dict):
+        derived = replace(
+            current,
+            package_id=f"{current.package_id}-C",
+            package_fingerprint=f"{current.package_fingerprint}-C",
+            continuity=dict(data["continuity"]),
+            validation=dict(data["validation"]),
+            status=ProductionPackageStatus.COMPILING,
+        )
+        self.values[current.shot_id] = derived
+        self.history.append(derived)
+        return derived
+
+
+def _service(tmp_path: Path):
+    packages = _Packages()
+    service = ContinuityCompilerService(
+        _Projects(tmp_path),  # type: ignore[arg-type]
+        packages,  # type: ignore[arg-type]
+    )
+    return service, packages
 
 
 def _presence_plan(
