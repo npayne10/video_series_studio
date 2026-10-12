@@ -7,6 +7,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 from vscs.application.production_execution.introduction_keyframes import (
     GovernedIntroductionKeyframeError,
     GovernedIntroductionKeyframeStore,
@@ -30,6 +31,9 @@ from vscs.application.production_execution.span_scoped_provider_inputs import (
     SpanScopedProviderInputPlan,
     SpanScopedProviderInputs,
 )
+from vscs.application.provider_reference_capacity import (
+    project_provider_reference_capacity,
+)
 
 from .governed_shot_boundaries import (
     GovernedShotBoundaryError,
@@ -49,6 +53,14 @@ MINIMAX_H3_DURATION_VALIDATION_CANDIDATES_SECONDS = (8, 10, 12, 15)
 
 class MiniMaxH3SpanAdapterError(RuntimeError):
     """Raised when governed span authority cannot become a safe H3 Ref2VA job plan."""
+
+
+@dataclass(frozen=True, slots=True)
+class _H3CapacityReference:
+    reference_id: str
+    role: ReferenceRole
+    priority: ReferencePriority
+    provider_ready: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +86,7 @@ class MiniMaxH3SpanExecution:
     prompt_validation_id: str
     prompt_validation_fingerprint: str
     prompt_validated_rules: tuple[str, ...]
+    deferred_reference_ids: tuple[str, ...] = ()
     provider_id: str = "minimax-h3-ref2va"
     mode: str = "governed_isolated_span_ref2va"
     normalization_policy: str = "retain_first_governed_frames"
@@ -141,6 +154,17 @@ class MiniMaxH3SpanExecution:
                 "H3 span execution prompt validation rules cannot contain duplicates"
             )
         object.__setattr__(self, "prompt_validated_rules", rules)
+        deferred = tuple(str(value).strip() for value in self.deferred_reference_ids)
+        if any(not value for value in deferred) or len(set(deferred)) != len(deferred):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 deferred reference IDs must be non-blank and unique"
+            )
+        active_reference_ids = {slot.reference_id for slot in self.reference_slots}
+        if active_reference_ids & set(deferred):
+            raise MiniMaxH3SpanAdapterError(
+                "H3 deferred references cannot also consume direct provider slots"
+            )
+        object.__setattr__(self, "deferred_reference_ids", deferred)
 
     @property
     def provider_trim_frames(self) -> int:
@@ -175,6 +199,7 @@ class MiniMaxH3SpanExecution:
             "governed_frame_count": self.governed_frame_count,
             "provider_frame_count": self.provider_frame_count,
             "reference_slots": [slot.to_dict() for slot in self.reference_slots],
+            "deferred_reference_ids": list(self.deferred_reference_ids),
             "positive_prompt": self.positive_prompt,
             "negative_prompt": self.negative_prompt,
             "motion_prompt": self.motion_prompt,
@@ -473,7 +498,7 @@ class MiniMaxH3SpanAdapterCompiler:
         guide_kind: str,
     ) -> MiniMaxH3SpanExecution:
         governed_frames = global_through_frame - global_start_frame + 1
-        reference_slots, positive_prompt = self._project_reference_slots(
+        reference_slots, positive_prompt, deferred_reference_ids = self._project_reference_slots(
             compiled,
             span_input,
         )
@@ -540,13 +565,14 @@ class MiniMaxH3SpanAdapterCompiler:
             prompt_validation_id=prompt_validation.validation_id,
             prompt_validation_fingerprint=prompt_validation.fingerprint,
             prompt_validated_rules=prompt_validation.validated_rules,
+            deferred_reference_ids=deferred_reference_ids,
         )
 
     def _project_reference_slots(
         self,
         compiled: CompiledProductionPackage,
         span_input: SpanScopedProviderInputs,
-    ) -> tuple[tuple[SpanReferenceSlot, ...], str]:
+    ) -> tuple[tuple[SpanReferenceSlot, ...], str, tuple[str, ...]]:
         """Project governed references into MiniMax H3's finite picture-slot budget."""
         references = self._reference_records(compiled)
         frame_state_ids = self._frame_state_reference_ids(compiled)
@@ -563,12 +589,11 @@ class MiniMaxH3SpanAdapterCompiler:
             and self._active_contained_environments(reference, active_asset_ids)
         )
         if not anchors:
-            if len(span_input.reference_slots) > 5:
-                raise MiniMaxH3SpanAdapterError(
-                    "H3 reference projection exceeds five slots without a required "
-                    "scene-composition anchor"
-                )
-            return span_input.reference_slots, span_input.positive_prompt
+            return self._priority_projected_reference_slots(
+                compiled,
+                span_input,
+                references,
+            )
         if len(anchors) != 1:
             raise MiniMaxH3SpanAdapterError(
                 "H3 reference projection requires exactly one active required "
@@ -628,9 +653,14 @@ class MiniMaxH3SpanAdapterCompiler:
             deduplicated.append(slot)
             seen_reference_ids.add(slot.reference_id)
 
-        if len(deduplicated) > 5:
+        policy_profile = default_provider_policy_profile_registry().require(
+            MINIMAX_H3_POLICY_PROFILE_ID
+        )
+        capacity = policy_profile.max_reference_images
+        if len(deduplicated) > capacity:
             raise MiniMaxH3SpanAdapterError(
-                "H3 governed reference projection cannot fit the five-slot provider budget"
+                "H3 governed reference projection cannot fit the "
+                f"{capacity}-slot provider budget"
             )
 
         projected = tuple(
@@ -670,7 +700,106 @@ class MiniMaxH3SpanAdapterCompiler:
             span_input,
             projected,
         )
-        return projected, positive_prompt
+        deferred = tuple(
+            slot.reference_id
+            for slot in span_input.reference_slots
+            if slot.reference_id not in projected_ids
+        )
+        return projected, positive_prompt, deferred
+
+    def _priority_projected_reference_slots(
+        self,
+        compiled: CompiledProductionPackage,
+        span_input: SpanScopedProviderInputs,
+        references: tuple[dict[str, object], ...],
+    ) -> tuple[tuple[SpanReferenceSlot, ...], str, tuple[str, ...]]:
+        policy_profile = default_provider_policy_profile_registry().require(
+            MINIMAX_H3_POLICY_PROFILE_ID
+        )
+        by_id = {
+            self._required_reference_text(reference, "reference_id"): reference
+            for reference in references
+        }
+        capacity_records: list[_H3CapacityReference] = []
+        for slot in span_input.reference_slots:
+            reference = by_id.get(slot.reference_id)
+            if reference is None:
+                raise MiniMaxH3SpanAdapterError(
+                    f"H3 active reference {slot.reference_id} is absent from governed authority"
+                )
+            try:
+                role = ReferenceRole(self._required_reference_text(reference, "role"))
+                priority = ReferencePriority(
+                    self._required_reference_text(reference, "priority")
+                )
+            except ValueError as exc:
+                raise MiniMaxH3SpanAdapterError(
+                    f"H3 reference capacity authority contains an unsupported enum: {exc}"
+                ) from exc
+            capacity_records.append(
+                _H3CapacityReference(
+                    reference_id=slot.reference_id,
+                    role=role,
+                    priority=priority,
+                    provider_ready=reference.get("provider_ready") is True,
+                )
+            )
+
+        projection = project_provider_reference_capacity(
+            policy_profile,
+            capacity_records,
+        )
+        if not projection.passed:
+            raise MiniMaxH3SpanAdapterError(
+                "H3 provider-aware reference projection is blocked: "
+                f"{projection.blocked_reason}"
+            )
+
+        selected = set(projection.selected_reference_ids)
+        ordered_slots = tuple(
+            slot
+            for slot in span_input.reference_slots
+            if slot.reference_id in selected
+        )
+        projected = tuple(
+            SpanReferenceSlot(
+                picture_index=index,
+                picture_tag=f"<Picture {index}>",
+                reference_id=slot.reference_id,
+                asset_id=slot.asset_id,
+                role=slot.role,
+                source_path=slot.source_path,
+                semantic_label=slot.semantic_label,
+            )
+            for index, slot in enumerate(ordered_slots, start=1)
+        )
+        if tuple(slot.reference_id for slot in projected) != projection.selected_reference_ids:
+            ordered_by_id = {slot.reference_id: slot for slot in projected}
+            projected = tuple(
+                SpanReferenceSlot(
+                    picture_index=index,
+                    picture_tag=f"<Picture {index}>",
+                    reference_id=ordered_by_id[reference_id].reference_id,
+                    asset_id=ordered_by_id[reference_id].asset_id,
+                    role=ordered_by_id[reference_id].role,
+                    source_path=ordered_by_id[reference_id].source_path,
+                    semantic_label=ordered_by_id[reference_id].semantic_label,
+                )
+                for index, reference_id in enumerate(
+                    projection.selected_reference_ids,
+                    start=1,
+                )
+            )
+
+        positive_prompt = self._replace_reference_declarations(
+            span_input,
+            projected,
+        )
+        return (
+            projected,
+            positive_prompt,
+            projection.deferred_preferred_reference_ids,
+        )
 
     def _replace_reference_declarations(
         self,
