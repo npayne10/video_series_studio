@@ -189,7 +189,7 @@ class MiniMaxH3SpanExecution:
         )
 
     def _authority_payload(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "provider_id": self.provider_id,
             "mode": self.mode,
             "span_id": self.span_id,
@@ -199,7 +199,6 @@ class MiniMaxH3SpanExecution:
             "governed_frame_count": self.governed_frame_count,
             "provider_frame_count": self.provider_frame_count,
             "reference_slots": [slot.to_dict() for slot in self.reference_slots],
-            "deferred_reference_ids": list(self.deferred_reference_ids),
             "positive_prompt": self.positive_prompt,
             "negative_prompt": self.negative_prompt,
             "motion_prompt": self.motion_prompt,
@@ -215,9 +214,13 @@ class MiniMaxH3SpanExecution:
             "normalization_policy": self.normalization_policy,
             "reference_image_size": self.reference_image_size,
         }
+        if self.deferred_reference_ids:
+            payload["deferred_reference_ids"] = list(self.deferred_reference_ids)
+        return payload
 
     def to_dict(self) -> dict[str, object]:
         payload = self._authority_payload()
+        payload["deferred_reference_ids"] = list(self.deferred_reference_ids)
         payload["job_id"] = self.job_id
         payload["provider_trim_frames"] = self.provider_trim_frames
         payload["reference_slot_fingerprint"] = self.reference_slot_fingerprint
@@ -699,12 +702,10 @@ class MiniMaxH3SpanAdapterCompiler:
             span_input,
             projected,
         )
-        deferred = tuple(
-            slot.reference_id
-            for slot in span_input.reference_slots
-            if slot.reference_id not in projected_ids
-        )
-        return projected, positive_prompt, deferred
+        # Preserve the accepted legacy composition-anchor execution contract.
+        # Provider-aware preferred-reference deferral is introduced only on the new
+        # policy-driven no-anchor path used by provider-selectable SHT-003+ work.
+        return projected, positive_prompt, ()
 
     def _priority_projected_reference_slots(
         self,
