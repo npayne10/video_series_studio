@@ -128,7 +128,7 @@ class GovernedReferenceSuitabilityReviewDialog(QDialog):
         self.target_height.setRange(1, 16384)
         self.target_height.setValue(720)
         self.target_profile = QLineEdit("production-video-16x9", target_group)
-        self.target_provider = QLineEdit("ltx23-local", target_group)
+        self.target_provider = QLineEdit("", target_group)
         self.aspect_tolerance = QDoubleSpinBox(target_group)
         self.aspect_tolerance.setDecimals(3)
         self.aspect_tolerance.setRange(0.001, 0.200)
