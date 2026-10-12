@@ -16,6 +16,11 @@ from vscs.application.production_package import (
     ProductionPackageStatus,
 )
 from vscs.application.projects import ProjectNotOpenError, ProjectService
+from vscs.application.timed_asset_presence import (
+    AssetPresenceRemoval,
+    TimedAssetPresenceError,
+    TimedAssetPresencePlan,
+)
 
 
 class ContinuityCompilerError(RuntimeError):
@@ -35,6 +40,7 @@ class ContinuityCompilationDraft:
     previous_shot_id: str = ""
     continuity: dict[str, Any] | None = None
     production_notes: str = ""
+    asset_state_governance_version: str = ""
     status: ContinuityCompilationStatus = ContinuityCompilationStatus.DRAFT
 
     def continuity_value(self) -> dict[str, Any]:
@@ -46,6 +52,7 @@ class ContinuityCompilerService:
 
     FILE_NAME = "continuity_compilation.json"
     SCHEMA_VERSION = "1.1"
+    ASSET_STATE_GOVERNANCE_VERSION = "1.0"
     _PRESERVATION_PHRASES = (
         "same as previous shot",
         "same as the previous shot",
@@ -113,6 +120,7 @@ class ContinuityCompilerService:
                 previous,
                 referenced_previous_shot_id=resolved_previous_id,
             ),
+            asset_state_governance_version=self.ASSET_STATE_GOVERNANCE_VERSION,
         )
         self._write((*self.list_drafts(), draft))
         return draft
@@ -144,6 +152,7 @@ class ContinuityCompilerService:
                 previous,
                 referenced_previous_shot_id=resolved_previous_id,
             ),
+            asset_state_governance_version=self.ASSET_STATE_GOVERNANCE_VERSION,
         )
         self._replace(updated)
         return updated
@@ -189,6 +198,14 @@ class ContinuityCompilerService:
             referenced_shot_id=referenced_previous_id,
         )
         resolved_previous_id = previous.shot_id if previous else referenced_previous_id
+        if draft.asset_state_governance_version != self.ASSET_STATE_GOVERNANCE_VERSION:
+            if draft.status is not ContinuityCompilationStatus.READY:
+                return False
+            return draft.dependency_fingerprint == self._legacy_dependency_fingerprint(
+                package,
+                previous,
+                referenced_previous_shot_id=resolved_previous_id,
+            )
         return draft.dependency_fingerprint == self._dependency_fingerprint(
             package,
             previous,
@@ -281,6 +298,42 @@ class ContinuityCompilerService:
         inherited_opening = bool(previous_shot_id and preservation_directive)
         shot_boundary_mode = "continuous" if inherited_opening else "new_composition"
         source_shot_id = previous_shot_id if inherited_opening else ""
+
+        previous_asset_ids = list(cls._asset_ids(previous)) if previous else []
+        current_asset_ids = list(cls._asset_ids(package))
+        previous_final_active_asset_ids = list(
+            cls._final_active_asset_ids(previous)
+        ) if previous else []
+        previous_boundary_exit_asset_ids = list(
+            cls._boundary_exit_asset_ids(previous)
+        ) if previous else []
+        current_opening_active_asset_ids = list(cls._opening_active_asset_ids(package))
+        carry_forward_required_asset_ids = [
+            asset_id
+            for asset_id in previous_final_active_asset_ids
+            if asset_id not in previous_boundary_exit_asset_ids
+        ]
+        missing_carried_asset_ids = (
+            [
+                asset_id
+                for asset_id in carry_forward_required_asset_ids
+                if asset_id not in current_opening_active_asset_ids
+            ]
+            if inherited_opening
+            else []
+        )
+        blocking_conflicts: list[str] = []
+        if missing_carried_asset_ids:
+            message = (
+                "Continuous Shot boundary drops previously active asset(s) without explicit "
+                "EXIT/HIDE/DISAPPEAR authority at the previous Shot boundary: "
+                + ", ".join(missing_carried_asset_ids)
+                + ". Carry them into current governed Asset + Timed Asset Presence authority, "
+                "or explicitly govern their removal at the previous boundary."
+            )
+            conflicts.append(message)
+            blocking_conflicts.append(message)
+
         return {
             "current_shot_id": package.shot_id,
             "previous_shot_id": previous_shot_id,
@@ -291,8 +344,13 @@ class ContinuityCompilerService:
             "effective_opening_state": effective_opening,
             "opening_resolution": opening_resolution,
             "current_closing_state": closing,
-            "previous_asset_ids": list(cls._asset_ids(previous)) if previous else [],
-            "current_asset_ids": list(cls._asset_ids(package)),
+            "previous_asset_ids": previous_asset_ids,
+            "current_asset_ids": current_asset_ids,
+            "previous_final_active_asset_ids": previous_final_active_asset_ids,
+            "previous_boundary_exit_asset_ids": previous_boundary_exit_asset_ids,
+            "current_opening_active_asset_ids": current_opening_active_asset_ids,
+            "carry_forward_required_asset_ids": carry_forward_required_asset_ids,
+            "missing_carried_asset_ids": missing_carried_asset_ids,
             "previous_screen_direction": cls._section_value(previous.camera, "screen_direction")
             if previous
             else "",
@@ -305,6 +363,7 @@ class ContinuityCompilerService:
             "current_lighting_continuity": cls._section_value(package.lighting, "continuity_notes"),
             "environment": cls._detached(package.environment),
             "continuity_conflicts": conflicts,
+            "blocking_continuity_conflicts": blocking_conflicts,
             "inheritance_mode": (
                 "previous-shot-closing-state"
                 if previous
@@ -333,12 +392,26 @@ class ContinuityCompilerService:
                 "closing_state": governed.get("current_closing_state", ""),
                 "asset_ids": governed.get("current_asset_ids", []),
                 "previous_asset_ids": governed.get("previous_asset_ids", []),
+                "previous_final_active_asset_ids": governed.get(
+                    "previous_final_active_asset_ids", []
+                ),
+                "previous_boundary_exit_asset_ids": governed.get(
+                    "previous_boundary_exit_asset_ids", []
+                ),
+                "current_opening_active_asset_ids": governed.get(
+                    "current_opening_active_asset_ids", []
+                ),
+                "carry_forward_required_asset_ids": governed.get(
+                    "carry_forward_required_asset_ids", []
+                ),
+                "missing_carried_asset_ids": governed.get("missing_carried_asset_ids", []),
                 "screen_direction": governed.get("current_screen_direction", ""),
                 "previous_screen_direction": governed.get("previous_screen_direction", ""),
                 "lighting_continuity": governed.get("current_lighting_continuity", ""),
                 "previous_lighting_continuity": governed.get("previous_lighting_continuity", ""),
                 "environment": governed.get("environment", {}),
                 "conflicts": governed.get("continuity_conflicts", []),
+                "blocking_conflicts": governed.get("blocking_continuity_conflicts", []),
                 "inheritance_mode": governed.get("inheritance_mode", ""),
                 "provider_neutral": True,
             },
@@ -352,6 +425,12 @@ class ContinuityCompilerService:
             )
         if "effective_opening_state" not in value or "current_closing_state" not in value:
             raise ContinuityCompilerError("Continuity authority is incomplete")
+        blocking = value.get("blocking_continuity_conflicts", [])
+        if isinstance(blocking, list) and blocking:
+            raise ContinuityCompilerError(
+                "Continuity authority has unresolved blocking asset-state conflict(s): "
+                + " | ".join(str(item) for item in blocking)
+            )
 
     def _previous_package(
         self,
@@ -392,16 +471,47 @@ class ContinuityCompilerService:
     ) -> str:
         payload = {
             "compiler_schema_version": cls.SCHEMA_VERSION,
-            "current": cls._dependency_payload(package),
-            "previous": cls._dependency_payload(previous) if previous else None,
+            "asset_state_governance_version": cls.ASSET_STATE_GOVERNANCE_VERSION,
+            "current": cls._dependency_payload(package, include_timed_presence=True),
+            "previous": (
+                cls._dependency_payload(previous, include_timed_presence=True)
+                if previous
+                else None
+            ),
             "referenced_previous_shot_id": referenced_previous_shot_id,
         }
         canonical = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @classmethod
-    def _dependency_payload(cls, package: ProductionPackage) -> dict[str, Any]:
-        return {
+    def _legacy_dependency_fingerprint(
+        cls,
+        package: ProductionPackage,
+        previous: ProductionPackage | None,
+        *,
+        referenced_previous_shot_id: str = "",
+    ) -> str:
+        payload = {
+            "compiler_schema_version": cls.SCHEMA_VERSION,
+            "current": cls._dependency_payload(package, include_timed_presence=False),
+            "previous": (
+                cls._dependency_payload(previous, include_timed_presence=False)
+                if previous
+                else None
+            ),
+            "referenced_previous_shot_id": referenced_previous_shot_id,
+        }
+        canonical = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _dependency_payload(
+        cls,
+        package: ProductionPackage,
+        *,
+        include_timed_presence: bool,
+    ) -> dict[str, Any]:
+        payload = {
             "shot_id": package.shot_id,
             "shot": cls._detached(package.shot),
             "assets": cls._detached_list(package.assets),
@@ -410,6 +520,53 @@ class ContinuityCompilerService:
             "environment": cls._detached(package.environment),
             "action_performance": cls._detached(package.action_performance),
         }
+        if include_timed_presence:
+            payload["timed_asset_presence"] = cls._detached(package.timed_asset_presence)
+        return payload
+
+    @classmethod
+    def _timed_presence_plan(
+        cls,
+        package: ProductionPackage | None,
+    ) -> TimedAssetPresencePlan | None:
+        if package is None or not package.timed_asset_presence:
+            return None
+        try:
+            return TimedAssetPresencePlan.from_dict(package.timed_asset_presence)
+        except TimedAssetPresenceError as exc:
+            raise ContinuityCompilerError(
+                f"Timed Asset Presence authority for {package.shot_id} is invalid: {exc}"
+            ) from exc
+
+    @classmethod
+    def _final_active_asset_ids(cls, package: ProductionPackage) -> tuple[str, ...]:
+        plan = cls._timed_presence_plan(package)
+        if plan is None:
+            return cls._asset_ids(package)
+        final_frame = plan.frame_count - 1
+        return tuple(dict.fromkeys(item.asset_id for item in plan.active_at(final_frame)))
+
+    @classmethod
+    def _boundary_exit_asset_ids(cls, package: ProductionPackage) -> tuple[str, ...]:
+        plan = cls._timed_presence_plan(package)
+        if plan is None:
+            return ()
+        final_frame = plan.frame_count - 1
+        return tuple(
+            dict.fromkeys(
+                item.asset_id
+                for item in plan.presences
+                if item.through_frame == final_frame
+                and item.removal is not AssetPresenceRemoval.THROUGH_SHOT
+            )
+        )
+
+    @classmethod
+    def _opening_active_asset_ids(cls, package: ProductionPackage) -> tuple[str, ...]:
+        plan = cls._timed_presence_plan(package)
+        if plan is None:
+            return cls._asset_ids(package)
+        return tuple(dict.fromkeys(item.asset_id for item in plan.active_at(0)))
 
     @classmethod
     def _previous_closing(cls, package: ProductionPackage | None) -> str:
@@ -518,5 +675,8 @@ class ContinuityCompilerService:
             previous_shot_id=str(data.get("previous_shot_id", "")),
             continuity=dict(continuity),
             production_notes=str(data.get("production_notes", "")),
+            asset_state_governance_version=str(
+                data.get("asset_state_governance_version", "")
+            ),
             status=ContinuityCompilationStatus(str(data.get("status", "draft"))),
         )
