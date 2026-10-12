@@ -133,6 +133,14 @@ class GovernedReferenceSuitabilityService:
             )
 
         target = self._target(raw.get("target"), path)
+        capacity_projection = raw.get("provider_capacity_projection")
+        if isinstance(capacity_projection, dict) and capacity_projection.get("passed") is not True:
+            reason = str(capacity_projection.get("blocked_reason") or "").strip()
+            suffix = f": {reason}" if reason else ""
+            raise GovernedReferenceSuitabilityError(
+                "Explicit suitability provider-capacity projection is blocked" + suffix
+            )
+
         references_raw = raw.get("references")
         if not isinstance(references_raw, list) or not references_raw:
             raise GovernedReferenceSuitabilityError(
@@ -188,7 +196,6 @@ class GovernedReferenceSuitabilityService:
                 f"Passing governed ReferencePlan for {shot_id} was not persisted"
             )
 
-        capacity_projection = raw.get("provider_capacity_projection")
         if isinstance(capacity_projection, dict):
             persisted["provider_capacity_projection"] = json.loads(
                 json.dumps(capacity_projection, default=str)
