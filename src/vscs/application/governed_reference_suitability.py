@@ -159,16 +159,17 @@ class GovernedReferenceSuitabilityService:
                 )
             )
 
+        provenance = {
+            "source": "live-explicit-suitability",
+            "suitability_file": str(path),
+            "suitability_file_checksum": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+        }
         resolution = self.persistence.resolve_and_persist(
             shot_id=shot_id,
             target=target,
             requests=tuple(requests),
             supplied_references=tuple(supplied),
-            provenance={
-                "source": "live-explicit-suitability",
-                "suitability_file": str(path),
-                "suitability_file_checksum": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
-            },
+            provenance=provenance,
         )
         if not resolution.passed:
             errors = [
@@ -185,6 +186,17 @@ class GovernedReferenceSuitabilityService:
         if persisted is None:
             raise GovernedReferenceSuitabilityError(
                 f"Passing governed ReferencePlan for {shot_id} was not persisted"
+            )
+
+        capacity_projection = raw.get("provider_capacity_projection")
+        if isinstance(capacity_projection, dict):
+            persisted["provider_capacity_projection"] = json.loads(
+                json.dumps(capacity_projection, default=str)
+            )
+            self.store.save_reference_plan(
+                shot_id,
+                persisted,
+                provenance=provenance,
             )
         return persisted
 
