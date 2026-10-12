@@ -887,6 +887,20 @@ def test_h3_priority_projection_defers_preferred_reference_beyond_five_slots(
     assert "REF-SHIP" not in tuple(slot.reference_id for slot in projected)
 
 
+def test_h3_accepted_anchor_path_does_not_add_empty_deferred_authority(
+    tmp_path: Path,
+) -> None:
+    compiled = _live_shaped_projection_compiled(tmp_path)
+
+    first = MiniMaxH3SpanAdapterCompiler(tmp_path).compile_execution(
+        compiled,
+        sequence_number=1,
+    )
+
+    assert first.deferred_reference_ids == ()
+    assert "deferred_reference_ids" not in first.to_dict()
+
+
 def test_h3_span_execution_serializes_deferred_reference_ids() -> None:
     slot = SpanReferenceSlot(
         picture_index=1,
