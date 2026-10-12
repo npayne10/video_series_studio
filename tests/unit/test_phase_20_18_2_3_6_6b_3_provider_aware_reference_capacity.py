@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pytest
@@ -338,12 +338,7 @@ def test_sht003_approval_blocks_when_required_references_exceed_h3_capacity(
     package = _package()
     paths = _write_assets(tmp_path)
     reviews = tuple(
-        SuitabilityReferenceReview(
-            **{
-                **review.__dict__,
-                "priority": ReferencePriority.REQUIRED,
-            }
-        )
+        replace(review, priority=ReferencePriority.REQUIRED)
         for review in _sht003_reviews(paths)
     )
     service = GovernedReferenceSuitabilityReviewService(
