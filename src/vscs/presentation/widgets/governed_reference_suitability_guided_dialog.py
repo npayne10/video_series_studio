@@ -22,6 +22,9 @@ from vscs.application.acpp.reference_roles import (
     ReferenceRole,
     ReferenceSubjectType,
 )
+from vscs.application.governed_reference_suitability_authoring import (
+    GovernedReferenceSuitabilityAuthoringError,
+)
 from vscs.application.governed_reference_suitability_review import (
     suggested_reference_priority,
 )
@@ -88,17 +91,37 @@ COVERAGE_CHOICES: tuple[tuple[str, str, str], ...] = (
     ("End frame", "end_frame", "Covers the exact governed ending frame state."),
 )
 
-_LTX_PROVIDER_IDS = frozenset({"ltx23-local", "ltx23", "ltx-2.3"})
-_LTX_VISUAL_REFERENCE_LIMIT = 3
-_NON_DIRECT_VISUAL_ROLE_VALUES = frozenset(
-    {
-        "scene_composition_anchor",
-        "provider_helper_reference",
-        "start_frame_reference",
-        "continuity_reference",
-        "previous_shot_final_frame",
-    }
-)
+class _ProviderChoiceComboBox(QComboBox):
+    """Installed provider selector compatible with the base dialog line-edit API."""
+
+    def __init__(self, profiles: tuple[Any, ...], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        for profile in profiles:
+            capacity = (
+                f"{profile.max_reference_images} direct refs"
+                if profile.reference_projection_mode == "direct_span_scoped_canonical_refs"
+                else "indirect reference projection"
+            )
+            self.addItem(
+                f"{profile.model_family} — {profile.provider_id} ({capacity})",
+                profile.provider_id,
+            )
+        self.setEditable(False)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+
+    def text(self) -> str:
+        value = self.currentData()
+        return str(value if value is not None else "")
+
+    def setText(self, value: str) -> None:  # noqa: N802 - compatibility with QLineEdit API
+        normalized = str(value or "").strip()
+        for index in range(self.count()):
+            if str(self.itemData(index)).casefold() == normalized.casefold():
+                self.setCurrentIndex(index)
+                return
+        if normalized:
+            self.addItem(f"Legacy / unavailable provider — {normalized}", normalized)
+            self.setCurrentIndex(self.count() - 1)
 
 
 class _GuidedChoiceComboBox(QComboBox):
@@ -154,6 +177,13 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         framing_combo.currentIndexChanged.connect(self._editor_changed)
         coverage_combo.currentIndexChanged.connect(self._editor_changed)
 
+        provider_profiles = tuple(
+            getattr(getattr(self.authoring, "provider_policies", None), "enabled_profiles", ())
+        )
+        provider_combo = self._replace_provider_combo(self.target_provider, provider_profiles)
+        guided_self.target_provider = provider_combo
+        provider_combo.currentIndexChanged.connect(self._update_action_state)
+
         self.table.setColumnCount(9)
         self.table.setHorizontalHeaderItem(8, QTableWidgetItem("Priority"))
 
@@ -185,7 +215,6 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         list_layout.insertLayout(table_index + 1, capacity_row)
 
         self.apply_suggested_priorities_button.clicked.connect(self._apply_suggested_priorities)
-        self.target_provider.textChanged.connect(self._update_action_state)
 
     def _populate_table(self) -> None:
         super()._populate_table()
@@ -300,55 +329,73 @@ class GovernedReferenceSuitabilityGuidedDialog(GovernedReferenceSuitabilityRevie
         ]
         self.apply_suggested_priorities_button.setEnabled(bool(included_candidates))
 
-        provider_id = self.target_provider.text().strip().lower()
-        if provider_id not in _LTX_PROVIDER_IDS:
+        projector = getattr(self.authoring, "capacity_projection", None)
+        if not callable(projector):
             self.capacity_status.setText(
-                "Provider capacity: no LTX direct-reference limit is enforced by this review."
-            )
-            return
-
-        direct_visual = [
-            state
-            for state in self._states
-            if state.included and state.role.value not in _NON_DIRECT_VISUAL_ROLE_VALUES
-        ]
-        required = [
-            state for state in direct_visual if state.priority is ReferencePriority.REQUIRED
-        ]
-        preferred_ready = [
-            state
-            for state in direct_visual
-            if state.priority is ReferencePriority.PREFERRED and state.provider_ready
-        ]
-        planned_direct = min(
-            _LTX_VISUAL_REFERENCE_LIMIT,
-            len(required) + len(preferred_ready),
-        )
-
-        if not required:
-            self.capacity_status.setText(
-                "LTX direct visual capacity: required 0/3 — BLOCKED. "
-                "At least one required governed visual reference is required."
+                "Provider capacity policy is unavailable for this workspace — BLOCKED."
             )
             self.approve_button.setEnabled(False)
             return
 
-        if len(required) > _LTX_VISUAL_REFERENCE_LIMIT:
+        try:
+            projection = projector(self._target(), self._selected_reviews())
+        except GovernedReferenceSuitabilityAuthoringError as exc:
+            self.capacity_status.setText(f"Provider capacity: {exc} — BLOCKED.")
+            self.approve_button.setEnabled(False)
+            return
+        if projection is None:
             self.capacity_status.setText(
-                "LTX direct visual capacity: "
-                f"required {len(required)}/{_LTX_VISUAL_REFERENCE_LIMIT}; "
-                f"preferred {len(preferred_ready)} — OVER CAPACITY. "
-                "Required references are never silently dropped."
+                "Provider capacity policy is unavailable for this review — BLOCKED."
             )
             self.approve_button.setEnabled(False)
             return
 
+        if projection.indirect_projection:
+            self.capacity_status.setText(
+                f"{projection.model_family}: governed references use "
+                f"{projection.reference_projection_mode}; direct picture slots are not consumed "
+                "at this review boundary — PASS."
+            )
+            return
+
+        required_count = len(projection.required_reference_ids)
+        preferred_count = len(projection.preferred_ready_reference_ids)
+        selected_count = len(projection.selected_reference_ids)
+        deferred = ", ".join(projection.deferred_preferred_reference_ids) or "none"
+        status = "PASS" if projection.passed else "BLOCKED"
         self.capacity_status.setText(
-            "LTX direct visual capacity: "
-            f"required {len(required)}/{_LTX_VISUAL_REFERENCE_LIMIT}; "
-            f"preferred {len(preferred_ready)}; "
-            f"planned direct slots {planned_direct}/{_LTX_VISUAL_REFERENCE_LIMIT} — PASS."
+            f"{projection.model_family} direct visual capacity: required "
+            f"{required_count}/{projection.capacity}; provider-ready preferred "
+            f"{preferred_count}; projected direct {selected_count}/{projection.capacity}; "
+            f"deferred preferred: {deferred} — {status}."
         )
+        if not projection.passed:
+            self.capacity_status.setToolTip(projection.blocked_reason or "")
+            self.approve_button.setEnabled(False)
+
+    @staticmethod
+    def _replace_provider_combo(
+        old_widget: QWidget,
+        profiles: tuple[Any, ...],
+    ) -> _ProviderChoiceComboBox:
+        parent = old_widget.parentWidget()
+        if parent is None:
+            raise RuntimeError("Provider selector has no target-profile parent")
+        layout = parent.layout()
+        if not isinstance(layout, QHBoxLayout):
+            raise RuntimeError("Provider selector is not hosted by the target-profile row")
+        index = layout.indexOf(old_widget)
+        if index < 0:
+            raise RuntimeError("Provider selector could not be located")
+        combo = _ProviderChoiceComboBox(profiles, parent)
+        if not profiles:
+            current_text = getattr(old_widget, "text", lambda: "")()
+            combo.setText(str(current_text))
+        layout.insertWidget(index, combo)
+        layout.removeWidget(old_widget)
+        old_widget.hide()
+        old_widget.deleteLater()
+        return combo
 
     @staticmethod
     def _combo_enum_value(combo: QComboBox, enum_type: type[Any], default: Any) -> Any:
