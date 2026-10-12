@@ -252,12 +252,21 @@ def test_continuous_boundary_blocks_dropped_final_active_asset_without_exit(
         service.mark_ready("SHT-002")
 
 
-def test_explicit_previous_boundary_exit_satisfies_carry_forward_governance(
+@pytest.mark.parametrize(
+    "removal",
+    (
+        AssetPresenceRemoval.EXIT,
+        AssetPresenceRemoval.HIDE,
+        AssetPresenceRemoval.DISAPPEAR,
+    ),
+)
+def test_explicit_previous_boundary_removal_satisfies_carry_forward_governance(
     tmp_path: Path,
+    removal: AssetPresenceRemoval,
 ) -> None:
     service, packages = _continuous_packages(
         tmp_path,
-        previous_ros_removal=AssetPresenceRemoval.EXIT,
+        previous_ros_removal=removal,
     )
 
     draft = service.create_from_current_package("SHT-002")
@@ -273,6 +282,31 @@ def test_explicit_previous_boundary_exit_satisfies_carry_forward_governance(
     assert compiled["previous_boundary_exit_asset_ids"] == ["CAP-CHR-005"]
     assert compiled["missing_carried_asset_ids"] == []
     assert compiled["blocking_conflicts"] == []
+
+
+def test_new_composition_does_not_require_previous_assets_to_be_visible(
+    tmp_path: Path,
+) -> None:
+    service, packages = _continuous_packages(tmp_path)
+    current = packages.values["SHT-002"]
+    packages.values["SHT-002"] = replace(
+        current,
+        action_performance={
+            "opening_state": "Cut to a new composition on James.",
+            "closing_state": "James remains at the control station.",
+        },
+        shot={
+            **current.shot,
+            "continuity_in": "Cut to a new composition on James.",
+        },
+    )
+
+    continuity = service.create_from_current_package("SHT-002").continuity_value()
+
+    assert continuity["shot_boundary_mode"] == "new_composition"
+    assert continuity["carry_forward_required_asset_ids"] == []
+    assert continuity["missing_carried_asset_ids"] == []
+    assert continuity["blocking_continuity_conflicts"] == []
 
 
 def test_carried_asset_present_at_current_frame_zero_resolves_boundary(
