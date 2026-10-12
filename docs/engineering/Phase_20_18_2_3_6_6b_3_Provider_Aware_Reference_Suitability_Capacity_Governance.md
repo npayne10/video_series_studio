@@ -127,13 +127,22 @@ decision without weakening the complete ReferencePlan.
 
 The H3 span adapter now derives direct picture slots through the same capacity policy.
 
-For ordinary span-scoped references without a required scene-composition anchor:
+For ordinary span-scoped references without a required scene-composition anchor,
+the new policy-driven projection is activated only when the governed ReferencePlan carries
+a passing, current MiniMax H3 `provider_capacity_projection`. The adapter verifies the
+provider ID, policy-profile ID, policy fingerprint, projection mode and capacity before
+using it. With that reviewed authority:
 
 - required references are projected first;
 - provider-ready preferred references fill remaining slots;
 - deferred preferred reference IDs are recorded in the H3 span execution authority and
   provider evidence;
 - provider prompt picture declarations are rebuilt to match the projected slot set.
+
+Pre-6.6b.3 no-anchor H3 authority without a capacity projection retains the legacy
+behavior when it already fits the installed H3 slot limit, and still fails closed when it
+does not. This prevents the new policy from silently changing accepted production merely
+because the application was upgraded.
 
 Existing governed scene-composition-anchor projection remains supported and now obtains
 its slot count from the installed H3 policy profile rather than a hard-coded literal.
