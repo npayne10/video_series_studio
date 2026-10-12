@@ -9,6 +9,12 @@
 > caching repeated governed authority reads only within one synchronous UI refresh.
 > It preserves all existing currentness/readiness decisions and discards the cache
 > before the next user action.
+>
+> Phase 20.18.2.3.6.6b.3 makes Reference Suitability provider-aware, aligns
+> character-role suggestion with approval, governs direct-reference capacity through
+> installed provider policy profiles, carries deterministic H3 preferred-reference
+> deferral into execution evidence, and exposes the ReferencePlan prerequisite before
+> Timed Asset Presence Save.
 
 ## Objective
 
