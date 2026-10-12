@@ -228,7 +228,44 @@ After automated validation passes:
 12. save the reviewed static 0–239 SHT-003 presence authority;
 13. verify SHT-001 and SHT-002 remain unchanged.
 
+## Acceptance evidence
+
+Post-repair local validation:
+
+- Ruff check: PASS.
+- Ruff format check: PASS — 1316 files already formatted.
+- mypy: PASS — 595 source files.
+- focused regression: PASS — 25 tests in 2.40 s.
+- full regression: PASS — 1898 tests in 25.41 s.
+
+Live SHT-003 acceptance:
+
+- MiniMax H3 selected from installed provider policy.
+- six governed references reviewed explicitly.
+- Sandra resolved as `primary_identity`; James as `secondary_identity`.
+- four references required and two preferred.
+- direct H3 projection passed at 5/5.
+- `LIVE-BACKGROUND_IDENTITY-CAP-SHP-002` was explicitly deferred.
+- governed ReferencePlan persisted with status `passed`.
+- Timed Asset Presence prerequisite unlocked only after that passing plan existed.
+- six static presence intervals persisted for frames 0–239 at 24 fps with no change frames.
+- SHT-003 authority review note reloads only for SHT-003.
+
+Protected-work preservation:
+
+- SHT-001 remains on its existing 144-frame accepted context; no Timed Asset Presence authority
+  was created and its review-note editor is blank.
+- SHT-002 remains persisted and current with seven presence intervals at 24 fps / 144 frames.
+- SHT-002 retains the governed frame-96 change boundary.
+- CAP-CHR-005 (Major Ros Rohsgard) remains absent through frame 95 and enters at frame 96,
+  continuing through frame 143.
+- SHT-002 retains its own persisted review note:
+  `Phase 20.18.2.3.5 SHT-002 functional acceptance. Major Ros Rohsgard is absent through frame 95 and enters at global frame 96.`
+- No stale/rebuild/migration warning or provider execution was triggered during read-only
+  preservation checks.
+
 ## Phase state
 
-**OPEN / PENDING LOCAL REVALIDATION AFTER LIVE CROSS-SHOT REVIEW-NOTE ISOLATION REPAIR,
-THEN FINAL SHT-001/SHT-002 PRESERVATION ACCEPTANCE.**
+**CLOSED — IMPLEMENTATION, STATIC VALIDATION, FOCUSED REGRESSION, FULL REGRESSION,
+LIVE SHT-003 FUNCTIONAL ACCEPTANCE, CROSS-SHOT REVIEW-NOTE ISOLATION, AND SHT-001/SHT-002
+PROTECTED-AUTHORITY PRESERVATION ALL PASSED.**
