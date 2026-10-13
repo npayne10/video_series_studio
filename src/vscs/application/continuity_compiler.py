@@ -301,12 +301,12 @@ class ContinuityCompilerService:
 
         previous_asset_ids = list(cls._asset_ids(previous)) if previous else []
         current_asset_ids = list(cls._asset_ids(package))
-        previous_final_active_asset_ids = list(
-            cls._final_active_asset_ids(previous)
-        ) if previous else []
-        previous_boundary_exit_asset_ids = list(
-            cls._boundary_exit_asset_ids(previous)
-        ) if previous else []
+        previous_final_active_asset_ids = (
+            list(cls._final_active_asset_ids(previous)) if previous else []
+        )
+        previous_boundary_exit_asset_ids = (
+            list(cls._boundary_exit_asset_ids(previous)) if previous else []
+        )
         current_opening_active_asset_ids = list(cls._opening_active_asset_ids(package))
         carry_forward_required_asset_ids = (
             [
@@ -474,9 +474,7 @@ class ContinuityCompilerService:
             "asset_state_governance_version": cls.ASSET_STATE_GOVERNANCE_VERSION,
             "current": cls._dependency_payload(package, include_timed_presence=True),
             "previous": (
-                cls._dependency_payload(previous, include_timed_presence=True)
-                if previous
-                else None
+                cls._dependency_payload(previous, include_timed_presence=True) if previous else None
             ),
             "referenced_previous_shot_id": referenced_previous_shot_id,
         }
@@ -675,8 +673,6 @@ class ContinuityCompilerService:
             previous_shot_id=str(data.get("previous_shot_id", "")),
             continuity=dict(continuity),
             production_notes=str(data.get("production_notes", "")),
-            asset_state_governance_version=str(
-                data.get("asset_state_governance_version", "")
-            ),
+            asset_state_governance_version=str(data.get("asset_state_governance_version", "")),
             status=ContinuityCompilationStatus(str(data.get("status", "draft"))),
         )
