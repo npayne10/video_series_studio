@@ -249,9 +249,7 @@ class ContinuityCompilerWorkspace(LightingCompilerWorkspace):
         self.continuity_create_button.setEnabled(False)
         self.continuity_refresh_button.setEnabled(stale and not ready)
         self.continuity_save_button.setEnabled(not stale and not ready)
-        self.continuity_ready_button.setEnabled(
-            not stale and not ready and blocking_count == 0
-        )
+        self.continuity_ready_button.setEnabled(not stale and not ready and blocking_count == 0)
         self.continuity_draft_button.setEnabled(ready)
         self.continuity_notes.setReadOnly(stale or ready)
 
