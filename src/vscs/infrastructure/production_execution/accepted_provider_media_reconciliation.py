@@ -224,6 +224,8 @@ class AcceptedProviderProductionReconciliationService:
         media = self._ensure_technical_validation(media, evidence)
         media = self._ensure_human_approval(media, evidence)
 
+        adoption = self._ensure_adoption(task, evidence)
+
         existing = self.selections.list_for_task(task.task_id)
         if existing:
             if len(existing) != 1 or existing[0].selected_media_id != media.media_id:
@@ -241,8 +243,6 @@ class AcceptedProviderProductionReconciliationService:
                     f"functional-acceptance evidence under Phase {self.PHASE}."
                 ),
             )
-
-        adoption = self._ensure_adoption(task, evidence)
         return AcceptedProviderProductionReconciliationResult(
             task=task,
             media=self._require_media(media.media_id),
