@@ -764,6 +764,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         self.production_task_refresh_readiness_button.setEnabled(enabled)
         self._refresh_production_task_completion_eligibility()
+        self._refresh_accepted_provider_reconciliation_eligibility()
         self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
 
@@ -790,6 +791,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             f"Current authoritative state: {states}."
         )
         self._refresh_production_task_completion_eligibility()
+        self._refresh_accepted_provider_reconciliation_eligibility()
         self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
         self._refresh_production_scheduling()
