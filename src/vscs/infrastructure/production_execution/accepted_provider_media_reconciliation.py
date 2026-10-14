@@ -143,9 +143,7 @@ class AcceptedProviderProductionReconciliationService:
         self.tasks = tasks
         self.media = media
         self.selections = selections
-        self.adoptions = adoption_store or ProviderProductionAdoptionStore(
-            self.project_directory
-        )
+        self.adoptions = adoption_store or ProviderProductionAdoptionStore(self.project_directory)
         self.media_probe = media_probe or FFprobeMiniMaxH3MediaProbe()
         self.technical_inspector = technical_inspector or FFprobeGeneratedMediaInspector(
             self.project_directory
@@ -251,9 +249,7 @@ class AcceptedProviderProductionReconciliationService:
             already_reconciled=False,
         )
 
-    def _task_findings(
-        self, task: ProductionTask
-    ) -> tuple[AcceptedProviderProductionFinding, ...]:
+    def _task_findings(self, task: ProductionTask) -> tuple[AcceptedProviderProductionFinding, ...]:
         findings: list[AcceptedProviderProductionFinding] = []
         if task.task_type is not ProductionTaskType.VIDEO_GENERATION:
             findings.append(
@@ -333,10 +329,14 @@ class AcceptedProviderProductionReconciliationService:
                 failed_or_incomplete = True
 
         if len(passed) != 1:
-            code = "functional-acceptance-ambiguous" if len(passed) > 1 else (
-                "functional-acceptance-not-passed"
-                if failed_or_incomplete
-                else "functional-acceptance-missing"
+            code = (
+                "functional-acceptance-ambiguous"
+                if len(passed) > 1
+                else (
+                    "functional-acceptance-not-passed"
+                    if failed_or_incomplete
+                    else "functional-acceptance-missing"
+                )
             )
             message = (
                 "Multiple passed functional-acceptance records exist for the same task."
@@ -374,10 +374,13 @@ class AcceptedProviderProductionReconciliationService:
             plan_root,
         )
         if path_finding is not None or final_path is None:
-            return None, (path_finding or AcceptedProviderProductionFinding(
-                "accepted-media-path-invalid",
-                "Accepted provider media path is invalid.",
-            ),)
+            return None, (
+                path_finding
+                or AcceptedProviderProductionFinding(
+                    "accepted-media-path-invalid",
+                    "Accepted provider media path is invalid.",
+                ),
+            )
 
         try:
             observation = self.media_probe.observe(final_path)
@@ -439,9 +442,7 @@ class AcceptedProviderProductionReconciliationService:
                 ),
             )
         provider_profile_id = str(manifest.get("provider_profile_id") or "")
-        provider_profile_fingerprint = str(
-            manifest.get("provider_profile_fingerprint") or ""
-        )
+        provider_profile_fingerprint = str(manifest.get("provider_profile_fingerprint") or "")
         execution_adapter_id = str(manifest.get("execution_adapter_id") or "")
         if (
             provider_profile_id != readiness.provider_profile_id
@@ -628,9 +629,9 @@ class AcceptedProviderProductionReconciliationService:
         media: GeneratedMedia,
         evidence: AcceptedProviderProductionEvidence,
     ) -> GeneratedMedia:
-        status = dict(media.technical_metadata).get(
-            "technical_validation.status", ""
-        ).strip().casefold()
+        status = (
+            dict(media.technical_metadata).get("technical_validation.status", "").strip().casefold()
+        )
         if status == "passed":
             return media
         result = GeneratedMediaTechnicalValidationService(
@@ -701,7 +702,10 @@ class AcceptedProviderProductionReconciliationService:
                 raise AcceptedProviderProductionReconciliationError(
                     "Existing provider adoption belongs to a different Shot"
                 )
-            if existing.final_path and Path(existing.final_path).resolve(strict=False) != evidence.final_path:
+            if (
+                existing.final_path
+                and Path(existing.final_path).resolve(strict=False) != evidence.final_path
+            ):
                 raise AcceptedProviderProductionReconciliationError(
                     "Existing provider adoption points at different final media"
                 )
@@ -739,9 +743,7 @@ class AcceptedProviderProductionReconciliationService:
             )
         return matches[0] if matches else None
 
-    def _accepted_adoption(
-        self, task: ProductionTask
-    ) -> ProviderProductionAdoptionRecord | None:
+    def _accepted_adoption(self, task: ProductionTask) -> ProviderProductionAdoptionRecord | None:
         readiness = self.adoptions.readiness_for(task.task_id, "production")
         if readiness is None:
             return None
