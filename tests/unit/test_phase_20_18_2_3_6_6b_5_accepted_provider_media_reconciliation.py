@@ -13,6 +13,7 @@ from vscs.application.generated_media import (
     GeneratedMediaSelection,
     GeneratedMediaSelectionEvent,
 )
+from vscs.application.generated_media.technical_validation import TechnicalMediaObservation
 from vscs.application.production_execution import (
     ProviderExecutionReadiness,
     ProviderExecutionReadinessState,
@@ -25,7 +26,6 @@ from vscs.application.production_tasks import (
     ProductionTaskState,
     ProductionTaskType,
 )
-from vscs.application.generated_media.technical_validation import TechnicalMediaObservation
 from vscs.domain.generated_media import GeneratedMediaKind
 from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
