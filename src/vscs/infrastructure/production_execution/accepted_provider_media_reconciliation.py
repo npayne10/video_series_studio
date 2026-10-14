@@ -160,25 +160,26 @@ class AcceptedProviderProductionReconciliationService:
         if existing_selections:
             reconciled = self._reconciled_media(task)
             selected_ids = {item.selected_media_id for item in existing_selections}
-            if (
+            selection_matches_reconciled = (
                 len(existing_selections) == 1
                 and reconciled is not None
                 and selected_ids == {reconciled.media_id}
-                and self._accepted_adoption(task) is not None
-            ):
+            )
+            if selection_matches_reconciled and self._accepted_adoption(task) is not None:
                 return AcceptedProviderProductionAssessment(
                     task=task,
                     evidence=None,
                     findings=(),
                     already_reconciled=True,
                 )
-            findings.append(
-                AcceptedProviderProductionFinding(
-                    "existing-authoritative-selection",
-                    "ProductionTask already has authoritative Generated Media selection; "
-                    "accepted-provider reconciliation will not replace it silently.",
+            if not selection_matches_reconciled:
+                findings.append(
+                    AcceptedProviderProductionFinding(
+                        "existing-authoritative-selection",
+                        "ProductionTask already has authoritative Generated Media selection; "
+                        "accepted-provider reconciliation will not replace it silently.",
+                    )
                 )
-            )
 
         evidence, evidence_findings = self._load_evidence(task)
         findings.extend(evidence_findings)
