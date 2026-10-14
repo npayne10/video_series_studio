@@ -28,6 +28,9 @@ from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
     JsonGeneratedMediaSelectionRepository,
 )
+from vscs.infrastructure.production_execution import (
+    AcceptedProviderProductionReconciliationService,
+)
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 
 
@@ -69,6 +72,18 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             "Complete the selected READY/RUNNING ProductionTask only when its governed "
             "authoritative Generated Media selection, technical validation, human approval "
             "and production-authority fingerprint all pass Phase 20.13 reconciliation."
+        )
+        self.production_task_reconcile_accepted_provider_button = QPushButton(
+            "Reconcile Accepted Provider Production",
+            group,
+        )
+        self.production_task_reconcile_accepted_provider_button.setObjectName(
+            "production_task_reconcile_accepted_provider_button"
+        )
+        self.production_task_reconcile_accepted_provider_button.setMinimumWidth(260)
+        self.production_task_reconcile_accepted_provider_button.setToolTip(
+            "Backfill exact passed provider functional-acceptance evidence into Generated "
+            "Media authority without rerendering or replacing an existing selection."
         )
         self.production_task_supersede_button = QPushButton("Supersede Obsolete Task", group)
         self.production_task_supersede_button.setObjectName("production_task_supersede_button")
@@ -121,6 +136,10 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         actions_layout.insertWidget(
             insertion_index + 2,
+            self.production_task_reconcile_accepted_provider_button,
+        )
+        actions_layout.insertWidget(
+            insertion_index + 3,
             self.production_task_supersede_button,
         )
 
@@ -133,6 +152,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_reconcile_completion_button.clicked.connect(
             self._production_task_reconcile_completion
         )
+        self.production_task_reconcile_accepted_provider_button.clicked.connect(
+            self._production_task_reconcile_accepted_provider
+        )
         self.production_task_supersede_button.clicked.connect(
             self._production_task_supersede_obsolete
         )
@@ -141,6 +163,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         self.production_task_table.itemSelectionChanged.connect(
             self._refresh_production_task_completion_eligibility
+        )
+        self.production_task_table.itemSelectionChanged.connect(
+            self._refresh_accepted_provider_reconciliation_eligibility
         )
         self.production_task_table.itemSelectionChanged.connect(
             self._refresh_production_task_supersession_eligibility
@@ -281,6 +306,159 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             selections,
         )
 
+    def _accepted_provider_reconciliation_service(
+        self: Any,
+    ) -> AcceptedProviderProductionReconciliationService:
+        project_directory = self.projects.project_directory
+        if project_directory is None:
+            raise RuntimeError(
+                "Open a VSCS project before reconciling accepted provider production."
+            )
+        task_repository = JsonProductionTaskRepository(
+            project_directory / "production" / "scheduling" / "tasks"
+        )
+        media = GeneratedMediaPersistenceService(
+            JsonGeneratedMediaRepository(project_directory / ".vscs" / "generated_media")
+        )
+        selections = JsonGeneratedMediaSelectionRepository(
+            project_directory / ".vscs" / "generated_media_selections"
+        )
+        return AcceptedProviderProductionReconciliationService(
+            project_directory,
+            task_repository,
+            media,
+            selections,
+        )
+
+    def _accepted_provider_reconciliation_context(
+        self: Any,
+    ) -> tuple[ProductionTask | None, str]:
+        selected = self._selected_persisted_production_task()
+        if selected is None:
+            return None, "Select a persisted READY/RUNNING ProductionTask first."
+        if selected.state not in {ProductionTaskState.READY, ProductionTaskState.RUNNING}:
+            return (
+                selected,
+                "Accepted-provider reconciliation requires READY or RUNNING state; "
+                f"selected task is {selected.state.value}.",
+            )
+        try:
+            completion = self._production_task_completion_service().assess(selected.task_id)
+        except (RuntimeError, ValueError) as exc:
+            return selected, str(exc)
+        blocking_codes = {finding.code for finding in completion.findings}
+        if blocking_codes != {"missing-authoritative-selection"}:
+            if not blocking_codes:
+                return (
+                    selected,
+                    "Normal ProductionTask completion evidence is already sufficient; "
+                    "use Reconcile Task Completion.",
+                )
+            return (
+                selected,
+                "Accepted-provider reconciliation is available only for the legacy missing "
+                "Generated Media selection gap. Current completion finding(s): "
+                + ", ".join(sorted(blocking_codes)),
+            )
+        try:
+            assessment = self._accepted_provider_reconciliation_service().assess(
+                selected.task_id
+            )
+        except (RuntimeError, ValueError) as exc:
+            return selected, str(exc)
+        if assessment.already_reconciled:
+            return (
+                selected,
+                "Accepted provider production is already reconciled; use "
+                "Reconcile Task Completion.",
+            )
+        if not assessment.eligible:
+            detail = "; ".join(
+                f"{finding.code}: {finding.message}"
+                for finding in assessment.findings
+            )
+            return selected, detail or "Accepted provider production is not eligible."
+        return selected, ""
+
+    def _refresh_accepted_provider_reconciliation_eligibility(
+        self: Any, *_args: Any
+    ) -> None:
+        button = getattr(
+            self,
+            "production_task_reconcile_accepted_provider_button",
+            None,
+        )
+        if button is None:
+            return
+        _selected, blocker = self._accepted_provider_reconciliation_context()
+        button.setEnabled(not blocker)
+        button.setToolTip(
+            blocker
+            or (
+                "Exact passed provider functional-acceptance evidence exists for this "
+                "current ProductionTask. Reconcile it into managed Generated Media, "
+                "human approval, authoritative selection and provider-adoption audit "
+                "without rerendering."
+            )
+        )
+
+    def _production_task_reconcile_accepted_provider(self: Any) -> None:
+        selected, blocker = self._accepted_provider_reconciliation_context()
+        if selected is None or blocker:
+            self.production_task_readiness_status.setText(blocker)
+            QMessageBox.information(
+                self,
+                "Accepted Provider Production Reconciliation",
+                blocker,
+            )
+            return
+        answer = QMessageBox.question(
+            self,
+            "Reconcile Accepted Provider Production",
+            "Reconcile already-passed provider production for\n\n"
+            f"{selected.task_id}\n\n"
+            "into managed Generated Media authority?\n\n"
+            "VSCS will not rerender the Shot and will not replace an existing "
+            "authoritative media selection.",
+        )
+        if answer is not QMessageBox.StandardButton.Yes:
+            return
+        try:
+            result = self._accepted_provider_reconciliation_service().reconcile(
+                selected.task_id
+            )
+        except (RuntimeError, ValueError) as exc:
+            self.production_task_readiness_status.setText(str(exc))
+            QMessageBox.warning(
+                self,
+                "Accepted Provider Production Reconciliation",
+                str(exc),
+            )
+            return
+
+        self.production_task_readiness_status.setText(
+            "Accepted provider production reconciled: "
+            f"Generated Media {result.media.media_id}; "
+            f"selection {result.selection.selection_id}; "
+            f"provider adoption {result.adoption.state}. "
+            "Use Reconcile Task Completion to advance the ProductionTask through "
+            "the normal completion lifecycle."
+        )
+        QMessageBox.information(
+            self,
+            "Accepted Provider Production Reconciliation",
+            "Accepted provider production was reconciled without rerendering.\n\n"
+            f"Generated Media: {result.media.media_id}\n"
+            f"Selection: {result.selection.selection_id}\n"
+            f"Provider adoption: {result.adoption.state}\n\n"
+            "Now use Reconcile Task Completion.",
+        )
+        self._refresh_persisted_production_tasks(result.task.production_id)
+        self._refresh_production_task_completion_eligibility()
+        self._refresh_accepted_provider_reconciliation_eligibility()
+        self._refresh_production_task_priority_control()
+        self._refresh_production_task_supersession_eligibility()
+
     def _refresh_production_task_completion_eligibility(self: Any, *_args: Any) -> None:
         button = getattr(self, "production_task_reconcile_completion_button", None)
         if button is None:
@@ -357,6 +535,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
 
         self._refresh_persisted_production_tasks(result.task.production_id)
         self._refresh_production_task_completion_eligibility()
+        self._refresh_accepted_provider_reconciliation_eligibility()
         self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
         self._refresh_production_scheduling()
@@ -624,6 +803,18 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     workspace_type._refresh_persisted_production_tasks = _refresh_persisted_production_tasks
     workspace_type._selected_persisted_production_task = _selected_persisted_production_task
     workspace_type._production_task_completion_service = _production_task_completion_service
+    workspace_type._accepted_provider_reconciliation_service = (
+        _accepted_provider_reconciliation_service
+    )
+    workspace_type._accepted_provider_reconciliation_context = (
+        _accepted_provider_reconciliation_context
+    )
+    workspace_type._refresh_accepted_provider_reconciliation_eligibility = (
+        _refresh_accepted_provider_reconciliation_eligibility
+    )
+    workspace_type._production_task_reconcile_accepted_provider = (
+        _production_task_reconcile_accepted_provider
+    )
     workspace_type._refresh_production_task_completion_eligibility = (
         _refresh_production_task_completion_eligibility
     )
