@@ -6,7 +6,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from vscs.application.production_execution import ProviderExecutionReadiness
+from vscs.application.production_execution import (
+    ProviderExecutionReadiness,
+    ProviderExecutionReadinessState,
+)
 
 
 class ProviderProductionAdoptionError(RuntimeError):
@@ -102,6 +105,22 @@ class ProviderProductionAdoptionStore:
         self._write_root(self.readiness_path, records)
         return readiness
 
+    def readiness_for(
+        self,
+        task_id: str,
+        execution_profile: str,
+    ) -> ProviderExecutionReadiness | None:
+        root = self._read_root(self.readiness_path, "readiness")
+        key = f"{task_id.strip()}|{execution_profile.strip().lower()}"
+        raw_records = root.get("records", [])
+        if not isinstance(raw_records, list):
+            raise ProviderProductionAdoptionError("Provider readiness records must be an array")
+        for item in reversed(raw_records):
+            if not isinstance(item, dict) or self._record_key(item) != key:
+                continue
+            return self._readiness_from_dict(item)
+        return None
+
     def adoption_for(
         self,
         task_id: str,
@@ -194,6 +213,36 @@ class ProviderProductionAdoptionStore:
         return (
             f"{str(item.get('task_id') or '').strip()}|"
             f"{str(item.get('execution_profile') or '').strip().lower()}"
+        )
+
+    @staticmethod
+    def _readiness_from_dict(item: dict[str, object]) -> ProviderExecutionReadiness:
+        blockers_raw = item.get("blockers", [])
+        if not isinstance(blockers_raw, list):
+            raise ProviderProductionAdoptionError("Provider readiness blockers must be an array")
+        return ProviderExecutionReadiness(
+            task_id=str(item.get("task_id") or ""),
+            shot_id=str(item.get("shot_id") or ""),
+            execution_profile=str(item.get("execution_profile") or ""),
+            provider_profile_id=str(item.get("provider_profile_id") or ""),
+            provider_profile_fingerprint=str(item.get("provider_profile_fingerprint") or ""),
+            execution_adapter_id=str(item.get("execution_adapter_id") or ""),
+            package_fingerprint=str(item.get("package_fingerprint") or ""),
+            timed_span_state=str(item.get("timed_span_state") or ""),
+            span_count=int(str(item.get("span_count") or "0")),
+            requirement_count=int(str(item.get("requirement_count") or "0")),
+            approved_keyframe_count=int(str(item.get("approved_keyframe_count") or "0")),
+            state=ProviderExecutionReadinessState(str(item.get("state") or "")),
+            blockers=tuple(str(value) for value in blockers_raw),
+            provider_plan_id=(
+                None if item.get("provider_plan_id") is None else str(item.get("provider_plan_id") or "")
+            ),
+            provider_plan_fingerprint=(
+                None
+                if item.get("provider_plan_fingerprint") is None
+                else str(item.get("provider_plan_fingerprint") or "")
+            ),
+            schema_version=str(item.get("schema_version") or ""),
         )
 
     @staticmethod
