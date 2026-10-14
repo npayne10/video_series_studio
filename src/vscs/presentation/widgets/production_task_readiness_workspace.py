@@ -28,10 +28,10 @@ from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
     JsonGeneratedMediaSelectionRepository,
 )
+from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.infrastructure.production_execution import (
     AcceptedProviderProductionReconciliationService,
 )
-from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 
 
 def install_production_task_readiness_workspace(workspace_class: type[Any]) -> None:
@@ -361,9 +361,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
                 + ", ".join(sorted(blocking_codes)),
             )
         try:
-            assessment = self._accepted_provider_reconciliation_service().assess(
-                selected.task_id
-            )
+            assessment = self._accepted_provider_reconciliation_service().assess(selected.task_id)
         except (RuntimeError, ValueError) as exc:
             return selected, str(exc)
         if assessment.already_reconciled:
@@ -374,15 +372,12 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             )
         if not assessment.eligible:
             detail = "; ".join(
-                f"{finding.code}: {finding.message}"
-                for finding in assessment.findings
+                f"{finding.code}: {finding.message}" for finding in assessment.findings
             )
             return selected, detail or "Accepted provider production is not eligible."
         return selected, ""
 
-    def _refresh_accepted_provider_reconciliation_eligibility(
-        self: Any, *_args: Any
-    ) -> None:
+    def _refresh_accepted_provider_reconciliation_eligibility(self: Any, *_args: Any) -> None:
         button = getattr(
             self,
             "production_task_reconcile_accepted_provider_button",
@@ -424,9 +419,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         if answer is not QMessageBox.StandardButton.Yes:
             return
         try:
-            result = self._accepted_provider_reconciliation_service().reconcile(
-                selected.task_id
-            )
+            result = self._accepted_provider_reconciliation_service().reconcile(selected.task_id)
         except (RuntimeError, ValueError) as exc:
             self.production_task_readiness_status.setText(str(exc))
             QMessageBox.warning(
