@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from vscs.application.generated_media import (
@@ -346,6 +347,7 @@ def test_existing_authoritative_selection_is_not_silently_replaced(tmp_path: Pat
     project.mkdir()
     _write_evidence(project)
     service, _tasks, _media, selections = _service(project)
+    occurred_at = datetime(2026, 10, 14, 12, 0, tzinfo=UTC)
     selection = GeneratedMediaSelection(
         selection_id="GMS-EXISTING",
         production_id="VSCS TSR2",
@@ -356,7 +358,7 @@ def test_existing_authoritative_selection_is_not_silently_replaced(tmp_path: Pat
         selected_revision=1,
         selected_by="human:existing",
         reason="Existing authoritative production",
-        selected_at=_task().created_at,
+        selected_at=occurred_at,
         history=(
             GeneratedMediaSelectionEvent(
                 previous_media_id=None,
@@ -364,7 +366,7 @@ def test_existing_authoritative_selection_is_not_silently_replaced(tmp_path: Pat
                 selected_revision=1,
                 actor="human:existing",
                 reason="Existing authoritative production",
-                occurred_at=_task().created_at,
+                occurred_at=occurred_at,
             ),
         ),
     )
