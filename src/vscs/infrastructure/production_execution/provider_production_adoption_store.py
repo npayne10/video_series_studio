@@ -246,7 +246,9 @@ class ProviderProductionAdoptionStore:
             state=ProviderExecutionReadinessState(str(item.get("state") or "")),
             blockers=tuple(str(value) for value in blockers_raw),
             provider_plan_id=(
-                None if item.get("provider_plan_id") is None else str(item.get("provider_plan_id") or "")
+                None
+                if item.get("provider_plan_id") is None
+                else str(item.get("provider_plan_id") or "")
             ),
             provider_plan_fingerprint=(
                 None
