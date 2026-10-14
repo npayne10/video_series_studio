@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -29,10 +30,8 @@ TASK_ID = "PT-VIDEO-GENERATION-29A500F54E418255"
 
 
 @pytest.fixture
-def application_context(tmp_path: object) -> Iterator[ApplicationContext]:
-    from pathlib import Path
-
-    root = Path(str(tmp_path))
+def application_context(tmp_path: Path) -> Iterator[ApplicationContext]:
+    root = tmp_path
     context = build_application_context(
         BootstrapOptions(
             mode=StartupMode.TEST,
@@ -75,12 +74,10 @@ def _task() -> ProductionTask:
 def test_production_tasks_exposes_fail_closed_accepted_provider_action(
     qtbot: object,
     qapp: QApplication,
-    tmp_path: object,
+    tmp_path: Path,
     application_context: ApplicationContext,
 ) -> None:
-    from pathlib import Path
-
-    root = Path(str(tmp_path))
+    root = tmp_path
     projects = application_context.services.require(ProjectService)
     projects.create(root / "Project", name="Project")
 
