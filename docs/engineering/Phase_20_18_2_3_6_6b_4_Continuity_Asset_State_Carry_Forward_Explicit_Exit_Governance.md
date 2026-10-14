@@ -127,7 +127,42 @@ Regression coverage includes:
 - legacy Ready draft compatibility;
 - UI disabling Ready and surfacing the missing carried asset.
 
+## Acceptance evidence
+
+Post-implementation local validation:
+
+- working tree clean before validation;
+- Ruff check: PASS;
+- Ruff format check: PASS — 1318 files already formatted;
+- mypy: PASS — 595 source files;
+- focused regression: PASS — 41 tests in 6.16 s;
+- full regression: PASS — 1907 tests in 26.61 s.
+
+Live SHT-003 acceptance:
+
+- existing pre-phase Continuity Draft became stale and was refreshed into the new
+  asset-state-aware model;
+- previous final active assets resolved to the seven SHT-002 governed presences;
+- previous boundary exits resolved to none;
+- current opening active assets resolved to the six current SHT-003 presences;
+- carry-forward required assets contained all seven previous final-active assets;
+- missing carried asset resolved to `CAP-CHR-005`;
+- one blocking continuity conflict was surfaced;
+- `Mark Ready & Compile` was disabled while the conflict remained unresolved.
+
+Protected-work preservation:
+
+- SHT-001 Continuity remained Ready / Compiled with no stale warning, no refresh request
+  and no migration requirement;
+- SHT-002 Continuity remained Ready / Compiled with no stale warning, no refresh request
+  and no migration requirement;
+- SHT-002 retained its accepted closing state establishing Ros present on the Iron Horizon
+  bridge with the unusual signal unresolved;
+- the legacy Ready compatibility boundary therefore protected accepted SHT-001/SHT-002
+  authority while new SHT-003 work adopted the stronger asset-state model.
+
 ## Phase state
 
-**OPEN — IMPLEMENTED; PENDING RUFF, MYPY, FOCUSED/FULL REGRESSION, AND LIVE SHT-003
-FUNCTIONAL ACCEPTANCE.**
+**CLOSED — IMPLEMENTATION, STATIC VALIDATION, FOCUSED REGRESSION, FULL REGRESSION,
+LIVE SHT-003 BLOCKING DETECTION, AND SHT-001/SHT-002 PROTECTED-AUTHORITY PRESERVATION
+ALL PASSED.**
