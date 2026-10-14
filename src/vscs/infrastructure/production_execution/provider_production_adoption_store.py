@@ -118,7 +118,18 @@ class ProviderProductionAdoptionStore:
         for item in reversed(raw_records):
             if not isinstance(item, dict) or self._record_key(item) != key:
                 continue
-            return self._readiness_from_dict(item)
+            readiness = self._readiness_from_dict(item)
+            stored_fingerprint = str(item.get("fingerprint") or "")
+            stored_readiness_id = str(item.get("readiness_id") or "")
+            if stored_fingerprint and stored_fingerprint != readiness.fingerprint:
+                raise ProviderProductionAdoptionError(
+                    "Provider readiness fingerprint does not match persisted authority"
+                )
+            if stored_readiness_id and stored_readiness_id != readiness.readiness_id:
+                raise ProviderProductionAdoptionError(
+                    "Provider readiness ID does not match persisted authority"
+                )
+            return readiness
         return None
 
     def adoption_for(
