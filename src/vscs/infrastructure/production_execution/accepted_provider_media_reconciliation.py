@@ -389,8 +389,23 @@ class AcceptedProviderProductionReconciliationService:
                 ),
             )
 
-        frame_count = int(str(report.get("final_frame_count") or "0"))
-        frames_per_second = int(str(report.get("frames_per_second") or "0"))
+        try:
+            frame_count = int(str(report.get("final_frame_count") or "0"))
+            frames_per_second = int(str(report.get("frames_per_second") or "0"))
+        except ValueError:
+            return None, (
+                AcceptedProviderProductionFinding(
+                    "functional-acceptance-media-facts-invalid",
+                    "Accepted frame count and frame rate must be integer values.",
+                ),
+            )
+        if frame_count <= 0 or frames_per_second <= 0:
+            return None, (
+                AcceptedProviderProductionFinding(
+                    "functional-acceptance-media-facts-invalid",
+                    "Accepted frame count and frame rate must be positive.",
+                ),
+            )
         if observation.frame_count != frame_count:
             return None, (
                 AcceptedProviderProductionFinding(
@@ -421,6 +436,23 @@ class AcceptedProviderProductionReconciliationService:
                 AcceptedProviderProductionFinding(
                     "provider-readiness-shot-mismatch",
                     "Provider readiness belongs to a different Shot.",
+                ),
+            )
+        provider_profile_id = str(manifest.get("provider_profile_id") or "")
+        provider_profile_fingerprint = str(
+            manifest.get("provider_profile_fingerprint") or ""
+        )
+        execution_adapter_id = str(manifest.get("execution_adapter_id") or "")
+        if (
+            provider_profile_id != readiness.provider_profile_id
+            or provider_profile_fingerprint != readiness.provider_profile_fingerprint
+            or execution_adapter_id != readiness.execution_adapter_id
+        ):
+            return None, (
+                AcceptedProviderProductionFinding(
+                    "provider-readiness-authority-mismatch",
+                    "Orchestration provider profile/adapter authority does not match "
+                    "persisted provider readiness.",
                 ),
             )
 
@@ -477,11 +509,36 @@ class AcceptedProviderProductionReconciliationService:
                 "Functional acceptance and orchestration manifest disagree on final media path.",
             )
         for key in ("final_frame_count", "frames_per_second"):
-            if int(str(report.get(key) or "0")) != int(str(manifest.get(key) or "0")):
+            try:
+                report_value = int(str(report.get(key) or "0"))
+                manifest_value = int(str(manifest.get(key) or "0"))
+            except ValueError:
+                return AcceptedProviderProductionFinding(
+                    "functional-acceptance-media-facts-invalid",
+                    f"Functional acceptance or orchestration {key} is not an integer.",
+                )
+            if report_value != manifest_value:
                 return AcceptedProviderProductionFinding(
                     f"{key.replace('_', '-')}-mismatch",
                     f"Functional acceptance and orchestration manifest disagree on {key}.",
                 )
+        required_manifest = (
+            "provider",
+            "provider_profile_id",
+            "provider_profile_fingerprint",
+            "execution_adapter_id",
+            "plan_fingerprint",
+            "source_package_fingerprint",
+        )
+        missing = tuple(
+            key for key in required_manifest if not str(manifest.get(key) or "").strip()
+        )
+        if missing:
+            return AcceptedProviderProductionFinding(
+                "orchestration-authority-incomplete",
+                "Orchestration manifest is missing governed authority field(s): "
+                + ", ".join(missing),
+            )
         return None
 
     def _accepted_final_path(
