@@ -451,6 +451,18 @@ class ProductionExecutionUiService:
             profile=execution_profile,
         )
 
+    def historical_closing_boundary_eligibility(
+        self, task_id: str, *, profile: str = "production"
+    ) -> dict[str, object]:
+        """Read-only inspection of a completed task outside the scheduled queue."""
+        normalized = self._task_id(task_id, "inspecting historical boundary publication")
+        operation = getattr(self.backend, "historical_closing_boundary_eligibility", None)
+        if operation is None:
+            raise ProductionExecutionError(
+                "Execution backend does not support historical boundary publication."
+            )
+        return cast(dict[str, object], operation(normalized, profile=profile))
+
     def publish_closing_boundary(
         self,
         task_id: str,
