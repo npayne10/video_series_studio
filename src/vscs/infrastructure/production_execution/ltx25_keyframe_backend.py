@@ -757,11 +757,30 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         source_shot_id = None
         opening_boundary_id = None
         messages: list[str] = []
+        if not production_authority:
+            # Resolve the pinned, current READY UPD rather than defaulting an
+            # uncompiled Shot to NEW_COMPOSITION. The authority-source guard
+            # verifies the ProductionTask fingerprint before returning it.
+            try:
+                source = self.package_compilation._authority_source(task)
+                authority = source.universal_description.get("production")
+                if not isinstance(authority, dict):
+                    raise LocalProductionPackageCompilationError(
+                        "Current READY UPD has no structured production authority."
+                    )
+                production_authority = authority
+            except LocalProductionPackageCompilationError as exc:
+                opening_state = "stale"
+                messages.append(str(exc))
         if production_authority:
             try:
+                continuity = production_authority.get("continuity")
+                mapping = continuity if isinstance(continuity, dict) else {}
+                # Preserve the real governed mode even when an inherited
+                # closing frame is missing and opening resolution fails.
+                opening_mode = store._mode(mapping)
+                source_shot_id = store._source_shot_id(mapping)
                 opening = store.resolve_opening(task.shot_id, production_authority)
-                opening_mode = opening.mode
-                source_shot_id = opening.source_shot_id
                 opening_boundary_id = opening.boundary_id
                 if compiled_opening is not None:
                     store.validate_compiled_opening(
