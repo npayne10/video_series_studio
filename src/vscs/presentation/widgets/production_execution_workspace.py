@@ -140,6 +140,7 @@ class ProductionExecutionWorkspace(QWidget):
         self._service_provider = service_provider
         self._candidates: dict[str, ProductionExecutionCandidate] = {}
         self._selected_task_id: str | None = None
+        self._historical_boundary_evidence: dict[str, object] | None = None
         self._execution_active = False
         self._package_status: ProductionPackageStatus | None = None
         self._retry_status: GovernedRetryOverrideStatus | None = None
@@ -282,6 +283,29 @@ class ProductionExecutionWorkspace(QWidget):
         timed_span_layout.addWidget(self.assemble_span_outputs_button, 9, 0)
         timed_span_layout.addWidget(self.record_span_qc_button, 9, 1)
 
+        self.historical_boundary_group = QGroupBox("Historical Approved Media — Closing Boundary")
+        historical_layout = QVBoxLayout(self.historical_boundary_group)
+        historical_layout.addWidget(QLabel(
+            "For COMPLETED video-generation tasks only. This does not change scheduling, "
+            "queue state, production attempts, or approved source media."
+        ))
+        historical_row = QHBoxLayout()
+        self.historical_task_id = QLineEdit()
+        self.historical_task_id.setPlaceholderText("Completed ProductionTask ID")
+        self.historical_task_id.textChanged.connect(self._historical_boundary_reset)
+        self.historical_inspect_button = QPushButton("Inspect Approved Historical Media")
+        self.historical_inspect_button.clicked.connect(self._inspect_historical_boundary)
+        self.historical_publish_button = QPushButton("Publish Historical Closing Boundary")
+        self.historical_publish_button.setEnabled(False)
+        self.historical_publish_button.clicked.connect(self._publish_historical_boundary)
+        historical_row.addWidget(self.historical_task_id, 1)
+        historical_row.addWidget(self.historical_inspect_button)
+        historical_row.addWidget(self.historical_publish_button)
+        historical_layout.addLayout(historical_row)
+        self.historical_boundary_status = QLabel("Inspect a completed task before publication.")
+        self.historical_boundary_status.setWordWrap(True)
+        historical_layout.addWidget(self.historical_boundary_status)
+
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
             ("Production", "Episode", "Scene", "Shot", "Task", "Resource", "State")
@@ -367,6 +391,7 @@ class ProductionExecutionWorkspace(QWidget):
         layout.addWidget(guidance)
         layout.addLayout(package_row)
         layout.addLayout(boundary_row)
+        layout.addWidget(self.historical_boundary_group)
         layout.addWidget(self.timed_span_group)
         layout.addLayout(buttons)
         layout.addWidget(self.table, 1)
@@ -375,6 +400,7 @@ class ProductionExecutionWorkspace(QWidget):
         layout.addWidget(self.details)
 
     def refresh(self) -> None:
+        self._historical_boundary_reset("")
         self._poll_timer.stop()
         service = self._service_provider()
         self._candidates.clear()
@@ -717,6 +743,89 @@ class ProductionExecutionWorkspace(QWidget):
                 f"Closing Boundary: {status.closing_state.upper()}{suffix}"
             )
         self.publish_boundary_button.setEnabled(status.closing_state != "published")
+
+    def _historical_boundary_reset(self, _text: str) -> None:
+        self._historical_boundary_evidence = None
+        self.historical_publish_button.setEnabled(False)
+        self.historical_boundary_status.setText(
+            "Inspect a completed task before publication."
+        )
+
+    def _inspect_historical_boundary(self) -> None:
+        self._historical_boundary_evidence = None
+        self.historical_publish_button.setEnabled(False)
+        service = self._service_provider()
+        if service is None:
+            self.historical_boundary_status.setText("Open a VSCS project first.")
+            return
+        try:
+            evidence = service.historical_closing_boundary_eligibility(
+                self.historical_task_id.text().strip(), profile="production"
+            )
+        except Exception as exc:
+            self.historical_boundary_status.setText(f"BLOCKED — {exc}")
+            return
+        self._historical_boundary_evidence = evidence
+        self.historical_boundary_status.setText(
+            f"ELIGIBLE — Shot {evidence['shot_id']}; approved media {evidence['media_id']}; "
+            f"final frame {evidence['frame_index']}/{evidence['frame_count']}; "
+            f"fps {evidence['frame_rate']}; SHA-256 {evidence['checksum_sha256']}."
+        )
+        self.historical_publish_button.setEnabled(True)
+
+    def _publish_historical_boundary(self) -> None:
+        evidence = self._historical_boundary_evidence
+        if evidence is None:
+            return
+        service = self._service_provider()
+        if service is None:
+            return
+        task_id = str(evidence["task_id"])
+        try:
+            current = service.historical_closing_boundary_eligibility(
+                task_id, profile="production"
+            )
+            if current != evidence:
+                raise ValueError("Historical source evidence changed. Inspect again.")
+        except Exception as exc:
+            self._historical_boundary_reset("")
+            self.historical_boundary_status.setText(f"BLOCKED — {exc}")
+            return
+        actor, accepted = QInputDialog.getText(
+            self, "Publish Historical Closing Boundary",
+            f"Confirm publication from approved media {evidence['media_id']} "
+            f"for {evidence['shot_id']}.\\nPublished by (human operator):",
+        )
+        if not accepted or not actor.strip():
+            return
+        answer = QMessageBox.question(
+            self,
+            "Confirm Governed Boundary Publication",
+            f"Publish frame {evidence['frame_index']} of {evidence['frame_count']} "
+            f"from {evidence['media_id']}?\\nThis publishes continuity authority, "
+            "but does not modify the approved video or re-run production.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            boundary = service.publish_closing_boundary(
+                task_id, published_by=actor.strip(), profile="production"
+            )
+        except Exception as exc:
+            self.historical_boundary_status.setText(f"BLOCKED — {exc}")
+            self._historical_boundary_evidence = None
+            self.historical_publish_button.setEnabled(False)
+            return
+        self.historical_boundary_status.setText(
+            f"PUBLISHED — {boundary.boundary_id}; source {boundary.source_media_id}; "
+            f"frame {boundary.frame_index}/{boundary.frame_count}; "
+            f"source SHA-256 {boundary.source_media_sha256}."
+        )
+        self._historical_boundary_evidence = None
+        self.historical_publish_button.setEnabled(False)
+        self._refresh_boundary_status()
 
     def _publish_closing_boundary(self) -> None:
         if self._selected_task_id is None:
