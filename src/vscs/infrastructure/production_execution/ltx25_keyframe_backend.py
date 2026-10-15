@@ -757,9 +757,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         profile: str,
         published_by: str,
     ) -> GovernedClosingBoundaryFrame:
-        eligibility = self.historical_closing_boundary_eligibility(
-            task_id, profile=profile
-        )
+        eligibility = self.historical_closing_boundary_eligibility(task_id, profile=profile)
         task = self._require_task(task_id)
         normalized = normalize_execution_profile(profile)
         candidates = tuple(
