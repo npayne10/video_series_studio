@@ -690,6 +690,66 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def historical_closing_boundary_eligibility(
+        self,
+        task_id: str,
+        *,
+        profile: str = "production",
+    ) -> dict[str, object]:
+        """Inspect completed approved media without touching scheduling or execution."""
+        from vscs.application.production_tasks import ProductionTaskState, ProductionTaskType
+
+        task = self._require_task(task_id)
+        normalized = normalize_execution_profile(profile)
+        if normalized != "production":
+            raise ProductionExecutionError(
+                "Historical closing boundary publication requires the production profile."
+            )
+        if task.state is not ProductionTaskState.COMPLETED:
+            raise ProductionExecutionError(
+                f"Historical boundary publication requires a COMPLETED task: {task.task_id}."
+            )
+        if task.task_type is not ProductionTaskType.VIDEO_GENERATION or not task.shot_id:
+            raise ProductionExecutionError(
+                "Historical boundary publication requires a completed video-generation Shot."
+            )
+        matching = [
+            media
+            for media in self.media.list_for_task(task.task_id)
+            if self.execution_profiles.profile_for_execution(media.provenance.execution_id)
+            == normalized
+            and media.kind is GeneratedMediaKind.VIDEO
+            and media.state is GeneratedMediaState.APPROVED
+            and media.scope.shot_id == task.shot_id
+        ]
+        if len(matching) != 1:
+            raise ProductionExecutionError(
+                "Historical closing boundary requires exactly one APPROVED production "
+                f"video scoped to {task.shot_id}; found {len(matching)}."
+            )
+        media = matching[0]
+        # Validate the exact media bytes before offering an operator publication action.
+        from .shot_boundary_runtime import GovernedShotBoundaryRuntime
+
+        runtime = GovernedShotBoundaryRuntime(self.project_directory, self.media)
+        source = runtime._project_file(media.file.relative_path)
+        checksum = runtime._sha256(source)
+        if not media.file.checksum_sha256 or checksum != media.file.checksum_sha256:
+            raise ProductionExecutionError(
+                "Historical Generated Media checksum is missing or does not match."
+            )
+        observation = runtime._observe_video(source)
+        return {
+            "task_id": task.task_id,
+            "shot_id": task.shot_id,
+            "media_id": media.media_id,
+            "profile": normalized,
+            "frame_count": observation.frame_count,
+            "frame_index": observation.final_frame_index,
+            "frame_rate": observation.frame_rate,
+            "checksum_sha256": checksum,
+        }
+
     def publish_closing_boundary_for_profile(
         self,
         task_id: str,
@@ -697,6 +757,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         profile: str,
         published_by: str,
     ) -> GovernedClosingBoundaryFrame:
+        eligibility = self.historical_closing_boundary_eligibility(
+            task_id, profile=profile
+        )
         task = self._require_task(task_id)
         normalized = normalize_execution_profile(profile)
         candidates = tuple(
@@ -706,6 +769,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             == normalized
             and media.kind is GeneratedMediaKind.VIDEO
             and media.state is GeneratedMediaState.APPROVED
+            and media.media_id == eligibility["media_id"]
         )
         if not candidates:
             raise ProductionExecutionError(
