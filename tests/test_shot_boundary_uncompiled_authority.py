@@ -50,6 +50,6 @@ def test_uncompiled_new_composition_does_not_require_previous_closing_frame(
     status = backend.shot_boundary_status_for_profile("PT-TEST", profile="production")
 
     assert status.opening_mode.value == "new_composition"
-    assert status.opening_source_shot_id == "EP-001-SCN-001-SHT-002"
+    assert status.opening_source_shot_id is None
     assert status.opening_state == "independent"
     assert "No governed closing boundary frame" not in status.message
