@@ -29,9 +29,7 @@ def _backend(tmp_path, monkeypatch, mode):
     return backend
 
 
-def test_uncompiled_continuous_shot_shows_governed_mode_and_missing_boundary(
-    tmp_path, monkeypatch
-):
+def test_uncompiled_continuous_shot_shows_governed_mode_and_missing_boundary(tmp_path, monkeypatch):
     backend = _backend(tmp_path, monkeypatch, "continuous")
 
     status = backend.shot_boundary_status_for_profile("PT-TEST", profile="production")
@@ -42,9 +40,7 @@ def test_uncompiled_continuous_shot_shows_governed_mode_and_missing_boundary(
     assert "No governed closing boundary frame" in status.message
 
 
-def test_uncompiled_new_composition_does_not_require_previous_closing_frame(
-    tmp_path, monkeypatch
-):
+def test_uncompiled_new_composition_does_not_require_previous_closing_frame(tmp_path, monkeypatch):
     backend = _backend(tmp_path, monkeypatch, "new_composition")
 
     status = backend.shot_boundary_status_for_profile("PT-TEST", profile="production")
