@@ -285,10 +285,12 @@ class ProductionExecutionWorkspace(QWidget):
 
         self.historical_boundary_group = QGroupBox("Historical Approved Media — Closing Boundary")
         historical_layout = QVBoxLayout(self.historical_boundary_group)
-        historical_layout.addWidget(QLabel(
-            "For COMPLETED video-generation tasks only. This does not change scheduling, "
-            "queue state, production attempts, or approved source media."
-        ))
+        historical_layout.addWidget(
+            QLabel(
+                "For COMPLETED video-generation tasks only. This does not change scheduling, "
+                "queue state, production attempts, or approved source media."
+            )
+        )
         historical_row = QHBoxLayout()
         self.historical_task_id = QLineEdit()
         self.historical_task_id.setPlaceholderText("Completed ProductionTask ID")
@@ -747,9 +749,7 @@ class ProductionExecutionWorkspace(QWidget):
     def _historical_boundary_reset(self, _text: str) -> None:
         self._historical_boundary_evidence = None
         self.historical_publish_button.setEnabled(False)
-        self.historical_boundary_status.setText(
-            "Inspect a completed task before publication."
-        )
+        self.historical_boundary_status.setText("Inspect a completed task before publication.")
 
     def _inspect_historical_boundary(self) -> None:
         self._historical_boundary_evidence = None
@@ -782,9 +782,7 @@ class ProductionExecutionWorkspace(QWidget):
             return
         task_id = str(evidence["task_id"])
         try:
-            current = service.historical_closing_boundary_eligibility(
-                task_id, profile="production"
-            )
+            current = service.historical_closing_boundary_eligibility(task_id, profile="production")
             if current != evidence:
                 raise ValueError("Historical source evidence changed. Inspect again.")
         except Exception as exc:
@@ -792,7 +790,8 @@ class ProductionExecutionWorkspace(QWidget):
             self.historical_boundary_status.setText(f"BLOCKED — {exc}")
             return
         actor, accepted = QInputDialog.getText(
-            self, "Publish Historical Closing Boundary",
+            self,
+            "Publish Historical Closing Boundary",
             f"Confirm publication from approved media {evidence['media_id']} "
             f"for {evidence['shot_id']}.\\nPublished by (human operator):",
         )
