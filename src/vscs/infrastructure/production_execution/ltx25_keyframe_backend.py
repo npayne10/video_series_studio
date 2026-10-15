@@ -779,7 +779,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 # Preserve the real governed mode even when an inherited
                 # closing frame is missing and opening resolution fails.
                 opening_mode = store._mode(mapping)
-                source_shot_id = store._source_shot_id(mapping)
+                if opening_mode.inherits_previous_closing_frame:
+                    source_shot_id = store._source_shot_id(mapping)
                 opening = store.resolve_opening(task.shot_id, production_authority)
                 opening_boundary_id = opening.boundary_id
                 if compiled_opening is not None:
