@@ -1174,10 +1174,6 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError(
                 "H3 recovery only supports one governed monolithic span."
             )
-        if self.provider_production_adoptions.adoption_for(task_id, normalized_profile):
-            raise ProductionExecutionError(
-                "H3 provider adoption already exists; recovery is blocked."
-            )
         saved_readiness = self.provider_production_adoptions.readiness_for(
             task_id, normalized_profile
         )
@@ -1200,8 +1196,6 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             not source.is_file()
             or not raw_dir.is_dir()
             or any(raw_dir.iterdir())
-            or final.exists()
-            or manifest.exists()
         ):
             raise ProductionExecutionError(
                 "H3 recovery requires the single existing normalized span, empty raw directory, "
@@ -1233,7 +1227,12 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("H3 recovery could not verify frame rate.") from exc
         if observed_fps != f"{compiled.frames_per_second}/1":
             raise ProductionExecutionError("H3 recovery normalized-video frame rate mismatch.")
-        final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(source, final)
+        if not final.exists():
+            final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
+                source, final
+            )
+        elif not final.is_file():
+            raise ProductionExecutionError("H3 recovery final path is not a regular file.")
         if inspector._frame_count(final) != compiled.frame_count:
             raise ProductionExecutionError("H3 recovery final-video frame count mismatch.")
         if hashlib.sha256(final.read_bytes()).hexdigest() != actual_sha:
@@ -1258,21 +1257,70 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             "frames_per_second": compiled.frames_per_second,
             "media_state": "generated_pending_human_review",
         }
-        with manifest.open("x", encoding="utf-8") as stream:
-            json.dump(recovery_manifest, stream, indent=2, sort_keys=True)
-            stream.write("\n")
-        record = self._register_h3_monolithic_generated_media(
-            task,
-            readiness=saved_readiness,
-            final_path=final,
-            frame_count=compiled.frame_count,
+        if manifest.exists():
+            try:
+                persisted_manifest = json.loads(manifest.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                raise ProductionExecutionError(
+                    "Existing H3 recovery manifest is unreadable; refusing to overwrite."
+                ) from exc
+            if persisted_manifest != recovery_manifest:
+                raise ProductionExecutionError(
+                    "Existing H3 recovery manifest does not match verified recovery authority."
+                )
+        else:
+            with manifest.open("x", encoding="utf-8") as stream:
+                json.dump(recovery_manifest, stream, indent=2, sort_keys=True)
+                stream.write("\n")
+
+        media_identity = (
+            "GM-H3-"
+            + hashlib.sha256(
+                f"{task.task_id}|{normalized_profile}|{plan.fingerprint}".encode()
+            ).hexdigest()[:24].upper()
         )
-        self.provider_production_adoptions.record_generated(
-            saved_readiness,
-            final_path=str(final),
-            final_frame_count=compiled.frame_count,
-            state="generated_pending_visual_qc",
-        )
+        record = self.media.get(media_identity)
+        if record is None:
+            record = self._register_h3_monolithic_generated_media(
+                task,
+                readiness=saved_readiness,
+                final_path=final,
+                frame_count=compiled.frame_count,
+            )
+        else:
+            if (
+                record.state not in {
+                    GeneratedMediaState.GENERATED,
+                    GeneratedMediaState.UNDER_REVIEW,
+                    GeneratedMediaState.APPROVED,
+                }
+                or record.provenance.provider_job_id != plan.plan_id
+                or record.file.checksum_sha256 != actual_sha
+                or record.scope.production_task_id != task.task_id
+                or dict(record.provenance.attributes).get("provider_plan_fingerprint")
+                != plan.fingerprint
+            ):
+                raise ProductionExecutionError(
+                    "Existing H3 Generated Media differs from verified recovery authority."
+                )
+        adoption = self.provider_production_adoptions.adoption_for(task_id, normalized_profile)
+        if adoption is None:
+            self.provider_production_adoptions.record_generated(
+                saved_readiness,
+                final_path=str(final),
+                final_frame_count=compiled.frame_count,
+                state="generated_pending_visual_qc",
+            )
+        elif (
+            adoption.final_path != str(final)
+            or adoption.final_frame_count != compiled.frame_count
+            or adoption.package_fingerprint != compiled.package_fingerprint
+            or adoption.provider_profile_id != MINIMAX_H3_POLICY_PROFILE_ID
+            or adoption.readiness_fingerprint != saved_readiness.fingerprint
+        ):
+            raise ProductionExecutionError(
+                "Existing H3 adoption differs from verified recovery authority."
+            )
         return record
 
     def _h3_claim_path(self, task_id: str, profile: str) -> Path:
