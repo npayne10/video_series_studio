@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -1109,6 +1110,59 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             ProviderProductionAdoptionError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
+
+    def _claim_h3_direct_execution(
+        self,
+        task: ProductionTask,
+        readiness: ProviderExecutionReadiness,
+    ) -> Path:
+        """Durably prevent a second direct submission of the same task/profile.
+
+        Claims intentionally survive failures and restarts. Reconciliation or retry
+        requires a separately reviewed governed recovery path, never file deletion
+        as an ordinary operator step.
+        """
+        if not readiness.ready_to_execute:
+            raise ProductionExecutionError("H3 execution claim requires READY preflight.")
+        if not readiness.provider_plan_fingerprint:
+            raise ProductionExecutionError("H3 execution claim requires a provider plan.")
+        if self.provider_production_adoptions.adoption_for(
+            task.task_id, readiness.execution_profile
+        ) is not None:
+            raise ProductionExecutionError(
+                "H3 provider adoption already exists; duplicate rendering is prohibited."
+            )
+        root = self.project_directory / ".vscs" / "production_execution" / "h3_launch_claims"
+        root.mkdir(parents=True, exist_ok=True)
+        identity = hashlib.sha256(
+            f"{task.task_id}|{readiness.execution_profile}".encode("utf-8")
+        ).hexdigest()[:24]
+        path = root / f"{identity}.json"
+        payload = {
+            "schema_version": "1.0",
+            "task_id": task.task_id,
+            "execution_profile": readiness.execution_profile,
+            "provider_profile_id": readiness.provider_profile_id,
+            "package_fingerprint": readiness.package_fingerprint,
+            "plan_fingerprint": readiness.provider_plan_fingerprint,
+            "state": "launch_claimed",
+        }
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as exc:
+            raise ProductionExecutionError(
+                "H3 direct execution already has a durable launch claim. "
+                "Review existing results and use governed recovery before another attempt."
+            ) from exc
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                json.dump(payload, stream, indent=2, sort_keys=True)
+                stream.write("\\n")
+        except OSError as exc:
+            raise ProductionExecutionError(
+                "Unable to persist the H3 direct-execution launch claim safely."
+            ) from exc
+        return path
 
     def _register_h3_monolithic_generated_media(
         self,
