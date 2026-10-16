@@ -599,9 +599,25 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 task.task_id,
                 profile=normalized,
             )
-            if not timed_status.applicable:
+            monolithic_h3 = (
+                provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+                and timed_status.state is TimedSpanAcceptanceState.NOT_APPLICABLE
+                and timed_status.span_count == 1
+                and timed_status.boundary_count == 0
+                and timed_status.requirement_count == 0
+            )
+            if not timed_status.applicable and not monolithic_h3:
                 blockers.append(
-                    "Selected provider orchestration currently requires a governed multi-span Shot."
+                    "Selected provider orchestration requires governed span authority; "
+                    "only single-span MiniMax H3 Shots may omit timed-span acceptance."
+                )
+            existing_adoption = self.provider_production_adoptions.adoption_for(
+                task.task_id, normalized
+            )
+            if existing_adoption is not None:
+                blockers.append(
+                    "Provider production already has adoption evidence; "
+                    "review existing output before any governed retry."
                 )
             if timed_status.pending_keyframe_requirement_ids:
                 blockers.append(
@@ -1007,7 +1023,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                         "MiniMax H3 requires the ComfyUI input folder beside the configured "
                         f"output folder: {comfyui_input_directory}"
                     )
-                MiniMaxH3AutomatedExecutionService(
+                result = MiniMaxH3AutomatedExecutionService(
                     self.project_directory,
                     endpoint=self.endpoint,
                     comfyui_input_directory=comfyui_input_directory,
@@ -1021,6 +1037,27 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     package.path,
                     direct_approved_keyframes=True,
                 )
+                if (
+                    status.state is TimedSpanAcceptanceState.NOT_APPLICABLE
+                    and status.span_count == 1
+                    and status.boundary_count == 0
+                    and status.requirement_count == 0
+                ):
+                    # Single-span output is generated evidence, never human acceptance.
+                    # Keep it in QC_REQUIRED until normal approved-media governance.
+                    final_media = Path(result.final_path).resolve(strict=False)
+                    if not final_media.is_file():
+                        raise ProductionExecutionError(
+                            "Monolithic H3 execution did not produce a governed final video."
+                        )
+                    status = replace(
+                        status,
+                        state=TimedSpanAcceptanceState.QC_REQUIRED,
+                        assembly_present=True,
+                        final_path=str(final_media),
+                        final_frame_count=None,
+                        message="Single-span H3 output generated; human media QC required.",
+                    )
             else:
                 raise ProductionExecutionError(
                     "Selected provider policy profile has no normal Production Execution adapter: "
