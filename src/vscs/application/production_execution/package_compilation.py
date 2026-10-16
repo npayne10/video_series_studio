@@ -13,9 +13,7 @@ from vscs.application.governed_reference_plan_source import (
     GovernedReferencePlanSourceError,
     PersistedGovernedReferencePlanSource,
 )
-from vscs.application.production_execution.provider_policy_profiles import (
-    default_provider_policy_profile_registry,
-)
+from vscs.application.production_execution import default_provider_policy_profile_registry
 from vscs.application.production_package import ProductionPackage
 from vscs.application.production_tasks import (
     ProductionTask,
@@ -240,7 +238,7 @@ class ProductionPackageCompilerService:
                 f"Governed reference compilation failed: {exc}"
             ) from exc
         reference_plan = governed_references.to_dict() if governed_references is not None else None
-        if reference_plan is not None and reference_plan_payload is not None:
+        if governed_references is not None and reference_plan is not None and reference_plan_payload is not None:
             self._preserve_reviewed_provider_capacity(
                 reference_plan_payload, governed_references.plan.references, reference_plan
             )
