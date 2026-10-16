@@ -13,6 +13,10 @@ from vscs.application.governed_reference_plan_source import (
     GovernedReferencePlanSourceError,
     PersistedGovernedReferencePlanSource,
 )
+from vscs.application.provider_reference_capacity import project_provider_reference_capacity
+from vscs.application.production_execution.provider_policy_profiles import (
+    default_provider_policy_profile_registry,
+)
 from vscs.application.production_package import ProductionPackage
 from vscs.application.production_tasks import (
     ProductionTask,
@@ -236,6 +240,10 @@ class ProductionPackageCompilerService:
                 f"Governed reference compilation failed: {exc}"
             ) from exc
         reference_plan = governed_references.to_dict() if governed_references is not None else None
+        if reference_plan is not None and reference_plan_payload is not None:
+            self._preserve_reviewed_provider_capacity(
+                reference_plan_payload, governed_references.plan.references, reference_plan
+            )
         timed_reference_activation = self._timed_reference_activation(
             timed_asset_presence,
             internal_render_spans,
@@ -456,6 +464,39 @@ class ProductionPackageCompilerService:
                 f"Governed Introduction Keyframe requirements cannot compile: {exc}"
             ) from exc
         return plan.to_dict()
+
+    @staticmethod
+    def _preserve_reviewed_provider_capacity(
+        source: dict[str, Any],
+        compiled_references: tuple[Any, ...],
+        destination: dict[str, Any],
+    ) -> None:
+        """Carry reviewed provider projection only if current references still agree."""
+        authority = source.get("provider_capacity_projection")
+        if authority is None:
+            return
+        if not isinstance(authority, dict):
+            raise ProductionPackageCompilationError(
+                "Reviewed provider-capacity projection must be an object"
+            )
+        profile_id = authority.get("provider_profile_id")
+        if not isinstance(profile_id, str) or not profile_id.strip():
+            raise ProductionPackageCompilationError(
+                "Reviewed provider-capacity projection has no provider profile identity"
+            )
+        try:
+            profile = default_provider_policy_profile_registry().require(profile_id)
+        except (KeyError, ValueError) as exc:
+            raise ProductionPackageCompilationError(
+                f"Reviewed provider-capacity projection has invalid provider policy: {exc}"
+            ) from exc
+        expected = project_provider_reference_capacity(profile, compiled_references).to_dict()
+        if authority != expected or not expected["passed"]:
+            raise ProductionPackageCompilationError(
+                "Reviewed provider-capacity projection is stale, blocked, or differs "
+                "from freshly compiled governed references and provider policy"
+            )
+        destination["provider_capacity_projection"] = dict(expected)
 
     def _reference_plan_payload(
         self, production: dict[str, Any], shot_id: str
