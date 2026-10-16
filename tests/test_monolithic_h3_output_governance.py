@@ -208,9 +208,7 @@ def test_recovery_rejects_absent_launch_claim(tmp_path):
     backend = _backend(tmp_path)
     backend._require_task = lambda task_id: _task()
     backend.provider_policy_selections = SimpleNamespace(
-        selected_profile=lambda task_id, profile: SimpleNamespace(
-            profile_id="minimax-h3-ref2va-v1"
-        )
+        selected_profile=lambda task_id, profile: SimpleNamespace(profile_id="minimax-h3-ref2va-v1")
     )
 
     with pytest.raises(ProductionExecutionError, match="launch claim"):
@@ -225,13 +223,16 @@ def test_recovery_never_reuses_output_without_claim(tmp_path):
     backend = _backend(tmp_path)
     backend._require_task = lambda task_id: _task()
     backend.provider_policy_selections = SimpleNamespace(
-        selected_profile=lambda task_id, profile: SimpleNamespace(
-            profile_id="minimax-h3-ref2va-v1"
-        )
+        selected_profile=lambda task_id, profile: SimpleNamespace(profile_id="minimax-h3-ref2va-v1")
     )
     source = (
-        tmp_path / ".vscs" / "h3_span_orchestration"
-        / "PT-H3-TEST" / "UNCLAIMED" / "normalized" / "span-001.mp4"
+        tmp_path
+        / ".vscs"
+        / "h3_span_orchestration"
+        / "PT-H3-TEST"
+        / "UNCLAIMED"
+        / "normalized"
+        / "span-001.mp4"
     )
     source.parent.mkdir(parents=True)
     source.write_bytes(b"unverified")
