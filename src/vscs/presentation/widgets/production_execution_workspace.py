@@ -1544,10 +1544,7 @@ class ProductionExecutionWorkspace(QWidget):
             "Provider Readiness: execution completed — revalidate before any rerun"
         )
         self._render_timed_span_status(value)
-        if (
-            value.state is TimedSpanAcceptanceState.QC_REQUIRED
-            and value.requirement_count == 0
-        ):
+        if value.state is TimedSpanAcceptanceState.QC_REQUIRED and value.requirement_count == 0:
             self.summary.setText(
                 "Governed monolithic H3 output generated and registered as Generated Media. "
                 "Inspect the managed video and complete human review in the Generated Media "
@@ -1873,12 +1870,11 @@ class ProductionExecutionWorkspace(QWidget):
 
     def _update_start_enabled(self) -> None:
         timed_span_blocks_monolithic_start = (
-            (self._timed_span_status is not None and self._timed_span_status.applicable)
-            or (
-                self._provider_policy_profile is not None
-                and self._provider_policy_profile.execution_adapter_id
-                == "minimax_h3_automated_execution"
-            )
+            self._timed_span_status is not None and self._timed_span_status.applicable
+        ) or (
+            self._provider_policy_profile is not None
+            and self._provider_policy_profile.execution_adapter_id
+            == "minimax_h3_automated_execution"
         )
         self.start_button.setEnabled(
             self._selected_task_id is not None
