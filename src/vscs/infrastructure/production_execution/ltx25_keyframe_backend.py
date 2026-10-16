@@ -1398,6 +1398,12 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         *,
         production_package: Path | None = None,
     ) -> ProductionExecutionResult:
+        selected = self.provider_policy_selections.selected_profile(task_id, "production")
+        if selected.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
+            raise ProductionExecutionError(
+                "MiniMax H3 must execute through the selected governed H3 orchestration "
+                "action, not legacy monolithic Start Production."
+            )
         status = self.timed_span_acceptance_status_for_profile(
             task_id,
             profile="production",
@@ -1417,6 +1423,12 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         profile: str,
         production_package: Path | None = None,
     ) -> ProductionExecutionResult:
+        selected = self.provider_policy_selections.selected_profile(task_id, profile)
+        if selected.profile_id == MINIMAX_H3_POLICY_PROFILE_ID:
+            raise ProductionExecutionError(
+                "MiniMax H3 must execute through the selected governed H3 orchestration "
+                "action, not legacy monolithic Start Production."
+            )
         status = self.timed_span_acceptance_status_for_profile(task_id, profile=profile)
         if status.applicable and status.state is not TimedSpanAcceptanceState.PACKAGE_REQUIRED:
             raise ProductionExecutionError(
