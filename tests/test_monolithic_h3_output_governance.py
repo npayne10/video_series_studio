@@ -199,8 +199,6 @@ def test_monolithic_promotion_never_overwrites_existing_output(tmp_path):
     destination.write_bytes(b"protected")
 
     with pytest.raises(MiniMaxH3SpanOrchestrationError, match="already exists"):
-        GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
-            source, destination
-        )
+        GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(source, destination)
 
     assert destination.read_bytes() == b"protected"
