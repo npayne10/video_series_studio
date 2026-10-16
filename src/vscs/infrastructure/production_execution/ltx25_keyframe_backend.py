@@ -1215,6 +1215,10 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             media for media in self.media.list_for_task(task.task_id)
             if media.kind is GeneratedMediaKind.VIDEO
         )
+        execution_id = f"H3DIRECT-{readiness.provider_plan_fingerprint[:24].upper()}"
+        self.execution_profiles.assign(
+            execution_id, task.task_id, readiness.execution_profile
+        )
         record = GeneratedMedia(
             media_id=media_id,
             kind=GeneratedMediaKind.VIDEO,
@@ -1226,7 +1230,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 shot_id=task.shot_id,
             ),
             provenance=GeneratedMediaProvenance(
-                execution_id=f"H3DIRECT-{readiness.provider_plan_fingerprint[:24].upper()}",
+                execution_id=execution_id,
                 provider_id=readiness.provider_profile_id,
                 provider_job_id=readiness.provider_plan_id,
                 workflow_id=readiness.execution_adapter_id,
