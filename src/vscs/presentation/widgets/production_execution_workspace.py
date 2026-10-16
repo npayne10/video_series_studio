@@ -986,9 +986,18 @@ class ProductionExecutionWorkspace(QWidget):
         h3_waiting_for_visual_qc = (
             h3_selected and status.assembly_present and bool(status.pending_qc_requirement_ids)
         )
+        monolithic_h3 = (
+            h3_selected
+            and status.state is TimedSpanAcceptanceState.NOT_APPLICABLE
+            and status.span_count == 1
+            and status.boundary_count == 0
+            and status.requirement_count == 0
+        )
         automation_ready = (
-            status.applicable
+            (status.applicable or monolithic_h3)
             and (
+                monolithic_h3
+                or
                 status.state
                 in {
                     TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
