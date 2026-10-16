@@ -299,9 +299,7 @@ class GovernedMiniMaxH3SpanOrchestrationService:
                 # A monolithic Shot has no internal boundaries to concatenate.
                 # Preserve its normalized bytes as the assembled deliverable;
                 # the independent ffprobe validation below still applies.
-                final = self._promote_monolithic_output(
-                    normalized_paths[0], final_target
-                )
+                final = self._promote_monolithic_output(normalized_paths[0], final_target)
             else:
                 try:
                     evidence = self.assembler.assemble(
