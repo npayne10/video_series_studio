@@ -309,6 +309,14 @@ class GovernedMiniMaxH3SpanOrchestrationService:
                 raise MiniMaxH3SpanOrchestrationError(
                     f"Governed H3 assembly produced no final Shot: {final}"
                 )
+            observed_final_frames = FFmpegMiniMaxH3SpanNormalizer(
+                self.project_directory
+            )._frame_count(final)
+            if observed_final_frames != compiled.frame_count:
+                raise MiniMaxH3SpanOrchestrationError(
+                    f"Assembled H3 Shot has {observed_final_frames} observed frames; "
+                    f"governed authority requires exactly {compiled.frame_count}."
+                )
 
             self._persist_manifest(
                 compiled,
