@@ -1121,12 +1121,13 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError(str(exc)) from exc
 
     def _h3_claim_path(self, task_id: str, profile: str) -> Path:
-        identity = hashlib.sha256(
-            f"{task_id}|{profile}".encode("utf-8")
-        ).hexdigest()[:24]
+        identity = hashlib.sha256(f"{task_id}|{profile}".encode()).hexdigest()[:24]
         return (
-            self.project_directory / ".vscs" / "production_execution"
-            / "h3_launch_claims" / f"{identity}.json"
+            self.project_directory
+            / ".vscs"
+            / "production_execution"
+            / "h3_launch_claims"
+            / f"{identity}.json"
         )
 
     def _claim_h3_direct_execution(
@@ -1144,9 +1145,12 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("H3 execution claim requires READY preflight.")
         if not readiness.provider_plan_fingerprint:
             raise ProductionExecutionError("H3 execution claim requires a provider plan.")
-        if self.provider_production_adoptions.adoption_for(
-            task.task_id, readiness.execution_profile
-        ) is not None:
+        if (
+            self.provider_production_adoptions.adoption_for(
+                task.task_id, readiness.execution_profile
+            )
+            is not None
+        ):
             raise ProductionExecutionError(
                 "H3 provider adoption already exists; duplicate rendering is prohibited."
             )
@@ -1208,8 +1212,10 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             "GM-H3-"
             + hashlib.sha256(
                 f"{task.task_id}|{readiness.execution_profile}|"
-                f"{readiness.provider_plan_fingerprint}".encode("utf-8")
-            ).hexdigest()[:24].upper()
+                f"{readiness.provider_plan_fingerprint}".encode()
+            )
+            .hexdigest()[:24]
+            .upper()
         )
         if self.media.get(media_id) is not None:
             raise ProductionExecutionError(
@@ -1225,13 +1231,12 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         )
         copied = file_store.ingest(relative, filename)
         previous = tuple(
-            media for media in self.media.list_for_task(task.task_id)
+            media
+            for media in self.media.list_for_task(task.task_id)
             if media.kind is GeneratedMediaKind.VIDEO
         )
         execution_id = f"H3DIRECT-{readiness.provider_plan_fingerprint[:24].upper()}"
-        self.execution_profiles.assign(
-            execution_id, task.task_id, readiness.execution_profile
-        )
+        self.execution_profiles.assign(execution_id, task.task_id, readiness.execution_profile)
         record = GeneratedMedia(
             media_id=media_id,
             kind=GeneratedMediaKind.VIDEO,
