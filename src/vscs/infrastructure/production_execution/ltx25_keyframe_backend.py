@@ -1143,15 +1143,18 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
 
         task = self._require_task(task_id)
         normalized_profile = normalize_execution_profile(profile)
-        if self.provider_policy_selections.selected_profile(
-            task_id, normalized_profile
-        ).profile_id != MINIMAX_H3_POLICY_PROFILE_ID:
+        if (
+            self.provider_policy_selections.selected_profile(task_id, normalized_profile).profile_id
+            != MINIMAX_H3_POLICY_PROFILE_ID
+        ):
             raise ProductionExecutionError("H3 recovery requires the selected MiniMax H3 profile.")
         claim_path = self._h3_claim_path(task_id, normalized_profile)
         try:
             claim = json.loads(claim_path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-            raise ProductionExecutionError("H3 recovery requires an existing valid launch claim.") from exc
+            raise ProductionExecutionError(
+                "H3 recovery requires an existing valid launch claim."
+            ) from exc
         compiled = self.package_compilation.compile_current(task, profile=normalized_profile)
         plan = MiniMaxH3SpanAdapterCompiler(self.project_directory).compile(compiled)
         expected_claim = {
@@ -1164,11 +1167,17 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             "state": "launch_claimed",
         }
         if claim != expected_claim:
-            raise ProductionExecutionError("H3 recovery launch claim differs from current authority.")
+            raise ProductionExecutionError(
+                "H3 recovery launch claim differs from current authority."
+            )
         if len(plan.spans) != 1 or compiled.frame_count <= 0:
-            raise ProductionExecutionError("H3 recovery only supports one governed monolithic span.")
+            raise ProductionExecutionError(
+                "H3 recovery only supports one governed monolithic span."
+            )
         if self.provider_production_adoptions.adoption_for(task_id, normalized_profile):
-            raise ProductionExecutionError("H3 provider adoption already exists; recovery is blocked.")
+            raise ProductionExecutionError(
+                "H3 provider adoption already exists; recovery is blocked."
+            )
         saved_readiness = self.provider_production_adoptions.readiness_for(
             task_id, normalized_profile
         )
@@ -1179,11 +1188,10 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             or saved_readiness.package_fingerprint != compiled.package_fingerprint
             or saved_readiness.provider_profile_id != MINIMAX_H3_POLICY_PROFILE_ID
         ):
-            raise ProductionExecutionError("H3 recovery requires matching persisted execution readiness.")
-        root = (
-            self.project_directory / ".vscs" / "h3_span_orchestration"
-            / task_id / plan.plan_id
-        )
+            raise ProductionExecutionError(
+                "H3 recovery requires matching persisted execution readiness."
+            )
+        root = self.project_directory / ".vscs" / "h3_span_orchestration" / task_id / plan.plan_id
         source = root / "normalized" / "span-001.mp4"
         raw_dir = root / "raw"
         final = root / f"{compiled.shot_id}-governed-h3-assembled.mp4"
@@ -1206,9 +1214,16 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         if inspector._frame_count(source) != compiled.frame_count:
             raise ProductionExecutionError("H3 recovery normalized-video frame count mismatch.")
         command = (
-            "ffprobe", "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=r_frame_rate", "-of",
-            "default=nokey=1:noprint_wrappers=1", str(source),
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=r_frame_rate",
+            "-of",
+            "default=nokey=1:noprint_wrappers=1",
+            str(source),
         )
         try:
             observed_fps = subprocess.run(
@@ -1218,9 +1233,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("H3 recovery could not verify frame rate.") from exc
         if observed_fps != f"{compiled.frames_per_second}/1":
             raise ProductionExecutionError("H3 recovery normalized-video frame rate mismatch.")
-        final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
-            source, final
-        )
+        final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(source, final)
         if inspector._frame_count(final) != compiled.frame_count:
             raise ProductionExecutionError("H3 recovery final-video frame count mismatch.")
         if hashlib.sha256(final.read_bytes()).hexdigest() != actual_sha:
