@@ -270,7 +270,8 @@ def observed_mock_assembly_frames(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_h3_orchestration_renders_normalizes_and_assembles_exact_span_sequence(
-    tmp_path: Path, observed_mock_assembly_frames: None,
+    tmp_path: Path,
+    observed_mock_assembly_frames: None,
 ) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
