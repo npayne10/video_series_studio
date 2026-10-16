@@ -30,6 +30,9 @@ def _backend(tmp_path: Path):
         JsonGeneratedMediaRepository(tmp_path / ".vscs" / "generated_media")
     )
     backend.execution_profiles = LocalExecutionProfileStore(tmp_path)
+    backend.provider_policy_registry = SimpleNamespace(
+        require=lambda profile_id: SimpleNamespace(provider_id="minimax-h3-ref2va")
+    )
     backend.provider_production_adoptions = SimpleNamespace(
         adoption_for=lambda task_id, profile: None
     )
@@ -72,6 +75,7 @@ def test_monolithic_h3_output_is_registered_as_managed_unapproved_media(tmp_path
     assert media.file.checksum_sha256 is not None
     assert media.file.relative_path.startswith("Media Output/generated_media/")
     assert (tmp_path / media.file.relative_path).read_bytes() == raw.read_bytes()
+    assert media.provenance.provider_id == "minimax-h3-ref2va"
     assert media.provenance.provider_job_id == "H3SPANPLAN-TEST"
     assert backend.execution_profiles.profile_for_execution(
         media.provenance.execution_id
