@@ -1192,11 +1192,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         raw_dir = root / "raw"
         final = root / f"{compiled.shot_id}-governed-h3-assembled.mp4"
         manifest = root / "orchestration.json"
-        if (
-            not source.is_file()
-            or not raw_dir.is_dir()
-            or any(raw_dir.iterdir())
-        ):
+        if not source.is_file() or not raw_dir.is_dir() or any(raw_dir.iterdir()):
             raise ProductionExecutionError(
                 "H3 recovery requires the single existing normalized span, empty raw directory, "
                 "and no assembled output or orchestration manifest."
@@ -1275,9 +1271,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
 
         media_identity = (
             "GM-H3-"
-            + hashlib.sha256(
-                f"{task.task_id}|{normalized_profile}|{plan.fingerprint}".encode()
-            ).hexdigest()[:24].upper()
+            + hashlib.sha256(f"{task.task_id}|{normalized_profile}|{plan.fingerprint}".encode())
+            .hexdigest()[:24]
+            .upper()
         )
         record = self.media.get(media_identity)
         if record is None:
@@ -1289,7 +1285,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             )
         else:
             if (
-                record.state not in {
+                record.state
+                not in {
                     GeneratedMediaState.GENERATED,
                     GeneratedMediaState.UNDER_REVIEW,
                     GeneratedMediaState.APPROVED,
