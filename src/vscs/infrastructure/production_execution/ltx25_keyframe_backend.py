@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -1119,6 +1120,147 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             ProviderProductionAdoptionError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
+
+    def recover_h3_monolithic_output_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        expected_sha256: str,
+    ) -> GeneratedMedia:
+        """Recover one previously normalized H3 Shot without provider submission.
+
+        Recovery is intentionally explicit, fail-closed, and only uses the
+        existing durable launch claim and current governed package authority.
+        """
+        from vscs.infrastructure.production_execution.minimax_h3_span_adapter import (
+            MiniMaxH3SpanAdapterCompiler,
+        )
+        from vscs.infrastructure.production_execution.minimax_h3_span_orchestration import (
+            FFmpegMiniMaxH3SpanNormalizer,
+            GovernedMiniMaxH3SpanOrchestrationService,
+        )
+
+        task = self._require_task(task_id)
+        normalized_profile = normalize_execution_profile(profile)
+        if self.provider_policy_selections.selected_profile(
+            task_id, normalized_profile
+        ).profile_id != MINIMAX_H3_POLICY_PROFILE_ID:
+            raise ProductionExecutionError("H3 recovery requires the selected MiniMax H3 profile.")
+        claim_path = self._h3_claim_path(task_id, normalized_profile)
+        try:
+            claim = json.loads(claim_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ProductionExecutionError("H3 recovery requires an existing valid launch claim.") from exc
+        compiled = self.package_compilation.compile_current(task, profile=normalized_profile)
+        plan = MiniMaxH3SpanAdapterCompiler(self.project_directory).compile(compiled)
+        expected_claim = {
+            "schema_version": "1.0",
+            "task_id": task.task_id,
+            "execution_profile": normalized_profile,
+            "provider_profile_id": MINIMAX_H3_POLICY_PROFILE_ID,
+            "package_fingerprint": compiled.package_fingerprint,
+            "plan_fingerprint": plan.fingerprint,
+            "state": "launch_claimed",
+        }
+        if claim != expected_claim:
+            raise ProductionExecutionError("H3 recovery launch claim differs from current authority.")
+        if len(plan.spans) != 1 or compiled.frame_count <= 0:
+            raise ProductionExecutionError("H3 recovery only supports one governed monolithic span.")
+        if self.provider_production_adoptions.adoption_for(task_id, normalized_profile):
+            raise ProductionExecutionError("H3 provider adoption already exists; recovery is blocked.")
+        saved_readiness = self.provider_production_adoptions.readiness_for(
+            task_id, normalized_profile
+        )
+        if (
+            saved_readiness is None
+            or saved_readiness.provider_plan_id != plan.plan_id
+            or saved_readiness.provider_plan_fingerprint != plan.fingerprint
+            or saved_readiness.package_fingerprint != compiled.package_fingerprint
+            or saved_readiness.provider_profile_id != MINIMAX_H3_POLICY_PROFILE_ID
+        ):
+            raise ProductionExecutionError("H3 recovery requires matching persisted execution readiness.")
+        root = (
+            self.project_directory / ".vscs" / "h3_span_orchestration"
+            / task_id / plan.plan_id
+        )
+        source = root / "normalized" / "span-001.mp4"
+        raw_dir = root / "raw"
+        final = root / f"{compiled.shot_id}-governed-h3-assembled.mp4"
+        manifest = root / "orchestration.json"
+        if (
+            not source.is_file()
+            or not raw_dir.is_dir()
+            or any(raw_dir.iterdir())
+            or final.exists()
+            or manifest.exists()
+        ):
+            raise ProductionExecutionError(
+                "H3 recovery requires the single existing normalized span, empty raw directory, "
+                "and no assembled output or orchestration manifest."
+            )
+        actual_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        if actual_sha != expected_sha256.lower():
+            raise ProductionExecutionError("H3 recovery normalized-video SHA-256 mismatch.")
+        inspector = FFmpegMiniMaxH3SpanNormalizer(self.project_directory)
+        if inspector._frame_count(source) != compiled.frame_count:
+            raise ProductionExecutionError("H3 recovery normalized-video frame count mismatch.")
+        command = (
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=r_frame_rate", "-of",
+            "default=nokey=1:noprint_wrappers=1", str(source),
+        )
+        try:
+            observed_fps = subprocess.run(
+                command, capture_output=True, text=True, check=True
+            ).stdout.strip()
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise ProductionExecutionError("H3 recovery could not verify frame rate.") from exc
+        if observed_fps != f"{compiled.frames_per_second}/1":
+            raise ProductionExecutionError("H3 recovery normalized-video frame rate mismatch.")
+        final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
+            source, final
+        )
+        if inspector._frame_count(final) != compiled.frame_count:
+            raise ProductionExecutionError("H3 recovery final-video frame count mismatch.")
+        if hashlib.sha256(final.read_bytes()).hexdigest() != actual_sha:
+            raise ProductionExecutionError("H3 recovery final-video checksum differs from source.")
+        recovery_manifest = {
+            "schema_version": "1.0",
+            "recovery_kind": "monolithic_h3_normalized_only",
+            "task_id": task_id,
+            "shot_id": compiled.shot_id,
+            "execution_profile": normalized_profile,
+            "provider_profile_id": MINIMAX_H3_POLICY_PROFILE_ID,
+            "source_package_fingerprint": compiled.package_fingerprint,
+            "plan_id": plan.plan_id,
+            "plan_fingerprint": plan.fingerprint,
+            "launch_claim_path": str(claim_path),
+            "raw_output_available": False,
+            "normalized_output_path": str(source),
+            "normalized_sha256": actual_sha,
+            "final_path": str(final),
+            "final_sha256": actual_sha,
+            "final_frame_count": compiled.frame_count,
+            "frames_per_second": compiled.frames_per_second,
+            "media_state": "generated_pending_human_review",
+        }
+        with manifest.open("x", encoding="utf-8") as stream:
+            json.dump(recovery_manifest, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+        record = self._register_h3_monolithic_generated_media(
+            task,
+            readiness=saved_readiness,
+            final_path=final,
+            frame_count=compiled.frame_count,
+        )
+        self.provider_production_adoptions.record_generated(
+            saved_readiness,
+            final_path=str(final),
+            final_frame_count=compiled.frame_count,
+            state="generated_pending_visual_qc",
+        )
+        return record
 
     def _h3_claim_path(self, task_id: str, profile: str) -> Path:
         identity = hashlib.sha256(f"{task_id}|{profile}".encode()).hexdigest()[:24]
