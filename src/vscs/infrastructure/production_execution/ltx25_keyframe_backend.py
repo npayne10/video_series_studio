@@ -1244,7 +1244,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             ),
             provenance=GeneratedMediaProvenance(
                 execution_id=execution_id,
-                provider_id=readiness.provider_profile_id,
+                provider_id=self.provider_policy_registry.require(
+                    readiness.provider_profile_id
+                ).provider_id,
                 provider_job_id=readiness.provider_plan_id,
                 workflow_id=readiness.execution_adapter_id,
                 attributes=(
