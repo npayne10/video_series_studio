@@ -156,15 +156,16 @@ class ProviderProductionAdoptionStore:
         final_frame_count: int | None,
         state: str,
     ) -> ProviderProductionAdoptionRecord:
-        if self.adoption_for(readiness.task_id, readiness.execution_profile) is not None:
-            raise ProviderProductionAdoptionError(
-                "Generated provider adoption already exists for this task and profile; "
-                "an explicit governed retry is required."
-            )
-        if not final_path or final_frame_count is None or final_frame_count <= 0:
-            raise ProviderProductionAdoptionError(
-                "Generated provider adoption requires verified final media and frame count"
-            )
+        if readiness.execution_adapter_id == "minimax_h3_automated_execution":
+            if self.adoption_for(readiness.task_id, readiness.execution_profile) is not None:
+                raise ProviderProductionAdoptionError(
+                    "H3 generated adoption already exists for this task and profile; "
+                    "an explicit governed retry is required."
+                )
+            if not final_path or final_frame_count is None or final_frame_count <= 0:
+                raise ProviderProductionAdoptionError(
+                    "H3 generated adoption requires verified final media and frame count"
+                )
         record = ProviderProductionAdoptionRecord(
             task_id=readiness.task_id,
             shot_id=readiness.shot_id,
