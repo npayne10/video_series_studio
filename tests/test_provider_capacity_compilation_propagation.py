@@ -27,7 +27,7 @@ def _references(required: int = 5, preferred: int = 2) -> tuple[ShotReference, .
         ShotReference(
             reference_id=f"REF-{i}",
             role=ReferenceRole.PRIMARY_IDENTITY,
-            reference_class=ReferenceClass.CANONICAL,
+            reference_class=ReferenceClass.CANONICAL_MASTER,
             priority=ReferencePriority.REQUIRED if i < required else ReferencePriority.PREFERRED,
             subject_type=ReferenceSubjectType.CHARACTER,
             source_path=f"reference-{i}.png",
