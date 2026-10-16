@@ -13,7 +13,6 @@ from vscs.application.governed_reference_plan_source import (
     GovernedReferencePlanSourceError,
     PersistedGovernedReferencePlanSource,
 )
-from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 from vscs.application.production_execution.provider_policy_profiles import (
     default_provider_policy_profile_registry,
 )
@@ -23,6 +22,7 @@ from vscs.application.production_tasks import (
     ProductionTaskState,
     ProductionTaskType,
 )
+from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 from vscs.application.timed_asset_presence import (
     TimedAssetPresenceError,
     TimedAssetPresencePlan,
