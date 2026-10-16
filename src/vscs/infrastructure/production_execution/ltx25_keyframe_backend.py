@@ -628,6 +628,14 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     "Provider production already has adoption evidence; "
                     "review existing output before any governed retry."
                 )
+            if (
+                provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+                and self._h3_claim_path(task.task_id, normalized).exists()
+            ):
+                blockers.append(
+                    "H3 direct execution has a durable launch claim; "
+                    "review existing output or use governed recovery."
+                )
             if timed_status.pending_keyframe_requirement_ids:
                 blockers.append(
                     f"{len(timed_status.pending_keyframe_requirement_ids)} governed "
@@ -1112,6 +1120,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
 
+    def _h3_claim_path(self, task_id: str, profile: str) -> Path:
+        identity = hashlib.sha256(
+            f"{task_id}|{profile}".encode("utf-8")
+        ).hexdigest()[:24]
+        return (
+            self.project_directory / ".vscs" / "production_execution"
+            / "h3_launch_claims" / f"{identity}.json"
+        )
+
     def _claim_h3_direct_execution(
         self,
         task: ProductionTask,
@@ -1133,12 +1150,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError(
                 "H3 provider adoption already exists; duplicate rendering is prohibited."
             )
-        root = self.project_directory / ".vscs" / "production_execution" / "h3_launch_claims"
-        root.mkdir(parents=True, exist_ok=True)
-        identity = hashlib.sha256(
-            f"{task.task_id}|{readiness.execution_profile}".encode("utf-8")
-        ).hexdigest()[:24]
-        path = root / f"{identity}.json"
+        path = self._h3_claim_path(task.task_id, readiness.execution_profile)
+        path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema_version": "1.0",
             "task_id": task.task_id,
