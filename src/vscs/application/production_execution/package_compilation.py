@@ -13,7 +13,6 @@ from vscs.application.governed_reference_plan_source import (
     GovernedReferencePlanSourceError,
     PersistedGovernedReferencePlanSource,
 )
-from vscs.application.production_execution import default_provider_policy_profile_registry
 from vscs.application.production_package import ProductionPackage
 from vscs.application.production_tasks import (
     ProductionTask,
@@ -482,6 +481,10 @@ class ProductionPackageCompilerService:
             raise ProductionPackageCompilationError(
                 "Reviewed provider-capacity projection has no provider profile identity"
             )
+        from vscs.infrastructure.production_execution.provider_policy_profiles import (
+            default_provider_policy_profile_registry,
+        )
+
         try:
             profile = default_provider_policy_profile_registry().require(profile_id)
         except (KeyError, ValueError) as exc:
