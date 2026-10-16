@@ -1032,6 +1032,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                         "MiniMax H3 requires the ComfyUI input folder beside the configured "
                         f"output folder: {comfyui_input_directory}"
                     )
+                self._claim_h3_direct_execution(task, readiness)
                 h3_result = MiniMaxH3AutomatedExecutionService(
                     self.project_directory,
                     endpoint=self.endpoint,
@@ -1157,7 +1158,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 json.dump(payload, stream, indent=2, sort_keys=True)
-                stream.write("\\n")
+                stream.write("\n")
         except OSError as exc:
             raise ProductionExecutionError(
                 "Unable to persist the H3 direct-execution launch claim safely."
