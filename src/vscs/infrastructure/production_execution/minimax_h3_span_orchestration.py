@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from contextlib import suppress
 from dataclasses import dataclass
@@ -294,17 +295,25 @@ class GovernedMiniMaxH3SpanOrchestrationService:
                 root,
                 output_path,
             )
-            try:
-                evidence = self.assembler.assemble(
-                    compiled.to_dict(),
-                    tuple(normalized_paths),
-                    final_target,
+            if len(normalized_paths) == 1:
+                # A monolithic Shot has no internal boundaries to concatenate.
+                # Preserve its normalized bytes as the assembled deliverable;
+                # the independent ffprobe validation below still applies.
+                final = self._promote_monolithic_output(
+                    normalized_paths[0], final_target
                 )
-            except GovernedSpanAssemblyRuntimeError as exc:
-                raise MiniMaxH3SpanOrchestrationError(
-                    f"Governed H3 span assembly failed: {exc}"
-                ) from exc
-            final = self._evidence_final_path(evidence, final_target)
+            else:
+                try:
+                    evidence = self.assembler.assemble(
+                        compiled.to_dict(),
+                        tuple(normalized_paths),
+                        final_target,
+                    )
+                except GovernedSpanAssemblyRuntimeError as exc:
+                    raise MiniMaxH3SpanOrchestrationError(
+                        f"Governed H3 span assembly failed: {exc}"
+                    ) from exc
+                final = self._evidence_final_path(evidence, final_target)
             if not final.is_file():
                 raise MiniMaxH3SpanOrchestrationError(
                     f"Governed H3 assembly produced no final Shot: {final}"
@@ -338,6 +347,29 @@ class GovernedMiniMaxH3SpanOrchestrationService:
         finally:
             with suppress(Exception):
                 self.provider.free_models_and_memory()
+
+    @staticmethod
+    def _promote_monolithic_output(source: Path, destination: Path) -> Path:
+        """Preserve one normalized span without overwriting a prior Shot output."""
+        if not source.is_file() or source.stat().st_size == 0:
+            raise MiniMaxH3SpanOrchestrationError(
+                "Monolithic H3 normalized span is missing or empty"
+            )
+        if source == destination:
+            return destination
+        try:
+            with source.open("rb") as reader, destination.open("xb") as writer:
+                shutil.copyfileobj(reader, writer)
+        except FileExistsError as exc:
+            raise MiniMaxH3SpanOrchestrationError(
+                f"Monolithic H3 final output already exists: {destination}"
+            ) from exc
+        except OSError as exc:
+            destination.unlink(missing_ok=True)
+            raise MiniMaxH3SpanOrchestrationError(
+                f"Unable to promote normalized monolithic H3 output: {exc}"
+            ) from exc
+        return destination
 
     def _final_output_path(
         self,
