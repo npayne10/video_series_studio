@@ -15,6 +15,11 @@ from vscs.infrastructure.production_execution.execution_profile_store import (
 from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
     LocalComfyUIProductionExecutionBackend,
 )
+from vscs.infrastructure.production_execution.minimax_h3_span_orchestration import (
+    FFmpegMiniMaxH3SpanNormalizer,
+    GovernedMiniMaxH3SpanOrchestrationService,
+    MiniMaxH3SpanOrchestrationError,
+)
 
 
 def _backend(tmp_path: Path):
@@ -107,3 +112,62 @@ def test_h3_launch_claim_requires_preflight_authority(tmp_path):
         backend._claim_h3_direct_execution(
             _task(), SimpleNamespace(ready_to_execute=False)
         )
+
+
+def test_final_assembled_frame_count_mismatch_fails_before_manifest(tmp_path, monkeypatch):
+    raw = tmp_path / "raw.mp4"
+    raw.write_bytes(b"provider-output")
+
+    class Provider:
+        def render(self, execution):
+            return raw
+
+        def free_models_and_memory(self):
+            pass
+
+    class Normalizer:
+        def normalize(self, source_path, destination_path, **kwargs):
+            destination_path.write_bytes(b"normalized-output")
+            return destination_path
+
+    class Assembler:
+        def assemble(self, compiled_package, span_paths, output_path):
+            output_path.write_bytes(b"assembled-output")
+            return SimpleNamespace(final_path=str(output_path))
+
+    service = GovernedMiniMaxH3SpanOrchestrationService(
+        tmp_path,
+        provider=Provider(),
+        normalizer=Normalizer(),
+        assembler=Assembler(),
+    )
+    span = SimpleNamespace(
+        sequence_number=1,
+        provider_frame_count=240,
+        governed_frame_count=240,
+        to_dict=lambda: {},
+    )
+    plan = SimpleNamespace(
+        governed_frame_count=240,
+        spans=(span,),
+        plan_id="H3SPANPLAN-TEST",
+    )
+    service.adapter = SimpleNamespace(compile=lambda compiled: plan)
+    compiled = SimpleNamespace(
+        task_id="PT-H3-TEST",
+        shot_id="EP-001-SCN-001-SHT-003",
+        frame_count=240,
+        frames_per_second=24,
+        to_dict=lambda: {},
+    )
+    monkeypatch.setattr(
+        FFmpegMiniMaxH3SpanNormalizer, "_frame_count", lambda self, path: 239
+    )
+
+    with pytest.raises(MiniMaxH3SpanOrchestrationError, match="239 observed frames"):
+        service.run(compiled)
+
+    assert not (
+        tmp_path / ".vscs" / "h3_span_orchestration" / "PT-H3-TEST"
+        / "H3SPANPLAN-TEST" / "orchestration.json"
+    ).exists()
