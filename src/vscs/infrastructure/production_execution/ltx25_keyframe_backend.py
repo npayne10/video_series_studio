@@ -1077,7 +1077,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                         state=TimedSpanAcceptanceState.QC_REQUIRED,
                         assembly_present=True,
                         final_path=str(final_media),
-                        final_frame_count=self.package_compilation.require_current(
+                        final_frame_count=self.package_compilation.compile_current(
                             task, profile=normalized
                         ).frame_count,
                         message="Single-span H3 output generated; human media QC required.",
