@@ -15,11 +15,11 @@ from vscs.application.production_execution.package_compilation import (
     ProductionPackageCompilationError,
     ProductionPackageCompilerService,
 )
+from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 from vscs.infrastructure.production_execution.provider_policy_profiles import (
     MINIMAX_H3_POLICY_PROFILE_ID,
     default_provider_policy_profile_registry,
 )
-from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 
 
 def _references(required: int = 5, preferred: int = 2) -> tuple[ShotReference, ...]:
