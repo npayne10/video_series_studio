@@ -11,7 +11,6 @@ from vscs.application.acpp.reference_roles import (
     ReferenceSubjectType,
     ShotReference,
 )
-from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 from vscs.application.production_execution.package_compilation import (
     ProductionPackageCompilationError,
     ProductionPackageCompilerService,
@@ -20,6 +19,7 @@ from vscs.application.production_execution.provider_policy_profiles import (
     MINIMAX_H3_POLICY_PROFILE_ID,
     default_provider_policy_profile_registry,
 )
+from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 
 
 def _references(required: int = 5, preferred: int = 2) -> tuple[ShotReference, ...]:
@@ -65,13 +65,16 @@ def test_legacy_reference_plan_without_reviewed_projection_stays_legacy():
     assert destination == {}
 
 
-@pytest.mark.parametrize("field,value", [
-    ("provider_profile_fingerprint", "stale"),
-    ("capacity", 999),
-    ("selected_reference_ids", ["REF-0"]),
-    ("deferred_preferred_reference_ids", []),
-    ("passed", False),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("provider_profile_fingerprint", "stale"),
+        ("capacity", 999),
+        ("selected_reference_ids", ["REF-0"]),
+        ("deferred_preferred_reference_ids", []),
+        ("passed", False),
+    ],
+)
 def test_mismatched_reviewed_projection_fails_closed(field, value):
     references = _references()
     authority = _approved(references)
