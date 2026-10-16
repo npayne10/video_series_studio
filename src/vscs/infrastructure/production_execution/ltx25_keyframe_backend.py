@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -50,7 +51,14 @@ from vscs.application.timed_asset_presence import (
     TimedAssetPresenceError,
     TimedAssetPresencePlan,
 )
-from vscs.domain.generated_media import GeneratedMediaKind, GeneratedMediaState
+from vscs.domain.generated_media import (
+    GeneratedMedia,
+    GeneratedMediaKind,
+    GeneratedMediaProvenance,
+    GeneratedMediaScope,
+    GeneratedMediaState,
+)
+from vscs.infrastructure.generated_media import LocalGeneratedMediaFileStore
 from vscs.infrastructure.rendering import (
     ComfyUIWorkflowCompiler,
     ProductionPackageComfyUIAdapter,
@@ -1074,6 +1082,17 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 raise ProductionExecutionError(
                     "Provider-selectable production completed without governed assembled media."
                 )
+            if (
+                provider_profile.profile_id == MINIMAX_H3_POLICY_PROFILE_ID
+                and status.state is TimedSpanAcceptanceState.QC_REQUIRED
+                and status.requirement_count == 0
+            ):
+                self._register_h3_monolithic_generated_media(
+                    task,
+                    readiness=readiness,
+                    final_path=Path(status.final_path),
+                    frame_count=status.final_frame_count,
+                )
             self.provider_production_adoptions.record_generated(
                 readiness,
                 final_path=status.final_path,
@@ -1090,6 +1109,86 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             ProviderProductionAdoptionError,
         ) as exc:
             raise ProductionExecutionError(str(exc)) from exc
+
+    def _register_h3_monolithic_generated_media(
+        self,
+        task: ProductionTask,
+        *,
+        readiness: ProviderExecutionReadiness,
+        final_path: Path,
+        frame_count: int | None,
+    ) -> GeneratedMedia:
+        """Register verified H3 output as GENERATED, never as approved media.
+
+        This direct-orchestration provenance is explicitly distinct from queue-driven
+        durable execution jobs. Review and approval use existing Generated Media controls.
+        """
+        if not readiness.provider_plan_id or not readiness.provider_plan_fingerprint:
+            raise ProductionExecutionError(
+                "H3 media registration requires verified provider plan provenance."
+            )
+        if frame_count is None or frame_count <= 0:
+            raise ProductionExecutionError(
+                "H3 media registration requires independently verified frame count."
+            )
+        source = final_path.resolve(strict=False)
+        if not source.is_file() or not source.is_relative_to(self.project_directory):
+            raise ProductionExecutionError(
+                "H3 Generated Media source must be a verified file inside the project."
+            )
+        media_id = (
+            "GM-H3-"
+            + hashlib.sha256(
+                f"{task.task_id}|{readiness.execution_profile}|"
+                f"{readiness.provider_plan_fingerprint}".encode("utf-8")
+            ).hexdigest()[:24].upper()
+        )
+        if self.media.get(media_id) is not None:
+            raise ProductionExecutionError(
+                "H3 Generated Media already exists for this governed execution plan."
+            )
+        relative = source.relative_to(self.project_directory).as_posix()
+        filename = f"generated_media/{task.production_id}/{task.episode_id}/"
+        filename += f"{task.task_id}/{media_id}{source.suffix.lower()}"
+        file_store = LocalGeneratedMediaFileStore(
+            source_root=self.project_directory,
+            project_root=self.project_directory,
+            managed_relative_root=self.managed_media_directory,
+        )
+        copied = file_store.ingest(relative, filename)
+        previous = tuple(
+            media for media in self.media.list_for_task(task.task_id)
+            if media.kind is GeneratedMediaKind.VIDEO
+        )
+        record = GeneratedMedia(
+            media_id=media_id,
+            kind=GeneratedMediaKind.VIDEO,
+            scope=GeneratedMediaScope(
+                production_id=task.production_id,
+                episode_id=task.episode_id,
+                production_task_id=task.task_id,
+                scene_id=task.scene_id,
+                shot_id=task.shot_id,
+            ),
+            provenance=GeneratedMediaProvenance(
+                execution_id=f"H3DIRECT-{readiness.provider_plan_fingerprint[:24].upper()}",
+                provider_id=readiness.provider_profile_id,
+                provider_job_id=readiness.provider_plan_id,
+                workflow_id=readiness.execution_adapter_id,
+                attributes=(
+                    ("execution_mode", "governed_h3_direct_orchestration"),
+                    ("execution_profile", readiness.execution_profile),
+                    ("package_fingerprint", readiness.package_fingerprint),
+                    ("provider_profile_fingerprint", readiness.provider_profile_fingerprint),
+                    ("provider_plan_fingerprint", readiness.provider_plan_fingerprint),
+                    ("verified_final_frames", str(frame_count)),
+                ),
+            ),
+            file=copied,
+            revision=max((media.revision for media in previous), default=0) + 1,
+            technical_metadata=(("frame_count", str(frame_count)),),
+        )
+        return self.media.register(record)
 
     def introduction_identity_gate_required_for_profile(
         self,
