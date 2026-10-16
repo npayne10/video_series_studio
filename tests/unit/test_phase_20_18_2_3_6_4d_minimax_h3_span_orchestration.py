@@ -26,6 +26,9 @@ from vscs.infrastructure.production_execution import (
     MiniMaxH3SpanExecution,
     MiniMaxH3SpanOrchestrationError,
 )
+from vscs.infrastructure.production_execution.minimax_h3_span_orchestration import (
+    FFmpegMiniMaxH3SpanNormalizer,
+)
 
 
 def _sha(path: Path) -> str:
@@ -256,8 +259,18 @@ class _Assembler:
         return _AssemblyEvidence(final_path=str(output_path))
 
 
+@pytest.fixture
+def observed_mock_assembly_frames(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The existing fake assembler writes placeholder bytes, not encoded MP4."""
+    monkeypatch.setattr(
+        FFmpegMiniMaxH3SpanNormalizer,
+        "_frame_count",
+        lambda self, path: 144,
+    )
+
+
 def test_h3_orchestration_renders_normalizes_and_assembles_exact_span_sequence(
-    tmp_path: Path,
+    tmp_path: Path, observed_mock_assembly_frames: None,
 ) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
@@ -292,7 +305,9 @@ def test_h3_orchestration_renders_normalizes_and_assembles_exact_span_sequence(
     assert provider.freed is True
 
 
-def test_h3_orchestration_persists_provider_plan_and_output_manifest(tmp_path: Path) -> None:
+def test_h3_orchestration_persists_provider_plan_and_output_manifest(
+    tmp_path: Path, observed_mock_assembly_frames: None
+) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
     provider = _Provider(tmp_path)
@@ -397,7 +412,9 @@ def test_h3_orchestration_blocks_without_approved_introduction_keyframe(tmp_path
         service.run(compiled)
 
 
-def test_h3_orchestration_uses_requested_project_relative_final_path(tmp_path: Path) -> None:
+def test_h3_orchestration_uses_requested_project_relative_final_path(
+    tmp_path: Path, observed_mock_assembly_frames: None
+) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
     service = GovernedMiniMaxH3SpanOrchestrationService(
@@ -413,7 +430,9 @@ def test_h3_orchestration_uses_requested_project_relative_final_path(tmp_path: P
     assert result.final_path.is_file()
 
 
-def test_h3_orchestration_result_preserves_raw_and_normalized_span_order(tmp_path: Path) -> None:
+def test_h3_orchestration_result_preserves_raw_and_normalized_span_order(
+    tmp_path: Path, observed_mock_assembly_frames: None
+) -> None:
     compiled = _compiled(tmp_path)
     _approve_intro(tmp_path, compiled)
     service = GovernedMiniMaxH3SpanOrchestrationService(
