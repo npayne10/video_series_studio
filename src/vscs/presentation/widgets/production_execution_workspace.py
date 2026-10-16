@@ -997,8 +997,7 @@ class ProductionExecutionWorkspace(QWidget):
             (status.applicable or monolithic_h3)
             and (
                 monolithic_h3
-                or
-                status.state
+                or status.state
                 in {
                     TimedSpanAcceptanceState.KEYFRAME_REQUIRED,
                     TimedSpanAcceptanceState.OUTPUTS_REQUIRED,
