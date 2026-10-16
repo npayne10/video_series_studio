@@ -1023,7 +1023,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                         "MiniMax H3 requires the ComfyUI input folder beside the configured "
                         f"output folder: {comfyui_input_directory}"
                     )
-                result = MiniMaxH3AutomatedExecutionService(
+                h3_result = MiniMaxH3AutomatedExecutionService(
                     self.project_directory,
                     endpoint=self.endpoint,
                     comfyui_input_directory=comfyui_input_directory,
@@ -1045,7 +1045,11 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                 ):
                     # Single-span output is generated evidence, never human acceptance.
                     # Keep it in QC_REQUIRED until normal approved-media governance.
-                    final_media = Path(result.final_path).resolve(strict=False)
+                    if h3_result.final_path is None:
+                        raise ProductionExecutionError(
+                            "Monolithic H3 execution returned no governed final video path."
+                        )
+                    final_media = Path(h3_result.final_path).resolve(strict=False)
                     if not final_media.is_file():
                         raise ProductionExecutionError(
                             "Monolithic H3 execution did not produce a governed final video."
