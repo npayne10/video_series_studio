@@ -176,3 +176,31 @@ def test_final_assembled_frame_count_mismatch_fails_before_manifest(tmp_path, mo
         / "H3SPANPLAN-TEST"
         / "orchestration.json"
     ).exists()
+
+
+def test_monolithic_promotion_preserves_normalized_bytes(tmp_path):
+    source = tmp_path / "span-001.mp4"
+    destination = tmp_path / "SHT-003-governed-h3-assembled.mp4"
+    source.write_bytes(b"normalized-span-content")
+
+    result = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
+        source, destination
+    )
+
+    assert result == destination
+    assert destination.read_bytes() == source.read_bytes()
+    assert source.read_bytes() == b"normalized-span-content"
+
+
+def test_monolithic_promotion_never_overwrites_existing_output(tmp_path):
+    source = tmp_path / "span-001.mp4"
+    destination = tmp_path / "SHT-003-governed-h3-assembled.mp4"
+    source.write_bytes(b"new")
+    destination.write_bytes(b"protected")
+
+    with pytest.raises(MiniMaxH3SpanOrchestrationError, match="already exists"):
+        GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
+            source, destination
+        )
+
+    assert destination.read_bytes() == b"protected"
