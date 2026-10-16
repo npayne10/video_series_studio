@@ -77,9 +77,10 @@ def test_monolithic_h3_output_is_registered_as_managed_unapproved_media(tmp_path
     assert (tmp_path / media.file.relative_path).read_bytes() == raw.read_bytes()
     assert media.provenance.provider_id == "minimax-h3-ref2va"
     assert media.provenance.provider_job_id == "H3SPANPLAN-TEST"
-    assert backend.execution_profiles.profile_for_execution(
-        media.provenance.execution_id
-    ) == "production"
+    assert (
+        backend.execution_profiles.profile_for_execution(media.provenance.execution_id)
+        == "production"
+    )
     assert dict(media.provenance.attributes)["verified_final_frames"] == "240"
     assert len(backend.media.list_for_task(_task().task_id)) == 1
 
@@ -113,9 +114,7 @@ def test_h3_launch_claim_survives_and_rejects_repeated_submission(tmp_path):
 def test_h3_launch_claim_requires_preflight_authority(tmp_path):
     backend = _backend(tmp_path)
     with pytest.raises(ProductionExecutionError, match="READY"):
-        backend._claim_h3_direct_execution(
-            _task(), SimpleNamespace(ready_to_execute=False)
-        )
+        backend._claim_h3_direct_execution(_task(), SimpleNamespace(ready_to_execute=False))
 
 
 def test_final_assembled_frame_count_mismatch_fails_before_manifest(tmp_path, monkeypatch):
@@ -164,14 +163,16 @@ def test_final_assembled_frame_count_mismatch_fails_before_manifest(tmp_path, mo
         frames_per_second=24,
         to_dict=lambda: {},
     )
-    monkeypatch.setattr(
-        FFmpegMiniMaxH3SpanNormalizer, "_frame_count", lambda self, path: 239
-    )
+    monkeypatch.setattr(FFmpegMiniMaxH3SpanNormalizer, "_frame_count", lambda self, path: 239)
 
     with pytest.raises(MiniMaxH3SpanOrchestrationError, match="239 observed frames"):
         service.run(compiled)
 
     assert not (
-        tmp_path / ".vscs" / "h3_span_orchestration" / "PT-H3-TEST"
-        / "H3SPANPLAN-TEST" / "orchestration.json"
+        tmp_path
+        / ".vscs"
+        / "h3_span_orchestration"
+        / "PT-H3-TEST"
+        / "H3SPANPLAN-TEST"
+        / "orchestration.json"
     ).exists()
