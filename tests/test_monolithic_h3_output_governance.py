@@ -9,6 +9,9 @@ from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.application.production_execution import ProductionExecutionError
 from vscs.domain.generated_media import GeneratedMediaState
 from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
+from vscs.infrastructure.production_execution.execution_profile_store import (
+    LocalExecutionProfileStore,
+)
 from vscs.infrastructure.production_execution.ltx25_keyframe_backend import (
     LocalComfyUIProductionExecutionBackend,
 )
@@ -21,6 +24,7 @@ def _backend(tmp_path: Path):
     backend.media = GeneratedMediaPersistenceService(
         JsonGeneratedMediaRepository(tmp_path / ".vscs" / "generated_media")
     )
+    backend.execution_profiles = LocalExecutionProfileStore(tmp_path)
     backend.provider_production_adoptions = SimpleNamespace(
         adoption_for=lambda task_id, profile: None
     )
@@ -64,6 +68,9 @@ def test_monolithic_h3_output_is_registered_as_managed_unapproved_media(tmp_path
     assert media.file.relative_path.startswith("Media Output/generated_media/")
     assert (tmp_path / media.file.relative_path).read_bytes() == raw.read_bytes()
     assert media.provenance.provider_job_id == "H3SPANPLAN-TEST"
+    assert backend.execution_profiles.profile_for_execution(
+        media.provenance.execution_id
+    ) == "production"
     assert dict(media.provenance.attributes)["verified_final_frames"] == "240"
     assert len(backend.media.list_for_task(_task().task_id)) == 1
 
