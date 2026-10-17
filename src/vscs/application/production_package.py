@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
+from vscs.application.selection_package_cache import selection_package_lookup
 from vscs.application.story.planning_integration import (
     GovernedPlanningIntegrationService,
     IntegratedPlanningPackage,
@@ -125,6 +126,11 @@ class ProductionPackageService:
         return package
 
     def current_package(self, shot_id: str) -> ProductionPackage | None:
+        return selection_package_lookup(
+            self, shot_id, lambda: self._current_package_uncached(shot_id)
+        )
+
+    def _current_package_uncached(self, shot_id: str) -> ProductionPackage | None:
         integrated = self.planning.current_package(shot_id)
         if integrated is None:
             return None
