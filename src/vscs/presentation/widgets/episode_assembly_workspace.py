@@ -13,10 +13,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPlainTextEdit,
-    QSpinBox,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -24,8 +24,8 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.episode_draft_selection import (
-    approved_media_choices,
     approval_evidence_reference,
+    approved_media_choices,
     build_partial_draft,
     publish_partial_draft,
 )
@@ -37,8 +37,8 @@ from vscs.application.episode_shot_set_resolver import (
 )
 from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.infrastructure.assembly_timeline import (
-    AssemblyMediaEvidenceValidator,
     AssemblyEvidenceError,
+    AssemblyMediaEvidenceValidator,
     JsonAssemblyTimelineRepository,
 )
 from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
@@ -263,11 +263,14 @@ class EpisodeAssemblyWorkspace(QWidget):
         if not self._staged_media or set(self._draft_frames) != set(self._staged_media):
             self.draft_status.setText("BLOCKED: Every staged Shot needs a source frame range.")
             return
-        if QMessageBox.question(
-            self,
-            "Publish immutable Draft?",
-            "Publish this partial Draft revision? This is append-only and does not complete the Episode.",
-        ) != QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Publish immutable Draft?",
+                "Publish this partial Draft revision? This is append-only and does not complete the Episode.",
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
             return
         try:
             services = self._authority_services() if self._authority_services else None
@@ -288,8 +291,11 @@ class EpisodeAssemblyWorkspace(QWidget):
                 first, last = self._draft_frames[shot_id]
                 selected.append((shot_id, record, first, last, ref))
             revision = build_partial_draft(
-                authority, scope, self.draft_assembly_id.text().strip(),
-                self.draft_revision_id.text().strip(), tuple(selected),
+                authority,
+                scope,
+                self.draft_assembly_id.text().strip(),
+                self.draft_revision_id.text().strip(),
+                tuple(selected),
             )
             repository = JsonAssemblyTimelineRepository(directory)
             validator = AssemblyMediaEvidenceValidator(directory, media_service)
