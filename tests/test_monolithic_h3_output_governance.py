@@ -244,3 +244,48 @@ def test_recovery_never_reuses_output_without_claim(tmp_path):
         )
     assert source.read_bytes() == b"unverified"
     assert backend.media.list_for_task("PT-H3-TEST") == ()
+
+
+def test_historical_recovery_requires_original_launch_claim_without_compilation(tmp_path):
+    backend = _backend(tmp_path)
+    backend._require_task = lambda task_id: _task()
+    backend.provider_policy_selections = SimpleNamespace(
+        selected_profile=lambda task_id, profile: SimpleNamespace(
+            profile_id="minimax-h3-ref2va-v1",
+            fingerprint="b" * 64,
+        )
+    )
+    backend.package_compilation = SimpleNamespace(
+        compile_current=lambda *args, **kwargs: pytest.fail(
+            "Historical recovery must never recompile the current UPD"
+        )
+    )
+
+    with pytest.raises(ProductionExecutionError, match="launch claim"):
+        backend.recover_historical_h3_output_for_profile(
+            "PT-H3-TEST",
+            profile="production",
+            expected_sha256="a" * 64,
+            expected_frame_count=240,
+            expected_frames_per_second=24,
+        )
+
+
+def test_historical_recovery_rejects_invalid_operator_evidence(tmp_path):
+    backend = _backend(tmp_path)
+    backend._require_task = lambda task_id: _task()
+    backend.provider_policy_selections = SimpleNamespace(
+        selected_profile=lambda task_id, profile: SimpleNamespace(
+            profile_id="minimax-h3-ref2va-v1",
+            fingerprint="b" * 64,
+        )
+    )
+
+    with pytest.raises(ProductionExecutionError, match="operator evidence"):
+        backend.recover_historical_h3_output_for_profile(
+            "PT-H3-TEST",
+            profile="production",
+            expected_sha256="not-sha256",
+            expected_frame_count=240,
+            expected_frames_per_second=24,
+        )
