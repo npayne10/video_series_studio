@@ -23,7 +23,5 @@ def test_shot_switch_profile_records_stage(monkeypatch, caplog):
 
 def test_shot_switch_profile_preserves_errors(monkeypatch):
     monkeypatch.setenv("VSCS_SHOT_SWITCH_PROFILE", "1")
-    with pytest.raises(RuntimeError, match="failure"), measure_shot_switch(
-        "selection.original"
-    ):
+    with pytest.raises(RuntimeError, match="failure"), measure_shot_switch("selection.original"):
         raise RuntimeError("failure")
