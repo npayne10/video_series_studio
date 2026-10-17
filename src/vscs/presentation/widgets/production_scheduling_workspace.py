@@ -35,7 +35,7 @@ from vscs.application.production_tasks import (
 )
 from vscs.infrastructure.production.schedule_repository import JsonProductionScheduleRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
-from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch
+from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch, profile_selection_handler
 
 
 def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
@@ -46,7 +46,9 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
     workspace_type: Any = workspace_class
     original_init = workspace_type.__init__
     original_refresh = workspace_type.refresh
-    original_selection = workspace_type._selection_changed
+    original_selection = profile_selection_handler(
+        workspace_type._selection_changed, "selection.pre_scheduling_chain"
+    )
     original_compile_tasks = workspace_type._compile_production_tasks
 
     def scheduling_init(self: Any, *args: Any, **kwargs: Any) -> None:
