@@ -36,10 +36,10 @@ def approved_media_choices(
         shot_id = record.scope.shot_id
         if shot_id not in eligible_shots:
             continue
-        approved = record.state.value == "approved" and any(
+        approved = getattr(record.kind, "value", "") == "video" and record.state.value == "approved" and any(
             event.to_state.value == "approved" for event in record.governance_history
         )
-        reason = "Human approval recorded" if approved else "Human QC/approval outstanding"
+        reason = "Human approval recorded" if approved else "Video approval/eligibility outstanding"
         if not record.file.checksum_sha256 or record.file.size_bytes is None:
             approved = False
             reason = "Media checksum or size evidence missing"
@@ -79,7 +79,13 @@ def build_partial_draft(
         approved = record.state.value == "approved" and any(
             event.to_state.value == "approved" for event in record.governance_history
         )
-        if not approved or not approval_ref.strip() or not record.file.checksum_sha256 or record.file.size_bytes is None:
+        if (
+            getattr(record.kind, "value", "") != "video"
+            or not approved
+            or not approval_ref.strip()
+            or not record.file.checksum_sha256
+            or record.file.size_bytes is None
+        ):
             raise ValueError("Only real approved media with checksum evidence may be staged")
         if not record.scope.scene_id:
             raise ValueError("Scene identity evidence missing")
