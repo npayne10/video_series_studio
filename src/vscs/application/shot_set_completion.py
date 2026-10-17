@@ -79,7 +79,9 @@ class ShotSetCompletionDeclaration:
             raise ShotSetDeclarationError("Invalid readiness fingerprint")
         if self.predecessor_declaration_id == self.declaration_id:
             raise ShotSetDeclarationError("Declaration cannot supersede itself")
-        if not self.expected_shot_ids or len(self.expected_shot_ids) != len(self.selected_media_ids):
+        if not self.expected_shot_ids or len(self.expected_shot_ids) != len(
+            self.selected_media_ids
+        ):
             raise ShotSetDeclarationError("Declaration must pin complete Shot/media coverage")
 
 
@@ -121,13 +123,21 @@ class ShotSetCompletionService:
         predecessor: ShotSetCompletionDeclaration | None = None,
     ) -> ShotSetCompletionDeclaration:
         if not readiness.ready:
-            raise ShotSetDeclarationError("Shot-set declaration blocked: " + "; ".join(readiness.blockers))
+            raise ShotSetDeclarationError(
+                "Shot-set declaration blocked: " + "; ".join(readiness.blockers)
+            )
         if observed_fingerprint != readiness.fingerprint:
             raise ShotSetDeclarationError("Shot-set evidence changed since review")
         if predecessor is not None:
-            if predecessor.scope.production_id != readiness.scope.production_id or predecessor.scope.scope_id != readiness.scope.scope_id:
+            if (
+                predecessor.scope.production_id != readiness.scope.production_id
+                or predecessor.scope.scope_id != readiness.scope.scope_id
+            ):
                 raise ShotSetDeclarationError("Predecessor belongs to another production scope")
-            if predecessor.scope.declared_shot_set_revision == readiness.scope.declared_shot_set_revision:
+            if (
+                predecessor.scope.declared_shot_set_revision
+                == readiness.scope.declared_shot_set_revision
+            ):
                 raise ShotSetDeclarationError("Reopening requires a new Shot-set revision")
         return ShotSetCompletionDeclaration(
             declaration_id=declaration_id,
