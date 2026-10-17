@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QSpinBox,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -21,7 +23,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.episode_draft_selection import approved_media_choices
+from vscs.application.episode_draft_selection import (
+    approved_media_choices,
+    approval_evidence_reference,
+    build_partial_draft,
+    publish_partial_draft,
+)
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
 from vscs.application.episode_shot_set_resolver import (
     EpisodeShotSet,
@@ -30,6 +37,7 @@ from vscs.application.episode_shot_set_resolver import (
 )
 from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.infrastructure.assembly_timeline import (
+    AssemblyMediaEvidenceValidator,
     AssemblyEvidenceError,
     JsonAssemblyTimelineRepository,
 )
@@ -45,11 +53,13 @@ class EpisodeAssemblyWorkspace(QWidget):
         project_directory: Callable[[], Path | None],
         parent: QWidget | None = None,
         authority_services: Callable[[], tuple[Any, Any, Any, Any] | None] | None = None,
+        verified_assembly_scope: Callable[[str], Any | None] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("episodeAssemblyWorkspace")
         self._project_directory = project_directory
         self._authority_services = authority_services
+        self._verified_assembly_scope = verified_assembly_scope
         layout = QVBoxLayout(self)
         heading = QLabel("Episode Assembly", self)
         heading.setObjectName("episodeAssemblyHeading")
@@ -134,6 +144,32 @@ class EpisodeAssemblyWorkspace(QWidget):
         layout.addWidget(self.draft_status)
         self._draft_candidates: dict[str, tuple[str, ...]] = {}
         self._staged_media: dict[str, str] = {}
+        publication = QGroupBox("Governed Draft Publication", self)
+        publication_form = QFormLayout(publication)
+        self.draft_assembly_id = QLineEdit(self)
+        self.draft_assembly_id.setObjectName("draftAssemblyId")
+        self.draft_revision_id = QLineEdit(self)
+        self.draft_revision_id.setObjectName("draftRevisionId")
+        self.draft_in_frame = QSpinBox(self)
+        self.draft_in_frame.setObjectName("draftSourceInFrame")
+        self.draft_in_frame.setRange(0, 1_000_000)
+        self.draft_out_frame = QSpinBox(self)
+        self.draft_out_frame.setObjectName("draftSourceOutFrame")
+        self.draft_out_frame.setRange(0, 1_000_000)
+        self.draft_out_frame.setValue(24)
+        publication_form.addRow("Assembly ID", self.draft_assembly_id)
+        publication_form.addRow("Revision ID", self.draft_revision_id)
+        publication_form.addRow("Source in frame", self.draft_in_frame)
+        publication_form.addRow("Source out frame (exclusive)", self.draft_out_frame)
+        self.store_frame_range = QPushButton("Set staged Shot frame range", self)
+        self.store_frame_range.clicked.connect(self._store_frame_range)
+        publication_form.addRow(self.store_frame_range)
+        self.publish_draft_button = QPushButton("Review and Publish Immutable Draft", self)
+        self.publish_draft_button.setObjectName("publishGovernedDraft")
+        self.publish_draft_button.clicked.connect(self._publish_draft)
+        publication_form.addRow(self.publish_draft_button)
+        layout.addWidget(publication)
+        self._draft_frames: dict[str, tuple[int, int]] = {}
         self._row_blockers: list[tuple[str, ...]] = []
         self.shot_blockers = QPlainTextEdit(self)
         self.shot_blockers.setObjectName("episodeShotBlockerDetails")
@@ -159,6 +195,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
         self._staged_media.clear()
+        self._draft_frames.clear()
         self._draft_candidates.clear()
         self.draft_media_selector.clear()
         self.draft_media_selector.addItem("Select approved media for highlighted Shot", None)
@@ -189,12 +226,81 @@ class EpisodeAssemblyWorkspace(QWidget):
             "No Draft published; frame ranges and authoritative scope are still required."
         )
 
+    def _store_frame_range(self) -> None:
+        row = self.coverage_table.currentRow()
+        item = self.coverage_table.item(row, 0) if row >= 0 else None
+        shot_id = item.text() if item is not None else ""
+        if shot_id not in self._staged_media:
+            self.draft_status.setText("BLOCKED: Stage approved media for this Shot first.")
+            return
+        first, last = self.draft_in_frame.value(), self.draft_out_frame.value()
+        if last <= first:
+            self.draft_status.setText("BLOCKED: Source out frame must exceed source in frame.")
+            return
+        self._draft_frames[shot_id] = (first, last)
+        self.draft_status.setText(f"Frame range recorded for {shot_id}: [{first}, {last}).")
+
+    def _publish_draft(self) -> None:
+        """Publish only after independent authoritative scope and media verification."""
+        directory = self._project_directory()
+        episode_id = self.episode_selector.currentData()
+        if not directory or not episode_id or not self._verified_assembly_scope:
+            self.draft_status.setText(
+                "BLOCKED: Authoritative assembly scope resolver is not connected. No Draft published."
+            )
+            return
+        scope = self._verified_assembly_scope(episode_id)
+        if scope is None:
+            self.draft_status.setText("BLOCKED: Verified assembly scope unavailable.")
+            return
+        if not self._staged_media or set(self._draft_frames) != set(self._staged_media):
+            self.draft_status.setText("BLOCKED: Every staged Shot needs a source frame range.")
+            return
+        if QMessageBox.question(
+            self,
+            "Publish immutable Draft?",
+            "Publish this partial Draft revision? This is append-only and does not complete the Episode.",
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            services = self._authority_services() if self._authority_services else None
+            if services is None:
+                raise ValueError("Episode planning authority unavailable")
+            authority = resolve_episode_shots(episode_id, *services)
+            media_service = GeneratedMediaPersistenceService(
+                JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+            )
+            selected = []
+            for shot_id, media_id in self._staged_media.items():
+                record = media_service.get(media_id)
+                if record is None:
+                    raise ValueError(f"{shot_id}: persisted media not found")
+                ref = approval_evidence_reference(record)
+                if ref is None:
+                    raise ValueError(f"{shot_id}: human approval evidence missing")
+                first, last = self._draft_frames[shot_id]
+                selected.append((shot_id, record, first, last, ref))
+            revision = build_partial_draft(
+                authority, scope, self.draft_assembly_id.text().strip(),
+                self.draft_revision_id.text().strip(), tuple(selected),
+            )
+            repository = JsonAssemblyTimelineRepository(directory)
+            validator = AssemblyMediaEvidenceValidator(directory, media_service)
+            path = publish_partial_draft(revision, repository, validator)
+        except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
+            self.draft_status.setText(f"BLOCKED: Draft publication failed: {exc}")
+            return
+        self.draft_status.setText(
+            f"Published immutable Draft at {path}. Episode completion remains blocked."
+        )
+        self.discover_revisions()
+
     def _show_shot_blockers(self) -> None:
         row = self.coverage_table.currentRow()
         if 0 <= row < len(self._row_blockers):
             details = self._row_blockers[row]
             self.shot_blockers.setPlainText(
-                "\\n".join(details) if details else "No Shot-specific blockers reported."
+                "\n".join(details) if details else "No Shot-specific blockers reported."
             )
         else:
             self.shot_blockers.clear()
