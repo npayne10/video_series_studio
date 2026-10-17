@@ -119,7 +119,11 @@ class EpisodeAssemblyWorkspace(QWidget):
                 (revision.assembly_id, revision.revision_id),
             )
         self.persisted_revisions.blockSignals(False)
-        if not revisions and directory is not None and not self.status.text().startswith("BLOCKED: Unable"):
+        if (
+            not revisions
+            and directory is not None
+            and not self.status.text().startswith("BLOCKED: Unable")
+        ):
             self.status.setText("BLOCKED: No persisted timeline revisions found.")
         elif revisions:
             self.status.setText(
