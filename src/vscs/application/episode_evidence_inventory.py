@@ -38,25 +38,26 @@ def reconcile_shot_evidence(
             tasks_by_shot.setdefault(task.shot_id, []).append(task)
     rows: list[ShotEvidenceRow] = []
     for shot_id in required:
-        blockers = tuple(
-            text for text in authority_blockers if text.startswith(f"{shot_id}:")
-        )
+        blockers = tuple(text for text in authority_blockers if text.startswith(f"{shot_id}:"))
         media = media_by_shot.get(shot_id, [])
         approved = [
-            item for item in media
+            item
+            for item in media
             if item.state.value == "approved"
             and any(event.to_state.value == "approved" for event in item.governance_history)
         ]
         selection = selected.get(shot_id)
         media_status = (
             f"{len(approved)} approved / {len(media)} records"
-            if approved else ("Exists — QC/approval pending" if media else "No media record")
+            if approved
+            else ("Exists — QC/approval pending" if media else "No media record")
         )
         assembly = "Selected" if selection is not None else "Not in timeline"
         task_records = tasks_by_shot.get(shot_id, [])
         task_status = (
             ", ".join(sorted({task.state.value for task in task_records}))
-            if task_records else "No task record"
+            if task_records
+            else "No task record"
         )
         details = list(blockers)
         if selection is None:
@@ -69,8 +70,12 @@ def reconcile_shot_evidence(
             details.append("Generated Media exists; authoritative QC approval pending")
         rows.append(
             ShotEvidenceRow(
-                shot_id, "Blocked" if blockers else "No Shot-level blockers",
-                media_status, assembly, task_status, tuple(details)
+                shot_id,
+                "Blocked" if blockers else "No Shot-level blockers",
+                media_status,
+                assembly,
+                task_status,
+                tuple(details),
             )
         )
     return tuple(rows)
