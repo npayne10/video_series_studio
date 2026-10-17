@@ -52,7 +52,7 @@ def build_partial_draft(
     scope: AssemblyScope,
     assembly_id: str,
     revision_id: str,
-    selected_media: tuple[tuple[str, Any, int, int], ...],
+    selected_media: tuple[tuple[str, Any, int, int, str], ...],
     *,
     frame_rate_num: int = 24,
     frame_rate_den: int = 1,
@@ -71,7 +71,7 @@ def build_partial_draft(
         raise ValueError("Duplicate Shot selections")
     chosen = sorted(selected_media, key=lambda item: ordered.get(item[0], len(ordered)))
     selections: list[ShotSelection] = []
-    for shot_id, record, first, last in chosen:
+    for shot_id, record, first, last, approval_ref in chosen:
         if shot_id not in ordered or record.scope.shot_id != shot_id:
             raise ValueError("Media Shot identity does not match authoritative Shot")
         if record.scope.episode_id != scope.scope_id or record.scope.production_id != scope.production_id:
@@ -79,7 +79,7 @@ def build_partial_draft(
         approved = record.state.value == "approved" and any(
             event.to_state.value == "approved" for event in record.governance_history
         )
-        if not approved or not record.file.checksum_sha256 or record.file.size_bytes is None:
+        if not approved or not approval_ref.strip() or not record.file.checksum_sha256 or record.file.size_bytes is None:
             raise ValueError("Only real approved media with checksum evidence may be staged")
         if not record.scope.scene_id:
             raise ValueError("Scene identity evidence missing")
@@ -89,10 +89,7 @@ def build_partial_draft(
             generated_media_id=record.media_id,
             media_revision=str(record.revision),
             file_checksum=record.file.checksum_sha256,
-            approval_evidence_ref=next(
-                (str(event.to_state.value) for event in record.governance_history
-                 if event.to_state.value == "approved"), None
-            ),
+            approval_evidence_ref=approval_ref,
             source_in_frame=first,
             source_out_frame=last,
             sequence_index=len(selections),
