@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.selection_package_cache import selection_package_scope
 from vscs.application.production_tasks import (
     ProductionCapability,
     ProductionResource,
@@ -34,6 +33,7 @@ from vscs.application.production_tasks import (
     ProductionWorker,
     ProductionWorkerState,
 )
+from vscs.application.selection_package_cache import selection_package_scope
 from vscs.infrastructure.production.schedule_repository import JsonProductionScheduleRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.presentation.widgets.shot_switch_diagnostics import (
