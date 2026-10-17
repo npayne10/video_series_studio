@@ -48,10 +48,9 @@ def test_outside_selection_never_caches():
 
 def test_exception_discards_selection_cache():
     service = object()
-    with pytest.raises(RuntimeError, match="stop"):
-        with selection_package_scope():
-            assert selection_package_lookup(service, "SHT-1", lambda: "old") == "old"
-            raise RuntimeError("stop")
+    with pytest.raises(RuntimeError, match="stop"), selection_package_scope():
+        assert selection_package_lookup(service, "SHT-1", lambda: "old") == "old"
+        raise RuntimeError("stop")
     with selection_package_scope():
         assert selection_package_lookup(service, "SHT-1", lambda: "new") == "new"
 
