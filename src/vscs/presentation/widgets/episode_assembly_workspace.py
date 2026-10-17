@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -48,8 +49,16 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.revision_id.setObjectName("episodeRevisionId")
         form.addRow("Assembly ID", self.assembly_id)
         form.addRow("Revision ID", self.revision_id)
+        self.persisted_revisions = QComboBox(self)
+        self.persisted_revisions.setObjectName("episodePersistedRevisionSelector")
+        self.persisted_revisions.addItem("Select persisted timeline revision", None)
+        form.addRow("Available revisions", self.persisted_revisions)
         layout.addWidget(form_group)
         actions = QHBoxLayout()
+        self.discover_button = QPushButton("Find persisted revisions", self)
+        self.discover_button.setObjectName("episodeDiscoverRevisions")
+        self.discover_button.clicked.connect(self.discover_revisions)
+        actions.addWidget(self.discover_button)
         self.inspect_button = QPushButton("Inspect persisted revision", self)
         self.inspect_button.setObjectName("episodeInspectRevision")
         self.inspect_button.clicked.connect(self.refresh)
@@ -81,11 +90,52 @@ class EpisodeAssemblyWorkspace(QWidget):
         layout.addWidget(self.stages)
         self.assembly_id.textChanged.connect(self._invalidate)
         self.revision_id.textChanged.connect(self._invalidate)
+        self.persisted_revisions.currentIndexChanged.connect(self._select_persisted_revision)
 
     def _invalidate(self, *_args: object) -> None:
         self.complete_button.setEnabled(False)
         self.table.setRowCount(0)
         self.status.setText("Revision selection changed. Inspect again to view persisted evidence.")
+
+    def discover_revisions(self) -> None:
+        """List only valid persisted timeline records; never infer approval."""
+        self._invalidate()
+        self.persisted_revisions.blockSignals(True)
+        self.persisted_revisions.clear()
+        self.persisted_revisions.addItem("Select persisted timeline revision", None)
+        directory = self._project_directory()
+        try:
+            revisions = (
+                JsonAssemblyTimelineRepository(directory).list_revisions()
+                if directory is not None
+                else ()
+            )
+        except (AssemblyEvidenceError, ValueError, OSError) as exc:
+            self.status.setText(f"BLOCKED: Unable to discover timeline revisions: {exc}")
+            revisions = ()
+        for revision in revisions:
+            self.persisted_revisions.addItem(
+                f"{revision.scope.scope_id} | {revision.assembly_id} | {revision.revision_id}",
+                (revision.assembly_id, revision.revision_id),
+            )
+        self.persisted_revisions.blockSignals(False)
+        if not revisions and directory is not None and not self.status.text().startswith("BLOCKED: Unable"):
+            self.status.setText("BLOCKED: No persisted timeline revisions found.")
+        elif revisions:
+            self.status.setText(
+                f"{len(revisions)} validated persisted revision(s) available. "
+                "Select one to inspect; planned Shot-set authority is not yet connected."
+            )
+
+    def _select_persisted_revision(self, _index: int) -> None:
+        self._invalidate()
+        identity = self.persisted_revisions.currentData()
+        if identity is None:
+            return
+        assembly_id, revision_id = identity
+        self.assembly_id.setText(assembly_id)
+        self.revision_id.setText(revision_id)
+        self.refresh()
 
     def refresh(self) -> None:
         self._invalidate()
