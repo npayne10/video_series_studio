@@ -443,14 +443,23 @@ class ContinuityCompilerService:
             if referenced is not None:
                 return referenced
         planning = self.packages.planning
-        current_ids = sorted(
-            {item.shot_id for item in planning.list_packages() if planning.is_current(item)}
-        )
         normalized = shot_id.strip().upper()
-        if normalized not in current_ids:
+        # Preserve governed eligibility: the selected shot must itself have
+        # a current integrated planning package.
+        candidate_ids = sorted(
+            {item.shot_id for item in planning.list_packages() if item.shot_id <= normalized}
+        )
+        if normalized not in candidate_ids or planning.current_package(normalized) is None:
             return None
-        index = current_ids.index(normalized)
-        return self.packages.current_package(current_ids[index - 1]) if index else None
+        # Only the nearest preceding *current* shot can be the predecessor.
+        # Later IDs cannot affect that answer, and historical revisions of a
+        # single shot must not trigger repeated readiness computations.
+        for candidate_id in reversed(candidate_ids):
+            if candidate_id >= normalized:
+                continue
+            if planning.current_package(candidate_id) is not None:
+                return self.packages.current_package(candidate_id)
+        return None
 
     @classmethod
     def _referenced_previous_shot_id(cls, package: ProductionPackage) -> str:
