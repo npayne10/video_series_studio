@@ -112,3 +112,22 @@ def test_partial_draft_publication_fails_closed():
     validator.validate.return_value = SimpleNamespace(allowed=True, blockers=())
     publish_partial_draft(revision, repo, validator)
     repo.create.assert_called_once_with(revision)
+
+
+def test_approval_reference_cannot_be_substituted():
+    with pytest.raises(ValueError, match="Approval evidence reference"):
+        build_partial_draft(
+            _authority(),
+            _scope(),
+            "ASM-1",
+            "REV-1",
+            (("SHT-001", _media(), 0, 24, "UNRELATED-QC"),),
+        )
+
+
+def test_recorded_approval_reference_is_deterministic():
+    media = _media()
+    first = approval_evidence_reference(media)
+    assert first is not None
+    assert first == approval_evidence_reference(media)
+    assert first.startswith("GM-APPROVAL-SHA256-")
