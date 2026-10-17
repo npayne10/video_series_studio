@@ -52,6 +52,7 @@ def test_missing_shots_display_in_coverage_matrix(qtbot, tmp_path):
     workspace.resolve_coverage()
     assert workspace.coverage_table.rowCount() == 1
     assert workspace.coverage_table.item(0, 0).text() == "SHT-001"
-    assert workspace.coverage_table.item(0, 2).text() == "Missing"
+    assert workspace.coverage_table.item(0, 2).text() == "No media record"
+    assert workspace.coverage_table.item(0, 3).text() == "Not in timeline"
     assert "BLOCKED" in workspace.coverage_status.text()
     assert not workspace.complete_button.isEnabled()
