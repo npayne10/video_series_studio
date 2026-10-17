@@ -90,3 +90,47 @@ def test_initialization_rejects_unapproved_media_without_writes():
         initialize_governed_episode_timeline(authority, revision, repository, validator)
     repository.create.assert_not_called()
     validator.validate.assert_not_called()
+
+
+def test_initialization_publishes_only_after_validating_real_evidence():
+    authority = _authority()
+    selections = tuple(
+        SimpleNamespace(shot_id=shot, media_state="approved", approval_evidence_ref="QC-1")
+        for shot in authority.required_shot_ids
+    )
+    revision = SimpleNamespace(
+        scope=SimpleNamespace(scope_kind=AssemblyScopeKind.EPISODE, scope_id="EP-001"),
+        state=AssemblyState.DRAFT,
+        selections=selections,
+    )
+    repository = Mock()
+    repository.create.return_value = "persisted"
+    validator = Mock()
+    validator.validate.return_value = SimpleNamespace(allowed=True, blockers=())
+    assert (
+        initialize_governed_episode_timeline(authority, revision, repository, validator)
+        == "persisted"
+    )
+    validator.validate.assert_called_once_with(revision, final_use=True)
+    repository.create.assert_called_once_with(revision)
+
+
+def test_initialization_blocks_failed_media_validation():
+    authority = _authority()
+    selections = tuple(
+        SimpleNamespace(shot_id=shot, media_state="approved", approval_evidence_ref="QC-1")
+        for shot in authority.required_shot_ids
+    )
+    revision = SimpleNamespace(
+        scope=SimpleNamespace(scope_kind=AssemblyScopeKind.EPISODE, scope_id="EP-001"),
+        state=AssemblyState.DRAFT,
+        selections=selections,
+    )
+    repository = Mock()
+    validator = Mock()
+    validator.validate.return_value = SimpleNamespace(
+        allowed=False, blockers=("media checksum mismatch",)
+    )
+    with pytest.raises(ValueError, match="media checksum mismatch"):
+        initialize_governed_episode_timeline(authority, revision, repository, validator)
+    repository.create.assert_not_called()
