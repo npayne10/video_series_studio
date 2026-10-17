@@ -1,9 +1,14 @@
 """Checkpoint 4B: Episode authority and coverage must fail closed."""
 
 from types import SimpleNamespace
+
+from vscs.application.assembly_contracts import AssemblyScopeKind, AssemblyState
 from unittest.mock import Mock
 
+import pytest
+
 from vscs.application.episode_shot_set_resolver import (
+    initialize_governed_episode_timeline,
     reconcile_episode_coverage,
     resolve_episode_shots,
 )
@@ -65,3 +70,23 @@ def test_coverage_accepts_order_but_does_not_declare_completion():
     assert result.ready
     assert result.missing == ()
     assert result.extra == ()
+
+
+def test_initialization_rejects_unapproved_media_without_writes():
+    authority = _authority()
+    revision = SimpleNamespace(
+        scope=SimpleNamespace(
+            scope_kind=AssemblyScopeKind.EPISODE,
+            scope_id="EP-001",
+        ),
+        state=AssemblyState.DRAFT,
+        selections=(
+            SimpleNamespace(shot_id="SHT-001", media_state="generated", approval_evidence_ref=None),
+        ),
+    )
+    repository = Mock()
+    validator = Mock()
+    with pytest.raises(ValueError, match="Timeline initialization blocked"):
+        initialize_governed_episode_timeline(authority, revision, repository, validator)
+    repository.create.assert_not_called()
+    validator.validate.assert_not_called()
