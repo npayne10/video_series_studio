@@ -19,8 +19,10 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
+    QWidget,
 )
 
+from vscs.application.assembly_contracts import AssemblyTimelineRevision
 from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.application.shot_set_completion import ShotSetDeclarationError, ShotSetReadiness
 from vscs.infrastructure.assembly_timeline import (
@@ -38,23 +40,21 @@ from vscs.infrastructure.shot_set_completion import (
 class EpisodeShotsCompleteDialog(QDialog):
     """Explicit timeline-backed readiness and operator confirmation UI."""
 
-    def __init__(self, project_directory: Path, parent=None) -> None:
+    def __init__(self, project_directory: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Episode / Video Shots Complete")
         self.setObjectName("episode_shots_complete_dialog")
         self.resize(780, 520)
         self._timeline = JsonAssemblyTimelineRepository(project_directory)
         media = GeneratedMediaPersistenceService(
-            JsonGeneratedMediaRepository(
-                project_directory / ".vscs" / "generated_media"
-            )
+            JsonGeneratedMediaRepository(project_directory / ".vscs" / "generated_media")
         )
         verifier = AssemblyMediaEvidenceValidator(project_directory, media)
         self._governance = GovernedShotSetCompletion(
             verifier, JsonShotSetCompletionRepository(project_directory)
         )
         self._readiness: ShotSetReadiness | None = None
-        self._revision = None
+        self._revision: AssemblyTimelineRevision | None = None
         self._expected: tuple[str, ...] = ()
 
         layout = QVBoxLayout(self)
@@ -117,8 +117,7 @@ class EpisodeShotsCompleteDialog(QDialog):
             if revision is None:
                 raise AssemblyEvidenceError("Timeline revision not found")
             expected = tuple(
-                shot.strip() for shot in self.expected_shots.text().split(",")
-                if shot.strip()
+                shot.strip() for shot in self.expected_shots.text().split(",") if shot.strip()
             )
             readiness = self._governance.assess(revision, expected)
             self._revision = revision
@@ -127,8 +126,12 @@ class EpisodeShotsCompleteDialog(QDialog):
             for index, shot in enumerate(revision.selections):
                 self.table.insertRow(index)
                 for column, value in enumerate(
-                    (shot.shot_id, shot.generated_media_id, shot.media_state,
-                     shot.approval_evidence_ref or "Pending")
+                    (
+                        shot.shot_id,
+                        shot.generated_media_id,
+                        shot.media_state,
+                        shot.approval_evidence_ref or "Pending",
+                    )
                 ):
                     self.table.setItem(index, column, QTableWidgetItem(value))
             self.status.setText(
@@ -147,7 +150,8 @@ class EpisodeShotsCompleteDialog(QDialog):
         if not self.complete_button.isEnabled() or readiness is None or revision is None:
             return
         answer = QMessageBox.question(
-            self, "Confirm Episode / Video Shots Complete",
+            self,
+            "Confirm Episode / Video Shots Complete",
             "Declare this selected Shot-set revision complete? This does NOT approve "
             "media, complete ProductionTasks, assemble video, or trigger rendering.",
         )
@@ -155,7 +159,8 @@ class EpisodeShotsCompleteDialog(QDialog):
             return
         try:
             declaration = self._governance.declare(
-                revision, self._expected,
+                revision,
+                self._expected,
                 declaration_id="DECL-" + uuid.uuid4().hex.upper(),
                 operator_id=self.operator_id.text().strip(),
                 observed_fingerprint=readiness.fingerprint,
