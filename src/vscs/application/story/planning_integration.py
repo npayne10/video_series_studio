@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
+from vscs.application.selection_package_cache import selection_package_lookup
 
 from .planning_review import GovernedPlanningReviewService, PlanningReview
 
@@ -111,7 +112,13 @@ class GovernedPlanningIntegrationService:
         return package
 
     def current_package(self, shot_id: str) -> IntegratedPlanningPackage | None:
-        """Return the package matching the currently approved planning authority."""
+        """Return current planning authority, reused only within one UI selection."""
+        return selection_package_lookup(
+            self, shot_id, lambda: self._current_package_uncached(shot_id)
+        )
+
+    def _current_package_uncached(self, shot_id: str) -> IntegratedPlanningPackage | None:
+        """Evaluate the authoritative planning package without a cache."""
         normalized = shot_id.strip().upper()
         review = self.reviews.review(normalized)
         if review is None or not self.reviews.is_production_ready(review):
