@@ -11,10 +11,10 @@ from pathlib import Path
 from vscs.application.assembly_contracts import AssemblyTimelineRevision
 from vscs.application.shot_set_completion import (
     ShotSetCompletionDeclaration,
-    ShotSetState,
     ShotSetCompletionService,
     ShotSetDeclarationError,
     ShotSetReadiness,
+    ShotSetState,
 )
 from vscs.infrastructure.assembly_timeline import AssemblyMediaEvidenceValidator
 
