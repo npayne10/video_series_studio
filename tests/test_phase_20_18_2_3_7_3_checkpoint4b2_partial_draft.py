@@ -24,7 +24,8 @@ def _media(shot="SHT-001", state="approved"):
         state=SimpleNamespace(value=state),
         governance_history=(
             (SimpleNamespace(to_state=SimpleNamespace(value="approved")),)
-            if state == "approved" else ()
+            if state == "approved"
+            else ()
         ),
         file=SimpleNamespace(checksum_sha256="a" * 64, size_bytes=100),
         revision=1,
@@ -53,7 +54,10 @@ def test_choices_exclude_pending_approval():
 
 def test_partial_draft_preserves_missing_shots_without_placeholder_media():
     revision = build_partial_draft(
-        _authority(), _scope(), "ASM-1", "REV-1",
+        _authority(),
+        _scope(),
+        "ASM-1",
+        "REV-1",
         (("SHT-001", _media(), 0, 24, "HUMAN-QC-1"),),
     )
     assert len(revision.selections) == 1
@@ -64,7 +68,10 @@ def test_partial_draft_preserves_missing_shots_without_placeholder_media():
 def test_draft_rejects_media_without_human_approval_reference():
     with pytest.raises(ValueError, match="approved media"):
         build_partial_draft(
-            _authority(), _scope(), "ASM-1", "REV-1",
+            _authority(),
+        _scope(),
+        "ASM-1",
+        "REV-1",
             (("SHT-001", _media(), 0, 24, ""),),
         )
 
@@ -72,14 +79,20 @@ def test_draft_rejects_media_without_human_approval_reference():
 def test_draft_rejects_mismatched_media_shot():
     with pytest.raises(ValueError, match="Shot identity"):
         build_partial_draft(
-            _authority(), _scope(), "ASM-1", "REV-1",
+            _authority(),
+        _scope(),
+        "ASM-1",
+        "REV-1",
             (("SHT-001", _media(shot="SHT-999"), 0, 24, "QC-1"),),
         )
 
 
 def test_partial_draft_publication_fails_closed():
     revision = build_partial_draft(
-        _authority(), _scope(), "ASM-1", "REV-1",
+        _authority(),
+        _scope(),
+        "ASM-1",
+        "REV-1",
         (("SHT-001", _media(), 0, 24, "QC-1"),),
     )
     repo, validator = Mock(), Mock()
