@@ -126,6 +126,8 @@ def test_media_mismatch_and_missing_reference_block(tmp_path):
 def test_provisional_historical_recovery_never_becomes_final_media(tmp_path):
     media, _location, checksum = _media(tmp_path)
     revision = _revision(checksum)
-    assert not AssemblyMediaEvidenceValidator(tmp_path, media).validate(
-        revision, final_use=True
-    ).allowed
+    assert (
+        not AssemblyMediaEvidenceValidator(tmp_path, media)
+        .validate(revision, final_use=True)
+        .allowed
+    )
