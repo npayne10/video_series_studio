@@ -36,8 +36,10 @@ def approved_media_choices(
         shot_id = record.scope.shot_id
         if shot_id not in eligible_shots:
             continue
-        approved = getattr(record.kind, "value", "") == "video" and record.state.value == "approved" and any(
-            event.to_state.value == "approved" for event in record.governance_history
+        approved = (
+            getattr(record.kind, "value", "") == "video"
+            and record.state.value == "approved"
+            and any(event.to_state.value == "approved" for event in record.governance_history)
         )
         reason = "Human approval recorded" if approved else "Video approval/eligibility outstanding"
         if not record.file.checksum_sha256 or record.file.size_bytes is None:
@@ -74,7 +76,10 @@ def build_partial_draft(
     for shot_id, record, first, last, approval_ref in chosen:
         if shot_id not in ordered or record.scope.shot_id != shot_id:
             raise ValueError("Media Shot identity does not match authoritative Shot")
-        if record.scope.episode_id != scope.scope_id or record.scope.production_id != scope.production_id:
+        if (
+            record.scope.episode_id != scope.scope_id
+            or record.scope.production_id != scope.production_id
+        ):
             raise ValueError("Media production or Episode identity mismatch")
         approved = record.state.value == "approved" and any(
             event.to_state.value == "approved" for event in record.governance_history
