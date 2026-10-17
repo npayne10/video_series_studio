@@ -11,6 +11,7 @@ from pathlib import Path
 from vscs.application.assembly_contracts import AssemblyTimelineRevision
 from vscs.application.shot_set_completion import (
     ShotSetCompletionDeclaration,
+    ShotSetState,
     ShotSetCompletionService,
     ShotSetDeclarationError,
     ShotSetReadiness,
@@ -83,12 +84,12 @@ class JsonShotSetCompletionRepository:
                 selected_media_ids=tuple(raw["selected_media_ids"]),
                 operator_id=raw["operator_id"],
                 predecessor_declaration_id=raw["predecessor_declaration_id"],
-                state=raw["state"],
+                state=ShotSetState(raw["state"]),
                 schema_version=raw["schema_version"],
             )
             if restored.declaration_id != declaration_id or restored.schema_version != "1.0":
                 raise ValueError("Declaration identity/schema mismatch")
-            if asdict(restored) != raw:
+            if json.loads(json.dumps(asdict(restored))) != raw:
                 raise ValueError("Declaration contains unsupported data")
             return restored
         except (OSError, ValueError, TypeError, KeyError) as exc:
