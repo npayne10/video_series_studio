@@ -169,7 +169,7 @@ class AssemblyMediaEvidenceValidator:
                 or record.scope.episode_id != revision.scope.scope_id
                 or record.scope.scene_id != selection.scene_id
                 or record.scope.shot_id != selection.shot_id
-                or record.revision != int(selection.media_revision)
+                or str(record.revision) != selection.media_revision
                 or record.state.value != selection.media_state
                 or record.file.checksum_sha256 != selection.file_checksum
             ):
