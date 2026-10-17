@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -19,6 +20,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_shot_set_resolver import (
+    EpisodeShotSet,
+    reconcile_episode_coverage,
+    resolve_episode_shots,
+)
 from vscs.infrastructure.assembly_timeline import (
     AssemblyEvidenceError,
     JsonAssemblyTimelineRepository,
@@ -28,10 +34,16 @@ from vscs.infrastructure.assembly_timeline import (
 class EpisodeAssemblyWorkspace(QWidget):
     """Inspect persisted episode assembly revisions without declaring completion."""
 
-    def __init__(self, project_directory: Callable[[], Path | None], parent: QWidget | None = None):
+    def __init__(
+        self,
+        project_directory: Callable[[], Path | None],
+        parent: QWidget | None = None,
+        authority_services: Callable[[], tuple[Any, Any, Any, Any] | None] | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("episodeAssemblyWorkspace")
         self._project_directory = project_directory
+        self._authority_services = authority_services
         layout = QVBoxLayout(self)
         heading = QLabel("Episode Assembly", self)
         heading.setObjectName("episodeAssemblyHeading")
@@ -41,6 +53,17 @@ class EpisodeAssemblyWorkspace(QWidget):
                 "Shot Set Readiness & Completion — authoritative planning integration pending", self
             )
         )
+        episode_group = QGroupBox("Authoritative Episode Coverage", self)
+        episode_form = QFormLayout(episode_group)
+        self.episode_selector = QComboBox(self)
+        self.episode_selector.setObjectName("episodeAuthoritySelector")
+        self.episode_selector.addItem("Select governed Episode", None)
+        episode_form.addRow("Episode", self.episode_selector)
+        self.resolve_button = QPushButton("Resolve Episode Shot Set", self)
+        self.resolve_button.setObjectName("episodeResolveShotSet")
+        self.resolve_button.clicked.connect(self.resolve_coverage)
+        episode_form.addRow(self.resolve_button)
+        layout.addWidget(episode_group)
         form_group = QGroupBox("Persisted Assembly Timeline Revision", self)
         form = QFormLayout(form_group)
         self.assembly_id = QLineEdit(self)
@@ -81,6 +104,16 @@ class EpisodeAssemblyWorkspace(QWidget):
             ["Shot", "Generated Media", "State", "Approval Evidence"]
         )
         layout.addWidget(self.table)
+        self.coverage_status = QLabel("BLOCKED: Authoritative Episode Shot set not resolved.", self)
+        self.coverage_status.setObjectName("episodeCoverageStatus")
+        self.coverage_status.setWordWrap(True)
+        layout.addWidget(self.coverage_status)
+        self.coverage_table = QTableWidget(0, 4, self)
+        self.coverage_table.setObjectName("episodeCoverageMatrix")
+        self.coverage_table.setHorizontalHeaderLabels(
+            ["Required Shot", "Timeline Media", "Coverage", "Approval"]
+        )
+        layout.addWidget(self.coverage_table)
         self.stages = QLabel(
             "Next governed stages (not yet enabled): Picture Lock → Dialogue & Lip-Sync → "
             "Effects & Transitions → Mastering & Final QC",
@@ -91,11 +124,81 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.assembly_id.textChanged.connect(self._invalidate)
         self.revision_id.textChanged.connect(self._invalidate)
         self.persisted_revisions.currentIndexChanged.connect(self._select_persisted_revision)
+        self.episode_selector.currentIndexChanged.connect(self._invalidate)
+        self._selected_revision: Any = None
+        self._resolved_authority: EpisodeShotSet | None = None
 
     def _invalidate(self, *_args: object) -> None:
         self.complete_button.setEnabled(False)
         self.table.setRowCount(0)
+        self.coverage_table.setRowCount(0)
+        self._selected_revision = None
+        self._resolved_authority = None
+        self.coverage_status.setText("BLOCKED: Episode coverage must be recalculated.")
         self.status.setText("Revision selection changed. Inspect again to view persisted evidence.")
+
+    def discover_episodes(self) -> None:
+        self.episode_selector.blockSignals(True)
+        self.episode_selector.clear()
+        self.episode_selector.addItem("Select governed Episode", None)
+        services = self._authority_services() if self._authority_services else None
+        if services is not None:
+            episodes, _scenes, _shots, _reviews = services
+            try:
+                for episode in episodes.list_plans():
+                    self.episode_selector.addItem(
+                        f"{episode.episode_id} — {episode.title}", episode.episode_id
+                    )
+            except (OSError, ValueError, RuntimeError) as exc:
+                self.coverage_status.setText(f"BLOCKED: Episode authority unavailable: {exc}")
+        self.episode_selector.blockSignals(False)
+
+    def resolve_coverage(self) -> None:
+        self.coverage_table.setRowCount(0)
+        self.complete_button.setEnabled(False)
+        services = self._authority_services() if self._authority_services else None
+        episode_id = self.episode_selector.currentData()
+        if services is None:
+            self.coverage_status.setText("BLOCKED: Governed Episode planning services unavailable.")
+            return
+        if not episode_id:
+            self.coverage_status.setText("BLOCKED: Select an authoritative Episode.")
+            return
+        try:
+            authority = resolve_episode_shots(episode_id, *services)
+            self._resolved_authority = authority
+            revision = self._selected_revision
+            if revision is not None and revision.scope.scope_id != episode_id:
+                self.coverage_status.setText("BLOCKED: Timeline revision belongs to another Episode.")
+                return
+            selections = revision.selections if revision is not None else ()
+            coverage = reconcile_episode_coverage(authority, selections)
+        except (OSError, ValueError, RuntimeError) as exc:
+            self.coverage_status.setText(f"BLOCKED: Episode authority evaluation failed: {exc}")
+            return
+        by_shot = {item.shot_id: item for item in selections}
+        for index, shot_id in enumerate(authority.required_shot_ids):
+            selection = by_shot.get(shot_id)
+            values = (
+                shot_id,
+                selection.generated_media_id if selection else "Missing",
+                "Selected" if selection else "Missing",
+                (
+                    "Approved evidence recorded"
+                    if selection and selection.media_state == "approved"
+                    and selection.approval_evidence_ref
+                    else "Not verified"
+                ),
+            )
+            self.coverage_table.insertRow(index)
+            for col, value in enumerate(values):
+                self.coverage_table.setItem(index, col, QTableWidgetItem(value))
+        self.coverage_status.setText(
+            ("PREVIEW: Coverage matches planned Shot order. Completion remains blocked; "
+             "final media evidence and Episode-set authority are not yet certified.")
+            if coverage.ready
+            else "BLOCKED: " + "; ".join(coverage.blockers)
+        )
 
     def discover_revisions(self) -> None:
         """List only valid persisted timeline records; never infer approval."""
@@ -160,6 +263,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         if revision is None:
             self.status.setText("BLOCKED: Persisted timeline revision not found.")
             return
+        self._selected_revision = revision
         for index, shot in enumerate(revision.selections):
             self.table.insertRow(index)
             for col, value in enumerate(
@@ -171,6 +275,8 @@ class EpisodeAssemblyWorkspace(QWidget):
                 )
             ):
                 self.table.setItem(index, col, QTableWidgetItem(value))
+        if self.episode_selector.currentData():
+            self.resolve_coverage()
         self.status.setText(
             f"Revision {revision.revision_id}: {len(revision.selections)} selected Shots. "
             "PREVIEW ONLY — the complete approved planned Shot set has not been "
