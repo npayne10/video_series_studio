@@ -166,6 +166,11 @@ class EpisodeAssemblyWorkspace(QWidget):
         publication_form.addRow(self.store_frame_range)
         self.publish_draft_button = QPushButton("Review and Publish Immutable Draft", self)
         self.publish_draft_button.setObjectName("publishGovernedDraft")
+        self.publish_draft_button.setEnabled(verified_assembly_scope is not None)
+        if verified_assembly_scope is None:
+            self.publish_draft_button.setToolTip(
+                "Blocked: verified assembly-scope authority is not connected."
+            )
         self.publish_draft_button.clicked.connect(self._publish_draft)
         publication_form.addRow(self.publish_draft_button)
         layout.addWidget(publication)
