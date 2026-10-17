@@ -216,7 +216,8 @@ class EpisodeAssemblyWorkspace(QWidget):
                 JsonProductionTaskRepository(
                     directory / "production" / "scheduling" / "tasks"
                 ).list_all()
-                if directory is not None else ()
+                if directory is not None
+                else ()
             )
             tasks = tuple(task for task in tasks if task.episode_id == episode_id)
         except (OSError, ValueError, RuntimeError) as exc:
@@ -237,7 +238,8 @@ class EpisodeAssemblyWorkspace(QWidget):
         qc_pending = sum("QC/approval pending" in row.media for row in rows)
         absent = sum(row.assembly == "Not in timeline" for row in rows)
         self.coverage_status.setText(
-            f"{len(rows)} required Shots | {planning_blocked} planning blocked | "
+            ("BLOCKED: " if coverage.blockers else "PREVIEW: ")
+            + f"{len(rows)} required Shots | {planning_blocked} planning blocked | "
             f"{media_missing} without media | {qc_pending} awaiting QC | "
             f"{absent} not in timeline | {len(coverage.blockers)} governance blockers. "
             "Completion remains disabled. Select a Shot row for details."
