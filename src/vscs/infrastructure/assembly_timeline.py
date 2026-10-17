@@ -45,9 +45,7 @@ def _encode(revision: AssemblyTimelineRevision) -> dict[str, Any]:
 def _decode(raw: Any) -> AssemblyTimelineRevision:
     try:
         data = _object(raw, "timeline", _fields(AssemblyTimelineRevision))
-        scope = AssemblyScope(
-            **_object(data["scope"], "scope", _fields(AssemblyScope))
-        )
+        scope = AssemblyScope(**_object(data["scope"], "scope", _fields(AssemblyScope)))
         selections_raw = data["selections"]
         if not isinstance(selections_raw, list):
             raise AssemblyEvidenceError("selections must be a list")
@@ -129,7 +127,9 @@ class JsonAssemblyTimelineRepository:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
             document = _object(
-                payload, "revision document", frozenset({"schema_version", "fingerprint", "timeline"})
+                payload,
+                "revision document",
+                frozenset({"schema_version", "fingerprint", "timeline"}),
             )
             if document["schema_version"] != "1.0":
                 raise AssemblyEvidenceError("Unsupported assembly repository schema")
@@ -146,18 +146,19 @@ class JsonAssemblyTimelineRepository:
 class AssemblyMediaEvidenceValidator:
     """Verify actual Generated Media records and bytes; no state transitions."""
 
-    def __init__(
-        self, project_directory: Path, media: GeneratedMediaPersistenceService
-    ) -> None:
+    def __init__(self, project_directory: Path, media: GeneratedMediaPersistenceService) -> None:
         self.project_directory = Path(project_directory).resolve()
         self.media = media
 
     def validate(
         self, revision: AssemblyTimelineRevision, *, final_use: bool
     ) -> AssemblyValidation:
-        blockers = list(AssemblyGovernanceValidator().validate(revision, final_use=final_use).blockers)
+        blockers = list(
+            AssemblyGovernanceValidator().validate(revision, final_use=final_use).blockers
+        )
         if revision.scope.scope_kind is not AssemblyScopeKind.EPISODE:
-            return AssemblyValidation(False, tuple(blockers + ["Standalone scope verification not implemented"]))
+            blockers.append("Standalone scope verification not implemented")
+            return AssemblyValidation(False, tuple(blockers))
         for selection in revision.selections:
             record = self.media.get(selection.generated_media_id)
             if record is None:
@@ -173,11 +174,16 @@ class AssemblyMediaEvidenceValidator:
                 or record.state.value != selection.media_state
                 or record.file.checksum_sha256 != selection.file_checksum
             ):
-                blockers.append(f"{selection.shot_id}: media identity, revision, state or checksum mismatch")
+                blockers.append(
+                    f"{selection.shot_id}: media identity, revision, state or checksum mismatch"
+                )
                 continue
             if final_use and (
                 record.state is not GeneratedMediaState.APPROVED
-                or not any(event.to_state is GeneratedMediaState.APPROVED for event in record.governance_history)
+                or not any(
+                    event.to_state is GeneratedMediaState.APPROVED
+                    for event in record.governance_history
+                )
             ):
                 blockers.append(f"{selection.shot_id}: authoritative human approval missing")
             if record.file.size_bytes is None:
@@ -192,6 +198,9 @@ class AssemblyMediaEvidenceValidator:
             except OSError:
                 blockers.append(f"{selection.shot_id}: media file unreadable")
                 continue
-            if len(data) != record.file.size_bytes or hashlib.sha256(data).hexdigest() != selection.file_checksum:
+            if (
+                len(data) != record.file.size_bytes
+                or hashlib.sha256(data).hexdigest() != selection.file_checksum
+            ):
                 blockers.append(f"{selection.shot_id}: media bytes do not match evidence")
         return AssemblyValidation(not blockers, tuple(blockers))
