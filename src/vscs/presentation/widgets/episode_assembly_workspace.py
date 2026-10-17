@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -18,7 +18,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.infrastructure.assembly_timeline import AssemblyEvidenceError, JsonAssemblyTimelineRepository
+from vscs.infrastructure.assembly_timeline import (
+    AssemblyEvidenceError,
+    JsonAssemblyTimelineRepository,
+)
 
 
 class EpisodeAssemblyWorkspace(QWidget):
@@ -32,7 +35,11 @@ class EpisodeAssemblyWorkspace(QWidget):
         heading = QLabel("Episode Assembly", self)
         heading.setObjectName("episodeAssemblyHeading")
         layout.addWidget(heading)
-        layout.addWidget(QLabel("Shot Set Readiness & Completion — authoritative planning integration pending", self))
+        layout.addWidget(
+            QLabel(
+                "Shot Set Readiness & Completion — authoritative planning integration pending", self
+            )
+        )
         form_group = QGroupBox("Persisted Assembly Timeline Revision", self)
         form = QFormLayout(form_group)
         self.assembly_id = QLineEdit(self)
@@ -50,7 +57,9 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.complete_button = QPushButton("Episode / Video Shots Complete", self)
         self.complete_button.setObjectName("episodeDeclareComplete")
         self.complete_button.setEnabled(False)
-        self.complete_button.setToolTip("Blocked until authoritative planned Shot-set coverage is resolved.")
+        self.complete_button.setToolTip(
+            "Blocked until authoritative planned Shot-set coverage is resolved."
+        )
         actions.addWidget(self.complete_button)
         layout.addLayout(actions)
         self.status = QLabel("Open a project and inspect a persisted timeline revision.", self)
@@ -59,7 +68,9 @@ class EpisodeAssemblyWorkspace(QWidget):
         layout.addWidget(self.status)
         self.table = QTableWidget(0, 4, self)
         self.table.setObjectName("episodeAssemblyShotTable")
-        self.table.setHorizontalHeaderLabels(["Shot", "Generated Media", "State", "Approval Evidence"])
+        self.table.setHorizontalHeaderLabels(
+            ["Shot", "Generated Media", "State", "Approval Evidence"]
+        )
         layout.addWidget(self.table)
         self.stages = QLabel(
             "Next governed stages (not yet enabled): Picture Lock → Dialogue & Lip-Sync → "
@@ -97,10 +108,14 @@ class EpisodeAssemblyWorkspace(QWidget):
             return
         for index, shot in enumerate(revision.selections):
             self.table.insertRow(index)
-            for col, value in enumerate((
-                shot.shot_id, shot.generated_media_id, shot.media_state,
-                shot.approval_evidence_ref or "Pending",
-            )):
+            for col, value in enumerate(
+                (
+                    shot.shot_id,
+                    shot.generated_media_id,
+                    shot.media_state,
+                    shot.approval_evidence_ref or "Pending",
+                )
+            ):
                 self.table.setItem(index, col, QTableWidgetItem(value))
         self.status.setText(
             f"Revision {revision.revision_id}: {len(revision.selections)} selected Shots. "
