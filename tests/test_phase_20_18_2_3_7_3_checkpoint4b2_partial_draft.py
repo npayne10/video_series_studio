@@ -1,5 +1,6 @@
 """Checkpoint 4B.2: partial Drafts cannot fabricate or bypass media authority."""
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -10,6 +11,7 @@ from vscs.application.episode_draft_selection import (
     approved_media_choices,
     build_partial_draft,
     publish_partial_draft,
+    approval_evidence_reference,
 )
 from vscs.application.episode_shot_set_resolver import EpisodeShotSet
 
@@ -23,7 +25,12 @@ def _media(shot="SHT-001", state="approved"):
         ),
         state=SimpleNamespace(value=state),
         governance_history=(
-            (SimpleNamespace(to_state=SimpleNamespace(value="approved")),)
+            (SimpleNamespace(
+                to_state=SimpleNamespace(value="approved"),
+                from_state=SimpleNamespace(value="under_review"),
+                actor="test-operator", reason="QC accepted",
+                occurred_at=datetime(2026, 1, 1, tzinfo=UTC),
+            ),)
             if state == "approved"
             else ()
         ),
@@ -58,11 +65,11 @@ def test_partial_draft_preserves_missing_shots_without_placeholder_media():
         _scope(),
         "ASM-1",
         "REV-1",
-        (("SHT-001", _media(), 0, 24, "HUMAN-QC-1"),),
+        (("SHT-001", (media := _media()), 0, 24, approval_evidence_reference(media)),),
     )
     assert len(revision.selections) == 1
     assert revision.selections[0].shot_id == "SHT-001"
-    assert revision.selections[0].approval_evidence_ref == "HUMAN-QC-1"
+    assert revision.selections[0].approval_evidence_ref == approval_evidence_reference(media)
 
 
 def test_draft_rejects_media_without_human_approval_reference():
@@ -83,7 +90,7 @@ def test_draft_rejects_mismatched_media_shot():
             _scope(),
             "ASM-1",
             "REV-1",
-            (("SHT-001", _media(shot="SHT-999"), 0, 24, "QC-1"),),
+            (("SHT-001", (media := _media(shot="SHT-999")), 0, 24, approval_evidence_reference(media)),),
         )
 
 
@@ -93,7 +100,7 @@ def test_partial_draft_publication_fails_closed():
         _scope(),
         "ASM-1",
         "REV-1",
-        (("SHT-001", _media(), 0, 24, "QC-1"),),
+        (("SHT-001", (media := _media()), 0, 24, approval_evidence_reference(media)),),
     )
     repo, validator = Mock(), Mock()
     validator.validate.return_value = SimpleNamespace(
