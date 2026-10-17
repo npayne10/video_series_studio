@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch
+
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -389,10 +391,14 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
     def _refresh_production_scheduling(self: Any, *_args: Any) -> None:
         if not hasattr(self, "scheduling_resource_table"):
             return
-        _render_resources(self)
-        _render_workers(self)
-        _render_schedule(self)
-        _render_queue(self)
+        with measure_shot_switch("scheduling.resources"):
+            _render_resources(self)
+        with measure_shot_switch("scheduling.workers"):
+            _render_workers(self)
+        with measure_shot_switch("scheduling.schedule"):
+            _render_schedule(self)
+        with measure_shot_switch("scheduling.queue"):
+            _render_queue(self)
         production_id = self._scheduling_production_id()
         enabled = bool(production_id and self.projects.is_project_open)
         self.scheduling_refresh_readiness_button.setEnabled(enabled)
@@ -414,8 +420,11 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self._refresh_production_scheduling()
 
     def scheduling_selection(self: Any) -> None:
-        original_selection(self)
-        self._refresh_production_scheduling()
+        with measure_shot_switch("selection.total"):
+            with measure_shot_switch("selection.original"):
+                original_selection(self)
+            with measure_shot_switch("selection.scheduling_refresh"):
+                self._refresh_production_scheduling()
 
     workspace_type.__init__ = scheduling_init
     workspace_type._build_production_scheduling_tab = _build_production_scheduling_tab
