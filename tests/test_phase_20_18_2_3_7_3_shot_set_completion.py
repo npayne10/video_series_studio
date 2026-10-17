@@ -24,8 +24,16 @@ from vscs.infrastructure.shot_set_completion import (
 def _timeline(state="approved"):
     scope = AssemblyScope("PROD-1", AssemblyScopeKind.EPISODE, "EP-1", "SET-1", "a" * 64)
     shot = ShotSelection(
-        "SCN-1", "SHT-1", "GM-1", "1", "b" * 64,
-        "QC-1" if state == "approved" else None, 0, 24, 0, state
+        "SCN-1",
+        "SHT-1",
+        "GM-1",
+        "1",
+        "b" * 64,
+        "QC-1" if state == "approved" else None,
+        0,
+        24,
+        0,
+        state,
     )
     return AssemblyTimelineRevision("ASM-1", "REV-1", scope, (shot,), 24, 1)
 
@@ -47,19 +55,26 @@ def test_readiness_requires_expected_coverage_and_human_approved_source():
     service = ShotSetCompletionService()
     timeline = _timeline()
     okay = service.assess(
-        timeline.scope, ("SHT-1",), timeline.selections, media_validation=AssemblyValidation(True, ())
+        timeline.scope,
+        ("SHT-1",),
+        timeline.selections,
+        media_validation=AssemblyValidation(True, ()),
     )
     assert okay.ready
     assert len(okay.fingerprint) == 64
     missing = service.assess(
-        timeline.scope, ("SHT-1", "SHT-2"), timeline.selections,
-        media_validation=AssemblyValidation(True, ())
+        timeline.scope,
+        ("SHT-1", "SHT-2"),
+        timeline.selections,
+        media_validation=AssemblyValidation(True, ()),
     )
     assert not missing.ready
     unapproved = _timeline("generated")
     result = service.assess(
-        unapproved.scope, ("SHT-1",), unapproved.selections,
-        media_validation=AssemblyValidation(True, ())
+        unapproved.scope,
+        ("SHT-1",),
+        unapproved.selections,
+        media_validation=AssemblyValidation(True, ()),
     )
     assert not result.ready
 
@@ -72,8 +87,11 @@ def test_handoff_rechecks_authoritative_evidence(tmp_path):
     verifier.allowed = False
     with pytest.raises(ShotSetDeclarationError, match="blocked"):
         process.declare(
-            timeline, ("SHT-1",), declaration_id="DECL-1",
-            operator_id="operator", observed_fingerprint=readiness.fingerprint
+            timeline,
+            ("SHT-1",),
+            declaration_id="DECL-1",
+            operator_id="operator",
+            observed_fingerprint=readiness.fingerprint,
         )
     assert process.repository.get("DECL-1") is None
     assert verifier.calls == 2
@@ -87,48 +105,61 @@ def test_explicit_operator_fingerprint_required_and_append_only(tmp_path):
     readiness = process.assess(timeline, ("SHT-1",))
     with pytest.raises(ShotSetDeclarationError, match="changed"):
         process.declare(
-            timeline, ("SHT-1",), declaration_id="DECL-1",
-            operator_id="operator", observed_fingerprint="0" * 64
+            timeline,
+            ("SHT-1",),
+            declaration_id="DECL-1",
+            operator_id="operator",
+            observed_fingerprint="0" * 64,
         )
     declaration = process.declare(
-        timeline, ("SHT-1",), declaration_id="DECL-1",
-        operator_id="operator", observed_fingerprint=readiness.fingerprint
+        timeline,
+        ("SHT-1",),
+        declaration_id="DECL-1",
+        operator_id="operator",
+        observed_fingerprint=readiness.fingerprint,
     )
     assert repository.get("DECL-1") == declaration
     with pytest.raises(ShotSetDeclarationError, match="already exists"):
         process.declare(
-            timeline, ("SHT-1",), declaration_id="DECL-1",
-            operator_id="operator", observed_fingerprint=readiness.fingerprint
+            timeline,
+            ("SHT-1",),
+            declaration_id="DECL-1",
+            operator_id="operator",
+            observed_fingerprint=readiness.fingerprint,
         )
 
 
 def test_revision_reopening_requires_new_shot_set_revision(tmp_path):
-    process = GovernedShotSetCompletion(
-        _Verifier(), JsonShotSetCompletionRepository(tmp_path)
-    )
+    process = GovernedShotSetCompletion(_Verifier(), JsonShotSetCompletionRepository(tmp_path))
     timeline = _timeline()
     first = process.declare(
-        timeline, ("SHT-1",), declaration_id="DECL-1",
-        operator_id="operator", observed_fingerprint=process.assess(
-            timeline, ("SHT-1",)
-        ).fingerprint
+        timeline,
+        ("SHT-1",),
+        declaration_id="DECL-1",
+        operator_id="operator",
+        observed_fingerprint=process.assess(timeline, ("SHT-1",)).fingerprint,
     )
     with pytest.raises(ShotSetDeclarationError, match="new Shot-set revision"):
         process.declare(
-            timeline, ("SHT-1",), declaration_id="DECL-2",
-            operator_id="operator", observed_fingerprint=process.assess(
-                timeline, ("SHT-1",)
-            ).fingerprint, predecessor_declaration_id=first.declaration_id
+            timeline,
+            ("SHT-1",),
+            declaration_id="DECL-2",
+            operator_id="operator",
+            observed_fingerprint=process.assess(timeline, ("SHT-1",)).fingerprint,
+            predecessor_declaration_id=first.declaration_id,
         )
     new_timeline = replace(
-        timeline, revision_id="REV-2",
-        scope=replace(timeline.scope, declared_shot_set_revision="SET-2")
+        timeline,
+        revision_id="REV-2",
+        scope=replace(timeline.scope, declared_shot_set_revision="SET-2"),
     )
     newer = process.declare(
-        new_timeline, ("SHT-1",), declaration_id="DECL-2",
-        operator_id="operator", observed_fingerprint=process.assess(
-            new_timeline, ("SHT-1",)
-        ).fingerprint, predecessor_declaration_id=first.declaration_id
+        new_timeline,
+        ("SHT-1",),
+        declaration_id="DECL-2",
+        operator_id="operator",
+        observed_fingerprint=process.assess(new_timeline, ("SHT-1",)).fingerprint,
+        predecessor_declaration_id=first.declaration_id,
     )
     assert newer.predecessor_declaration_id == first.declaration_id
 
