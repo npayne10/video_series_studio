@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -20,11 +21,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
+from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.application.episode_shot_set_resolver import (
     EpisodeShotSet,
     reconcile_episode_coverage,
     resolve_episode_shots,
 )
+from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
+from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.infrastructure.assembly_timeline import (
     AssemblyEvidenceError,
     JsonAssemblyTimelineRepository,
@@ -108,12 +113,19 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.coverage_status.setObjectName("episodeCoverageStatus")
         self.coverage_status.setWordWrap(True)
         layout.addWidget(self.coverage_status)
-        self.coverage_table = QTableWidget(0, 4, self)
+        self.coverage_table = QTableWidget(0, 5, self)
         self.coverage_table.setObjectName("episodeCoverageMatrix")
         self.coverage_table.setHorizontalHeaderLabels(
-            ["Required Shot", "Timeline Media", "Coverage", "Approval"]
+            ["Required Shot", "Planning", "Generated Media", "Assembly", "ProductionTask"]
         )
         layout.addWidget(self.coverage_table)
+        self.coverage_table.itemSelectionChanged.connect(self._show_shot_blockers)
+        self._row_blockers: list[tuple[str, ...]] = []
+        self.shot_blockers = QPlainTextEdit(self)
+        self.shot_blockers.setObjectName("episodeShotBlockerDetails")
+        self.shot_blockers.setReadOnly(True)
+        self.shot_blockers.setMaximumHeight(120)
+        layout.addWidget(self.shot_blockers)
         self.stages = QLabel(
             "Next governed stages (not yet enabled): Picture Lock → Dialogue & Lip-Sync → "
             "Effects & Transitions → Mastering & Final QC",
@@ -132,10 +144,22 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.complete_button.setEnabled(False)
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
+        self._row_blockers = []
+        self.shot_blockers.clear()
         self._selected_revision = None
         self._resolved_authority = None
         self.coverage_status.setText("BLOCKED: Episode coverage must be recalculated.")
         self.status.setText("Revision selection changed. Inspect again to view persisted evidence.")
+
+    def _show_shot_blockers(self) -> None:
+        row = self.coverage_table.currentRow()
+        if 0 <= row < len(self._row_blockers):
+            details = self._row_blockers[row]
+            self.shot_blockers.setPlainText(
+                "\\n".join(details) if details else "No Shot-specific blockers reported."
+            )
+        else:
+            self.shot_blockers.clear()
 
     def discover_episodes(self) -> None:
         self.episode_selector.blockSignals(True)
@@ -178,31 +202,44 @@ class EpisodeAssemblyWorkspace(QWidget):
         except (OSError, ValueError, RuntimeError) as exc:
             self.coverage_status.setText(f"BLOCKED: Episode authority evaluation failed: {exc}")
             return
-        by_shot = {item.shot_id: item for item in selections}
-        for index, shot_id in enumerate(authority.required_shot_ids):
-            selection = by_shot.get(shot_id)
-            values = (
-                shot_id,
-                selection.generated_media_id if selection else "Missing",
-                "Selected" if selection else "Missing",
-                (
-                    "Approved evidence recorded"
-                    if selection
-                    and selection.media_state == "approved"
-                    and selection.approval_evidence_ref
-                    else "Not verified"
-                ),
+        directory = self._project_directory()
+        try:
+            media = (
+                GeneratedMediaPersistenceService(
+                    JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+                ).list_all()
+                if directory is not None else ()
             )
+            media = tuple(item for item in media if item.scope.episode_id == episode_id)
+            tasks = (
+                JsonProductionTaskRepository(
+                    directory / "production" / "scheduling" / "tasks"
+                ).list_all()
+                if directory is not None else ()
+            )
+            tasks = tuple(task for task in tasks if task.episode_id == episode_id)
+        except (OSError, ValueError, RuntimeError) as exc:
+            self.coverage_status.setText(f"BLOCKED: Evidence inventory unreadable: {exc}")
+            return
+        rows = reconcile_shot_evidence(
+            authority.required_shot_ids, authority.blockers, selections, media, tasks
+        )
+        self._row_blockers = [row.blockers for row in rows]
+        for index, row in enumerate(rows):
             self.coverage_table.insertRow(index)
-            for col, value in enumerate(values):
+            for col, value in enumerate(
+                (row.shot_id, row.planning, row.media, row.assembly, row.production_task)
+            ):
                 self.coverage_table.setItem(index, col, QTableWidgetItem(value))
+        planning_blocked = sum(bool(row.planning == "Blocked") for row in rows)
+        media_missing = sum(row.media == "No media record" for row in rows)
+        qc_pending = sum("QC/approval pending" in row.media for row in rows)
+        absent = sum(row.assembly == "Not in timeline" for row in rows)
         self.coverage_status.setText(
-            (
-                "PREVIEW: Coverage matches planned Shot order. Completion remains blocked; "
-                "final media evidence and Episode-set authority are not yet certified."
-            )
-            if coverage.ready
-            else "BLOCKED: " + "; ".join(coverage.blockers)
+            f"{len(rows)} required Shots | {planning_blocked} planning blocked | "
+            f"{media_missing} without media | {qc_pending} awaiting QC | "
+            f"{absent} not in timeline | {len(coverage.blockers)} governance blockers. "
+            "Completion remains disabled. Select a Shot row for details."
         )
 
     def discover_revisions(self) -> None:
