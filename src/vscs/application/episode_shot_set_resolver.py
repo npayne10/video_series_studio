@@ -92,3 +92,31 @@ def reconcile_episode_coverage(
     return EpisodeCoverage(
         authority.required_shot_ids, selected, missing, extra, tuple(blockers)
     )
+
+
+def initialize_governed_episode_timeline(
+    authority: EpisodeShotSet,
+    revision: Any,
+    repository: Any,
+    evidence_validator: Any,
+) -> Any:
+    """Publish an immutable draft only from complete approved existing media evidence.
+
+    Caller supplies a fully formed revision; no fabricated media identifiers,
+    approvals, or generated timeline selections are permitted.
+    """
+    from vscs.application.assembly_contracts import AssemblyScopeKind, AssemblyState
+
+    if revision.scope.scope_kind is not AssemblyScopeKind.EPISODE:
+        raise ValueError("Only governed Episode assembly is supported")
+    if revision.scope.scope_id != authority.episode_id:
+        raise ValueError("Episode authority and timeline scope differ")
+    if revision.state is not AssemblyState.DRAFT:
+        raise ValueError("Initialization requires a Draft assembly revision")
+    coverage = reconcile_episode_coverage(authority, revision.selections)
+    if not coverage.ready:
+        raise ValueError("Timeline initialization blocked: " + "; ".join(coverage.blockers))
+    validation = evidence_validator.validate(revision, final_use=True)
+    if not validation.ready:
+        raise ValueError("Timeline media evidence blocked: " + "; ".join(validation.blockers))
+    return repository.create(revision)
