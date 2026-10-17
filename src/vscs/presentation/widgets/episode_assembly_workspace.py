@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from PySide6.QtWidgets import (
     QComboBox,
@@ -169,7 +169,9 @@ class EpisodeAssemblyWorkspace(QWidget):
             self._resolved_authority = authority
             revision = self._selected_revision
             if revision is not None and revision.scope.scope_id != episode_id:
-                self.coverage_status.setText("BLOCKED: Timeline revision belongs to another Episode.")
+                self.coverage_status.setText(
+                    "BLOCKED: Timeline revision belongs to another Episode."
+                )
                 return
             selections = revision.selections if revision is not None else ()
             coverage = reconcile_episode_coverage(authority, selections)
@@ -185,7 +187,8 @@ class EpisodeAssemblyWorkspace(QWidget):
                 "Selected" if selection else "Missing",
                 (
                     "Approved evidence recorded"
-                    if selection and selection.media_state == "approved"
+                    if selection
+                    and selection.media_state == "approved"
                     and selection.approval_evidence_ref
                     else "Not verified"
                 ),
@@ -194,8 +197,10 @@ class EpisodeAssemblyWorkspace(QWidget):
             for col, value in enumerate(values):
                 self.coverage_table.setItem(index, col, QTableWidgetItem(value))
         self.coverage_status.setText(
-            ("PREVIEW: Coverage matches planned Shot order. Completion remains blocked; "
-             "final media evidence and Episode-set authority are not yet certified.")
+            (
+                "PREVIEW: Coverage matches planned Shot order. Completion remains blocked; "
+                "final media evidence and Episode-set authority are not yet certified."
+            )
             if coverage.ready
             else "BLOCKED: " + "; ".join(coverage.blockers)
         )
