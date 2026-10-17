@@ -105,3 +105,20 @@ def build_partial_draft(
         frame_rate_den=frame_rate_den,
         state=AssemblyState.DRAFT,
     )
+
+
+def publish_partial_draft(
+    revision: AssemblyTimelineRevision, repository: Any, evidence_validator: Any
+) -> Any:
+    """Append only after validating real source media and bytes.
+
+    Incomplete Episode coverage is permitted for Draft only, never as a closure.
+    """
+    if revision.state is not AssemblyState.DRAFT:
+        raise ValueError("Only Draft assembly revisions may be initialized")
+    if not revision.selections:
+        raise ValueError("A Draft must include at least one verified media selection")
+    validation = evidence_validator.validate(revision, final_use=True)
+    if not validation.allowed:
+        raise ValueError("Draft publication blocked: " + "; ".join(validation.blockers))
+    return repository.create(revision)
