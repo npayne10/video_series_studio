@@ -444,20 +444,17 @@ class ContinuityCompilerService:
                 return referenced
         planning = self.packages.planning
         normalized = shot_id.strip().upper()
-        # Preserve governed eligibility: the selected shot must itself have
-        # a current integrated planning package.
-        candidate_ids = sorted(
-            {item.shot_id for item in planning.list_packages() if item.shot_id <= normalized}
-        )
-        if normalized not in candidate_ids or planning.current_package(normalized) is None:
+        # Preserve the historical is_current(package) governance contract while
+        # excluding future shots and stopping at the nearest current predecessor.
+        candidates: dict[str, list[Any]] = {}
+        for item in planning.list_packages():
+            if item.shot_id <= normalized:
+                candidates.setdefault(item.shot_id, []).append(item)
+        selected = candidates.get(normalized, ())
+        if not any(planning.is_current(item) for item in selected):
             return None
-        # Only the nearest preceding *current* shot can be the predecessor.
-        # Later IDs cannot affect that answer, and historical revisions of a
-        # single shot must not trigger repeated readiness computations.
-        for candidate_id in reversed(candidate_ids):
-            if candidate_id >= normalized:
-                continue
-            if planning.current_package(candidate_id) is not None:
+        for candidate_id in sorted((shot for shot in candidates if shot < normalized), reverse=True):
+            if any(planning.is_current(item) for item in candidates[candidate_id]):
                 return self.packages.current_package(candidate_id)
         return None
 
