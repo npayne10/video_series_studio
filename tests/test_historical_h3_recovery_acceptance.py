@@ -3,7 +3,6 @@
 import hashlib
 import json
 import subprocess
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -91,18 +90,27 @@ def recovery_case(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    root = (
-        tmp_path / ".vscs" / "h3_span_orchestration"
-        / task.task_id / readiness.provider_plan_id
-    )
+    root = tmp_path / ".vscs" / "h3_span_orchestration" / task.task_id / readiness.provider_plan_id
     (root / "raw").mkdir(parents=True)
     (root / "normalized").mkdir(parents=True)
     source = root / "normalized" / "span-001.mp4"
     subprocess.run(
         [
-            "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
-            "-f", "lavfi", "-i", "color=c=black:s=64x64:r=24",
-            "-frames:v", "24", "-c:v", "mpeg4", "-y", str(source),
+            "ffmpeg",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=64x64:r=24",
+            "-frames:v",
+            "24",
+            "-c:v",
+            "mpeg4",
+            "-y",
+            str(source),
         ],
         check=True,
     )
@@ -117,7 +125,7 @@ def recovery_case(tmp_path, monkeypatch):
 
 
 def test_historical_recovery_end_to_end_and_safe_repeat(recovery_case):
-    backend, task, readiness, root, source, claim, args = recovery_case
+    backend, task, _readiness, root, source, claim, args = recovery_case
     original_claim = claim.read_bytes()
     original_source = source.read_bytes()
 
@@ -141,7 +149,7 @@ def test_historical_recovery_end_to_end_and_safe_repeat(recovery_case):
 
 
 def test_historical_recovery_conflicting_claim_fails_without_writes(recovery_case):
-    backend, task, readiness, root, source, claim, args = recovery_case
+    backend, task, _readiness, root, _source, claim, args = recovery_case
     altered = json.loads(claim.read_text(encoding="utf-8"))
     altered["package_fingerprint"] = "0" * 64
     claim.write_text(json.dumps(altered), encoding="utf-8")
@@ -154,7 +162,7 @@ def test_historical_recovery_conflicting_claim_fails_without_writes(recovery_cas
 
 
 def test_historical_recovery_wrong_checksum_fails_without_writes(recovery_case):
-    backend, task, readiness, root, source, claim, args = recovery_case
+    backend, task, _readiness, root, _source, _claim, args = recovery_case
     args["expected_sha256"] = "0" * 64
     with pytest.raises(ProductionExecutionError, match="SHA-256 mismatch"):
         backend.recover_historical_h3_output_for_profile(task.task_id, **args)
@@ -163,7 +171,7 @@ def test_historical_recovery_wrong_checksum_fails_without_writes(recovery_case):
 
 
 def test_historical_recovery_conflicting_manifest_blocks_repeat(recovery_case):
-    backend, task, readiness, root, source, claim, args = recovery_case
+    backend, task, _readiness, root, _source, _claim, args = recovery_case
     backend.recover_historical_h3_output_for_profile(task.task_id, **args)
     path = root / "orchestration.json"
     manifest = json.loads(path.read_text(encoding="utf-8"))
