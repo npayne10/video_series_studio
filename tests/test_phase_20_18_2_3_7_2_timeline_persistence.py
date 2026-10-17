@@ -131,3 +131,13 @@ def test_provisional_historical_recovery_never_becomes_final_media(tmp_path):
         .validate(revision, final_use=True)
         .allowed
     )
+
+
+def test_invalid_persisted_scope_kind_is_rejected(tmp_path):
+    repo = JsonAssemblyTimelineRepository(tmp_path)
+    path = repo.create(_revision())
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["timeline"]["scope"]["scope_kind"] = "unknown_scope"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(AssemblyEvidenceError, match="Invalid stored assembly timeline"):
+        repo.get("ASM-1", "REV-1")
