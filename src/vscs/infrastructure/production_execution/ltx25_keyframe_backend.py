@@ -1320,6 +1320,209 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             )
         return record
 
+    def recover_historical_h3_output_for_profile(
+        self,
+        task_id: str,
+        *,
+        profile: str,
+        expected_sha256: str,
+        expected_frame_count: int,
+        expected_frames_per_second: int,
+    ) -> GeneratedMedia:
+        """Recover existing H3 media with incomplete historical package snapshot.
+
+        This is NOT an execution or a current-UPD compilation. The surviving
+        launch claim and immutable persisted readiness must agree exactly.
+        The missing original compiled package is explicitly disclosed.
+        """
+        from vscs.infrastructure.production_execution.minimax_h3_span_orchestration import (
+            FFmpegMiniMaxH3SpanNormalizer,
+            GovernedMiniMaxH3SpanOrchestrationService,
+        )
+
+        task = self._require_task(task_id)
+        execution_profile = normalize_execution_profile(profile)
+        selected = self.provider_policy_selections.selected_profile(task_id, execution_profile)
+        if selected.profile_id != MINIMAX_H3_POLICY_PROFILE_ID:
+            raise ProductionExecutionError("Historical H3 recovery requires selected MiniMax H3.")
+        if (
+            expected_frame_count <= 0
+            or expected_frames_per_second <= 0
+            or len(expected_sha256) != 64
+            or any(char not in "0123456789abcdef" for char in expected_sha256.lower())
+        ):
+            raise ProductionExecutionError("Historical H3 recovery requires valid operator evidence.")
+        claim_path = self._h3_claim_path(task_id, execution_profile)
+        try:
+            claim = json.loads(claim_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ProductionExecutionError("Historical H3 launch claim is unavailable.") from exc
+        readiness = self.provider_production_adoptions.readiness_for(
+            task_id, execution_profile
+        )
+        if (
+            readiness is None
+            or readiness.state is not ProviderExecutionReadinessState.READY
+            or readiness.shot_id != task.shot_id
+            or readiness.span_count != 1
+            or readiness.requirement_count != 0
+            or readiness.timed_span_state != TimedSpanAcceptanceState.NOT_APPLICABLE.value
+            or readiness.provider_profile_id != MINIMAX_H3_POLICY_PROFILE_ID
+            or readiness.provider_profile_fingerprint != selected.fingerprint
+            or readiness.execution_adapter_id != "minimax_h3_automated_execution"
+            or not readiness.provider_plan_id
+            or not readiness.provider_plan_fingerprint
+        ):
+            raise ProductionExecutionError("Historical H3 persisted readiness is not eligible.")
+        expected_claim = {
+            "schema_version": "1.0",
+            "task_id": task.task_id,
+            "execution_profile": execution_profile,
+            "provider_profile_id": readiness.provider_profile_id,
+            "package_fingerprint": readiness.package_fingerprint,
+            "plan_fingerprint": readiness.provider_plan_fingerprint,
+            "state": "launch_claimed",
+        }
+        if claim != expected_claim:
+            raise ProductionExecutionError("Historical H3 launch claim and readiness disagree.")
+        expected_plan_id = (
+            f"H3SPANPLAN-{task.shot_id}-"
+            f"{readiness.provider_plan_fingerprint[:12].upper()}"
+        )
+        if readiness.provider_plan_id != expected_plan_id:
+            raise ProductionExecutionError("Historical H3 plan identity is inconsistent.")
+        root = (
+            self.project_directory / ".vscs" / "h3_span_orchestration"
+            / task_id / readiness.provider_plan_id
+        )
+        source = root / "normalized" / "span-001.mp4"
+        raw_dir = root / "raw"
+        final = root / f"{task.shot_id}-governed-h3-assembled.mp4"
+        manifest = root / "orchestration.json"
+        if (
+            not source.is_file()
+            or not raw_dir.is_dir()
+            or any(raw_dir.iterdir())
+            or len(tuple((root / "normalized").iterdir())) != 1
+            or source.is_symlink()
+            or final.is_symlink()
+        ):
+            raise ProductionExecutionError(
+                "Historical H3 recovery requires one normalized span and an empty raw folder."
+            )
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        if digest != expected_sha256.lower():
+            raise ProductionExecutionError("Historical H3 source SHA-256 mismatch.")
+        probe = FFmpegMiniMaxH3SpanNormalizer(self.project_directory)
+        if probe._frame_count(source) != expected_frame_count:
+            raise ProductionExecutionError("Historical H3 source frame count mismatch.")
+        try:
+            fps = subprocess.run(
+                [
+                    "ffprobe", "-v", "error", "-select_streams", "v:0",
+                    "-show_entries", "stream=r_frame_rate",
+                    "-of", "default=nokey=1:noprint_wrappers=1", str(source),
+                ],
+                check=True, capture_output=True, text=True,
+            ).stdout.strip()
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise ProductionExecutionError("Historical H3 frame-rate probe failed.") from exc
+        if fps != f"{expected_frames_per_second}/1":
+            raise ProductionExecutionError("Historical H3 source frame rate mismatch.")
+
+        recovery_evidence = {
+            "schema_version": "1.0",
+            "recovery_kind": "historical_h3_evidence_only",
+            "authority_limitation": "original_compiled_package_unavailable",
+            "new_generation_authorized": False,
+            "task_id": task_id,
+            "shot_id": task.shot_id,
+            "execution_profile": execution_profile,
+            "source_package_fingerprint": readiness.package_fingerprint,
+            "readiness_id": readiness.readiness_id,
+            "readiness_fingerprint": readiness.fingerprint,
+            "plan_id": readiness.provider_plan_id,
+            "plan_fingerprint": readiness.provider_plan_fingerprint,
+            "provider_profile_id": readiness.provider_profile_id,
+            "provider_profile_fingerprint": readiness.provider_profile_fingerprint,
+            "launch_claim_path": str(claim_path),
+            "raw_output_available": False,
+            "normalized_output_path": str(source),
+            "normalized_sha256": digest,
+            "final_path": str(final),
+            "final_sha256": digest,
+            "final_frame_count": expected_frame_count,
+            "frames_per_second": expected_frames_per_second,
+            "media_state": "generated_pending_human_review",
+        }
+        # Validate completed checkpoints before introducing any side effects.
+        if final.exists():
+            if not final.is_file():
+                raise ProductionExecutionError("Historical H3 final path is not a file.")
+            if hashlib.sha256(final.read_bytes()).hexdigest() != digest:
+                raise ProductionExecutionError("Existing historical H3 output differs from source.")
+            if probe._frame_count(final) != expected_frame_count:
+                raise ProductionExecutionError("Existing historical H3 frame count differs.")
+        if manifest.exists():
+            try:
+                stored = json.loads(manifest.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                raise ProductionExecutionError("Historical H3 manifest is unreadable.") from exc
+            if stored != recovery_evidence:
+                raise ProductionExecutionError("Historical H3 manifest conflicts with recovery evidence.")
+        existing_adoption = self.provider_production_adoptions.adoption_for(
+            task_id, execution_profile
+        )
+        if existing_adoption is not None and (
+            existing_adoption.final_path != str(final)
+            or existing_adoption.final_frame_count != expected_frame_count
+            or existing_adoption.package_fingerprint != readiness.package_fingerprint
+            or existing_adoption.readiness_fingerprint != readiness.fingerprint
+        ):
+            raise ProductionExecutionError("Historical H3 existing adoption is inconsistent.")
+
+        if not final.exists():
+            GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
+                source, final
+            )
+        if hashlib.sha256(final.read_bytes()).hexdigest() != digest:
+            raise ProductionExecutionError("Historical H3 promoted output SHA-256 mismatch.")
+        if probe._frame_count(final) != expected_frame_count:
+            raise ProductionExecutionError("Historical H3 promoted output frame count mismatch.")
+        if not manifest.exists():
+            with manifest.open("x", encoding="utf-8") as stream:
+                json.dump(recovery_evidence, stream, indent=2, sort_keys=True)
+                stream.write("\n")
+
+        media_id = (
+            "GM-H3-"
+            + hashlib.sha256(
+                f"{task.task_id}|{execution_profile}|"
+                f"{readiness.provider_plan_fingerprint}".encode()
+            ).hexdigest()[:24].upper()
+        )
+        record = self.media.get(media_id)
+        if record is None:
+            record = self._register_h3_monolithic_generated_media(
+                task, readiness=readiness, final_path=final,
+                frame_count=expected_frame_count,
+                recovery_kind="historical_h3_evidence_only",
+            )
+        elif (
+            record.scope.production_task_id != task_id
+            or record.provenance.provider_job_id != readiness.provider_plan_id
+            or record.file.checksum_sha256 != digest
+            or dict(record.provenance.attributes).get("recovery_kind")
+            != "historical_h3_evidence_only"
+        ):
+            raise ProductionExecutionError("Existing historical H3 Generated Media differs.")
+        if existing_adoption is None:
+            self.provider_production_adoptions.record_generated(
+                readiness, final_path=str(final), final_frame_count=expected_frame_count,
+                state="generated_pending_visual_qc",
+            )
+        return record
+
     def _h3_claim_path(self, task_id: str, profile: str) -> Path:
         identity = hashlib.sha256(f"{task_id}|{profile}".encode()).hexdigest()[:24]
         return (
@@ -1389,6 +1592,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         readiness: ProviderExecutionReadiness,
         final_path: Path,
         frame_count: int | None,
+        recovery_kind: str | None = None,
     ) -> GeneratedMedia:
         """Register verified H3 output as GENERATED, never as approved media.
 
@@ -1461,6 +1665,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
                     ("provider_profile_fingerprint", readiness.provider_profile_fingerprint),
                     ("provider_plan_fingerprint", readiness.provider_plan_fingerprint),
                     ("verified_final_frames", str(frame_count)),
+                    *((("recovery_kind", recovery_kind),) if recovery_kind else ()),
                 ),
             ),
             file=copied,
