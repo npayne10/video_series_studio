@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.selection_package_cache import selection_package_scope
 from vscs.application.production_tasks import (
     ProductionCapability,
     ProductionResource,
@@ -424,7 +425,7 @@ def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
         self._refresh_production_scheduling()
 
     def scheduling_selection(self: Any) -> None:
-        with measure_shot_switch("selection.total"):
+        with selection_package_scope(), measure_shot_switch("selection.total"):
             with measure_shot_switch("selection.original"):
                 original_selection(self)
             with measure_shot_switch("selection.scheduling_refresh"):
