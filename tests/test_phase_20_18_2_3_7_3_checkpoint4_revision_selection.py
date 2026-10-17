@@ -2,7 +2,10 @@
 
 import pytest
 
-from vscs.infrastructure.assembly_timeline import AssemblyEvidenceError, JsonAssemblyTimelineRepository
+from vscs.infrastructure.assembly_timeline import (
+    AssemblyEvidenceError,
+    JsonAssemblyTimelineRepository,
+)
 from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssemblyWorkspace
 
 
