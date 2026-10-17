@@ -59,6 +59,7 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
 from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 from vscs.presentation.widgets.cap_readiness_widget import install_cap_readiness
 from vscs.presentation.widgets.dashboard import DashboardWidget
+from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssemblyWorkspace
 from vscs.presentation.widgets.generated_media_workspace import GeneratedMediaWorkspaceWidget
 from vscs.presentation.widgets.production_execution_workspace import ProductionExecutionWorkspace
 from vscs.presentation.widgets.provider_capability_validation_workspace import (
@@ -181,6 +182,7 @@ class MainWindow(QMainWindow):
             "Production Execution",
             "Generated Media",
             "Provider Validation",
+            "Episode Assembly",
             "Post-Production",
         )
         for section in sections:
@@ -244,6 +246,10 @@ class MainWindow(QMainWindow):
             self._provider_capability_validation_service
         )
         self.content_stack.addWidget(self.provider_validation_workspace)
+        self.episode_assembly_workspace = EpisodeAssemblyWorkspace(
+            lambda: self.projects.project_directory
+        )
+        self.content_stack.addWidget(self.episode_assembly_workspace)
         self.content_stack.addWidget(self._placeholder_page("Post-Production"))
         self.setCentralWidget(self.content_stack)
         self.navigation.setCurrentRow(0)
@@ -285,6 +291,8 @@ class MainWindow(QMainWindow):
             self.generated_media_workspace.refresh()
         elif section == "Provider Validation":
             self.provider_validation_workspace.refresh()
+        elif section == "Episode Assembly":
+            self.episode_assembly_workspace.refresh()
 
     def _select_navigation_item(self, row: int) -> None:
         self.navigation.setCurrentRow(row)
