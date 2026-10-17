@@ -90,6 +90,14 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_supersede_button.setMinimumWidth(210)
         self.production_task_supersede_button.setMinimumHeight(28)
         self.production_task_supersede_button.setVisible(True)
+        self.episode_shots_complete_button = QPushButton("Episode / Video Shots Complete…", group)
+        self.episode_shots_complete_button.setObjectName(
+            "open_episode_shots_complete_dialog"
+        )
+        self.episode_shots_complete_button.setToolTip(
+            "Open independent Shot-set readiness and operator completion governance. "
+            "This does not complete ProductionTasks or approve Generated Media."
+        )
         self.production_task_supersede_button.setToolTip(
             "Select an obsolete ProductionTask row. VSCS will preserve it as durable provenance "
             "and supersede it only when a governed replacement compiled from current READY UPD "
@@ -142,6 +150,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             insertion_index + 3,
             self.production_task_supersede_button,
         )
+        actions_layout.insertWidget(insertion_index + 4, self.episode_shots_complete_button)
 
         table_index = layout.indexOf(self.production_task_table)
         layout.insertWidget(table_index, self.production_task_readiness_status)
@@ -157,6 +166,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         self.production_task_supersede_button.clicked.connect(
             self._production_task_supersede_obsolete
+        )
+        self.episode_shots_complete_button.clicked.connect(
+            self._open_episode_shots_complete_dialog
         )
         self.production_task_priority_apply_button.clicked.connect(
             self._production_task_apply_priority
@@ -174,6 +186,20 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             self._refresh_production_task_priority_control
         )
         self._refresh_production_tasks()
+
+    def _open_episode_shots_complete_dialog(self: Any) -> None:
+        from vscs.presentation.widgets.episode_shots_complete_dialog import (
+            EpisodeShotsCompleteDialog,
+        )
+
+        project_directory = self.projects.project_directory
+        if project_directory is None:
+            QMessageBox.information(
+                self, "Episode / Video Shots Complete", "Open a VSCS project first."
+            )
+            return
+        dialog = EpisodeShotsCompleteDialog(project_directory, self)
+        dialog.exec()
 
     def _production_task_previous_shot_id(self: Any) -> str:
         shot_id = self._production_task_shot_id()
@@ -790,6 +816,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self._refresh_production_scheduling()
 
     workspace_type.__init__ = readiness_init
+    workspace_type._open_episode_shots_complete_dialog = _open_episode_shots_complete_dialog
     workspace_type._production_task_previous_shot_id = _production_task_previous_shot_id
     workspace_type._production_task_dependencies = _production_task_dependencies
     workspace_type._production_task_context = readiness_task_context
