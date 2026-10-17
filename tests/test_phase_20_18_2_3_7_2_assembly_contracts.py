@@ -36,9 +36,7 @@ def _shot(index=0, state="approved", approval="QC-1"):
 
 
 def _revision(*shots):
-    return AssemblyTimelineRevision(
-        "ASM-1", "REV-1", _scope(), tuple(shots), 24, 1
-    )
+    return AssemblyTimelineRevision("ASM-1", "REV-1", _scope(), tuple(shots), 24, 1)
 
 
 def test_frame_accurate_duration_fingerprint_and_immutability():
