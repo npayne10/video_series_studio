@@ -117,6 +117,6 @@ def initialize_governed_episode_timeline(
     if not coverage.ready:
         raise ValueError("Timeline initialization blocked: " + "; ".join(coverage.blockers))
     validation = evidence_validator.validate(revision, final_use=True)
-    if not validation.ready:
+    if not validation.allowed:
         raise ValueError("Timeline media evidence blocked: " + "; ".join(validation.blockers))
     return repository.create(revision)
