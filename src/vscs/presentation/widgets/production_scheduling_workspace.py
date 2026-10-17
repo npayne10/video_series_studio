@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch
-
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -37,6 +35,7 @@ from vscs.application.production_tasks import (
 )
 from vscs.infrastructure.production.schedule_repository import JsonProductionScheduleRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
+from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch
 
 
 def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
