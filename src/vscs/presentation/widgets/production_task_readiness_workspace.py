@@ -91,9 +91,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_supersede_button.setMinimumHeight(28)
         self.production_task_supersede_button.setVisible(True)
         self.episode_shots_complete_button = QPushButton("Episode / Video Shots Complete…", group)
-        self.episode_shots_complete_button.setObjectName(
-            "open_episode_shots_complete_dialog"
-        )
+        self.episode_shots_complete_button.setObjectName("open_episode_shots_complete_dialog")
         self.episode_shots_complete_button.setToolTip(
             "Open independent Shot-set readiness and operator completion governance. "
             "This does not complete ProductionTasks or approve Generated Media."
@@ -167,9 +165,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_supersede_button.clicked.connect(
             self._production_task_supersede_obsolete
         )
-        self.episode_shots_complete_button.clicked.connect(
-            self._open_episode_shots_complete_dialog
-        )
+        self.episode_shots_complete_button.clicked.connect(self._open_episode_shots_complete_dialog)
         self.production_task_priority_apply_button.clicked.connect(
             self._production_task_apply_priority
         )
