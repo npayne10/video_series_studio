@@ -8,10 +8,10 @@ import pytest
 
 from vscs.application.assembly_contracts import AssemblyScope, AssemblyScopeKind
 from vscs.application.episode_draft_selection import (
+    approval_evidence_reference,
     approved_media_choices,
     build_partial_draft,
     publish_partial_draft,
-    approval_evidence_reference,
 )
 from vscs.application.episode_shot_set_resolver import EpisodeShotSet
 
@@ -25,12 +25,15 @@ def _media(shot="SHT-001", state="approved"):
         ),
         state=SimpleNamespace(value=state),
         governance_history=(
-            (SimpleNamespace(
-                to_state=SimpleNamespace(value="approved"),
-                from_state=SimpleNamespace(value="under_review"),
-                actor="test-operator", reason="QC accepted",
-                occurred_at=datetime(2026, 1, 1, tzinfo=UTC),
-            ),)
+            (
+                SimpleNamespace(
+                    to_state=SimpleNamespace(value="approved"),
+                    from_state=SimpleNamespace(value="under_review"),
+                    actor="test-operator",
+                    reason="QC accepted",
+                    occurred_at=datetime(2026, 1, 1, tzinfo=UTC),
+                ),
+            )
             if state == "approved"
             else ()
         ),
@@ -90,7 +93,15 @@ def test_draft_rejects_mismatched_media_shot():
             _scope(),
             "ASM-1",
             "REV-1",
-            (("SHT-001", (media := _media(shot="SHT-999")), 0, 24, approval_evidence_reference(media)),),
+            (
+                (
+                    "SHT-001",
+                    (media := _media(shot="SHT-999")),
+                    0,
+                    24,
+                    approval_evidence_reference(media),
+                ),
+            ),
         )
 
 
