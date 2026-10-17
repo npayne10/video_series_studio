@@ -8,7 +8,8 @@ from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
 def _media(shot, state):
     events = (
         (SimpleNamespace(to_state=SimpleNamespace(value="approved")),)
-        if state == "approved" else ()
+        if state == "approved"
+        else ()
     )
     return SimpleNamespace(
         scope=SimpleNamespace(shot_id=shot),
@@ -18,9 +19,7 @@ def _media(shot, state):
 
 
 def test_media_exists_but_timeline_missing_and_qc_pending():
-    rows = reconcile_shot_evidence(
-        ("SHT-003",), (), (), (_media("SHT-003", "generated"),), ()
-    )
+    rows = reconcile_shot_evidence(("SHT-003",), (), (), (_media("SHT-003", "generated"),), ())
     assert rows[0].media == "Exists — QC/approval pending"
     assert rows[0].assembly == "Not in timeline"
     assert "QC approval pending" in rows[0].blockers[-1]
@@ -34,17 +33,13 @@ def test_missing_media_is_distinct_from_missing_timeline():
 
 
 def test_approved_media_without_timeline_does_not_imply_assembly():
-    rows = reconcile_shot_evidence(
-        ("SHT-002",), (), (), (_media("SHT-002", "approved"),), ()
-    )
+    rows = reconcile_shot_evidence(("SHT-002",), (), (), (_media("SHT-002", "approved"),), ())
     assert rows[0].media == "1 approved / 1 records"
     assert rows[0].assembly == "Not in timeline"
 
 
 def test_planning_and_task_evidence_are_separate():
-    task = SimpleNamespace(
-        shot_id="SHT-001", state=SimpleNamespace(value="completed")
-    )
+    task = SimpleNamespace(shot_id="SHT-001", state=SimpleNamespace(value="completed"))
     rows = reconcile_shot_evidence(
         ("SHT-001",),
         ("SHT-001: Planning Review not current",),
