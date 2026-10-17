@@ -220,6 +220,8 @@ class EpisodeAssemblyWorkspace(QWidget):
         if media_id not in self._draft_candidates.get(shot_id, ()):
             self.draft_status.setText("BLOCKED: Selected media is not eligible for this Shot.")
             return
+        if self._staged_media.get(shot_id) != media_id:
+            self._draft_frames.pop(shot_id, None)
         self._staged_media[shot_id] = media_id
         self.draft_status.setText(
             f"{len(self._staged_media)} approved media choice(s) staged in memory. "
@@ -290,10 +292,10 @@ class EpisodeAssemblyWorkspace(QWidget):
         except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
             self.draft_status.setText(f"BLOCKED: Draft publication failed: {exc}")
             return
+        self.discover_revisions()
         self.draft_status.setText(
             f"Published immutable Draft at {path}. Episode completion remains blocked."
         )
-        self.discover_revisions()
 
     def _show_shot_blockers(self) -> None:
         row = self.coverage_table.currentRow()
