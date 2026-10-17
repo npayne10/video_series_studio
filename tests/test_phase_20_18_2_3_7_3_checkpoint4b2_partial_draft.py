@@ -69,9 +69,9 @@ def test_draft_rejects_media_without_human_approval_reference():
     with pytest.raises(ValueError, match="approved media"):
         build_partial_draft(
             _authority(),
-        _scope(),
-        "ASM-1",
-        "REV-1",
+            _scope(),
+            "ASM-1",
+            "REV-1",
             (("SHT-001", _media(), 0, 24, ""),),
         )
 
@@ -80,9 +80,9 @@ def test_draft_rejects_mismatched_media_shot():
     with pytest.raises(ValueError, match="Shot identity"):
         build_partial_draft(
             _authority(),
-        _scope(),
-        "ASM-1",
-        "REV-1",
+            _scope(),
+            "ASM-1",
+            "REV-1",
             (("SHT-001", _media(shot="SHT-999"), 0, 24, "QC-1"),),
         )
 
