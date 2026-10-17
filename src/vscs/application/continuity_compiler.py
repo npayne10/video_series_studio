@@ -453,7 +453,9 @@ class ContinuityCompilerService:
         selected = candidates.get(normalized, ())
         if not any(planning.is_current(item) for item in selected):
             return None
-        for candidate_id in sorted((shot for shot in candidates if shot < normalized), reverse=True):
+        for candidate_id in sorted(
+            (shot for shot in candidates if shot < normalized), reverse=True
+        ):
             if any(planning.is_current(item) for item in candidates[candidate_id]):
                 return self.packages.current_package(candidate_id)
         return None
