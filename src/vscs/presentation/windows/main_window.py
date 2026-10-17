@@ -32,13 +32,13 @@ from vscs.application.caps import (
 from vscs.application.generated_media import GeneratedMediaUiService
 from vscs.application.production_execution import ProductionExecutionUiService
 from vscs.application.projects import ProjectError, ProjectService
+from vscs.application.provider_capability_validation import ProviderCapabilityValidationService
 from vscs.application.story import (
     EpisodePlanningService,
     GovernedPlanningReviewService,
     GovernedShotPlanningService,
     ScenePlanningService,
 )
-from vscs.application.provider_capability_validation import ProviderCapabilityValidationService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.generated_media import (
     JsonGeneratedMediaRepository,
