@@ -5,6 +5,8 @@ Missing shots remain coverage blockers, never fabricated ShotSelection objects.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,6 +26,27 @@ class DraftMediaChoice:
     media_id: str
     eligible: bool
     reason: str
+
+
+def approval_evidence_reference(record: Any) -> str | None:
+    """Fingerprint the existing human APPROVED event; never invent a grant."""
+    for event in reversed(record.governance_history):
+        if event.to_state.value != "approved":
+            continue
+        payload = json.dumps(
+            {
+                "media_id": record.media_id,
+                "revision": record.revision,
+                "from_state": event.from_state.value,
+                "to_state": event.to_state.value,
+                "actor": event.actor,
+                "reason": event.reason,
+                "occurred_at": event.occurred_at.isoformat(),
+            },
+            sort_keys=True,
+        )
+        return "GM-APPROVAL-SHA256-" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return None
 
 
 def approved_media_choices(
@@ -84,6 +107,8 @@ def build_partial_draft(
         approved = record.state.value == "approved" and any(
             event.to_state.value == "approved" for event in record.governance_history
         )
+        if approval_ref != approval_evidence_reference(record):
+            raise ValueError("Approval evidence reference does not match authoritative history")
         if (
             getattr(record.kind, "value", "") != "video"
             or not approved
