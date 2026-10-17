@@ -40,8 +40,8 @@ def test_failed_snapshot_is_not_cached():
     service = object.__new__(GovernedPlanningReviewService)
     recovered = object()
     service._snapshot_uncached = Mock(side_effect=[ValueError("bad snapshot"), recovered])
+    with pytest.raises(ValueError, match="bad snapshot"), selection_package_scope():
+        service.snapshot("SHT-001")
     with selection_package_scope():
-        with pytest.raises(ValueError, match="bad snapshot"):
-            service.snapshot("SHT-001")
         assert service.snapshot("SHT-001") is recovered
     assert service._snapshot_uncached.call_count == 2
