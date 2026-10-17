@@ -10,8 +10,8 @@ import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar
 from fractions import Fraction
+from typing import ClassVar
 
 
 class AssemblyContractError(ValueError):
@@ -176,17 +176,27 @@ class AssemblyGovernanceValidator:
     """Fail closed for approval and locking; never changes external state."""
 
     _transitions: ClassVar[dict[AssemblyState, frozenset[AssemblyState]]] = {
-        AssemblyState.DRAFT: frozenset({AssemblyState.PROVISIONAL_REVIEW, AssemblyState.SUPERSEDED}),
-        AssemblyState.PROVISIONAL_REVIEW: frozenset({
-            AssemblyState.PICTURE_LOCKED,
-            AssemblyState.SUPERSEDED,
-        }),
-        AssemblyState.PICTURE_LOCKED: frozenset({AssemblyState.POST_PRODUCTION, AssemblyState.SUPERSEDED}),
-        AssemblyState.POST_PRODUCTION: frozenset({
-            AssemblyState.FINAL_QC_REQUIRED,
-            AssemblyState.SUPERSEDED,
-        }),
-        AssemblyState.FINAL_QC_REQUIRED: frozenset({AssemblyState.APPROVED, AssemblyState.SUPERSEDED}),
+        AssemblyState.DRAFT: frozenset(
+            {AssemblyState.PROVISIONAL_REVIEW, AssemblyState.SUPERSEDED}
+        ),
+        AssemblyState.PROVISIONAL_REVIEW: frozenset(
+            {
+                AssemblyState.PICTURE_LOCKED,
+                AssemblyState.SUPERSEDED,
+            }
+        ),
+        AssemblyState.PICTURE_LOCKED: frozenset(
+            {AssemblyState.POST_PRODUCTION, AssemblyState.SUPERSEDED}
+        ),
+        AssemblyState.POST_PRODUCTION: frozenset(
+            {
+                AssemblyState.FINAL_QC_REQUIRED,
+                AssemblyState.SUPERSEDED,
+            }
+        ),
+        AssemblyState.FINAL_QC_REQUIRED: frozenset(
+            {AssemblyState.APPROVED, AssemblyState.SUPERSEDED}
+        ),
         AssemblyState.APPROVED: frozenset({AssemblyState.MASTERED, AssemblyState.SUPERSEDED}),
         AssemblyState.MASTERED: frozenset(),
         AssemblyState.SUPERSEDED: frozenset(),
