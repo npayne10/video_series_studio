@@ -1224,9 +1224,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         if observed_fps != f"{compiled.frames_per_second}/1":
             raise ProductionExecutionError("H3 recovery normalized-video frame rate mismatch.")
         if not final.exists():
-            final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
-                source, final
-            )
+            final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(source, final)
         elif not final.is_file():
             raise ProductionExecutionError("H3 recovery final path is not a regular file.")
         if inspector._frame_count(final) != compiled.frame_count:
@@ -1351,15 +1349,15 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             or len(expected_sha256) != 64
             or any(char not in "0123456789abcdef" for char in expected_sha256.lower())
         ):
-            raise ProductionExecutionError("Historical H3 recovery requires valid operator evidence.")
+            raise ProductionExecutionError(
+                "Historical H3 recovery requires valid operator evidence."
+            )
         claim_path = self._h3_claim_path(task_id, execution_profile)
         try:
             claim = json.loads(claim_path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise ProductionExecutionError("Historical H3 launch claim is unavailable.") from exc
-        readiness = self.provider_production_adoptions.readiness_for(
-            task_id, execution_profile
-        )
+        readiness = self.provider_production_adoptions.readiness_for(task_id, execution_profile)
         if (
             readiness is None
             or readiness.state is not ProviderExecutionReadinessState.READY
@@ -1386,14 +1384,16 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         if claim != expected_claim:
             raise ProductionExecutionError("Historical H3 launch claim and readiness disagree.")
         expected_plan_id = (
-            f"H3SPANPLAN-{task.shot_id}-"
-            f"{readiness.provider_plan_fingerprint[:12].upper()}"
+            f"H3SPANPLAN-{task.shot_id}-{readiness.provider_plan_fingerprint[:12].upper()}"
         )
         if readiness.provider_plan_id != expected_plan_id:
             raise ProductionExecutionError("Historical H3 plan identity is inconsistent.")
         root = (
-            self.project_directory / ".vscs" / "h3_span_orchestration"
-            / task_id / readiness.provider_plan_id
+            self.project_directory
+            / ".vscs"
+            / "h3_span_orchestration"
+            / task_id
+            / readiness.provider_plan_id
         )
         source = root / "normalized" / "span-001.mp4"
         raw_dir = root / "raw"
@@ -1419,11 +1419,20 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         try:
             fps = subprocess.run(
                 [
-                    "ffprobe", "-v", "error", "-select_streams", "v:0",
-                    "-show_entries", "stream=r_frame_rate",
-                    "-of", "default=nokey=1:noprint_wrappers=1", str(source),
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "v:0",
+                    "-show_entries",
+                    "stream=r_frame_rate",
+                    "-of",
+                    "default=nokey=1:noprint_wrappers=1",
+                    str(source),
                 ],
-                check=True, capture_output=True, text=True,
+                check=True,
+                capture_output=True,
+                text=True,
             ).stdout.strip()
         except (OSError, subprocess.CalledProcessError) as exc:
             raise ProductionExecutionError("Historical H3 frame-rate probe failed.") from exc
@@ -1469,7 +1478,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             except (OSError, UnicodeError, json.JSONDecodeError) as exc:
                 raise ProductionExecutionError("Historical H3 manifest is unreadable.") from exc
             if stored != recovery_evidence:
-                raise ProductionExecutionError("Historical H3 manifest conflicts with recovery evidence.")
+                raise ProductionExecutionError(
+                    "Historical H3 manifest conflicts with recovery evidence."
+                )
         existing_adoption = self.provider_production_adoptions.adoption_for(
             task_id, execution_profile
         )
@@ -1497,9 +1508,10 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         media_id = (
             "GM-H3-"
             + hashlib.sha256(
-                f"{task.task_id}|{execution_profile}|"
-                f"{readiness.provider_plan_fingerprint}".encode()
-            ).hexdigest()[:24].upper()
+                f"{task.task_id}|{execution_profile}|{readiness.provider_plan_fingerprint}".encode()
+            )
+            .hexdigest()[:24]
+            .upper()
         )
         record = self.media.get(media_id)
         if record is not None and (
@@ -1508,7 +1520,8 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             or record.file.checksum_sha256 != digest
             or dict(record.provenance.attributes).get("recovery_kind")
             != "historical_h3_evidence_only"
-            or record.state not in {
+            or record.state
+            not in {
                 GeneratedMediaState.GENERATED,
                 GeneratedMediaState.UNDER_REVIEW,
                 GeneratedMediaState.APPROVED,
@@ -1517,7 +1530,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("Existing historical H3 Generated Media differs.")
         if record is None:
             record = self._register_h3_monolithic_generated_media(
-                task, readiness=readiness, final_path=final,
+                task,
+                readiness=readiness,
+                final_path=final,
                 frame_count=expected_frame_count,
                 recovery_kind="historical_h3_evidence_only",
             )
@@ -1531,7 +1546,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("Existing historical H3 Generated Media differs.")
         if existing_adoption is None:
             self.provider_production_adoptions.record_generated(
-                readiness, final_path=str(final), final_frame_count=expected_frame_count,
+                readiness,
+                final_path=str(final),
+                final_frame_count=expected_frame_count,
                 state="generated_pending_visual_qc",
             )
         return record
