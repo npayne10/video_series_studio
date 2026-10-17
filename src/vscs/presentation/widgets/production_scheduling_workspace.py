@@ -35,7 +35,10 @@ from vscs.application.production_tasks import (
 )
 from vscs.infrastructure.production.schedule_repository import JsonProductionScheduleRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
-from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch, profile_selection_handler
+from vscs.presentation.widgets.shot_switch_diagnostics import (
+    measure_shot_switch,
+    profile_selection_handler,
+)
 
 
 def install_production_scheduling_workspace(workspace_class: type[Any]) -> None:
