@@ -1224,7 +1224,9 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
         if observed_fps != f"{compiled.frames_per_second}/1":
             raise ProductionExecutionError("H3 recovery normalized-video frame rate mismatch.")
         if not final.exists():
-            final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(source, final)
+            final = GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
+                source, final
+            )
         elif not final.is_file():
             raise ProductionExecutionError("H3 recovery final path is not a regular file.")
         if inspector._frame_count(final) != compiled.frame_count:
@@ -1493,9 +1495,7 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             raise ProductionExecutionError("Historical H3 existing adoption is inconsistent.")
 
         if not final.exists():
-            GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(
-                source, final
-            )
+            GovernedMiniMaxH3SpanOrchestrationService._promote_monolithic_output(source, final)
         if hashlib.sha256(final.read_bytes()).hexdigest() != digest:
             raise ProductionExecutionError("Historical H3 promoted output SHA-256 mismatch.")
         if probe._frame_count(final) != expected_frame_count:
