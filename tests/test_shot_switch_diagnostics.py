@@ -4,7 +4,10 @@ import logging
 
 import pytest
 
-from vscs.presentation.widgets.shot_switch_diagnostics import measure_shot_switch, profile_selection_handler
+from vscs.presentation.widgets.shot_switch_diagnostics import (
+    measure_shot_switch,
+    profile_selection_handler,
+)
 
 
 def test_shot_switch_profile_disabled_by_default(monkeypatch, caplog):
@@ -30,7 +33,9 @@ def test_shot_switch_profile_preserves_errors(monkeypatch):
 def test_deep_profile_disabled_is_transparent(monkeypatch, caplog):
     monkeypatch.delenv("VSCS_SHOT_SWITCH_PROFILE", raising=False)
     with caplog.at_level(logging.WARNING):
-        result = profile_selection_handler(lambda value: value + 1, "selection.pre_scheduling_chain")(4)
+        result = profile_selection_handler(
+            lambda value: value + 1, "selection.pre_scheduling_chain"
+        )(4)
     assert result == 5
     assert "top_calls" not in caplog.text
 
