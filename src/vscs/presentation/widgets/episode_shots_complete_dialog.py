@@ -90,6 +90,10 @@ class EpisodeShotsCompleteDialog(QDialog):
         self.complete_button = QPushButton("Episode / Video Shots Complete", self)
         self.complete_button.setObjectName("shot_set_declare_complete")
         self.complete_button.setEnabled(False)
+        self.complete_button.setToolTip(
+            "Awaiting authoritative planned-Shot-set resolution. Manually entered IDs "
+            "must not authorize Episode completion."
+        )
         self.refresh_button.clicked.connect(self.refresh_readiness)
         self.complete_button.clicked.connect(self.declare_complete)
         controls.addWidget(self.refresh_button)
@@ -128,13 +132,12 @@ class EpisodeShotsCompleteDialog(QDialog):
                 ):
                     self.table.setItem(index, column, QTableWidgetItem(value))
             self.status.setText(
-                "READY: Operator confirmation required."
+                "PREVIEW ONLY: Selected media pass checks, but the required Shot list "
+                "has not been verified against authoritative Episode planning."
                 if readiness.ready
                 else "BLOCKED: " + "; ".join(readiness.blockers)
             )
-            self.complete_button.setEnabled(
-                readiness.ready and bool(self.operator_id.text().strip())
-            )
+            self.complete_button.setEnabled(False)
         except (AssemblyEvidenceError, ShotSetDeclarationError, ValueError, OSError) as exc:
             self.status.setText(f"BLOCKED: {exc}")
 
