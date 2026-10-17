@@ -123,6 +123,21 @@ class JsonAssemblyTimelineRepository:
                 staged.unlink(missing_ok=True)
         return path
 
+    def list_revisions(self) -> tuple[AssemblyTimelineRevision, ...]:
+        """Discover persisted revisions, validating every record fail-closed."""
+        if not self.root.is_dir():
+            return ()
+        revisions: list[AssemblyTimelineRevision] = []
+        for assembly_directory in sorted(self.root.iterdir()):
+            if not assembly_directory.is_dir():
+                continue
+            for path in sorted(assembly_directory.glob("*.json")):
+                revision = self.get(assembly_directory.name, path.stem)
+                if revision is None:
+                    raise AssemblyEvidenceError("Discovered assembly revision is missing")
+                revisions.append(revision)
+        return tuple(revisions)
+
     def get(self, assembly_id: str, revision_id: str) -> AssemblyTimelineRevision | None:
         path = self._path(assembly_id, revision_id)
         if not path.exists():
