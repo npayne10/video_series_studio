@@ -32,6 +32,12 @@ from vscs.application.caps import (
 from vscs.application.generated_media import GeneratedMediaUiService
 from vscs.application.production_execution import ProductionExecutionUiService
 from vscs.application.projects import ProjectError, ProjectService
+from vscs.application.story import (
+    EpisodePlanningService,
+    GovernedPlanningReviewService,
+    GovernedShotPlanningService,
+    ScenePlanningService,
+)
 from vscs.application.provider_capability_validation import ProviderCapabilityValidationService
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.infrastructure.generated_media import (
@@ -247,7 +253,8 @@ class MainWindow(QMainWindow):
         )
         self.content_stack.addWidget(self.provider_validation_workspace)
         self.episode_assembly_workspace = EpisodeAssemblyWorkspace(
-            lambda: self.projects.project_directory
+            lambda: self.projects.project_directory,
+            authority_services=self._episode_assembly_authority_services,
         )
         self.content_stack.addWidget(self.episode_assembly_workspace)
         self.content_stack.addWidget(self._placeholder_page("Post-Production"))
@@ -292,6 +299,7 @@ class MainWindow(QMainWindow):
         elif section == "Provider Validation":
             self.provider_validation_workspace.refresh()
         elif section == "Episode Assembly":
+            self.episode_assembly_workspace.discover_episodes()
             self.episode_assembly_workspace.refresh()
 
     def _select_navigation_item(self, row: int) -> None:
@@ -302,6 +310,16 @@ class MainWindow(QMainWindow):
         self._select_navigation_item(4)
         self.cap_manager.refresh()
         self.statusBar().showMessage(f"Canonical Profiles — {asset_id}", 5000)
+
+    def _episode_assembly_authority_services(self) -> tuple[object, object, object, object] | None:
+        """Use the registered governed planning graph, never create substitute authority."""
+        services = (
+            self.services.get(EpisodePlanningService),
+            self.services.get(ScenePlanningService),
+            self.services.get(GovernedShotPlanningService),
+            self.services.get(GovernedPlanningReviewService),
+        )
+        return services if all(service is not None for service in services) else None
 
     def _generated_media_ui_service(self) -> GeneratedMediaUiService | None:
         project_directory = self.projects.project_directory
