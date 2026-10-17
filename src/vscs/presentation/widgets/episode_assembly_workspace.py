@@ -22,18 +22,18 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
-from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.application.episode_shot_set_resolver import (
     EpisodeShotSet,
     reconcile_episode_coverage,
     resolve_episode_shots,
 )
-from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
-from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
+from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.infrastructure.assembly_timeline import (
     AssemblyEvidenceError,
     JsonAssemblyTimelineRepository,
 )
+from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
+from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 
 
 class EpisodeAssemblyWorkspace(QWidget):
@@ -208,7 +208,8 @@ class EpisodeAssemblyWorkspace(QWidget):
                 GeneratedMediaPersistenceService(
                     JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
                 ).list_all()
-                if directory is not None else ()
+                if directory is not None
+                else ()
             )
             media = tuple(item for item in media if item.scope.episode_id == episode_id)
             tasks = (
