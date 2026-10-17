@@ -89,9 +89,7 @@ def reconcile_episode_coverage(
     for item in selections:
         if item.media_state != "approved" or not item.approval_evidence_ref:
             blockers.append(f"{item.shot_id}: Generated Media approval evidence missing")
-    return EpisodeCoverage(
-        authority.required_shot_ids, selected, missing, extra, tuple(blockers)
-    )
+    return EpisodeCoverage(authority.required_shot_ids, selected, missing, extra, tuple(blockers))
 
 
 def initialize_governed_episode_timeline(
