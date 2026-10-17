@@ -45,7 +45,10 @@ def _encode(revision: AssemblyTimelineRevision) -> dict[str, Any]:
 def _decode(raw: Any) -> AssemblyTimelineRevision:
     try:
         data = _object(raw, "timeline", _fields(AssemblyTimelineRevision))
-        scope = AssemblyScope(**_object(data["scope"], "scope", _fields(AssemblyScope)))
+        scope_data = _object(data["scope"], "scope", _fields(AssemblyScope))
+        scope = AssemblyScope(
+            **{**scope_data, "scope_kind": AssemblyScopeKind(scope_data["scope_kind"])}
+        )
         selections_raw = data["selections"]
         if not isinstance(selections_raw, list):
             raise AssemblyEvidenceError("selections must be a list")
