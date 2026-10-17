@@ -73,7 +73,7 @@ def test_partial_draft_preserves_missing_shots_without_placeholder_media():
 
 
 def test_draft_rejects_media_without_human_approval_reference():
-    with pytest.raises(ValueError, match="approved media"):
+    with pytest.raises(ValueError, match="Approval evidence reference"):
         build_partial_draft(
             _authority(),
             _scope(),
