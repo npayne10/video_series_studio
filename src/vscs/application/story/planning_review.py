@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from vscs.application.projects import ProjectNotOpenError, ProjectService
+from vscs.application.selection_package_cache import selection_package_lookup
 
 from .asset_resolver import GovernedAssetResolutionService
 from .camera_planning import GovernedCameraPlanningService
@@ -123,7 +124,11 @@ class GovernedPlanningReviewService:
         return next((item for item in self.list_reviews() if item.shot_id == normalized), None)
 
     def snapshot(self, shot_id: str) -> PlanningReviewSnapshot:
-        """Evaluate every authoritative Phase 19.3 Shot-level planning contract."""
+        """Evaluate authoritative readiness once per Shot within a UI selection."""
+        return selection_package_lookup(self, shot_id, lambda: self._snapshot_uncached(shot_id))
+
+    def _snapshot_uncached(self, shot_id: str) -> PlanningReviewSnapshot:
+        """Recompute every governed readiness check from authoritative inputs."""
         normalized = shot_id.strip().upper()
         shot = self.shots.plan(normalized)
         checks: list[PlanningReviewCheck] = []
