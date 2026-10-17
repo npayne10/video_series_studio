@@ -1502,6 +1502,19 @@ class LocalComfyUIProductionExecutionBackend(_CurrentAuthorityBackend):
             ).hexdigest()[:24].upper()
         )
         record = self.media.get(media_id)
+        if record is not None and (
+            record.scope.production_task_id != task_id
+            or record.provenance.provider_job_id != readiness.provider_plan_id
+            or record.file.checksum_sha256 != digest
+            or dict(record.provenance.attributes).get("recovery_kind")
+            != "historical_h3_evidence_only"
+            or record.state not in {
+                GeneratedMediaState.GENERATED,
+                GeneratedMediaState.UNDER_REVIEW,
+                GeneratedMediaState.APPROVED,
+            }
+        ):
+            raise ProductionExecutionError("Existing historical H3 Generated Media differs.")
         if record is None:
             record = self._register_h3_monolithic_generated_media(
                 task, readiness=readiness, final_path=final,
