@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_draft_selection import approved_media_choices
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
 from vscs.application.episode_shot_set_resolver import (
     EpisodeShotSet,
@@ -120,6 +121,19 @@ class EpisodeAssemblyWorkspace(QWidget):
         )
         layout.addWidget(self.coverage_table)
         self.coverage_table.itemSelectionChanged.connect(self._show_shot_blockers)
+        self.draft_media_selector = QComboBox(self)
+        self.draft_media_selector.setObjectName("episodeDraftMediaSelector")
+        self.draft_media_selector.addItem("Select approved media for highlighted Shot", None)
+        layout.addWidget(self.draft_media_selector)
+        self.stage_media_button = QPushButton("Stage Media for Draft (no publication)", self)
+        self.stage_media_button.setObjectName("episodeStageDraftMedia")
+        self.stage_media_button.clicked.connect(self._stage_selected_media)
+        layout.addWidget(self.stage_media_button)
+        self.draft_status = QLabel("No Draft media staged. Completion remains blocked.", self)
+        self.draft_status.setObjectName("episodeDraftStagingStatus")
+        layout.addWidget(self.draft_status)
+        self._draft_candidates: dict[str, tuple[str, ...]] = {}
+        self._staged_media: dict[str, str] = {}
         self._row_blockers: list[tuple[str, ...]] = []
         self.shot_blockers = QPlainTextEdit(self)
         self.shot_blockers.setObjectName("episodeShotBlockerDetails")
@@ -144,12 +158,36 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.complete_button.setEnabled(False)
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
+        self._staged_media.clear()
+        self._draft_candidates.clear()
+        self.draft_media_selector.clear()
+        self.draft_media_selector.addItem("Select approved media for highlighted Shot", None)
+        self.draft_status.setText("No Draft media staged. Completion remains blocked.")
         self._row_blockers = []
         self.shot_blockers.clear()
         self._selected_revision = None
         self._resolved_authority = None
         self.coverage_status.setText("BLOCKED: Episode coverage must be recalculated.")
         self.status.setText("Revision selection changed. Inspect again to view persisted evidence.")
+
+    def _stage_selected_media(self) -> None:
+        row = self.coverage_table.currentRow()
+        media_id = self.draft_media_selector.currentData()
+        if row < 0 or not media_id:
+            self.draft_status.setText("BLOCKED: Select a Shot and approved media first.")
+            return
+        shot_item = self.coverage_table.item(row, 0)
+        if shot_item is None:
+            return
+        shot_id = shot_item.text()
+        if media_id not in self._draft_candidates.get(shot_id, ()):
+            self.draft_status.setText("BLOCKED: Selected media is not eligible for this Shot.")
+            return
+        self._staged_media[shot_id] = media_id
+        self.draft_status.setText(
+            f"{len(self._staged_media)} approved media choice(s) staged in memory. "
+            "No Draft published; frame ranges and authoritative scope are still required."
+        )
 
     def _show_shot_blockers(self) -> None:
         row = self.coverage_table.currentRow()
@@ -160,6 +198,12 @@ class EpisodeAssemblyWorkspace(QWidget):
             )
         else:
             self.shot_blockers.clear()
+        self.draft_media_selector.clear()
+        self.draft_media_selector.addItem("Select approved media for highlighted Shot", None)
+        item = self.coverage_table.item(row, 0) if row >= 0 else None
+        if item is not None:
+            for media_id in self._draft_candidates.get(item.text(), ()):
+                self.draft_media_selector.addItem(media_id, media_id)
 
     def discover_episodes(self) -> None:
         self.episode_selector.blockSignals(True)
@@ -223,6 +267,11 @@ class EpisodeAssemblyWorkspace(QWidget):
         except (OSError, ValueError, RuntimeError) as exc:
             self.coverage_status.setText(f"BLOCKED: Evidence inventory unreadable: {exc}")
             return
+        self._draft_candidates = {}
+        for choice in approved_media_choices(authority, media):
+            if choice.eligible:
+                existing = self._draft_candidates.get(choice.shot_id, ())
+                self._draft_candidates[choice.shot_id] = (*existing, choice.media_id)
         rows = reconcile_shot_evidence(
             authority.required_shot_ids, authority.blockers, selections, media, tasks
         )
