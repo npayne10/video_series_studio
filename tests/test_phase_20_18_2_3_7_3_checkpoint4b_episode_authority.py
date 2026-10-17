@@ -1,11 +1,11 @@
 """Checkpoint 4B: Episode authority and coverage must fail closed."""
 
 from types import SimpleNamespace
-
-from vscs.application.assembly_contracts import AssemblyScopeKind, AssemblyState
 from unittest.mock import Mock
 
 import pytest
+
+from vscs.application.assembly_contracts import AssemblyScopeKind, AssemblyState
 
 from vscs.application.episode_shot_set_resolver import (
     initialize_governed_episode_timeline,
