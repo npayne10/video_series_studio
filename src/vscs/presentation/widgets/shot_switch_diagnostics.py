@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import cProfile
+import io
 import logging
+import pstats
 import os
 import time
 from collections.abc import Callable, Iterator
@@ -32,7 +35,15 @@ _R = TypeVar("_R")
 def profile_selection_handler(handler: Callable[..., _R], stage: str) -> Callable[..., _R]:
     """Wrap a selection callback without modifying its arguments or return value."""
     def measured(*args: Any, **kwargs: Any) -> _R:
-        with measure_shot_switch(stage):
+        if os.environ.get("VSCS_SHOT_SWITCH_PROFILE") != "1":
             return handler(*args, **kwargs)
+        profiler = cProfile.Profile()
+        with measure_shot_switch(stage):
+            try:
+                return profiler.runcall(handler, *args, **kwargs)
+            finally:
+                report = io.StringIO()
+                pstats.Stats(profiler, stream=report).sort_stats("cumulative").print_stats(25)
+                _LOG.warning("SHOT_SWITCH_PROFILE top_calls stage=%s\n%s", stage, report.getvalue())
 
     return measured
