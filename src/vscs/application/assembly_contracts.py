@@ -10,6 +10,7 @@ import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import ClassVar
 from fractions import Fraction
 
 
@@ -174,24 +175,26 @@ class AssemblyValidation:
 class AssemblyGovernanceValidator:
     """Fail closed for approval and locking; never changes external state."""
 
-    _transitions = {
-        AssemblyState.DRAFT: {AssemblyState.PROVISIONAL_REVIEW, AssemblyState.SUPERSEDED},
-        AssemblyState.PROVISIONAL_REVIEW: {
+    _transitions: ClassVar[dict[AssemblyState, frozenset[AssemblyState]]] = {
+        AssemblyState.DRAFT: frozenset({AssemblyState.PROVISIONAL_REVIEW, AssemblyState.SUPERSEDED}),
+        AssemblyState.PROVISIONAL_REVIEW: frozenset({
             AssemblyState.PICTURE_LOCKED,
             AssemblyState.SUPERSEDED,
-        },
-        AssemblyState.PICTURE_LOCKED: {AssemblyState.POST_PRODUCTION, AssemblyState.SUPERSEDED},
-        AssemblyState.POST_PRODUCTION: {
+        }),
+        AssemblyState.PICTURE_LOCKED: frozenset({AssemblyState.POST_PRODUCTION, AssemblyState.SUPERSEDED}),
+        AssemblyState.POST_PRODUCTION: frozenset({
             AssemblyState.FINAL_QC_REQUIRED,
             AssemblyState.SUPERSEDED,
-        },
-        AssemblyState.FINAL_QC_REQUIRED: {AssemblyState.APPROVED, AssemblyState.SUPERSEDED},
-        AssemblyState.APPROVED: {AssemblyState.MASTERED, AssemblyState.SUPERSEDED},
-        AssemblyState.MASTERED: set(),
-        AssemblyState.SUPERSEDED: set(),
+        }),
+        AssemblyState.FINAL_QC_REQUIRED: frozenset({AssemblyState.APPROVED, AssemblyState.SUPERSEDED}),
+        AssemblyState.APPROVED: frozenset({AssemblyState.MASTERED, AssemblyState.SUPERSEDED}),
+        AssemblyState.MASTERED: frozenset(),
+        AssemblyState.SUPERSEDED: frozenset(),
     }
 
-    def validate(self, revision: AssemblyTimelineRevision, *, final_use: bool) -> AssemblyValidation:
+    def validate(
+        self, revision: AssemblyTimelineRevision, *, final_use: bool
+    ) -> AssemblyValidation:
         blockers: list[str] = []
         if not revision.selections:
             blockers.append("Assembly has no selected Shots")
