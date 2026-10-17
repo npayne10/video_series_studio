@@ -46,7 +46,6 @@ def test_duplicate_historical_revisions_stops_when_current_found():
 def test_reference_precedence_is_unchanged():
     compiler, planning, _packages = _compiler(["SHT-001", "SHT-002"], {"SHT-002"})
     assert (
-        compiler._previous_package("SHT-002", referenced_shot_id="SHT-009")
-        == "production:SHT-009"
+        compiler._previous_package("SHT-002", referenced_shot_id="SHT-009") == "production:SHT-009"
     )
     planning.list_packages.assert_not_called()
