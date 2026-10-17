@@ -17,6 +17,7 @@ from vscs.application.episode_shot_set_resolver import EpisodeShotSet
 def _media(shot="SHT-001", state="approved"):
     return SimpleNamespace(
         media_id="GM-001",
+        kind=SimpleNamespace(value="video"),
         scope=SimpleNamespace(
             shot_id=shot, scene_id="SCN-001", episode_id="EP-001", production_id="PROD-1"
         ),
