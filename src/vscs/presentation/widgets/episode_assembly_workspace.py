@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QScrollArea,
+    QSplitter,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -86,6 +89,27 @@ class EpisodeAssemblyWorkspace(QWidget):
                 "Shot Set Readiness & Completion — authoritative planning integration pending", self
             )
         )
+        self.assembly_splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        self.assembly_splitter.setObjectName("episodeAssemblyResponsiveSplitter")
+        self.assembly_splitter.setChildrenCollapsible(False)
+        self.coverage_scroll = QScrollArea(self.assembly_splitter)
+        self.coverage_scroll.setObjectName("episodeAssemblyCoverageScroll")
+        self.coverage_scroll.setWidgetResizable(True)
+        self.coverage_panel = QWidget()
+        coverage_layout = QVBoxLayout(self.coverage_panel)
+        self.coverage_scroll.setWidget(self.coverage_panel)
+        self.timeline_scroll = QScrollArea(self.assembly_splitter)
+        self.timeline_scroll.setObjectName("episodeAssemblyTimelineScroll")
+        self.timeline_scroll.setWidgetResizable(True)
+        self.timeline_panel = QWidget()
+        timeline_layout = QVBoxLayout(self.timeline_panel)
+        self.timeline_scroll.setWidget(self.timeline_panel)
+        self.assembly_splitter.addWidget(self.coverage_scroll)
+        self.assembly_splitter.addWidget(self.timeline_scroll)
+        self.assembly_splitter.setStretchFactor(0, 1)
+        self.assembly_splitter.setStretchFactor(1, 1)
+        self.assembly_splitter.setSizes([1600, 1600])
+        layout.addWidget(self.assembly_splitter, 1)
         episode_group = QGroupBox("Authoritative Episode Coverage", self)
         episode_form = QFormLayout(episode_group)
         self.episode_selector = QComboBox(self)
@@ -96,7 +120,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.resolve_button.setObjectName("episodeResolveShotSet")
         self.resolve_button.clicked.connect(self.resolve_coverage)
         episode_form.addRow(self.resolve_button)
-        layout.addWidget(episode_group)
+        coverage_layout.addWidget(episode_group)
         form_group = QGroupBox("Persisted Assembly Timeline Revision", self)
         form = QFormLayout(form_group)
         self.assembly_id = QLineEdit(self)
@@ -109,7 +133,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.persisted_revisions.setObjectName("episodePersistedRevisionSelector")
         self.persisted_revisions.addItem("Select persisted timeline revision", None)
         form.addRow("Available revisions", self.persisted_revisions)
-        layout.addWidget(form_group)
+        timeline_layout.addWidget(form_group)
         actions = QHBoxLayout()
         self.discover_button = QPushButton("Find persisted revisions", self)
         self.discover_button.setObjectName("episodeDiscoverRevisions")
@@ -126,39 +150,43 @@ class EpisodeAssemblyWorkspace(QWidget):
             "Blocked until authoritative planned Shot-set coverage is resolved."
         )
         actions.addWidget(self.complete_button)
-        layout.addLayout(actions)
+        timeline_layout.addLayout(actions)
         self.status = QLabel("Open a project and inspect a persisted timeline revision.", self)
         self.status.setObjectName("episodeAssemblyStatus")
         self.status.setWordWrap(True)
-        layout.addWidget(self.status)
+        timeline_layout.addWidget(self.status)
         self.table = QTableWidget(0, 4, self)
         self.table.setObjectName("episodeAssemblyShotTable")
         self.table.setHorizontalHeaderLabels(
             ["Shot", "Generated Media", "State", "Approval Evidence"]
         )
-        layout.addWidget(self.table)
+        self.table.setMinimumHeight(190)
+        self.table.setMaximumHeight(380)
+        timeline_layout.addWidget(self.table)
         self.coverage_status = QLabel("BLOCKED: Authoritative Episode Shot set not resolved.", self)
         self.coverage_status.setObjectName("episodeCoverageStatus")
         self.coverage_status.setWordWrap(True)
-        layout.addWidget(self.coverage_status)
+        coverage_layout.addWidget(self.coverage_status)
         self.coverage_table = QTableWidget(0, 5, self)
         self.coverage_table.setObjectName("episodeCoverageMatrix")
         self.coverage_table.setHorizontalHeaderLabels(
             ["Required Shot", "Planning", "Generated Media", "Assembly", "ProductionTask"]
         )
-        layout.addWidget(self.coverage_table)
+        self.coverage_table.setMinimumHeight(260)
+        self.coverage_table.setMaximumHeight(560)
+        coverage_layout.addWidget(self.coverage_table)
         self.coverage_table.itemSelectionChanged.connect(self._show_shot_blockers)
         self.draft_media_selector = QComboBox(self)
         self.draft_media_selector.setObjectName("episodeDraftMediaSelector")
         self.draft_media_selector.addItem("Select approved media for highlighted Shot", None)
-        layout.addWidget(self.draft_media_selector)
+        coverage_layout.addWidget(self.draft_media_selector)
         self.stage_media_button = QPushButton("Stage Media for Draft (no publication)", self)
         self.stage_media_button.setObjectName("episodeStageDraftMedia")
         self.stage_media_button.clicked.connect(self._stage_selected_media)
-        layout.addWidget(self.stage_media_button)
+        coverage_layout.addWidget(self.stage_media_button)
         self.draft_status = QLabel("No Draft media staged. Completion remains blocked.", self)
         self.draft_status.setObjectName("episodeDraftStagingStatus")
-        layout.addWidget(self.draft_status)
+        coverage_layout.addWidget(self.draft_status)
         self._draft_candidates: dict[str, tuple[str, ...]] = {}
         self._staged_media: dict[str, str] = {}
         self.staged_summary = QTableWidget(0, 4, self)
@@ -166,8 +194,9 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.staged_summary.setHorizontalHeaderLabels(
             ["Shot", "Approved Generated Media", "Source Frames", "Readiness"]
         )
-        self.staged_summary.setMaximumHeight(160)
-        layout.addWidget(self.staged_summary)
+        self.staged_summary.setMinimumHeight(125)
+        self.staged_summary.setMaximumHeight(220)
+        coverage_layout.addWidget(self.staged_summary)
         publication = QGroupBox("Governed Draft Publication", self)
         publication_form = QFormLayout(publication)
         self.draft_assembly_id = QLineEdit(self)
@@ -201,7 +230,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             )
         self.publish_draft_button.clicked.connect(self._publish_draft)
         publication_form.addRow(self.publish_draft_button)
-        layout.addWidget(publication)
+        timeline_layout.addWidget(publication)
         self._draft_frames: dict[str, tuple[int, int]] = {}
         successor_group = QGroupBox("Governed Successor Draft Revision", self)
         successor_form = QFormLayout(successor_group)
@@ -224,7 +253,8 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.successor_comparison.setHorizontalHeaderLabels(
             ["Shot", "Change", "Previous media", "Proposed media", "Source frames"]
         )
-        self.successor_comparison.setMaximumHeight(175)
+        self.successor_comparison.setMinimumHeight(145)
+        self.successor_comparison.setMaximumHeight(300)
         successor_form.addRow(self.successor_comparison)
         self.successor_status = QLabel("Select and inspect a persisted Draft predecessor.", self)
         self.successor_status.setWordWrap(True)
@@ -234,7 +264,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.successor_publish_button.setEnabled(False)
         self.successor_publish_button.clicked.connect(self._publish_successor)
         successor_form.addRow(self.successor_publish_button)
-        layout.addWidget(successor_group)
+        timeline_layout.addWidget(successor_group)
         self._successor_candidate: Any = None
         self._successor_predecessor_fingerprint: str | None = None
 
@@ -250,14 +280,14 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.shot_blockers.setObjectName("episodeShotBlockerDetails")
         self.shot_blockers.setReadOnly(True)
         self.shot_blockers.setMaximumHeight(120)
-        layout.addWidget(self.shot_blockers)
+        coverage_layout.addWidget(self.shot_blockers)
         self.stages = QLabel(
             "Next governed stages (not yet enabled): Picture Lock → Dialogue & Lip-Sync → "
             "Effects & Transitions → Mastering & Final QC",
             self,
         )
         self.stages.setWordWrap(True)
-        layout.addWidget(self.stages)
+        timeline_layout.addWidget(self.stages)
         self.assembly_id.textChanged.connect(self._invalidate)
         self.revision_id.textChanged.connect(self._invalidate)
         self.persisted_revisions.currentIndexChanged.connect(self._select_persisted_revision)
