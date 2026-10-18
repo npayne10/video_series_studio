@@ -31,3 +31,15 @@ def test_frame_range_requires_staged_media(qtbot, tmp_path):
     workspace._store_frame_range()
     assert workspace.draft_status.text().startswith("BLOCKED:")
     assert workspace._draft_frames == {}
+
+
+def test_scope_callback_without_valid_evidence_keeps_publish_disabled(qtbot, tmp_path):
+    workspace = EpisodeAssemblyWorkspace(
+        lambda: tmp_path,
+        verified_assembly_scope=lambda _episode_id: None,
+    )
+    qtbot.addWidget(workspace)
+    assert not workspace.publish_draft_button.isEnabled()
+    workspace._publish_draft()
+    assert "BLOCKED" in workspace.draft_status.text()
+    assert not (tmp_path / ".vscs" / "episode_assembly").exists()
