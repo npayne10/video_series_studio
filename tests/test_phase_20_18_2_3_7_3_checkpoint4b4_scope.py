@@ -8,7 +8,7 @@ from vscs.application.episode_assembly_scope import verified_episode_assembly_sc
 
 
 def test_missing_governed_scope_never_fabricated(tmp_path):
-    assert verified_episode_assembly_scope(tmp_path, "EP-001") is None
+    assert verified_episode_assembly_scope(tmp_path, "EP-001", ("SHT-001",)) is None
 
 
 def test_malformed_governed_scope_fails_closed(tmp_path):
@@ -20,4 +20,4 @@ def test_malformed_governed_scope_fails_closed(tmp_path):
 
 
 def test_missing_project_never_supplies_scope():
-    assert verified_episode_assembly_scope(None, "EP-001") is None
+    assert verified_episode_assembly_scope(None, "EP-001", ("SHT-001",)) is None
