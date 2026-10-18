@@ -67,9 +67,7 @@ def test_snapshot_publishes_once_and_rejects_changed_plan(tmp_path):
     )
     assert scope == snapshot.scope
     with pytest.raises(ValueError, match="Shot order"):
-        resolve_current_planning_snapshot(
-            tmp_path, "EP-001", services, ("PROD-1",), ("SHT-002",)
-        )
+        resolve_current_planning_snapshot(tmp_path, "EP-001", services, ("PROD-1",), ("SHT-002",))
     with pytest.raises(ValueError, match="Shot order"):
         resolve_current_planning_snapshot(
             tmp_path, "EP-001", _services("SHT-002"), ("PROD-1",), ("SHT-001",)
