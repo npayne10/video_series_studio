@@ -30,7 +30,6 @@ from vscs.application.episode_draft_selection import (
     publish_partial_draft,
 )
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
-from vscs.application.episode_video_frame_inspection import read_approved_video_frames
 from vscs.application.episode_planning_snapshot import (
     JsonPlanningSnapshotRepository,
     build_planning_snapshot,
@@ -41,6 +40,7 @@ from vscs.application.episode_shot_set_resolver import (
     reconcile_episode_coverage,
     resolve_episode_shots,
 )
+from vscs.application.episode_video_frame_inspection import read_approved_video_frames
 from vscs.application.generated_media import GeneratedMediaPersistenceService
 from vscs.infrastructure.assembly_timeline import (
     AssemblyEvidenceError,
