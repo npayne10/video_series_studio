@@ -10,8 +10,6 @@ from uuid import uuid4
 
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import (
-    QScrollArea,
-    QSplitter,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -21,7 +19,9 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -111,9 +111,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.assembly_splitter.setSizes([1600, 1600])
         self._layout_settings = QSettings("VSCS", "EpisodeAssembly")
         saved_splitter = self._layout_settings.value("responsive_splitter_state")
-        if isinstance(saved_splitter, bytes):
-            self.assembly_splitter.restoreState(saved_splitter)
-        elif saved_splitter is not None:
+        if saved_splitter is not None:
             self.assembly_splitter.restoreState(saved_splitter)
         self.assembly_splitter.splitterMoved.connect(self._save_splitter_layout)
         layout.addWidget(self.assembly_splitter, 1)
