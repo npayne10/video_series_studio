@@ -55,7 +55,7 @@ def build_planning_snapshot(
             raise ValueError("Scene has no governed Shot Plans")
         ids = [plan.shot_id for plan in plans]
         required.extend(ids)
-        structure.append({"scene_id": scene.scene_id, "shot_ids": ids})
+        structure.append({"scene_id": scene.scene_id, "shots": [asdict(plan) for plan in plans]})
     if len(required) != len(set(required)):
         raise ValueError("Duplicate planned Shots")
     unique_productions = sorted(set(production_ids))
@@ -102,7 +102,13 @@ class JsonPlanningSnapshotRepository:
                 suffix=".tmp", delete=False,
             ) as stream:
                 staged = Path(stream.name)
-                json.dump({"schema_version": "1.0", "snapshot": asdict(snapshot)}, stream, sort_keys=True)
+                payload = asdict(snapshot)
+                serialized = json.dumps(payload, sort_keys=True)
+                integrity = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+                json.dump(
+                    {"schema_version": "1.0", "snapshot": payload, "integrity_sha256": integrity},
+                    stream, sort_keys=True,
+                )
                 stream.flush()
                 os.fsync(stream.fileno())
             os.link(staged, path)
@@ -118,11 +124,17 @@ class JsonPlanningSnapshotRepository:
         raw = json.loads(path.read_text(encoding="utf-8"))
         if raw.get("schema_version") != "1.0":
             raise ValueError("Unsupported planning snapshot schema")
+        serialized = json.dumps(raw["snapshot"], sort_keys=True)
+        actual_integrity = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        if actual_integrity != raw.get("integrity_sha256"):
+            raise ValueError("Planning snapshot integrity mismatch")
         snapshot = PlanningSnapshot(**{
             **raw["snapshot"], "shot_ids": tuple(raw["snapshot"]["shot_ids"])
         })
         if snapshot.episode_id != episode_id or snapshot.revision_id != revision_id:
             raise ValueError("Planning snapshot identity mismatch")
+        if not snapshot.shot_ids or len(set(snapshot.shot_ids)) != len(snapshot.shot_ids):
+            raise ValueError("Invalid snapshot Shot set")
         if not snapshot.operator_id.strip() or not snapshot.production_id.strip():
             raise ValueError("Planning snapshot lacks authority")
         if "PS-" + snapshot.planning_fingerprint[:24].upper() != snapshot.revision_id:
