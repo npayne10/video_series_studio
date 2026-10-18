@@ -5,6 +5,12 @@ from unittest.mock import Mock
 
 import pytest
 
+from test_phase_20_18_2_3_7_4_timeline_successor import (
+    _authority,
+    _previous,
+    _selection,
+)
+
 from vscs.application.episode_timeline_revision_management import (
     prepare_successor_revision,
     publish_successor_revision,
@@ -13,11 +19,6 @@ from vscs.infrastructure.assembly_replacement_decisions import (
     JsonReplacementDecisionRepository,
     ReplacementDecision,
     ReplacementDecisionError,
-)
-from test_phase_20_18_2_3_7_4_timeline_successor import (
-    _authority,
-    _previous,
-    _selection,
 )
 
 
@@ -99,7 +100,7 @@ def test_replacement_publication_requires_matching_persisted_decision(tmp_path):
 
 
 def test_unrelated_decision_cannot_authorize_other_successor(tmp_path):
-    predecessor, candidate, decision = _case()
+    predecessor, _candidate, decision = _case()
     decisions = JsonReplacementDecisionRepository(tmp_path)
     decisions.create(decision)
     changed_candidate = prepare_successor_revision(
