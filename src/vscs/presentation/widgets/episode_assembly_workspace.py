@@ -619,7 +619,18 @@ class EpisodeAssemblyWorkspace(QWidget):
                 self.revision_id.text().strip(),
             )
             target = current_id if all(current_id) else None
-        chosen = self.persisted_revisions.findData(target) if target else -1
+        # Qt can deserialize tuple item data as a list; findData(tuple) then misses it.
+        chosen = -1
+        if target:
+            for index in range(1, self.persisted_revisions.count()):
+                identity = self.persisted_revisions.itemData(index)
+                if (
+                    isinstance(identity, (tuple, list))
+                    and len(identity) == 2
+                    and tuple(identity) == target
+                ):
+                    chosen = index
+                    break
         self.persisted_revisions.setCurrentIndex(chosen if chosen >= 0 else 0)
         self.persisted_revisions.blockSignals(False)
         if chosen >= 0:
