@@ -283,19 +283,24 @@ class EpisodeAssemblyWorkspace(QWidget):
             return
         try:
             snapshot = build_planning_snapshot(
-                episode_id, services, self._staged_production_ids(directory),
+                episode_id,
+                services,
+                self._staged_production_ids(directory),
                 self.snapshot_operator.text().strip(),
             )
             if self._resolved_authority is None or (
                 snapshot.shot_ids != self._resolved_authority.required_shot_ids
             ):
                 raise ValueError("Shot-set order is not the resolved authoritative Episode")
-            if QMessageBox.question(
-                self,
-                "Authorize immutable planning snapshot?",
-                "Authorize the current Episode/Scene/Shot planning structure for partial "
-                "Draft assembly? This DOES NOT approve missing Shots or complete the Episode.",
-            ) != QMessageBox.StandardButton.Yes:
+            if (
+                QMessageBox.question(
+                    self,
+                    "Authorize immutable planning snapshot?",
+                    "Authorize the current Episode/Scene/Shot planning structure for partial "
+                    "Draft assembly? This DOES NOT approve missing Shots or complete the Episode.",
+                )
+                != QMessageBox.StandardButton.Yes
+            ):
                 return
             path = JsonPlanningSnapshotRepository(directory).create(snapshot)
         except (ValueError, RuntimeError, OSError) as exc:
@@ -313,15 +318,22 @@ class EpisodeAssemblyWorkspace(QWidget):
             return None
         scope = (
             self._verified_assembly_scope(episode_id, authority.required_shot_ids)
-            if self._verified_assembly_scope is not None else None
+            if self._verified_assembly_scope is not None
+            else None
         )
         if scope is not None:
             return scope
         services = self._authority_services() if self._authority_services else None
         if services is None:
             return None
+        # A Draft cannot obtain production scope without staged persisted media.
+        if not self._staged_media:
+            return None
         return resolve_current_planning_snapshot(
-            directory, episode_id, services, self._staged_production_ids(directory),
+            directory,
+            episode_id,
+            services,
+            self._staged_production_ids(directory),
             authority.required_shot_ids,
         )
 
