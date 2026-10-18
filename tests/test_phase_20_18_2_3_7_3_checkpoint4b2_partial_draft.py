@@ -142,3 +142,20 @@ def test_recorded_approval_reference_is_deterministic():
     assert first is not None
     assert first == approval_evidence_reference(media)
     assert first.startswith("GM-APPROVAL-SHA256-")
+
+
+def test_partial_draft_allows_other_incomplete_shots_but_not_selected_unready_shot():
+    from vscs.application.episode_shot_set_resolver import EpisodeShotSet
+
+    media = _media()
+    authority = EpisodeShotSet(
+        "EP-001", ("SHT-001", "SHT-002"), ("SHT-002: planning review outstanding",)
+    )
+    selected = (("SHT-001", media, 0, 24, approval_evidence_reference(media)),)
+    draft = build_partial_draft(authority, _scope(), "ASM-PARTIAL", "REV-1", selected)
+    assert tuple(item.shot_id for item in draft.selections) == ("SHT-001",)
+    blocked = EpisodeShotSet(
+        "EP-001", ("SHT-001", "SHT-002"), ("SHT-001: planning review outstanding",)
+    )
+    with pytest.raises(ValueError, match="Planning or review blockers"):
+        build_partial_draft(blocked, _scope(), "ASM-PARTIAL", "REV-1", selected)
