@@ -133,7 +133,9 @@ def publish_successor_revision(
         if any(decision is None for decision in decisions):
             raise ValueError("Persisted replacement decision missing")
         decision_shots = [decision.shot_id for decision in decisions]
-        if len(set(replacement_decision_ids)) != len(decisions) or set(decision_shots) != set(changed):
+        if len(set(replacement_decision_ids)) != len(decisions) or set(decision_shots) != set(
+            changed
+        ):
             raise ValueError("Replacement decisions do not match changed Shots")
         for decision in decisions:
             prior = existing[decision.shot_id]
