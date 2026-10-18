@@ -150,6 +150,13 @@ class EpisodeAssemblyWorkspace(QWidget):
         layout.addWidget(self.draft_status)
         self._draft_candidates: dict[str, tuple[str, ...]] = {}
         self._staged_media: dict[str, str] = {}
+        self.staged_summary = QTableWidget(0, 4, self)
+        self.staged_summary.setObjectName("episodeStagedMediaSummary")
+        self.staged_summary.setHorizontalHeaderLabels(
+            ["Shot", "Approved Generated Media", "Source Frames", "Readiness"]
+        )
+        self.staged_summary.setMaximumHeight(160)
+        layout.addWidget(self.staged_summary)
         publication = QGroupBox("Governed Draft Publication", self)
         publication_form = QFormLayout(publication)
         self.draft_assembly_id = QLineEdit(self)
@@ -212,6 +219,20 @@ class EpisodeAssemblyWorkspace(QWidget):
         self._selected_revision: Any = None
         self._resolved_authority: EpisodeShotSet | None = None
 
+    def _update_staged_summary(self) -> None:
+        self.staged_summary.setRowCount(0)
+        for index, (shot_id, media_id) in enumerate(sorted(self._staged_media.items())):
+            frames = self._draft_frames.get(shot_id)
+            values = (
+                shot_id,
+                media_id,
+                f"[{frames[0]}, {frames[1]})" if frames else "Not recorded",
+                "Range recorded" if frames else "Needs source range",
+            )
+            self.staged_summary.insertRow(index)
+            for column, value in enumerate(values):
+                self.staged_summary.setItem(index, column, QTableWidgetItem(value))
+
     def _invalidate(self, *_args: object) -> None:
         self.complete_button.setEnabled(False)
         self.publish_draft_button.setEnabled(False)
@@ -219,6 +240,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.coverage_table.setRowCount(0)
         self._staged_media.clear()
         self._draft_frames.clear()
+        self._update_staged_summary()
         self._draft_candidates.clear()
         self.draft_media_selector.clear()
         self.draft_media_selector.addItem("Select approved media for highlighted Shot", None)
@@ -246,6 +268,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         if self._staged_media.get(shot_id) != media_id:
             self._draft_frames.pop(shot_id, None)
         self._staged_media[shot_id] = media_id
+        self._update_staged_summary()
         self.draft_status.setText(
             f"{len(self._staged_media)} approved media choice(s) staged in memory. "
             "No Draft published; frame ranges and authoritative scope are still required."
@@ -275,6 +298,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.draft_in_frame.setValue(0)
         self.draft_out_frame.setValue(details.frame_count)
         self._draft_frames.pop(shot_id, None)
+        self._update_staged_summary()
         self.draft_status.setText(
             f"Verified {shot_id}: {details.media_id} | {details.relative_path} | "
             f"{details.frame_count} frames at {details.frame_rate} fps "
@@ -294,6 +318,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             self.draft_status.setText("BLOCKED: Source out frame must exceed source in frame.")
             return
         self._draft_frames[shot_id] = (first, last)
+        self._update_staged_summary()
         self.draft_status.setText(f"Frame range recorded for {shot_id}: [{first}, {last}).")
 
     def _staged_production_ids(self, directory: Path) -> tuple[str, ...]:
@@ -437,7 +462,9 @@ class EpisodeAssemblyWorkspace(QWidget):
         except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
             self.draft_status.setText(f"BLOCKED: Draft publication failed: {exc}")
             return
-        self.discover_revisions()
+        self.discover_revisions(
+            select_identity=(revision.assembly_id, revision.revision_id)
+        )
         self.draft_status.setText(
             f"Published immutable Draft at {path}. Episode completion remains blocked."
         )
@@ -559,9 +586,10 @@ class EpisodeAssemblyWorkspace(QWidget):
                         "BLOCKED: No existing authoritative Assembly Scope for this Episode."
                     )
 
-    def discover_revisions(self) -> None:
-        """List only valid persisted timeline records; never infer approval."""
-        self._invalidate()
+    def discover_revisions(
+        self, *, select_identity: tuple[str, str] | None = None
+    ) -> None:
+        """Discover persisted revisions and optionally inspect a specific revision."""
         self.persisted_revisions.blockSignals(True)
         self.persisted_revisions.clear()
         self.persisted_revisions.addItem("Select persisted timeline revision", None)
@@ -573,24 +601,36 @@ class EpisodeAssemblyWorkspace(QWidget):
                 else ()
             )
         except (AssemblyEvidenceError, ValueError, OSError) as exc:
+            self.persisted_revisions.blockSignals(False)
             self.status.setText(f"BLOCKED: Unable to discover timeline revisions: {exc}")
-            revisions = ()
-        for revision in revisions:
+            return
+        for revision in sorted(
+            revisions,
+            key=lambda item: (item.scope.scope_id, item.assembly_id, item.revision_id),
+            reverse=True,
+        ):
             self.persisted_revisions.addItem(
                 f"{revision.scope.scope_id} | {revision.assembly_id} | {revision.revision_id}",
                 (revision.assembly_id, revision.revision_id),
             )
+        target = select_identity
+        if target is None:
+            current_id = (
+                self.assembly_id.text().strip(),
+                self.revision_id.text().strip(),
+            )
+            target = current_id if all(current_id) else None
+        chosen = self.persisted_revisions.findData(target) if target else -1
+        self.persisted_revisions.setCurrentIndex(chosen if chosen >= 0 else 0)
         self.persisted_revisions.blockSignals(False)
-        if (
-            not revisions
-            and directory is not None
-            and not self.status.text().startswith("BLOCKED: Unable")
-        ):
+        if chosen >= 0:
+            self._select_persisted_revision(chosen)
+        elif not revisions:
             self.status.setText("BLOCKED: No persisted timeline revisions found.")
-        elif revisions:
+        else:
             self.status.setText(
                 f"{len(revisions)} validated persisted revision(s) available. "
-                "Select one to inspect; planned Shot-set authority is not yet connected."
+                "Select a revision to inspect."
             )
 
     def _select_persisted_revision(self, _index: int) -> None:
