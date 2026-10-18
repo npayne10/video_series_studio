@@ -150,3 +150,31 @@ class JsonPlanningSnapshotRepository:
         if snapshot != expected:
             raise ValueError("Published planning snapshot is stale or differs from current plan")
         return snapshot.scope
+
+
+def resolve_current_planning_snapshot(
+    project_directory: Path,
+    episode_id: str,
+    planning_services: tuple[Any, Any, Any, Any],
+    production_ids: tuple[str, ...],
+    expected_shot_ids: tuple[str, ...],
+) -> AssemblyScope | None:
+    """Accept only published, intact snapshot matching the *current* plan."""
+    if not expected_shot_ids:
+        return None
+    candidate = build_planning_snapshot(
+        episode_id, planning_services, production_ids, operator_id="comparison-only"
+    )
+    if candidate.shot_ids != expected_shot_ids:
+        raise ValueError("Episode Shot order differs from planning snapshot authority")
+    repository = JsonPlanningSnapshotRepository(project_directory)
+    persisted = repository.get(episode_id, candidate.revision_id)
+    if persisted is None:
+        return None
+    if (
+        persisted.production_id != candidate.production_id
+        or persisted.shot_ids != candidate.shot_ids
+        or persisted.planning_fingerprint != candidate.planning_fingerprint
+    ):
+        raise ValueError("Persisted planning snapshot does not match current authority")
+    return persisted.scope
