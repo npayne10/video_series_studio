@@ -462,9 +462,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
             self.draft_status.setText(f"BLOCKED: Draft publication failed: {exc}")
             return
-        self.discover_revisions(
-            select_identity=(revision.assembly_id, revision.revision_id)
-        )
+        self.discover_revisions(select_identity=(revision.assembly_id, revision.revision_id))
         self.draft_status.setText(
             f"Published immutable Draft at {path}. Episode completion remains blocked."
         )
@@ -589,9 +587,7 @@ class EpisodeAssemblyWorkspace(QWidget):
                         else "BLOCKED: No current verified Assembly Scope for these staged media."
                     )
 
-    def discover_revisions(
-        self, *, select_identity: tuple[str, str] | None = None
-    ) -> None:
+    def discover_revisions(self, *, select_identity: tuple[str, str] | None = None) -> None:
         """Discover persisted revisions and optionally inspect a specific revision."""
         self.persisted_revisions.blockSignals(True)
         self.persisted_revisions.clear()
