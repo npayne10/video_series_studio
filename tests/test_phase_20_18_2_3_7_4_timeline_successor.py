@@ -59,7 +59,9 @@ def _authority() -> EpisodeShotSet:
 def test_successor_adds_shot_and_preserves_predecessor_evidence():
     old = _previous()
     next_revision = prepare_successor_revision(
-        old, revision_id="REV-002", authority=_authority(),
+        old,
+        revision_id="REV-002",
+        authority=_authority(),
         additions=(_selection("SHT-002", "GM-2"),),
     )
     assert next_revision.predecessor_revision == "REV-001"
@@ -71,17 +73,23 @@ def test_successor_adds_shot_and_preserves_predecessor_evidence():
 def test_silent_replacement_and_unapproved_additions_block():
     with pytest.raises(ValueError, match="governed replacement"):
         prepare_successor_revision(
-            _previous(), revision_id="REV-002", authority=_authority(),
+            _previous(),
+            revision_id="REV-002",
+            authority=_authority(),
             additions=(_selection("SHT-001", "GM-NEW"),),
         )
     with pytest.raises(ValueError, match="justification"):
         prepare_successor_revision(
-            _previous(), revision_id="REV-002", authority=_authority(),
+            _previous(),
+            revision_id="REV-002",
+            authority=_authority(),
             replacements=(_selection("SHT-001", "GM-NEW"),),
         )
     with pytest.raises(ValueError, match="human-approved"):
         prepare_successor_revision(
-            _previous(), revision_id="REV-002", authority=_authority(),
+            _previous(),
+            revision_id="REV-002",
+            authority=_authority(),
             additions=(replace(_selection("SHT-002", "GM-2"), media_state="generated"),),
         )
 
@@ -89,7 +97,9 @@ def test_silent_replacement_and_unapproved_additions_block():
 def test_successor_publication_requires_current_predecessor_and_media_bytes():
     old = _previous()
     candidate = prepare_successor_revision(
-        old, revision_id="REV-002", authority=_authority(),
+        old,
+        revision_id="REV-002",
+        authority=_authority(),
         additions=(_selection("SHT-002", "GM-2"),),
     )
     repo = Mock()
@@ -97,21 +107,29 @@ def test_successor_publication_requires_current_predecessor_and_media_bytes():
     validator = Mock()
     validator.validate.return_value = SimpleNamespace(allowed=True, blockers=())
     publish_successor_revision(
-        candidate, repository=repo, validator=validator,
-        authority=_authority(), expected_predecessor_fingerprint=old.fingerprint,
+        candidate,
+        repository=repo,
+        validator=validator,
+        authority=_authority(),
+        expected_predecessor_fingerprint=old.fingerprint,
     )
     repo.create.assert_called_once_with(candidate)
     with pytest.raises(ValueError, match="Predecessor"):
         publish_successor_revision(
-            candidate, repository=repo, validator=validator,
-            authority=_authority(), expected_predecessor_fingerprint="stale",
+            candidate,
+            repository=repo,
+            validator=validator,
+            authority=_authority(),
+            expected_predecessor_fingerprint="stale",
         )
 
 
 def test_replacement_requires_justification_at_publish_boundary():
     old = _previous()
     candidate = prepare_successor_revision(
-        old, revision_id="REV-002", authority=_authority(),
+        old,
+        revision_id="REV-002",
+        authority=_authority(),
         replacements=(_selection("SHT-001", "GM-NEW"),),
         replacement_reason="Operator reviewed new QC evidence",
     )
@@ -119,7 +137,10 @@ def test_replacement_requires_justification_at_publish_boundary():
     repo.get.return_value = old
     with pytest.raises(ValueError, match="justification"):
         publish_successor_revision(
-            candidate, repository=repo, validator=validator,
-            authority=_authority(), expected_predecessor_fingerprint=old.fingerprint,
+            candidate,
+            repository=repo,
+            validator=validator,
+            authority=_authority(),
+            expected_predecessor_fingerprint=old.fingerprint,
         )
     repo.create.assert_not_called()
