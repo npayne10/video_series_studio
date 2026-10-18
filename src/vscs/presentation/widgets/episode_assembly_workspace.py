@@ -166,7 +166,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         publication_form.addRow(self.store_frame_range)
         self.publish_draft_button = QPushButton("Review and Publish Immutable Draft", self)
         self.publish_draft_button.setObjectName("publishGovernedDraft")
-        self.publish_draft_button.setEnabled(verified_assembly_scope is not None)
+        self.publish_draft_button.setEnabled(False)
         if verified_assembly_scope is None:
             self.publish_draft_button.setToolTip(
                 "Blocked: verified assembly-scope authority is not connected."
@@ -197,6 +197,7 @@ class EpisodeAssemblyWorkspace(QWidget):
 
     def _invalidate(self, *_args: object) -> None:
         self.complete_button.setEnabled(False)
+        self.publish_draft_button.setEnabled(False)
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
         self._staged_media.clear()
@@ -256,7 +257,11 @@ class EpisodeAssemblyWorkspace(QWidget):
                 "BLOCKED: Authoritative assembly scope resolver is not connected. No Draft published."
             )
             return
-        scope = self._verified_assembly_scope(episode_id)
+        try:
+            scope = self._verified_assembly_scope(episode_id)
+        except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
+            self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
+            return
         if scope is None:
             self.draft_status.setText("BLOCKED: Verified assembly scope unavailable.")
             return
@@ -412,6 +417,18 @@ class EpisodeAssemblyWorkspace(QWidget):
             f"{absent} not in timeline | {len(coverage.blockers)} governance blockers. "
             "Completion remains disabled. Select a Shot row for details."
         )
+
+        if self._verified_assembly_scope is not None and authority.eligible:
+            try:
+                verified_scope = self._verified_assembly_scope(episode_id)
+            except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
+                self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
+            else:
+                self.publish_draft_button.setEnabled(verified_scope is not None)
+                if verified_scope is None:
+                    self.draft_status.setText(
+                        "BLOCKED: No existing authoritative Assembly Scope for this Episode."
+                    )
 
     def discover_revisions(self) -> None:
         """List only valid persisted timeline records; never infer approval."""
