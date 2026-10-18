@@ -10,7 +10,6 @@ from test_phase_20_18_2_3_7_4_timeline_successor import (
     _previous,
     _selection,
 )
-
 from vscs.application.episode_timeline_revision_management import (
     prepare_successor_revision,
     publish_successor_revision,
