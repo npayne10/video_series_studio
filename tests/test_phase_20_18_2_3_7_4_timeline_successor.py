@@ -135,7 +135,7 @@ def test_replacement_requires_justification_at_publish_boundary():
     )
     repo, validator = Mock(), Mock()
     repo.get.return_value = old
-    with pytest.raises(ValueError, match="justification"):
+    with pytest.raises(ValueError, match="persisted replacement decisions"):
         publish_successor_revision(
             candidate,
             repository=repo,
