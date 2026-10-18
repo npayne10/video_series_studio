@@ -29,6 +29,7 @@ from vscs.application.caps import (
     CAPService,
     ProductionProjectionService,
 )
+from vscs.application.episode_assembly_scope import verified_episode_assembly_scope
 from vscs.application.generated_media import GeneratedMediaUiService
 from vscs.application.production_execution import ProductionExecutionUiService
 from vscs.application.projects import ProjectError, ProjectService
@@ -255,6 +256,9 @@ class MainWindow(QMainWindow):
         self.episode_assembly_workspace = EpisodeAssemblyWorkspace(
             lambda: self.projects.project_directory,
             authority_services=self._episode_assembly_authority_services,
+            verified_assembly_scope=lambda episode_id: verified_episode_assembly_scope(
+                self.projects.project_directory, episode_id
+            ),
         )
         self.content_stack.addWidget(self.episode_assembly_workspace)
         self.content_stack.addWidget(self._placeholder_page("Post-Production"))
