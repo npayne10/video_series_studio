@@ -130,3 +130,43 @@ Test 5: only on an isolated project with actual eligible approved media,
 confirm publication and inspect the new persisted successor.
 Check unchanged original revision checksum, SHT-003 pending-QC gate, and
 Episode completion disabled.
+
+## Checkpoint 3.1 — Responsive Episode Assembly layout
+
+The Episode Assembly page uses a horizontal, drag-resizable `QSplitter`
+with independently scrollable `QScrollArea` panes:
+
+- **Left:** Episode selection and Shot-set resolution, Coverage Matrix,
+  approved-media selection, staged-media summary and Shot-specific blockers.
+- **Right:** persisted revision discovery/inspection and Shot evidence,
+  initial Draft publication, governed successor editor and comparison,
+  completion control and subsequent-stage status.
+
+Both panes scroll vertically without scrolling the other pane. Tables
+retain their own scrollbars with bounded heights, so extensive evidence
+does not force the entire workspace to expand. The splitter stores its
+last divider positions through VSCS-specific Qt settings, separate from
+project evidence. No authority, QC, media, publication or Episode
+completion code paths are intentionally changed.
+
+### Operator UI acceptance at 3440×1440
+
+Use an isolated project such as `D:\\VSCS TSR2 - TEST 4B5`, not
+production TSR2. Open Episode Assembly and verify:
+1. Two side-by-side panels are visible with a draggable divider.
+2. Scroll Coverage Matrix on the left without moving the right panel.
+3. Scroll the right panel to the Successor comparison without moving
+   the left panel.
+4. Resize the divider, restart VSCS and confirm its position persists.
+5. Inspect existing REV-001, ensure SHT-001/SHT-002 are visible,
+   SHT-003 remains QC-pending and completion disabled.
+6. Stage an approved selection and save a range, verify staged summary
+   and successor preview controls remain reachable.
+7. Do **not** publish another immutable revision during layout testing.
+
+Focused tests:
+```powershell
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_checkpoint3_1_responsive_layout.py -v
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_successor_editor_ui.py -v
+python -m pytest -q
+```
