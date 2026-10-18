@@ -9,14 +9,14 @@ from vscs.infrastructure.shot_set_completion import JsonShotSetCompletionReposit
 
 
 def verified_episode_assembly_scope(
-    project_directory: Path | None, episode_id: str
+    project_directory: Path | None, episode_id: str, expected_shot_ids: tuple[str, ...]
 ) -> AssemblyScope | None:
     """Reuse only a valid published Shot-set declaration, never invent a revision.
 
     A first-time partial Draft still requires a separate approved planning-snapshot
     scope authority; this lookup cannot provide one without existing evidence.
     """
-    if project_directory is None or not episode_id.strip():
+    if project_directory is None or not episode_id.strip() or not expected_shot_ids:
         return None
     repository = JsonShotSetCompletionRepository(project_directory)
     if not repository.root.is_dir():
@@ -30,6 +30,8 @@ def verified_episode_assembly_scope(
             declaration.scope.scope_kind is AssemblyScopeKind.EPISODE
             and declaration.scope.scope_id == episode_id.strip().upper()
         ):
+            if declaration.expected_shot_ids != expected_shot_ids:
+                raise ValueError("Declared Episode Shot set differs from current planning")
             matching.append(declaration.scope)
     if not matching:
         return None
