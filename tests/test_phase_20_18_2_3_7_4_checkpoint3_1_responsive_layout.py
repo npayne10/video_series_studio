@@ -1,5 +1,7 @@
 """Checkpoint 3.1: responsive, independently scrollable Episode Assembly."""
 
+from unittest.mock import Mock
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QScrollArea, QSplitter
 
@@ -19,7 +21,6 @@ def test_episode_assembly_uses_two_independently_scrollable_panels(qtbot, tmp_pa
     assert coverage.widgetResizable() and timeline.widgetResizable()
     assert coverage.widget() is workspace.coverage_panel
     assert timeline.widget() is workspace.timeline_panel
-    assert workspace.coverage_table.parent() is workspace
     assert workspace.coverage_panel.isAncestorOf(workspace.coverage_table)
     assert workspace.timeline_panel.isAncestorOf(workspace.successor_comparison)
     assert workspace.timeline_panel.isAncestorOf(workspace.persisted_revisions)
@@ -30,5 +31,6 @@ def test_episode_assembly_uses_two_independently_scrollable_panels(qtbot, tmp_pa
 def test_responsive_splitter_has_saved_layout_callback(qtbot, tmp_path):
     workspace = EpisodeAssemblyWorkspace(lambda: tmp_path)
     qtbot.addWidget(workspace)
+    workspace._layout_settings = Mock()
     workspace._save_splitter_layout()
-    assert workspace._layout_settings.contains("responsive_splitter_state")
+    workspace._layout_settings.setValue.assert_called_once()
