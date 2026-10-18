@@ -583,7 +583,10 @@ class EpisodeAssemblyWorkspace(QWidget):
                 self.publish_draft_button.setEnabled(verified_scope is not None)
                 if verified_scope is None:
                     self.draft_status.setText(
-                        "BLOCKED: No existing authoritative Assembly Scope for this Episode."
+                        "BLOCKED: Stage approved media to evaluate new Draft scope. "
+                        "Existing persisted revisions remain available for inspection."
+                        if not self._staged_media
+                        else "BLOCKED: No current verified Assembly Scope for these staged media."
                     )
 
     def discover_revisions(
