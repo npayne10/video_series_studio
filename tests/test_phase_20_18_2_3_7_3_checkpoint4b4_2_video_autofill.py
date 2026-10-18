@@ -46,9 +46,11 @@ def test_rejects_modified_bytes_without_running_probe(tmp_path):
     folder = tmp_path / "media"
     folder.mkdir()
     (folder / "approved.mp4").write_bytes(b"tampered")
-    with patch("vscs.application.episode_video_frame_inspection.subprocess.run") as run:
-        with pytest.raises(ValueError, match="checksum or size mismatch"):
-            read_approved_video_frames(tmp_path, _record(b"original"))
+    with (
+        patch("vscs.application.episode_video_frame_inspection.subprocess.run") as run,
+        pytest.raises(ValueError, match="checksum or size mismatch"),
+    ):
+        read_approved_video_frames(tmp_path, _record(b"original"))
     run.assert_not_called()
 
 
@@ -61,12 +63,14 @@ def test_rejects_missing_or_invalid_frame_count(tmp_path):
     folder = tmp_path / "media"
     folder.mkdir()
     (folder / "approved.mp4").write_bytes(b"bytes")
-    with patch(
-        "vscs.application.episode_video_frame_inspection.subprocess.run",
-        return_value=SimpleNamespace(stdout='{"streams":[{"avg_frame_rate":"24/1"}]}'),
+    with (
+        patch(
+            "vscs.application.episode_video_frame_inspection.subprocess.run",
+            return_value=SimpleNamespace(stdout='{"streams":[{"avg_frame_rate":"24/1"}]}'),
+        ),
+        pytest.raises(ValueError, match="frame count or frame rate"),
     ):
-        with pytest.raises(ValueError, match="frame count or frame rate"):
-            read_approved_video_frames(tmp_path, _record(b"bytes"))
+        read_approved_video_frames(tmp_path, _record(b"bytes"))
 
 
 def test_ui_autofill_requires_staged_approved_media(qtbot, tmp_path):
