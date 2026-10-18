@@ -30,6 +30,11 @@ from vscs.application.episode_draft_selection import (
     publish_partial_draft,
 )
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
+from vscs.application.episode_planning_snapshot import (
+    JsonPlanningSnapshotRepository,
+    build_planning_snapshot,
+    resolve_current_planning_snapshot,
+)
 from vscs.application.episode_shot_set_resolver import (
     EpisodeShotSet,
     reconcile_episode_coverage,
@@ -175,6 +180,13 @@ class EpisodeAssemblyWorkspace(QWidget):
         publication_form.addRow(self.publish_draft_button)
         layout.addWidget(publication)
         self._draft_frames: dict[str, tuple[int, int]] = {}
+        self.snapshot_operator = QLineEdit(self)
+        self.snapshot_operator.setObjectName("planningSnapshotOperator")
+        publication_form.addRow("Planning snapshot operator", self.snapshot_operator)
+        self.authorize_snapshot = QPushButton("Authorize Immutable Planning Snapshot", self)
+        self.authorize_snapshot.setObjectName("authorizePlanningSnapshot")
+        self.authorize_snapshot.clicked.connect(self._authorize_planning_snapshot)
+        publication_form.addRow(self.authorize_snapshot)
         self._row_blockers: list[tuple[str, ...]] = []
         self.shot_blockers = QPlainTextEdit(self)
         self.shot_blockers.setObjectName("episodeShotBlockerDetails")
@@ -248,11 +260,76 @@ class EpisodeAssemblyWorkspace(QWidget):
         self._draft_frames[shot_id] = (first, last)
         self.draft_status.setText(f"Frame range recorded for {shot_id}: [{first}, {last}).")
 
+    def _staged_production_ids(self, directory: Path) -> tuple[str, ...]:
+        if not self._staged_media:
+            return ()
+        service = GeneratedMediaPersistenceService(
+            JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+        )
+        productions = []
+        for media_id in self._staged_media.values():
+            media = service.get(media_id)
+            if media is None:
+                raise ValueError("Staged Generated Media record no longer exists")
+            productions.append(media.scope.production_id)
+        return tuple(productions)
+
+    def _authorize_planning_snapshot(self) -> None:
+        directory = self._project_directory()
+        episode_id = self.episode_selector.currentData()
+        services = self._authority_services() if self._authority_services else None
+        if directory is None or not episode_id or services is None:
+            self.draft_status.setText("BLOCKED: Open a project and resolve Episode authority.")
+            return
+        try:
+            snapshot = build_planning_snapshot(
+                episode_id, services, self._staged_production_ids(directory),
+                self.snapshot_operator.text().strip(),
+            )
+            if self._resolved_authority is None or (
+                snapshot.shot_ids != self._resolved_authority.required_shot_ids
+            ):
+                raise ValueError("Shot-set order is not the resolved authoritative Episode")
+            if QMessageBox.question(
+                self,
+                "Authorize immutable planning snapshot?",
+                "Authorize the current Episode/Scene/Shot planning structure for partial "
+                "Draft assembly? This DOES NOT approve missing Shots or complete the Episode.",
+            ) != QMessageBox.StandardButton.Yes:
+                return
+            path = JsonPlanningSnapshotRepository(directory).create(snapshot)
+        except (ValueError, RuntimeError, OSError) as exc:
+            self.draft_status.setText(f"BLOCKED: Planning snapshot authorization failed: {exc}")
+            return
+        self.draft_status.setText(
+            f"Published planning authority {snapshot.revision_id} at {path}. "
+            "No Shot or media approval changed."
+        )
+        self.publish_draft_button.setEnabled(True)
+
+    def _scope_for_current_draft(self, episode_id: str, authority: EpisodeShotSet) -> Any:
+        directory = self._project_directory()
+        if directory is None:
+            return None
+        scope = (
+            self._verified_assembly_scope(episode_id, authority.required_shot_ids)
+            if self._verified_assembly_scope is not None else None
+        )
+        if scope is not None:
+            return scope
+        services = self._authority_services() if self._authority_services else None
+        if services is None:
+            return None
+        return resolve_current_planning_snapshot(
+            directory, episode_id, services, self._staged_production_ids(directory),
+            authority.required_shot_ids,
+        )
+
     def _publish_draft(self) -> None:
         """Publish only after independent authoritative scope and media verification."""
         directory = self._project_directory()
         episode_id = self.episode_selector.currentData()
-        if not directory or not episode_id or not self._verified_assembly_scope:
+        if not directory or not episode_id:
             self.draft_status.setText(
                 "BLOCKED: Authoritative assembly scope resolver is not connected. No Draft published."
             )
@@ -262,7 +339,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             if services_for_scope is None:
                 raise ValueError("Episode planning authority unavailable")
             scope_authority = resolve_episode_shots(episode_id, *services_for_scope)
-            scope = self._verified_assembly_scope(episode_id, scope_authority.required_shot_ids)
+            scope = self._scope_for_current_draft(episode_id, scope_authority)
         except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
             self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
             return
@@ -422,11 +499,9 @@ class EpisodeAssemblyWorkspace(QWidget):
             "Completion remains disabled. Select a Shot row for details."
         )
 
-        if self._verified_assembly_scope is not None and authority.eligible:
+        if authority.required_shot_ids:
             try:
-                verified_scope = self._verified_assembly_scope(
-                    episode_id, authority.required_shot_ids
-                )
+                verified_scope = self._scope_for_current_draft(episode_id, authority)
             except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
                 self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
             else:
