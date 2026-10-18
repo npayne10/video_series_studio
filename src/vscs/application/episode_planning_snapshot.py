@@ -64,17 +64,24 @@ def build_planning_snapshot(
     if not operator_id.strip():
         raise ValueError("Explicit operator identity is required")
     payload = {
-        "episode_id": episode_id, "story_id": episode.story_id,
-        "episode_plan": asdict(episode), "scenes": [asdict(scene) for scene in scene_plans],
-        "shot_structure": structure, "required_shots": required,
+        "episode_id": episode_id,
+        "story_id": episode.story_id,
+        "episode_plan": asdict(episode),
+        "scenes": [asdict(scene) for scene in scene_plans],
+        "shot_structure": structure,
+        "required_shots": required,
         "production_id": unique_productions[0],
     }
     fingerprint = hashlib.sha256(
         json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     ).hexdigest()
     return PlanningSnapshot(
-        episode_id, unique_productions[0], tuple(required), fingerprint,
-        operator_id.strip(), "PS-" + fingerprint[:24].upper(),
+        episode_id,
+        unique_productions[0],
+        tuple(required),
+        fingerprint,
+        operator_id.strip(),
+        "PS-" + fingerprint[:24].upper(),
     )
 
 
@@ -86,7 +93,10 @@ class JsonPlanningSnapshotRepository:
 
     def _path(self, episode_id: str, revision_id: str) -> Path:
         for value in (episode_id, revision_id):
-            if not value or any(ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for ch in value):
+            if not value or any(
+                ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+                for ch in value
+            ):
                 raise ValueError("Unsafe snapshot identity")
         return self.root / episode_id / f"{revision_id}.json"
 
@@ -98,8 +108,11 @@ class JsonPlanningSnapshotRepository:
         staged: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", dir=path.parent,
-                suffix=".tmp", delete=False,
+                mode="w",
+                encoding="utf-8",
+                dir=path.parent,
+                suffix=".tmp",
+                delete=False,
             ) as stream:
                 staged = Path(stream.name)
                 payload = asdict(snapshot)
@@ -107,7 +120,8 @@ class JsonPlanningSnapshotRepository:
                 integrity = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
                 json.dump(
                     {"schema_version": "1.0", "snapshot": payload, "integrity_sha256": integrity},
-                    stream, sort_keys=True,
+                    stream,
+                    sort_keys=True,
                 )
                 stream.flush()
                 os.fsync(stream.fileno())
@@ -128,9 +142,9 @@ class JsonPlanningSnapshotRepository:
         actual_integrity = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
         if actual_integrity != raw.get("integrity_sha256"):
             raise ValueError("Planning snapshot integrity mismatch")
-        snapshot = PlanningSnapshot(**{
-            **raw["snapshot"], "shot_ids": tuple(raw["snapshot"]["shot_ids"])
-        })
+        snapshot = PlanningSnapshot(
+            **{**raw["snapshot"], "shot_ids": tuple(raw["snapshot"]["shot_ids"])}
+        )
         if snapshot.episode_id != episode_id or snapshot.revision_id != revision_id:
             raise ValueError("Planning snapshot identity mismatch")
         if not snapshot.shot_ids or len(set(snapshot.shot_ids)) != len(snapshot.shot_ids):
