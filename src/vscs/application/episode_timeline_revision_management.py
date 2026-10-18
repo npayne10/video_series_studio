@@ -87,6 +87,8 @@ def publish_successor_revision(
     authority: EpisodeShotSet,
     expected_predecessor_fingerprint: str,
     replacement_reason: str | None = None,
+    decision_repository: Any = None,
+    replacement_decision_ids: tuple[str, ...] = (),
 ) -> Any:
     """Re-read exact predecessor, reject stale lineage, and verify media bytes.
 
@@ -124,8 +126,32 @@ def publish_successor_revision(
         if item.shot_id in existing
         and item != replace(existing[item.shot_id], sequence_index=item.sequence_index)
     )
-    if changed and not (replacement_reason and replacement_reason.strip()):
-        raise ValueError("Changed predecessor Shots require replacement justification")
+    if changed:
+        if decision_repository is None or len(replacement_decision_ids) != len(changed):
+            raise ValueError("Changed predecessor Shots require persisted replacement decisions")
+        decisions = [decision_repository.get(identity) for identity in replacement_decision_ids]
+        if any(decision is None for decision in decisions):
+            raise ValueError("Persisted replacement decision missing")
+        decision_shots = [decision.shot_id for decision in decisions]
+        if len(set(replacement_decision_ids)) != len(decisions) or set(decision_shots) != set(changed):
+            raise ValueError("Replacement decisions do not match changed Shots")
+        for decision in decisions:
+            prior = existing[decision.shot_id]
+            successor = proposed[decision.shot_id]
+            if (
+                decision.assembly_id != candidate.assembly_id
+                or decision.predecessor_revision_id != predecessor.revision_id
+                or decision.successor_revision_id != candidate.revision_id
+                or decision.predecessor_fingerprint != predecessor.fingerprint
+                or decision.successor_fingerprint != candidate.fingerprint
+                or decision.previous_selection != prior
+                or decision.replacement_selection != successor
+                or not decision.operator_id.strip()
+                or not decision.justification.strip()
+            ):
+                raise ValueError("Persisted replacement decision does not match revision evidence")
+    elif replacement_decision_ids:
+        raise ValueError("Unexpected replacement decisions without changed Shots")
     if not changed and len(proposed) == len(existing):
         raise ValueError("Successor contains no additions or governed replacements")
     for item in candidate.selections:
