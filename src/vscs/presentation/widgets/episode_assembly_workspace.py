@@ -379,11 +379,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             changed = tuple(
                 item for item in candidate.selections
                 if item.shot_id in old
-                and (
-                    item.generated_media_id != old[item.shot_id].generated_media_id
-                    or item.source_in_frame != old[item.shot_id].source_in_frame
-                    or item.source_out_frame != old[item.shot_id].source_out_frame
-                )
+                and item != replace(old[item.shot_id], sequence_index=item.sequence_index)
             )
             if (
                 QMessageBox.question(
