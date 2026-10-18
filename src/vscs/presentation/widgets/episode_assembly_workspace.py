@@ -30,6 +30,7 @@ from vscs.application.episode_draft_selection import (
     publish_partial_draft,
 )
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
+from vscs.application.episode_video_frame_inspection import read_approved_video_frames
 from vscs.application.episode_planning_snapshot import (
     JsonPlanningSnapshotRepository,
     build_planning_snapshot,
@@ -166,6 +167,10 @@ class EpisodeAssemblyWorkspace(QWidget):
         publication_form.addRow("Revision ID", self.draft_revision_id)
         publication_form.addRow("Source in frame", self.draft_in_frame)
         publication_form.addRow("Source out frame (exclusive)", self.draft_out_frame)
+        self.autofill_frames_button = QPushButton("Read Approved Media & Auto-Fill Frames", self)
+        self.autofill_frames_button.setObjectName("draftAutoFillFrames")
+        self.autofill_frames_button.clicked.connect(self._autofill_source_frames)
+        publication_form.addRow(self.autofill_frames_button)
         self.store_frame_range = QPushButton("Set staged Shot frame range", self)
         self.store_frame_range.clicked.connect(self._store_frame_range)
         publication_form.addRow(self.store_frame_range)
@@ -244,6 +249,37 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.draft_status.setText(
             f"{len(self._staged_media)} approved media choice(s) staged in memory. "
             "No Draft published; frame ranges and authoritative scope are still required."
+        )
+
+    def _autofill_source_frames(self) -> None:
+        """Verify selected media bytes and use actual decoded frame count."""
+        row = self.coverage_table.currentRow()
+        item = self.coverage_table.item(row, 0) if row >= 0 else None
+        shot_id = item.text() if item is not None else ""
+        media_id = self._staged_media.get(shot_id)
+        directory = self._project_directory()
+        if not shot_id or not media_id or directory is None:
+            self.draft_status.setText("BLOCKED: Select a staged approved Shot and open project.")
+            return
+        try:
+            repository = JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+            media = GeneratedMediaPersistenceService(repository).get(media_id)
+            if media is None or media.scope.shot_id != shot_id:
+                raise ValueError("Staged media identity no longer matches the Shot")
+            details = read_approved_video_frames(directory, media)
+            if details.frame_count > self.draft_out_frame.maximum():
+                raise ValueError("Source frame count exceeds supported UI frame range")
+        except (ValueError, OSError, RuntimeError) as exc:
+            self.draft_status.setText(f"BLOCKED: Cannot auto-fill source frames: {exc}")
+            return
+        self.draft_in_frame.setValue(0)
+        self.draft_out_frame.setValue(details.frame_count)
+        self._draft_frames.pop(shot_id, None)
+        self.draft_status.setText(
+            f"Verified {shot_id}: {details.media_id} | {details.relative_path} | "
+            f"{details.frame_count} frames at {details.frame_rate} fps "
+            f"({details.duration_seconds:.2f} seconds). "
+            "Review and click Set staged Shot frame range to save."
         )
 
     def _store_frame_range(self) -> None:
