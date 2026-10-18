@@ -86,6 +86,7 @@ def publish_successor_revision(
     validator: Any,
     authority: EpisodeShotSet,
     expected_predecessor_fingerprint: str,
+    replacement_reason: str | None = None,
 ) -> Any:
     """Re-read exact predecessor, reject stale lineage, and verify media bytes.
 
@@ -115,6 +116,17 @@ def publish_successor_revision(
     proposed = {item.shot_id: item for item in candidate.selections}
     if len(proposed) != len(candidate.selections) or not set(existing).issubset(proposed):
         raise ValueError("Successor may not drop or duplicate predecessor Shots")
+    changed = tuple(
+        item.shot_id
+        for item in candidate.selections
+        if item.shot_id in existing and item != replace(
+            existing[item.shot_id], sequence_index=item.sequence_index
+        )
+    )
+    if changed and not (replacement_reason and replacement_reason.strip()):
+        raise ValueError("Changed predecessor Shots require replacement justification")
+    if not changed and len(proposed) == len(existing):
+        raise ValueError("Successor contains no additions or governed replacements")
     for item in candidate.selections:
         if item.media_state != "approved" or not item.approval_evidence_ref:
             raise ValueError(f"{item.shot_id}: approval evidence missing")
