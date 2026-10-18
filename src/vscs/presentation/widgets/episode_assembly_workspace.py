@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from uuid import uuid4
 from typing import Any
 
 from PySide6.QtWidgets import (
@@ -29,6 +30,10 @@ from vscs.application.episode_draft_selection import (
     build_partial_draft,
     publish_partial_draft,
 )
+from vscs.application.episode_timeline_revision_management import (
+    prepare_successor_revision,
+    publish_successor_revision,
+)
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
 from vscs.application.episode_planning_snapshot import (
     JsonPlanningSnapshotRepository,
@@ -46,6 +51,11 @@ from vscs.infrastructure.assembly_timeline import (
     AssemblyEvidenceError,
     AssemblyMediaEvidenceValidator,
     JsonAssemblyTimelineRepository,
+)
+from vscs.infrastructure.assembly_replacement_decisions import (
+    JsonReplacementDecisionRepository,
+    ReplacementDecision,
+    ReplacementDecisionError,
 )
 from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
@@ -192,6 +202,41 @@ class EpisodeAssemblyWorkspace(QWidget):
         publication_form.addRow(self.publish_draft_button)
         layout.addWidget(publication)
         self._draft_frames: dict[str, tuple[int, int]] = {}
+        successor_group = QGroupBox("Governed Successor Draft Revision", self)
+        successor_form = QFormLayout(successor_group)
+        self.successor_revision_id = QLineEdit(self)
+        self.successor_revision_id.setObjectName("successorRevisionId")
+        self.successor_operator = QLineEdit(self)
+        self.successor_operator.setObjectName("successorOperator")
+        self.successor_reason = QPlainTextEdit(self)
+        self.successor_reason.setObjectName("successorReplacementReason")
+        self.successor_reason.setMaximumHeight(75)
+        successor_form.addRow("New revision ID", self.successor_revision_id)
+        successor_form.addRow("Replacement operator", self.successor_operator)
+        successor_form.addRow("Replacement justification (if replacing)", self.successor_reason)
+        self.successor_preview_button = QPushButton("Preview Successor Differences", self)
+        self.successor_preview_button.setObjectName("successorPreview")
+        self.successor_preview_button.clicked.connect(self._preview_successor)
+        successor_form.addRow(self.successor_preview_button)
+        self.successor_comparison = QTableWidget(0, 5, self)
+        self.successor_comparison.setObjectName("successorComparison")
+        self.successor_comparison.setHorizontalHeaderLabels(
+            ["Shot", "Change", "Previous media", "Proposed media", "Source frames"]
+        )
+        self.successor_comparison.setMaximumHeight(175)
+        successor_form.addRow(self.successor_comparison)
+        self.successor_status = QLabel("Select and inspect a persisted Draft predecessor.", self)
+        self.successor_status.setWordWrap(True)
+        successor_form.addRow(self.successor_status)
+        self.successor_publish_button = QPushButton("Confirm & Publish Successor Draft", self)
+        self.successor_publish_button.setObjectName("successorPublish")
+        self.successor_publish_button.setEnabled(False)
+        self.successor_publish_button.clicked.connect(self._publish_successor)
+        successor_form.addRow(self.successor_publish_button)
+        layout.addWidget(successor_group)
+        self._successor_candidate: Any = None
+        self._successor_predecessor_fingerprint: str | None = None
+
         self.snapshot_operator = QLineEdit(self)
         self.snapshot_operator.setObjectName("planningSnapshotOperator")
         publication_form.addRow("Planning snapshot operator", self.snapshot_operator)
@@ -216,8 +261,183 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.revision_id.textChanged.connect(self._invalidate)
         self.persisted_revisions.currentIndexChanged.connect(self._select_persisted_revision)
         self.episode_selector.currentIndexChanged.connect(self._invalidate)
+        self.successor_revision_id.textChanged.connect(self._invalidate_successor_preview)
+        self.successor_operator.textChanged.connect(self._invalidate_successor_preview)
+        self.successor_reason.textChanged.connect(self._invalidate_successor_preview)
         self._selected_revision: Any = None
         self._resolved_authority: EpisodeShotSet | None = None
+
+    def _invalidate_successor_preview(self, *_args: object) -> None:
+        self._successor_candidate = None
+        self._successor_predecessor_fingerprint = None
+        self.successor_publish_button.setEnabled(False)
+        self.successor_comparison.setRowCount(0)
+
+    def _build_successor_candidate(self) -> Any:
+        directory = self._project_directory()
+        predecessor = self._selected_revision
+        episode_id = self.episode_selector.currentData()
+        services = self._authority_services() if self._authority_services else None
+        if directory is None or predecessor is None or services is None or not episode_id:
+            raise ValueError("Open a project, select Episode and inspect a persisted predecessor")
+        authority = resolve_episode_shots(episode_id, *services)
+        if predecessor.scope.scope_id != episode_id:
+            raise ValueError("Selected predecessor belongs to another Episode")
+        if not self._staged_media or set(self._draft_frames) != set(self._staged_media):
+            raise ValueError("Stage approved media and save source ranges for every change")
+        media_service = GeneratedMediaPersistenceService(
+            JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+        )
+        selected = []
+        for shot_id, media_id in self._staged_media.items():
+            record = media_service.get(media_id)
+            if record is None:
+                raise ValueError(f"{shot_id}: media record not found")
+            approval = approval_evidence_reference(record)
+            if approval is None:
+                raise ValueError(f"{shot_id}: human approval missing")
+            first, last = self._draft_frames[shot_id]
+            selected.append((shot_id, record, first, last, approval))
+        proposed = build_partial_draft(
+            authority, predecessor.scope, predecessor.assembly_id,
+            self.successor_revision_id.text().strip(), tuple(selected),
+            frame_rate_num=predecessor.frame_rate_num,
+            frame_rate_den=predecessor.frame_rate_den,
+        )
+        existing = {item.shot_id: item for item in predecessor.selections}
+        additions = tuple(item for item in proposed.selections if item.shot_id not in existing)
+        replacements = tuple(
+            item for item in proposed.selections
+            if item.shot_id in existing
+            and item != existing[item.shot_id].__class__(
+                **{**{field: getattr(existing[item.shot_id], field)
+                       for field in existing[item.shot_id].__dataclass_fields__},
+                   "sequence_index": item.sequence_index}
+            )
+        )
+        if replacements and (
+            not self.successor_operator.text().strip()
+            or not self.successor_reason.toPlainText().strip()
+        ):
+            raise ValueError("Replacement operator and justification are required")
+        candidate = prepare_successor_revision(
+            predecessor, revision_id=self.successor_revision_id.text().strip(),
+            authority=authority, additions=additions, replacements=replacements,
+            replacement_reason=self.successor_reason.toPlainText().strip() or None,
+        )
+        if not additions and not replacements:
+            raise ValueError("No changes staged for a successor revision")
+        return candidate
+
+    def _preview_successor(self) -> None:
+        self._invalidate_successor_preview()
+        try:
+            candidate = self._build_successor_candidate()
+        except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
+            self.successor_status.setText(f"BLOCKED: {exc}")
+            return
+        predecessor = self._selected_revision
+        old = {item.shot_id: item for item in predecessor.selections}
+        self.successor_comparison.setRowCount(0)
+        for index, item in enumerate(candidate.selections):
+            previous = old.get(item.shot_id)
+            kind = (
+                "Added" if previous is None else
+                "Carried" if item.generated_media_id == previous.generated_media_id
+                and item.source_in_frame == previous.source_in_frame
+                and item.source_out_frame == previous.source_out_frame
+                else "Replaced"
+            )
+            values = (
+                item.shot_id, kind,
+                previous.generated_media_id if previous else "—",
+                item.generated_media_id,
+                f"[{item.source_in_frame}, {item.source_out_frame})",
+            )
+            self.successor_comparison.insertRow(index)
+            for column, value in enumerate(values):
+                self.successor_comparison.setItem(index, column, QTableWidgetItem(value))
+        self._successor_candidate = candidate
+        self._successor_predecessor_fingerprint = predecessor.fingerprint
+        self.successor_publish_button.setEnabled(True)
+        self.successor_status.setText(
+            f"PREVIEW ONLY: {len(candidate.selections)} Shots; "
+            "review changes before confirming immutable publication."
+        )
+
+    def _publish_successor(self) -> None:
+        candidate = self._successor_candidate
+        directory = self._project_directory()
+        if candidate is None or directory is None or not self._successor_predecessor_fingerprint:
+            self.successor_status.setText("BLOCKED: Preview a successor first.")
+            return
+        try:
+            fresh = self._build_successor_candidate()
+            if fresh.fingerprint != candidate.fingerprint:
+                raise ValueError("Staged changes or operator inputs changed; preview again")
+            predecessor = self._selected_revision
+            if predecessor is None or predecessor.fingerprint != self._successor_predecessor_fingerprint:
+                raise ValueError("Predecessor changed; preview again")
+            old = {item.shot_id: item for item in predecessor.selections}
+            changed = tuple(
+                item for item in candidate.selections
+                if item.shot_id in old
+                and (
+                    item.generated_media_id != old[item.shot_id].generated_media_id
+                    or item.source_in_frame != old[item.shot_id].source_in_frame
+                    or item.source_out_frame != old[item.shot_id].source_out_frame
+                )
+            )
+            if (
+                QMessageBox.question(
+                    self, "Publish immutable successor?",
+                    f"Publish {candidate.assembly_id} / {candidate.revision_id} with "
+                    f"{len(candidate.selections)} Shots and {len(changed)} replacements? "
+                    "This creates append-only evidence and DOES NOT complete the Episode.",
+                ) != QMessageBox.StandardButton.Yes
+            ):
+                return
+            services = self._authority_services() if self._authority_services else None
+            if services is None:
+                raise ValueError("Authoritative planning services unavailable")
+            authority = resolve_episode_shots(self.episode_selector.currentData(), *services)
+            media_service = GeneratedMediaPersistenceService(
+                JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+            )
+            decisions = JsonReplacementDecisionRepository(directory)
+            decision_ids = []
+            for item in changed:
+                decision = ReplacementDecision(
+                    decision_id=f"RD-{uuid4().hex.upper()}",
+                    assembly_id=candidate.assembly_id,
+                    predecessor_revision_id=predecessor.revision_id,
+                    successor_revision_id=candidate.revision_id,
+                    predecessor_fingerprint=predecessor.fingerprint,
+                    successor_fingerprint=candidate.fingerprint,
+                    shot_id=item.shot_id,
+                    previous_selection=old[item.shot_id],
+                    replacement_selection=item,
+                    operator_id=self.successor_operator.text().strip(),
+                    justification=self.successor_reason.toPlainText().strip(),
+                )
+                decisions.create(decision)
+                decision_ids.append(decision.decision_id)
+            path = publish_successor_revision(
+                candidate, repository=JsonAssemblyTimelineRepository(directory),
+                validator=AssemblyMediaEvidenceValidator(directory, media_service),
+                authority=authority,
+                expected_predecessor_fingerprint=predecessor.fingerprint,
+                decision_repository=decisions,
+                replacement_decision_ids=tuple(decision_ids),
+            )
+        except (ValueError, RuntimeError, OSError, AssemblyEvidenceError, ReplacementDecisionError) as exc:
+            self.successor_status.setText(f"BLOCKED: Successor publication failed: {exc}")
+            return
+        self._invalidate_successor_preview()
+        self.discover_revisions(select_identity=(candidate.assembly_id, candidate.revision_id))
+        self.successor_status.setText(
+            f"Published immutable successor at {path}. Episode completion remains blocked."
+        )
 
     def _update_staged_summary(self) -> None:
         self.staged_summary.setRowCount(0)
@@ -238,6 +458,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.publish_draft_button.setEnabled(False)
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
+        self._invalidate_successor_preview()
         self._staged_media.clear()
         self._draft_frames.clear()
         self._update_staged_summary()
@@ -267,6 +488,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             return
         if self._staged_media.get(shot_id) != media_id:
             self._draft_frames.pop(shot_id, None)
+        self._invalidate_successor_preview()
         self._staged_media[shot_id] = media_id
         self._update_staged_summary()
         self.draft_status.setText(
@@ -297,6 +519,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             return
         self.draft_in_frame.setValue(0)
         self.draft_out_frame.setValue(details.frame_count)
+        self._invalidate_successor_preview()
         self._draft_frames.pop(shot_id, None)
         self._update_staged_summary()
         self.draft_status.setText(
@@ -317,6 +540,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         if last <= first:
             self.draft_status.setText("BLOCKED: Source out frame must exceed source in frame.")
             return
+        self._invalidate_successor_preview()
         self._draft_frames[shot_id] = (first, last)
         self._update_staged_summary()
         self.draft_status.setText(f"Frame range recorded for {shot_id}: [{first}, {last}).")
