@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 from typing import Any
@@ -309,11 +310,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         replacements = tuple(
             item for item in proposed.selections
             if item.shot_id in existing
-            and item != existing[item.shot_id].__class__(
-                **{**{field: getattr(existing[item.shot_id], field)
-                       for field in existing[item.shot_id].__dataclass_fields__},
-                   "sequence_index": item.sequence_index}
-            )
+            and item != replace(existing[item.shot_id], sequence_index=item.sequence_index)
         )
         if replacements and (
             not self.successor_operator.text().strip()
