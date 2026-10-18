@@ -78,3 +78,55 @@ Focused tests:
 python -m pytest -q tests/test_phase_20_18_2_3_7_4_replacement_decision_evidence.py -v
 python -m pytest -q tests/test_phase_20_18_2_3_7_4_timeline_successor.py -v
 ```
+
+## Checkpoint 3 — Governed Successor Draft Editor
+
+Episode Assembly now includes **Governed Successor Draft Revision** below the
+initial Draft publication controls. Select an Episode, discover and inspect an
+existing persisted Draft, enter a **new** revision identity, then use the
+existing coverage matrix to stage only additions/replacements. Save each
+staged Shot's source range using verified approved-media auto-fill.
+
+Click **Preview Successor Differences** to carry forward unchanged selections
+and display a read-only table identifying carried, added and replaced Shots,
+previous/proposed media and proposed frame ranges. Changes to staging, source
+ranges, revision ID, operator or justification invalidate the preview.
+
+For replacements the operator identity and justification are mandatory.
+**Confirm & Publish Successor Draft** requires a successful preview and
+a separate affirmative human confirmation. Replacement decisions are
+published as immutable evidence and verified against exact predecessor and
+successor fingerprints before the successor is appended. In the event of a
+later media-validation failure, the already-written evidence remains an
+audit record, not authority to publish.
+
+No implicit Shot QC, Episode completion, Picture Lock or ProductionTask state
+changes occur. The existing initial Draft flow remains separate.
+
+### Acceptance
+
+Run:
+```powershell
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src
+git diff --check
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_successor_editor_ui.py -v
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_replacement_decision_evidence.py -v
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_timeline_successor.py -v
+python -m pytest -q
+```
+
+Use only `D:\\VSCS TSR2 - TEST 4B5` or a fresh copy for UI acceptance.
+**Never publish a successor in the original TSR2 project while testing.**
+Test 1: with no predecessor inspected, Preview blocks, Publish is disabled.
+Test 2: inspect REV-001, stage an approved new Shot (if present) and record
+verified frames; Preview shows carried and added Shots.
+Test 3: stage approved alternate media for an existing Shot (if available),
+enter operator and justification; Preview shows its replacement. Verify a
+missing operator or justification blocks.
+Test 4: reject publication confirmation; no new revision or decisions created.
+Test 5: only on an isolated project with actual eligible approved media,
+confirm publication and inspect the new persisted successor.
+Check unchanged original revision checksum, SHT-003 pending-QC gate, and
+Episode completion disabled.
