@@ -45,8 +45,11 @@ class ReplacementDecision:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", self.decision_id):
             raise ReplacementDecisionError("Unsafe replacement decision ID")
         for field in (
-            "assembly_id", "predecessor_revision_id", "successor_revision_id",
-            "operator_id", "justification",
+            "assembly_id",
+            "predecessor_revision_id",
+            "successor_revision_id",
+            "operator_id",
+            "justification",
         ):
             if not getattr(self, field).strip():
                 raise ReplacementDecisionError(f"{field} is required")
@@ -109,7 +112,9 @@ class JsonReplacementDecisionRepository:
             if not isinstance(payload, dict) or set(payload) != {"fingerprint", "decision"}:
                 raise ReplacementDecisionError("Malformed replacement envelope")
             fields = payload["decision"]
-            if not isinstance(fields, dict) or set(fields) != set(ReplacementDecision.__dataclass_fields__):
+            if not isinstance(fields, dict) or set(fields) != set(
+                ReplacementDecision.__dataclass_fields__
+            ):
                 raise ReplacementDecisionError("Malformed replacement decision fields")
             for name in ("previous_selection", "replacement_selection"):
                 raw = fields[name]
@@ -119,7 +124,10 @@ class JsonReplacementDecisionRepository:
                     **{**raw, "boundary_evidence_refs": tuple(raw["boundary_evidence_refs"])}
                 )
             decision = ReplacementDecision(**fields)
-            if decision.decision_id != decision_id or decision.fingerprint != payload["fingerprint"]:
+            if (
+                decision.decision_id != decision_id
+                or decision.fingerprint != payload["fingerprint"]
+            ):
                 raise ReplacementDecisionError("Replacement decision identity or checksum mismatch")
             return decision
         except (OSError, ValueError, TypeError, KeyError) as exc:
