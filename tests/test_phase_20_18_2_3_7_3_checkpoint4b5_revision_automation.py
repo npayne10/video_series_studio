@@ -32,7 +32,7 @@ def test_newly_published_revision_auto_selected_and_inspected(qtbot, tmp_path):
         repository.list_revisions.return_value = (revision,)
         repository.get.return_value = revision
         workspace.discover_revisions(select_identity=("ASM-EP-001", "REV-001"))
-    assert workspace.persisted_revisions.currentData() == ("ASM-EP-001", "REV-001")
+    assert tuple(workspace.persisted_revisions.currentData()) == ("ASM-EP-001", "REV-001")
     assert workspace.assembly_id.text() == "ASM-EP-001"
     assert workspace.revision_id.text() == "REV-001"
     assert workspace.table.rowCount() == 1
