@@ -87,8 +87,8 @@ def build_partial_draft(
     Publication requires a separate real-media validator and append-only repository.
     This function never writes, approves, or declares completion.
     """
-    if not authority.eligible:
-        raise ValueError("Episode planning authority is not eligible")
+    if not authority.required_shot_ids:
+        raise ValueError("Episode required Shot-set authority is missing")
     if scope.scope_kind is not AssemblyScopeKind.EPISODE or scope.scope_id != authority.episode_id:
         raise ValueError("Authoritative Episode scope does not match")
     ordered = {shot: index for index, shot in enumerate(authority.required_shot_ids)}
@@ -99,6 +99,8 @@ def build_partial_draft(
     for shot_id, record, first, last, approval_ref in chosen:
         if shot_id not in ordered or record.scope.shot_id != shot_id:
             raise ValueError("Media Shot identity does not match authoritative Shot")
+        if any(blocker.startswith(f"{shot_id}:") for blocker in authority.blockers):
+            raise ValueError(f"{shot_id}: Planning or review blockers prevent Draft selection")
         if (
             record.scope.episode_id != scope.scope_id
             or record.scope.production_id != scope.production_id
