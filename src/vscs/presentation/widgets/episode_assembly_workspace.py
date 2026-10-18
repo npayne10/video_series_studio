@@ -262,9 +262,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             if services_for_scope is None:
                 raise ValueError("Episode planning authority unavailable")
             scope_authority = resolve_episode_shots(episode_id, *services_for_scope)
-            scope = self._verified_assembly_scope(
-                episode_id, scope_authority.required_shot_ids
-            )
+            scope = self._verified_assembly_scope(episode_id, scope_authority.required_shot_ids)
         except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
             self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
             return
