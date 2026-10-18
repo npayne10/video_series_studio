@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-import subprocess
 from types import SimpleNamespace
 from unittest.mock import patch
 
