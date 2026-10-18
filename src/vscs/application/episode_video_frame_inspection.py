@@ -54,11 +54,22 @@ def read_approved_video_frames(
     try:
         process = subprocess.run(
             [
-                probe_command, "-v", "error", "-select_streams", "v:0",
-                "-count_frames", "-show_entries",
-                "stream=nb_read_frames,avg_frame_rate", "-of", "json", str(path),
+                probe_command,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-count_frames",
+                "-show_entries",
+                "stream=nb_read_frames,avg_frame_rate",
+                "-of",
+                "json",
+                str(path),
             ],
-            check=True, capture_output=True, text=True, timeout=60,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         payload = json.loads(process.stdout)
         streams = payload["streams"]
