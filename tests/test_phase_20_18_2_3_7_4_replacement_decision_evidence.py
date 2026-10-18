@@ -5,11 +5,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from test_phase_20_18_2_3_7_4_timeline_successor import (
-    _authority,
-    _previous,
-    _selection,
+from vscs.application.assembly_contracts import (
+    AssemblyScope,
+    AssemblyScopeKind,
+    AssemblyTimelineRevision,
+    ShotSelection,
 )
+from vscs.application.episode_shot_set_resolver import EpisodeShotSet
 from vscs.application.episode_timeline_revision_management import (
     prepare_successor_revision,
     publish_successor_revision,
@@ -19,6 +21,43 @@ from vscs.infrastructure.assembly_replacement_decisions import (
     ReplacementDecision,
     ReplacementDecisionError,
 )
+
+
+def _selection(shot: str, media: str, index: int = 0) -> ShotSelection:
+    return ShotSelection(
+        scene_id="SCN-001",
+        shot_id=shot,
+        generated_media_id=media,
+        media_revision="1",
+        file_checksum="a" * 64,
+        approval_evidence_ref="HUMAN-QC",
+        source_in_frame=0,
+        source_out_frame=144,
+        sequence_index=index,
+        media_state="approved",
+    )
+
+
+def _previous() -> AssemblyTimelineRevision:
+    scope = AssemblyScope(
+        production_id="PROD-1",
+        scope_kind=AssemblyScopeKind.EPISODE,
+        scope_id="EP-001",
+        declared_shot_set_revision="PS-001",
+        story_structure_fingerprint="b" * 64,
+    )
+    return AssemblyTimelineRevision(
+        assembly_id="ASM-EP-001",
+        revision_id="REV-001",
+        scope=scope,
+        selections=(_selection("SHT-001", "GM-1"),),
+        frame_rate_num=24,
+        frame_rate_den=1,
+    )
+
+
+def _authority() -> EpisodeShotSet:
+    return EpisodeShotSet("EP-001", ("SHT-001", "SHT-002"), ())
 
 
 def _case():
