@@ -44,3 +44,37 @@ python -m mypy src
 python -m pytest -q tests/test_phase_20_18_2_3_7_4_timeline_successor.py -v
 python -m pytest -q
 ```
+
+## Checkpoint 2 — Persisted Replacement Decision Evidence
+
+An immutable replacement-decision JSON file is created at
+`.vscs/episode_assembly/replacement_decisions/<decision_id>.json`, using
+exclusive-link publication with no overwrites. It stores the operator identity,
+justification, exact previous and replacement selections, predecessor and
+successor revision IDs, both revision fingerprints, Shot ID, schema version and
+a SHA-256 fingerprint of the complete decision payload.
+
+`JsonReplacementDecisionRepository.get` rejects malformed files, unknown
+fields, wrong identities and fingerprint mismatches. Before publishing changed
+predecessor selections, `publish_successor_revision` requires the exact
+set of persisted decisions and verifies each decision against the re-read
+predecessor and candidate. Unrelated or absent decisions fail closed.
+Additions do not require replacement decisions. The existing media validator
+still must pass before immutable timeline publication.
+
+The decision is **operator-supplied evidence**, not an automatic media
+approval. Do not create a decision without an actual human operator review,
+and do not treat it as authority to bypass human Shot QC. A persisted
+decision can exist without a subsequently published successor if final
+media or planning validation blocks publication; it is never silently
+rewritten.
+
+The operator-facing replacement editor and deliberate review confirmation
+remain for Checkpoint 3. No production TSR2 revision should be created for
+these backend tests.
+
+Focused tests:
+```powershell
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_replacement_decision_evidence.py -v
+python -m pytest -q tests/test_phase_20_18_2_3_7_4_timeline_successor.py -v
+```
