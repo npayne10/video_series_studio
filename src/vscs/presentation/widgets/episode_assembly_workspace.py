@@ -53,7 +53,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         project_directory: Callable[[], Path | None],
         parent: QWidget | None = None,
         authority_services: Callable[[], tuple[Any, Any, Any, Any] | None] | None = None,
-        verified_assembly_scope: Callable[[str], Any | None] | None = None,
+        verified_assembly_scope: Callable[[str, tuple[str, ...]], Any | None] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("episodeAssemblyWorkspace")
@@ -258,7 +258,13 @@ class EpisodeAssemblyWorkspace(QWidget):
             )
             return
         try:
-            scope = self._verified_assembly_scope(episode_id)
+            services_for_scope = self._authority_services() if self._authority_services else None
+            if services_for_scope is None:
+                raise ValueError("Episode planning authority unavailable")
+            scope_authority = resolve_episode_shots(episode_id, *services_for_scope)
+            scope = self._verified_assembly_scope(
+                episode_id, scope_authority.required_shot_ids
+            )
         except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
             self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
             return
@@ -420,7 +426,9 @@ class EpisodeAssemblyWorkspace(QWidget):
 
         if self._verified_assembly_scope is not None and authority.eligible:
             try:
-                verified_scope = self._verified_assembly_scope(episode_id)
+                verified_scope = self._verified_assembly_scope(
+                    episode_id, authority.required_shot_ids
+                )
             except (ValueError, RuntimeError, OSError, AssemblyEvidenceError) as exc:
                 self.draft_status.setText(f"BLOCKED: Assembly scope validation failed: {exc}")
             else:
