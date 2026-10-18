@@ -1,6 +1,6 @@
 """Checkpoint 4B.4.1: independent immutable planning-snapshot authority."""
 
-from types import SimpleNamespace
+from dataclasses import dataclass
 from unittest.mock import Mock
 
 import pytest
@@ -13,11 +13,26 @@ from vscs.application.episode_planning_snapshot import (
 
 
 def _services(shot_id="SHT-001"):
-    episode = SimpleNamespace(
-        episode_id="EP-001", story_id="STORY-1", title="Pilot", production_ready=True
-    )
-    scene = SimpleNamespace(scene_id="SCN-001", episode_id="EP-001")
-    shot = SimpleNamespace(shot_id=shot_id, scene_id="SCN-001")
+    @dataclass(frozen=True)
+    class Episode:
+        episode_id: str = "EP-001"
+        story_id: str = "STORY-1"
+        title: str = "Pilot"
+        production_ready: bool = True
+
+    @dataclass(frozen=True)
+    class Scene:
+        scene_id: str = "SCN-001"
+        episode_id: str = "EP-001"
+
+    @dataclass(frozen=True)
+    class Shot:
+        shot_id: str
+        scene_id: str = "SCN-001"
+
+    episode = Episode()
+    scene = Scene()
+    shot = Shot(shot_id)
     episodes, scenes, shots, reviews = Mock(), Mock(), Mock(), Mock()
     episodes.plan.return_value = episode
     scenes.list_plans.return_value = (scene,)
@@ -55,7 +70,7 @@ def test_snapshot_publishes_once_and_rejects_changed_plan(tmp_path):
         resolve_current_planning_snapshot(
             tmp_path, "EP-001", services, ("PROD-1",), ("SHT-002",)
         )
-    with pytest.raises(ValueError, match="current"):
+    with pytest.raises(ValueError, match="Shot order"):
         resolve_current_planning_snapshot(
             tmp_path, "EP-001", _services("SHT-002"), ("PROD-1",), ("SHT-001",)
         )
