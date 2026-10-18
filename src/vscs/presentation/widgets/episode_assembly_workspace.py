@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import (
     QScrollArea,
     QSplitter,
@@ -109,6 +109,13 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.assembly_splitter.setStretchFactor(0, 1)
         self.assembly_splitter.setStretchFactor(1, 1)
         self.assembly_splitter.setSizes([1600, 1600])
+        self._layout_settings = QSettings("VSCS", "EpisodeAssembly")
+        saved_splitter = self._layout_settings.value("responsive_splitter_state")
+        if isinstance(saved_splitter, bytes):
+            self.assembly_splitter.restoreState(saved_splitter)
+        elif saved_splitter is not None:
+            self.assembly_splitter.restoreState(saved_splitter)
+        self.assembly_splitter.splitterMoved.connect(self._save_splitter_layout)
         layout.addWidget(self.assembly_splitter, 1)
         episode_group = QGroupBox("Authoritative Episode Coverage", self)
         episode_form = QFormLayout(episode_group)
@@ -297,6 +304,11 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.successor_reason.textChanged.connect(self._invalidate_successor_preview)
         self._selected_revision: Any = None
         self._resolved_authority: EpisodeShotSet | None = None
+
+    def _save_splitter_layout(self, *_args: object) -> None:
+        self._layout_settings.setValue(
+            "responsive_splitter_state", self.assembly_splitter.saveState()
+        )
 
     def _invalidate_successor_preview(self, *_args: object) -> None:
         self._successor_candidate = None
