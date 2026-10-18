@@ -107,9 +107,11 @@ def publish_successor_revision(
         raise ValueError("Successor cannot overwrite predecessor")
     if authority.episode_id != candidate.scope.scope_id:
         raise ValueError("Current Episode authority differs")
-    expected_order = tuple(shot for shot in authority.required_shot_ids if shot in {
-        selection.shot_id for selection in candidate.selections
-    })
+    expected_order = tuple(
+        shot
+        for shot in authority.required_shot_ids
+        if shot in {selection.shot_id for selection in candidate.selections}
+    )
     if tuple(item.shot_id for item in candidate.selections) != expected_order:
         raise ValueError("Successor has missing, duplicate or out-of-order Shot selections")
     existing = {item.shot_id: item for item in predecessor.selections}
@@ -119,9 +121,8 @@ def publish_successor_revision(
     changed = tuple(
         item.shot_id
         for item in candidate.selections
-        if item.shot_id in existing and item != replace(
-            existing[item.shot_id], sequence_index=item.sequence_index
-        )
+        if item.shot_id in existing
+        and item != replace(existing[item.shot_id], sequence_index=item.sequence_index)
     )
     if changed and not (replacement_reason and replacement_reason.strip()):
         raise ValueError("Changed predecessor Shots require replacement justification")
