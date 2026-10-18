@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from uuid import uuid4
 from typing import Any
+from uuid import uuid4
 
 from PySide6.QtWidgets import (
     QComboBox,
@@ -31,10 +31,6 @@ from vscs.application.episode_draft_selection import (
     build_partial_draft,
     publish_partial_draft,
 )
-from vscs.application.episode_timeline_revision_management import (
-    prepare_successor_revision,
-    publish_successor_revision,
-)
 from vscs.application.episode_evidence_inventory import reconcile_shot_evidence
 from vscs.application.episode_planning_snapshot import (
     JsonPlanningSnapshotRepository,
@@ -46,17 +42,21 @@ from vscs.application.episode_shot_set_resolver import (
     reconcile_episode_coverage,
     resolve_episode_shots,
 )
+from vscs.application.episode_timeline_revision_management import (
+    prepare_successor_revision,
+    publish_successor_revision,
+)
 from vscs.application.episode_video_frame_inspection import read_approved_video_frames
 from vscs.application.generated_media import GeneratedMediaPersistenceService
-from vscs.infrastructure.assembly_timeline import (
-    AssemblyEvidenceError,
-    AssemblyMediaEvidenceValidator,
-    JsonAssemblyTimelineRepository,
-)
 from vscs.infrastructure.assembly_replacement_decisions import (
     JsonReplacementDecisionRepository,
     ReplacementDecision,
     ReplacementDecisionError,
+)
+from vscs.infrastructure.assembly_timeline import (
+    AssemblyEvidenceError,
+    AssemblyMediaEvidenceValidator,
+    JsonAssemblyTimelineRepository,
 )
 from vscs.infrastructure.generated_media import JsonGeneratedMediaRepository
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
@@ -300,15 +300,19 @@ class EpisodeAssemblyWorkspace(QWidget):
             first, last = self._draft_frames[shot_id]
             selected.append((shot_id, record, first, last, approval))
         proposed = build_partial_draft(
-            authority, predecessor.scope, predecessor.assembly_id,
-            self.successor_revision_id.text().strip(), tuple(selected),
+            authority,
+            predecessor.scope,
+            predecessor.assembly_id,
+            self.successor_revision_id.text().strip(),
+            tuple(selected),
             frame_rate_num=predecessor.frame_rate_num,
             frame_rate_den=predecessor.frame_rate_den,
         )
         existing = {item.shot_id: item for item in predecessor.selections}
         additions = tuple(item for item in proposed.selections if item.shot_id not in existing)
         replacements = tuple(
-            item for item in proposed.selections
+            item
+            for item in proposed.selections
             if item.shot_id in existing
             and item != replace(existing[item.shot_id], sequence_index=item.sequence_index)
         )
@@ -318,8 +322,11 @@ class EpisodeAssemblyWorkspace(QWidget):
         ):
             raise ValueError("Replacement operator and justification are required")
         candidate = prepare_successor_revision(
-            predecessor, revision_id=self.successor_revision_id.text().strip(),
-            authority=authority, additions=additions, replacements=replacements,
+            predecessor,
+            revision_id=self.successor_revision_id.text().strip(),
+            authority=authority,
+            additions=additions,
+            replacements=replacements,
             replacement_reason=self.successor_reason.toPlainText().strip() or None,
         )
         if not additions and not replacements:
@@ -339,14 +346,17 @@ class EpisodeAssemblyWorkspace(QWidget):
         for index, item in enumerate(candidate.selections):
             previous = old.get(item.shot_id)
             kind = (
-                "Added" if previous is None else
-                "Carried" if item.generated_media_id == previous.generated_media_id
+                "Added"
+                if previous is None
+                else "Carried"
+                if item.generated_media_id == previous.generated_media_id
                 and item.source_in_frame == previous.source_in_frame
                 and item.source_out_frame == previous.source_out_frame
                 else "Replaced"
             )
             values = (
-                item.shot_id, kind,
+                item.shot_id,
+                kind,
                 previous.generated_media_id if previous else "—",
                 item.generated_media_id,
                 f"[{item.source_in_frame}, {item.source_out_frame})",
@@ -373,21 +383,27 @@ class EpisodeAssemblyWorkspace(QWidget):
             if fresh.fingerprint != candidate.fingerprint:
                 raise ValueError("Staged changes or operator inputs changed; preview again")
             predecessor = self._selected_revision
-            if predecessor is None or predecessor.fingerprint != self._successor_predecessor_fingerprint:
+            if (
+                predecessor is None
+                or predecessor.fingerprint != self._successor_predecessor_fingerprint
+            ):
                 raise ValueError("Predecessor changed; preview again")
             old = {item.shot_id: item for item in predecessor.selections}
             changed = tuple(
-                item for item in candidate.selections
+                item
+                for item in candidate.selections
                 if item.shot_id in old
                 and item != replace(old[item.shot_id], sequence_index=item.sequence_index)
             )
             if (
                 QMessageBox.question(
-                    self, "Publish immutable successor?",
+                    self,
+                    "Publish immutable successor?",
                     f"Publish {candidate.assembly_id} / {candidate.revision_id} with "
                     f"{len(candidate.selections)} Shots and {len(changed)} replacements? "
                     "This creates append-only evidence and DOES NOT complete the Episode.",
-                ) != QMessageBox.StandardButton.Yes
+                )
+                != QMessageBox.StandardButton.Yes
             ):
                 return
             services = self._authority_services() if self._authority_services else None
@@ -416,14 +432,21 @@ class EpisodeAssemblyWorkspace(QWidget):
                 decisions.create(decision)
                 decision_ids.append(decision.decision_id)
             path = publish_successor_revision(
-                candidate, repository=JsonAssemblyTimelineRepository(directory),
+                candidate,
+                repository=JsonAssemblyTimelineRepository(directory),
                 validator=AssemblyMediaEvidenceValidator(directory, media_service),
                 authority=authority,
                 expected_predecessor_fingerprint=predecessor.fingerprint,
                 decision_repository=decisions,
                 replacement_decision_ids=tuple(decision_ids),
             )
-        except (ValueError, RuntimeError, OSError, AssemblyEvidenceError, ReplacementDecisionError) as exc:
+        except (
+            ValueError,
+            RuntimeError,
+            OSError,
+            AssemblyEvidenceError,
+            ReplacementDecisionError,
+        ) as exc:
             self.successor_status.setText(f"BLOCKED: Successor publication failed: {exc}")
             return
         self._invalidate_successor_preview()
