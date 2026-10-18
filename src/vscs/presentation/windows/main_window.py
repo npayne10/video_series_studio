@@ -256,8 +256,8 @@ class MainWindow(QMainWindow):
         self.episode_assembly_workspace = EpisodeAssemblyWorkspace(
             lambda: self.projects.project_directory,
             authority_services=self._episode_assembly_authority_services,
-            verified_assembly_scope=lambda episode_id: verified_episode_assembly_scope(
-                self.projects.project_directory, episode_id
+            verified_assembly_scope=lambda episode_id, shot_ids: verified_episode_assembly_scope(
+                self.projects.project_directory, episode_id, shot_ids
             ),
         )
         self.content_stack.addWidget(self.episode_assembly_workspace)
