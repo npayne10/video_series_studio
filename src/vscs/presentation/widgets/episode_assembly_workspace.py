@@ -256,7 +256,9 @@ class EpisodeAssemblyWorkspace(QWidget):
         boundary_layout.addWidget(self.boundary_status)
         self.boundary_findings = QPlainTextEdit(self)
         self.boundary_findings.setObjectName("episodeBoundaryFindings")
-        self.boundary_findings.setPlaceholderText("Operator continuity findings (session notes only; no QC state change)")
+        self.boundary_findings.setPlaceholderText(
+            "Operator continuity findings (session notes only; no QC state change)"
+        )
         self.boundary_findings.setMaximumHeight(90)
         boundary_layout.addWidget(self.boundary_findings)
         self.boundary_findings.textChanged.connect(self._remember_boundary_findings)
@@ -721,22 +723,19 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.boundary_incoming_image.clear()
         try:
             pair = boundary_pair(plan, index)
-            outgoing = extract_verified_boundary_png(
-                directory, pair.outgoing, pair.outgoing_frame
-            )
-            incoming = extract_verified_boundary_png(
-                directory, pair.incoming, pair.incoming_frame
-            )
+            outgoing = extract_verified_boundary_png(directory, pair.outgoing, pair.outgoing_frame)
+            incoming = extract_verified_boundary_png(directory, pair.incoming, pair.incoming_frame)
             for label, content in (
                 (self.boundary_outgoing_image, outgoing),
                 (self.boundary_incoming_image, incoming),
             ):
                 pixmap = QPixmap()
-                if not pixmap.loadFromData(content, "PNG"):
+                if not pixmap.loadFromData(content, b"PNG"):
                     raise ValueError("Decoded boundary image is invalid")
                 label.setPixmap(
                     pixmap.scaled(
-                        360, 220,
+                        360,
+                        220,
                         Qt.AspectRatioMode.KeepAspectRatio,
                         Qt.TransformationMode.SmoothTransformation,
                     )
@@ -794,11 +793,9 @@ class EpisodeAssemblyWorkspace(QWidget):
             self._playback_plan = preview
             self._playback_project = Path(directory)
             for index, (outgoing, incoming) in enumerate(
-                zip(preview.segments, preview.segments[1:])
+                zip(preview.segments, preview.segments[1:], strict=False)
             ):
-                self.boundary_selector.addItem(
-                    f"{outgoing.shot_id} → {incoming.shot_id}", index
-                )
+                self.boundary_selector.addItem(f"{outgoing.shot_id} → {incoming.shot_id}", index)
             self.boundary_inspect.setEnabled(self.boundary_selector.count() > 0)
             self.playback_seek.setRange(0, preview.total_frames - 1)
             self._update_playback_controls()
