@@ -34,7 +34,9 @@ def test_boundary_decoder_is_in_memory_and_checks_png(tmp_path):
     (tmp_path / "a.mp4").write_bytes(b"sample")
     segment = _plan().segments[0]
     runner = Mock(return_value=SimpleNamespace(stdout=b"\x89PNG\r\n\x1a\nimage"))
-    assert extract_verified_boundary_png(tmp_path, segment, 23, runner=runner).startswith(b"\x89PNG")
+    assert extract_verified_boundary_png(tmp_path, segment, 23, runner=runner).startswith(
+        b"\x89PNG"
+    )
     args = runner.call_args.args[0]
     assert "-vf" in args and "-frames:v" in args
     assert args[args.index("-vf") + 1] == r"select=eq(n\,23)"
