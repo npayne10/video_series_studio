@@ -81,3 +81,46 @@ python -m pytest -q tests/test_phase_20_18_2_3_7_5_checkpoint2_playback.py -v
 python -m pytest -q tests/test_phase_20_18_2_3_7_5_preview_readiness.py -v
 python -m pytest -q
 ```
+
+## Checkpoint 3 — Boundary & Continuity Inspection
+
+Under the verified preview player, the **Boundary & Continuity Inspection —
+Read Only** panel lists adjacent approved Shot pairs. After **Verify Selected
+Revision for Playback** completes successfully, select a boundary and press
+**Inspect Verified Boundary Frames** to inspect the exact last included
+frame (source-out exclusive minus one) alongside the next Shot's first
+included source frame.
+
+The service uses installed FFmpeg to select one numbered decoded frame
+per approved source and return PNG data in memory. It does not concatenate,
+render an assembly, edit source media, change QC approval, or authorize
+Picture Lock. Invalid frame ranges, non-adjacent Shot positions, or failed
+decoding display **BLOCKED** and clear displayed images. Only a fully verified
+assembly preview may expose boundary inspection.
+
+The operator can enter continuity observations; these are **session-only
+notes**, keyed by revision fingerprint and boundary. They are not yet a
+persisted governed review record and are not used for automatic continuity
+approval. Persisting review findings requires a separately specified audit
+workflow; do not treat notes as Shot QC.
+
+### Controlled acceptance
+
+- Use `D:\\VSCS TSR2 - TEST 4B5`, never production TSR2.
+- Inspect `ASM-EP-001 / REV-002-ACCEPTANCE` and verify source integrity.
+- Select SHT-001 → SHT-002; inspect outgoing source frame **23** and
+  incoming source frame **0**; verify both images display.
+- Type an observation and switch to a different revision; controls must
+  block until it is separately verified. Neither revision nor media approval
+  may be modified.
+- Verify Episode completion and Picture Lock remain disabled.
+- Run focused and full pytest after Ruff/mypy validation.
+
+```powershell
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src
+git diff --check
+python -m pytest -q tests/test_phase_20_18_2_3_7_5_checkpoint3_boundaries.py -v
+python -m pytest -q
+```
