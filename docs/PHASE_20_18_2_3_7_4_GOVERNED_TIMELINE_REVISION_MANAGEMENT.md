@@ -170,3 +170,48 @@ python -m pytest -q tests/test_phase_20_18_2_3_7_4_checkpoint3_1_responsive_layo
 python -m pytest -q tests/test_phase_20_18_2_3_7_4_successor_editor_ui.py -v
 python -m pytest -q
 ```
+
+## Checkpoint 4 — Controlled successor UI acceptance and final stabilization
+
+The successor editor now binds the operator identity and full replacement
+justification to its reviewed preview. Any subsequent change invalidates the
+preview and disables publication. The explicit **No** confirmation path is
+regression-tested to create neither timeline revisions nor replacement
+decision files.
+
+**Automated fixture acceptance:** run the successor editor UI regression,
+immutable decision tests, successor service tests, responsive layout tests,
+and the complete suite. Tests use temporary repositories and mocked
+operator confirmation; they do not modify the real TSR2 project.
+
+**Operator acceptance (isolated test project only):**
+1. Confirm the current path is `D:\\VSCS TSR2 - TEST 4B5`, **not**
+   `D:\\VSCS TSR2`; take a backup of test-project REV-001 and its checksum.
+2. Discover and inspect `ASM-EP-001 / REV-001`; confirm SHT-001/SHT-002
+   and that Episode completion is disabled.
+3. Enter a **new** test successor revision ID such as `REV-002-ACCEPTANCE`.
+   With no staged changes, preview must block.
+4. Use an **already human-approved** alternative media selection for an
+   existing Shot or an **already human-approved** additional Shot.
+   Check recorded approval, verified media bytes, frame count and explicit
+   saved range. Do not manufacture or simulate human QC inside production.
+5. Review preview for correct carried/added/replaced Shot ordering.
+   For replacements, confirm blank operator or justification blocks.
+6. Change operator after a successful preview: publishing must become
+   disabled until preview is rerun.
+7. Confirm publication with **No** first; no new revision or replacement
+   decision file should appear.
+8. Only if test-project media approval evidence and operator authorization
+   are real and verified, confirm **Yes**. Inspect newly persisted successor,
+   predecessor linkage, replacement decision checksum and source media IDs.
+   If no eligible media exists, stop: do not force a publication.
+9. Validate original REV-001 checksum unchanged, SHT-003 still pending QC,
+   and Episode / Video Shots Complete still disabled.
+10. Restart VSCS; confirm both panels resize/scroll independently and the
+    saved splitter position returns.
+
+**Remaining gate:** A real operator-confirmed UI publication is NOT covered
+by the new automated cancel/preview tests. Do not declare final phase
+accepted until the isolated-project affirmative acceptance test completes
+with eligible approved media, or is formally deferred and reported as
+unverified.
