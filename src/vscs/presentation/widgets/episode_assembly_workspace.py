@@ -42,6 +42,7 @@ from vscs.application.episode_assembly_playback import (
     validated_source_path,
 )
 from vscs.application.episode_assembly_preview import inspect_assembly_preview
+from vscs.application.episode_assembly_revision_comparison import compare_assembly_revisions
 from vscs.application.episode_draft_selection import (
     approval_evidence_reference,
     approved_media_choices,
@@ -263,6 +264,34 @@ class EpisodeAssemblyWorkspace(QWidget):
         boundary_layout.addWidget(self.boundary_findings)
         self.boundary_findings.textChanged.connect(self._remember_boundary_findings)
         preview_layout.addWidget(boundary_group)
+        compare_group = QGroupBox("Persisted Revision A/B Comparison — Read Only", self)
+        compare_layout = QVBoxLayout(compare_group)
+        selectors = QHBoxLayout()
+        self.compare_a = QComboBox(self)
+        self.compare_a.setObjectName("episodeCompareRevisionA")
+        self.compare_b = QComboBox(self)
+        self.compare_b.setObjectName("episodeCompareRevisionB")
+        selectors.addWidget(QLabel("Revision A", self))
+        selectors.addWidget(self.compare_a, 1)
+        selectors.addWidget(QLabel("Revision B", self))
+        selectors.addWidget(self.compare_b, 1)
+        compare_layout.addLayout(selectors)
+        self.compare_button = QPushButton("Compare Revisions — Read Only", self)
+        self.compare_button.setObjectName("episodeCompareRun")
+        self.compare_button.clicked.connect(self._compare_revisions)
+        compare_layout.addWidget(self.compare_button)
+        self.compare_status = QLabel("Discover and select two persisted revisions.", self)
+        self.compare_status.setWordWrap(True)
+        compare_layout.addWidget(self.compare_status)
+        self.compare_table = QTableWidget(0, 7, self)
+        self.compare_table.setObjectName("episodeCompareDifferences")
+        self.compare_table.setHorizontalHeaderLabels(
+            ["Shot", "Difference", "Order A → B", "Media A", "Media B", "Range A", "Range B"]
+        )
+        self.compare_table.setMinimumHeight(140)
+        self.compare_table.setMaximumHeight(320)
+        compare_layout.addWidget(self.compare_table)
+        timeline_layout.addWidget(compare_group)
         self._boundary_session_notes: dict[tuple[str, str, int], str] = {}
         self.boundary_inspect.setEnabled(False)
         self._playback_plan: Any = None
@@ -1184,6 +1213,48 @@ class EpisodeAssemblyWorkspace(QWidget):
                         else "BLOCKED: No current verified Assembly Scope for these staged media."
                     )
 
+    def _compare_revisions(self) -> None:
+        self.compare_table.setRowCount(0)
+        left_id = self.compare_a.currentData()
+        right_id = self.compare_b.currentData()
+        directory = self._project_directory()
+        if directory is None or left_id is None or right_id is None:
+            self.compare_status.setText("BLOCKED: Open a project and select both revisions.")
+            return
+        try:
+            repository = JsonAssemblyTimelineRepository(directory)
+            left = repository.get(*left_id)
+            right = repository.get(*right_id)
+            if left is None or right is None:
+                raise ValueError("One or both persisted revisions are missing")
+            comparison = compare_assembly_revisions(left, right)
+        except (ValueError, OSError, AssemblyEvidenceError) as exc:
+            self.compare_status.setText(f"BLOCKED: {exc}")
+            return
+        for index, difference in enumerate(comparison.differences):
+            self.compare_table.insertRow(index)
+            values = (
+                difference.shot_id,
+                difference.change,
+                f"{difference.index_a} → {difference.index_b}",
+                difference.media_a or "—",
+                difference.media_b or "—",
+                str(difference.range_a) if difference.range_a is not None else "—",
+                str(difference.range_b) if difference.range_b is not None else "—",
+            )
+            for column, value in enumerate(values):
+                self.compare_table.setItem(index, column, QTableWidgetItem(value))
+        self.compare_status.setText(
+            f"{comparison.revision_a} → {comparison.revision_b}; "
+            f"fingerprints {comparison.fingerprint_a[:12]} / {comparison.fingerprint_b[:12]}; "
+            f"frames {comparison.frames_a} → {comparison.frames_b} "
+            f"(delta {comparison.frame_delta:+d}); "
+            f"duration {float(comparison.duration_a):.3f}s → "
+            f"{float(comparison.duration_b):.3f}s "
+            f"(delta {float(comparison.duration_delta):+.3f}s). "
+            "Read only; no approvals, QC or Picture Lock changed."
+        )
+
     def discover_revisions(self, *, select_identity: tuple[str, str] | None = None) -> None:
         """Discover persisted revisions and optionally inspect a specific revision."""
         self.persisted_revisions.blockSignals(True)
@@ -1200,6 +1271,22 @@ class EpisodeAssemblyWorkspace(QWidget):
             self.persisted_revisions.blockSignals(False)
             self.status.setText(f"BLOCKED: Unable to discover timeline revisions: {exc}")
             return
+        for selector in (self.compare_a, self.compare_b):
+            previous = selector.currentData()
+            selector.clear()
+            selector.addItem("Select revision", None)
+            for candidate in revisions:
+                selector.addItem(
+                    f"{candidate.assembly_id} / {candidate.revision_id}",
+                    (candidate.assembly_id, candidate.revision_id),
+                )
+            for index in range(1, selector.count()):
+                identity = selector.itemData(index)
+                if identity is not None and tuple(identity) == tuple(previous or ()):
+                    selector.setCurrentIndex(index)
+                    break
+        self.compare_table.setRowCount(0)
+        self.compare_status.setText("Select Revision A and Revision B to compare.")
         for revision in sorted(
             revisions,
             key=lambda item: (item.scope.scope_id, item.assembly_id, item.revision_id),
