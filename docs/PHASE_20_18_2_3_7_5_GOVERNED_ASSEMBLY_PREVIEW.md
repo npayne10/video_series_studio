@@ -124,3 +124,37 @@ git diff --check
 python -m pytest -q tests/test_phase_20_18_2_3_7_5_checkpoint3_boundaries.py -v
 python -m pytest -q
 ```
+
+## Checkpoint 4 — Persisted Revision A/B Comparison (read-only)
+
+Episode Assembly includes independent Revision A and Revision B selectors
+populated from the validated persisted timeline repository. Click
+**Compare Revisions — Read Only** to display per-Shot ADDED, REMOVED,
+UNCHANGED, ORDER, RANGE, and MEDIA/EVIDENCE changes, original source
+in/out frame ranges, Generated Media IDs and sequence indexes.
+The summary reports immutable revision fingerprints, total frames, durations
+and signed differences. The algorithm rejects comparisons across different
+assemblies, authoritative scopes or frame rates, and rejects identical
+revision fingerprints. It does **not** modify the currently inspected
+revision or playback plan; it does not verify either revision for playback.
+Video source visualization remains within the separately governed Preview
+and Boundary Inspector controls and is not implicit in comparison.
+
+**Acceptance:** in isolated project `D:\\VSCS TSR2 - TEST 4B5`,
+discover revisions, choose A `REV-001`, B `REV-002-ACCEPTANCE`,
+then compare. Expect SHT-001 source range changes (A → B), and SHT-002
+unchanged. Do not assume A's frame range or total duration without
+inspecting the persisted immutable records. Confirm comparison keeps
+the inspected revision and all Shot/QC/Picture Lock states unchanged.
+Select the same revision twice and expect BLOCKED. Swap A and B to check
+signed duration difference reverses.
+
+Run:
+```powershell
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src
+git diff --check
+python -m pytest -q tests/test_phase_20_18_2_3_7_5_checkpoint4_comparison.py -v
+python -m pytest -q
+```
