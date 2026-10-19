@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, QUrl
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -20,6 +22,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSlider,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -28,6 +31,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_assembly_playback import (
+    map_timeline_frame,
+    validated_source_path,
+)
 from vscs.application.episode_assembly_preview import inspect_assembly_preview
 from vscs.application.episode_draft_selection import (
     approval_evidence_reference,
@@ -188,6 +195,43 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.preview_status.setWordWrap(True)
         preview_layout.addWidget(self.preview_status)
         timeline_layout.addWidget(preview_group)
+        self.playback_view = QVideoWidget(self)
+        self.playback_view.setObjectName("episodeAssemblyVideoPlayback")
+        self.playback_view.setMinimumHeight(220)
+        self.playback_view.setMaximumHeight(410)
+        preview_layout.addWidget(self.playback_view)
+        self.playback_player = QMediaPlayer(self)
+        self.playback_audio = QAudioOutput(self)
+        self.playback_player.setAudioOutput(self.playback_audio)
+        self.playback_player.setVideoOutput(self.playback_view)
+        self.playback_player.positionChanged.connect(self._playback_position_changed)
+        self.playback_player.errorOccurred.connect(self._playback_error)
+        playback_actions = QHBoxLayout()
+        self.playback_play = QPushButton("Play Verified Timeline", self)
+        self.playback_play.setObjectName("episodePlaybackPlay")
+        self.playback_play.clicked.connect(self._start_playback)
+        self.playback_pause = QPushButton("Pause", self)
+        self.playback_pause.setObjectName("episodePlaybackPause")
+        self.playback_pause.clicked.connect(self.playback_player.pause)
+        self.playback_stop = QPushButton("Stop", self)
+        self.playback_stop.setObjectName("episodePlaybackStop")
+        self.playback_stop.clicked.connect(self._stop_playback)
+        for control in (self.playback_play, self.playback_pause, self.playback_stop):
+            playback_actions.addWidget(control)
+        preview_layout.addLayout(playback_actions)
+        self.playback_seek = QSlider(Qt.Orientation.Horizontal, self)
+        self.playback_seek.setObjectName("episodePlaybackSeek")
+        self.playback_seek.setRange(0, 0)
+        self.playback_seek.sliderReleased.connect(self._seek_playback)
+        preview_layout.addWidget(self.playback_seek)
+        self.playback_current_shot = QLabel("No verified timeline loaded.", self)
+        self.playback_current_shot.setObjectName("episodePlaybackCurrentShot")
+        preview_layout.addWidget(self.playback_current_shot)
+        self._playback_plan: Any = None
+        self._playback_segment_index = -1
+        self._playback_project: Path | None = None
+        self._playback_seeking = False
+        self._update_playback_controls()
         self.coverage_status = QLabel("BLOCKED: Authoritative Episode Shot set not resolved.", self)
         self.coverage_status.setObjectName("episodeCoverageStatus")
         self.coverage_status.setWordWrap(True)
@@ -524,7 +568,100 @@ class EpisodeAssemblyWorkspace(QWidget):
             f"Published immutable successor at {path}. Episode completion remains blocked."
         )
 
+    def _update_playback_controls(self) -> None:
+        ready = self._playback_plan is not None and self._playback_plan.ready
+        self.playback_play.setEnabled(ready)
+        self.playback_pause.setEnabled(ready)
+        self.playback_stop.setEnabled(ready)
+        self.playback_seek.setEnabled(ready)
+
+    def _stop_playback(self) -> None:
+        self.playback_player.stop()
+        self._playback_segment_index = -1
+        self.playback_current_shot.setText("Playback stopped.")
+
+    def _clear_playback(self) -> None:
+        self._stop_playback()
+        self.playback_player.setSource(QUrl())
+        self._playback_plan = None
+        self._playback_project = None
+        self.playback_seek.setRange(0, 0)
+        self._update_playback_controls()
+
+    def _playback_error(self, *_args: object) -> None:
+        self._stop_playback()
+        self.playback_current_shot.setText(
+            "BLOCKED: Video decoder or media playback error: "
+            + self.playback_player.errorString()
+        )
+
+    def _open_playback_frame(self, frame: int, *, play: bool) -> None:
+        plan = self._playback_plan
+        directory = self._playback_project
+        if plan is None or directory is None or not plan.ready:
+            self.playback_current_shot.setText("BLOCKED: Verify timeline media first.")
+            return
+        try:
+            location = map_timeline_frame(plan, frame)
+            path = validated_source_path(directory, location.segment)
+        except (ValueError, OSError) as exc:
+            self._clear_playback()
+            self.playback_current_shot.setText(f"BLOCKED: {exc}")
+            return
+        if self._playback_segment_index != location.segment_index:
+            self.playback_player.stop()
+            self.playback_player.setSource(QUrl.fromLocalFile(str(path)))
+            self._playback_segment_index = location.segment_index
+        self.playback_player.setPosition(location.source_ms)
+        self.playback_current_shot.setText(
+            f"{location.segment.shot_id} | {location.segment.media_id} | "
+            f"assembly frame {frame + 1}/{plan.total_frames}"
+        )
+        if play:
+            self.playback_player.play()
+        else:
+            self.playback_player.pause()
+
+    def _start_playback(self) -> None:
+        if self._playback_plan is None or not self._playback_plan.ready:
+            return
+        current = self.playback_seek.value()
+        self._open_playback_frame(current, play=True)
+
+    def _seek_playback(self) -> None:
+        if self._playback_plan is None:
+            return
+        self._open_playback_frame(
+            self.playback_seek.value(),
+            play=self.playback_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState,
+        )
+
+    def _playback_position_changed(self, source_ms: int) -> None:
+        plan = self._playback_plan
+        index = self._playback_segment_index
+        if plan is None or index < 0 or index >= len(plan.segments):
+            return
+        segment = plan.segments[index]
+        rate = segment.source_frame_rate
+        source_frame = int(Fraction(source_ms, 1000) * rate)
+        local_frame = max(0, source_frame - segment.source_in_frame)
+        if local_frame >= segment.timeline_end_frame - segment.timeline_start_frame:
+            if index + 1 < len(plan.segments):
+                self._open_playback_frame(plan.segments[index + 1].timeline_start_frame, play=True)
+            else:
+                self._stop_playback()
+                self.playback_seek.setValue(plan.total_frames - 1)
+            return
+        frame = segment.timeline_start_frame + local_frame
+        if not self.playback_seek.isSliderDown():
+            self.playback_seek.setValue(frame)
+        self.playback_current_shot.setText(
+            f"{segment.shot_id} | {segment.media_id} | "
+            f"assembly frame {frame + 1}/{plan.total_frames}"
+        )
+
     def _inspect_playback_preview(self) -> None:
+        self._clear_playback()
         self.preview_table.setRowCount(0)
         revision = self._selected_revision
         directory = self._project_directory()
@@ -558,6 +695,10 @@ class EpisodeAssemblyWorkspace(QWidget):
         if preview.blockers:
             self.preview_status.setText("BLOCKED: " + "; ".join(preview.blockers))
         else:
+            self._playback_plan = preview
+            self._playback_project = Path(directory)
+            self.playback_seek.setRange(0, preview.total_frames - 1)
+            self._update_playback_controls()
             self.preview_status.setText(
                 f"VERIFIED READ-ONLY PREVIEW: {len(preview.segments)} Shots, "
                 f"{preview.total_frames} frames at {preview.frame_rate} fps. "
@@ -584,6 +725,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
         self._invalidate_successor_preview()
+        self._clear_playback()
         self.preview_table.setRowCount(0)
         self.preview_status.setText("Select a persisted revision and verify source media.")
         self._staged_media.clear()
