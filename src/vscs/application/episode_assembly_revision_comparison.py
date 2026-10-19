@@ -41,6 +41,10 @@ class RevisionComparison:
         return self.duration_b - self.duration_a
 
 
+def _frame_range(item: ShotSelection | None) -> tuple[int, int] | None:
+    return None if item is None else (item.source_in_frame, item.source_out_frame)
+
+
 def compare_assembly_revisions(
     a: AssemblyTimelineRevision, b: AssemblyTimelineRevision
 ) -> RevisionComparison:
@@ -81,8 +85,6 @@ def compare_assembly_revisions(
             ):
                 flags.append("MEDIA/EVIDENCE")
             change = " + ".join(flags) if flags else "MODIFIED"
-        def frame_range(item: ShotSelection | None) -> tuple[int, int] | None:
-            return None if item is None else (item.source_in_frame, item.source_out_frame)
         diffs.append(
             RevisionDifference(
                 shot_id,
@@ -91,12 +93,18 @@ def compare_assembly_revisions(
                 None if right is None else right.sequence_index,
                 None if left is None else left.generated_media_id,
                 None if right is None else right.generated_media_id,
-                frame_range(left),
-                frame_range(right),
+                _frame_range(left),
+                _frame_range(right),
             )
         )
     return RevisionComparison(
-        a.revision_id, b.revision_id, a.fingerprint, b.fingerprint,
-        a.total_frames, b.total_frames, a.duration_seconds, b.duration_seconds,
+        a.revision_id,
+        b.revision_id,
+        a.fingerprint,
+        b.fingerprint,
+        a.total_frames,
+        b.total_frames,
+        a.duration_seconds,
+        b.duration_seconds,
         tuple(diffs),
     )
