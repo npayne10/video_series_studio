@@ -42,3 +42,42 @@ timeline ranges [0,24), [24,168), assuming source frame rates match
 24 fps. If rate/byte/approval evidence disagrees, expect **BLOCKED**:
 do not bypass validation. Verify the original REV-001 and production
 TSR2 remain unchanged and Episode completion remains disabled.
+
+## Checkpoint 2 — Continuous sequential Qt playback (operator preview)
+
+The verified preview enables an embedded Qt Multimedia QVideoWidget and
+QMediaPlayer with Play, Pause, Stop, frame-indexed seek slider and active
+Shot/media indicator. `map_timeline_frame` maps cumulative timeline
+frames to approved source positions. Each new Shot is opened from its
+original project file (no intermediates or source writes); when playback
+reaches the exclusive source-out boundary it switches to the next verified
+Shot. Playback stops at the last segment. All controls are disabled until
+the complete preview is verified; changing the selected persisted
+revision invalidates the playback plan and stops the player.
+
+Important: Qt media decoder seeking and file switching are asynchronous.
+This is operator-grade approximate real-time preview, **not frame-exact
+playback**. Decoder latency or missing codec support can introduce gaps;
+frame-accurate first/last-frame boundary review follows in Checkpoint 3.
+No Picture Lock, Shot QC or Episode completion is authorized by playback.
+
+### Local acceptance (isolated project only)
+
+1. Run static Ruff/mypy checks and full regressions.
+2. Open `D:\\VSCS TSR2 - TEST 4B5` (never production TSR2).
+3. Select `ASM-EP-001 / REV-002-ACCEPTANCE`, inspect and verify playback
+   readiness. Expect 2 Shots, source ranges [0,24) and [0,144).
+4. Confirm video and seek controls enable only after successful validation.
+5. Play and observe SHT-001 then SHT-002. Verify Shot identity changes.
+6. Pause/resume, seek within each Shot and across the boundary, then Stop.
+7. Select a different persisted revision: old playback must stop and require
+   a new Verify action. Confirm completion stays disabled.
+8. If Qt decoder cannot play media, report the exact error; do not weaken
+   checksum/approval validation or copy media outside the project.
+
+Focus:
+```powershell
+python -m pytest -q tests/test_phase_20_18_2_3_7_5_checkpoint2_playback.py -v
+python -m pytest -q tests/test_phase_20_18_2_3_7_5_preview_readiness.py -v
+python -m pytest -q
+```
