@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from PySide6.QtCore import QSettings, Qt, QUrl
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import QByteArray, QSettings, Qt, QUrl
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -729,9 +729,10 @@ class EpisodeAssemblyWorkspace(QWidget):
                 (self.boundary_outgoing_image, outgoing),
                 (self.boundary_incoming_image, incoming),
             ):
-                pixmap = QPixmap()
-                if not pixmap.loadFromData(content, b"PNG"):
+                decoded_image = QImage.fromData(QByteArray(content))
+                if decoded_image.isNull():
                     raise ValueError("Decoded boundary image is invalid")
+                pixmap = QPixmap.fromImage(decoded_image)
                 label.setPixmap(
                     pixmap.scaled(
                         360,
@@ -740,10 +741,13 @@ class EpisodeAssemblyWorkspace(QWidget):
                         Qt.TransformationMode.SmoothTransformation,
                     )
                 )
-        except (ValueError, OSError, RuntimeError) as exc:
+        except (ValueError, OSError, RuntimeError, TypeError) as exc:
             self.boundary_outgoing_image.clear()
             self.boundary_incoming_image.clear()
-            self.boundary_status.setText(f"BLOCKED: {exc}")
+            detail = str(exc)
+            if len(detail) > 240:
+                detail = f"{type(exc).__name__} while decoding boundary image"
+            self.boundary_status.setText(f"BLOCKED: {detail}")
             return
         self.boundary_status.setText(
             f"{pair.outgoing.shot_id} frame {pair.outgoing_frame} → "
