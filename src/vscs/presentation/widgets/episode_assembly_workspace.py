@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_assembly_preview import inspect_assembly_preview
 from vscs.application.episode_draft_selection import (
     approval_evidence_reference,
     approved_media_choices,
@@ -168,6 +169,25 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.table.setMinimumHeight(190)
         self.table.setMaximumHeight(380)
         timeline_layout.addWidget(self.table)
+        preview_group = QGroupBox("Governed Assembly Preview — Read Only", self)
+        preview_layout = QVBoxLayout(preview_group)
+        self.preview_inspect_button = QPushButton("Verify Selected Revision for Playback", self)
+        self.preview_inspect_button.setObjectName("episodePreviewVerify")
+        self.preview_inspect_button.clicked.connect(self._inspect_playback_preview)
+        preview_layout.addWidget(self.preview_inspect_button)
+        self.preview_table = QTableWidget(0, 5, self)
+        self.preview_table.setObjectName("episodePreviewSegments")
+        self.preview_table.setHorizontalHeaderLabels(
+            ["Shot", "Source frames", "Timeline frames", "Frame rate", "Media ID"]
+        )
+        self.preview_table.setMinimumHeight(145)
+        self.preview_table.setMaximumHeight(260)
+        preview_layout.addWidget(self.preview_table)
+        self.preview_status = QLabel("Select a persisted revision and verify source media.", self)
+        self.preview_status.setObjectName("episodePreviewStatus")
+        self.preview_status.setWordWrap(True)
+        preview_layout.addWidget(self.preview_status)
+        timeline_layout.addWidget(preview_group)
         self.coverage_status = QLabel("BLOCKED: Authoritative Episode Shot set not resolved.", self)
         self.coverage_status.setObjectName("episodeCoverageStatus")
         self.coverage_status.setWordWrap(True)
@@ -504,6 +524,48 @@ class EpisodeAssemblyWorkspace(QWidget):
             f"Published immutable successor at {path}. Episode completion remains blocked."
         )
 
+    def _inspect_playback_preview(self) -> None:
+        self.preview_table.setRowCount(0)
+        revision = self._selected_revision
+        directory = self._project_directory()
+        if revision is None or directory is None:
+            self.preview_status.setText("BLOCKED: Inspect a persisted revision first.")
+            return
+        try:
+            media = GeneratedMediaPersistenceService(
+                JsonGeneratedMediaRepository(directory / ".vscs" / "generated_media")
+            )
+            preview = inspect_assembly_preview(
+                revision,
+                project_directory=directory,
+                media_service=media,
+                validator=AssemblyMediaEvidenceValidator(directory, media),
+            )
+        except (ValueError, OSError, RuntimeError, AssemblyEvidenceError) as exc:
+            self.preview_status.setText(f"BLOCKED: Preview verification failed: {exc}")
+            return
+        for index, segment in enumerate(preview.segments):
+            self.preview_table.insertRow(index)
+            values = (
+                segment.shot_id,
+                f"[{segment.source_in_frame}, {segment.source_out_frame})",
+                f"[{segment.timeline_start_frame}, {segment.timeline_end_frame})",
+                str(segment.source_frame_rate),
+                segment.media_id,
+            )
+            for column, value in enumerate(values):
+                self.preview_table.setItem(index, column, QTableWidgetItem(value))
+        if preview.blockers:
+            self.preview_status.setText(
+                "BLOCKED: " + "; ".join(preview.blockers)
+            )
+        else:
+            self.preview_status.setText(
+                f"VERIFIED READ-ONLY PREVIEW: {len(preview.segments)} Shots, "
+                f"{preview.total_frames} frames at {preview.frame_rate} fps. "
+                "No video rendered, media approval changed or Picture Lock authorized."
+            )
+
     def _update_staged_summary(self) -> None:
         self.staged_summary.setRowCount(0)
         for index, (shot_id, media_id) in enumerate(sorted(self._staged_media.items())):
@@ -524,6 +586,8 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.table.setRowCount(0)
         self.coverage_table.setRowCount(0)
         self._invalidate_successor_preview()
+        self.preview_table.setRowCount(0)
+        self.preview_status.setText("Select a persisted revision and verify source media.")
         self._staged_media.clear()
         self._draft_frames.clear()
         self._update_staged_summary()
