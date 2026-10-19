@@ -70,6 +70,6 @@ def extract_verified_boundary_png(
         )
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         raise ValueError("Boundary frame decoding failed") from exc
-    if not result.stdout.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+    if not result.stdout.startswith(b"\x89PNG\r\n\x1a\n"):
         raise ValueError("Decoder returned no valid PNG frame")
     return result.stdout
