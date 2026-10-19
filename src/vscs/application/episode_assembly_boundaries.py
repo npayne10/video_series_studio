@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 from vscs.application.episode_assembly_playback import validated_source_path
 from vscs.application.episode_assembly_preview import AssemblyPreviewPlan, PreviewSegment
@@ -27,9 +27,7 @@ def boundary_pair(plan: AssemblyPreviewPlan, index: int) -> BoundaryPair:
     outgoing, incoming = plan.segments[index : index + 2]
     if outgoing.timeline_end_frame != incoming.timeline_start_frame:
         raise ValueError("Timeline boundary is not contiguous")
-    return BoundaryPair(
-        outgoing, incoming, outgoing.source_out_frame - 1, incoming.source_in_frame
-    )
+    return BoundaryPair(outgoing, incoming, outgoing.source_out_frame - 1, incoming.source_in_frame)
 
 
 def extract_verified_boundary_png(
