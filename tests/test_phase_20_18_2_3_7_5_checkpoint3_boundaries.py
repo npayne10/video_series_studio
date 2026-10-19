@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+from PySide6.QtGui import QImage
 
 from vscs.application.episode_assembly_boundaries import (
     boundary_pair,
@@ -59,3 +61,51 @@ def test_boundary_ui_blocks_until_verified(qtbot, tmp_path):
     workspace._inspect_boundary()
     assert "BLOCKED" in workspace.boundary_status.text()
     assert not workspace.complete_button.isEnabled()
+
+
+def test_boundary_ui_decodes_actual_qt_png_without_geometry_expansion(
+    qtbot, tmp_path, monkeypatch
+):
+    from vscs.presentation.widgets import episode_assembly_workspace as module
+
+    image = QImage(16, 12, QImage.Format.Format_RGB32)
+    image.fill(0xFF2377AA)
+    data = QByteArray()
+    buffer = QBuffer(data)
+    assert buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+    assert image.save(buffer, "PNG")
+    buffer.close()
+    monkeypatch.setattr(module, "extract_verified_boundary_png", lambda *_args: bytes(data))
+
+    workspace = EpisodeAssemblyWorkspace(lambda: tmp_path)
+    qtbot.addWidget(workspace)
+    workspace._playback_plan = _plan()
+    workspace._playback_project = tmp_path
+    workspace.boundary_selector.addItem("SHT-001 to SHT-002", 0)
+    workspace.boundary_inspect.setEnabled(True)
+    workspace._inspect_boundary()
+
+    assert workspace.boundary_outgoing_image.pixmap() is not None
+    assert workspace.boundary_incoming_image.pixmap() is not None
+    assert "frame 23" in workspace.boundary_status.text()
+    assert "frame 2" in workspace.boundary_status.text()
+    assert len(workspace.boundary_status.text()) < 260
+
+
+def test_boundary_ui_never_exposes_raw_png_bytes_in_error_text(
+    qtbot, tmp_path, monkeypatch
+):
+    from vscs.presentation.widgets import episode_assembly_workspace as module
+
+    def fail(*_args):
+        raise TypeError("Qt decoding failed: " + "binary" * 20000)
+
+    monkeypatch.setattr(module, "extract_verified_boundary_png", fail)
+    workspace = EpisodeAssemblyWorkspace(lambda: tmp_path)
+    qtbot.addWidget(workspace)
+    workspace._playback_plan = _plan()
+    workspace._playback_project = tmp_path
+    workspace.boundary_selector.addItem("SHT-001 to SHT-002", 0)
+    workspace._inspect_boundary()
+    assert workspace.boundary_status.text().startswith("BLOCKED:")
+    assert len(workspace.boundary_status.text()) < 240
