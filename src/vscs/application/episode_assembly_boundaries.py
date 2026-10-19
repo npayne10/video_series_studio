@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Callable
 
 from vscs.application.episode_assembly_playback import validated_source_path
 from vscs.application.episode_assembly_preview import AssemblyPreviewPlan, PreviewSegment
