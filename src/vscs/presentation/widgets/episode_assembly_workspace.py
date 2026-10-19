@@ -272,6 +272,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         timeline_layout.addWidget(successor_group)
         self._successor_candidate: Any = None
         self._successor_predecessor_fingerprint: str | None = None
+        self._successor_operator_evidence: tuple[str, str] | None = None
 
         self.snapshot_operator = QLineEdit(self)
         self.snapshot_operator.setObjectName("planningSnapshotOperator")
@@ -311,6 +312,7 @@ class EpisodeAssemblyWorkspace(QWidget):
     def _invalidate_successor_preview(self, *_args: object) -> None:
         self._successor_candidate = None
         self._successor_predecessor_fingerprint = None
+        self._successor_operator_evidence = None
         self.successor_publish_button.setEnabled(False)
         self.successor_comparison.setRowCount(0)
 
@@ -406,6 +408,10 @@ class EpisodeAssemblyWorkspace(QWidget):
                 self.successor_comparison.setItem(index, column, QTableWidgetItem(value))
         self._successor_candidate = candidate
         self._successor_predecessor_fingerprint = predecessor.fingerprint
+        self._successor_operator_evidence = (
+            self.successor_operator.text().strip(),
+            self.successor_reason.toPlainText().strip(),
+        )
         self.successor_publish_button.setEnabled(True)
         self.successor_status.setText(
             f"PREVIEW ONLY: {len(candidate.selections)} Shots; "
@@ -420,7 +426,10 @@ class EpisodeAssemblyWorkspace(QWidget):
             return
         try:
             fresh = self._build_successor_candidate()
-            if fresh.fingerprint != candidate.fingerprint:
+            if fresh.fingerprint != candidate.fingerprint or self._successor_operator_evidence != (
+                self.successor_operator.text().strip(),
+                self.successor_reason.toPlainText().strip(),
+            ):
                 raise ValueError("Staged changes or operator inputs changed; preview again")
             predecessor = self._selected_revision
             if (
