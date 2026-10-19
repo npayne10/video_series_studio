@@ -556,9 +556,7 @@ class EpisodeAssemblyWorkspace(QWidget):
             for column, value in enumerate(values):
                 self.preview_table.setItem(index, column, QTableWidgetItem(value))
         if preview.blockers:
-            self.preview_status.setText(
-                "BLOCKED: " + "; ".join(preview.blockers)
-            )
+            self.preview_status.setText("BLOCKED: " + "; ".join(preview.blockers))
         else:
             self.preview_status.setText(
                 f"VERIFIED READ-ONLY PREVIEW: {len(preview.segments)} Shots, "
