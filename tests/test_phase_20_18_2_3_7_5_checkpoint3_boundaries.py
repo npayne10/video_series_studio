@@ -63,9 +63,7 @@ def test_boundary_ui_blocks_until_verified(qtbot, tmp_path):
     assert not workspace.complete_button.isEnabled()
 
 
-def test_boundary_ui_decodes_actual_qt_png_without_geometry_expansion(
-    qtbot, tmp_path, monkeypatch
-):
+def test_boundary_ui_decodes_actual_qt_png_without_geometry_expansion(qtbot, tmp_path, monkeypatch):
     from vscs.presentation.widgets import episode_assembly_workspace as module
 
     image = QImage(16, 12, QImage.Format.Format_RGB32)
@@ -92,9 +90,7 @@ def test_boundary_ui_decodes_actual_qt_png_without_geometry_expansion(
     assert len(workspace.boundary_status.text()) < 260
 
 
-def test_boundary_ui_never_exposes_raw_png_bytes_in_error_text(
-    qtbot, tmp_path, monkeypatch
-):
+def test_boundary_ui_never_exposes_raw_png_bytes_in_error_text(qtbot, tmp_path, monkeypatch):
     from vscs.presentation.widgets import episode_assembly_workspace as module
 
     def fail(*_args):
