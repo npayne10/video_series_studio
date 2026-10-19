@@ -42,7 +42,9 @@ class AssemblyPreviewPlan:
 
     @property
     def total_frames(self) -> int:
-        return sum(segment.timeline_end_frame - segment.timeline_start_frame for segment in self.segments)
+        return sum(
+            segment.timeline_end_frame - segment.timeline_start_frame for segment in self.segments
+        )
 
 
 def inspect_assembly_preview(
