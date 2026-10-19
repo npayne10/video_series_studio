@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -591,8 +592,7 @@ class EpisodeAssemblyWorkspace(QWidget):
     def _playback_error(self, *_args: object) -> None:
         self._stop_playback()
         self.playback_current_shot.setText(
-            "BLOCKED: Video decoder or media playback error: "
-            + self.playback_player.errorString()
+            "BLOCKED: Video decoder or media playback error: " + self.playback_player.errorString()
         )
 
     def _open_playback_frame(self, frame: int, *, play: bool) -> None:
