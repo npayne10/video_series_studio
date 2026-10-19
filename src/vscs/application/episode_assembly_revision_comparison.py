@@ -72,7 +72,8 @@ def compare_assembly_revisions(
             if left.sequence_index != right.sequence_index:
                 flags.append("ORDER")
             if (left.source_in_frame, left.source_out_frame) != (
-                right.source_in_frame, right.source_out_frame
+                right.source_in_frame,
+                right.source_out_frame,
             ):
                 flags.append("RANGE")
             if (
