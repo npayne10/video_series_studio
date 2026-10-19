@@ -18,19 +18,14 @@ from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssembly
 def _revision(revision_id="REV-001", end=48, extra=False):
     scope = AssemblyScope("PROD", AssemblyScopeKind.EPISODE, "EP-001", "PLAN-1", "a" * 64)
     selections = [
-        ShotSelection("SCN", "SHT-001", "GM-001", "1", "b" * 64, "APP-1",
-                      0, end, 0, "approved"),
-        ShotSelection("SCN", "SHT-002", "GM-002", "1", "c" * 64, "APP-2",
-                      0, 144, 1, "approved"),
+        ShotSelection("SCN", "SHT-001", "GM-001", "1", "b" * 64, "APP-1", 0, end, 0, "approved"),
+        ShotSelection("SCN", "SHT-002", "GM-002", "1", "c" * 64, "APP-2", 0, 144, 1, "approved"),
     ]
     if extra:
         selections.append(
-            ShotSelection("SCN", "SHT-003", "GM-003", "1", "d" * 64, "APP-3",
-                          0, 24, 2, "approved")
+            ShotSelection("SCN", "SHT-003", "GM-003", "1", "d" * 64, "APP-3", 0, 24, 2, "approved")
         )
-    return AssemblyTimelineRevision(
-        "ASM-EP-001", revision_id, scope, tuple(selections), 24, 1
-    )
+    return AssemblyTimelineRevision("ASM-EP-001", revision_id, scope, tuple(selections), 24, 1)
 
 
 def test_comparison_detects_range_duration_and_unchanged_shot():
@@ -50,8 +45,11 @@ def test_comparison_added_removed_media_and_order():
     first, second = b.selections[:2]
     swapped = replace(
         b,
-        selections=(replace(second, sequence_index=0),
-                    replace(first, sequence_index=1), b.selections[2]),
+        selections=(
+            replace(second, sequence_index=0),
+            replace(first, sequence_index=1),
+            b.selections[2],
+        ),
     )
     changes = compare_assembly_revisions(a, swapped)
     assert all("ORDER" in entry.change for entry in changes.differences[:2])
