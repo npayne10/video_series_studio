@@ -4,20 +4,28 @@ from fractions import Fraction
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from vscs.application.assembly_contracts import (
+    AssemblyScope,
+    AssemblyScopeKind,
+    AssemblyTimelineRevision,
+    ShotSelection,
+)
 from vscs.application.episode_assembly_preview import inspect_assembly_preview
 from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssemblyWorkspace
-from vscs.application.assembly_contracts import (
-    AssemblyScope, AssemblyScopeKind, AssemblyTimelineRevision, ShotSelection,
-)
 
 
 def _previous():
     return AssemblyTimelineRevision(
-        assembly_id="ASM-1", revision_id="REV-1",
+        assembly_id="ASM-1",
+        revision_id="REV-1",
         scope=AssemblyScope("PROD-1", AssemblyScopeKind.EPISODE, "EP-001", "PS-1", "b" * 64),
-        selections=(ShotSelection("SCN-1", "SHT-1", "GM-1", "1", "a" * 64,
-                                 "HUMAN-QC", 0, 144, 0, "approved"),),
-        frame_rate_num=24, frame_rate_den=1,
+        selections=(
+            ShotSelection(
+                "SCN-1", "SHT-1", "GM-1", "1", "a" * 64, "HUMAN-QC", 0, 144, 0, "approved"
+            ),
+        ),
+        frame_rate_num=24,
+        frame_rate_den=1,
     )
 
 
