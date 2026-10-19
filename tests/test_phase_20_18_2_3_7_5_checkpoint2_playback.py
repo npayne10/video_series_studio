@@ -12,8 +12,14 @@ from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssembly
 def _plan(ready=True):
     first = PreviewSegment("SHT-001", "GM-1", "a.mp4", 0, 24, Fraction(24), 0, 24)
     second = PreviewSegment("SHT-002", "GM-2", "b.mp4", 0, 144, Fraction(24), 24, 168)
-    return AssemblyPreviewPlan("ASM-1", "REV-1", "a" * 64, (first, second),
-                               () if ready else ("Missing approval",), Fraction(24))
+    return AssemblyPreviewPlan(
+        "ASM-1",
+        "REV-1",
+        "a" * 64,
+        (first, second),
+        () if ready else ("Missing approval",),
+        Fraction(24),
+    )
 
 
 def test_playback_maps_timeline_boundaries_and_seek_positions():
