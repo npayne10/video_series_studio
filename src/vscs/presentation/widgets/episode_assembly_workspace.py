@@ -10,6 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from PySide6.QtCore import QSettings, Qt, QUrl
+from PySide6.QtGui import QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -32,6 +33,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_assembly_boundaries import (
+    boundary_pair,
+    extract_verified_boundary_png,
+)
 from vscs.application.episode_assembly_playback import (
     map_timeline_frame,
     validated_source_path,
@@ -228,6 +233,36 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.playback_current_shot = QLabel("No verified timeline loaded.", self)
         self.playback_current_shot.setObjectName("episodePlaybackCurrentShot")
         preview_layout.addWidget(self.playback_current_shot)
+        boundary_group = QGroupBox("Boundary & Continuity Inspection — Read Only", self)
+        boundary_layout = QVBoxLayout(boundary_group)
+        self.boundary_selector = QComboBox(self)
+        self.boundary_selector.setObjectName("episodeBoundarySelector")
+        boundary_layout.addWidget(self.boundary_selector)
+        self.boundary_inspect = QPushButton("Inspect Verified Boundary Frames", self)
+        self.boundary_inspect.setObjectName("episodeBoundaryInspect")
+        self.boundary_inspect.clicked.connect(self._inspect_boundary)
+        boundary_layout.addWidget(self.boundary_inspect)
+        boundary_images = QHBoxLayout()
+        self.boundary_outgoing_image = QLabel("Outgoing final selected frame", self)
+        self.boundary_incoming_image = QLabel("Incoming first selected frame", self)
+        for image_label in (self.boundary_outgoing_image, self.boundary_incoming_image):
+            image_label.setMinimumHeight(180)
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image_label.setScaledContents(False)
+            boundary_images.addWidget(image_label, 1)
+        boundary_layout.addLayout(boundary_images)
+        self.boundary_status = QLabel("Verify a revision before inspecting boundaries.", self)
+        self.boundary_status.setWordWrap(True)
+        boundary_layout.addWidget(self.boundary_status)
+        self.boundary_findings = QPlainTextEdit(self)
+        self.boundary_findings.setObjectName("episodeBoundaryFindings")
+        self.boundary_findings.setPlaceholderText("Operator continuity findings (session notes only; no QC state change)")
+        self.boundary_findings.setMaximumHeight(90)
+        boundary_layout.addWidget(self.boundary_findings)
+        self.boundary_findings.textChanged.connect(self._remember_boundary_findings)
+        preview_layout.addWidget(boundary_group)
+        self._boundary_session_notes: dict[tuple[str, str, int], str] = {}
+        self.boundary_inspect.setEnabled(False)
         self._playback_plan: Any = None
         self._playback_segment_index = -1
         self._playback_project: Path | None = None
@@ -582,6 +617,14 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.playback_current_shot.setText("Playback stopped.")
 
     def _clear_playback(self) -> None:
+        self.boundary_selector.clear()
+        self.boundary_inspect.setEnabled(False)
+        self.boundary_outgoing_image.clear()
+        self.boundary_incoming_image.clear()
+        self.boundary_status.setText("Verify a revision before inspecting boundaries.")
+        self.boundary_findings.blockSignals(True)
+        self.boundary_findings.clear()
+        self.boundary_findings.blockSignals(False)
         self._stop_playback()
         self.playback_player.setSource(QUrl())
         self._playback_plan = None
@@ -660,6 +703,59 @@ class EpisodeAssemblyWorkspace(QWidget):
             f"assembly frame {frame + 1}/{plan.total_frames}"
         )
 
+    def _remember_boundary_findings(self) -> None:
+        plan = self._playback_plan
+        index = self.boundary_selector.currentData()
+        if plan is not None and index is not None:
+            key = (plan.assembly_id, plan.revision_fingerprint, index)
+            self._boundary_session_notes[key] = self.boundary_findings.toPlainText()
+
+    def _inspect_boundary(self) -> None:
+        plan = self._playback_plan
+        directory = self._playback_project
+        index = self.boundary_selector.currentData()
+        if plan is None or directory is None or index is None or not plan.ready:
+            self.boundary_status.setText("BLOCKED: Verify a persisted revision first.")
+            return
+        self.boundary_outgoing_image.clear()
+        self.boundary_incoming_image.clear()
+        try:
+            pair = boundary_pair(plan, index)
+            outgoing = extract_verified_boundary_png(
+                directory, pair.outgoing, pair.outgoing_frame
+            )
+            incoming = extract_verified_boundary_png(
+                directory, pair.incoming, pair.incoming_frame
+            )
+            for label, content in (
+                (self.boundary_outgoing_image, outgoing),
+                (self.boundary_incoming_image, incoming),
+            ):
+                pixmap = QPixmap()
+                if not pixmap.loadFromData(content, "PNG"):
+                    raise ValueError("Decoded boundary image is invalid")
+                label.setPixmap(
+                    pixmap.scaled(
+                        360, 220,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
+        except (ValueError, OSError, RuntimeError) as exc:
+            self.boundary_outgoing_image.clear()
+            self.boundary_incoming_image.clear()
+            self.boundary_status.setText(f"BLOCKED: {exc}")
+            return
+        self.boundary_status.setText(
+            f"{pair.outgoing.shot_id} frame {pair.outgoing_frame} → "
+            f"{pair.incoming.shot_id} frame {pair.incoming_frame}. "
+            "Visual review only; no human QC or Picture Lock authorized."
+        )
+        key = (plan.assembly_id, plan.revision_fingerprint, index)
+        self.boundary_findings.blockSignals(True)
+        self.boundary_findings.setPlainText(self._boundary_session_notes.get(key, ""))
+        self.boundary_findings.blockSignals(False)
+
     def _inspect_playback_preview(self) -> None:
         self._clear_playback()
         self.preview_table.setRowCount(0)
@@ -697,6 +793,13 @@ class EpisodeAssemblyWorkspace(QWidget):
         else:
             self._playback_plan = preview
             self._playback_project = Path(directory)
+            for index, (outgoing, incoming) in enumerate(
+                zip(preview.segments, preview.segments[1:])
+            ):
+                self.boundary_selector.addItem(
+                    f"{outgoing.shot_id} → {incoming.shot_id}", index
+                )
+            self.boundary_inspect.setEnabled(self.boundary_selector.count() > 0)
             self.playback_seek.setRange(0, preview.total_frames - 1)
             self._update_playback_controls()
             self.preview_status.setText(
