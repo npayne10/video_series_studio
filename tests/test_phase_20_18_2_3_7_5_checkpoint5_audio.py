@@ -29,6 +29,7 @@ def test_audio_inspection_reports_silence_without_approval(tmp_path):
     ]
     def run(*_args, **_kwargs):
         return CompletedProcess([], 0, json.dumps(payloads.pop(0)), "")
+
     with patch("vscs.application.episode_assembly_audio_readiness.subprocess.run", run):
         report = inspect_assembly_audio(_plan(), tmp_path)
     assert report.silent_shots == 1
@@ -44,16 +45,17 @@ def test_audio_inspection_rejects_unverified_plan(tmp_path):
 
 def test_audio_inspection_fails_closed_on_ambiguous_streams(tmp_path):
     (tmp_path / "a.mp4").write_bytes(b"video")
-    streams = {"streams": [
-        {"codec_name": "aac", "channels": 2, "sample_rate": "48000"},
-        {"codec_name": "opus", "channels": 2, "sample_rate": "48000"},
-    ]}
+    streams = {
+        "streams": [
+            {"codec_name": "aac", "channels": 2, "sample_rate": "48000"},
+            {"codec_name": "opus", "channels": 2, "sample_rate": "48000"},
+        ]
+    }
     with patch(
         "vscs.application.episode_assembly_audio_readiness.subprocess.run",
         return_value=CompletedProcess([], 0, json.dumps(streams), ""),
-    ):
-        with pytest.raises(ValueError, match="SHT-001"):
-            inspect_assembly_audio(_plan(), tmp_path)
+    ), pytest.raises(ValueError, match="SHT-001"):
+        inspect_assembly_audio(_plan(), tmp_path)
 
 
 def test_audio_ui_requires_verified_playback_plan(qtbot, tmp_path):
