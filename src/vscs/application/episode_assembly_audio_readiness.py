@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 
 from vscs.application.episode_assembly_playback import validated_source_path
@@ -52,9 +53,16 @@ def inspect_assembly_audio(
         try:
             process = subprocess.run(
                 [
-                    probe_command, "-v", "error", "-select_streams", "a",
-                    "-show_entries", "stream=codec_name,channels,sample_rate",
-                    "-of", "json", str(path),
+                    probe_command,
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "a",
+                    "-show_entries",
+                    "stream=codec_name,channels,sample_rate",
+                    "-of",
+                    "json",
+                    str(path),
                 ],
                 capture_output=True,
                 check=True,
@@ -88,17 +96,26 @@ def inspect_assembly_audio(
                     tuple(findings),
                 )
             )
-        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired,
-                KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        except (
+            OSError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+            KeyError,
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+        ) as exc:
             raise ValueError(f"{segment.shot_id}: Audio probe unavailable or invalid") from exc
     continuity: list[str] = []
-    for previous, current in zip(shots, shots[1:], strict=False):
+    for previous, current in pairwise(shots):
         if previous.stream_count != current.stream_count:
             continuity.append(
                 f"{previous.shot_id} → {current.shot_id}: embedded audio presence changes"
             )
         elif previous.stream_count and (
-            previous.codec, previous.channels, previous.sample_rate
+            previous.codec,
+            previous.channels,
+            previous.sample_rate,
         ) != (current.codec, current.channels, current.sample_rate):
             continuity.append(
                 f"{previous.shot_id} → {current.shot_id}: audio stream formats differ"
