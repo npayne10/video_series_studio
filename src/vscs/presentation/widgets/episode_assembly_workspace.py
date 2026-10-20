@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.episode_assembly_audio_readiness import inspect_assembly_audio
 from vscs.application.episode_assembly_boundaries import (
     boundary_pair,
     extract_verified_boundary_png,
@@ -41,7 +42,6 @@ from vscs.application.episode_assembly_playback import (
     map_timeline_frame,
     validated_source_path,
 )
-from vscs.application.episode_assembly_audio_readiness import inspect_assembly_audio
 from vscs.application.episode_assembly_preview import inspect_assembly_preview
 from vscs.application.episode_assembly_revision_comparison import compare_assembly_revisions
 from vscs.application.episode_draft_selection import (
