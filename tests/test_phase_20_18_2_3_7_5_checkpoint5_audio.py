@@ -51,10 +51,13 @@ def test_audio_inspection_fails_closed_on_ambiguous_streams(tmp_path):
             {"codec_name": "opus", "channels": 2, "sample_rate": "48000"},
         ]
     }
-    with patch(
-        "vscs.application.episode_assembly_audio_readiness.subprocess.run",
-        return_value=CompletedProcess([], 0, json.dumps(streams), ""),
-    ), pytest.raises(ValueError, match="SHT-001"):
+    with (
+        patch(
+            "vscs.application.episode_assembly_audio_readiness.subprocess.run",
+            return_value=CompletedProcess([], 0, json.dumps(streams), ""),
+        ),
+        pytest.raises(ValueError, match="SHT-001"),
+    ):
         inspect_assembly_audio(_plan(), tmp_path)
 
 
