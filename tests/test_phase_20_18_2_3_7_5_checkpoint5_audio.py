@@ -27,6 +27,7 @@ def test_audio_inspection_reports_silence_without_approval(tmp_path):
         {"streams": []},
         {"streams": [{"codec_name": "aac", "channels": 2, "sample_rate": "48000"}]},
     ]
+
     def run(*_args, **_kwargs):
         return CompletedProcess([], 0, json.dumps(payloads.pop(0)), "")
 
