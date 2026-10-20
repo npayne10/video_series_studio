@@ -41,6 +41,7 @@ from vscs.application.episode_assembly_playback import (
     map_timeline_frame,
     validated_source_path,
 )
+from vscs.application.episode_assembly_audio_readiness import inspect_assembly_audio
 from vscs.application.episode_assembly_preview import inspect_assembly_preview
 from vscs.application.episode_assembly_revision_comparison import compare_assembly_revisions
 from vscs.application.episode_draft_selection import (
@@ -201,6 +202,26 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.preview_status.setObjectName("episodePreviewStatus")
         self.preview_status.setWordWrap(True)
         preview_layout.addWidget(self.preview_status)
+        audio_group = QGroupBox("Technical Audio Readiness — Read Only", self)
+        audio_layout = QVBoxLayout(audio_group)
+        self.audio_inspect_button = QPushButton("Inspect Verified Timeline Audio", self)
+        self.audio_inspect_button.setObjectName("episodeAudioInspect")
+        self.audio_inspect_button.clicked.connect(self._inspect_audio_readiness)
+        audio_layout.addWidget(self.audio_inspect_button)
+        self.audio_status = QLabel("Verify revision before inspecting embedded audio.", self)
+        self.audio_status.setObjectName("episodeAudioStatus")
+        self.audio_status.setWordWrap(True)
+        audio_layout.addWidget(self.audio_status)
+        self.audio_table = QTableWidget(0, 6, self)
+        self.audio_table.setObjectName("episodeAudioInventory")
+        self.audio_table.setHorizontalHeaderLabels(
+            ["Shot", "Media ID", "Streams", "Codec", "Channels", "Sample rate"]
+        )
+        self.audio_table.setMinimumHeight(130)
+        self.audio_table.setMaximumHeight(280)
+        audio_layout.addWidget(self.audio_table)
+        preview_layout.addWidget(audio_group)
+        self.audio_inspect_button.setEnabled(False)
         timeline_layout.addWidget(preview_group)
         self.playback_view = QVideoWidget(self)
         self.playback_view.setObjectName("episodeAssemblyVideoPlayback")
@@ -647,7 +668,41 @@ class EpisodeAssemblyWorkspace(QWidget):
         self._playback_segment_index = -1
         self.playback_current_shot.setText("Playback stopped.")
 
+    def _inspect_audio_readiness(self) -> None:
+        self.audio_table.setRowCount(0)
+        plan = self._playback_plan
+        directory = self._playback_project
+        if plan is None or directory is None or not plan.ready:
+            self.audio_status.setText("BLOCKED: Verify selected revision first.")
+            return
+        try:
+            report = inspect_assembly_audio(plan, directory)
+        except (ValueError, OSError) as exc:
+            self.audio_status.setText(f"BLOCKED: Audio probe failed: {str(exc)[:180]}")
+            return
+        for index, shot in enumerate(report.shots):
+            self.audio_table.insertRow(index)
+            values = (
+                shot.shot_id,
+                shot.media_id,
+                str(shot.stream_count),
+                shot.codec or "No audio",
+                str(shot.channels) if shot.channels is not None else "—",
+                str(shot.sample_rate) if shot.sample_rate is not None else "—",
+            )
+            for column, value in enumerate(values):
+                self.audio_table.setItem(index, column, QTableWidgetItem(value))
+        findings = "; ".join(report.continuity_findings) or "No stream-format transitions"
+        self.audio_status.setText(
+            f"TECHNICAL AUDIO INVENTORY: {len(report.shots)} Shots; "
+            f"{report.silent_shots} without embedded audio. {findings}. "
+            "Dialogue, sound design and final mix remain unverified."
+        )
+
     def _clear_playback(self) -> None:
+        self.audio_table.setRowCount(0)
+        self.audio_inspect_button.setEnabled(False)
+        self.audio_status.setText("Verify revision before inspecting audio.")
         self.boundary_selector.clear()
         self.boundary_inspect.setEnabled(False)
         self.boundary_outgoing_image.clear()
@@ -825,6 +880,7 @@ class EpisodeAssemblyWorkspace(QWidget):
         else:
             self._playback_plan = preview
             self._playback_project = Path(directory)
+            self.audio_inspect_button.setEnabled(True)
             for index, (outgoing, incoming) in enumerate(
                 zip(preview.segments, preview.segments[1:], strict=False)
             ):
