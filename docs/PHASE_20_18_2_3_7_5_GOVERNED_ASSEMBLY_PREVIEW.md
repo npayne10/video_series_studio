@@ -158,3 +158,28 @@ git diff --check
 python -m pytest -q tests/test_phase_20_18_2_3_7_5_checkpoint4_comparison.py -v
 python -m pytest -q
 ```
+
+## Checkpoint 5 — Technical Audio Readiness (read-only)
+
+The Episode Assembly **Technical Audio Readiness — Read Only** panel
+is enabled only after verification of the selected persisted revision.
+**Inspect Verified Timeline Audio** runs ffprobe against each approved video
+file and reports embedded audio stream presence, codec, channels, sample
+rate, and adjacent stream presence/format changes. Videos without audio
+are recorded as **NO EMBEDDED AUDIO — editorial intent unverified**,
+not a QC failure. Ambiguous multiple audio streams or invalid metadata
+block this inspection; they never authorize changing media or assembly.
+
+This inventory does not determine whether planned dialogue, Foley,
+ambience, music or final mix is complete. That decision needs separate
+governed post-production evidence and an explicit human review. No
+media approval, production revision, Picture Lock or Episode completion
+is changed, and no audio is synthesized, transcoded or saved.
+
+Acceptance in isolated `D:\\VSCS TSR2 - TEST 4B5`:
+open `ASM-EP-001 / REV-002-ACCEPTANCE`, verify preview, then inspect
+audio. Confirm each selected Shot appears, with true source audio metadata;
+missing embedded audio must be presented as information, not an error.
+Change revision and confirm audio inspection is disabled until another
+successful preview verification. Run Ruff, mypy, the new focused suite
+and full regression before UI acceptance.
