@@ -22,7 +22,11 @@ def test_h3_benchmark_variants_are_isolated_and_original_unchanged(tmp_path):
     paths = bench.prepare_variants(tmp_path / "bench")
     assert len(paths) == 5
     assert [json.loads(p.read_text())["115"]["inputs"]["megapixels"] for p in paths] == [
-        0.2, 0.35, 0.5, 0.8, 1.0
+        0.2,
+        0.35,
+        0.5,
+        0.8,
+        1.0,
     ]
     for path in paths:
         payload = json.loads(path.read_text())
