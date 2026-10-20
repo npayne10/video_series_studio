@@ -1,9 +1,9 @@
 # Phase 20.18.2.3.7.5 — Final Integration & Acceptance Record
 
-**Status:** Checkpoint 6 implemented; local validation and operator approval PENDING.
+**Status:** ACCEPTED — all six checkpoints, automated validation and final operator approval complete.
 **Scope:** Read-only inspection of persisted Episode Assembly timeline revisions.
 **Feature branch:** `phase-20.18.2.3.6.3-local-r2v-provider-evaluation`.
-**Final accepted GitHub SHA:** To be recorded AFTER final validation and operator approval.
+**Accepted implementation GitHub SHA:** `ead779e3245b9837465a50438492bf8cb6c46427` (before acceptance-record-only update).
 **Environment:** Isolated acceptance project `D:\\VSCS TSR2 - TEST 4B5`, not production `D:\\VSCS TSR2`.
 
 ## Evidence already accepted by operator
@@ -61,4 +61,15 @@ python -m pytest -q
 git status --short
 ```
 
-Record actual total tests, local HEAD, any failed checks, and operator final approval here only after verified results are returned.
+## Final acceptance evidence — 2026-10-20
+
+- Operator explicitly confirmed: **all eight final integrated UI and governance acceptance checks passed** in the isolated acceptance project.
+- `python -m ruff check .`: all checks passed.
+- `python -m ruff format --check .`: 1,390 files formatted.
+- `python -m mypy src`: no issues in 617 source files.
+- `git diff --check`: clean.
+- Focused Checkpoint 6 suite: **4 passed in 5.07 s**.
+- Full regression: **2,093 passed in 30.92 s**.
+- `git status --short`: clean.
+- **Decision: Phase 20.18.2.3.7.5 ACCEPTED and CLOSED** for read-only Episode Assembly inspection capabilities only. This does not approve Generated Media, Episode completion, Picture Lock or any successor production publication.
+
