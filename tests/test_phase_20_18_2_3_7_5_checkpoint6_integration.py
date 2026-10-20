@@ -25,10 +25,8 @@ from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssembly
 def _revisions():
     scope = AssemblyScope("PROD", AssemblyScopeKind.EPISODE, "EP-001", "PLAN-1", "a" * 64)
     source = (
-        ShotSelection("SCN-001", "SHT-001", "GM-1", "1", "b" * 64, "APP-1",
-                      0, 48, 0, "approved"),
-        ShotSelection("SCN-001", "SHT-002", "GM-2", "1", "c" * 64, "APP-2",
-                      0, 144, 1, "approved"),
+        ShotSelection("SCN-001", "SHT-001", "GM-1", "1", "b" * 64, "APP-1", 0, 48, 0, "approved"),
+        ShotSelection("SCN-001", "SHT-002", "GM-2", "1", "c" * 64, "APP-2", 0, 144, 1, "approved"),
     )
     first = AssemblyTimelineRevision("ASM-EP-001", "REV-001", scope, source, 24, 1)
     second = replace(
@@ -46,15 +44,24 @@ def _preview(revision):
     for shot in revision.selections:
         segments.append(
             PreviewSegment(
-                shot.shot_id, shot.generated_media_id, f"{shot.shot_id}.mp4",
-                shot.source_in_frame, shot.source_out_frame, Fraction(24),
-                start, start + shot.frame_count,
+                shot.shot_id,
+                shot.generated_media_id,
+                f"{shot.shot_id}.mp4",
+                shot.source_in_frame,
+                shot.source_out_frame,
+                Fraction(24),
+                start,
+                start + shot.frame_count,
             )
         )
         start += shot.frame_count
     return AssemblyPreviewPlan(
-        revision.assembly_id, revision.revision_id,
-        revision.fingerprint, tuple(segments), (), Fraction(24)
+        revision.assembly_id,
+        revision.revision_id,
+        revision.fingerprint,
+        tuple(segments),
+        (),
+        Fraction(24),
     )
 
 
