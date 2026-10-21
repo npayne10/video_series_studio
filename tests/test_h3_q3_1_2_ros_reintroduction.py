@@ -22,7 +22,9 @@ def test_q312_reintroduces_only_ros_without_overwriting_inputs(tmp_path):
     )
     baseline["115"]["inputs"]["megapixels"] = 0.35
     for node in ("137", "139", "141", "142", "143", "145"):
-        baseline[node]["inputs"]["image"] = f"VSCS_H3_BENCH_{node}_" + baseline[node]["inputs"]["image"]
+        baseline[node]["inputs"]["image"] = (
+            f"VSCS_H3_BENCH_{node}_" + baseline[node]["inputs"]["image"]
+        )
     reduced = json.loads(json.dumps(baseline))
     reduced.pop("141")
     reduced.pop("143")
@@ -48,7 +50,10 @@ def test_q312_reintroduces_only_ros_without_overwriting_inputs(tmp_path):
     assert result["141"] == baseline["141"]
     assert "143" not in result
     assert [result["136"]["inputs"][f"ref_images.ref_image_{i}"] for i in range(4)] == [
-        ["137", 0], ["139", 0], ["142", 0], ["141", 0]
+        ["137", 0],
+        ["139", 0],
+        ["142", 0],
+        ["141", 0],
     ]
     assert "ref_images.ref_image_4" not in result["136"]["inputs"]
     for node in ("115", "125", "126", "129", "130", "131", "136", "144"):
