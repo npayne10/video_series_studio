@@ -9,8 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from vscs.application.provider_reference_capacity import ProviderReferenceCapacityProjection
+if TYPE_CHECKING:
+    from vscs.application.provider_reference_capacity import ProviderReferenceCapacityProjection
 
 from .h3_reference_selection_governance import (
     H3ReferenceCandidate,
@@ -80,9 +82,7 @@ def review_governed_h3_references(
         for candidate in candidates
     )
     proposal = propose_h3_reference_selection(enriched, capacity=projection.capacity)
-    changes = tuple(
-        item for item in selected if item in proposal.proposed_deferred_ids
-    )
+    changes = tuple(item for item in selected if item in proposal.proposed_deferred_ids)
     authority = {
         "projection": projection.to_dict(),
         "candidate_ids": list(all_ids),
@@ -90,9 +90,7 @@ def review_governed_h3_references(
         "guide_overlap_ids": sorted(guide_overlap_ids),
         "proposal_fingerprint": proposal.fingerprint,
     }
-    fingerprint = hashlib.sha256(
-        json.dumps(authority, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    fingerprint = hashlib.sha256(json.dumps(authority, sort_keys=True).encode("utf-8")).hexdigest()
     return H3GovernedReferenceReview(
         authority_fingerprint=fingerprint,
         proposal=proposal,
