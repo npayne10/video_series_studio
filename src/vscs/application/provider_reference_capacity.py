@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
+
 if TYPE_CHECKING:
     from vscs.application.production_execution.provider_policy_profiles import ProviderPolicyProfile
 
