@@ -53,9 +53,7 @@ class H3ReferenceProposal:
 
     @property
     def proposed_deferred_ids(self) -> tuple[str, ...]:
-        return tuple(
-            d.reference_id for d in self.decisions if d.disposition == "propose_defer"
-        )
+        return tuple(d.reference_id for d in self.decisions if d.disposition == "propose_defer")
 
 
 def propose_h3_reference_selection(
@@ -116,7 +114,5 @@ def propose_h3_reference_selection(
             for d in decisions
         ],
     }
-    fingerprint = hashlib.sha256(
-        json.dumps(payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
     return H3ReferenceProposal(tuple(decisions), capacity, fingerprint)
