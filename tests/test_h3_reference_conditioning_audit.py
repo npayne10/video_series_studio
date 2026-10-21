@@ -14,9 +14,9 @@ def test_h3_reference_conditioning_audit_identifies_only_resolution_and_output(t
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     original = json.loads(
-        (
-            repo / "resources/workflows/manual/minimax_h3_ref2va_sht002_baseline_api.json"
-        ).read_text(encoding="utf-8")
+        (repo / "resources/workflows/manual/minimax_h3_ref2va_sht002_baseline_api.json").read_text(
+            encoding="utf-8"
+        )
     )
     for suffix, mp in (("0p2", 0.2), ("0p35", 0.35)):
         workflow = json.loads(json.dumps(original))
