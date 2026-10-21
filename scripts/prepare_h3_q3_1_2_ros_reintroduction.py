@@ -39,14 +39,21 @@ def prepare(source: Path, original: Path, destination: Path) -> Path:
         raise ValueError("Unexpected seed")
     slots = candidate["136"]["inputs"]
     if [slots.get(f"ref_images.ref_image_{i}") for i in range(3)] != [
-        ["137", 0], ["139", 0], ["142", 0]
+        ["137", 0],
+        ["139", 0],
+        ["142", 0],
     ]:
         raise ValueError("Unexpected three-reference configuration")
-    if any(key.startswith("ref_images.ref_image_") and key not in {
-        "ref_images.ref_image_0",
-        "ref_images.ref_image_1",
-        "ref_images.ref_image_2",
-    } for key in slots):
+    if any(
+        key.startswith("ref_images.ref_image_")
+        and key
+        not in {
+            "ref_images.ref_image_0",
+            "ref_images.ref_image_1",
+            "ref_images.ref_image_2",
+        }
+        for key in slots
+    ):
         raise ValueError("Unexpected additional reference slots")
     if "141" in candidate or "143" in candidate:
         raise ValueError("Reduced-reference candidate contains excluded loaders")
