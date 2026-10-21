@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 
@@ -111,7 +111,7 @@ def validate_h3_span_freshness(
         raise H3ReferenceGovernanceError("Deferred reference IDs differ from projection")
     if len(set(active)) != len(active):
         raise H3ReferenceGovernanceError("Duplicate active reference IDs")
-    if not set((*selected, *execution.deferred_reference_ids)).issubset(active):
+    if set((*selected, *execution.deferred_reference_ids)) != set(active):
         raise H3ReferenceGovernanceError("Future or unknown reference in provider execution")
 
     raw = plan.get("references")
@@ -137,7 +137,7 @@ def validate_h3_span_freshness(
             raise H3ReferenceGovernanceError("Non-direct reference cannot occupy active direct slot")
         if priority is ReferencePriority.PREFERRED and record.get("provider_ready") is not True:
             raise H3ReferenceGovernanceError("Preferred direct reference is not provider ready")
-        kind: str = "other"
+        kind: Literal["character", "environment", "visual_element", "other"] = "other"
         if role in (
             ReferenceRole.PRIMARY_IDENTITY,
             ReferenceRole.SECONDARY_IDENTITY,
