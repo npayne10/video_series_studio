@@ -75,24 +75,24 @@ def propose_h3_reference_selection(
             "Required references exceed provider capacity; explicit replanning required"
         )
     decisions: list[H3ReferenceDecision] = []
-    retained_count = 0
+    optional_slots = capacity - required_count
+    optional_retained = 0
     for candidate in candidates:
         if candidate.required:
             decision = H3ReferenceDecision(
                 candidate.reference_id, "retain", "Required by supplied authority"
             )
-            retained_count += 1
         elif candidate.guide_represents_asset:
             decision = H3ReferenceDecision(
                 candidate.reference_id,
                 "propose_defer",
                 "Guide appears to represent asset; operator must review equivalence",
             )
-        elif retained_count < capacity:
+        elif optional_retained < optional_slots:
             decision = H3ReferenceDecision(
                 candidate.reference_id, "retain", "Optional reference within provider capacity"
             )
-            retained_count += 1
+            optional_retained += 1
         else:
             decision = H3ReferenceDecision(
                 candidate.reference_id,
