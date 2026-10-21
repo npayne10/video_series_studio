@@ -24,7 +24,7 @@ def _compiled() -> SimpleNamespace:
             "references": [
                 {
                     "reference_id": "james",
-                    "role": ReferenceRole.CHARACTER_IDENTITY.value,
+                    "role": ReferenceRole.PRIMARY_IDENTITY.value,
                     "priority": ReferencePriority.REQUIRED.value,
                     "provider_ready": True,
                 },
