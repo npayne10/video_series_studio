@@ -2,15 +2,16 @@
 
 from dataclasses import replace
 
+from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
+    H3ReferenceCandidate,
+    H3ReferenceGovernanceError,
+)
+
 import pytest
 
 from vscs.application.provider_reference_capacity import ProviderReferenceCapacityProjection
 from vscs.infrastructure.production_execution.h3_governed_reference_review import (
     review_governed_h3_references,
-)
-from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
-    H3ReferenceCandidate,
-    H3ReferenceGovernanceError,
 )
 
 
@@ -50,9 +51,12 @@ def test_review_is_non_mutating_and_identifies_guide_overlap() -> None:
     assert review.governed_deferred_ids == ("planet",)
     assert review.proposed_changes_to_governed_slots == ("bridge",)
     assert review.requires_operator_review
-    assert review.authority_fingerprint == review_governed_h3_references(
-        projection, _candidates(), guide_overlap_ids=frozenset({"bridge", "planet"})
-    ).authority_fingerprint
+    assert (
+        review.authority_fingerprint
+        == review_governed_h3_references(
+            projection, _candidates(), guide_overlap_ids=frozenset({"bridge", "planet"})
+        ).authority_fingerprint
+    )
 
 
 def test_required_reference_missing_fails_closed() -> None:
@@ -62,9 +66,7 @@ def test_required_reference_missing_fails_closed() -> None:
 
 
 def test_stale_projection_order_fails_closed() -> None:
-    projection = replace(
-        _projection(), selected_reference_ids=("sandra", "james", "bridge")
-    )
+    projection = replace(_projection(), selected_reference_ids=("sandra", "james", "bridge"))
     with pytest.raises(H3ReferenceGovernanceError, match="precedence"):
         review_governed_h3_references(projection, _candidates())
 
