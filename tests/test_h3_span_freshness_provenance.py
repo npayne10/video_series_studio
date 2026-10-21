@@ -16,9 +16,24 @@ from vscs.infrastructure.production_execution.h3_span_freshness_provenance impor
 
 def _fixtures():
     records = [
-        {"reference_id": "james", "role": "primary_identity", "priority": "required", "provider_ready": True},
-        {"reference_id": "bridge", "role": "environment_reference", "priority": "preferred", "provider_ready": True},
-        {"reference_id": "future-ros", "role": "secondary_identity", "priority": "required", "provider_ready": True},
+        {
+            "reference_id": "james",
+            "role": "primary_identity",
+            "priority": "required",
+            "provider_ready": True,
+        },
+        {
+            "reference_id": "bridge",
+            "role": "environment_reference",
+            "priority": "preferred",
+            "provider_ready": True,
+        },
+        {
+            "reference_id": "future-ros",
+            "role": "secondary_identity",
+            "priority": "required",
+            "provider_ready": True,
+        },
     ]
     compiled = SimpleNamespace(
         shot_id="SHOT-TEST",
@@ -35,7 +50,10 @@ def _fixtures():
     span = SimpleNamespace(
         span_id="span-1",
         sequence_number=1,
-        reference_slots=(SimpleNamespace(reference_id="james"), SimpleNamespace(reference_id="bridge")),
+        reference_slots=(
+            SimpleNamespace(reference_id="james"),
+            SimpleNamespace(reference_id="bridge"),
+        ),
         active_reference_ids=("james", "bridge"),
     )
     span_plan = SimpleNamespace(
@@ -48,7 +66,10 @@ def _fixtures():
         span_id="span-1",
         sequence_number=1,
         source_span_input_plan_fingerprint="span-fingerprint",
-        reference_slots=(SimpleNamespace(reference_id="james"), SimpleNamespace(reference_id="bridge")),
+        reference_slots=(
+            SimpleNamespace(reference_id="james"),
+            SimpleNamespace(reference_id="bridge"),
+        ),
         deferred_reference_ids=(),
     )
     projection = ProviderReferenceCapacityProjection(
