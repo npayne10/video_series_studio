@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 
@@ -52,9 +52,7 @@ class H3ReferenceProvenanceReport:
 
 def _digest(value: object) -> str:
     return hashlib.sha256(
-        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
-            "utf-8"
-        )
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     ).hexdigest()
 
 
@@ -100,7 +98,7 @@ def review_compiled_h3_reference_provenance(
             continue
         if priority is ReferencePriority.PREFERRED and reference.get("provider_ready") is not True:
             continue
-        kind = "other"
+        kind: Literal["character", "environment", "visual_element", "other"] = "other"
         if role in (
             ReferenceRole.PRIMARY_IDENTITY,
             ReferenceRole.SECONDARY_IDENTITY,
@@ -121,9 +119,10 @@ def review_compiled_h3_reference_provenance(
     # include future references. Only identical eligible direct ID sets
     # can be reconciled without explicit span activation authority.
     direct_ids = tuple(candidate.reference_id for candidate in candidates)
-    projected_ids = set(
-        (*projection.selected_reference_ids, *projection.deferred_preferred_reference_ids)
-    )
+    projected_ids = {
+        *projection.selected_reference_ids,
+        *projection.deferred_preferred_reference_ids,
+    }
     if projected_ids != set(direct_ids):
         raise H3ReferenceGovernanceError(
             "Projection differs from full compiled direct references; span activation authority required"
