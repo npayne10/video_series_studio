@@ -68,10 +68,6 @@ def review_governed_h3_references(
     expected_deferred = preferred[projection.capacity - len(required) :]
     if selected != expected or deferred != expected_deferred:
         raise H3ReferenceGovernanceError("Projection selection does not match governed precedence")
-    if tuple(item for item in all_ids if item in (*selected, *deferred)) != tuple(
-        item for item in all_ids if item in (*selected, *deferred)
-    ):
-        raise H3ReferenceGovernanceError("Reference order mismatch")
     # Advisory model may propose deferment because of guide overlap. Its result
     # cannot override the live projection even if the operator likes the advice.
     enriched = tuple(
