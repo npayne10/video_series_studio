@@ -83,7 +83,8 @@ def validate_h3_span_freshness(
     if not isinstance(plan, dict) or not isinstance(current_plan, dict):
         raise H3ReferenceGovernanceError("Governed ReferencePlan is missing")
     if plan.get("status") not in (None, "passed") or current_plan.get("status") not in (
-        None, "passed"
+        None,
+        "passed",
     ):
         raise H3ReferenceGovernanceError("Governed ReferencePlan is blocked")
     reference_digest = _digest(plan)
@@ -111,7 +112,7 @@ def validate_h3_span_freshness(
         raise H3ReferenceGovernanceError("Deferred reference IDs differ from projection")
     if len(set(active)) != len(active):
         raise H3ReferenceGovernanceError("Duplicate active reference IDs")
-    if set((*selected, *execution.deferred_reference_ids)) != set(active):
+    if {*selected, *execution.deferred_reference_ids} != set(active):
         raise H3ReferenceGovernanceError("Future or unknown reference in provider execution")
 
     raw = plan.get("references")
@@ -129,12 +130,18 @@ def validate_h3_span_freshness(
         if record is None:
             raise H3ReferenceGovernanceError("Active reference absent from ReferencePlan")
         try:
-            role = ReferenceRole(record["role"])
-            priority = ReferencePriority(record["priority"])
+            raw_role = record["role"]
+            raw_priority = record["priority"]
+            if not isinstance(raw_role, str) or not isinstance(raw_priority, str):
+                raise H3ReferenceGovernanceError("Invalid governed reference role or priority")
+            role = ReferenceRole(raw_role)
+            priority = ReferencePriority(raw_priority)
         except (KeyError, TypeError, ValueError) as exc:
             raise H3ReferenceGovernanceError("Invalid governed reference role or priority") from exc
         if role in _NON_DIRECT or priority is ReferencePriority.OPTIONAL:
-            raise H3ReferenceGovernanceError("Non-direct reference cannot occupy active direct slot")
+            raise H3ReferenceGovernanceError(
+                "Non-direct reference cannot occupy active direct slot"
+            )
         if priority is ReferencePriority.PREFERRED and record.get("provider_ready") is not True:
             raise H3ReferenceGovernanceError("Preferred direct reference is not provider ready")
         kind: Literal["character", "environment", "visual_element", "other"] = "other"
