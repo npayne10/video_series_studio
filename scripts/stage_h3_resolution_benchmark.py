@@ -77,7 +77,10 @@ def stage(*, variants: Path, comfy_input: Path, output: Path) -> list[Path]:
         data.pop("146", None)
         data.pop("147", None)
         data["126"]["inputs"]["conditioning"] = ["144", 0]
-        data["131"]["inputs"] = {"expression": str(FRAME_COUNT)}
+        data["131"]["inputs"] = {
+            "expression": str(FRAME_COUNT),
+            "values.a": ["132", 0],
+        }
         data["138"]["inputs"]["value"] = (
             "Disposable rendering benchmark. Use the five supplied reference pictures "
             "to preserve a consistent photorealistic science-fiction bridge scene. "
