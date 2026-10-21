@@ -2,16 +2,15 @@
 
 from dataclasses import replace
 
-from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
-    H3ReferenceCandidate,
-    H3ReferenceGovernanceError,
-)
-
 import pytest
 
 from vscs.application.provider_reference_capacity import ProviderReferenceCapacityProjection
 from vscs.infrastructure.production_execution.h3_governed_reference_review import (
     review_governed_h3_references,
+)
+from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
+    H3ReferenceCandidate,
+    H3ReferenceGovernanceError,
 )
 
 
