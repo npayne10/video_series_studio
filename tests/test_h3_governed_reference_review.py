@@ -1,6 +1,8 @@
 """Q3.1.3.1 read-only governed reference reconciliation."""
 
 from dataclasses import replace
+import subprocess
+import sys
 
 import pytest
 
@@ -12,6 +14,21 @@ from vscs.infrastructure.production_execution.h3_reference_selection_governance 
     H3ReferenceCandidate,
     H3ReferenceGovernanceError,
 )
+
+
+def test_reference_capacity_cold_import_in_fresh_process() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from vscs.application.provider_reference_capacity import "
+            "ProviderReferenceCapacityProjection, project_provider_reference_capacity",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def _projection() -> ProviderReferenceCapacityProjection:
