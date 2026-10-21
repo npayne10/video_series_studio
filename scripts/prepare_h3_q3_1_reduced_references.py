@@ -44,7 +44,10 @@ def prepare(source: Path, destination: Path) -> Path:
         ["143", 0],
     ]:
         raise ValueError("Original reference order did not match audited baseline")
-    if not all(workflow[node]["inputs"]["image"].startswith("VSCS_H3_BENCH_") for node in (*KEPT_LOADERS, "145")):
+    if not all(
+        workflow[node]["inputs"]["image"].startswith("VSCS_H3_BENCH_")
+        for node in (*KEPT_LOADERS, "145")
+    ):
         raise ValueError("Source workflow uses non-isolated images")
     candidate = copy.deepcopy(workflow)
     for node in REMOVED_LOADERS:
