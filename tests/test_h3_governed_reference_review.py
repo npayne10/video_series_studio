@@ -1,8 +1,8 @@
 """Q3.1.3.1 read-only governed reference reconciliation."""
 
-from dataclasses import replace
 import subprocess
 import sys
+from dataclasses import replace
 
 import pytest
 
