@@ -96,11 +96,19 @@ def review_compiled_h3_reference_provenance(
             raise H3ReferenceGovernanceError("Invalid governed reference role or priority") from exc
         if role in _NON_DIRECT:
             continue
+        if priority is ReferencePriority.OPTIONAL:
+            continue
+        if priority is ReferencePriority.PREFERRED and reference.get("provider_ready") is not True:
+            continue
         kind = "other"
-        role_name = role.value.lower()
-        if "character" in role_name:
+        if role in (
+            ReferenceRole.PRIMARY_IDENTITY,
+            ReferenceRole.SECONDARY_IDENTITY,
+            ReferenceRole.GROUP_IDENTITY,
+            ReferenceRole.BACKGROUND_IDENTITY,
+        ):
             kind = "character"
-        elif "environment" in role_name or "location" in role_name:
+        elif role is ReferenceRole.ENVIRONMENT_REFERENCE:
             kind = "environment"
         candidates.append(
             H3ReferenceCandidate(
@@ -110,7 +118,7 @@ def review_compiled_h3_reference_provenance(
             )
         )
     # Projection in the H3 adapter is span-specific: a full-shot plan may
-    # include future or indirect references. Only identical direct ID sets
+    # include future references. Only identical eligible direct ID sets
     # can be reconciled without explicit span activation authority.
     direct_ids = tuple(candidate.reference_id for candidate in candidates)
     projected_ids = set(
