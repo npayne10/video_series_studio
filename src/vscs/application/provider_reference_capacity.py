@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
-from vscs.application.production_execution.provider_policy_profiles import ProviderPolicyProfile
+if TYPE_CHECKING:
+    from vscs.application.production_execution.provider_policy_profiles import ProviderPolicyProfile
 
 
 class ReferenceCapacityRecord(Protocol):
