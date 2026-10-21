@@ -67,9 +67,12 @@ def test_provenance_is_stable_and_preserves_authority() -> None:
     assert report.review.governed_deferred_ids == ("planet",)
     assert report.advisory_only
     assert str(compiled.reference_plan) == original
-    assert report.report_fingerprint == review_compiled_h3_reference_provenance(
-        compiled, _projection(), guide_overlap_ids=frozenset({"planet"})
-    ).report_fingerprint
+    assert (
+        report.report_fingerprint
+        == review_compiled_h3_reference_provenance(
+            compiled, _projection(), guide_overlap_ids=frozenset({"planet"})
+        ).report_fingerprint
+    )
 
 
 def test_missing_authoritative_reference_fails_closed() -> None:
