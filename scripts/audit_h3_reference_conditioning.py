@@ -48,8 +48,7 @@ def audit(workflow_dir: Path) -> dict[str, object]:
                 "path": str(path),
                 "megapixels": workflow["115"]["inputs"]["megapixels"],
                 "reference_slots": [
-                    {"slot": i, "link": model.get(f"ref_images.ref_image_{i}")}
-                    for i in range(5)
+                    {"slot": i, "link": model.get(f"ref_images.ref_image_{i}")} for i in range(5)
                 ],
                 "guide_image_link": workflow["144"]["inputs"].get("image"),
                 "guide_frame": workflow["144"]["inputs"].get("frame_idx"),
@@ -59,17 +58,14 @@ def audit(workflow_dir: Path) -> dict[str, object]:
                 "frame_expression": workflow["131"]["inputs"].get("expression"),
                 "seed": workflow["129"]["inputs"].get("noise_seed"),
                 "prompt_digest": digest(workflow["138"]["inputs"]["value"]),
-                "input_names": {
-                    n: workflow[n]["inputs"]["image"] for n in (*REFERENCES, "145")
-                },
+                "input_names": {n: workflow[n]["inputs"]["image"] for n in (*REFERENCES, "145")},
             }
         )
     return {
         "comparison": per_run,
         "different_nodes": differences,
-        "only_resolution_and_output_differ": {
-            entry["node"] for entry in differences
-        } == {"115", "92"},
+        "only_resolution_and_output_differ": {entry["node"] for entry in differences}
+        == {"115", "92"},
         "notes": [
             "Static workflow audit; cannot determine why pixels from reference images appeared in output.",
             "The reference image slots are model inputs, not a temporal guarantee.",
