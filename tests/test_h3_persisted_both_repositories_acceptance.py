@@ -27,6 +27,8 @@ def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
         "scene_id": "SCN-TEST",
         "shot_id": task_shot,
         "task_type": "video_generation",
+        "capabilities": ["video_generation"],
+        "expected_outputs": ["generated_video"],
         "state": "ready",
         "authority": {
             "authority_type": "universal_production_description",
