@@ -87,7 +87,9 @@ def test_wrapper_passes_repository_loader_to_freshness_gate(monkeypatch, tmp_pat
     original = SimpleNamespace(task_id="TASK-1", source_package_id="PACKAGE-1", shot_id="SHOT-1")
     called = []
 
-    def fake_gate(*, reference_root, load_current_source, original, execution, projection, guide_overlap_ids):
+    def fake_gate(
+        *, reference_root, load_current_source, original, execution, projection, guide_overlap_ids
+    ):
         task, package = load_current_source()
         called.append((task.task_id, package.package_id, reference_root))
         return "read-only-verified"
