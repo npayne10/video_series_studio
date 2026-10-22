@@ -29,7 +29,7 @@ def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
         "task_type": "video_generation",
         "state": "ready",
         "authority": {
-            "authority_type": "production_package",
+            "authority_type": "universal_production_description",
             "authority_id": "AUTH-TEST",
             "revision": 1,
             "fingerprint": "authority-fingerprint",
