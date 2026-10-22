@@ -14,7 +14,8 @@ from .h3_reference_selection_governance import H3ReferenceGovernanceError
 
 if TYPE_CHECKING:
     from vscs.application.production_execution.package_compilation import CompiledProductionPackage
-    from vscs.application.production_package import ProductionPackageService
+    from vscs.application.production_package import ProductionPackage, ProductionPackageService
+    from vscs.application.production_tasks.models import ProductionTask
     from vscs.application.production_tasks.repository import ProductionTaskRepository
     from vscs.application.provider_reference_capacity import ProviderReferenceCapacityProjection
 
@@ -31,16 +32,20 @@ class H3PersistedAuthoritySource:
     source_package_id: str
     shot_id: str
 
-    def load_current(self):
+    def load_current(self) -> tuple[ProductionTask, ProductionPackage]:
         task = self.tasks.get(self.task_id)
         if task is None:
             raise H3ReferenceGovernanceError("Authoritative ProductionTask is missing")
         if task.task_id != self.task_id or task.shot_id != self.shot_id:
             raise H3ReferenceGovernanceError("ProductionTask identity has changed")
         sources = self.packages.list_packages(shot_id=self.shot_id)
-        matches = tuple(package for package in sources if package.package_id == self.source_package_id)
+        matches = tuple(
+            package for package in sources if package.package_id == self.source_package_id
+        )
         if len(matches) != 1:
-            raise H3ReferenceGovernanceError("Expected exactly one persisted source ProductionPackage")
+            raise H3ReferenceGovernanceError(
+                "Expected exactly one persisted source ProductionPackage"
+            )
         source = matches[0]
         if source.shot_id != self.shot_id:
             raise H3ReferenceGovernanceError("Persisted ProductionPackage Shot has changed")
