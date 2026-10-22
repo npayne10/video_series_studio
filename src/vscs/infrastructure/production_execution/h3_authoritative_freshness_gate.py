@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from .minimax_h3_span_adapter import MiniMaxH3SpanExecution
 
-CurrentSourceLoader = Callable[[], tuple[ProductionTask, ProductionPackage]]
+CurrentSourceLoader = Callable[[], tuple["ProductionTask", "ProductionPackage"]]
 
 
 @dataclass(frozen=True)
