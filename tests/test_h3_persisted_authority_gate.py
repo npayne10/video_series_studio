@@ -95,12 +95,15 @@ def test_wrapper_passes_repository_loader_to_freshness_gate(monkeypatch, tmp_pat
         return "read-only-verified"
 
     monkeypatch.setattr(gate, "verify_current_h3_reference_authority", fake_gate)
-    assert gate.verify_persisted_h3_reference_authority(
-        reference_root=tmp_path,
-        tasks=tasks,
-        packages=packages,
-        original=original,
-        execution=SimpleNamespace(),
-        projection=SimpleNamespace(),
-    ) == "read-only-verified"
+    assert (
+        gate.verify_persisted_h3_reference_authority(
+            reference_root=tmp_path,
+            tasks=tasks,
+            packages=packages,
+            original=original,
+            execution=SimpleNamespace(),
+            projection=SimpleNamespace(),
+        )
+        == "read-only-verified"
+    )
     assert called == [("TASK-1", "PACKAGE-1", tmp_path)]
