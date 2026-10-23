@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
@@ -31,6 +33,8 @@ from vscs.infrastructure.generated_media import (
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.infrastructure.production_execution import (
     AcceptedProviderProductionReconciliationService,
+    MiniMaxH3AutomatedExecutionError,
+    MiniMaxH3AutomatedExecutionService,
 )
 
 
@@ -84,6 +88,12 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_reconcile_accepted_provider_button.setToolTip(
             "Backfill exact passed provider functional-acceptance evidence into Generated "
             "Media authority without rerendering or replacing an existing selection."
+        )
+        self.h3_verify_readiness_button = QPushButton("Verify H3 Readiness (No Generation)", group)
+        self.h3_verify_readiness_button.setObjectName("h3_verify_readiness_button")
+        self.h3_verify_readiness_button.setToolTip(
+            "Read-only H3 preflight: reload persisted authority, verify current references "
+            "and provider policy. Never submit a provider job or approve media."
         )
         self.production_task_supersede_button = QPushButton("Supersede Obsolete Task", group)
         self.production_task_supersede_button.setObjectName("production_task_supersede_button")
@@ -148,7 +158,8 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
             insertion_index + 3,
             self.production_task_supersede_button,
         )
-        actions_layout.insertWidget(insertion_index + 4, self.episode_shots_complete_button)
+        actions_layout.insertWidget(insertion_index + 4, self.h3_verify_readiness_button)
+        actions_layout.insertWidget(insertion_index + 5, self.episode_shots_complete_button)
 
         table_index = layout.indexOf(self.production_task_table)
         layout.insertWidget(table_index, self.production_task_readiness_status)
@@ -162,6 +173,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self.production_task_reconcile_accepted_provider_button.clicked.connect(
             self._production_task_reconcile_accepted_provider
         )
+        self.h3_verify_readiness_button.clicked.connect(self._verify_h3_operator_readiness)
         self.production_task_supersede_button.clicked.connect(
             self._production_task_supersede_obsolete
         )
@@ -177,6 +189,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         )
         self.production_task_table.itemSelectionChanged.connect(
             self._refresh_production_task_supersession_eligibility
+        )
+        self.production_task_table.itemSelectionChanged.connect(
+            self._refresh_h3_operator_readiness_eligibility
         )
         self.production_task_table.itemSelectionChanged.connect(
             self._refresh_production_task_priority_control
@@ -744,6 +759,59 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self._refresh_production_task_supersession_eligibility()
         self._refresh_production_scheduling()
 
+    def _refresh_h3_operator_readiness_eligibility(self: Any) -> None:
+        button = getattr(self, "h3_verify_readiness_button", None)
+        if button is None:
+            return
+        task = self._selected_persisted_production_task()
+        button.setEnabled(
+            bool(
+                task is not None
+                and task.shot_id
+                and task.task_type.value == "video_generation"
+                and self.projects.project_directory is not None
+            )
+        )
+
+    def _verify_h3_operator_readiness(self: Any) -> None:
+        """Operator-only read-only preflight. No execute() or provider submission."""
+        task = self._selected_persisted_production_task()
+        if task is None or task.task_type.value != "video_generation":
+            self.production_task_readiness_status.setText(
+                "Select a persisted VIDEO_GENERATION task to verify H3 readiness."
+            )
+            return
+        endpoint = os.environ.get("VSCS_H3_COMFYUI_ENDPOINT", "").strip()
+        input_directory = os.environ.get("VSCS_H3_COMFYUI_INPUT_DIR", "").strip()
+        output_directory = os.environ.get("VSCS_H3_COMFYUI_OUTPUT_DIR", "").strip()
+        if not all((endpoint, input_directory, output_directory)):
+            self.production_task_readiness_status.setText(
+                "H3 preflight BLOCKED: configure VSCS_H3_COMFYUI_ENDPOINT, "
+                "VSCS_H3_COMFYUI_INPUT_DIR and VSCS_H3_COMFYUI_OUTPUT_DIR. "
+                "No provider request was sent."
+            )
+            return
+        try:
+            planning = self.packages.planning
+            service = MiniMaxH3AutomatedExecutionService.from_project_services(
+                self.projects,
+                planning,
+                endpoint=endpoint,
+                comfyui_input_directory=Path(input_directory),
+                comfyui_output_directory=Path(output_directory),
+            )
+            preflight = service.preflight(task.task_id)
+        except (MiniMaxH3AutomatedExecutionError, OSError, ValueError, RuntimeError) as exc:
+            self.production_task_readiness_status.setText(
+                f"H3 preflight BLOCKED: {exc}. No provider request was sent."
+            )
+            return
+        self.production_task_readiness_status.setText(
+            f"H3 preflight READY: {preflight.span_count} governed span(s); "
+            f"policy {preflight.provider_profile_id}. "
+            "Readiness only — no provider job submitted or media approved."
+        )
+
     def readiness_refresh_tasks(self: Any) -> None:
         editor = getattr(self, "production_task_production_id", None)
         requested_production_id = str(editor.text() if editor is not None else "").strip()
@@ -782,6 +850,7 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
         self._refresh_accepted_provider_reconciliation_eligibility()
         self._refresh_production_task_priority_control()
         self._refresh_production_task_supersession_eligibility()
+        self._refresh_h3_operator_readiness_eligibility()
 
     def readiness_compile_tasks(self: Any) -> None:
         original_compile_tasks(self)
@@ -849,5 +918,9 @@ def install_production_task_readiness_workspace(workspace_class: type[Any]) -> N
     workspace_type._production_task_supersede_obsolete = _production_task_supersede_obsolete
     workspace_type._refresh_production_tasks = readiness_refresh_tasks
     workspace_type._compile_production_tasks = readiness_compile_tasks
+    workspace_type._refresh_h3_operator_readiness_eligibility = (
+        _refresh_h3_operator_readiness_eligibility
+    )
+    workspace_type._verify_h3_operator_readiness = _verify_h3_operator_readiness
     workspace_type._production_task_refresh_readiness = _production_task_refresh_readiness
     workspace_type._production_task_readiness_workspace_installed = True
