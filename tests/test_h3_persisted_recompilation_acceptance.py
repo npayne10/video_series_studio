@@ -25,11 +25,11 @@ from vscs.infrastructure.production_execution.h3_persisted_authority_gate import
     H3PersistedAuthoritySource,
     verify_persisted_h3_reference_authority,
 )
-from vscs.infrastructure.production_execution.h3_span_freshness_provenance import (
-    validate_h3_span_freshness,
-)
 from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
     H3ReferenceGovernanceError,
+)
+from vscs.infrastructure.production_execution.h3_span_freshness_provenance import (
+    validate_h3_span_freshness,
 )
 
 
@@ -262,6 +262,7 @@ def test_positive_span_inputs_and_h3_freshness_with_isolated_temporal_contract(
         future_reference_ids=(),
         execution_id="EXEC-1",
     )
+
     class TemporalCompiler:
         def compile(self, package):
             assert package is compiled
@@ -295,9 +296,7 @@ def test_positive_span_inputs_and_h3_freshness_with_isolated_temporal_contract(
         deferred_preferred_reference_ids=(),
         indirect_projection=False,
     )
-    report = validate_h3_span_freshness(
-        compiled, compiled, plan, execution, projection
-    )
+    report = validate_h3_span_freshness(compiled, compiled, plan, execution, projection)
     assert report.advisory_only
     assert report.provider_profile_fingerprint == "isolated-test-policy"
     assert report.span_input_plan_fingerprint == plan.fingerprint
