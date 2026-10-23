@@ -7,6 +7,7 @@ from typing import cast
 import pytest
 
 from vscs.application.production_execution import CompiledProductionPackage
+from vscs.infrastructure.production_execution import minimax_h3_automated_execution as h3
 from vscs.application.production_tasks import ProductionTask
 from vscs.infrastructure.production_execution import (
     MiniMaxH3AutomatedExecutionError,
@@ -120,6 +121,9 @@ def _compiled() -> CompiledProductionPackage:
             task_id="PT-VIDEO-001",
             shot_id="SHT-002",
             package_fingerprint="package-fingerprint",
+            reference_plan={"status": "passed", "references": [
+                {"reference_id": "REF-1", "role": "environment_reference", "priority": "required", "provider_ready": True}
+            ]},
         ),
     )
 
@@ -131,6 +135,8 @@ def _execution(sequence: int):
         reference_slot_fingerprint=f"refs-{sequence}",
         prompt_validation_fingerprint=f"validation-{sequence}",
         provider_id="minimax-h3-ref2va",
+        reference_slots=(SimpleNamespace(reference_id="REF-1"),),
+        deferred_reference_ids=(),
     )
 
 
@@ -184,6 +190,7 @@ def _service(
         plan_compiler=plans,
         workflow_compiler=workflows,
         orchestrator=orchestrator,
+        authority_packages=SimpleNamespace(),
     )
     return service, packages, plans, workflows, orchestrator, result
 
