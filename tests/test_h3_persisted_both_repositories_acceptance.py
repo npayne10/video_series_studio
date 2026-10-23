@@ -71,6 +71,11 @@ def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
 def _loader(project):
     service = object.__new__(ProductionPackageService)
     service.projects = SimpleNamespace(project_directory=project)
+    service.planning = SimpleNamespace(
+        current_package=lambda shot_id: SimpleNamespace(
+            shot_id=shot_id, package_fingerprint="source-fingerprint"
+        )
+    )
     return H3PersistedAuthoritySource(
         tasks=JsonProductionTaskRepository(project / "production" / "scheduling" / "tasks"),
         packages=service,
