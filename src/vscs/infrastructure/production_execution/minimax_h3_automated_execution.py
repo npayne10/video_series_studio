@@ -317,11 +317,12 @@ class MiniMaxH3AutomatedExecutionService:
         for execution in plan.spans:
             try:
                 records = []
-                for slot in execution.reference_slots:
-                    raw = by_reference_id[slot.reference_id]
+                selected_ids = tuple(slot.reference_id for slot in execution.reference_slots)
+                for reference_id in (*selected_ids, *execution.deferred_reference_ids):
+                    raw = by_reference_id[reference_id]
                     records.append(
                         _H3ReadinessReference(
-                            reference_id=slot.reference_id,
+                            reference_id=reference_id,
                             role=ReferenceRole(str(raw["role"])),
                             priority=ReferencePriority(str(raw["priority"])),
                             provider_ready=raw.get("provider_ready") is True,
