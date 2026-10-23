@@ -19,8 +19,10 @@ def _operator():
         def _production_task_blocker(self):
             return ""
 
+    # Install the callback on the type without running the Qt-heavy wrapped
+    # __init__: this isolated test exercises the operator action, not UI layout.
     ui.install_production_task_readiness_workspace(Workspace)
-    workspace = Workspace()
+    workspace = object.__new__(Workspace)
     status = SimpleNamespace(value="", setText=lambda text: setattr(status, "value", text))
     workspace.production_task_readiness_status = status
     workspace._selected_persisted_production_task = lambda: SimpleNamespace(
