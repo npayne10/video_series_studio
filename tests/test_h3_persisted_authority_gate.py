@@ -32,13 +32,17 @@ class ReadOnlyPackages:
         self.reads.append(shot_id)
         return tuple(item for item in self.records if item.shot_id == shot_id)
 
+    def current_package(self, shot_id):
+        self.reads.append(f"current:{shot_id}")
+        return next((item for item in reversed(self.records) if item.shot_id == shot_id), None)
+
     def persist(self, source):
         raise AssertionError("Source persistence must not be written")
 
 
 def _source():
     task = SimpleNamespace(task_id="TASK-1", shot_id="SHOT-1")
-    package = SimpleNamespace(package_id="PACKAGE-1", shot_id="SHOT-1")
+    package = SimpleNamespace(package_id="PACKAGE-1", shot_id="SHOT-1", source_fingerprint="SRC", package_fingerprint="PKG")
     return ReadOnlyTasks({"TASK-1": task}), ReadOnlyPackages([package])
 
 
@@ -58,7 +62,7 @@ def test_exact_persisted_authority_read():
     assert task.task_id == "TASK-1"
     assert source.package_id == "PACKAGE-1"
     assert tasks.reads == ["TASK-1"]
-    assert packages.reads == ["SHOT-1"]
+    assert packages.reads == ["SHOT-1", "current:SHOT-1"]
 
 
 def test_missing_task_blocks():
@@ -70,7 +74,7 @@ def test_missing_task_blocks():
 
 def test_ambiguous_package_blocks():
     tasks, packages = _source()
-    packages.records.append(SimpleNamespace(package_id="PACKAGE-1", shot_id="SHOT-1"))
+    packages.records.append(SimpleNamespace(package_id="PACKAGE-1", shot_id="SHOT-1", source_fingerprint="SRC", package_fingerprint="PKG"))
     with pytest.raises(H3ReferenceGovernanceError, match="exactly one"):
         _loader(tasks, packages).load_current()
 
