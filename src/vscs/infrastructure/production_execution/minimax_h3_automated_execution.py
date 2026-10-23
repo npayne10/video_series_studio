@@ -10,9 +10,17 @@ from vscs.application.production_execution.package_compilation import CompiledPr
 from vscs.application.production_execution.provider_policy_profiles import (
     ProviderPolicyProfile,
 )
+from vscs.application.production_package import ProductionPackageService
 from vscs.application.production_tasks import ProductionTask
+from vscs.application.provider_reference_capacity import (
+    ProviderReferenceCapacityProjection,
+    project_provider_reference_capacity,
+)
+from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 from vscs.infrastructure.production import JsonProductionTaskRepository
 
+from .h3_persisted_authority_gate import verify_persisted_h3_reference_authority
+from .h3_reference_selection_governance import H3ReferenceGovernanceError
 from .minimax_h3_comfyui_provider import (
     LiveMiniMaxH3ComfyUISpanProvider,
     MiniMaxH3ComfyUICompiledJob,
@@ -39,6 +47,14 @@ from .provider_policy_profiles import (
     MINIMAX_H3_POLICY_PROFILE_ID,
     default_provider_policy_profile_registry,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class _H3ReadinessReference:
+    reference_id: str
+    role: ReferenceRole
+    priority: ReferencePriority
+    provider_ready: bool
 
 
 class MiniMaxH3AutomatedExecutionError(RuntimeError):
@@ -152,6 +168,7 @@ class MiniMaxH3AutomatedExecutionService:
         orchestrator: _H3Orchestrator | None = None,
         policy_profile: ProviderPolicyProfile | None = None,
         execution_profile: str = "production",
+        authority_packages: ProductionPackageService | None = None,
     ) -> None:
         self.project_directory = Path(project_directory).expanduser().resolve(strict=False)
         self.endpoint = endpoint.strip().rstrip("/")
@@ -227,6 +244,7 @@ class MiniMaxH3AutomatedExecutionService:
                 provider=live_provider,
             )
         self.orchestrator = orchestrator
+        self.authority_packages = authority_packages
 
     def preflight(self, task_id: str) -> MiniMaxH3AutomatedExecutionPreflight:
         compiled = self._compiled_for_task(task_id)
@@ -283,6 +301,58 @@ class MiniMaxH3AutomatedExecutionService:
             raise MiniMaxH3AutomatedExecutionError(
                 f"H3 automated execution governance/validation failed: {exc}"
             ) from exc
+
+        # Provider submission is forbidden until the current persisted planning
+        # authority has been reloaded and independently recompiled for EVERY span.
+        if self.authority_packages is None:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 execution requires an authenticated current planning/package authority service"
+            )
+        if not isinstance(compiled.reference_plan, dict):
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 execution requires a governed ReferencePlan for freshness verification"
+            )
+        by_reference_id = {
+            str(item.get("reference_id")): item
+            for item in compiled.reference_plan.get("references", [])
+            if isinstance(item, dict)
+        }
+        for execution in plan.spans:
+            try:
+                records = []
+                for slot in execution.reference_slots:
+                    raw = by_reference_id[slot.reference_id]
+                    records.append(
+                        _H3ReadinessReference(
+                            reference_id=slot.reference_id,
+                            role=ReferenceRole(str(raw["role"])),
+                            priority=ReferencePriority(str(raw["priority"])),
+                            provider_ready=raw.get("provider_ready") is True,
+                        )
+                    )
+                projection = project_provider_reference_capacity(self.policy_profile, records)
+                if (
+                    not projection.passed
+                    or projection.selected_reference_ids
+                    != tuple(slot.reference_id for slot in execution.reference_slots)
+                    or projection.deferred_preferred_reference_ids
+                    != execution.deferred_reference_ids
+                ):
+                    raise H3ReferenceGovernanceError(
+                        "H3 provider reference selection differs from current governed policy"
+                    )
+                verify_persisted_h3_reference_authority(
+                    reference_root=self.project_directory,
+                    tasks=self.task_repository,
+                    packages=self.authority_packages,
+                    original=compiled,
+                    execution=execution,
+                    projection=projection,
+                )
+            except (H3ReferenceGovernanceError, KeyError, TypeError, ValueError) as exc:
+                raise MiniMaxH3AutomatedExecutionError(
+                    f"H3 execution freshness authority is blocked: {exc}"
+                ) from exc
 
         jobs: list[MiniMaxH3ComfyUICompiledJob] = []
         try:
