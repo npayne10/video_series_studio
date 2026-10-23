@@ -49,6 +49,23 @@ class H3PersistedAuthoritySource:
         source = matches[0]
         if source.shot_id != self.shot_id:
             raise H3ReferenceGovernanceError("Persisted ProductionPackage Shot has changed")
+        try:
+            current = self.packages.current_package(self.shot_id)
+        except Exception as exc:
+            raise H3ReferenceGovernanceError(
+                "Unable to verify current ProductionPackage planning authority"
+            ) from exc
+        if current is None:
+            raise H3ReferenceGovernanceError("Current ProductionPackage authority is missing")
+        if (
+            current.package_id != source.package_id
+            or current.shot_id != source.shot_id
+            or current.source_fingerprint != source.source_fingerprint
+            or current.package_fingerprint != source.package_fingerprint
+        ):
+            raise H3ReferenceGovernanceError(
+                "Persisted ProductionPackage is not the current planning authority"
+            )
         return task, source
 
 
