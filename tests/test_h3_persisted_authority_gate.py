@@ -111,3 +111,61 @@ def test_wrapper_passes_repository_loader_to_freshness_gate(monkeypatch, tmp_pat
         == "read-only-verified"
     )
     assert called == [("TASK-1", "PACKAGE-1", tmp_path)]
+
+
+def test_superseded_package_fails_closed():
+    tasks, packages = _source()
+    packages.records.append(
+        SimpleNamespace(
+            package_id="PACKAGE-NEW",
+            shot_id="SHOT-1",
+            source_fingerprint="SRC",
+            package_fingerprint="NEW",
+        )
+    )
+    with pytest.raises(H3ReferenceGovernanceError, match="not the current"):
+        _loader(tasks, packages).load_current()
+
+
+def test_missing_current_planning_authority_fails_closed():
+    tasks, packages = _source()
+    packages.current_package = lambda shot_id: None
+    with pytest.raises(H3ReferenceGovernanceError, match="authority is missing"):
+        _loader(tasks, packages).load_current()
+
+
+def test_current_package_lookup_failure_fails_closed():
+    tasks, packages = _source()
+
+    def broken_lookup(shot_id):
+        raise RuntimeError("Planning authority cannot be read")
+
+    packages.current_package = broken_lookup
+    with pytest.raises(H3ReferenceGovernanceError, match="Unable to verify"):
+        _loader(tasks, packages).load_current()
+
+
+def test_changed_package_fingerprint_fails_closed():
+    tasks, packages = _source()
+    current = SimpleNamespace(
+        package_id="PACKAGE-1",
+        shot_id="SHOT-1",
+        source_fingerprint="SRC",
+        package_fingerprint="CHANGED",
+    )
+    packages.current_package = lambda shot_id: current
+    with pytest.raises(H3ReferenceGovernanceError, match="not the current"):
+        _loader(tasks, packages).load_current()
+
+
+def test_changed_source_fingerprint_fails_closed():
+    tasks, packages = _source()
+    current = SimpleNamespace(
+        package_id="PACKAGE-1",
+        shot_id="SHOT-1",
+        source_fingerprint="CHANGED",
+        package_fingerprint="PKG",
+    )
+    packages.current_package = lambda shot_id: current
+    with pytest.raises(H3ReferenceGovernanceError, match="not the current"):
+        _loader(tasks, packages).load_current()
