@@ -16,6 +16,24 @@ from vscs.infrastructure.production_execution import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _verified_persisted_authority(monkeypatch: pytest.MonkeyPatch):
+    """These historical workflow tests isolate the successful authority boundary.
+
+    Separate H3 freshness tests exercise the real fail-closed gate.
+    """
+    verified = []
+
+    def check(**kwargs):
+        assert kwargs["packages"] is not None
+        assert kwargs["original"].task_id == "PT-VIDEO-001"
+        verified.append(kwargs["execution"])
+        return SimpleNamespace(verified_against_current_loader=True)
+
+    monkeypatch.setattr(h3, "verify_persisted_h3_reference_authority", check)
+    yield verified
+
+
 class _Tasks:
     def __init__(self, task: ProductionTask | None) -> None:
         self.task = task
