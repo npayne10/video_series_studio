@@ -10,6 +10,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from vscs.application.production_package import ProductionPackageService
+from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
+from vscs.infrastructure.production_execution.h3_persisted_authority_gate import (
+    H3PersistedAuthoritySource,
+)
+
 from vscs.infrastructure.production_execution.h3_persisted_authority_gate import (
     verify_persisted_h3_reference_authority,
 )
@@ -17,7 +23,72 @@ from vscs.infrastructure.production_execution.h3_reference_selection_governance 
     H3ReferenceGovernanceError,
 )
 
-from test_h3_persisted_both_repositories_acceptance import _loader, _write_records
+def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
+    task_root = project / "production" / "scheduling" / "tasks"
+    task_root.mkdir(parents=True, exist_ok=True)
+    task = {
+        "task_id": "TASK-TEST",
+        "production_id": "PROD-TEST",
+        "episode_id": "EP-TEST",
+        "scene_id": "SCN-TEST",
+        "shot_id": task_shot,
+        "task_type": "video_generation",
+        "capabilities": ["video_generation"],
+        "expected_outputs": ["generated_video"],
+        "state": "ready",
+        "authority": {
+            "authority_type": "universal_production_description",
+            "authority_id": "AUTH-TEST",
+            "revision": 1,
+            "fingerprint": "authority-fingerprint",
+            "approved": True,
+            "approved_by": "test-operator",
+        },
+        "created_at": "2026-10-01T12:00:00+00:00",
+    }
+    task_path = task_root / "TASK-TEST.json"
+    task_path.write_text(json.dumps({"schema_version": "1.0", "task": task}), encoding="utf-8")
+    package_root = project / "production"
+    package = {
+        "package_id": source_id,
+        "shot_id": "SHT-TEST",
+        "schema_version": "1.0",
+        "source_fingerprint": "source-fingerprint",
+        "package_fingerprint": "package-fingerprint",
+        "provenance": {
+            "integrated_package_id": "INT-TEST",
+            "integrated_package_fingerprint": "integration-fingerprint",
+            "planning_review_id": "REVIEW-TEST",
+            "planning_review_fingerprint": "review-fingerprint",
+        },
+        "shot": {},
+        "camera": {},
+        "lighting": {},
+        "environment": {},
+    }
+    package_path = package_root / "production_packages.json"
+    package_path.write_text(
+        json.dumps({"schema_version": "1.0", "production_packages": [package]}),
+        encoding="utf-8",
+    )
+    return task_path, package_path
+
+
+def _loader(project):
+    service = object.__new__(ProductionPackageService)
+    service.projects = SimpleNamespace(project_directory=project)
+    service.planning = SimpleNamespace(
+        current_package=lambda shot_id: SimpleNamespace(
+            shot_id=shot_id, package_fingerprint="source-fingerprint"
+        )
+    )
+    return H3PersistedAuthoritySource(
+        tasks=JsonProductionTaskRepository(project / "production" / "scheduling" / "tasks"),
+        packages=service,
+        task_id="TASK-TEST",
+        source_package_id="PKG-TEST",
+        shot_id="SHT-TEST",
+    )
 
 
 def _verify(tmp_path):
