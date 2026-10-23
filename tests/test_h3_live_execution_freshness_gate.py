@@ -3,6 +3,7 @@
 No network, ComfyUI, or production filesystem access is permitted in these tests.
 """
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -190,8 +191,6 @@ def test_real_project_factory_wires_current_planning_backed_package_service(
         "lighting": {},
         "environment": {},
     }
-    import json
-
     root = tmp_path / "production"
     root.mkdir()
     (root / "production_packages.json").write_text(
