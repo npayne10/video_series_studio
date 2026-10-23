@@ -318,6 +318,7 @@ def test_positive_span_inputs_and_h3_freshness_with_isolated_temporal_contract(
 
 def _write_reference_image(path):
     """Small deterministic standard-library PNG, no remote/production media."""
+
     def chunk(kind, data):
         return (
             struct.pack(">I", len(data))
@@ -328,9 +329,9 @@ def _write_reference_image(path):
 
     path.parent.mkdir(parents=True, exist_ok=True)
     width, height = 1280, 720
-    pixels = (b"\\x00" + b"\\x20\\x30\\x40" * width) * height
+    pixels = (b"\x00" + b"\x20\x30\x40" * width) * height
     path.write_bytes(
-        b"\\x89PNG\\r\\n\\x1a\\n"
+        b"\x89PNG\r\n\x1a\n"
         + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
         + chunk(b"IDAT", zlib.compress(pixels, level=9))
         + chunk(b"IEND", b"")
