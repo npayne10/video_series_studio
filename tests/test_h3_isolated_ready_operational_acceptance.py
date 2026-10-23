@@ -7,6 +7,7 @@ workflow compiler are deliberately controlled stand-ins: no ComfyUI, QC or media
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -97,7 +98,7 @@ def test_ready_preflight_verifies_real_persisted_freshness_without_writes(tmp_pa
     assert result.task_id == compiled.task_id
     assert result.span_count == 1
     assert result.package_fingerprint == compiled.package_fingerprint
-    assert calls == [result.shot_id and service.plan_compiler.compile(compiled).spans[0].span_id]
+    assert calls == [service.plan_compiler.compile(compiled).spans[0].span_id]
     assert tuple(path.read_bytes() for path in sources) == before
     assert not (tmp_path / "renders").exists()
 
@@ -105,8 +106,6 @@ def test_ready_preflight_verifies_real_persisted_freshness_without_writes(tmp_pa
 def test_stale_ready_fixture_blocks_workflow_without_rewriting_records(tmp_path: Path):
     service, compiled, calls, sources = _ready_service(tmp_path)
     source = sources[1]
-    import json
-
     payload = json.loads(source.read_text(encoding="utf-8"))
     payload["production_packages"][0]["package_id"] = "REPLACED"
     source.write_text(json.dumps(payload), encoding="utf-8")
