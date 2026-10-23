@@ -7,11 +7,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+import struct
+import zlib
 from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 
+from vscs.application.production_execution.provider_temporal_span_execution import (
+    ProviderTemporalSpanExecutionCompiler,
+)
+from vscs.application.timed_asset_presence import (
+    TimedAssetKind,
+    TimedAssetPresence,
+    TimedAssetPresencePlan,
+)
+from vscs.infrastructure.production_execution.provider_policy_profiles import (
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
+)
 from vscs.application.production_execution.package_compilation import (
     ProductionPackageCompilerService,
 )
@@ -301,3 +315,142 @@ def test_positive_span_inputs_and_h3_freshness_with_isolated_temporal_contract(
     assert report.provider_profile_fingerprint == "isolated-test-policy"
     assert report.span_input_plan_fingerprint == plan.fingerprint
     assert (task_path.read_bytes(), package_path.read_bytes()) == before
+
+
+def _write_reference_image(path):
+    """Small deterministic standard-library PNG, no remote/production media."""
+    def chunk(kind, data):
+        return (
+            struct.pack(">I", len(data))
+            + kind
+            + data
+            + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+        )
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    width, height = 1280, 720
+    pixels = (b"\\x00" + b"\\x20\\x30\\x40" * width) * height
+    path.write_bytes(
+        b"\\x89PNG\\r\\n\\x1a\\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(pixels, level=9))
+        + chunk(b"IEND", b"")
+    )
+
+
+def _governed_positive_fixture(tmp_path):
+    task_path, package_path = _write_records(tmp_path)
+    _write_reference_image(tmp_path / "references" / "bridge.png")
+    presence = TimedAssetPresence(
+        asset_id="BRIDGE",
+        asset_kind=TimedAssetKind.ENVIRONMENT,
+        from_frame=0,
+        through_frame=144,
+        canonical_reference_ids=("bridge-ref",),
+    )
+    timed = TimedAssetPresencePlan(
+        shot_id="SHT-TEST",
+        frames_per_second=24,
+        frame_count=145,
+        presences=(presence,),
+    )
+    reference_plan = {
+        "status": "passed",
+        "references": [
+            {
+                "reference_id": "bridge-ref",
+                "asset_id": "BRIDGE",
+                "role": "environment_reference",
+                "reference_class": "canonical_master",
+                "priority": "required",
+                "subject_type": "environment",
+                "source_path": "references/bridge.png",
+                "label": "Test Bridge",
+                "provider_ready": True,
+            }
+        ],
+    }
+    description = {
+        "production": {
+            "universal_text": "A controlled test-bridge shot.",
+            "shot": {
+                "required_action": "The camera holds on an empty test bridge."
+            },
+            "render": {
+                "width": 1280,
+                "height": 720,
+                "frames_per_second": 24,
+                "frame_count": 145,
+            },
+            "assets": [{"asset_id": "BRIDGE", "name": "Test Bridge"}],
+            "timed_asset_presence": timed.to_dict(),
+            "reference_plan": reference_plan,
+        }
+    }
+    raw = json.loads(package_path.read_text(encoding="utf-8"))
+    source = raw["production_packages"][0]
+    source["universal_description"] = description
+    source["validation"] = {
+        "universal_description_complete": True,
+        "cross_authority_consistent": True,
+    }
+    package_path.write_text(json.dumps(raw), encoding="utf-8")
+    task_raw = json.loads(task_path.read_text(encoding="utf-8"))
+    task_raw["task"]["authority"]["fingerprint"] = hashlib.sha256(
+        json.dumps(description, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    task_path.write_text(json.dumps(task_raw), encoding="utf-8")
+    return task_path, package_path
+
+
+def test_full_real_temporal_chain_and_h3_freshness_is_read_only(tmp_path):
+    """All compilers are real; original/execution come from isolated source."""
+    task_path, package_path = _governed_positive_fixture(tmp_path)
+    image_path = tmp_path / "references" / "bridge.png"
+    before = tuple(path.read_bytes() for path in (task_path, package_path, image_path))
+    loader = _loader(tmp_path)
+    task, source = loader.load_current()
+    compiler = ProductionPackageCompilerService(reference_root=tmp_path)
+    original = compiler.compile(task, source, profile="production")
+    temporal = ProviderTemporalSpanExecutionCompiler().compile(original)
+    span_plan = SpanScopedProviderInputCompiler().compile(original)
+    assert temporal.executions
+    assert span_plan.spans
+    assert span_plan.spans[0].active_reference_ids == ("bridge-ref",)
+
+    policy = default_provider_policy_profile_registry().require(
+        MINIMAX_H3_POLICY_PROFILE_ID
+    )
+    projection = ProviderReferenceCapacityProjection(
+        provider_id=policy.provider_id,
+        provider_profile_id=policy.profile_id,
+        provider_profile_fingerprint=policy.fingerprint,
+        model_family=policy.model_family,
+        reference_projection_mode=policy.reference_projection_mode,
+        capacity=policy.max_reference_images,
+        required_reference_ids=("bridge-ref",),
+        preferred_ready_reference_ids=(),
+        selected_reference_ids=("bridge-ref",),
+        deferred_preferred_reference_ids=(),
+        indirect_projection=False,
+    )
+    execution = SimpleNamespace(
+        span_id=span_plan.spans[0].span_id,
+        sequence_number=span_plan.spans[0].sequence_number,
+        source_span_input_plan_fingerprint=span_plan.fingerprint,
+        reference_slots=span_plan.spans[0].reference_slots,
+        deferred_reference_ids=(),
+    )
+    result = verify_persisted_h3_reference_authority(
+        reference_root=tmp_path,
+        tasks=loader.tasks,
+        packages=loader.packages,
+        original=original,
+        execution=execution,
+        projection=projection,
+    )
+    assert result.advisory_only
+    assert result.report.provider_profile_fingerprint == policy.fingerprint
+    assert result.report.span_input_plan_fingerprint == span_plan.fingerprint
+    assert result.refreshed_package_fingerprint == original.package_fingerprint
+    assert tuple(path.read_bytes() for path in (task_path, package_path, image_path)) == before
