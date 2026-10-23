@@ -267,9 +267,7 @@ class MiniMaxH3AutomatedExecutionService:
         """
         project_directory = projects.project_directory
         if project_directory is None:
-            raise MiniMaxH3AutomatedExecutionError(
-                "H3 execution requires an open VSCS project"
-            )
+            raise MiniMaxH3AutomatedExecutionError("H3 execution requires an open VSCS project")
         if planning.projects is not projects:
             raise MiniMaxH3AutomatedExecutionError(
                 "H3 planning authority does not belong to the open VSCS project service"
