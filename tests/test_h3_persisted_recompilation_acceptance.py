@@ -14,26 +14,22 @@ from types import SimpleNamespace
 
 import pytest
 
-from vscs.application.production_execution.provider_temporal_span_execution import (
-    ProviderTemporalSpanExecutionCompiler,
-)
-from vscs.application.timed_asset_presence import (
-    TimedAssetKind,
-    TimedAssetPresence,
-    TimedAssetPresencePlan,
-)
-from vscs.infrastructure.production_execution.provider_policy_profiles import (
-    MINIMAX_H3_POLICY_PROFILE_ID,
-    default_provider_policy_profile_registry,
-)
 from vscs.application.production_execution.package_compilation import (
     ProductionPackageCompilerService,
+)
+from vscs.application.production_execution.provider_temporal_span_execution import (
+    ProviderTemporalSpanExecutionCompiler,
 )
 from vscs.application.production_execution.span_scoped_provider_inputs import (
     SpanScopedProviderInputCompiler,
 )
 from vscs.application.production_package import ProductionPackageService
 from vscs.application.provider_reference_capacity import ProviderReferenceCapacityProjection
+from vscs.application.timed_asset_presence import (
+    TimedAssetKind,
+    TimedAssetPresence,
+    TimedAssetPresencePlan,
+)
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.infrastructure.production_execution.h3_persisted_authority_gate import (
     H3PersistedAuthoritySource,
@@ -45,7 +41,10 @@ from vscs.infrastructure.production_execution.h3_reference_selection_governance 
 from vscs.infrastructure.production_execution.h3_span_freshness_provenance import (
     validate_h3_span_freshness,
 )
-
+from vscs.infrastructure.production_execution.provider_policy_profiles import (
+    MINIMAX_H3_POLICY_PROFILE_ID,
+    default_provider_policy_profile_registry,
+)
 
 def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
     task_root = project / "production" / "scheduling" / "tasks"
@@ -373,9 +372,7 @@ def _governed_positive_fixture(tmp_path):
     description = {
         "production": {
             "universal_text": "A controlled test-bridge shot.",
-            "shot": {
-                "required_action": "The camera holds on an empty test bridge."
-            },
+            "shot": {"required_action": "The camera holds on an empty test bridge."},
             "render": {
                 "width": 1280,
                 "height": 720,
