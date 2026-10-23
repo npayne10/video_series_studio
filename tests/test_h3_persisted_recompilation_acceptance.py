@@ -46,6 +46,7 @@ from vscs.infrastructure.production_execution.provider_policy_profiles import (
     default_provider_policy_profile_registry,
 )
 
+
 def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
     task_root = project / "production" / "scheduling" / "tasks"
     task_root.mkdir(parents=True, exist_ok=True)
@@ -416,9 +417,7 @@ def test_full_real_temporal_chain_and_h3_freshness_is_read_only(tmp_path):
     assert span_plan.spans
     assert span_plan.spans[0].active_reference_ids == ("bridge-ref",)
 
-    policy = default_provider_policy_profile_registry().require(
-        MINIMAX_H3_POLICY_PROFILE_ID
-    )
+    policy = default_provider_policy_profile_registry().require(MINIMAX_H3_POLICY_PROFILE_ID)
     projection = ProviderReferenceCapacityProjection(
         provider_id=policy.provider_id,
         provider_profile_id=policy.profile_id,
