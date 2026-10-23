@@ -14,14 +14,12 @@ from vscs.application.production_package import ProductionPackageService
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.infrastructure.production_execution.h3_persisted_authority_gate import (
     H3PersistedAuthoritySource,
-)
-
-from vscs.infrastructure.production_execution.h3_persisted_authority_gate import (
     verify_persisted_h3_reference_authority,
 )
 from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
     H3ReferenceGovernanceError,
 )
+
 
 def _write_records(project, *, source_id="PKG-TEST", task_shot="SHT-TEST"):
     task_root = project / "production" / "scheduling" / "tasks"
