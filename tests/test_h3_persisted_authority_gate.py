@@ -42,7 +42,12 @@ class ReadOnlyPackages:
 
 def _source():
     task = SimpleNamespace(task_id="TASK-1", shot_id="SHOT-1")
-    package = SimpleNamespace(package_id="PACKAGE-1", shot_id="SHOT-1", source_fingerprint="SRC", package_fingerprint="PKG")
+    package = SimpleNamespace(
+        package_id="PACKAGE-1",
+        shot_id="SHOT-1",
+        source_fingerprint="SRC",
+        package_fingerprint="PKG",
+    )
     return ReadOnlyTasks({"TASK-1": task}), ReadOnlyPackages([package])
 
 
@@ -74,7 +79,14 @@ def test_missing_task_blocks():
 
 def test_ambiguous_package_blocks():
     tasks, packages = _source()
-    packages.records.append(SimpleNamespace(package_id="PACKAGE-1", shot_id="SHOT-1", source_fingerprint="SRC", package_fingerprint="PKG"))
+    packages.records.append(
+        SimpleNamespace(
+            package_id="PACKAGE-1",
+            shot_id="SHOT-1",
+            source_fingerprint="SRC",
+            package_fingerprint="PKG",
+        )
+    )
     with pytest.raises(H3ReferenceGovernanceError, match="exactly one"):
         _loader(tasks, packages).load_current()
 
