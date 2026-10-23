@@ -7,13 +7,13 @@ from typing import cast
 import pytest
 
 from vscs.application.production_execution import CompiledProductionPackage
-from vscs.infrastructure.production_execution import minimax_h3_automated_execution as h3
 from vscs.application.production_tasks import ProductionTask
 from vscs.infrastructure.production_execution import (
     MiniMaxH3AutomatedExecutionError,
     MiniMaxH3AutomatedExecutionService,
     default_provider_policy_profile_registry,
 )
+from vscs.infrastructure.production_execution import minimax_h3_automated_execution as h3
 
 
 @pytest.fixture(autouse=True)
@@ -139,9 +139,17 @@ def _compiled() -> CompiledProductionPackage:
             task_id="PT-VIDEO-001",
             shot_id="SHT-002",
             package_fingerprint="package-fingerprint",
-            reference_plan={"status": "passed", "references": [
-                {"reference_id": "REF-1", "role": "environment_reference", "priority": "required", "provider_ready": True}
-            ]},
+            reference_plan={
+                "status": "passed",
+                "references": [
+                    {
+                        "reference_id": "REF-1",
+                        "role": "environment_reference",
+                        "priority": "required",
+                        "provider_ready": True,
+                    }
+                ],
+            },
         ),
     )
 
