@@ -220,9 +220,7 @@ def test_real_project_factory_wires_current_planning_backed_package_service(
     assert current.package_id == "PKG-FACTORY"
 
 
-def test_project_factory_fails_closed_on_cross_project_planning(
-    tmp_path: Path, monkeypatch
-):
+def test_project_factory_fails_closed_on_cross_project_planning(tmp_path: Path, monkeypatch):
     project = SimpleNamespace(project_directory=tmp_path)
     planning = SimpleNamespace(projects=SimpleNamespace(project_directory=tmp_path))
     monkeypatch.setattr(
