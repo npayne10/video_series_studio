@@ -5,11 +5,15 @@ Every filesystem is an isolated pytest tmp_path. No provider or production outpu
 
 from __future__ import annotations
 
+import hashlib
 import json
 from types import SimpleNamespace
 
 import pytest
 
+from vscs.application.production_execution.package_compilation import (
+    ProductionPackageCompilerService,
+)
 from vscs.application.production_package import ProductionPackageService
 from vscs.infrastructure.production.task_repository import JsonProductionTaskRepository
 from vscs.infrastructure.production_execution.h3_persisted_authority_gate import (
@@ -148,4 +152,49 @@ def test_persisted_source_replacement_blocks_before_real_recompilation(tmp_path)
     before = (task_path.read_bytes(), package_path.read_bytes())
     with pytest.raises(H3ReferenceGovernanceError, match="exactly one"):
         _verify(tmp_path)
+    assert (task_path.read_bytes(), package_path.read_bytes()) == before
+
+
+def test_valid_persisted_task_and_package_recompile_without_writes(tmp_path):
+    """Positive path through real task and package readers plus real package compiler."""
+    task_path, package_path = _write_records(tmp_path)
+    document = json.loads(package_path.read_text(encoding="utf-8"))
+    package = document["production_packages"][0]
+    description = {
+        "production": {
+            "universal_text": "A controlled cinematic test shot.",
+            "shot": {
+                "production_objective": "Show a stationary engineering console.",
+                "required_action": "The camera holds on the console.",
+            },
+            "action_performance": {
+                "temporal_narrative": "The camera holds on the console."
+            },
+        }
+    }
+    package["universal_description"] = description
+    package["validation"] = {
+        "universal_description_complete": True,
+        "cross_authority_consistent": True,
+    }
+    package_path.write_text(json.dumps(document), encoding="utf-8")
+    task_document = json.loads(task_path.read_text(encoding="utf-8"))
+    task_document["task"]["authority"]["fingerprint"] = hashlib.sha256(
+        json.dumps(description, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    task_path.write_text(json.dumps(task_document), encoding="utf-8")
+    before = (task_path.read_bytes(), package_path.read_bytes())
+
+    task, source = _loader(tmp_path).load_current()
+    compiler = ProductionPackageCompilerService(reference_root=tmp_path)
+    compiled = compiler.compile(task, source, profile="production")
+
+    assert compiled.task_id == task.task_id
+    assert compiled.source_package_id == source.package_id
+    assert compiled.source_package_fingerprint == source.package_fingerprint
+    assert compiled.positive_prompt
+    assert compiled.package_fingerprint
+    assert compiler.compile(task, source, profile="production").package_fingerprint == (
+        compiled.package_fingerprint
+    )
     assert (task_path.read_bytes(), package_path.read_bytes()) == before
