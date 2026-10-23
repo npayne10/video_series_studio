@@ -6,17 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
 from vscs.application.production_execution.provider_policy_profiles import (
     ProviderPolicyProfile,
 )
 from vscs.application.production_package import ProductionPackageService
 from vscs.application.production_tasks import ProductionTask
-from vscs.application.provider_reference_capacity import (
-    ProviderReferenceCapacityProjection,
-    project_provider_reference_capacity,
-)
-from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
+from vscs.application.provider_reference_capacity import project_provider_reference_capacity
 from vscs.infrastructure.production import JsonProductionTaskRepository
 
 from .h3_persisted_authority_gate import verify_persisted_h3_reference_authority
