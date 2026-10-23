@@ -167,9 +167,7 @@ def test_valid_persisted_task_and_package_recompile_without_writes(tmp_path):
                 "production_objective": "Show a stationary engineering console.",
                 "required_action": "The camera holds on the console.",
             },
-            "action_performance": {
-                "temporal_narrative": "The camera holds on the console."
-            },
+            "action_performance": {"temporal_narrative": "The camera holds on the console."},
         }
     }
     package["universal_description"] = description
