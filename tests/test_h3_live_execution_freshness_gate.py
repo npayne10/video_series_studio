@@ -3,10 +3,12 @@
 No network, ComfyUI, or production filesystem access is permitted in these tests.
 """
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from vscs.application.production_package import ProductionPackageService
 from vscs.infrastructure.production_execution import minimax_h3_automated_execution as h3
 from vscs.infrastructure.production_execution.h3_reference_selection_governance import (
     H3ReferenceGovernanceError,
@@ -156,3 +158,87 @@ def test_live_execute_does_not_submit_when_authority_is_unwired():
     ):
         service.execute("TASK-1")
     assert calls == ["plan"]
+
+
+def test_real_project_factory_wires_current_planning_backed_package_service(
+    tmp_path: Path, monkeypatch
+):
+    """The production factory must pass the actual ProductionPackageService."""
+    project = SimpleNamespace(project_directory=tmp_path)
+    integrated = SimpleNamespace(
+        shot_id="SHT-FACTORY",
+        package_fingerprint="source-fingerprint",
+    )
+    planning = SimpleNamespace(
+        projects=project,
+        current_package=lambda shot_id: integrated,
+    )
+    source = {
+        "package_id": "PKG-FACTORY",
+        "shot_id": "SHT-FACTORY",
+        "schema_version": "1.0",
+        "source_fingerprint": "source-fingerprint",
+        "package_fingerprint": "package-fingerprint",
+        "provenance": {
+            "integrated_package_id": "INT-FACTORY",
+            "integrated_package_fingerprint": "integration-fingerprint",
+            "planning_review_id": "REVIEW-FACTORY",
+            "planning_review_fingerprint": "review-fingerprint",
+        },
+        "shot": {},
+        "camera": {},
+        "lighting": {},
+        "environment": {},
+    }
+    import json
+
+    root = tmp_path / "production"
+    root.mkdir()
+    (root / "production_packages.json").write_text(
+        json.dumps({"schema_version": "1.0", "production_packages": [source]}),
+        encoding="utf-8",
+    )
+    forwarded = {}
+
+    def capture_init(self, project_directory, **kwargs):
+        forwarded.update(project_directory=project_directory, **kwargs)
+
+    monkeypatch.setattr(h3.MiniMaxH3AutomatedExecutionService, "__init__", capture_init)
+    h3.MiniMaxH3AutomatedExecutionService.from_project_services(
+        project,
+        planning,
+        endpoint="http://127.0.0.1:8188",
+        comfyui_input_directory=tmp_path,
+        comfyui_output_directory=tmp_path,
+    )
+    assert forwarded["project_directory"] == tmp_path
+    packages = forwarded["authority_packages"]
+    assert isinstance(packages, ProductionPackageService)
+    assert packages.projects is project
+    assert packages.planning is planning
+    current = packages.current_package("SHT-FACTORY")
+    assert current is not None
+    assert current.package_id == "PKG-FACTORY"
+
+
+def test_project_factory_fails_closed_on_cross_project_planning(
+    tmp_path: Path, monkeypatch
+):
+    project = SimpleNamespace(project_directory=tmp_path)
+    planning = SimpleNamespace(projects=SimpleNamespace(project_directory=tmp_path))
+    monkeypatch.setattr(
+        h3.MiniMaxH3AutomatedExecutionService,
+        "__init__",
+        lambda self, *args, **kwargs: pytest.fail("No service may be constructed"),
+    )
+    with pytest.raises(
+        h3.MiniMaxH3AutomatedExecutionError,
+        match="does not belong to the open VSCS project",
+    ):
+        h3.MiniMaxH3AutomatedExecutionService.from_project_services(
+            project,
+            planning,
+            endpoint="http://127.0.0.1:8188",
+            comfyui_input_directory=tmp_path,
+            comfyui_output_directory=tmp_path,
+        )
