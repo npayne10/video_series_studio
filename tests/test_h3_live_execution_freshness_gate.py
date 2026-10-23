@@ -88,9 +88,7 @@ def test_stale_persisted_authority_blocks_before_provider_workflow(monkeypatch):
         raise H3ReferenceGovernanceError("Current ProductionPackage authority is missing")
 
     monkeypatch.setattr(h3, "verify_persisted_h3_reference_authority", reject)
-    with pytest.raises(
-        h3.MiniMaxH3AutomatedExecutionError, match="freshness authority is blocked"
-    ):
+    with pytest.raises(h3.MiniMaxH3AutomatedExecutionError, match="freshness authority is blocked"):
         service._preflight_compiled(compiled)
     assert len(verified) == 1
     assert verified[0]["packages"] is service.authority_packages
@@ -148,9 +146,7 @@ def test_validated_preflight_allows_provider_payload_only_after_freshness(monkey
 def test_live_execute_does_not_submit_when_authority_is_unwired():
     service, compiled, calls = _harness()
     service.task_repository = SimpleNamespace(get=lambda task_id: SimpleNamespace(task_id=task_id))
-    service.package_compiler = SimpleNamespace(
-        compile_current=lambda task, profile: compiled
-    )
+    service.package_compiler = SimpleNamespace(compile_current=lambda task, profile: compiled)
     service.orchestrator = SimpleNamespace(
         run=lambda *args, **kwargs: pytest.fail("Provider submission must not occur")
     )
