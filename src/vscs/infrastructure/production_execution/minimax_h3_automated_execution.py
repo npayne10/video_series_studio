@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
@@ -52,6 +52,11 @@ class _H3ReadinessReference:
     role: ReferenceRole
     priority: ReferencePriority
     provider_ready: bool
+
+
+if TYPE_CHECKING:
+    from vscs.application.projects import ProjectService
+    from vscs.application.story.planning_integration import GovernedPlanningIntegrationService
 
 
 class MiniMaxH3AutomatedExecutionError(RuntimeError):
@@ -242,6 +247,43 @@ class MiniMaxH3AutomatedExecutionService:
             )
         self.orchestrator = orchestrator
         self.authority_packages = authority_packages
+
+    @classmethod
+    def from_project_services(
+        cls,
+        projects: ProjectService,
+        planning: GovernedPlanningIntegrationService,
+        *,
+        endpoint: str,
+        comfyui_input_directory: Path,
+        comfyui_output_directory: Path,
+        workflow_path: Path | None = None,
+        execution_profile: str = "production",
+    ) -> MiniMaxH3AutomatedExecutionService:
+        """Wire the live H3 caller to genuine VSCS project/planning authority.
+
+        The project and planning services must refer to the same open project.
+        Never infer a current source from the compiled package alone.
+        """
+        project_directory = projects.project_directory
+        if project_directory is None:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 execution requires an open VSCS project"
+            )
+        if planning.projects is not projects:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 planning authority does not belong to the open VSCS project service"
+            )
+        packages = ProductionPackageService(projects, planning)
+        return cls(
+            project_directory,
+            endpoint=endpoint,
+            comfyui_input_directory=comfyui_input_directory,
+            comfyui_output_directory=comfyui_output_directory,
+            workflow_path=workflow_path,
+            authority_packages=packages,
+            execution_profile=execution_profile,
+        )
 
     def preflight(self, task_id: str) -> MiniMaxH3AutomatedExecutionPreflight:
         compiled = self._compiled_for_task(task_id)
