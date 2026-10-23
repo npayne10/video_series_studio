@@ -33,6 +33,11 @@ class ReadOnlyTaskRepository:
 def _isolated_package_service(tmp_path):
     service = object.__new__(ProductionPackageService)
     service.projects = SimpleNamespace(project_directory=tmp_path)
+    service.planning = SimpleNamespace(
+        current_package=lambda shot_id: SimpleNamespace(
+            shot_id=shot_id, package_fingerprint="governed-source"
+        )
+    )
     # ProductionPackageService.list_packages reads the actual project JSON via
     # its canonical serializer; no production database or planner is opened.
     return service
