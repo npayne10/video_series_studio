@@ -41,6 +41,7 @@ def _harness(*, packages=None):
     service.policy_profile = SimpleNamespace(
         provider_id="minimax-h3-ref2va",
         profile_id="minimax-h3-ref2va-v1",
+        execution_adapter_id="minimax_h3_automated_execution",
         fingerprint="policy-sha",
         model_family="MiniMax H3",
         reference_projection_mode="direct_span_scoped_canonical_refs",
