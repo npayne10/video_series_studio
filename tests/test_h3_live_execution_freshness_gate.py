@@ -386,10 +386,7 @@ def test_h3_comfyui_probe_is_get_only_and_validates_pinned_models():
     def request(method, path):
         calls.append((method, path))
         assert method == "GET" and path == "/object_info"
-        return {
-            node: {"input": {"required": {"models": [list(models)]}}}
-            for node in required
-        }
+        return {node: {"input": {"required": {"models": [list(models)]}}} for node in required}
 
     provider = object.__new__(LiveMiniMaxH3ComfyUISpanProvider)
     provider.client = SimpleNamespace(
@@ -412,9 +409,7 @@ def test_h3_comfyui_probe_blocks_missing_model_without_submission():
         health=lambda: SimpleNamespace(healthy=True),
         transport=SimpleNamespace(
             request=lambda method, path: {
-                node: {} for node in (
-                    MiniMaxH3ComfyUIWorkflowCompiler.REQUIRED_NODE_TYPES.values()
-                )
+                node: {} for node in (MiniMaxH3ComfyUIWorkflowCompiler.REQUIRED_NODE_TYPES.values())
             }
         ),
     )
