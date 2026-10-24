@@ -79,6 +79,7 @@ class H3IsolatedAcceptanceCoordinator:
         if not output.is_dir():
             raise H3IsolatedAcceptanceError("H3 acceptance output directory must exist")
         self.service = service
+        self.acceptance_root = root
         self.project_root = project
         self.output_root = output
         self._pending: tuple[str, H3IsolatedAcceptancePreparation] | None = None
