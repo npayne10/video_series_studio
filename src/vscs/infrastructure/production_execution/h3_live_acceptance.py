@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from secrets import token_urlsafe
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, Any
 
 from .minimax_h3_automated_execution import MiniMaxH3AutomatedExecutionPreflight
 
@@ -184,6 +184,7 @@ class H3IsolatedAcceptanceCoordinator:
             shot_id=prepared.report.shot_id,
             plan_fingerprint=prepared.plan_fingerprint,
             output=validated,
+            provider_evidence=provider_evidence,
         )
         return validated, report_path
 
@@ -218,13 +219,17 @@ class H3IsolatedAcceptanceCoordinator:
             raise H3IsolatedAcceptanceError("H3 live acceptance requires the genuine ComfyUI provider")
         # Never allow a previous run to be overwritten or silently reused.
         final = self.output_root / f"{run_id}.mp4"
-        if not run_id or not run_id.replace("-", "").replace("_", "").isascii() or not run_id.replace("-", "").replace("_", "").isalnum():
+        safe_id = run_id.replace("-", "").replace("_", "")
+        if not run_id or not safe_id.isascii() or not safe_id.isalnum():
             raise H3IsolatedAcceptanceError("H3 live acceptance requires a safe ASCII run ID")
         if final.exists() or (Path(evidence_root) / f"{run_id}.json").exists():
             raise H3IsolatedAcceptanceError("H3 acceptance run ID already has artifacts")
         if Path(provider.project_directory).resolve() != self.project_root:
             raise H3IsolatedAcceptanceError("H3 provider is not bound to the disposable project")
-        result = self.service.execute(
+        execute = getattr(self.service, "execute", None)
+        if not callable(execute):
+            raise H3IsolatedAcceptanceError("H3 live acceptance executor is unavailable")
+        result: Any = execute(
             prepared.task_id,
             output_path=final,
             operator_authorized=True,
