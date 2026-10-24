@@ -42,7 +42,11 @@ def run_read_only_preflight(
 ) -> dict[str, object]:
     """Compile actual persisted authority without authorizing provider execution."""
     root = Path(acceptance_root).expanduser().resolve(strict=True)
-    project = Path(project_directory).expanduser().resolve(strict=True) if project_directory else root / "project"
+    project = (
+        Path(project_directory).expanduser().resolve(strict=True)
+        if project_directory
+        else root / "project"
+    )
     if not project.is_dir() or project == root or not project.is_relative_to(root):
         raise H3IsolatedAcceptanceError("Native acceptance project is outside disposable root")
     if not (project / "project.vscs").is_file():
