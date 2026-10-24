@@ -72,7 +72,7 @@ class _Plans:
 
 class _Workflows:
     def __init__(self, jobs: tuple[object, ...], *, fail: bool = False) -> None:
-        self.jobs = list(jobs)
+        self.jobs = tuple(jobs)
         self.fail = fail
         self.calls = 0
 
@@ -84,7 +84,7 @@ class _Workflows:
             )
 
             raise MiniMaxH3ComfyUIProviderError("invalid provider payload")
-        return self.jobs.pop(0)
+        return self.jobs[(self.calls - 1) % len(self.jobs)]
 
 
 class _Orchestrator:
