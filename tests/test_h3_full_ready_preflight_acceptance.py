@@ -88,4 +88,7 @@ def test_full_real_h3_preflight_does_not_submit_or_mutate_governed_sources(tmp_p
     assert all(result.workflow_fingerprints)
     assert tuple(path.read_bytes() for path in (task_path, package_path, reference_path)) == before
     assert not (tmp_path / "renders").exists()
-    assert all(path.is_file() for path in input_directory.iterdir())
+    staged = tuple((input_directory / "vscs_h3").rglob("*.png"))
+    assert staged, "Real H3 workflow compilation must stage isolated test images"
+    assert all(path.is_file() and path.is_relative_to(input_directory) for path in staged)
+    assert all(path.read_bytes() == reference_path.read_bytes() for path in staged)
