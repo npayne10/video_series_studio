@@ -8,7 +8,7 @@ import subprocess
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
 
@@ -231,7 +231,7 @@ class GovernedMiniMaxH3SpanOrchestrationService:
         self.normalizer = normalizer or FFmpegMiniMaxH3SpanNormalizer(self.project_directory)
         self.assembler = assembler or GovernedSpanAssemblyRuntime(self.project_directory)
         self.adapter = MiniMaxH3SpanAdapterCompiler(self.project_directory)
-        self.submission_guard = None
+        self.submission_guard: Callable[[CompiledProductionPackage, MiniMaxH3SpanExecutionPlan, MiniMaxH3SpanExecution], None] | None = None
 
     def run(
         self,
