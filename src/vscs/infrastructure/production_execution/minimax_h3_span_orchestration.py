@@ -231,6 +231,7 @@ class GovernedMiniMaxH3SpanOrchestrationService:
         self.normalizer = normalizer or FFmpegMiniMaxH3SpanNormalizer(self.project_directory)
         self.assembler = assembler or GovernedSpanAssemblyRuntime(self.project_directory)
         self.adapter = MiniMaxH3SpanAdapterCompiler(self.project_directory)
+        self.submission_guard = None
 
     def run(
         self,
@@ -266,6 +267,8 @@ class GovernedMiniMaxH3SpanOrchestrationService:
         normalized_paths: list[Path] = []
         try:
             for execution in plan.spans:
+                if self.submission_guard is not None:
+                    self.submission_guard(compiled, plan, execution)
                 raw = Path(self.provider.render(execution)).expanduser().resolve(strict=False)
                 if not raw.is_file():
                     raise MiniMaxH3SpanOrchestrationError(
