@@ -251,7 +251,8 @@ def test_h3_automated_execute_preflights_before_orchestration(tmp_path: Path) ->
     service, packages, plans, workflows, orchestrator, expected = _service(tmp_path)
 
     result = service.execute(
-        "PT-VIDEO-001", operator_authorized=True,
+        "PT-VIDEO-001",
+        operator_authorized=True,
         expected_preflight_fingerprint="plan-fingerprint",
     )
 
@@ -276,7 +277,8 @@ def test_h3_automated_execute_fails_before_provider_when_payload_preflight_fails
         match="provider payload preflight failed",
     ):
         service.execute(
-            "PT-VIDEO-001", operator_authorized=True,
+            "PT-VIDEO-001",
+            operator_authorized=True,
             expected_preflight_fingerprint="plan-fingerprint",
         )
 
