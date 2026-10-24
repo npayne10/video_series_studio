@@ -35,13 +35,18 @@ def run_read_only_preflight(
     *,
     acceptance_root: Path,
     task_id: str,
+    project_directory: Path | None = None,
     comfyui_input: Path,
     comfyui_output: Path,
     endpoint: str = "http://127.0.0.1:8188",
 ) -> dict[str, object]:
     """Compile actual persisted authority without authorizing provider execution."""
     root = Path(acceptance_root).expanduser().resolve(strict=True)
-    project = root / "project"
+    project = Path(project_directory).expanduser().resolve(strict=True) if project_directory else root / "project"
+    if not project.is_dir() or project == root or not project.is_relative_to(root):
+        raise H3IsolatedAcceptanceError("Native acceptance project is outside disposable root")
+    if not (project / "project.vscs").is_file():
+        raise H3IsolatedAcceptanceError("Native VSCS project.vscs is missing")
     service = MiniMaxH3AutomatedExecutionService(
         project,
         endpoint=endpoint,
@@ -86,6 +91,7 @@ def main() -> int:
     modes.add_argument("--init", action="store_true")
     modes.add_argument("--preflight", action="store_true")
     parser.add_argument("--task-id")
+    parser.add_argument("--project-directory", type=Path)
     parser.add_argument("--comfyui-input", type=Path)
     parser.add_argument("--comfyui-output", type=Path)
     parser.add_argument("--endpoint", default="http://127.0.0.1:8188")
@@ -99,6 +105,7 @@ def main() -> int:
     result = run_read_only_preflight(
         acceptance_root=args.acceptance_root,
         task_id=args.task_id,
+        project_directory=args.project_directory,
         comfyui_input=args.comfyui_input,
         comfyui_output=args.comfyui_output,
         endpoint=args.endpoint,
