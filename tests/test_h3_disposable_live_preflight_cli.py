@@ -53,3 +53,55 @@ def test_preflight_missing_governed_task_never_submits(tmp_path: Path):
         )
     assert tuple(output_root.iterdir()) == ()
     assert tuple((root / "project" / "acceptance-output").iterdir()) == ()
+
+
+def test_nested_native_project_is_allowed_but_missing_task_blocks(tmp_path: Path):
+    root = tmp_path / "acceptance"
+    initialize_disposable_scope(root)
+    project = root / "project" / "H3 Isolated Acceptance"
+    project.mkdir()
+    (project / "project.vscs").write_text("name: H3 Isolated Acceptance", encoding="utf-8")
+    (project / "acceptance-output").mkdir()
+    input_root = tmp_path / "input"
+    output_root = tmp_path / "output"
+    input_root.mkdir()
+    output_root.mkdir()
+    with pytest.raises(MiniMaxH3AutomatedExecutionError, match="cannot find ProductionTask"):
+        run_read_only_preflight(
+            acceptance_root=root,
+            project_directory=project,
+            task_id="NONEXISTENT",
+            comfyui_input=input_root,
+            comfyui_output=output_root,
+        )
+
+
+def test_external_native_project_is_rejected(tmp_path: Path):
+    root = tmp_path / "acceptance"
+    initialize_disposable_scope(root)
+    external = tmp_path / "external"
+    external.mkdir()
+    (external / "project.vscs").write_text("name: external", encoding="utf-8")
+    with pytest.raises(H3IsolatedAcceptanceError, match="outside disposable"):
+        run_read_only_preflight(
+            acceptance_root=root,
+            project_directory=external,
+            task_id="TASK",
+            comfyui_input=tmp_path,
+            comfyui_output=tmp_path,
+        )
+
+
+def test_nested_project_without_native_file_is_rejected(tmp_path: Path):
+    root = tmp_path / "acceptance"
+    initialize_disposable_scope(root)
+    nested = root / "project" / "Uninitialized"
+    nested.mkdir()
+    with pytest.raises(H3IsolatedAcceptanceError, match="project.vscs"):
+        run_read_only_preflight(
+            acceptance_root=root,
+            project_directory=nested,
+            task_id="TASK",
+            comfyui_input=tmp_path,
+            comfyui_output=tmp_path,
+        )
