@@ -63,12 +63,20 @@ def validate_h3_acceptance_output(
         denominator = int(rate[1]) if len(rate) == 2 else 1
         fps = numerator // denominator if denominator and numerator % denominator == 0 else 0
         width, height = int(stream["width"]), int(stream["height"])
-    except (OSError, subprocess.SubprocessError, KeyError, ValueError, IndexError,
-            TypeError, json.JSONDecodeError, ZeroDivisionError) as exc:
+    except (
+        OSError,
+        subprocess.SubprocessError,
+        KeyError,
+        ValueError,
+        IndexError,
+        TypeError,
+        ZeroDivisionError,
+    ) as exc:
         raise H3IsolatedAcceptanceError(f"H3 output media validation failed: {exc}") from exc
     if frames != expected_frames or fps != expected_fps or width <= 0 or height <= 0:
         raise H3IsolatedAcceptanceError("H3 output frame count, FPS or resolution is invalid")
-    checksum = hashlib.file_digest(candidate.open("rb"), "sha256").hexdigest()
+    with candidate.open("rb") as handle:
+        checksum = hashlib.file_digest(handle, "sha256").hexdigest()
     return H3ValidatedOutput(
         relative_path=candidate.relative_to(root).as_posix(),
         byte_count=byte_count,
