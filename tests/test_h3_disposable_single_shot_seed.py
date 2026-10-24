@@ -21,9 +21,7 @@ def _project(tmp_path: Path) -> tuple[Path, Path]:
     (project / "assets" / "reference").mkdir(parents=True)
     (project / "database").mkdir()
     (project / "project.vscs").write_text("name: H3 Isolated Acceptance", encoding="utf-8")
-    (root / ".vscs_h3_disposable_acceptance").write_text(
-        "Q3.1.3.5.8", encoding="utf-8"
-    )
+    (root / ".vscs_h3_disposable_acceptance").write_text("Q3.1.3.5.8", encoding="utf-8")
     return root, project
 
 
