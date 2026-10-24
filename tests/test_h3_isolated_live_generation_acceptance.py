@@ -40,6 +40,9 @@ def _coordinator(tmp_path: Path, report=None):
     project = tmp_path / "disposable" / "project"
     output = project / "acceptance-output"
     output.mkdir(parents=True)
+    (tmp_path / "disposable" / ".vscs_h3_disposable_acceptance").write_text(
+        "Q3.1.3.5.8", encoding="utf-8"
+    )
     seen = []
     current = [report or _report()]
 
