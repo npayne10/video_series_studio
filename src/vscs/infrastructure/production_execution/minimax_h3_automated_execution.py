@@ -324,9 +324,7 @@ class MiniMaxH3AutomatedExecutionService:
             raise MiniMaxH3AutomatedExecutionError(
                 "H3 provider execution blocked: authority or provider payload changed"
             )
-        real_orchestrator = isinstance(
-            self.orchestrator, GovernedMiniMaxH3SpanOrchestrationService
-        )
+        real_orchestrator = isinstance(self.orchestrator, GovernedMiniMaxH3SpanOrchestrationService)
         if real_orchestrator:
             provider = getattr(self.orchestrator, "provider", None)
             if not isinstance(provider, LiveMiniMaxH3ComfyUISpanProvider):
@@ -340,7 +338,11 @@ class MiniMaxH3AutomatedExecutionService:
                     f"H3 provider readiness blocked: {exc}"
                 ) from exc
 
-            def verify_span(current_package, current_plan, execution):
+            def verify_span(
+                current_package: CompiledProductionPackage,
+                current_plan: MiniMaxH3SpanExecutionPlan,
+                execution: MiniMaxH3SpanExecution,
+            ) -> None:
                 refreshed = self._compiled_for_task(task_id)
                 report = self._preflight_compiled(refreshed)
                 if (
@@ -355,7 +357,10 @@ class MiniMaxH3AutomatedExecutionService:
                     raise MiniMaxH3AutomatedExecutionError(
                         "H3 submission blocked: per-span persisted authority or payload changed"
                     )
-            def verify_payload(execution, job):
+            def verify_payload(
+                execution: MiniMaxH3SpanExecution,
+                job: MiniMaxH3ComfyUICompiledJob,
+            ) -> None:
                 refreshed = self._compiled_for_task(task_id)
                 report = self._preflight_compiled(refreshed)
                 try:
@@ -374,8 +379,8 @@ class MiniMaxH3AutomatedExecutionService:
                         "H3 live submission blocked: payload or authority fingerprint changed"
                     )
 
-            setattr(provider, "submission_guard", verify_payload)
-            setattr(self.orchestrator, "submission_guard", verify_span)
+            provider.submission_guard = verify_payload
+            self.orchestrator.submission_guard = verify_span
         try:
             return self.orchestrator.run(second_compiled, output_path=output_path)
         except MiniMaxH3SpanOrchestrationError as exc:
@@ -384,8 +389,8 @@ class MiniMaxH3AutomatedExecutionService:
             ) from exc
         finally:
             if real_orchestrator:
-                setattr(self.orchestrator, "submission_guard", None)
-                setattr(provider, "submission_guard", None)
+                self.orchestrator.submission_guard = None
+                provider.submission_guard = None
 
     def _compiled_for_task(self, task_id: str) -> CompiledProductionPackage:
         normalized = task_id.strip()
