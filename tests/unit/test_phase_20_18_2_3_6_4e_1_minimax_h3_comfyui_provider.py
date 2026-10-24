@@ -379,11 +379,21 @@ def test_live_h3_provider_submits_exact_isolated_workflow_and_persists_evidence(
         transport=transport,
     )
 
+    authorized_jobs = []
+
+    def authorize_payload(span, job):
+        assert span.job_id == execution.job_id
+        assert job.job_id == execution.job_id
+        assert len(job.workflow_fingerprint) == 64
+        authorized_jobs.append(job.job_id)
+
+    provider.submission_guard = authorize_payload
     output = provider.render(execution)
     evidence = provider.execution_evidence(execution)
     provider.free_models_and_memory()
 
     assert output.is_file()
+    assert authorized_jobs == [execution.job_id]
     assert evidence["job_id"] == execution.job_id
     assert evidence["provider_frame_count"] == 107
     assert evidence["governed_frame_count"] == 96
