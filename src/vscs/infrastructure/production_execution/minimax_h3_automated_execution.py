@@ -328,6 +328,18 @@ class MiniMaxH3AutomatedExecutionService:
             self.orchestrator, GovernedMiniMaxH3SpanOrchestrationService
         )
         if real_orchestrator:
+            provider = self.orchestrator.provider
+            if not isinstance(provider, LiveMiniMaxH3ComfyUISpanProvider):
+                raise MiniMaxH3AutomatedExecutionError(
+                    "Live H3 execution requires the authenticated ComfyUI provider"
+                )
+            try:
+                provider.probe_readiness()
+            except MiniMaxH3ComfyUIProviderError as exc:
+                raise MiniMaxH3AutomatedExecutionError(
+                    f"H3 provider readiness blocked: {exc}"
+                ) from exc
+
             def verify_span(current_package, current_plan, execution):
                 refreshed = self._compiled_for_task(task_id)
                 report = self._preflight_compiled(refreshed)
