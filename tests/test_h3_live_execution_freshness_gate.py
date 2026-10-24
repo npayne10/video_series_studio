@@ -420,3 +420,28 @@ def test_h3_comfyui_probe_blocks_missing_model_without_submission():
     )
     with pytest.raises(MiniMaxH3ComfyUIProviderError, match="model choices are missing"):
         provider.probe_readiness()
+
+
+def test_h3_live_prompt_submission_denies_missing_payload_guard():
+    from vscs.infrastructure.production_execution.minimax_h3_comfyui_provider import (
+        LiveMiniMaxH3ComfyUISpanProvider,
+        MiniMaxH3ComfyUIProviderError,
+    )
+
+    provider = object.__new__(LiveMiniMaxH3ComfyUISpanProvider)
+    provider.compiler = SimpleNamespace(
+        compile=lambda execution: SimpleNamespace(
+            workflow={"H3": "test"},
+            workflow_fingerprint="TEST-WORKFLOW",
+            model_config_fingerprint="TEST-MODEL",
+        )
+    )
+    provider.client = SimpleNamespace(
+        submit=lambda payload: pytest.fail("No ComfyUI request is authorized"),
+    )
+    provider.submission_guard = None
+    with pytest.raises(
+        MiniMaxH3ComfyUIProviderError,
+        match="authorized per-span payload guard",
+    ):
+        provider.render(SimpleNamespace(job_id="ISOLATED-TEST", span_id="SPAN-TEST"))
