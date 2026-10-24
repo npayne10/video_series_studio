@@ -157,7 +157,11 @@ def test_live_execute_does_not_submit_when_authority_is_unwired():
         h3.MiniMaxH3AutomatedExecutionError,
         match="authenticated current planning/package authority",
     ):
-        service.execute("TASK-1")
+        service.execute(
+            "TASK-1",
+            operator_authorized=True,
+            expected_preflight_fingerprint="ISOLATED-EXPECTED-PLAN",
+        )
     assert calls == ["plan"]
 
 
