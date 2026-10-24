@@ -9,9 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from secrets import token_urlsafe
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from .minimax_h3_automated_execution import MiniMaxH3AutomatedExecutionPreflight
+
+if TYPE_CHECKING:
+    from .h3_live_acceptance_evidence import H3ValidatedOutput
 
 
 class H3IsolatedAcceptanceError(RuntimeError):
@@ -130,3 +133,57 @@ class H3IsolatedAcceptanceCoordinator:
         if refreshed != prepared.report:
             raise H3IsolatedAcceptanceError("H3 authorization is stale after fresh preflight")
         return prepared
+
+
+    def validate_completed_output(
+        self,
+        prepared: H3IsolatedAcceptancePreparation,
+        *,
+        output_path: Path,
+        expected_frames: int,
+        expected_fps: int,
+        evidence_root: Path,
+        run_id: str,
+        provider_evidence: dict[str, object],
+    ) -> tuple[H3ValidatedOutput, Path]:
+        """Offline integration acceptance; NO provider submission or QC transition.
+
+        Bind provider proof to the exact prepared span before writing results.
+        Caller must supply separately obtained actual provider execution evidence.
+        """
+        from .h3_live_acceptance_evidence import (
+            validate_h3_acceptance_output,
+            write_h3_acceptance_evidence,
+        )
+
+        if (
+            prepared.project_root != self.project_root
+            or prepared.output_root != self.output_root
+            or prepared.report.span_count != 1
+        ):
+            raise H3IsolatedAcceptanceError("H3 acceptance preparation does not match scope")
+        if (
+            provider_evidence.get("job_id") != prepared.report.span_job_ids[0]
+            or provider_evidence.get("workflow_fingerprint")
+            != prepared.report.workflow_fingerprints[0]
+            or provider_evidence.get("model_config_fingerprint")
+            != prepared.report.model_config_fingerprints[0]
+            or not str(provider_evidence.get("prompt_id") or "").strip()
+        ):
+            raise H3IsolatedAcceptanceError("H3 provider evidence does not match authorized span")
+        validated = validate_h3_acceptance_output(
+            output_path,
+            allowed_root=self.output_root,
+            expected_frames=expected_frames,
+            expected_fps=expected_fps,
+        )
+        report_path = write_h3_acceptance_evidence(
+            evidence_root=evidence_root,
+            acceptance_project=self.project_root,
+            run_id=run_id,
+            task_id=prepared.task_id,
+            shot_id=prepared.report.shot_id,
+            plan_fingerprint=prepared.plan_fingerprint,
+            output=validated,
+        )
+        return validated, report_path
