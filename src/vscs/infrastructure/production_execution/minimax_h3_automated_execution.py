@@ -328,7 +328,7 @@ class MiniMaxH3AutomatedExecutionService:
             self.orchestrator, GovernedMiniMaxH3SpanOrchestrationService
         )
         if real_orchestrator:
-            provider = self.orchestrator.provider
+            provider = getattr(self.orchestrator, "provider", None)
             if not isinstance(provider, LiveMiniMaxH3ComfyUISpanProvider):
                 raise MiniMaxH3AutomatedExecutionError(
                     "Live H3 execution requires the authenticated ComfyUI provider"
@@ -355,6 +355,26 @@ class MiniMaxH3AutomatedExecutionService:
                     raise MiniMaxH3AutomatedExecutionError(
                         "H3 submission blocked: per-span persisted authority or payload changed"
                     )
+            def verify_payload(execution, job):
+                refreshed = self._compiled_for_task(task_id)
+                report = self._preflight_compiled(refreshed)
+                try:
+                    index = second.span_job_ids.index(execution.job_id)
+                except ValueError as exc:
+                    raise MiniMaxH3AutomatedExecutionError(
+                        "H3 live submission blocked: unknown governed span"
+                    ) from exc
+                if (
+                    report != second
+                    or job.job_id != execution.job_id
+                    or job.workflow_fingerprint != second.workflow_fingerprints[index]
+                    or job.model_config_fingerprint != second.model_config_fingerprints[index]
+                ):
+                    raise MiniMaxH3AutomatedExecutionError(
+                        "H3 live submission blocked: payload or authority fingerprint changed"
+                    )
+
+            setattr(provider, "submission_guard", verify_payload)
             setattr(self.orchestrator, "submission_guard", verify_span)
         try:
             return self.orchestrator.run(second_compiled, output_path=output_path)
@@ -365,6 +385,7 @@ class MiniMaxH3AutomatedExecutionService:
         finally:
             if real_orchestrator:
                 setattr(self.orchestrator, "submission_guard", None)
+                setattr(provider, "submission_guard", None)
 
     def _compiled_for_task(self, task_id: str) -> CompiledProductionPackage:
         normalized = task_id.strip()
