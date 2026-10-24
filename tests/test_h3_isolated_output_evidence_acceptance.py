@@ -22,11 +22,24 @@ def _valid_video(root: Path) -> Path:
     target = root / "accepted.mp4"
     subprocess.run(
         [
-            "ffmpeg", "-nostdin", "-y", "-v", "error", "-f", "lavfi",
-            "-i", "color=c=black:s=64x64:r=24", "-frames:v", "12",
-            "-c:v", "mpeg4", str(target),
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=64x64:r=24",
+            "-frames:v",
+            "12",
+            "-c:v",
+            "mpeg4",
+            str(target),
         ],
-        check=True, capture_output=True, timeout=30,
+        check=True,
+        capture_output=True,
+        timeout=30,
     )
     return target
 
@@ -45,8 +58,12 @@ def test_real_ffprobe_accepts_expected_mp4_and_writes_unreviewed_evidence(tmp_pa
     assert result.byte_count > 0
     assert len(result.sha256) == 64
     path = write_h3_acceptance_evidence(
-        evidence_root=evidence_root, acceptance_project=project, run_id="RUN-001",
-        task_id="TEST-TASK", shot_id="TEST-SHOT", plan_fingerprint="plan-test",
+        evidence_root=evidence_root,
+        acceptance_project=project,
+        run_id="RUN-001",
+        task_id="TEST-TASK",
+        shot_id="TEST-SHOT",
+        plan_fingerprint="plan-test",
         output=result,
     )
     report = json.loads(path.read_text(encoding="utf-8"))
@@ -55,8 +72,12 @@ def test_real_ffprobe_accepts_expected_mp4_and_writes_unreviewed_evidence(tmp_pa
     assert report["output"]["sha256"] == result.sha256
     with pytest.raises(H3IsolatedAcceptanceError, match="already exists"):
         write_h3_acceptance_evidence(
-            evidence_root=evidence_root, acceptance_project=project, run_id="RUN-001",
-            task_id="TEST-TASK", shot_id="TEST-SHOT", plan_fingerprint="plan-test",
+            evidence_root=evidence_root,
+            acceptance_project=project,
+            run_id="RUN-001",
+            task_id="TEST-TASK",
+            shot_id="TEST-SHOT",
+            plan_fingerprint="plan-test",
             output=result,
         )
 
@@ -75,9 +96,7 @@ def test_corrupt_mp4_blocks(tmp_path: Path):
     bad = root / "corrupt.mp4"
     bad.write_bytes(b"not really mp4")
     with pytest.raises(H3IsolatedAcceptanceError, match="validation failed"):
-        validate_h3_acceptance_output(
-            bad, allowed_root=root, expected_frames=12, expected_fps=24
-        )
+        validate_h3_acceptance_output(bad, allowed_root=root, expected_frames=12, expected_fps=24)
 
 
 def test_empty_mp4_blocks(tmp_path: Path):
@@ -86,9 +105,7 @@ def test_empty_mp4_blocks(tmp_path: Path):
     bad = root / "empty.mp4"
     bad.touch()
     with pytest.raises(H3IsolatedAcceptanceError, match="empty"):
-        validate_h3_acceptance_output(
-            bad, allowed_root=root, expected_frames=12, expected_fps=24
-        )
+        validate_h3_acceptance_output(bad, allowed_root=root, expected_frames=12, expected_fps=24)
 
 
 def test_output_outside_root_blocks(tmp_path: Path):
@@ -114,6 +131,11 @@ def test_evidence_outside_project_blocks(tmp_path: Path):
     result = H3ValidatedOutput("x.mp4", 10, "a" * 64, 12, 24, 64, 64)
     with pytest.raises(H3IsolatedAcceptanceError, match="inside disposable"):
         write_h3_acceptance_evidence(
-            evidence_root=external, acceptance_project=project, run_id="RUN-001",
-            task_id="TASK", shot_id="SHOT", plan_fingerprint="plan", output=result,
+            evidence_root=external,
+            acceptance_project=project,
+            run_id="RUN-001",
+            task_id="TASK",
+            shot_id="SHOT",
+            plan_fingerprint="plan",
+            output=result,
         )
