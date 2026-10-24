@@ -287,16 +287,45 @@ class MiniMaxH3AutomatedExecutionService:
         compiled = self._compiled_for_task(task_id)
         return self._preflight_compiled(compiled)
 
+    def dry_run(self, task_id: str) -> MiniMaxH3AutomatedExecutionPreflight:
+        """Validate live H3 compilation and authority without provider submission."""
+        return self.preflight(task_id)
+
     def execute(
         self,
         task_id: str,
         *,
         output_path: Path | None = None,
+        operator_authorized: bool = False,
+        expected_preflight_fingerprint: str | None = None,
     ) -> MiniMaxH3SpanOrchestrationResult:
+        """Explicit operator-gated H3 execution; never accept implied authorization."""
+        if not operator_authorized or not expected_preflight_fingerprint:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 provider execution requires explicit operator authorization "
+                "and a matching current preflight fingerprint"
+            )
         compiled = self._compiled_for_task(task_id)
-        self._preflight_compiled(compiled)
+        first = self._preflight_compiled(compiled)
+        if first.plan_fingerprint != expected_preflight_fingerprint:
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 provider execution blocked: authorized preflight plan fingerprint changed"
+            )
+        # Re-read the current persisted task/package immediately before handing
+        # control to the orchestrator; no stale cached preflight may be replayed.
+        second_compiled = self._compiled_for_task(task_id)
+        second = self._preflight_compiled(second_compiled)
+        if (
+            second.package_fingerprint != first.package_fingerprint
+            or second.plan_fingerprint != first.plan_fingerprint
+            or second.workflow_fingerprints != first.workflow_fingerprints
+            or second.provider_profile_fingerprint != first.provider_profile_fingerprint
+        ):
+            raise MiniMaxH3AutomatedExecutionError(
+                "H3 provider execution blocked: authority or provider payload changed"
+            )
         try:
-            return self.orchestrator.run(compiled, output_path=output_path)
+            return self.orchestrator.run(second_compiled, output_path=output_path)
         except MiniMaxH3SpanOrchestrationError as exc:
             raise MiniMaxH3AutomatedExecutionError(
                 f"H3 automated execution failed safely: {exc}"
