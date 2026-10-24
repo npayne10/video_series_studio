@@ -56,8 +56,10 @@ def _coordinator(tmp_path: Path, report=None):
         execute=lambda *args, **kwargs: pytest.fail("No live execution allowed in 8a"),
     )
     coordinator = H3IsolatedAcceptanceCoordinator(
-        service, acceptance_root=tmp_path / "disposable",
-        project_root=project, output_root=output,
+        service,
+        acceptance_root=tmp_path / "disposable",
+        project_root=project,
+        output_root=output,
     )
     return coordinator, current, seen
 
@@ -126,14 +128,17 @@ def test_reject_outside_project_or_other_service_project(tmp_path: Path):
     foreign.mkdir()
     with pytest.raises(H3IsolatedAcceptanceError, match="child"):
         H3IsolatedAcceptanceCoordinator(
-            coordinator.service, acceptance_root=tmp_path / "disposable",
-            project_root=foreign, output_root=foreign,
+            coordinator.service,
+            acceptance_root=tmp_path / "disposable",
+            project_root=foreign,
+            output_root=foreign,
         )
     with pytest.raises(H3IsolatedAcceptanceError, match="not bound"):
         H3IsolatedAcceptanceCoordinator(
             SimpleNamespace(project_directory=foreign),
             acceptance_root=tmp_path / "disposable",
-            project_root=coordinator.project_root, output_root=coordinator.output_root,
+            project_root=coordinator.project_root,
+            output_root=coordinator.output_root,
         )
 
 
@@ -141,6 +146,8 @@ def test_reject_output_escape(tmp_path: Path):
     coordinator, _, _ = _coordinator(tmp_path)
     with pytest.raises(H3IsolatedAcceptanceError, match="confined"):
         H3IsolatedAcceptanceCoordinator(
-            coordinator.service, acceptance_root=tmp_path / "disposable",
-            project_root=coordinator.project_root, output_root=tmp_path,
+            coordinator.service,
+            acceptance_root=tmp_path / "disposable",
+            project_root=coordinator.project_root,
+            output_root=tmp_path,
         )
