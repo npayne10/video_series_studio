@@ -39,7 +39,8 @@ def test_preexisting_root_cannot_be_initialized_or_overwritten(tmp_path: Path):
 
 def test_preflight_missing_governed_task_never_submits(tmp_path: Path):
     root = tmp_path / "acceptance"
-    initialize_disposable_scope(root)
+    project = initialize_disposable_scope(root)
+    (project / "project.vscs").write_text("name: disposable", encoding="utf-8")
     input_root = tmp_path / "comfy-input"
     output_root = tmp_path / "comfy-output"
     input_root.mkdir()
@@ -97,7 +98,7 @@ def test_nested_project_without_native_file_is_rejected(tmp_path: Path):
     initialize_disposable_scope(root)
     nested = root / "project" / "Uninitialized"
     nested.mkdir()
-    with pytest.raises(H3IsolatedAcceptanceError, match="project.vscs"):
+    with pytest.raises(H3IsolatedAcceptanceError, match=r"project\.vscs"):
         run_read_only_preflight(
             acceptance_root=root,
             project_directory=nested,
