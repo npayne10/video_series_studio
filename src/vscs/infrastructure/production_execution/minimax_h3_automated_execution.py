@@ -324,12 +324,35 @@ class MiniMaxH3AutomatedExecutionService:
             raise MiniMaxH3AutomatedExecutionError(
                 "H3 provider execution blocked: authority or provider payload changed"
             )
+        real_orchestrator = isinstance(
+            self.orchestrator, GovernedMiniMaxH3SpanOrchestrationService
+        )
+        if real_orchestrator:
+            def verify_span(current_package, current_plan, execution):
+                refreshed = self._compiled_for_task(task_id)
+                report = self._preflight_compiled(refreshed)
+                if (
+                    refreshed.package_fingerprint != second_compiled.package_fingerprint
+                    or report.plan_fingerprint != second.plan_fingerprint
+                    or report.workflow_fingerprints != second.workflow_fingerprints
+                    or report.provider_profile_fingerprint != second.provider_profile_fingerprint
+                    or current_package.package_fingerprint != second_compiled.package_fingerprint
+                    or current_plan.fingerprint != second.plan_fingerprint
+                    or execution.job_id not in second.span_job_ids
+                ):
+                    raise MiniMaxH3AutomatedExecutionError(
+                        "H3 submission blocked: per-span persisted authority or payload changed"
+                    )
+            self.orchestrator.submission_guard = verify_span
         try:
             return self.orchestrator.run(second_compiled, output_path=output_path)
         except MiniMaxH3SpanOrchestrationError as exc:
             raise MiniMaxH3AutomatedExecutionError(
                 f"H3 automated execution failed safely: {exc}"
             ) from exc
+        finally:
+            if real_orchestrator:
+                self.orchestrator.submission_guard = None
 
     def _compiled_for_task(self, task_id: str) -> CompiledProductionPackage:
         normalized = task_id.strip()
