@@ -345,7 +345,14 @@ def test_real_orchestrator_boundary_rechecks_each_span_before_provider():
                 seen.append(span.job_id)
             pytest.fail("Second provider submission should have been blocked")
 
+    from vscs.infrastructure.production_execution.minimax_h3_comfyui_provider import (
+        LiveMiniMaxH3ComfyUISpanProvider,
+    )
+
     service.orchestrator = object.__new__(ControlledOrchestrator)
+    provider = object.__new__(LiveMiniMaxH3ComfyUISpanProvider)
+    provider.probe_readiness = lambda: ("checked",)
+    service.orchestrator.provider = provider
     service.orchestrator.submission_guard = None
     with pytest.raises(
         h3.MiniMaxH3AutomatedExecutionError,
@@ -359,3 +366,57 @@ def test_real_orchestrator_boundary_rechecks_each_span_before_provider():
     assert seen == ["JOB-1"]
     assert verification_count == 4
     assert service.orchestrator.submission_guard is None
+
+
+def test_h3_comfyui_probe_is_get_only_and_validates_pinned_models():
+    from vscs.infrastructure.production_execution.minimax_h3_comfyui_provider import (
+        LiveMiniMaxH3ComfyUISpanProvider,
+        MiniMaxH3ComfyUIWorkflowCompiler,
+    )
+
+    calls = []
+    required = MiniMaxH3ComfyUIWorkflowCompiler.REQUIRED_NODE_TYPES.values()
+    models = (
+        "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "minimax_h3_video_vae_fp16.safetensors",
+        "minimax_h3_audio_vae_fp32.safetensors",
+    )
+
+    def request(method, path):
+        calls.append((method, path))
+        assert method == "GET" and path == "/object_info"
+        return {
+            node: {"input": {"required": {"models": [list(models)]}}}
+            for node in required
+        }
+
+    provider = object.__new__(LiveMiniMaxH3ComfyUISpanProvider)
+    provider.client = SimpleNamespace(
+        health=lambda: SimpleNamespace(healthy=True),
+        transport=SimpleNamespace(request=request),
+    )
+    assert provider.probe_readiness()
+    assert calls == [("GET", "/object_info")]
+
+
+def test_h3_comfyui_probe_blocks_missing_model_without_submission():
+    from vscs.infrastructure.production_execution.minimax_h3_comfyui_provider import (
+        LiveMiniMaxH3ComfyUISpanProvider,
+        MiniMaxH3ComfyUIProviderError,
+        MiniMaxH3ComfyUIWorkflowCompiler,
+    )
+
+    provider = object.__new__(LiveMiniMaxH3ComfyUISpanProvider)
+    provider.client = SimpleNamespace(
+        health=lambda: SimpleNamespace(healthy=True),
+        transport=SimpleNamespace(
+            request=lambda method, path: {
+                node: {} for node in (
+                    MiniMaxH3ComfyUIWorkflowCompiler.REQUIRED_NODE_TYPES.values()
+                )
+            }
+        ),
+    )
+    with pytest.raises(MiniMaxH3ComfyUIProviderError, match="model choices are missing"):
+        provider.probe_readiness()
