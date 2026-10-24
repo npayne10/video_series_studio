@@ -246,7 +246,7 @@ def test_project_factory_fails_closed_on_cross_project_planning(tmp_path: Path, 
 
 
 def test_h3_execute_requires_explicit_authorization_before_compilation():
-    service, compiled, calls = _harness()
+    service, _compiled, calls = _harness()
     service.orchestrator = SimpleNamespace(
         run=lambda *args, **kwargs: pytest.fail("H3 must not submit")
     )
@@ -259,7 +259,7 @@ def test_h3_execute_requires_explicit_authorization_before_compilation():
 
 
 def test_h3_execute_rejects_authorized_fingerprint_mismatch_before_submission():
-    service, compiled, calls = _harness()
+    service, compiled, _calls = _harness()
     service._compiled_for_task = lambda task_id: compiled
     service._preflight_compiled = lambda package: SimpleNamespace(
         plan_fingerprint="CURRENT-PLAN",
@@ -282,7 +282,7 @@ def test_h3_execute_rejects_authorized_fingerprint_mismatch_before_submission():
 
 
 def test_h3_execute_rejects_changed_second_preflight_before_submission():
-    service, compiled, calls = _harness()
+    service, compiled, _calls = _harness()
     service._compiled_for_task = lambda task_id: compiled
     revisions = iter(("FIRST", "SECOND"))
 
