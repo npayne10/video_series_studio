@@ -48,12 +48,22 @@ def validate_h3_acceptance_output(
     try:
         completed = subprocess.run(
             [
-                ffprobe, "-v", "error", "-select_streams", "v:0",
-                "-count_frames", "-show_entries",
+                ffprobe,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-count_frames",
+                "-show_entries",
                 "stream=codec_type,width,height,nb_read_frames,avg_frame_rate",
-                "-of", "json", str(candidate),
+                "-of",
+                "json",
+                str(candidate),
             ],
-            check=True, capture_output=True, text=True, timeout=60,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         metadata = json.loads(completed.stdout)
         stream = metadata["streams"][0]
