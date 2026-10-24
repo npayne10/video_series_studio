@@ -9,12 +9,12 @@ import pytest
 from vscs.infrastructure.production_execution.h3_live_acceptance import (
     H3IsolatedAcceptanceError,
 )
-from vscs.infrastructure.production_execution.minimax_h3_automated_execution import (
-    MiniMaxH3AutomatedExecutionError,
-)
 from vscs.infrastructure.production_execution.h3_live_preflight_cli import (
     initialize_disposable_scope,
     run_read_only_preflight,
+)
+from vscs.infrastructure.production_execution.minimax_h3_automated_execution import (
+    MiniMaxH3AutomatedExecutionError,
 )
 
 
