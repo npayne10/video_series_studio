@@ -7,9 +7,10 @@ import hashlib
 import json
 import shutil
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 
 from vscs.infrastructure.rendering import (
     ComfyUIClient,
@@ -344,7 +345,9 @@ class LiveMiniMaxH3ComfyUISpanProvider:
             seed=seed,
         )
         self.evidence_root = self.project_directory / ".vscs" / "h3_provider_jobs"
-        self.submission_guard: Callable[[MiniMaxH3SpanExecution, MiniMaxH3ComfyUICompiledJob], None] | None = None
+        self.submission_guard: (
+            Callable[[MiniMaxH3SpanExecution, MiniMaxH3ComfyUICompiledJob], None] | None
+        ) = None
 
     def probe_readiness(self) -> tuple[str, ...]:
         """Read-only ComfyUI and H3 dependency probe; never enqueue a prompt."""
