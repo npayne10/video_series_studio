@@ -250,12 +250,15 @@ def test_h3_automated_preflight_wires_all_governed_spans_to_provider_payloads(
 def test_h3_automated_execute_preflights_before_orchestration(tmp_path: Path) -> None:
     service, packages, plans, workflows, orchestrator, expected = _service(tmp_path)
 
-    result = service.execute("PT-VIDEO-001")
+    result = service.execute(
+        "PT-VIDEO-001", operator_authorized=True,
+        expected_preflight_fingerprint="plan-fingerprint",
+    )
 
     assert result is expected
-    assert packages.calls == 1
-    assert plans.calls == 1
-    assert workflows.calls == 2
+    assert packages.calls == 2
+    assert plans.calls == 2
+    assert workflows.calls == 4
     assert orchestrator.calls == 1
     assert orchestrator.compiled is packages.compiled
 
@@ -272,7 +275,10 @@ def test_h3_automated_execute_fails_before_provider_when_payload_preflight_fails
         MiniMaxH3AutomatedExecutionError,
         match="provider payload preflight failed",
     ):
-        service.execute("PT-VIDEO-001")
+        service.execute(
+            "PT-VIDEO-001", operator_authorized=True,
+            expected_preflight_fingerprint="plan-fingerprint",
+        )
 
     assert workflows.calls == 1
     assert orchestrator.calls == 0
