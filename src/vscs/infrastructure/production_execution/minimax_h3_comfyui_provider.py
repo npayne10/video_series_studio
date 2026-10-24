@@ -462,7 +462,16 @@ class LiveMiniMaxH3ComfyUISpanProvider:
                     candidate = (self.comfyui_output_directory / subfolder / filename).resolve(
                         strict=False
                     )
+                    allowed_root = self.comfyui_output_directory.resolve(strict=False)
+                    if not candidate.is_relative_to(allowed_root):
+                        raise MiniMaxH3ComfyUIProviderError(
+                            "H3 provider output escapes configured ComfyUI output directory"
+                        )
                     if candidate.is_file():
+                        if candidate.stat().st_size == 0:
+                            raise MiniMaxH3ComfyUIProviderError(
+                                "H3 provider returned an empty MP4 output"
+                            )
                         candidates.append(candidate)
         if len(candidates) != 1:
             raise MiniMaxH3ComfyUIProviderError(
