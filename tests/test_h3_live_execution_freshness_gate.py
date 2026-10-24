@@ -308,3 +308,54 @@ def test_h3_execute_rejects_changed_second_preflight_before_submission():
             operator_authorized=True,
             expected_preflight_fingerprint="CURRENT-PLAN",
         )
+
+
+def test_real_orchestrator_boundary_rechecks_each_span_before_provider():
+    """The second span must be stopped if persisted payload changes mid-run."""
+    from vscs.infrastructure.production_execution.minimax_h3_span_orchestration import (
+        GovernedMiniMaxH3SpanOrchestrationService,
+    )
+
+    service, compiled, _calls = _harness()
+    service._compiled_for_task = lambda task_id: compiled
+    verification_count = 0
+
+    def verify(package):
+        nonlocal verification_count
+        verification_count += 1
+        # Execute: two preflights; submission guard: one per span.
+        payload = "CHANGED" if verification_count >= 4 else "WORKFLOW-OK"
+        return SimpleNamespace(
+            plan_fingerprint="CURRENT-PLAN",
+            package_fingerprint="PACKAGE-1",
+            workflow_fingerprints=(payload,),
+            provider_profile_fingerprint="CURRENT-POLICY",
+            span_job_ids=("JOB-1", "JOB-2"),
+        )
+
+    service._preflight_compiled = verify
+    seen = []
+
+    class ControlledOrchestrator(GovernedMiniMaxH3SpanOrchestrationService):
+        def run(self, package, *, output_path=None):
+            plan = SimpleNamespace(fingerprint="CURRENT-PLAN")
+            for number in (1, 2):
+                span = SimpleNamespace(job_id=f"JOB-{number}")
+                self.submission_guard(package, plan, span)
+                seen.append(span.job_id)
+            pytest.fail("Second provider submission should have been blocked")
+
+    service.orchestrator = object.__new__(ControlledOrchestrator)
+    service.orchestrator.submission_guard = None
+    with pytest.raises(
+        h3.MiniMaxH3AutomatedExecutionError,
+        match="per-span persisted authority or payload changed",
+    ):
+        service.execute(
+            "TASK-1",
+            operator_authorized=True,
+            expected_preflight_fingerprint="CURRENT-PLAN",
+        )
+    assert seen == ["JOB-1"]
+    assert verification_count == 4
+    assert service.orchestrator.submission_guard is None
