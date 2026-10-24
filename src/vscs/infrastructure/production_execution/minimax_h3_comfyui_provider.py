@@ -344,6 +344,7 @@ class LiveMiniMaxH3ComfyUISpanProvider:
             seed=seed,
         )
         self.evidence_root = self.project_directory / ".vscs" / "h3_provider_jobs"
+        self.submission_guard = None
 
     def probe_readiness(self) -> tuple[str, ...]:
         """Read-only ComfyUI and H3 dependency probe; never enqueue a prompt."""
@@ -394,6 +395,11 @@ class LiveMiniMaxH3ComfyUISpanProvider:
                 "model_config_fingerprint": compiled.model_config_fingerprint,
             },
         }
+        if self.submission_guard is None:
+            raise MiniMaxH3ComfyUIProviderError(
+                "H3 live submission requires an authorized per-span payload guard"
+            )
+        self.submission_guard(execution, compiled)
         prompt_id = self.client.submit(payload)
         deadline = time.monotonic() + self.execution_timeout_seconds
         while time.monotonic() < deadline:
