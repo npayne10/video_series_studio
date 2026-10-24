@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from secrets import token_urlsafe
-from typing import TYPE_CHECKING, Protocol, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from .minimax_h3_automated_execution import MiniMaxH3AutomatedExecutionPreflight
 
@@ -188,7 +188,6 @@ class H3IsolatedAcceptanceCoordinator:
         )
         return validated, report_path
 
-
     def execute_single_authorized_run(
         self,
         token: str,
@@ -216,7 +215,9 @@ class H3IsolatedAcceptanceCoordinator:
         from .minimax_h3_comfyui_provider import LiveMiniMaxH3ComfyUISpanProvider
 
         if not isinstance(provider, LiveMiniMaxH3ComfyUISpanProvider):
-            raise H3IsolatedAcceptanceError("H3 live acceptance requires the genuine ComfyUI provider")
+            raise H3IsolatedAcceptanceError(
+                "H3 live acceptance requires the genuine ComfyUI provider"
+            )
         # Never allow a previous run to be overwritten or silently reused.
         final = self.output_root / f"{run_id}.mp4"
         safe_id = run_id.replace("-", "").replace("_", "")
@@ -237,8 +238,13 @@ class H3IsolatedAcceptanceCoordinator:
         )
         if result.task_id != prepared.task_id or result.shot_id != prepared.report.shot_id:
             raise H3IsolatedAcceptanceError("H3 live execution returned the wrong shot identity")
-        if result.plan_fingerprint != prepared.plan_fingerprint or result.final_path.resolve() != final.resolve():
-            raise H3IsolatedAcceptanceError("H3 live execution result is not the authorized plan/output")
+        if (
+            result.plan_fingerprint != prepared.plan_fingerprint
+            or result.final_path.resolve() != final.resolve()
+        ):
+            raise H3IsolatedAcceptanceError(
+                "H3 live execution result is not the authorized plan/output"
+            )
         if len(result.raw_span_paths) != 1:
             raise H3IsolatedAcceptanceError("H3 live execution produced an unexpected span count")
         # Read genuine persisted provider evidence, not caller-supplied assertions.
@@ -253,15 +259,24 @@ class H3IsolatedAcceptanceCoordinator:
             raise H3IsolatedAcceptanceError("H3 provider evidence cannot be decoded") from exc
         if not isinstance(provider_evidence, dict):
             raise H3IsolatedAcceptanceError("H3 provider evidence is invalid")
-        if Path(str(provider_evidence.get("output_path", ""))).resolve() != result.raw_span_paths[0].resolve():
-            raise H3IsolatedAcceptanceError("H3 provider evidence output does not match the returned raw span")
+        if (
+            Path(str(provider_evidence.get("output_path", ""))).resolve()
+            != result.raw_span_paths[0].resolve()
+        ):
+            raise H3IsolatedAcceptanceError(
+                "H3 provider evidence output does not match the returned raw span"
+            )
         if (
             provider_evidence.get("job_id") != prepared.report.span_job_ids[0]
-            or provider_evidence.get("workflow_fingerprint") != prepared.report.workflow_fingerprints[0]
-            or provider_evidence.get("model_config_fingerprint") != prepared.report.model_config_fingerprints[0]
+            or provider_evidence.get("workflow_fingerprint")
+            != prepared.report.workflow_fingerprints[0]
+            or provider_evidence.get("model_config_fingerprint")
+            != prepared.report.model_config_fingerprints[0]
             or not str(provider_evidence.get("prompt_id") or "").strip()
         ):
-            raise H3IsolatedAcceptanceError("H3 live provider evidence does not match prepared authority")
+            raise H3IsolatedAcceptanceError(
+                "H3 live provider evidence does not match prepared authority"
+            )
         import hashlib
 
         with result.raw_span_paths[0].open("rb") as handle:
