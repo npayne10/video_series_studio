@@ -358,9 +358,7 @@ class LiveMiniMaxH3ComfyUISpanProvider:
                 f"H3 ComfyUI read-only readiness probe failed: {exc}"
             ) from exc
         if not isinstance(raw, dict):
-            raise MiniMaxH3ComfyUIProviderError(
-                "H3 ComfyUI object_info response must be an object"
-            )
+            raise MiniMaxH3ComfyUIProviderError("H3 ComfyUI object_info response must be an object")
         required = set(MiniMaxH3ComfyUIWorkflowCompiler.REQUIRED_NODE_TYPES.values())
         missing = sorted(required.difference(raw))
         if missing:
