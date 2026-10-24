@@ -83,3 +83,27 @@ def seed_disposable_single_shot(
             reference.unlink(missing_ok=True)
         raise
     return {"reference": str(reference), "brief": str(brief), "status": "SEED_CREATED_NOT_GOVERNED"}
+
+
+def main() -> int:
+    """Explicit operator seed command; no authority or provider mutation."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Seed one disposable H3 acceptance reference")
+    parser.add_argument("--acceptance-root", type=Path, required=True)
+    parser.add_argument("--project-directory", type=Path, required=True)
+    args = parser.parse_args()
+    print(
+        json.dumps(
+            seed_disposable_single_shot(
+                acceptance_root=args.acceptance_root,
+                project_directory=args.project_directory,
+            ),
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
