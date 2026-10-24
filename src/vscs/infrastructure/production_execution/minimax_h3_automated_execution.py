@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 from vscs.application.acpp.reference_roles import ReferencePriority, ReferenceRole
 from vscs.application.production_execution.package_compilation import CompiledProductionPackage
@@ -380,7 +380,7 @@ class MiniMaxH3AutomatedExecutionService:
                     )
 
             provider.submission_guard = verify_payload
-            self.orchestrator.submission_guard = verify_span
+            cast(GovernedMiniMaxH3SpanOrchestrationService, self.orchestrator).submission_guard = verify_span
         try:
             return self.orchestrator.run(second_compiled, output_path=output_path)
         except MiniMaxH3SpanOrchestrationError as exc:
@@ -389,7 +389,7 @@ class MiniMaxH3AutomatedExecutionService:
             ) from exc
         finally:
             if real_orchestrator:
-                self.orchestrator.submission_guard = None
+                cast(GovernedMiniMaxH3SpanOrchestrationService, self.orchestrator).submission_guard = None
                 provider.submission_guard = None
 
     def _compiled_for_task(self, task_id: str) -> CompiledProductionPackage:
