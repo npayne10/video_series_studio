@@ -58,6 +58,9 @@ class H3IsolatedAcceptanceCoordinator:
         service_project = Path(service.project_directory).expanduser().resolve(strict=False)
         if not root.is_dir() or not project.is_dir():
             raise H3IsolatedAcceptanceError("Acceptance root and disposable project must exist")
+        marker = root / ".vscs_h3_disposable_acceptance"
+        if not marker.is_file() or marker.read_text(encoding="utf-8").strip() != "Q3.1.3.5.8":
+            raise H3IsolatedAcceptanceError("Acceptance root lacks the explicit disposable marker")
         if project == root or not project.is_relative_to(root):
             raise H3IsolatedAcceptanceError(
                 "H3 acceptance project must be a child of the designated disposable root"
