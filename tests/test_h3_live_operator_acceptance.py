@@ -19,8 +19,11 @@ def test_missing_live_authorization_blocks_before_provider(tmp_path: Path):
     coordinator, _, _, seen, _, evidence = _fixture(tmp_path)
     with pytest.raises(H3IsolatedAcceptanceError, match="authorization"):
         coordinator.execute_single_authorized_run(
-            "invalid", run_id="RUN-001", evidence_root=evidence,
-            expected_frames=12, expected_fps=24,
+            "invalid",
+            run_id="RUN-001",
+            evidence_root=evidence,
+            expected_frames=12,
+            expected_fps=24,
         )
     assert seen == ["TASK-TEST"]
 
@@ -32,8 +35,11 @@ def test_live_execution_refuses_non_governed_orchestrator(tmp_path: Path):
     )
     with pytest.raises(H3IsolatedAcceptanceError, match="governed orchestration"):
         coordinator.execute_single_authorized_run(
-            token, run_id="RUN-001", evidence_root=evidence,
-            expected_frames=12, expected_fps=24,
+            token,
+            run_id="RUN-001",
+            evidence_root=evidence,
+            expected_frames=12,
+            expected_fps=24,
         )
     assert seen == ["TASK-TEST", "TASK-TEST"]
     with pytest.raises(H3IsolatedAcceptanceError, match="consumed"):
@@ -44,8 +50,12 @@ def test_integrated_report_persists_provider_provenance_without_approval(tmp_pat
     coordinator, prepared, _, _, output, evidence = _fixture(tmp_path)
     provider_evidence = _provider(prepared)
     _, report_path = coordinator.validate_completed_output(
-        prepared, output_path=output, expected_frames=12, expected_fps=24,
-        evidence_root=evidence, run_id="RUN-001",
+        prepared,
+        output_path=output,
+        expected_frames=12,
+        expected_fps=24,
+        evidence_root=evidence,
+        run_id="RUN-001",
         provider_evidence=provider_evidence,
     )
     import json
