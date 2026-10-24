@@ -345,6 +345,43 @@ class LiveMiniMaxH3ComfyUISpanProvider:
         )
         self.evidence_root = self.project_directory / ".vscs" / "h3_provider_jobs"
 
+    def probe_readiness(self) -> tuple[str, ...]:
+        """Read-only ComfyUI and H3 dependency probe; never enqueue a prompt."""
+        try:
+            report = self.client.health()
+            if not report.healthy:
+                raise MiniMaxH3ComfyUIProviderError("ComfyUI health probe was not healthy")
+            raw = self.client.transport.request("GET", "/object_info")
+        except Exception as exc:
+            raise MiniMaxH3ComfyUIProviderError(
+                f"H3 ComfyUI read-only readiness probe failed: {exc}"
+            ) from exc
+        if not isinstance(raw, dict):
+            raise MiniMaxH3ComfyUIProviderError(
+                "H3 ComfyUI object_info response must be an object"
+            )
+        required = set(MiniMaxH3ComfyUIWorkflowCompiler.REQUIRED_NODE_TYPES.values())
+        missing = sorted(required.difference(raw))
+        if missing:
+            raise MiniMaxH3ComfyUIProviderError(
+                f"H3 ComfyUI is missing required node types: {', '.join(missing)}"
+            )
+        # The ComfyUI node schemas include model choice values. Verify every
+        # pinned H3 model is offered, not merely that generic loaders exist.
+        manifest = json.dumps(raw, ensure_ascii=False)
+        required_models = (
+            "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+            "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+            "minimax_h3_video_vae_fp16.safetensors",
+            "minimax_h3_audio_vae_fp32.safetensors",
+        )
+        missing_models = [name for name in required_models if name not in manifest]
+        if missing_models:
+            raise MiniMaxH3ComfyUIProviderError(
+                f"H3 ComfyUI model choices are missing: {', '.join(missing_models)}"
+            )
+        return tuple(sorted(required))
+
     def render(self, execution: MiniMaxH3SpanExecution) -> Path:
         compiled = self.compiler.compile(execution)
         payload: dict[str, object] = {
