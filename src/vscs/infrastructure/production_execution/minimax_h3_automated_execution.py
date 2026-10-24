@@ -343,7 +343,7 @@ class MiniMaxH3AutomatedExecutionService:
                     raise MiniMaxH3AutomatedExecutionError(
                         "H3 submission blocked: per-span persisted authority or payload changed"
                     )
-            self.orchestrator.submission_guard = verify_span
+            setattr(self.orchestrator, "submission_guard", verify_span)
         try:
             return self.orchestrator.run(second_compiled, output_path=output_path)
         except MiniMaxH3SpanOrchestrationError as exc:
@@ -352,7 +352,7 @@ class MiniMaxH3AutomatedExecutionService:
             ) from exc
         finally:
             if real_orchestrator:
-                self.orchestrator.submission_guard = None
+                setattr(self.orchestrator, "submission_guard", None)
 
     def _compiled_for_task(self, task_id: str) -> CompiledProductionPackage:
         normalized = task_id.strip()
