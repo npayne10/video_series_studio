@@ -107,6 +107,7 @@ def write_h3_acceptance_evidence(
     shot_id: str,
     plan_fingerprint: str,
     output: H3ValidatedOutput,
+    provider_evidence: dict[str, object] | None = None,
 ) -> Path:
     """Create a write-once, unreviewed report without replacing existing evidence."""
     project = Path(acceptance_project).resolve(strict=True)
@@ -136,6 +137,19 @@ def write_h3_acceptance_evidence(
         "qc_status": "unreviewed",
         "approved": False,
     }
+    if provider_evidence is not None:
+        payload["provider_provenance"] = {
+            key: provider_evidence.get(key)
+            for key in (
+                "provider_id",
+                "job_id",
+                "span_id",
+                "prompt_id",
+                "workflow_fingerprint",
+                "model_config_fingerprint",
+                "output_sha256",
+            )
+        }
     destination = root / f"{run_id}.json"
     try:
         with destination.open("x", encoding="utf-8") as handle:
