@@ -79,6 +79,7 @@ def seed_disposable_single_shot(
             json.dump(payload, handle, sort_keys=True, indent=2)
             handle.write("\n")
     except OSError:
-        reference.unlink(missing_ok=True) if not brief.exists() else None
+        if not brief.exists():
+            reference.unlink(missing_ok=True)
         raise
     return {"reference": str(reference), "brief": str(brief), "status": "SEED_CREATED_NOT_GOVERNED"}
