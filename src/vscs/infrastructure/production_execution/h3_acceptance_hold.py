@@ -48,7 +48,7 @@ def create_hold(acceptance_root: Path, project_directory: Path) -> dict[str, obj
         raise H3IsolatedAcceptanceError("H3 hold requires the initialized native seed project")
     if hold_path(root).exists():
         raise H3IsolatedAcceptanceError("H3 hold already exists; refusing overwrite")
-    evidence = {
+    evidence: dict[str, object] = {
         "phase": "20.19.1",
         "status": "H3_LIVE_GENERATION_ON_HOLD",
         "acceptance_root": str(root),
