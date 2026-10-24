@@ -114,3 +114,14 @@ def test_stale_ready_fixture_blocks_workflow_without_rewriting_records(tmp_path:
         service.preflight(compiled.task_id)
     assert calls == []
     assert tuple(path.read_bytes() for path in sources) == before
+
+
+def test_controlled_h3_dry_run_is_read_only_and_never_submits(tmp_path: Path):
+    service, compiled, calls, sources = _ready_service(tmp_path)
+    before = tuple(path.read_bytes() for path in sources)
+    report = service.dry_run(compiled.task_id)
+    assert report.task_id == compiled.task_id
+    assert report.span_count == 1
+    assert calls
+    assert tuple(path.read_bytes() for path in sources) == before
+    assert not (tmp_path / "renders").exists()
