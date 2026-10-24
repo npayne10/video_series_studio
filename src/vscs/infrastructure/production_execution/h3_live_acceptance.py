@@ -134,7 +134,6 @@ class H3IsolatedAcceptanceCoordinator:
             raise H3IsolatedAcceptanceError("H3 authorization is stale after fresh preflight")
         return prepared
 
-
     def validate_completed_output(
         self,
         prepared: H3IsolatedAcceptancePreparation,
