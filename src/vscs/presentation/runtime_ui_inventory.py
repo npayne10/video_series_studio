@@ -88,7 +88,7 @@ def collect_runtime_ui_inventory(window: MainWindow) -> dict[str, Any]:
     }
 
 
-def write_runtime_ui_inventory(window: QMainWindow, output: Path) -> Path:
+def write_runtime_ui_inventory(window: MainWindow, output: Path) -> Path:
     """Write inventory to a new file; refuse overwrites and project directories."""
     target = output.expanduser().resolve(strict=False)
     with target.open("x", encoding="utf-8") as handle:
