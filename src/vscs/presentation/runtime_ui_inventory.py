@@ -18,13 +18,15 @@ from PySide6.QtWidgets import QMainWindow, QMenu, QStackedWidget, QToolBar
 
 def collect_runtime_ui_inventory(window: QMainWindow) -> dict[str, Any]:
     """Record runtime menus, navigation, instantiated workspaces and action aliases."""
-    stack = getattr(window, "content_stack")
-    navigation = getattr(window, "navigation")
+    stack = window.content_stack
+    navigation = window.navigation
     if not isinstance(stack, QStackedWidget):
         raise TypeError("Main window has no QStackedWidget content_stack")
     workspaces: list[dict[str, Any]] = []
     for index in range(stack.count()):
         widget = stack.widget(index)
+        if widget is None:
+            raise RuntimeError(f"Missing stacked widget at index {index}")
         item = navigation.item(index) if index < navigation.count() else None
         workspaces.append(
             {
