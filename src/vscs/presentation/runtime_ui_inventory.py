@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QMainWindow, QMenu, QStackedWidget
+from PySide6.QtWidgets import QMainWindow, QMenu, QStackedWidget, QToolBar
 
 
 def collect_runtime_ui_inventory(window: QMainWindow) -> dict[str, Any]:
@@ -54,7 +54,7 @@ def collect_runtime_ui_inventory(window: QMainWindow) -> dict[str, Any]:
             )
         menus.append({"name": menu.title().replace("&", ""), "entries": entries})
     toolbar_actions: list[str] = []
-    for toolbar in window.findChildren(__import__("PySide6.QtWidgets", fromlist=["QToolBar"]).QToolBar):
+    for toolbar in window.findChildren(QToolBar):
         for action in toolbar.actions():
             if isinstance(action, QAction) and not action.isSeparator():
                 toolbar_actions.append(action.text().replace("&", ""))
