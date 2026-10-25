@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 from PySide6.QtGui import QAction
@@ -104,24 +105,34 @@ def main() -> int:
     owned_app = app is None
     if owned_app:
         app = QApplication([])
-    context = build_application_context(
-        BootstrapOptions(
-            mode=StartupMode.TEST,
-            configure_logging=False,
-            discover_plugins=False,
-            load_plugins=False,
-            validate_environment=False,
+    with TemporaryDirectory(prefix="vscs-ui-audit-") as temporary:
+        context = build_application_context(
+            BootstrapOptions(
+                mode=StartupMode.TEST,
+                config_path=Path(temporary) / "settings.yaml",
+                plugin_root=Path(temporary) / "plugins",
+                configure_logging=False,
+                discover_plugins=False,
+                load_plugins=False,
+                validate_environment=False,
+            )
         )
-    )
-    try:
-        window = context.create_main_window()
         try:
-            path = write_runtime_ui_inventory(window, args.output)
-            print(json.dumps({"status": "INVENTORY_CREATED_NO_PROVIDER_SUBMISSION", "path": str(path)}))
+            window = context.create_main_window()
+            try:
+                path = write_runtime_ui_inventory(window, args.output)
+                print(
+                    json.dumps(
+                        {
+                            "status": "INVENTORY_CREATED_NO_PROVIDER_SUBMISSION",
+                            "path": str(path),
+                        }
+                    )
+                )
+            finally:
+                window.close()
         finally:
-            window.close()
-    finally:
-        context.shutdown()
+            context.shutdown()
     return 0
 
 
