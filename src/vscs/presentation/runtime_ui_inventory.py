@@ -10,13 +10,16 @@ import argparse
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QMainWindow, QMenu, QStackedWidget, QToolBar
+from PySide6.QtWidgets import QMenu, QStackedWidget, QToolBar
+
+if TYPE_CHECKING:
+    from vscs.presentation.windows.main_window import MainWindow
 
 
-def collect_runtime_ui_inventory(window: QMainWindow) -> dict[str, Any]:
+def collect_runtime_ui_inventory(window: MainWindow) -> dict[str, Any]:
     """Record runtime menus, navigation, instantiated workspaces and action aliases."""
     stack = window.content_stack
     navigation = window.navigation
