@@ -43,12 +43,12 @@ def assess_completeness(spec: CAPStructuredSpecification) -> CAPCompletenessAsse
     unverified = tuple(
         key for key in required
         if spec.canonical_attributes.get(key, "").strip()
-        and spec.origin == "story_intelligence_proposal"
+
     )
     return CAPCompletenessAssessment(
         spec.category,
         required,
         missing,
         unverified,
-        not missing and not unverified and bool(spec.continuity_rules),
+        False,  # No claim-level source verification or approved reference authority here.
     )
