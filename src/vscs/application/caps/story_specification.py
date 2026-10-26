@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from vscs.application.caps.detail_expansion import CanonicalDetailExpansion, expand_details
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
@@ -36,6 +37,7 @@ class StoryCAPProposal:
     specification: CAPStructuredSpecification
     suggested_attribute_key: str
     limitations: tuple[str, ...]
+    detail_expansion: CanonicalDetailExpansion | None = None
 
 
 class StoryCAPSpecificationService:
@@ -84,6 +86,7 @@ class StoryCAPSpecificationService:
                 "Provider-inferred appearances and dimensions are proposals, not established canon.",
                 "Review missing dependencies, variants, and prompt fidelity before saving.",
             ),
+            expand_details(proposed, draft, approved_story_context),
         )
 
     def save_reviewed(
