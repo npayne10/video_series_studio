@@ -81,7 +81,9 @@ class StoryCAPSpecificationDialog(QDialog):
                     "allowed_variants": mapping,
                     "master_prompt": self.prompt.toPlainText(),
                     "continuity_rules": tuple(
-                        item.strip() for item in self.rules.toPlainText().splitlines() if item.strip()
+                        item.strip()
+                        for item in self.rules.toPlainText().splitlines()
+                        if item.strip()
                     ),
                 }
             )
