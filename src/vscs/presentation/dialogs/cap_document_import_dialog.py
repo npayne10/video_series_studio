@@ -118,7 +118,9 @@ class CAPDocumentImportDialog(QDialog):
         except (CAPDocumentImportError, OSError, ValueError) as exc:
             QMessageBox.warning(self, "CAP Document Import", str(exc))
             return
-        self.source_label.setText(f"{Path(filename).name} — SHA256 {self.proposals[0].source_sha256}")
+        self.source_label.setText(
+            f"{Path(filename).name} — SHA256 {self.proposals[0].source_sha256}"
+        )
         self.proposal_selector.clear()
         for proposal in self.proposals:
             self.proposal_selector.addItem(
@@ -155,8 +157,15 @@ class CAPDocumentImportDialog(QDialog):
             return
         try:
             attributes = parse_mapping_lines(self.attributes.toPlainText())
-            raw_variants = parse_mapping_lines(self.variants.toPlainText()) if self.variants.toPlainText().strip() else {}
-            variants = {key: tuple(part.strip() for part in value.split("|")) for key, value in raw_variants.items()}
+            raw_variants = (
+                parse_mapping_lines(self.variants.toPlainText())
+                if self.variants.toPlainText().strip()
+                else {}
+            )
+            variants = {
+                key: tuple(part.strip() for part in value.split("|"))
+                for key, value in raw_variants.items()
+            }
             specification = proposal.to_draft_specification(
                 target_asset_id=asset_id,
                 attributes=attributes,
