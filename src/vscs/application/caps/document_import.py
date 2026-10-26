@@ -146,7 +146,9 @@ def preview_cap_docx(path: Path) -> tuple[CAPDocumentProposal, ...]:
 
         for line in body:
             if line in _SECTION_NAMES or line in {
-                "Revision History", "Future Production Variants", "Variant Rules"
+                "Revision History",
+                "Future Production Variants",
+                "Variant Rules",
             }:
                 if active and chunks:
                     sections[active] = "\n".join(chunks).strip()
