@@ -44,9 +44,7 @@ def test_batch_deduplicates_and_skips_existing_specifications():
     assert batch.candidates[0].asset_id == "CAP-PRP-001"
     assert len(batch.candidates[0].story_fingerprint) == 64
     assert len(batch.skipped) == 1
-    generator.propose.assert_called_once_with(
-        "CAP-PRP-001", "A control room and vessel"
-    )
+    generator.propose.assert_called_once_with("CAP-PRP-001", "A control room and vessel")
     generator.specifications.save_draft.assert_not_called()
 
 
@@ -65,8 +63,6 @@ def test_locked_story_may_be_previewed_without_writes():
     generator = Mock()
     generator.specifications.get.return_value = None
     generator.propose.return_value = Mock()
-    result = StoryCAPBatchService(stories, generator).preview(
-        "STORY-001", ("CAP-LOC-001",)
-    )
+    result = StoryCAPBatchService(stories, generator).preview("STORY-001", ("CAP-LOC-001",))
     assert len(result.candidates) == 1
     generator.specifications.save_draft.assert_not_called()
