@@ -32,7 +32,7 @@ def test_cap_wire_response_round_trips_to_legacy_domain_defaults():
         "source_summary": "",
         "canonical_facts": [],
         "contradictions": [],
-        "confidence": {key: 0.0 for key in _StrictCAPConfidence.model_fields},
+        "confidence": dict.fromkeys(_StrictCAPConfidence.model_fields, 0.0),
     }
     wire = _StrictGeneratedCAPDraft.model_validate(payload)
     wire_data = wire.model_dump()
