@@ -159,15 +159,15 @@ class OpenAICAPGenerationProvider:
             f"Category: {request.asset_category}\n\n"
             f"Approved canon analysis:\n{analysis.model_dump_json(indent=2)}"
         )
-        draft = self._parse(
+        wire_draft = self._parse(
             instructions=instructions,
             input_text=input_text,
             result_type=_StrictGeneratedCAPDraft,
             stage="CAP Draft Package generation",
         )
-        wire_data = draft.model_dump()
+        wire_data = wire_draft.model_dump()
         wire_data["production_metadata"] = {
-            entry.key: entry.value for entry in draft.production_metadata
+            entry.key: entry.value for entry in wire_draft.production_metadata
         }
         draft = GeneratedCAPDraft.model_validate(wire_data)
         if not draft.canonical_facts:
