@@ -27,7 +27,7 @@ def test_cap_wire_response_round_trips_to_legacy_domain_defaults():
         "semantic_tags": [],
         "production_classifications": [],
         "behaviour_references": [],
-        "production_metadata": {},
+        "production_metadata": [],
         "unresolved_questions": [],
         "source_summary": "",
         "canonical_facts": [],
@@ -35,6 +35,10 @@ def test_cap_wire_response_round_trips_to_legacy_domain_defaults():
         "confidence": {key: 0.0 for key in _StrictCAPConfidence.model_fields},
     }
     wire = _StrictGeneratedCAPDraft.model_validate(payload)
-    domain = GeneratedCAPDraft.model_validate(wire.model_dump())
+    wire_data = wire.model_dump()
+    wire_data["production_metadata"] = {
+        entry.key: entry.value for entry in wire.production_metadata
+    }
+    domain = GeneratedCAPDraft.model_validate(wire_data)
     assert domain.production_metadata == {}
     assert domain.title == "Control Room"
