@@ -144,22 +144,18 @@ def preview_cap_docx(path: Path) -> tuple[CAPDocumentProposal, ...]:
         active: str | None = None
         chunks: list[str] = []
 
-        def flush() -> None:
-            if active and chunks:
-                sections[active] = "\n".join(chunks).strip()
-
         for line in body:
-            if line in _SECTION_NAMES:
-                flush()
-                active = _SECTION_NAMES[line]
-                chunks = []
-            elif line in {"Revision History", "Future Production Variants", "Variant Rules"}:
-                flush()
-                active = None
+            if line in _SECTION_NAMES or line in {
+                "Revision History", "Future Production Variants", "Variant Rules"
+            }:
+                if active and chunks:
+                    sections[active] = "\n".join(chunks).strip()
+                active = _SECTION_NAMES.get(line)
                 chunks = []
             elif active:
                 chunks.append(line)
-        flush()
+        if active and chunks:
+            sections[active] = "\n".join(chunks).strip()
         warnings = []
         if not sections.get("master_prompt"):
             warnings.append("Missing Master Creation Prompt")
@@ -167,7 +163,9 @@ def preview_cap_docx(path: Path) -> tuple[CAPDocumentProposal, ...]:
             warnings.append("Missing Visual Design Intent")
         if not sections.get("location_identity") and category is AssetCategory.LOCATION:
             warnings.append("Location identity requires manual review")
-        proposals.append(CAPDocumentProposal(source_id, name, category, digest, sections, tuple(warnings)))
+        proposals.append(
+            CAPDocumentProposal(source_id, name, category, digest, sections, tuple(warnings))
+        )
     if not proposals:
         raise CAPDocumentImportError("Document contains no supported CAP categories")
     return tuple(proposals)
@@ -180,8 +178,12 @@ class CAPDocumentImportService:
         self.specifications = specifications
 
     def apply_reviewed(
-        self, proposal: CAPDocumentProposal, *, target_asset_id: str,
-        attributes: dict[str, str], allowed_variants: dict[str, tuple[str, ...]] | None = None,
+        self,
+        proposal: CAPDocumentProposal,
+        *,
+        target_asset_id: str,
+        attributes: dict[str, str],
+        allowed_variants: dict[str, tuple[str, ...]] | None = None,
     ) -> CAPStructuredSpecification:
         spec = proposal.to_draft_specification(
             target_asset_id=target_asset_id,
@@ -190,5 +192,7 @@ class CAPDocumentImportService:
         )
         existing = self.specifications.get(target_asset_id)
         if existing is not None:
-            raise CAPSpecificationError("Existing structured CAP draft requires separate revision review")
+            raise CAPSpecificationError(
+                "Existing structured CAP draft requires separate revision review"
+            )
         return self.specifications.save_draft(spec)
