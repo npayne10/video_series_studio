@@ -40,6 +40,18 @@ class StoryCAPSpecificationDialog(QDialog):
         self.completeness = QLabel()
         self.completeness.setWordWrap(True)
         self.attributes.textChanged.connect(self._update_completeness)
+        self.detail_evidence = QTextEdit()
+        self.detail_evidence.setReadOnly(True)
+        self.detail_evidence.setMaximumHeight(140)
+        expansion = proposal.detail_expansion
+        if expansion is not None:
+            self.detail_evidence.setPlainText(
+                "\\n".join(
+                    f"{candidate.field}: {candidate.authority.value}"
+                    + (f" | {candidate.evidence}" if candidate.evidence else "")
+                    for candidate in expansion.candidates
+                )
+            )
         self.variants = QTextEdit()
         self.variants.setPlaceholderText("Optional variant=value1|value2")
         self.prompt = QTextEdit(spec.master_prompt)
@@ -48,6 +60,7 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Design intent", self.intent)
         form.addRow("Canonical attributes (key=value)", self.attributes)
         form.addRow("Completeness (not approval)", self.completeness)
+        form.addRow("Source evidence / design status", self.detail_evidence)
         form.addRow("Allowed variants", self.variants)
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
