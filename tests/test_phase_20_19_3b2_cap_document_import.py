@@ -17,7 +17,7 @@ from vscs.domain.assets.models import AssetCategory
 def _docx(tmp_path, text):
     path = tmp_path / "source.docx"
     ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-    paragraphs = "".join(f'<w:p><w:r><w:t>{line}</w:t></w:r></w:p>' for line in text)
+    paragraphs = "".join(f"<w:p><w:r><w:t>{line}</w:t></w:r></w:p>" for line in text)
     with ZipFile(path, "w") as archive:
         archive.writestr(
             "word/document.xml",
@@ -114,7 +114,9 @@ def test_import_requires_human_mapping_and_an_empty_slot(tmp_path):
     specifications.save_draft.side_effect = lambda specification: specification
     service = CAPDocumentImportService(specifications)
     with pytest.raises(CAPSpecificationError, match="category-specific"):
-        service.apply_reviewed(proposal, target_asset_id="CAP-LOC-001", attributes={"hair": "brown"})
+        service.apply_reviewed(
+            proposal, target_asset_id="CAP-LOC-001", attributes={"hair": "brown"}
+        )
     specifications.save_draft.assert_not_called()
 
     saved = service.apply_reviewed(
