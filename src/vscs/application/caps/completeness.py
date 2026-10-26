@@ -38,9 +38,7 @@ def assess_completeness(spec: CAPStructuredSpecification) -> CAPCompletenessAsse
     """
     required = REQUIRED_FIELDS.get(spec.category, ("identity",))
     missing = tuple(key for key in required if not spec.canonical_attributes.get(key, "").strip())
-    unverified = tuple(
-        key for key in required if spec.canonical_attributes.get(key, "").strip()
-    )
+    unverified = tuple(key for key in required if spec.canonical_attributes.get(key, "").strip())
     return CAPCompletenessAssessment(
         spec.category,
         required,
