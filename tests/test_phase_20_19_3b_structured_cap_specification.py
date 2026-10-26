@@ -7,10 +7,10 @@ import pytest
 from pydantic import ValidationError
 
 from vscs.application.caps.structured_specification import (
+    SPECIFICATION_METADATA_KEY,
     CAPSpecificationError,
     CAPStructuredSpecification,
     CAPStructuredSpecificationService,
-    SPECIFICATION_METADATA_KEY,
 )
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CAPStatus
@@ -55,9 +55,7 @@ def test_character_and_location_specs_are_distinct():
     )
     char.validate_category_contract()
     with pytest.raises(CAPSpecificationError):
-        char.model_copy(
-            update={"category": AssetCategory.LOCATION}
-        ).validate_category_contract()
+        char.model_copy(update={"category": AssetCategory.LOCATION}).validate_category_contract()
 
 
 def test_bad_source_digest_fails_validation():
@@ -119,9 +117,7 @@ def test_stored_wrong_asset_identity_is_rejected():
     caps = Mock()
     caps.get.return_value = SimpleNamespace(
         asset_id="CAP-LOC-002",
-        production_metadata={
-            SPECIFICATION_METADATA_KEY: _spec().model_dump_json()
-        },
+        production_metadata={SPECIFICATION_METADATA_KEY: _spec().model_dump_json()},
     )
     with pytest.raises(CAPSpecificationError, match="identity mismatch"):
         CAPStructuredSpecificationService(caps).get("CAP-LOC-002")
