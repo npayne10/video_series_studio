@@ -33,7 +33,7 @@ def test_each_category_reports_missing_detail_without_inventing_it(category):
 
 
 def test_fully_populated_story_proposal_is_still_unverified():
-    fields = {key: "Proposed detail" for key in REQUIRED_FIELDS[AssetCategory.LOCATION]}
+    fields = dict.fromkeys(REQUIRED_FIELDS[AssetCategory.LOCATION], "Proposed detail")
     result = assess_completeness(_spec(AssetCategory.LOCATION, fields))
     assert not result.missing
     assert result.unverified
@@ -41,7 +41,7 @@ def test_fully_populated_story_proposal_is_still_unverified():
 
 
 def test_reviewed_document_does_not_establish_claim_level_source_authority():
-    fields = {key: "Reviewed detail" for key in REQUIRED_FIELDS[AssetCategory.PROP]}
+    fields = dict.fromkeys(REQUIRED_FIELDS[AssetCategory.PROP], "Reviewed detail")
     spec = _spec(AssetCategory.PROP, fields, origin="docx_import_reviewed")
     assert not assess_completeness(spec).ready_for_image_review
     assert assess_completeness(spec).unverified
