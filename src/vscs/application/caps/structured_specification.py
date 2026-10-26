@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from vscs.application.caps.service import CAPError, CAPService
+from vscs.application.caps.service import CAPService
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CAPStatus, CAPUpdate
 
@@ -27,19 +27,25 @@ _CATEGORY_FIELDS: dict[AssetCategory, frozenset[str]] = {
         {"layout", "scale", "architecture", "materials", "fixtures", "spatial_anchors", "windows", "doors"}
     ),
     AssetCategory.SHIP: frozenset(
-        {"dimensions", "silhouette", "hull", "markings", "propulsion", "interior_relationships"}
+        {
+            "dimensions", "silhouette", "hull", "markings", "propulsion", "interior_relationships"
+        }
     ),
     AssetCategory.VEHICLE: frozenset(
         {"dimensions", "silhouette", "hull", "markings", "propulsion", "interior_relationships"}
     ),
     AssetCategory.PROP: frozenset(
-        {"geometry", "materials", "components", "controls", "display", "operating_states"}
+        {
+            "geometry", "materials", "components", "controls", "display", "operating_states"
+        }
     ),
     AssetCategory.TECHNOLOGY: frozenset(
         {"geometry", "materials", "components", "controls", "display", "operating_states"}
     ),
     AssetCategory.ENVIRONMENT: frozenset(
-        {"terrain", "atmosphere", "sky", "climate", "illumination", "geography"}
+        {
+            "terrain", "atmosphere", "sky", "climate", "illumination", "geography"
+        }
     ),
     AssetCategory.PLANET: frozenset(
         {"terrain", "atmosphere", "sky", "climate", "illumination", "geography"}
@@ -91,7 +97,10 @@ class CAPStructuredSpecification(BaseModel):
     @field_validator("allowed_variants")
     @classmethod
     def validate_variants(cls, value: dict[str, tuple[str, ...]]) -> dict[str, tuple[str, ...]]:
-        if any(not key.strip() or not items or any(not item.strip() for item in items) for key, items in value.items()):
+        if any(
+            not key.strip() or not items or any(not item.strip() for item in items)
+            for key, items in value.items()
+        ):
             raise ValueError("Allowed variant names and choices must not be empty")
         return value
 
