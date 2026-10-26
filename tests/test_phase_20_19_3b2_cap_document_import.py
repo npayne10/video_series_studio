@@ -111,6 +111,7 @@ def test_import_requires_human_mapping_and_an_empty_slot(tmp_path):
     )[0]
     specifications = Mock()
     specifications.get.return_value = None
+    specifications.save_draft.side_effect = lambda specification: specification
     service = CAPDocumentImportService(specifications)
     with pytest.raises(CAPSpecificationError, match="category-specific"):
         service.apply_reviewed(proposal, target_asset_id="CAP-LOC-001", attributes={"hair": "brown"})
