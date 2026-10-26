@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
-from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
 from vscs.presentation.dialogs.story_cap_specification_dialog import (
     StoryCAPSpecificationDialog,
@@ -28,9 +28,7 @@ from vscs.presentation.dialogs.story_cap_specification_dialog import (
 class StoryCAPBatchDialog(QDialog):
     """Operator-controlled queue; rejected/cancelled proposals never write."""
 
-    def __init__(
-        self, generator: CAPGeneratorService, parent: QWidget | None = None
-    ) -> None:
+    def __init__(self, generator: CAPGeneratorService, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Approved Story → CAP Batch Review")
         self.setMinimumSize(760, 490)
@@ -121,9 +119,7 @@ class StoryCAPBatchDialog(QDialog):
             )
             if confirm != QMessageBox.StandardButton.Yes:
                 return
-            self.review_service.save_reviewed(
-                story_id, dialog.reviewed(), item.story_fingerprint
-            )
+            self.review_service.save_reviewed(story_id, dialog.reviewed(), item.story_fingerprint)
         except (StoryBatchError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(self, "CAP Batch Review", str(exc))
             return
