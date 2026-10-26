@@ -33,6 +33,8 @@ from vscs.application.caps import (
     CAPGeneratorService,
     CAPService,
 )
+from vscs.application.caps.story_specification import StoryCAPSpecificationService
+from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
 from vscs.domain.caps import (
     CanonicalAssetProfile,
     CanonicalReference,
@@ -48,6 +50,7 @@ from vscs.domain.caps import (
 from vscs.infrastructure.ai.provider import GeneratedCAPDraft
 from vscs.presentation.dialogs.cap_document_import_dialog import CAPDocumentImportDialog
 from vscs.presentation.dialogs.cap_draft_review_dialog import CAPDraftReviewDialog
+from vscs.presentation.dialogs.story_cap_specification_dialog import StoryCAPSpecificationDialog
 
 
 class CanonicalReferenceEditorDialog(QDialog):
@@ -432,6 +435,8 @@ class CAPManagerWidget(QWidget):
             self.status_filter.addItem(status.value.title(), status)
         self.generate_button = QPushButton("Generate CAP")
         self.generate_button.setToolTip("Generate and review a CAP Draft Package")
+        self.story_spec_button = QPushButton("Story → CAP Draft…")
+        self.story_spec_button.setToolTip("Generate a proposed structured CAP for human review")
         self.import_button = QPushButton("Import CAP DOCX…")
         self.import_button.setToolTip("Review document sections and save to an existing Draft CAP")
         self.add_button = QPushButton("New CAP")
@@ -445,6 +450,7 @@ class CAPManagerWidget(QWidget):
         controls.addWidget(self.status_filter)
         controls.addWidget(self.generate_button)
         controls.addWidget(self.import_button)
+        controls.addWidget(self.story_spec_button)
         controls.addWidget(self.add_button)
         controls.addWidget(self.edit_button)
         controls.addWidget(self.delete_button)
@@ -468,6 +474,7 @@ class CAPManagerWidget(QWidget):
         self.status_filter.currentIndexChanged.connect(self.refresh)
         self.generate_button.clicked.connect(self._generate)
         self.import_button.clicked.connect(self._import_document)
+        self.story_spec_button.clicked.connect(self._story_specification)
         self.add_button.clicked.connect(self._add)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
@@ -510,6 +517,7 @@ class CAPManagerWidget(QWidget):
     def _set_enabled(self, enabled: bool) -> None:
         self.generate_button.setEnabled(enabled and self.generator is not None)
         self.import_button.setEnabled(enabled)
+        self.story_spec_button.setEnabled(enabled and self.generator is not None)
         self.add_button.setEnabled(enabled)
         self.edit_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
@@ -585,6 +593,45 @@ class CAPManagerWidget(QWidget):
                 "It remains non-canonical until approved through the normal CAP review process."
             ),
         )
+
+    def _story_specification(self) -> None:
+        if self.generator is None:
+            return
+        asset_id = self._selected_asset_id()
+        if asset_id is None:
+            QMessageBox.information(self, "Story CAP Draft", "Select an existing Draft CAP first.")
+            return
+        try:
+            profile = self.caps.get(asset_id)
+            if profile.status is not CAPStatus.DRAFT:
+                QMessageBox.warning(self, "Story CAP Draft", "Only Draft CAPs may be updated.")
+                return
+            story_context, accepted = QInputDialog.getMultiLineText(
+                self,
+                "Approved Story Context",
+                "Paste the approved Story passage for this asset (not an unapproved idea):",
+            )
+            if not accepted or not story_context.strip():
+                return
+            service = StoryCAPSpecificationService(
+                self.generator, CAPStructuredSpecificationService(self.caps)
+            )
+            proposal = service.propose(asset_id, story_context)
+            dialog = StoryCAPSpecificationDialog(proposal, self)
+            if not dialog.exec():
+                return
+            if QMessageBox.question(
+                self,
+                "Save Unapproved CAP Specification?",
+                f"Store reviewed structured CAP Draft for {asset_id}? No CAP approval or image generation.",
+            ) != QMessageBox.StandardButton.Yes:
+                return
+            service.save_reviewed(dialog.reviewed())
+        except (CAPError, CAPGenerationError, ValueError) as exc:
+            QMessageBox.warning(self, "Story CAP Draft", str(exc))
+            return
+        self.refresh()
+        QMessageBox.information(self, "CAP Draft Saved", "Draft specification saved for review.")
 
     def _import_document(self) -> None:
         try:
