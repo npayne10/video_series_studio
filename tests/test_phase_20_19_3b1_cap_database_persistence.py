@@ -100,12 +100,8 @@ def test_round_trip_sqlite_retains_legacy_metadata_and_revision(cap_services):
 def test_project_asset_identity_and_categories_are_isolated(cap_services):
     caps, _ = cap_services
     service = CAPStructuredSpecificationService(caps)
-    service.save_draft(
-        _spec("CAP-LOC-001", AssetCategory.LOCATION, "layout", "Unchanging room")
-    )
-    service.save_draft(
-        _spec("CAP-CHR-001", AssetCategory.CHARACTER, "face", "Distinct anatomy")
-    )
+    service.save_draft(_spec("CAP-LOC-001", AssetCategory.LOCATION, "layout", "Unchanging room"))
+    service.save_draft(_spec("CAP-CHR-001", AssetCategory.CHARACTER, "face", "Distinct anatomy"))
     assert service.get("CAP-LOC-001").category == AssetCategory.LOCATION
     assert service.get("CAP-CHR-001").category == AssetCategory.CHARACTER
     assert service.get("CAP-LOC-001").fingerprint() != service.get("CAP-CHR-001").fingerprint()
@@ -116,9 +112,7 @@ def test_approved_cap_cannot_be_mutated_by_specification_service(cap_services):
     service = CAPStructuredSpecificationService(caps)
     caps.update("CAP-LOC-001", CAPUpdate(status=CAPStatus.APPROVED))
     with pytest.raises(CAPSpecificationError, match="Draft"):
-        service.save_draft(
-            _spec("CAP-LOC-001", AssetCategory.LOCATION, "layout", "New layout")
-        )
+        service.save_draft(_spec("CAP-LOC-001", AssetCategory.LOCATION, "layout", "New layout"))
     assert service.get("CAP-LOC-001") is None
 
 
@@ -126,9 +120,7 @@ def test_missing_or_wrong_category_is_refused_before_persistence(cap_services):
     caps, _ = cap_services
     service = CAPStructuredSpecificationService(caps)
     with pytest.raises(CAPSpecificationError, match="category"):
-        service.save_draft(
-            _spec("CAP-LOC-001", AssetCategory.PROP, "geometry", "Console")
-        )
+        service.save_draft(_spec("CAP-LOC-001", AssetCategory.PROP, "geometry", "Console"))
     assert service.get("CAP-LOC-001") is None
 
 
