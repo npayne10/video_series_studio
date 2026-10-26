@@ -32,6 +32,13 @@ class _StrictCAPConfidence(BaseModel):
     overall: float = Field(ge=0.0, le=1.0)
 
 
+class _MetadataEntry(BaseModel):
+    """Explicit metadata pair, avoiding dynamic JSON object keys in strict schemas."""
+
+    key: str
+    value: str
+
+
 class _StrictGeneratedCAPDraft(BaseModel):
     """Strict API response model; legacy domain defaults remain unchanged."""
 
@@ -45,7 +52,7 @@ class _StrictGeneratedCAPDraft(BaseModel):
     semantic_tags: tuple[str, ...]
     production_classifications: tuple[str, ...]
     behaviour_references: tuple[str, ...]
-    production_metadata: dict[str, str]
+    production_metadata: tuple[_MetadataEntry, ...]
     unresolved_questions: tuple[str, ...]
     source_summary: str
     canonical_facts: tuple[ExtractedCanonicalFact, ...]
@@ -138,7 +145,7 @@ class OpenAICAPGenerationProvider:
             "an uncertainty, contradiction, or unsupported inference into canon. Preserve all "
             "uncertainties as unresolved_questions. Copy canonical_facts and contradictions into "
             "the result. Also emit structured functional_capabilities, semantic_tags, "
-            "production_classifications, behaviour_references, and production_metadata only when "
+            "production_classifications, behaviour_references, and production_metadata key/value entries only when "
             "they are directly supported by the approved canonical facts. Functional capabilities "
             "must describe what the asset can actually do in production, not visual adjectives. "
             "Continuity rules and prohibited variations must be explicit production constraints. "
@@ -158,7 +165,11 @@ class OpenAICAPGenerationProvider:
             result_type=_StrictGeneratedCAPDraft,
             stage="CAP Draft Package generation",
         )
-        draft = GeneratedCAPDraft.model_validate(draft.model_dump())
+        wire_data = draft.model_dump()
+        wire_data["production_metadata"] = {
+            entry.key: entry.value for entry in draft.production_metadata
+        }
+        draft = GeneratedCAPDraft.model_validate(wire_data)
         if not draft.canonical_facts:
             draft = draft.model_copy(update={"canonical_facts": analysis.canonical_facts})
         if not draft.unresolved_questions:
