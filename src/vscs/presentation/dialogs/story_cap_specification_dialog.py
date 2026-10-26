@@ -46,7 +46,7 @@ class StoryCAPSpecificationDialog(QDialog):
         expansion = proposal.detail_expansion
         if expansion is not None:
             self.detail_evidence.setPlainText(
-                "\\n".join(
+                "\n".join(
                     f"{candidate.field}: {candidate.authority.value}"
                     + (f" | {candidate.evidence}" if candidate.evidence else "")
                     for candidate in expansion.candidates
