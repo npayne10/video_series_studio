@@ -5,17 +5,52 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any, TypeVar, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from vscs.domain.caps.generation import (
     CanonicalFactExtraction,
     CAPCanonAnalysis,
     CAPGenerationRequest,
+    ExtractedCanonicalFact,
     GeneratedCAPDraft,
 )
 from vscs.infrastructure.ai.provider import AIProviderError
 
 StructuredResult = TypeVar("StructuredResult", bound=BaseModel)
+
+
+class _StrictCAPConfidence(BaseModel):
+    """OpenAI wire schema: all confidence fields are explicitly required."""
+
+    canonical_description: float = Field(ge=0.0, le=1.0)
+    visual_identity: float = Field(ge=0.0, le=1.0)
+    production_notes: float = Field(ge=0.0, le=1.0)
+    continuity_rules: float = Field(ge=0.0, le=1.0)
+    prohibited_variations: float = Field(ge=0.0, le=1.0)
+    functional_capabilities: float = Field(ge=0.0, le=1.0)
+    classifications: float = Field(ge=0.0, le=1.0)
+    overall: float = Field(ge=0.0, le=1.0)
+
+
+class _StrictGeneratedCAPDraft(BaseModel):
+    """Strict API response model; legacy domain defaults remain unchanged."""
+
+    title: str
+    canonical_description: str
+    visual_identity: str
+    production_notes: str
+    continuity_rules: tuple[str, ...]
+    prohibited_variations: tuple[str, ...]
+    functional_capabilities: tuple[str, ...]
+    semantic_tags: tuple[str, ...]
+    production_classifications: tuple[str, ...]
+    behaviour_references: tuple[str, ...]
+    production_metadata: dict[str, str]
+    unresolved_questions: tuple[str, ...]
+    source_summary: str
+    canonical_facts: tuple[ExtractedCanonicalFact, ...]
+    contradictions: tuple[str, ...]
+    confidence: _StrictCAPConfidence
 
 
 class OpenAICAPGenerationProvider:
@@ -120,9 +155,10 @@ class OpenAICAPGenerationProvider:
         draft = self._parse(
             instructions=instructions,
             input_text=input_text,
-            result_type=GeneratedCAPDraft,
+            result_type=_StrictGeneratedCAPDraft,
             stage="CAP Draft Package generation",
         )
+        draft = GeneratedCAPDraft.model_validate(draft.model_dump())
         if not draft.canonical_facts:
             draft = draft.model_copy(update={"canonical_facts": analysis.canonical_facts})
         if not draft.unresolved_questions:
