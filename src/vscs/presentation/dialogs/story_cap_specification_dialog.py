@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.completeness import assess_completeness
 from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.presentation.dialogs.cap_document_import_dialog import parse_mapping_lines
@@ -36,6 +37,9 @@ class StoryCAPSpecificationDialog(QDialog):
         self.attributes = QTextEdit(
             "\n".join(f"{key}={value}" for key, value in spec.canonical_attributes.items())
         )
+        self.completeness = QLabel()
+        self.completeness.setWordWrap(True)
+        self.attributes.textChanged.connect(self._update_completeness)
         self.variants = QTextEdit()
         self.variants.setPlaceholderText("Optional variant=value1|value2")
         self.prompt = QTextEdit(spec.master_prompt)
@@ -43,6 +47,7 @@ class StoryCAPSpecificationDialog(QDialog):
         form = QFormLayout()
         form.addRow("Design intent", self.intent)
         form.addRow("Canonical attributes (key=value)", self.attributes)
+        form.addRow("Completeness (not approval)", self.completeness)
         form.addRow("Allowed variants", self.variants)
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
@@ -57,6 +62,23 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(QLabel("\n".join(proposal.limitations)))
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
+        self._update_completeness()
+
+    def _update_completeness(self) -> None:
+        try:
+            attributes = parse_mapping_lines(self.attributes.toPlainText())
+            proposal = self.proposal.specification.model_copy(
+                update={"canonical_attributes": attributes}
+            )
+            result = assess_completeness(proposal)
+            missing = ", ".join(result.missing) or "none"
+            self.completeness.setText(
+                f"Missing category fields: {missing}. "
+                "Story-suggested values remain unverified until source evidence review. "
+                "Saving a Draft does not authorize image generation."
+            )
+        except ValueError:
+            self.completeness.setText("Enter valid key=value canonical attributes.")
 
     def reviewed(self) -> CAPStructuredSpecification:
         if self._reviewed is None:
