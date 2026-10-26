@@ -40,9 +40,10 @@ def test_fully_populated_story_proposal_is_still_unverified():
     assert not result.ready_for_image_review
 
 
-def test_validated_source_still_requires_continuity_rules():
+def test_reviewed_document_does_not_establish_claim_level_source_authority():
     fields = {key: "Reviewed detail" for key in REQUIRED_FIELDS[AssetCategory.PROP]}
     spec = _spec(AssetCategory.PROP, fields, origin="docx_import_reviewed")
-    assert assess_completeness(spec).ready_for_image_review
+    assert not assess_completeness(spec).ready_for_image_review
+    assert assess_completeness(spec).unverified
     no_rules = spec.model_copy(update={"continuity_rules": ()})
     assert not assess_completeness(no_rules).ready_for_image_review
