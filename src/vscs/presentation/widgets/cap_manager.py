@@ -620,11 +620,14 @@ class CAPManagerWidget(QWidget):
             dialog = StoryCAPSpecificationDialog(proposal, self)
             if not dialog.exec():
                 return
-            if QMessageBox.question(
-                self,
-                "Save Unapproved CAP Specification?",
-                f"Store reviewed structured CAP Draft for {asset_id}? No CAP approval or image generation.",
-            ) != QMessageBox.StandardButton.Yes:
+            if (
+                QMessageBox.question(
+                    self,
+                    "Save Unapproved CAP Specification?",
+                    f"Store reviewed structured CAP Draft for {asset_id}? No CAP approval or image generation.",
+                )
+                != QMessageBox.StandardButton.Yes
+            ):
                 return
             service.save_reviewed(dialog.reviewed())
         except (CAPError, CAPGenerationError, ValueError) as exc:
