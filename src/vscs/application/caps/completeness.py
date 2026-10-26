@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from vscs.domain.assets.models import AssetCategory
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
+from vscs.domain.assets.models import AssetCategory
 
 REQUIRED_FIELDS: dict[AssetCategory, tuple[str, ...]] = {
     AssetCategory.CHARACTER: ("anatomy", "face", "proportions", "costume"),
@@ -37,13 +37,9 @@ def assess_completeness(spec: CAPStructuredSpecification) -> CAPCompletenessAsse
     Filling a text box is not evidence that a claim belongs to Story Canon.
     """
     required = REQUIRED_FIELDS.get(spec.category, ("identity",))
-    missing = tuple(
-        key for key in required if not spec.canonical_attributes.get(key, "").strip()
-    )
+    missing = tuple(key for key in required if not spec.canonical_attributes.get(key, "").strip())
     unverified = tuple(
-        key for key in required
-        if spec.canonical_attributes.get(key, "").strip()
-
+        key for key in required if spec.canonical_attributes.get(key, "").strip()
     )
     return CAPCompletenessAssessment(
         spec.category,
