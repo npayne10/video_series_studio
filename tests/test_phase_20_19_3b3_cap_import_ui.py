@@ -24,9 +24,12 @@ def test_explicit_mapping_requires_nonempty_unique_key_values():
 def test_draft_targets_only_and_no_unprompted_mutation(qtbot):
     caps = Mock()
     caps.list.return_value = (
-        SimpleNamespace(asset_id="CAP-LOC-001", title="Room", status=SimpleNamespace(value="draft")),
         SimpleNamespace(
-            asset_id="CAP-CHR-002", title="Approved character",
+            asset_id="CAP-LOC-001", title="Room", status=SimpleNamespace(value="draft")
+        ),
+        SimpleNamespace(
+            asset_id="CAP-CHR-002",
+            title="Approved character",
             status=SimpleNamespace(value="approved"),
         ),
     )
