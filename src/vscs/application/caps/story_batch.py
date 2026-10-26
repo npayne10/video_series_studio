@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 
+from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.story_specification import (
     StoryCAPProposal,
     StoryCAPSpecificationService,
@@ -71,7 +72,10 @@ class StoryCAPBatchService:
                 continue
             seen.add(asset_id)
             try:
-                existing = self.generator.specifications.get(asset_id)
+                try:
+                    existing = self.generator.specifications.get(asset_id)
+                except CAPNotFoundError:
+                    existing = None
                 if existing is not None:
                     skipped.append(f"{asset_id}: existing specification requires revision review")
                     continue
