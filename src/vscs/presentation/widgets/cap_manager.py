@@ -50,6 +50,7 @@ from vscs.domain.caps import (
 from vscs.infrastructure.ai.provider import GeneratedCAPDraft
 from vscs.presentation.dialogs.cap_document_import_dialog import CAPDocumentImportDialog
 from vscs.presentation.dialogs.cap_draft_review_dialog import CAPDraftReviewDialog
+from vscs.presentation.dialogs.story_cap_batch_dialog import StoryCAPBatchDialog
 from vscs.presentation.dialogs.story_cap_specification_dialog import StoryCAPSpecificationDialog
 
 
@@ -435,6 +436,8 @@ class CAPManagerWidget(QWidget):
             self.status_filter.addItem(status.value.title(), status)
         self.generate_button = QPushButton("Generate CAP")
         self.generate_button.setToolTip("Generate and review a CAP Draft Package")
+        self.batch_button = QPushButton("Story → CAP Batch…")
+        self.batch_button.setToolTip("Review registered Shot asset requirements for Approved Story")
         self.story_spec_button = QPushButton("Story → CAP Draft…")
         self.story_spec_button.setToolTip("Generate a proposed structured CAP for human review")
         self.import_button = QPushButton("Import CAP DOCX…")
@@ -451,6 +454,7 @@ class CAPManagerWidget(QWidget):
         controls.addWidget(self.generate_button)
         controls.addWidget(self.import_button)
         controls.addWidget(self.story_spec_button)
+        controls.addWidget(self.batch_button)
         controls.addWidget(self.add_button)
         controls.addWidget(self.edit_button)
         controls.addWidget(self.delete_button)
@@ -475,6 +479,7 @@ class CAPManagerWidget(QWidget):
         self.generate_button.clicked.connect(self._generate)
         self.import_button.clicked.connect(self._import_document)
         self.story_spec_button.clicked.connect(self._story_specification)
+        self.batch_button.clicked.connect(self._story_batch)
         self.add_button.clicked.connect(self._add)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
@@ -518,6 +523,7 @@ class CAPManagerWidget(QWidget):
         self.generate_button.setEnabled(enabled and self.generator is not None)
         self.import_button.setEnabled(enabled)
         self.story_spec_button.setEnabled(enabled and self.generator is not None)
+        self.batch_button.setEnabled(enabled and self.generator is not None)
         self.add_button.setEnabled(enabled)
         self.edit_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
@@ -593,6 +599,16 @@ class CAPManagerWidget(QWidget):
                 "It remains non-canonical until approved through the normal CAP review process."
             ),
         )
+
+    def _story_batch(self) -> None:
+        if self.generator is None:
+            return
+        try:
+            dialog = StoryCAPBatchDialog(self.generator, self)
+            dialog.exec()
+        except (CAPError, ValueError) as exc:
+            QMessageBox.warning(self, "Story CAP Batch", str(exc))
+        self.refresh()
 
     def _story_specification(self) -> None:
         if self.generator is None:
