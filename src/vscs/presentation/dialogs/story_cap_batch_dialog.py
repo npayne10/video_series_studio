@@ -1,0 +1,131 @@
+"""Batch Story CAP proposal review, with deliberate per-item persistence."""
+
+from __future__ import annotations
+
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
+from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
+from vscs.application.caps.story_specification import StoryCAPSpecificationService
+from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
+from vscs.application.caps.generator import CAPGeneratorService
+from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
+from vscs.presentation.dialogs.story_cap_specification_dialog import (
+    StoryCAPSpecificationDialog,
+)
+
+
+class StoryCAPBatchDialog(QDialog):
+    """Operator-controlled queue; rejected/cancelled proposals never write."""
+
+    def __init__(
+        self, generator: CAPGeneratorService, parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Approved Story → CAP Batch Review")
+        self.setMinimumSize(760, 490)
+        caps = generator.caps
+        self.stories = StoryLifecycleService(caps.assets.projects)
+        proposal_service = StoryCAPSpecificationService(
+            generator, CAPStructuredSpecificationService(caps)
+        )
+        self.review_service = StoryCAPBatchReviewService(
+            StoryCAPBatchService(self.stories, proposal_service)
+        )
+        self.story = QComboBox()
+        for story in self.stories.list_stories():
+            if story.status in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
+                self.story.addItem(f"{story.story_id} — {story.title}", story.story_id)
+        self.assets = QComboBox()
+        self.inspect = QPushButton("Discover Shot Assets")
+        self.preview = QPushButton("Generate Proposal for Selected Asset")
+        self.close_button = QPushButton("Close")
+        self.summary = QTextEdit()
+        self.summary.setReadOnly(True)
+        self.summary.setPlainText(
+            "Select an approved Story. Discovery reads only persisted Shot asset bindings. "
+            "Each generated proposal requires review and separate confirmation. "
+            "Only Draft CAP records may be created; nothing is approved."
+        )
+        row = QHBoxLayout()
+        row.addWidget(self.inspect)
+        row.addWidget(self.assets)
+        row.addWidget(self.preview)
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("Project-approved Story"))
+        layout.addWidget(self.story)
+        layout.addLayout(row)
+        layout.addWidget(self.summary)
+        layout.addWidget(self.close_button)
+        self.inspect.clicked.connect(self.discover)
+        self.preview.clicked.connect(self.review_one)
+        self.close_button.clicked.connect(self.reject)
+        self.preview.setEnabled(False)
+
+    def discover(self) -> None:
+        self.assets.clear()
+        try:
+            candidates = self.review_service.discover()
+        except (StoryBatchError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "CAP Asset Discovery", str(exc))
+            return
+        lines = []
+        for candidate in candidates:
+            state = (
+                "Already specified"
+                if candidate.has_specification
+                else "CAP Draft exists"
+                if candidate.has_cap
+                else "Missing CAP — will require explicit creation"
+            )
+            lines.append(f"{candidate.asset_id} — {candidate.name} ({candidate.category}): {state}")
+            if not candidate.has_specification:
+                self.assets.addItem(candidate.asset_id, candidate.asset_id)
+        self.summary.setPlainText(
+            "\n".join(lines) if lines else "No registered bound assets found in Shot ledger."
+        )
+        self.preview.setEnabled(self.assets.count() > 0 and self.story.count() > 0)
+
+    def review_one(self) -> None:
+        story_id = self.story.currentData()
+        asset_id = self.assets.currentData()
+        if not isinstance(story_id, str) or not isinstance(asset_id, str):
+            return
+        try:
+            batch = self.review_service.batch.preview(story_id, (asset_id,))
+            if not batch.candidates:
+                QMessageBox.warning(
+                    self, "CAP Batch Review", "\n".join(batch.skipped) or "No eligible proposal"
+                )
+                return
+            item = batch.candidates[0]
+            dialog = StoryCAPSpecificationDialog(item.proposal, self)
+            if not dialog.exec():
+                return
+            confirm = QMessageBox.question(
+                self,
+                "Create Reviewed Draft CAP?",
+                f"Save the reviewed CAP specification for {asset_id}?\n"
+                "A missing CAP record will be created in Draft status.\n"
+                "No canon, reference, or production approval will be granted.",
+            )
+            if confirm != QMessageBox.StandardButton.Yes:
+                return
+            self.review_service.save_reviewed(
+                story_id, dialog.reviewed(), item.story_fingerprint
+            )
+        except (StoryBatchError, RuntimeError, ValueError) as exc:
+            QMessageBox.warning(self, "CAP Batch Review", str(exc))
+            return
+        QMessageBox.information(self, "CAP Draft Saved", f"{asset_id} saved as Draft.")
+        self.discover()
