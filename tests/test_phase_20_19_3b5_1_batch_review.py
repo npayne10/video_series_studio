@@ -36,9 +36,7 @@ def review(tmp_path: Path):
         SimpleNamespace(
             asset_id="CAP-LOC-001", name="Control Room", category=AssetCategory.LOCATION
         ),
-        SimpleNamespace(
-            asset_id="CAP-PRP-001", name="Console", category=AssetCategory.PROP
-        ),
+        SimpleNamespace(asset_id="CAP-PRP-001", name="Console", category=AssetCategory.PROP),
     )
     caps = Mock()
     from vscs.application.caps.service import CAPNotFoundError
@@ -61,9 +59,7 @@ def test_discovery_deduplicates_registered_bound_assets(review):
 def test_discovery_rejects_category_collision(review):
     service, _, assets = review
     assets.list.return_value = (
-        SimpleNamespace(
-            asset_id="CAP-LOC-001", name="Control Room", category=AssetCategory.SHIP
-        ),
+        SimpleNamespace(asset_id="CAP-LOC-001", name="Control Room", category=AssetCategory.SHIP),
     )
     with pytest.raises(StoryBatchError, match="category"):
         service.discover()
@@ -80,9 +76,7 @@ def test_missing_cap_is_created_draft_only_after_review(review):
     assets.get.return_value = assets.list.return_value[0]
     item = SimpleNamespace(
         story_fingerprint="fingerprint",
-        proposal=SimpleNamespace(
-            specification=SimpleNamespace(category=AssetCategory.LOCATION)
-        ),
+        proposal=SimpleNamespace(specification=SimpleNamespace(category=AssetCategory.LOCATION)),
     )
     service.batch.preview.return_value = SimpleNamespace(candidates=(item,))
     service.save_reviewed("STORY-001", spec, "fingerprint")
@@ -95,9 +89,7 @@ def test_stale_story_fingerprint_never_creates_cap(review):
     service, caps, _ = review
     item = SimpleNamespace(
         story_fingerprint="changed",
-        proposal=SimpleNamespace(
-            specification=SimpleNamespace(category=AssetCategory.LOCATION)
-        ),
+        proposal=SimpleNamespace(specification=SimpleNamespace(category=AssetCategory.LOCATION)),
     )
     service.batch.preview.return_value = SimpleNamespace(candidates=(item,))
     with pytest.raises(StoryBatchError, match="Story changed"):
