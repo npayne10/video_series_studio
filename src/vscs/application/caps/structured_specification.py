@@ -24,35 +24,36 @@ _CATEGORY_FIELDS: dict[AssetCategory, frozenset[str]] = {
         {"anatomy", "face", "eyes", "hair", "skin", "proportions", "costume", "insignia"}
     ),
     AssetCategory.LOCATION: frozenset(
-        {"layout", "scale", "architecture", "materials", "fixtures", "spatial_anchors", "windows", "doors"}
+        {
+            "layout",
+            "scale",
+            "architecture",
+            "materials",
+            "fixtures",
+            "spatial_anchors",
+            "windows",
+            "doors",
+        }
     ),
     AssetCategory.SHIP: frozenset(
-        {
-            "dimensions", "silhouette", "hull", "markings", "propulsion", "interior_relationships"
-        }
+        {"dimensions", "silhouette", "hull", "markings", "propulsion", "interior_relationships"}
     ),
     AssetCategory.VEHICLE: frozenset(
         {"dimensions", "silhouette", "hull", "markings", "propulsion", "interior_relationships"}
     ),
     AssetCategory.PROP: frozenset(
-        {
-            "geometry", "materials", "components", "controls", "display", "operating_states"
-        }
+        {"geometry", "materials", "components", "controls", "display", "operating_states"}
     ),
     AssetCategory.TECHNOLOGY: frozenset(
         {"geometry", "materials", "components", "controls", "display", "operating_states"}
     ),
     AssetCategory.ENVIRONMENT: frozenset(
-        {
-            "terrain", "atmosphere", "sky", "climate", "illumination", "geography"
-        }
+        {"terrain", "atmosphere", "sky", "climate", "illumination", "geography"}
     ),
     AssetCategory.PLANET: frozenset(
         {"terrain", "atmosphere", "sky", "climate", "illumination", "geography"}
     ),
-    AssetCategory.UNIFORM: frozenset(
-        {"cut", "fabric", "colours", "insignia", "fit", "materials"}
-    ),
+    AssetCategory.UNIFORM: frozenset({"cut", "fabric", "colours", "insignia", "fit", "materials"}),
 }
 
 
@@ -133,7 +134,9 @@ class CAPStructuredSpecificationService:
         specification.validate_category_contract()
         asset = self.caps.assets.get(specification.asset_id)
         if asset.category != specification.category:
-            raise CAPSpecificationError("Specification category does not match the registered asset")
+            raise CAPSpecificationError(
+                "Specification category does not match the registered asset"
+            )
         cap = self.caps.get(specification.asset_id)
         if cap.status != CAPStatus.DRAFT:
             raise CAPSpecificationError("Only Draft CAPs may receive specification drafts")
