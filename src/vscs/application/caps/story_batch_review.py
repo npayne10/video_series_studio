@@ -68,8 +68,11 @@ class StoryCAPBatchReviewService:
                 self.batch.generator.specifications.get(asset_id) if cap is not None else None
             )
             by_id[asset_id] = CAPAssetCandidate(
-                asset_id, asset.name, asset.category.value,
-                cap is not None, specification is not None,
+                asset_id,
+                asset.name,
+                asset.category.value,
+                cap is not None,
+                specification is not None,
             )
         return tuple(by_id.values())
 
