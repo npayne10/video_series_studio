@@ -46,6 +46,7 @@ from vscs.domain.caps import (
     CAPUpdate,
 )
 from vscs.infrastructure.ai.provider import GeneratedCAPDraft
+from vscs.presentation.dialogs.cap_document_import_dialog import CAPDocumentImportDialog
 from vscs.presentation.dialogs.cap_draft_review_dialog import CAPDraftReviewDialog
 
 
@@ -431,6 +432,8 @@ class CAPManagerWidget(QWidget):
             self.status_filter.addItem(status.value.title(), status)
         self.generate_button = QPushButton("Generate CAP")
         self.generate_button.setToolTip("Generate and review a CAP Draft Package")
+        self.import_button = QPushButton("Import CAP DOCX…")
+        self.import_button.setToolTip("Review document sections and save to an existing Draft CAP")
         self.add_button = QPushButton("New CAP")
         self.edit_button = QPushButton("Edit Selected")
         self.delete_button = QPushButton("Delete Selected")
@@ -441,6 +444,7 @@ class CAPManagerWidget(QWidget):
         controls.addWidget(self.search_input, 1)
         controls.addWidget(self.status_filter)
         controls.addWidget(self.generate_button)
+        controls.addWidget(self.import_button)
         controls.addWidget(self.add_button)
         controls.addWidget(self.edit_button)
         controls.addWidget(self.delete_button)
@@ -463,6 +467,7 @@ class CAPManagerWidget(QWidget):
         self.search_input.textChanged.connect(self.refresh)
         self.status_filter.currentIndexChanged.connect(self.refresh)
         self.generate_button.clicked.connect(self._generate)
+        self.import_button.clicked.connect(self._import_document)
         self.add_button.clicked.connect(self._add)
         self.edit_button.clicked.connect(self._edit)
         self.delete_button.clicked.connect(self._delete)
@@ -504,6 +509,7 @@ class CAPManagerWidget(QWidget):
 
     def _set_enabled(self, enabled: bool) -> None:
         self.generate_button.setEnabled(enabled and self.generator is not None)
+        self.import_button.setEnabled(enabled)
         self.add_button.setEnabled(enabled)
         self.edit_button.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
@@ -578,6 +584,22 @@ class CAPManagerWidget(QWidget):
                 f"The moderated CAP for {asset_id} was saved in Draft status. "
                 "It remains non-canonical until approved through the normal CAP review process."
             ),
+        )
+
+    def _import_document(self) -> None:
+        try:
+            dialog = CAPDocumentImportDialog(self.caps, self)
+            if not dialog.exec():
+                return
+        except (CAPError, ValueError) as exc:
+            QMessageBox.critical(self, "CAP Document Import", str(exc))
+            return
+        self.refresh()
+        QMessageBox.information(
+            self,
+            "CAP Specification Saved",
+            "The reviewed specification was saved to an existing Draft CAP. "
+            "No production approval was granted.",
         )
 
     def _add(self) -> None:
