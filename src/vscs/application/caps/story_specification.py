@@ -86,7 +86,9 @@ class StoryCAPSpecificationService:
             ),
         )
 
-    def save_reviewed(self, specification: CAPStructuredSpecification) -> CAPStructuredSpecification:
+    def save_reviewed(
+        self, specification: CAPStructuredSpecification
+    ) -> CAPStructuredSpecification:
         if specification.origin != "story_intelligence_proposal":
             raise ValueError("Only Story-to-CAP proposals are accepted by this workflow")
         if self.specifications.get(specification.asset_id) is not None:
