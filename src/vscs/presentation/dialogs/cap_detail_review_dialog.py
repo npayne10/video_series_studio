@@ -30,7 +30,10 @@ class CAPDetailReviewDialog(QDialog):
     """Explicit decision for each required field; no writes before confirmation."""
 
     def __init__(
-        self, spec: CAPStructuredSpecification, *, reviewer: str = "Operator",
+        self,
+        spec: CAPStructuredSpecification,
+        *,
+        reviewer: str = "Operator",
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -95,11 +98,11 @@ class CAPDetailReviewDialog(QDialog):
                     DesignFieldReview(
                         field=field,
                         proposed_value=self.spec.canonical_attributes.get(field, ""),
-                        final_value=text if decision in {DetailDecision.ACCEPT, DetailDecision.EDIT} else "",
+                        final_value=text
+                        if decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}
+                        else "",
                         decision=decision,
-                        origin=(
-                            DetailOrigin.DESIGN_PROPOSAL if text else DetailOrigin.UNRESOLVED
-                        ),
+                        origin=(DetailOrigin.DESIGN_PROPOSAL if text else DetailOrigin.UNRESOLVED),
                         evidence=evidence.text().strip(),
                     )
                 )
