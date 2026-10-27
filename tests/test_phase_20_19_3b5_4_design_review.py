@@ -33,26 +33,40 @@ def _review(spec):
         reviewer="QA operator",
         fields=(
             DesignFieldReview(
-                field="layout", proposed_value="Existing console",
-                final_value="Existing console", decision=DetailDecision.ACCEPT,
+                field="layout",
+                proposed_value="Existing console",
+                final_value="Existing console",
+                decision=DetailDecision.ACCEPT,
                 origin=DetailOrigin.DESIGN_PROPOSAL,
             ),
             DesignFieldReview(
-                field="scale", proposed_value="", final_value="8 m by 5 m",
-                decision=DetailDecision.EDIT, origin=DetailOrigin.UNRESOLVED,
+                field="scale",
+                proposed_value="",
+                final_value="8 m by 5 m",
+                decision=DetailDecision.EDIT,
+                origin=DetailOrigin.UNRESOLVED,
                 rationale="Operator design choice",
             ),
             DesignFieldReview(
-                field="materials", proposed_value="", final_value="",
-                decision=DetailDecision.DEFER, origin=DetailOrigin.UNRESOLVED,
+                field="materials",
+                proposed_value="",
+                final_value="",
+                decision=DetailDecision.DEFER,
+                origin=DetailOrigin.UNRESOLVED,
             ),
             DesignFieldReview(
-                field="spatial_anchors", proposed_value="", final_value="",
-                decision=DetailDecision.REJECT, origin=DetailOrigin.UNRESOLVED,
+                field="spatial_anchors",
+                proposed_value="",
+                final_value="",
+                decision=DetailDecision.REJECT,
+                origin=DetailOrigin.UNRESOLVED,
             ),
             DesignFieldReview(
-                field="lighting", proposed_value="", final_value="",
-                decision=DetailDecision.DEFER, origin=DetailOrigin.UNRESOLVED,
+                field="lighting",
+                proposed_value="",
+                final_value="",
+                decision=DetailDecision.DEFER,
+                origin=DetailOrigin.UNRESOLVED,
             ),
         ),
     )
@@ -61,9 +75,7 @@ def _review(spec):
 def test_field_decisions_do_not_promote_deferred_details():
     spec = _spec()
     changed, audit = apply_review(spec, _review(spec))
-    assert changed.canonical_attributes == {
-        "layout": "Existing console", "scale": "8 m by 5 m"
-    }
+    assert changed.canonical_attributes == {"layout": "Existing console", "scale": "8 m by 5 m"}
     payload = json.loads(audit)
     assert payload["canon_approved"] is False
     assert payload["image_authorized"] is False
@@ -93,6 +105,8 @@ def test_accept_requires_value_and_defer_forbids_value():
         )
     with pytest.raises(ValueError):
         DesignFieldReview(
-            field="scale", final_value="8 m", decision=DetailDecision.DEFER,
+            field="scale",
+            final_value="8 m",
+            decision=DetailDecision.DEFER,
             origin=DetailOrigin.DESIGN_PROPOSAL,
         )
