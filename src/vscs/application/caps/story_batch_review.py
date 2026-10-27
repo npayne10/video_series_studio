@@ -122,9 +122,9 @@ class StoryCAPBatchReviewService:
             if review is None:
                 self.batch.generator.save_reviewed(specification)
             else:
-                DesignReviewPersistence(
-                    self.batch.generator.specifications
-                ).save(specification, review)
+                DesignReviewPersistence(self.batch.generator.specifications).save(
+                    specification, review
+                )
         except Exception:
             # Avoid destructive rollback of any preexisting CAP. Newly created
             # Draft CAP is removed only if it still has no structured specification.
