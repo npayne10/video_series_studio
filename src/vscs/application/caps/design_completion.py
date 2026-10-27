@@ -132,10 +132,12 @@ class DesignReviewPersistence:
     def __init__(self, specifications: object) -> None:
         self.specifications = specifications
 
-    def save(self, spec: CAPStructuredSpecification, review: DesignReviewPackage) -> CAPStructuredSpecification:
+    def save(
+        self, spec: CAPStructuredSpecification, review: DesignReviewPackage
+    ) -> CAPStructuredSpecification:
         from vscs.application.caps.structured_specification import (
-            CAPStructuredSpecificationService,
             SPECIFICATION_METADATA_KEY,
+            CAPStructuredSpecificationService,
         )
 
         service = self.specifications
