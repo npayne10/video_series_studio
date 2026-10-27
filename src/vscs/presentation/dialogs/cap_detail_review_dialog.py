@@ -23,6 +23,7 @@ from vscs.application.caps.design_completion import (
     DetailDecision,
     DetailOrigin,
 )
+from vscs.application.caps.provider_design_expansion import ProposedDesignField
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 
 
@@ -34,11 +35,13 @@ class CAPDetailReviewDialog(QDialog):
         spec: CAPStructuredSpecification,
         *,
         reviewer: str = "Operator",
+        suggestions: tuple[ProposedDesignField, ...] = (),
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.spec = spec
         self.reviewer = reviewer
+        proposed = {item.field: item for item in suggestions}
         self.setWindowTitle(f"Review CAP Detail Decisions — {spec.asset_id}")
         self.setMinimumSize(850, 620)
         self.rows: list[tuple[str, QLineEdit, QComboBox, QLineEdit]] = []
@@ -55,18 +58,22 @@ class CAPDetailReviewDialog(QDialog):
         body = QWidget()
         form = QFormLayout(body)
         for field in REQUIRED_FIELDS.get(spec.category, ("identity",)):
-            value = QLineEdit(spec.canonical_attributes.get(field, ""))
+            suggestion = proposed.get(field)
+            value = QLineEdit(
+                spec.canonical_attributes.get(field, "")
+                or (suggestion.proposed_value if suggestion is not None else "")
+            )
             value.setPlaceholderText("Enter reviewed design detail")
             choice = QComboBox()
             for decision in DetailDecision:
                 choice.addItem(decision.value.title(), decision)
             choice.setCurrentIndex(
-                choice.findData(
-                    DetailDecision.EDIT if not value.text().strip() else DetailDecision.DEFER
-                )
+                choice.findData(DetailDecision.DEFER)
             )
             evidence = QLineEdit()
             evidence.setPlaceholderText("Evidence / reason (optional; not auto-verified)")
+            if suggestion is not None:
+                evidence.setText(f"AI design proposal: {suggestion.rationale}")
             row = QHBoxLayout()
             row.addWidget(value, 3)
             row.addWidget(choice, 1)
@@ -97,7 +104,7 @@ class CAPDetailReviewDialog(QDialog):
                 fields.append(
                     DesignFieldReview(
                         field=field,
-                        proposed_value=self.spec.canonical_attributes.get(field, ""),
+                        proposed_value=value.text().strip(),
                         final_value=text
                         if decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}
                         else "",
