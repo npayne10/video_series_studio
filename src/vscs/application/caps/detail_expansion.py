@@ -63,9 +63,7 @@ def expand_details(
             ),
             "",
         )
-        authority = (
-            DetailAuthority.STORY_CANDIDATE if evidence else DetailAuthority.DESIGN_PROPOSAL
-        )
+        authority = DetailAuthority.STORY_CANDIDATE if evidence else DetailAuthority.DESIGN_PROPOSAL
         candidates.append(CanonicalDetailCandidate(field, current, authority, evidence))
     return CanonicalDetailExpansion(
         tuple(candidates),
