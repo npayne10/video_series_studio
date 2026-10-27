@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.caps.design_completion import DesignReviewPackage, DesignReviewPersistence
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.caps import CAPCreate, CAPStatus
@@ -81,6 +82,7 @@ class StoryCAPBatchReviewService:
         story_id: str,
         specification: CAPStructuredSpecification,
         approved_fingerprint: str,
+        review: DesignReviewPackage | None = None,
     ) -> None:
         """Recheck Story authority and current asset/CAP state before persistence."""
         # Recheck against fresh persisted story state. This intentionally invokes
@@ -117,7 +119,12 @@ class StoryCAPBatchReviewService:
         elif cap.status != CAPStatus.DRAFT:
             raise StoryBatchError("Existing CAP is not Draft")
         try:
-            self.batch.generator.save_reviewed(specification)
+            if review is None:
+                self.batch.generator.save_reviewed(specification)
+            else:
+                DesignReviewPersistence(
+                    self.batch.generator.specifications
+                ).save(specification, review)
         except Exception:
             # Avoid destructive rollback of any preexisting CAP. Newly created
             # Draft CAP is removed only if it still has no structured specification.
