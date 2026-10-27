@@ -42,6 +42,7 @@ class CAPDetailReviewDialog(QDialog):
         self.spec = spec
         self.reviewer = reviewer
         proposed = {item.field: item for item in suggestions}
+        self._suggestions = proposed
         self.setWindowTitle(f"Review CAP Detail Decisions — {spec.asset_id}")
         self.setMinimumSize(850, 620)
         self.rows: list[tuple[str, QLineEdit, QComboBox, QLineEdit]] = []
@@ -104,7 +105,11 @@ class CAPDetailReviewDialog(QDialog):
                 fields.append(
                     DesignFieldReview(
                         field=field,
-                        proposed_value=value.text().strip(),
+                        proposed_value=(
+                            self._suggestions[field].proposed_value
+                            if field in self._suggestions
+                            else self.spec.canonical_attributes.get(field, "")
+                        ),
                         final_value=text
                         if decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}
                         else "",
