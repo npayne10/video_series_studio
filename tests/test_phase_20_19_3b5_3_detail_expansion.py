@@ -32,7 +32,9 @@ def test_evidence_candidate_requires_verbatim_context_and_matching_claim():
     )
     result = expand_details(_spec(), draft, "The console is fixed.")
     assert result.candidates[0].authority is DetailAuthority.STORY_CANDIDATE
-    assert result.candidates[1].authority is DetailAuthority.DESIGN_PROPOSAL
+    by_field = {candidate.field: candidate for candidate in result.candidates}
+    assert by_field["materials"].authority is DetailAuthority.DESIGN_PROPOSAL
+    assert by_field["scale"].authority is DetailAuthority.UNRESOLVED
     assert "scale" in result.missing
     assert "lighting" in result.missing
 
