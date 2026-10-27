@@ -81,7 +81,11 @@ class StoryCAPSpecificationService:
         )
         proposed.validate_category_contract()
         suggestions: tuple[ProposedDesignField, ...] = ()
-        expansion_method = getattr(self.generator.provider, "expand_cap_design", None)
+        expansion_method = (
+            getattr(self.generator.provider, "expand_cap_design")
+            if callable(getattr(type(self.generator.provider), "expand_cap_design", None))
+            else None
+        )
         if callable(expansion_method):
             response = expansion_method(proposed, approved_story_context)
             verified = validate_design_expansion(proposed, response)
