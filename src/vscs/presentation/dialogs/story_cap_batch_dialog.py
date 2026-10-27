@@ -20,6 +20,7 @@ from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
+from vscs.presentation.dialogs.cap_detail_review_dialog import CAPDetailReviewDialog
 from vscs.presentation.dialogs.story_cap_specification_dialog import (
     StoryCAPSpecificationDialog,
 )
@@ -110,6 +111,9 @@ class StoryCAPBatchDialog(QDialog):
             dialog = StoryCAPSpecificationDialog(item.proposal, self)
             if not dialog.exec():
                 return
+            detail_dialog = CAPDetailReviewDialog(dialog.reviewed(), parent=self)
+            if not detail_dialog.exec():
+                return
             confirm = QMessageBox.question(
                 self,
                 "Create Reviewed Draft CAP?",
@@ -119,7 +123,9 @@ class StoryCAPBatchDialog(QDialog):
             )
             if confirm != QMessageBox.StandardButton.Yes:
                 return
-            self.review_service.save_reviewed(story_id, dialog.reviewed(), item.story_fingerprint)
+            self.review_service.save_reviewed(
+                story_id, dialog.reviewed(), item.story_fingerprint, detail_dialog.reviewed()
+            )
         except (StoryBatchError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(self, "CAP Batch Review", str(exc))
             return
