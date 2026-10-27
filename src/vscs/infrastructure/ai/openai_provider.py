@@ -7,6 +7,8 @@ from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, Field
 
+from vscs.application.caps.provider_design_expansion import DesignExpansionResponse
+from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.caps.generation import (
     CanonicalFactExtraction,
     CAPCanonAnalysis,
@@ -97,6 +99,40 @@ class OpenAICAPGenerationProvider:
             raise
         except Exception as exc:
             raise AIProviderError(f"OpenAI CAP generation failed: {exc}") from exc
+
+    def expand_cap_design(
+        self, spec: CAPStructuredSpecification, story_context: str
+    ) -> DesignExpansionResponse:
+        """One read-only structured call for creative suggestions, never canon."""
+        from vscs.application.caps.completeness import REQUIRED_FIELDS
+
+        missing = [
+            key
+            for key in REQUIRED_FIELDS.get(spec.category, ("identity",))
+            if not spec.canonical_attributes.get(key, "").strip()
+        ]
+        if not missing:
+            return DesignExpansionResponse(fields=())
+        instructions = (
+            "Act as a production designer, NOT a canon extraction agent. "
+            "Suggest physically coherent visual choices for the requested missing fields. "
+            "Never present invented dimensions, materials, or spatial relationships as Story facts. "
+            "Return exactly one proposal and rationale per requested field; leave a field out "
+            "if a responsible design cannot be proposed. Never change fixed attributes. "
+            "Do not generate images or execute media providers."
+        )
+        source = (
+            f"Category: {spec.category.value}\\nDesign intent: {spec.design_intent}\\n"
+            f"Fixed details: {spec.canonical_attributes}\\n"
+            f"Fields to propose: {missing}\\n"
+            f"Story context (source, not permission to invent canon): {story_context}"
+        )
+        return self._parse(
+            instructions=instructions,
+            input_text=source,
+            result_type=DesignExpansionResponse,
+            stage="CAP design detail proposals",
+        )
 
     def _extract_facts(self, request: CAPGenerationRequest) -> CanonicalFactExtraction:
         instructions = (
