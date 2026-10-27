@@ -111,7 +111,9 @@ class StoryCAPBatchDialog(QDialog):
             dialog = StoryCAPSpecificationDialog(item.proposal, self)
             if not dialog.exec():
                 return
-            detail_dialog = CAPDetailReviewDialog(dialog.reviewed(), parent=self)
+            detail_dialog = CAPDetailReviewDialog(
+                dialog.reviewed(), suggestions=item.proposal.design_suggestions, parent=self
+            )
             if not detail_dialog.exec():
                 return
             confirm = QMessageBox.question(
