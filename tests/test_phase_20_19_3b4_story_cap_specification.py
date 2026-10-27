@@ -7,6 +7,7 @@ import pytest
 
 from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.domain.assets.models import AssetCategory
+from vscs.domain.caps.generation import GeneratedCAPDraft
 
 
 @pytest.mark.parametrize(
@@ -24,7 +25,8 @@ def test_generates_category_specific_review_only_proposal(category, key):
     generator.assets.get.return_value = SimpleNamespace(
         asset_id="CAP-TEST-001", name="Test Asset", category=category
     )
-    generator.generate_draft.return_value = SimpleNamespace(
+    generator.generate_draft.return_value = GeneratedCAPDraft(
+        title="Test Asset",
         visual_identity="Fixed canonical silhouette",
         canonical_description="Controlled story asset",
         continuity_rules=("Preserve dimensions",),
