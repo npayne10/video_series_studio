@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from vscs.application.caps.geometry_contract import check_containment
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
@@ -147,6 +148,27 @@ def validate_dependencies(
                     target_id,
                 )
             )
+        elif constraint.relation is DependencyRelation.CONTAINS:
+            if specification.geometry is None or target_spec.geometry is None:
+                findings.append(
+                    ContinuityFinding(
+                        "missing_typed_geometry",
+                        "Typed bounds for both assets are required for physical verification",
+                        specification.asset_id,
+                        target_id,
+                    )
+                )
+            else:
+                for issue in check_containment(
+                    specification.geometry,
+                    target_spec.geometry,
+                    constraint.minimum_clearance_mm,
+                ):
+                    findings.append(
+                        ContinuityFinding(
+                            issue.code, issue.message, specification.asset_id, target_id
+                        )
+                    )
         if constraint.minimum_clearance_mm is not None and not _MEASURED.search(
             " ".join(specification.canonical_attributes.values())
         ):
