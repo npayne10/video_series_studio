@@ -79,6 +79,41 @@ class StoryCAPBatchReviewService:
             )
         return tuple(by_id.values())
 
+    def validate_reviewed_dependencies(
+        self, specification: CAPStructuredSpecification
+    ) -> tuple[str, ...]:
+        """Local preflight for operator-entered relationships, never paid AI."""
+        if not specification.dependency_asset_ids and not specification.dependency_constraints:
+            return ()
+        caps = self.batch.generator.specifications.caps
+        findings = validate_dependencies(
+            specification,
+            specification.dependency_constraints,
+            caps.assets,
+            self.batch.generator.specifications,
+        )
+        blockers = {
+            "duplicate_relation",
+            "unresolved_dependency",
+            "self_dependency",
+            "undeclared_dependency",
+            "missing_asset",
+            "invalid_container",
+            "invalid_location",
+            "target_category_mismatch",
+        }
+        errors = [item for item in findings if item.code in blockers]
+        if errors:
+            raise StoryBatchError(
+                "CAP dependency validation failed: "
+                + "; ".join(f"{item.target_asset_id}: {item.message}" for item in errors)
+            )
+        return tuple(
+            f"{item.target_asset_id}: {item.message}"
+            for item in findings
+            if item.code not in blockers
+        )
+
     def save_reviewed(
         self,
         story_id: str,
@@ -98,29 +133,7 @@ class StoryCAPBatchReviewService:
         if existing_spec is not None:
             raise StoryBatchError("A structured CAP already exists; revision review is required")
         caps = self.batch.generator.specifications.caps
-        if specification.dependency_asset_ids or specification.dependency_constraints:
-            findings = validate_dependencies(
-                specification,
-                specification.dependency_constraints,
-                caps.assets,
-                self.batch.generator.specifications,
-            )
-            blockers = {
-                "duplicate_relation",
-                "unresolved_dependency",
-                "self_dependency",
-                "undeclared_dependency",
-                "missing_asset",
-                "invalid_container",
-                "invalid_location",
-                "target_category_mismatch",
-            }
-            errors = [item for item in findings if item.code in blockers]
-            if errors:
-                raise StoryBatchError(
-                    "CAP dependency validation failed: "
-                    + "; ".join(f"{item.target_asset_id}: {item.message}" for item in errors)
-                )
+        self.validate_reviewed_dependencies(specification)
         asset = caps.assets.get(specification.asset_id)
         if asset.category != specification.category:
             raise StoryBatchError("Asset category changed during review")
