@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from vscs.application.caps.completeness import REQUIRED_FIELDS
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
@@ -17,6 +17,7 @@ class ProposedDesignField(BaseModel):
 
 class DesignExpansionResponse(BaseModel):
     """Strict wire contract: a list, not unconstrained keyed JSON."""
+
     model_config = ConfigDict(extra="forbid")
     fields: tuple[ProposedDesignField, ...]
 
