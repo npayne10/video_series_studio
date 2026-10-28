@@ -13,6 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.service import CAPService
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CAPStatus, CAPUpdate
@@ -109,6 +110,7 @@ class CAPStructuredSpecification(BaseModel):
     continuity_rules: tuple[str, ...] = ()
     dependency_asset_ids: tuple[str, ...] = ()
     dependency_constraints: tuple[DependencyConstraint, ...] = ()
+    geometry: CAPGeometry | None = None
     source_document_sha256: str | None = Field(
         default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
     )
