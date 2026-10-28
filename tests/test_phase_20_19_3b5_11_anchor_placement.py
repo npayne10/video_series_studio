@@ -50,6 +50,7 @@ def test_axis_aligned_collision_and_noncollision():
 
 
 def test_collision_requires_matching_frames():
-    assert check_collision(
-        _geometry("one", 0, 300, "a"), _geometry("two", 0, 300, "b")
-    )[0].code == "frame_mismatch"
+    assert (
+        check_collision(_geometry("one", 0, 300, "a"), _geometry("two", 0, 300, "b"))[0].code
+        == "frame_mismatch"
+    )
