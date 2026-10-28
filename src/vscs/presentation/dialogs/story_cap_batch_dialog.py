@@ -38,6 +38,7 @@ class StoryCAPBatchDialog(QDialog):
         self.setWindowTitle("Approved Story → CAP Batch Review")
         self.setMinimumSize(760, 490)
         caps = generator.caps
+        self.generator = generator
         self.stories = StoryLifecycleService(caps.assets.projects)
         proposal_service = StoryCAPSpecificationService(
             generator, CAPStructuredSpecificationService(caps)
@@ -45,14 +46,16 @@ class StoryCAPBatchDialog(QDialog):
         self.review_service = StoryCAPBatchReviewService(
             StoryCAPBatchService(self.stories, proposal_service)
         )
-        self._proposal_cache: dict[tuple[str, str, str], StoryBatchProposal] = {}
+        self._proposal_cache: dict[tuple[str, str, str, str, str], StoryBatchProposal] = {}
+        self.cache = CAPProposalCache(caps.assets.projects.project_directory) if caps.assets.projects.project_directory is not None else None
         self.story = QComboBox()
         for story in self.stories.list_stories():
             if story.status in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
                 self.story.addItem(f"{story.story_id} — {story.title}", story.story_id)
         self.assets = QComboBox()
         self.inspect = QPushButton("Discover Shot Assets")
-        self.preview = QPushButton("Generate Proposal for Selected Asset")
+        self.preview = QPushButton("Review / Generate Proposal")
+        self.regenerate = QPushButton("Regenerate Using AI (Paid)")
         self.close_button = QPushButton("Close")
         self.summary = QTextEdit()
         self.summary.setReadOnly(True)
@@ -65,6 +68,7 @@ class StoryCAPBatchDialog(QDialog):
         row.addWidget(self.inspect)
         row.addWidget(self.assets)
         row.addWidget(self.preview)
+        row.addWidget(self.regenerate)
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Project-approved Story"))
         layout.addWidget(self.story)
@@ -73,8 +77,10 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(self.close_button)
         self.inspect.clicked.connect(self.discover)
         self.preview.clicked.connect(self.review_one)
+        self.regenerate.clicked.connect(self.regenerate_one)
         self.close_button.clicked.connect(self.reject)
         self.preview.setEnabled(False)
+        self.regenerate.setEnabled(False)
 
     def discover(self) -> None:
         self.assets.clear()
@@ -99,16 +105,47 @@ class StoryCAPBatchDialog(QDialog):
             "\n".join(lines) if lines else "No registered bound assets found in Shot ledger."
         )
         self.preview.setEnabled(self.assets.count() > 0 and self.story.count() > 0)
+        self.regenerate.setEnabled(self.preview.isEnabled())
 
-    def review_one(self) -> None:
+    def regenerate_one(self) -> None:
+        choice = QMessageBox.question(
+            self,
+            "Regenerate CAP Proposal Using AI?",
+            "This discards the cached proposal and makes new paid OpenAI requests. "
+            "Existing CAP approvals are not changed. Proceed?",
+        )
+        if choice == QMessageBox.StandardButton.Yes:
+            self.review_one(force_regenerate=True)
+
+    def review_one(self, *, force_regenerate: bool = False) -> None:
         story_id = self.story.currentData()
         asset_id = self.assets.currentData()
         if not isinstance(story_id, str) or not isinstance(asset_id, str):
             return
         try:
             fingerprint = self.review_service.batch.current_story_fingerprint(story_id)
-            cache_key = (story_id, asset_id, fingerprint)
-            cached = self._proposal_cache.get(cache_key)
+            asset = self.generator.assets.get(asset_id)
+            asset_fingerprint = cache_fingerprint(
+                asset.asset_id, asset.name, asset.category.value, asset.description
+            )
+            provider = self.generator.provider
+            provider_fingerprint = cache_fingerprint(
+                type(provider).__module__,
+                type(provider).__qualname__,
+                str(getattr(provider, "_model", "")),
+                "cap-design-prompt-v2",
+            )
+            cache_key = (story_id, asset_id, fingerprint, asset_fingerprint, provider_fingerprint)
+            eligible_assets = self.review_service.discover()
+            if asset_id not in {
+                item.asset_id for item in eligible_assets if not item.has_specification
+            }:
+                raise StoryBatchError("Asset is no longer eligible for a new CAP specification")
+            cached = None if force_regenerate else self._proposal_cache.get(cache_key)
+            if cached is None and not force_regenerate and self.cache is not None:
+                cached = self.cache.load(
+                    story_id, asset_id, fingerprint, asset_fingerprint, provider_fingerprint
+                )
             if cached is not None:
                 item = cached
             else:
@@ -119,7 +156,9 @@ class StoryCAPBatchDialog(QDialog):
                     )
                     return
                 item = batch.candidates[0]
-                self._proposal_cache[cache_key] = item
+                if self.cache is not None:
+                    self.cache.save(item, asset_fingerprint, provider_fingerprint)
+            self._proposal_cache[cache_key] = item
             dialog = StoryCAPSpecificationDialog(item.proposal, self)
             if not dialog.exec():
                 return
