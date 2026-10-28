@@ -106,7 +106,9 @@ def assess_spatial_graph(
             for containment_issue in containment:
                 findings.append(
                     SpatialGraphFinding(
-                        containment_issue.code, containment_issue.message, (parent.asset_id, target_id)
+                        containment_issue.code,
+                        containment_issue.message,
+                        (parent.asset_id, target_id),
                     )
                 )
             continue
