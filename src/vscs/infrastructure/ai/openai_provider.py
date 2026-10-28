@@ -115,7 +115,14 @@ class OpenAICAPGenerationProvider:
             return DesignExpansionResponse(fields=())
         instructions = (
             "Act as a production designer, NOT a canon extraction agent. "
-            "Suggest physically coherent visual choices for the requested missing fields. "
+            "Suggest a DISTINCTIVE, repeatable, camera-independent physical asset. "
+            "For locations establish a coordinate-independent fixed layout, key equipment relationships, "
+            "doorways or access points when appropriate, consistent surfaces and practical lighting fixtures. "
+            "For scale or dimensions give plausible numeric measurements and units explicitly as PROPOSED "
+            "design choices, never as source facts. Treat separate props, ships and characters as "
+            "independent assets: specify attachment zones or spatial relationships without inventing "
+            "their intrinsic dimensions, identity or appearance. Do not use foreground, midground, "
+            "background, framing, camera placement or shot composition as canonical geometry. "
             "Never present invented dimensions, materials, or spatial relationships as Story facts. "
             "Return exactly one proposal and rationale per requested field; leave a field out "
             "if a responsible design cannot be proposed. Never change fixed attributes. "
