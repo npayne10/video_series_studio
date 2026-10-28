@@ -51,7 +51,8 @@ class StoryCAPBatchService:
         self.stories = stories
         self.generator = generator
 
-    def preview(self, story_id: str, asset_ids: tuple[str, ...]) -> StoryBatchPreview:
+    def current_story_fingerprint(self, story_id: str) -> str:
+        """Revalidate persisted Story authority without invoking an AI provider."""
         story = self.stories.story(story_id)
         if story is None or story.status not in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
             raise StoryBatchError("Story must exist in this project and be Approved or Locked")
@@ -60,9 +61,16 @@ class StoryCAPBatchService:
             raise StoryBatchError(
                 "Approved Story description is empty; no grounded prose is available"
             )
-        fingerprint = hashlib.sha256(
+        return hashlib.sha256(
             (story.story_id + "\n" + story.title + "\n" + context).encode("utf-8")
         ).hexdigest()
+
+    def preview(self, story_id: str, asset_ids: tuple[str, ...]) -> StoryBatchPreview:
+        fingerprint = self.current_story_fingerprint(story_id)
+        story = self.stories.story(story_id)
+        if story is None:
+            raise StoryBatchError("Story disappeared during preview")
+        context = story.description.strip()
         candidates: list[StoryBatchProposal] = []
         skipped: list[str] = []
         seen: set[str] = set()
