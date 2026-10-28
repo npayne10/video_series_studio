@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
+    QTextEdit,
     QMessageBox,
     QScrollArea,
     QVBoxLayout,
@@ -44,8 +44,8 @@ class CAPDetailReviewDialog(QDialog):
         proposed = {item.field: item for item in suggestions}
         self._suggestions = proposed
         self.setWindowTitle(f"Review CAP Detail Decisions — {spec.asset_id}")
-        self.setMinimumSize(850, 620)
-        self.rows: list[tuple[str, QLineEdit, QComboBox, QLineEdit]] = []
+        self.setMinimumSize(1050, 740)
+        self.rows: list[tuple[str, QTextEdit, QComboBox, QTextEdit]] = []
         layout = QVBoxLayout(self)
         note = QLabel(
             "Every required field needs Accept/Edit/Reject/Defer. "
@@ -58,25 +58,29 @@ class CAPDetailReviewDialog(QDialog):
         scroll.setWidgetResizable(True)
         body = QWidget()
         form = QFormLayout(body)
+        form.setSpacing(14)
         for field in REQUIRED_FIELDS.get(spec.category, ("identity",)):
             suggestion = proposed.get(field)
-            value = QLineEdit(
+            value = QTextEdit()
+            value.setPlainText(
                 spec.canonical_attributes.get(field, "")
                 or (suggestion.proposed_value if suggestion is not None else "")
             )
+            value.setMinimumHeight(100)
             value.setPlaceholderText("Enter reviewed design detail")
             choice = QComboBox()
             for decision in DetailDecision:
                 choice.addItem(decision.value.title(), decision)
             choice.setCurrentIndex(choice.findData(DetailDecision.DEFER))
-            evidence = QLineEdit()
+            evidence = QTextEdit()
+            evidence.setMinimumHeight(100)
             evidence.setPlaceholderText("Evidence / reason (optional; not auto-verified)")
             if suggestion is not None:
-                evidence.setText(f"AI design proposal: {suggestion.rationale}")
+                evidence.setPlainText(f"AI design proposal: {suggestion.rationale}")
             row = QHBoxLayout()
-            row.addWidget(value, 3)
+            row.addWidget(value, 4)
             row.addWidget(choice, 1)
-            row.addWidget(evidence, 2)
+            row.addWidget(evidence, 3)
             form.addRow(field, row)
             self.rows.append((field, value, choice, evidence))
         scroll.setWidget(body)
@@ -99,7 +103,7 @@ class CAPDetailReviewDialog(QDialog):
             fields = []
             for field, value, choice, evidence in self.rows:
                 decision: DetailDecision = choice.currentData()
-                text = value.text().strip()
+                text = value.toPlainText().strip()
                 fields.append(
                     DesignFieldReview(
                         field=field,
@@ -113,7 +117,7 @@ class CAPDetailReviewDialog(QDialog):
                         else "",
                         decision=decision,
                         origin=(DetailOrigin.DESIGN_PROPOSAL if text else DetailOrigin.UNRESOLVED),
-                        evidence=evidence.text().strip(),
+                        evidence=evidence.toPlainText().strip(),
                     )
                 )
             package = DesignReviewPackage(
