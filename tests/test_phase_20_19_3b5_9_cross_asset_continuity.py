@@ -95,7 +95,6 @@ def test_missing_target_spec_is_not_mistaken_for_verified_geometry():
     assert "missing_target_spec" in {issue.code for issue in findings}
 
 
-
 def test_registered_target_without_cap_is_advisory():
     assets, specs = _services()
     specs.get.side_effect = CAPNotFoundError("CAP not found for asset: CAP-PRP-001")
