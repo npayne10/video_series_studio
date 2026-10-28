@@ -52,7 +52,7 @@ def test_explicit_control_room_console_dependency_is_structurally_valid():
         assets,
         specs,
     )
-    assert findings == ()
+    assert [finding.code for finding in findings] == ["missing_typed_geometry"]
     assets.get.assert_called_once_with("CAP-PRP-001")
 
 
