@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Protocol, runtime_checkable
+
 from pydantic import BaseModel, ConfigDict
 
 from vscs.application.caps.completeness import REQUIRED_FIELDS
@@ -36,3 +38,12 @@ def validate_design_expansion(
             raise ValueError("Provider must provide a proposed design and rationale")
         result[item.field] = item
     return result
+
+
+@runtime_checkable
+class CAPDesignExpansionProvider(Protocol):
+    """Optional capability; ordinary CAP providers need not implement it."""
+
+    def expand_cap_design(
+        self, spec: CAPStructuredSpecification, story_context: str
+    ) -> DesignExpansionResponse: ...
