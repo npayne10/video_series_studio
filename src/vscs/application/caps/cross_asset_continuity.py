@@ -4,37 +4,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from vscs.application.caps.structured_specification import CAPStructuredSpecification
+from vscs.application.caps.structured_specification import (
+    CAPStructuredSpecification,
+    DependencyConstraint,
+    DependencyRelation,
+)
 from vscs.domain.assets.models import Asset, AssetCategory
-
-
-class DependencyRelation(StrEnum):
-    CONTAINS = "contains"
-    MOUNTED_IN = "mounted_in"
-    ADJACENT_TO = "adjacent_to"
-    LOCATED_IN = "located_in"
-    REFERENCES = "references"
-
-
-class DependencyConstraint(BaseModel):
-    """Explicit operator-specified relationship; never inferred from an AI description."""
-
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    target_asset_id: str = Field(min_length=1)
-    relation: DependencyRelation
-    anchor: str = ""
-    minimum_clearance_mm: float | None = Field(default=None, ge=0)
-
-    @model_validator(mode="after")
-    def validate_constraint(self) -> DependencyConstraint:
-        if self.minimum_clearance_mm is not None and not self.anchor:
-            raise ValueError("Clearance constraints require a named spatial anchor")
-        return self
 
 
 @dataclass(frozen=True)
