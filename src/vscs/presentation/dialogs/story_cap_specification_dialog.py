@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.anchor_placement import AnchorPlacement
 from vscs.application.caps.completeness import assess_completeness
 from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.story_specification import StoryCAPProposal
@@ -74,14 +75,18 @@ class StoryCAPSpecificationDialog(QDialog):
                         item.relation.value,
                         item.anchor,
                         "" if item.minimum_clearance_mm is None else str(item.minimum_clearance_mm),
+                        "" if item.placement is None else (
+                            f"{item.placement.parent_anchor}>{item.placement.child_anchor}"
+                        ),
                     )
                 )
                 for item in spec.dependency_constraints
             )
         )
         self.dependencies.setPlaceholderText(
-            "One relationship per line: CAP-PRP-001|contains|forward wall|900\n"
-            "Fields: target asset ID | relation | spatial anchor | clearance in mm (optional)."
+            "One per line: CAP-PRP-001|contains|forward wall|900|socket>base\n"
+            "Fields: asset | relation | spatial anchor | clearance mm | "
+            "parent>child named anchors (optional)."
         )
         form_container = QWidget()
         self.geometry_editor = QTextEdit(
@@ -166,14 +171,24 @@ class StoryCAPSpecificationDialog(QDialog):
                 if not line.strip():
                     continue
                 parts = [part.strip() for part in line.split("|")]
-                if len(parts) != 4:
-                    raise ValueError("Dependencies must use asset|relation|anchor|clearance-mm")
+                if len(parts) not in (4, 5):
+                    raise ValueError(
+                        "Dependencies must use asset|relation|anchor|clearance-mm|parent>child"
+                    )
+                anchor_pair = parts[4] if len(parts) == 5 else ""
+                placement = None
+                if anchor_pair:
+                    names = [name.strip() for name in anchor_pair.split(">")]
+                    if len(names) != 2 or not all(names):
+                        raise ValueError("Placement requires parent_anchor>child_anchor")
+                    placement = AnchorPlacement(parent_anchor=names[0], child_anchor=names[1])
                 dependencies.append(
                     DependencyConstraint(
                         target_asset_id=parts[0],
                         relation=DependencyRelation(parts[1]),
                         anchor=parts[2],
                         minimum_clearance_mm=float(parts[3]) if parts[3] else None,
+                        placement=placement,
                     )
                 )
             geometry = (
