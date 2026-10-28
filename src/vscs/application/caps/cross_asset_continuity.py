@@ -160,18 +160,19 @@ def validate_dependencies(
                     )
                 )
             else:
-                resolved: CAPGeometry | None = target_spec.geometry
+                target_geometry = target_spec.geometry
+                resolved: CAPGeometry | None = target_geometry
                 if constraint.placement is not None:
                     resolved, placement_issues = place_at_anchor(
-                        specification.geometry, resolved, constraint.placement
+                        specification.geometry, target_geometry, constraint.placement
                     )
-                    for issue in placement_issues:
+                    for placement_issue in placement_issues:
                         findings.append(
                             ContinuityFinding(
-                                containment_issue.code,
-                            containment_issue.message,
-                            specification.asset_id,
-                            target_id
+                                placement_issue.code,
+                                placement_issue.message,
+                                specification.asset_id,
+                                target_id,
                             )
                         )
                 if resolved is not None:
@@ -180,7 +181,10 @@ def validate_dependencies(
                     ):
                         findings.append(
                             ContinuityFinding(
-                                issue.code, issue.message, specification.asset_id, target_id
+                                containment_issue.code,
+                                containment_issue.message,
+                                specification.asset_id,
+                                target_id,
                             )
                         )
         if (
