@@ -10,7 +10,10 @@ from dataclasses import dataclass
 
 from vscs.application.caps.detail_expansion import CanonicalDetailExpansion, expand_details
 from vscs.application.caps.generator import CAPGeneratorService
-from vscs.application.caps.provider_design_expansion import ProposedDesignField, validate_design_expansion
+from vscs.application.caps.provider_design_expansion import (
+    ProposedDesignField,
+    validate_design_expansion,
+)
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     CAPStructuredSpecificationService,
@@ -82,7 +85,7 @@ class StoryCAPSpecificationService:
         proposed.validate_category_contract()
         suggestions: tuple[ProposedDesignField, ...] = ()
         expansion_method = (
-            getattr(self.generator.provider, "expand_cap_design")
+            self.generator.provider.expand_cap_design
             if callable(getattr(type(self.generator.provider), "expand_cap_design", None))
             else None
         )
