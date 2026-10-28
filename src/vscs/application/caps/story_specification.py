@@ -68,7 +68,9 @@ class StoryCAPProposal:
                 ],
                 "missing": list(self.detail_expansion.missing),
             },
-            "design_suggestions": [item.model_dump(mode="json") for item in self.design_suggestions],
+            "design_suggestions": [
+                item.model_dump(mode="json") for item in self.design_suggestions
+            ],
             "quality_issues": [
                 {"field": item.field, "code": item.code, "message": item.message}
                 for item in self.quality_issues
