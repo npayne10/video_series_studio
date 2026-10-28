@@ -59,14 +59,15 @@ class StoryCAPBatchDialog(QDialog):
                 self.story.addItem(f"{story.story_id} — {story.title}", story.story_id)
         self.assets = QComboBox()
         self.inspect = QPushButton("Discover Shot Assets")
-        self.preview = QPushButton("Review / Generate Proposal")
-        self.regenerate = QPushButton("Regenerate Using AI (Paid)")
+        self.preview = QPushButton("Review Cached Proposal")
+        self.regenerate = QPushButton("Generate / Regenerate Using AI (Paid)")
         self.close_button = QPushButton("Close")
         self.summary = QTextEdit()
         self.summary.setReadOnly(True)
         self.summary.setPlainText(
             "Select an approved Story. Discovery reads only persisted Shot asset bindings. "
-            "Each generated proposal requires review and separate confirmation. "
+            "Review Cached Proposal never calls OpenAI. "
+            "Generate / Regenerate Using AI (Paid) always requires a cost confirmation. "
             "Only Draft CAP records may be created; nothing is approved."
         )
         row = QHBoxLayout()
@@ -115,8 +116,8 @@ class StoryCAPBatchDialog(QDialog):
     def regenerate_one(self) -> None:
         choice = QMessageBox.question(
             self,
-            "Regenerate CAP Proposal Using AI?",
-            "This discards the cached proposal and makes new paid OpenAI requests. "
+            "Generate CAP Proposal Using AI (Paid)?",
+            "This makes new paid OpenAI requests and replaces any cached proposal. "
             "Existing CAP approvals are not changed. Proceed?",
         )
         if choice == QMessageBox.StandardButton.Yes:
@@ -153,6 +154,15 @@ class StoryCAPBatchDialog(QDialog):
                 )
             if cached is not None:
                 item = cached
+            elif not force_regenerate:
+                QMessageBox.information(
+                    self,
+                    "No Cached CAP Proposal",
+                    "No valid cached proposal exists for this Story, asset and AI configuration. "
+                    "Review Cached Proposal will not contact OpenAI. "
+                    "Use Generate / Regenerate Using AI (Paid) to confirm a new paid request.",
+                )
+                return
             else:
                 batch = self.review_service.batch.preview(story_id, (asset_id,))
                 if not batch.candidates:
