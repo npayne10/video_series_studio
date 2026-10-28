@@ -9,6 +9,7 @@ from pathlib import Path
 from vscs.application.caps.cross_asset_continuity import validate_dependencies
 from vscs.application.caps.design_completion import DesignReviewPackage, DesignReviewPersistence
 from vscs.application.caps.service import CAPNotFoundError
+from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.caps import CAPCreate, CAPStatus
@@ -105,6 +106,19 @@ class StoryCAPBatchReviewService:
             "frame_mismatch",
             "missing_anchor",
         }
+        graph = assess_spatial_graph(specification, self.batch.generator.specifications)
+        for item in graph.findings:
+            if item.code == "collision":
+                raise StoryBatchError(
+                    "CAP spatial graph collision: "
+                    + ", ".join(item.asset_ids)
+                    + " — "
+                    + item.message
+                )
+        graph_warnings = tuple(
+            f"{', '.join(item.asset_ids)}: {item.message}" for item in graph.findings
+            if item.code != "collision"
+        )
         errors = [item for item in findings if item.code in blockers]
         if errors:
             raise StoryBatchError(
@@ -115,7 +129,7 @@ class StoryCAPBatchReviewService:
             f"{item.target_asset_id}: {item.message}"
             for item in findings
             if item.code not in blockers
-        )
+        ) + graph_warnings
 
     def save_reviewed(
         self,
