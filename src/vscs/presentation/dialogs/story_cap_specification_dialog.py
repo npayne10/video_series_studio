@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
     QLabel,
     QMessageBox,
+    QScrollArea,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -31,7 +33,8 @@ class StoryCAPSpecificationDialog(QDialog):
         self.proposal = proposal
         spec = proposal.specification
         self.setWindowTitle(f"Review Story CAP Draft — {spec.asset_id}")
-        self.setMinimumSize(770, 560)
+        self.resize(860, 700)
+        self.setMinimumSize(520, 380)
         note = QLabel(
             "Advisory AI proposal only — distinguish story evidence from inferred design. "
             "Saving stores Draft metadata, never approves Canon or references."
@@ -77,7 +80,10 @@ class StoryCAPSpecificationDialog(QDialog):
             "One relationship per line: CAP-PRP-001|contains|forward wall|900\n"
             "Fields: target asset ID | relation | spatial anchor | clearance in mm (optional)."
         )
-        form = QFormLayout()
+        form_container = QWidget()
+        form = QFormLayout(form_container)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.addRow("Design intent", self.intent)
         form.addRow("Canonical attributes (key=value)", self.attributes)
         form.addRow("Completeness (not approval)", self.completeness)
@@ -91,10 +97,24 @@ class StoryCAPSpecificationDialog(QDialog):
         )
         buttons.accepted.connect(self._validate)
         buttons.rejected.connect(self.reject)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.addWidget(note)
+        scroll_layout.addWidget(form_container)
+        limitations = QLabel("\n".join(proposal.limitations))
+        limitations.setWordWrap(True)
+        scroll_layout.addWidget(limitations)
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(scroll_content)
+        scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         layout = QVBoxLayout(self)
-        layout.addWidget(note)
-        layout.addLayout(form)
-        layout.addWidget(QLabel("\n".join(proposal.limitations)))
+        layout.addWidget(scroll_area, 1)
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
