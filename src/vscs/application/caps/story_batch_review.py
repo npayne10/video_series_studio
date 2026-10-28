@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vscs.application.caps.design_completion import DesignReviewPackage, DesignReviewPersistence
+from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.caps import CAPCreate, CAPStatus
@@ -85,23 +86,21 @@ class StoryCAPBatchReviewService:
         review: DesignReviewPackage | None = None,
     ) -> None:
         """Recheck Story authority and current asset/CAP state before persistence."""
-        # Recheck against fresh persisted story state. This intentionally invokes
-        # preview again; that preview never writes project records.
-        batch = self.batch.preview(story_id, (specification.asset_id,))
-        if len(batch.candidates) != 1:
-            raise StoryBatchError("Story proposal no longer eligible for this asset")
-        candidate = batch.candidates[0]
-        if candidate.story_fingerprint != approved_fingerprint:
+        # Revalidate directly from persisted Story, never regenerate a paid AI proposal.
+        current_fingerprint = self.batch.current_story_fingerprint(story_id)
+        if current_fingerprint != approved_fingerprint:
             raise StoryBatchError("Story changed after proposal; review a new draft")
-        if candidate.proposal.specification.category != specification.category:
-            raise StoryBatchError("Asset category changed during review")
+        try:
+            existing_spec = self.batch.generator.specifications.get(specification.asset_id)
+        except CAPNotFoundError:
+            existing_spec = None
+        if existing_spec is not None:
+            raise StoryBatchError("A structured CAP already exists; revision review is required")
         caps = self.batch.generator.specifications.caps
         asset = caps.assets.get(specification.asset_id)
         if asset.category != specification.category:
             raise StoryBatchError("Asset category changed during review")
         created = False
-        from vscs.application.caps.service import CAPNotFoundError
-
         try:
             cap = caps.get(specification.asset_id)
         except CAPNotFoundError:
