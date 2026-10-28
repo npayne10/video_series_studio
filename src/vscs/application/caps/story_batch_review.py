@@ -103,6 +103,7 @@ class StoryCAPBatchReviewService:
             "target_category_mismatch",
             "out_of_bounds",
             "frame_mismatch",
+            "missing_anchor",
         }
         errors = [item for item in findings if item.code in blockers]
         if errors:
