@@ -10,6 +10,7 @@ from vscs.application.caps.cross_asset_continuity import (
     DependencyRelation,
     validate_dependencies,
 )
+from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.assets.models import AssetCategory
 
@@ -92,6 +93,23 @@ def test_missing_target_spec_is_not_mistaken_for_verified_geometry():
         specs,
     )
     assert "missing_target_spec" in {issue.code for issue in findings}
+
+
+
+def test_registered_target_without_cap_is_advisory():
+    assets, specs = _services()
+    specs.get.side_effect = CAPNotFoundError("CAP not found for asset: CAP-PRP-001")
+    findings = validate_dependencies(
+        _location(),
+        (
+            DependencyConstraint(
+                target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS
+            ),
+        ),
+        assets,
+        specs,
+    )
+    assert [finding.code for finding in findings] == ["missing_target_spec"]
 
 
 def test_clearance_requires_named_anchor_and_measured_geometry():
