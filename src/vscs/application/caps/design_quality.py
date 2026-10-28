@@ -9,17 +9,17 @@ from vscs.application.caps.provider_design_expansion import ProposedDesignField
 from vscs.domain.assets.models import AssetCategory
 
 _CAMERA_SPACE = re.compile(
-    r"\\b(?:foreground|midground|background|in frame|camera angle|camera position|"
+    r"\b(?:foreground|midground|background|in frame|camera angle|camera position|"
     r"camera-facing|left of camera|right of camera|toward camera|static shot|"
-    r"wide shot|close-up|focal length|depth of field)\\b",
+    r"wide shot|close-up|focal length|depth of field)\b",
     re.IGNORECASE,
 )
 _VAGUE_SCALE = re.compile(
-    r"\\b(?:human[- ]scaled|moderately sized|moderately confined|spacious|"
-    r"comfortable|compact|large|small|enough room|feels? like)\\b",
+    r"\b(?:human[- ]scaled|moderately sized|moderately confined|spacious|"
+    r"comfortable|compact|large|small|enough room|feels? like)\b",
     re.IGNORECASE,
 )
-_MEASURED = re.compile(r"\\b\\d+(?:\\.\\d+)?\\s*(?:mm|cm|m|metres?|meters?|ft|feet)\\b", re.IGNORECASE)
+_MEASURED = re.compile(r"\b\d+(?:\.\d+)?\s*(?:mm|cm|m|metres?|meters?|ft|feet)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
