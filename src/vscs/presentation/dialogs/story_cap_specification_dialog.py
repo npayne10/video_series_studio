@@ -84,12 +84,12 @@ class StoryCAPSpecificationDialog(QDialog):
             "Fields: target asset ID | relation | spatial anchor | clearance in mm (optional)."
         )
         form_container = QWidget()
-        self.geometry = QTextEdit(
+        self.geometry_editor = QTextEdit(
             json.dumps(spec.geometry.model_dump(mode="json"), indent=2)
             if spec.geometry is not None
             else ""
         )
-        self.geometry.setPlaceholderText(
+        self.geometry_editor.setPlaceholderText(
             'Optional typed geometry JSON: {"frame_id":"room-001", '
             '"origin_mm":{"x":0,"y":0,"z":0}, '
             '"size_mm":{"x":8000,"y":5000,"z":2600},"anchors":[]}'
@@ -105,7 +105,7 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
         form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
-        form.addRow("Typed geometry (mm, optional JSON Draft)", self.geometry)
+        form.addRow("Typed geometry (mm, optional JSON Draft)", self.geometry_editor)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
@@ -177,8 +177,8 @@ class StoryCAPSpecificationDialog(QDialog):
                     )
                 )
             geometry = (
-                CAPGeometry.model_validate_json(self.geometry.toPlainText())
-                if self.geometry.toPlainText().strip()
+                CAPGeometry.model_validate_json(self.geometry_editor.toPlainText())
+                if self.geometry_editor.toPlainText().strip()
                 else None
             )
             spec = self.proposal.specification.model_copy(
