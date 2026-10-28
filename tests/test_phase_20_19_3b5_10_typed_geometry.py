@@ -42,10 +42,13 @@ def test_clearance_violation_is_detected():
 
 
 def test_mismatched_frames_cannot_be_compared():
-    assert check_containment(
-        _geometry((8000, 5000, 2600)),
-        _geometry((1000, 500, 1000), frame="ship-002"),
-    )[0].code == "frame_mismatch"
+    assert (
+        check_containment(
+            _geometry((8000, 5000, 2600)),
+            _geometry((1000, 500, 1000), frame="ship-002"),
+        )[0].code
+        == "frame_mismatch"
+    )
 
 
 def test_invalid_dimensions_and_duplicate_anchors_rejected():
