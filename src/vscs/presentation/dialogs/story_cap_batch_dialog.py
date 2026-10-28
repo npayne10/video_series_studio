@@ -177,6 +177,15 @@ class StoryCAPBatchDialog(QDialog):
             dialog = StoryCAPSpecificationDialog(item.proposal, self)
             if not dialog.exec():
                 return
+            warnings = self.review_service.validate_reviewed_dependencies(dialog.reviewed())
+            if warnings:
+                QMessageBox.information(
+                    self,
+                    "CAP Dependency Review — Unverified",
+                    "The relationship is registered, but physical continuity is NOT verified:\n"
+                    + "\n".join(warnings)
+                    + "\nThese remain Draft-only advisory findings.",
+                )
             detail_dialog = CAPDetailReviewDialog(
                 dialog.reviewed(),
                 suggestions=item.proposal.design_suggestions,
