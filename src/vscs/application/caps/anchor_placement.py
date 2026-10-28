@@ -39,9 +39,9 @@ def place_at_anchor(
             PlacementFinding("missing_anchor", "Named parent or child anchor does not exist"),
         )
     position = Vector3MM(
-        x=parent_anchor.position_mm.x + placement.offset_mm.x - child_anchor.position_mm.x,
-        y=parent_anchor.position_mm.y + placement.offset_mm.y - child_anchor.position_mm.y,
-        z=parent_anchor.position_mm.z + placement.offset_mm.z - child_anchor.position_mm.z,
+        x=parent.origin_mm.x + parent_anchor.position_mm.x + placement.offset_mm.x - child_anchor.position_mm.x,
+        y=parent.origin_mm.y + parent_anchor.position_mm.y + placement.offset_mm.y - child_anchor.position_mm.y,
+        z=parent.origin_mm.z + parent_anchor.position_mm.z + placement.offset_mm.z - child_anchor.position_mm.z,
     )
     return (
         child.model_copy(update={"frame_id": parent.frame_id, "origin_mm": position}),
