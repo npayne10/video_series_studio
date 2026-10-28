@@ -5,11 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from vscs.application.caps.story_batch import StoryBatchProposal
-from vscs.application.caps.story_specification import StoryCAPProposal
 
 
 class CachedCAPProposal(BaseModel):
@@ -20,7 +20,7 @@ class CachedCAPProposal(BaseModel):
     asset_id: str
     asset_fingerprint: str
     provider_fingerprint: str
-    proposal: dict[str, object]
+    proposal: dict[str, Any]
 
 
 def cache_fingerprint(*parts: str) -> str:
