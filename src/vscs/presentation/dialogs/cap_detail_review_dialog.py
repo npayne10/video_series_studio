@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QTextEdit,
     QMessageBox,
     QScrollArea,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
