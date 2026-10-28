@@ -43,7 +43,11 @@ def test_explicit_control_room_console_dependency_is_structurally_valid():
     assets, specs = _services()
     findings = validate_dependencies(
         _location(),
-        (DependencyConstraint(target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS),),
+        (
+            DependencyConstraint(
+                target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS
+            ),
+        ),
         assets,
         specs,
     )
@@ -62,7 +66,11 @@ def test_cross_project_unknown_asset_fails_closed():
     assets.get.side_effect = KeyError("not registered")
     findings = validate_dependencies(
         _location(),
-        (DependencyConstraint(target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS),),
+        (
+            DependencyConstraint(
+                target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS
+            ),
+        ),
         assets,
         specs,
     )
@@ -75,7 +83,11 @@ def test_missing_target_spec_is_not_mistaken_for_verified_geometry():
     specs.get.return_value = None
     findings = validate_dependencies(
         _location(),
-        (DependencyConstraint(target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS),),
+        (
+            DependencyConstraint(
+                target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS
+            ),
+        ),
         assets,
         specs,
     )
@@ -113,7 +125,11 @@ def test_self_dependency_rejected():
     assets, specs = _services()
     findings = validate_dependencies(
         _location(("CAP-LOC-001",)),
-        (DependencyConstraint(target_asset_id="CAP-LOC-001", relation=DependencyRelation.REFERENCES),),
+        (
+            DependencyConstraint(
+                target_asset_id="CAP-LOC-001", relation=DependencyRelation.REFERENCES
+            ),
+        ),
         assets,
         specs,
     )
