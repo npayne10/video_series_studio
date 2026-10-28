@@ -13,6 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from vscs.application.caps.anchor_placement import AnchorPlacement
 from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.service import CAPService
 from vscs.domain.assets.models import AssetCategory
@@ -76,6 +77,7 @@ class DependencyConstraint(BaseModel):
     relation: DependencyRelation
     anchor: str = ""
     minimum_clearance_mm: float | None = Field(default=None, ge=0)
+    placement: AnchorPlacement | None = None
 
     @field_validator("target_asset_id")
     @classmethod
