@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from vscs.application.caps.design_quality import DesignQualityIssue, assess_design_quality
 from vscs.application.caps.detail_expansion import CanonicalDetailExpansion, expand_details
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.provider_design_expansion import (
@@ -44,6 +45,7 @@ class StoryCAPProposal:
     limitations: tuple[str, ...]
     detail_expansion: CanonicalDetailExpansion | None = None
     design_suggestions: tuple[ProposedDesignField, ...] = ()
+    quality_issues: tuple[DesignQualityIssue, ...] = ()
 
 
 class StoryCAPSpecificationService:
@@ -100,6 +102,7 @@ class StoryCAPSpecificationService:
             ),
             expand_details(proposed, draft, approved_story_context),
             suggestions,
+            assess_design_quality(asset.category, suggestions),
         )
 
     def save_reviewed(
