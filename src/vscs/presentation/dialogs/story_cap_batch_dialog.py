@@ -112,7 +112,10 @@ class StoryCAPBatchDialog(QDialog):
             if not dialog.exec():
                 return
             detail_dialog = CAPDetailReviewDialog(
-                dialog.reviewed(), suggestions=item.proposal.design_suggestions, parent=self
+                dialog.reviewed(),
+                suggestions=item.proposal.design_suggestions,
+                quality_issues=item.proposal.quality_issues,
+                parent=self
             )
             if not detail_dialog.exec():
                 return
