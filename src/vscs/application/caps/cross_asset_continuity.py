@@ -169,8 +169,12 @@ def validate_dependencies(
                             issue.code, issue.message, specification.asset_id, target_id
                         )
                     )
-        if constraint.minimum_clearance_mm is not None and not _MEASURED.search(
-            " ".join(specification.canonical_attributes.values())
+        if (
+            constraint.minimum_clearance_mm is not None
+            and specification.geometry is None
+            and not _MEASURED.search(
+                " ".join(specification.canonical_attributes.values())
+            )
         ):
             findings.append(
                 ContinuityFinding(
