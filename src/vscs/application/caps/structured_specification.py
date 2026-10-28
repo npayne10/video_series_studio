@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from vscs.application.caps.service import CAPService
 from vscs.domain.assets.models import AssetCategory
@@ -57,6 +58,36 @@ _CATEGORY_FIELDS: dict[AssetCategory, frozenset[str]] = {
 }
 
 
+class DependencyRelation(StrEnum):
+    CONTAINS = "contains"
+    MOUNTED_IN = "mounted_in"
+    ADJACENT_TO = "adjacent_to"
+    LOCATED_IN = "located_in"
+    REFERENCES = "references"
+
+
+class DependencyConstraint(BaseModel):
+    """Explicit, operator-reviewed spatial relationship; never inferred canon."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    target_asset_id: str = Field(min_length=1)
+    relation: DependencyRelation
+    anchor: str = ""
+    minimum_clearance_mm: float | None = Field(default=None, ge=0)
+
+    @field_validator("target_asset_id")
+    @classmethod
+    def normalize_target_id(cls, value: str) -> str:
+        return value.upper()
+
+    @model_validator(mode="after")
+    def check_clearance(self) -> DependencyConstraint:
+        if self.minimum_clearance_mm is not None and not self.anchor:
+            raise ValueError("Clearance constraints require a named spatial anchor")
+        return self
+
+
 class CAPSpecificationError(ValueError):
     """Invalid or unauthorized structured specification operation."""
 
@@ -77,6 +108,7 @@ class CAPStructuredSpecification(BaseModel):
     negative_prompt: str = ""
     continuity_rules: tuple[str, ...] = ()
     dependency_asset_ids: tuple[str, ...] = ()
+    dependency_constraints: tuple[DependencyConstraint, ...] = ()
     source_document_sha256: str | None = Field(
         default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
     )
@@ -106,6 +138,19 @@ class CAPStructuredSpecification(BaseModel):
         return value
 
     def validate_category_contract(self) -> None:
+        if len(set(self.dependency_asset_ids)) != len(self.dependency_asset_ids):
+            raise CAPSpecificationError("Duplicate dependency asset IDs")
+        if len({item.target_asset_id for item in self.dependency_constraints}) != len(
+            self.dependency_constraints
+        ):
+            raise CAPSpecificationError("Duplicate dependency relationship targets")
+        if any(
+            item.target_asset_id not in self.dependency_asset_ids
+            for item in self.dependency_constraints
+        ):
+            raise CAPSpecificationError("Relationship targets must be declared dependencies")
+        if self.asset_id in self.dependency_asset_ids:
+            raise CAPSpecificationError("An asset cannot depend on itself")
         required = _CATEGORY_FIELDS.get(self.category)
         if required is not None and not (self.canonical_attributes.keys() & required):
             raise CAPSpecificationError(
