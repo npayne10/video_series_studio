@@ -71,6 +71,8 @@ def test_missing_cap_is_created_draft_only_after_review(review):
         asset_id="CAP-LOC-001",
         category=AssetCategory.LOCATION,
         design_intent="Fixed engineering room",
+        dependency_asset_ids=(),
+        dependency_constraints=(),
     )
     caps.assets = assets
     assets.get.return_value = assets.list.return_value[0]
