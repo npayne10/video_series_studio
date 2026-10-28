@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
@@ -16,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.completeness import assess_completeness
+from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
@@ -81,6 +84,16 @@ class StoryCAPSpecificationDialog(QDialog):
             "Fields: target asset ID | relation | spatial anchor | clearance in mm (optional)."
         )
         form_container = QWidget()
+        self.geometry = QTextEdit(
+            json.dumps(spec.geometry.model_dump(mode="json"), indent=2)
+            if spec.geometry is not None
+            else ""
+        )
+        self.geometry.setPlaceholderText(
+            'Optional typed geometry JSON: {"frame_id":"room-001", '
+            '"origin_mm":{"x":0,"y":0,"z":0}, '
+            '"size_mm":{"x":8000,"y":5000,"z":2600},"anchors":[]}'
+        )
         form = QFormLayout(form_container)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
@@ -92,6 +105,7 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
         form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
+        form.addRow("Typed geometry (mm, optional JSON Draft)", self.geometry)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
@@ -162,6 +176,11 @@ class StoryCAPSpecificationDialog(QDialog):
                         minimum_clearance_mm=float(parts[3]) if parts[3] else None,
                     )
                 )
+            geometry = (
+                CAPGeometry.model_validate_json(self.geometry.toPlainText())
+                if self.geometry.toPlainText().strip()
+                else None
+            )
             spec = self.proposal.specification.model_copy(
                 update={
                     "design_intent": self.intent.toPlainText(),
@@ -175,6 +194,7 @@ class StoryCAPSpecificationDialog(QDialog):
                     ),
                     "dependency_asset_ids": tuple(item.target_asset_id for item in dependencies),
                     "dependency_constraints": tuple(dependencies),
+                    "geometry": geometry,
                 }
             )
             spec = CAPStructuredSpecification.model_validate(spec.model_dump())
