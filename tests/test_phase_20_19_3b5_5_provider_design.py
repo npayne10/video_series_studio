@@ -40,9 +40,7 @@ def test_missing_category_details_are_advisory_only():
     )
     validated = validate_design_expansion(original, proposals)
     assert set(validated) == {"layout", "lighting"}
-    assert original.canonical_attributes == {
-        "architecture": "Vessel control room with a console"
-    }
+    assert original.canonical_attributes == {"architecture": "Vessel control room with a console"}
 
 
 @pytest.mark.parametrize("field", ["architecture", "not_a_location_field"])
@@ -50,7 +48,7 @@ def test_provider_cannot_overwrite_canon_or_add_unsupported_keys(field):
     suggestion = DesignExpansionResponse(
         fields=(ProposedDesignField(field=field, proposed_value="Change", rationale="Suggestion"),)
     )
-    with pytest.raises(ValueError, match="unsupported|already-defined"):
+    with pytest.raises(ValueError, match=r"unsupported|already-defined"):
         validate_design_expansion(_spec(), suggestion)
 
 
