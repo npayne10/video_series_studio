@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.generator import CAPGeneratorService
+from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.story_batch import (
     StoryBatchError,
     StoryBatchProposal,
@@ -47,7 +48,11 @@ class StoryCAPBatchDialog(QDialog):
             StoryCAPBatchService(self.stories, proposal_service)
         )
         self._proposal_cache: dict[tuple[str, str, str, str, str], StoryBatchProposal] = {}
-        self.cache = CAPProposalCache(caps.assets.projects.project_directory) if caps.assets.projects.project_directory is not None else None
+        self.cache = (
+            CAPProposalCache(caps.assets.projects.project_directory)
+            if caps.assets.projects.project_directory is not None
+            else None
+        )
         self.story = QComboBox()
         for story in self.stories.list_stories():
             if story.status in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
