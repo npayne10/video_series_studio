@@ -67,7 +67,10 @@ def validate_dependencies(
         if target_id == specification.asset_id:
             findings.append(
                 ContinuityFinding(
-                    "self_dependency", "Asset cannot depend on itself", specification.asset_id, target_id
+                    "self_dependency",
+                    "Asset cannot depend on itself",
+                    specification.asset_id,
+                    target_id
                 )
             )
             continue
@@ -92,20 +95,19 @@ def validate_dependencies(
                 )
             )
             continue
-        if constraint.relation in {DependencyRelation.CONTAINS, DependencyRelation.MOUNTED_IN}:
-            if specification.category not in {
-                AssetCategory.LOCATION,
-                AssetCategory.SHIP,
-                AssetCategory.VEHICLE,
-            }:
-                findings.append(
-                    ContinuityFinding(
+        if (
+            constraint.relation in {DependencyRelation.CONTAINS, DependencyRelation.MOUNTED_IN}
+            and specification.category
+            not in {AssetCategory.LOCATION, AssetCategory.SHIP, AssetCategory.VEHICLE}
+        ):
+            findings.append(
+                ContinuityFinding(
                     "invalid_container",
                     "Asset category cannot contain another physical asset",
                     specification.asset_id,
                     target_id,
                 )
-                )
+            )
         if constraint.relation is DependencyRelation.LOCATED_IN and target.category not in {
             AssetCategory.LOCATION,
             AssetCategory.SHIP,
