@@ -78,8 +78,9 @@ def test_missing_cap_is_created_draft_only_after_review(review):
         story_fingerprint="fingerprint",
         proposal=SimpleNamespace(specification=SimpleNamespace(category=AssetCategory.LOCATION)),
     )
-    service.batch.preview.return_value = SimpleNamespace(candidates=(item,))
+    service.batch.current_story_fingerprint.return_value = item.story_fingerprint
     service.save_reviewed("STORY-001", spec, "fingerprint")
+    service.batch.preview.assert_not_called()
     caps.create.assert_called_once()
     assert caps.create.call_args.args[0].status is CAPStatus.DRAFT
     service.batch.generator.save_reviewed.assert_called_once_with(spec)
@@ -91,7 +92,7 @@ def test_stale_story_fingerprint_never_creates_cap(review):
         story_fingerprint="changed",
         proposal=SimpleNamespace(specification=SimpleNamespace(category=AssetCategory.LOCATION)),
     )
-    service.batch.preview.return_value = SimpleNamespace(candidates=(item,))
+    service.batch.current_story_fingerprint.return_value = item.story_fingerprint
     with pytest.raises(StoryBatchError, match="Story changed"):
         service.save_reviewed(
             "STORY-001",
@@ -99,3 +100,4 @@ def test_stale_story_fingerprint_never_creates_cap(review):
             "original",
         )
     caps.create.assert_not_called()
+    service.batch.preview.assert_not_called()
