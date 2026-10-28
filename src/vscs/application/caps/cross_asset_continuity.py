@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from vscs.application.caps.anchor_placement import place_at_anchor
 from vscs.application.caps.geometry_contract import check_containment
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.structured_specification import (
@@ -159,16 +160,26 @@ def validate_dependencies(
                     )
                 )
             else:
-                for issue in check_containment(
-                    specification.geometry,
-                    target_spec.geometry,
-                    constraint.minimum_clearance_mm,
-                ):
-                    findings.append(
-                        ContinuityFinding(
-                            issue.code, issue.message, specification.asset_id, target_id
-                        )
+                resolved = target_spec.geometry
+                if constraint.placement is not None:
+                    resolved, placement_issues = place_at_anchor(
+                        specification.geometry, resolved, constraint.placement
                     )
+                    for issue in placement_issues:
+                        findings.append(
+                            ContinuityFinding(
+                                issue.code, issue.message, specification.asset_id, target_id
+                            )
+                        )
+                if resolved is not None:
+                    for issue in check_containment(
+                        specification.geometry, resolved, constraint.minimum_clearance_mm
+                    ):
+                        findings.append(
+                            ContinuityFinding(
+                                issue.code, issue.message, specification.asset_id, target_id
+                            )
+                        )
         if (
             constraint.minimum_clearance_mm is not None
             and specification.geometry is None
