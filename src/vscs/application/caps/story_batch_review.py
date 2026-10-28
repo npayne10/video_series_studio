@@ -116,7 +116,8 @@ class StoryCAPBatchReviewService:
                     + item.message
                 )
         graph_warnings = tuple(
-            f"{', '.join(item.asset_ids)}: {item.message}" for item in graph.findings
+            f"{', '.join(item.asset_ids)}: {item.message}"
+            for item in graph.findings
             if item.code != "collision"
         )
         errors = [item for item in findings if item.code in blockers]
@@ -125,11 +126,14 @@ class StoryCAPBatchReviewService:
                 "CAP dependency validation failed: "
                 + "; ".join(f"{item.target_asset_id}: {item.message}" for item in errors)
             )
-        return tuple(
-            f"{item.target_asset_id}: {item.message}"
-            for item in findings
-            if item.code not in blockers
-        ) + graph_warnings
+        return (
+            tuple(
+                f"{item.target_asset_id}: {item.message}"
+                for item in findings
+                if item.code not in blockers
+            )
+            + graph_warnings
+        )
 
     def save_reviewed(
         self,
