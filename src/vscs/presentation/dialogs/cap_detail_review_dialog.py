@@ -68,9 +68,7 @@ class CAPDetailReviewDialog(QDialog):
             choice = QComboBox()
             for decision in DetailDecision:
                 choice.addItem(decision.value.title(), decision)
-            choice.setCurrentIndex(
-                choice.findData(DetailDecision.DEFER)
-            )
+            choice.setCurrentIndex(choice.findData(DetailDecision.DEFER))
             evidence = QLineEdit()
             evidence.setPlaceholderText("Evidence / reason (optional; not auto-verified)")
             if suggestion is not None:
