@@ -60,9 +60,12 @@ def test_contained_geometry_passes_draft_preflight_without_provider():
         "CAP-PRP-001", AssetCategory.PROP, _geometry(100, 300)
     )
     review = StoryCAPBatchReviewService(batch)
-    assert review.validate_reviewed_dependencies(
-        _spec("CAP-LOC-001", AssetCategory.LOCATION, _geometry(1000))
-    ) == ()
+    assert (
+        review.validate_reviewed_dependencies(
+            _spec("CAP-LOC-001", AssetCategory.LOCATION, _geometry(1000))
+        )
+        == ()
+    )
     batch.generator.propose.assert_not_called()
     caps.create.assert_not_called()
 
