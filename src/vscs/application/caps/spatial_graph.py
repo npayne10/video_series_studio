@@ -90,9 +90,11 @@ def assess_spatial_graph(
             placed_geometry, placement_findings = place_at_anchor(
                 parent.geometry, child_geometry, constraint.placement
             )
-            for issue in placement_findings:
+            for placement_issue in placement_findings:
                 findings.append(
-                    SpatialGraphFinding(issue.code, issue.message, (parent.asset_id, target_id))
+                    SpatialGraphFinding(
+                        placement_issue.code, placement_issue.message, (parent.asset_id, target_id)
+                    )
                 )
             if placed_geometry is None:
                 continue
@@ -101,9 +103,11 @@ def assess_spatial_graph(
             parent.geometry, child_geometry, constraint.minimum_clearance_mm
         )
         if containment:
-            for issue in containment:
+            for containment_issue in containment:
                 findings.append(
-                    SpatialGraphFinding(issue.code, issue.message, (parent.asset_id, target_id))
+                    SpatialGraphFinding(
+                        containment_issue.code, containment_issue.message, (parent.asset_id, target_id)
+                    )
                 )
             continue
         placed[target_id] = child_geometry
