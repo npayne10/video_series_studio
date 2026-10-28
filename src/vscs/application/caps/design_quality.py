@@ -39,30 +39,38 @@ def assess_design_quality(
         if _CAMERA_SPACE.search(value):
             issues.append(
                 DesignQualityIssue(
-                    item.field, "camera_dependent",
+                    item.field,
+                    "camera_dependent",
                     "Define fixed asset geometry, not framing or camera-relative positions.",
                 )
             )
         if item.field in {"scale", "dimensions"} and not _MEASURED.search(value):
             issues.append(
                 DesignQualityIssue(
-                    item.field, "unmeasured_scale",
+                    item.field,
+                    "unmeasured_scale",
                     "Give proposed physical dimensions with units, clearly marked as design choices.",
                 )
             )
         if item.field in {"layout", "spatial_anchors"} and _VAGUE_SCALE.search(value):
             issues.append(
                 DesignQualityIssue(
-                    item.field, "imprecise_geometry",
+                    item.field,
+                    "imprecise_geometry",
                     "Specify stable relationships between named physical anchors.",
                 )
             )
-        if category is AssetCategory.LOCATION and item.field == "layout":
-            if "console" not in value.casefold() and "workstation" not in value.casefold():
-                issues.append(
-                    DesignQualityIssue(
-                        item.field, "missing_functional_anchor",
-                        "Check the required console/workstation against the approved Story.",
-                    )
+        if (
+            category is AssetCategory.LOCATION
+            and item.field == "layout"
+            and "console" not in value.casefold()
+            and "workstation" not in value.casefold()
+        ):
+            issues.append(
+                DesignQualityIssue(
+                    item.field,
+                    "missing_functional_anchor",
+                    "Check the required console/workstation against the approved Story.",
                 )
+            )
     return tuple(issues)
