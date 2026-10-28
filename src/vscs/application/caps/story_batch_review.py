@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.caps.cross_asset_continuity import validate_dependencies
 from vscs.application.caps.design_completion import DesignReviewPackage, DesignReviewPersistence
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
@@ -97,6 +98,29 @@ class StoryCAPBatchReviewService:
         if existing_spec is not None:
             raise StoryBatchError("A structured CAP already exists; revision review is required")
         caps = self.batch.generator.specifications.caps
+        if specification.dependency_asset_ids or specification.dependency_constraints:
+            findings = validate_dependencies(
+                specification,
+                specification.dependency_constraints,
+                caps.assets,
+                self.batch.generator.specifications,
+            )
+            blockers = {
+                "duplicate_relation",
+                "unresolved_dependency",
+                "self_dependency",
+                "undeclared_dependency",
+                "missing_asset",
+                "invalid_container",
+                "invalid_location",
+                "target_category_mismatch",
+            }
+            errors = [item for item in findings if item.code in blockers]
+            if errors:
+                raise StoryBatchError(
+                    "CAP dependency validation failed: "
+                    + "; ".join(f"{item.target_asset_id}: {item.message}" for item in errors)
+                )
         asset = caps.assets.get(specification.asset_id)
         if asset.category != specification.category:
             raise StoryBatchError("Asset category changed during review")
