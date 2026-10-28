@@ -31,3 +31,10 @@ git status --short
 ```
 
 UI acceptance: Review a cached control-room proposal without contacting OpenAI. In cross-asset dependencies enter `CAP-PRP-001|contains|forward bulkhead|900` only for inspection; verify it is parsed and Draft-only. Cancel all dialogs in Golden Path audit. No paid regeneration or CAP creation is necessary. The user-owned untracked architecture audit must remain untouched.
+
+## Review preflight acceptance increment
+The Batch Review dialog now invokes `validate_reviewed_dependencies` locally after operator confirmation of the Story CAP Draft form and **before** proceeding to CAP Detail Decisions. An unknown project asset, incompatible relationship or invalid identity raises a visible error and cannot reach the Draft save step. A missing target specification or unmeasured clearance shows an advisory, explicitly **unverified** notice; physical fit is not asserted.
+
+No paid OpenAI request is made by dependency preflight. For manual acceptance, use the existing cached `CAP-LOC-001` proposal. First enter `CAP-PRP-999|contains|forward bulkhead|900` and click the Story Draft form's Save: expect the batch to reject the unknown target, with no saved CAP. Then reopen cached review and enter `CAP-PRP-001|contains|forward bulkhead|900`: expect the independent registered Diagnostic Console to be accepted as a relationship target but missing specification/unmeasured geometry clearly marked as unverified. **Cancel at CAP Detail Decisions** instead of persisting the CAP. Neither test needs OpenAI or the paid regeneration button.
+
+New regression tests: `tests/test_phase_20_19_3b5_9_review_preflight.py`.
