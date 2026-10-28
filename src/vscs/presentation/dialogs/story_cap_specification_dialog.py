@@ -75,9 +75,9 @@ class StoryCAPSpecificationDialog(QDialog):
                         item.relation.value,
                         item.anchor,
                         "" if item.minimum_clearance_mm is None else str(item.minimum_clearance_mm),
-                        "" if item.placement is None else (
-                            f"{item.placement.parent_anchor}>{item.placement.child_anchor}"
-                        ),
+                        ""
+                        if item.placement is None
+                        else (f"{item.placement.parent_anchor}>{item.placement.child_anchor}"),
                     )
                 )
                 for item in spec.dependency_constraints
