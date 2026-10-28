@@ -17,13 +17,13 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.completeness import REQUIRED_FIELDS
-from vscs.application.caps.design_quality import DesignQualityIssue
 from vscs.application.caps.design_completion import (
     DesignFieldReview,
     DesignReviewPackage,
     DetailDecision,
     DetailOrigin,
 )
+from vscs.application.caps.design_quality import DesignQualityIssue
 from vscs.application.caps.provider_design_expansion import ProposedDesignField
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 
