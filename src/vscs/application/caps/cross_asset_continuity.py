@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     DependencyConstraint,
@@ -126,7 +127,7 @@ def validate_dependencies(
             )
         try:
             target_spec = specifications.get(target_id)
-        except (KeyError, LookupError, ValueError):
+        except (CAPNotFoundError, KeyError, LookupError, ValueError):
             target_spec = None
         if target_spec is None:
             findings.append(
