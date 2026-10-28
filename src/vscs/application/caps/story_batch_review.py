@@ -101,6 +101,8 @@ class StoryCAPBatchReviewService:
             "invalid_container",
             "invalid_location",
             "target_category_mismatch",
+            "out_of_bounds",
+            "frame_mismatch",
         }
         errors = [item for item in findings if item.code in blockers]
         if errors:
