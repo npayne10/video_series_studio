@@ -41,6 +41,7 @@ class StoryCAPBatchDialog(QDialog):
         self.review_service = StoryCAPBatchReviewService(
             StoryCAPBatchService(self.stories, proposal_service)
         )
+        self._proposal_cache: dict[tuple[str, str, str], StoryBatchProposal] = {}
         self.story = QComboBox()
         for story in self.stories.list_stories():
             if story.status in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
@@ -101,13 +102,20 @@ class StoryCAPBatchDialog(QDialog):
         if not isinstance(story_id, str) or not isinstance(asset_id, str):
             return
         try:
-            batch = self.review_service.batch.preview(story_id, (asset_id,))
-            if not batch.candidates:
-                QMessageBox.warning(
-                    self, "CAP Batch Review", "\n".join(batch.skipped) or "No eligible proposal"
-                )
-                return
-            item = batch.candidates[0]
+            fingerprint = self.review_service.batch.current_story_fingerprint(story_id)
+            cache_key = (story_id, asset_id, fingerprint)
+            cached = self._proposal_cache.get(cache_key)
+            if cached is not None:
+                item = cached
+            else:
+                batch = self.review_service.batch.preview(story_id, (asset_id,))
+                if not batch.candidates:
+                    QMessageBox.warning(
+                        self, "CAP Batch Review", "\n".join(batch.skipped) or "No eligible proposal"
+                    )
+                    return
+                item = batch.candidates[0]
+                self._proposal_cache[cache_key] = item
             dialog = StoryCAPSpecificationDialog(item.proposal, self)
             if not dialog.exec():
                 return
@@ -134,5 +142,6 @@ class StoryCAPBatchDialog(QDialog):
         except (StoryBatchError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(self, "CAP Batch Review", str(exc))
             return
+        self._proposal_cache.clear()
         QMessageBox.information(self, "CAP Draft Saved", f"{asset_id} saved as Draft.")
         self.discover()
