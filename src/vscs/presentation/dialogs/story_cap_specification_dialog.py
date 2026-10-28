@@ -15,7 +15,10 @@ from PySide6.QtWidgets import (
 
 from vscs.application.caps.completeness import assess_completeness
 from vscs.application.caps.story_specification import StoryCAPProposal
-from vscs.application.caps.structured_specification import CAPStructuredSpecification
+from vscs.application.caps.structured_specification import (
+    CAPStructuredSpecification,
+    DependencyConstraint,
+)
 from vscs.presentation.dialogs.cap_document_import_dialog import parse_mapping_lines
 
 
@@ -56,6 +59,23 @@ class StoryCAPSpecificationDialog(QDialog):
         self.variants.setPlaceholderText("Optional variant=value1|value2")
         self.prompt = QTextEdit(spec.master_prompt)
         self.rules = QTextEdit("\n".join(spec.continuity_rules))
+        self.dependencies = QTextEdit(
+            "\n".join(
+                "|".join(
+                    (
+                        item.target_asset_id,
+                        item.relation.value,
+                        item.anchor,
+                        "" if item.minimum_clearance_mm is None else str(item.minimum_clearance_mm),
+                    )
+                )
+                for item in spec.dependency_constraints
+            )
+        )
+        self.dependencies.setPlaceholderText(
+            "One relationship per line: CAP-PRP-001|contains|forward wall|900\n"
+            "Fields: target asset ID | relation | spatial anchor | clearance in mm (optional)."
+        )
         form = QFormLayout()
         form.addRow("Design intent", self.intent)
         form.addRow("Canonical attributes (key=value)", self.attributes)
@@ -64,6 +84,7 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Allowed variants", self.variants)
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
+        form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
@@ -109,6 +130,21 @@ class StoryCAPSpecificationDialog(QDialog):
                 key: tuple(value.strip() for value in values.split("|"))
                 for key, values in variants.items()
             }
+            dependencies = []
+            for line in self.dependencies.toPlainText().splitlines():
+                if not line.strip():
+                    continue
+                parts = [part.strip() for part in line.split("|")]
+                if len(parts) != 4:
+                    raise ValueError("Dependencies must use asset|relation|anchor|clearance-mm")
+                dependencies.append(
+                    DependencyConstraint(
+                        target_asset_id=parts[0],
+                        relation=parts[1],
+                        anchor=parts[2],
+                        minimum_clearance_mm=float(parts[3]) if parts[3] else None,
+                    )
+                )
             spec = self.proposal.specification.model_copy(
                 update={
                     "design_intent": self.intent.toPlainText(),
@@ -120,6 +156,10 @@ class StoryCAPSpecificationDialog(QDialog):
                         for item in self.rules.toPlainText().splitlines()
                         if item.strip()
                     ),
+                    "dependency_asset_ids": tuple(
+                        item.target_asset_id for item in dependencies
+                    ),
+                    "dependency_constraints": tuple(dependencies),
                 }
             )
             spec = CAPStructuredSpecification.model_validate(spec.model_dump())
