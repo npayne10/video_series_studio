@@ -15,7 +15,11 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.generator import CAPGeneratorService
-from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
+from vscs.application.caps.story_batch import (
+    StoryBatchError,
+    StoryBatchProposal,
+    StoryCAPBatchService,
+)
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
