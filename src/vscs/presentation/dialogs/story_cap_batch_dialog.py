@@ -115,7 +115,7 @@ class StoryCAPBatchDialog(QDialog):
                 dialog.reviewed(),
                 suggestions=item.proposal.design_suggestions,
                 quality_issues=item.proposal.quality_issues,
-                parent=self
+                parent=self,
             )
             if not detail_dialog.exec():
                 return
