@@ -49,7 +49,9 @@ def validate_dependencies(
     claimed = {constraint.target_asset_id.upper() for constraint in constraints}
     if len(claimed) != len(constraints):
         findings.append(
-            ContinuityFinding("duplicate_relation", "Duplicate target relationship", specification.asset_id)
+            ContinuityFinding(
+                "duplicate_relation", "Duplicate target relationship", specification.asset_id
+            )
         )
     for missing in sorted(expected - claimed):
         findings.append(
@@ -64,7 +66,9 @@ def validate_dependencies(
         target_id = constraint.target_asset_id.upper()
         if target_id == specification.asset_id:
             findings.append(
-                ContinuityFinding("self_dependency", "Asset cannot depend on itself", specification.asset_id, target_id)
+                ContinuityFinding(
+                    "self_dependency", "Asset cannot depend on itself", specification.asset_id, target_id
+                )
             )
             continue
         if target_id not in expected:
@@ -80,19 +84,40 @@ def validate_dependencies(
             target = assets.get(target_id)
         except (KeyError, LookupError, ValueError):
             findings.append(
-                ContinuityFinding("missing_asset", "Target asset is not registered in this project", specification.asset_id, target_id)
+                ContinuityFinding(
+                    "missing_asset",
+                    "Target asset is not registered in this project",
+                    specification.asset_id,
+                    target_id,
+                )
             )
             continue
         if constraint.relation in {DependencyRelation.CONTAINS, DependencyRelation.MOUNTED_IN}:
-            if specification.category not in {AssetCategory.LOCATION, AssetCategory.SHIP, AssetCategory.VEHICLE}:
+            if specification.category not in {
+                AssetCategory.LOCATION,
+                AssetCategory.SHIP,
+                AssetCategory.VEHICLE,
+            }:
                 findings.append(
-                    ContinuityFinding("invalid_container", "Asset category cannot contain another physical asset", specification.asset_id, target_id)
+                    ContinuityFinding(
+                    "invalid_container",
+                    "Asset category cannot contain another physical asset",
+                    specification.asset_id,
+                    target_id,
+                )
                 )
         if constraint.relation is DependencyRelation.LOCATED_IN and target.category not in {
-            AssetCategory.LOCATION, AssetCategory.SHIP, AssetCategory.VEHICLE
+            AssetCategory.LOCATION,
+            AssetCategory.SHIP,
+            AssetCategory.VEHICLE,
         }:
             findings.append(
-                ContinuityFinding("invalid_location", "Located-in target must be a location, ship or vehicle", specification.asset_id, target_id)
+                ContinuityFinding(
+                    "invalid_location",
+                    "Located-in target must be a location, ship or vehicle",
+                    specification.asset_id,
+                    target_id,
+                )
             )
         try:
             target_spec = specifications.get(target_id)
@@ -100,16 +125,31 @@ def validate_dependencies(
             target_spec = None
         if target_spec is None:
             findings.append(
-                ContinuityFinding("missing_target_spec", "Target CAP specification is not yet available for physical verification", specification.asset_id, target_id)
+                ContinuityFinding(
+                    "missing_target_spec",
+                    "Target CAP specification is not yet available for physical verification",
+                    specification.asset_id,
+                    target_id,
+                )
             )
         elif target_spec.category != target.category:
             findings.append(
-                ContinuityFinding("target_category_mismatch", "Target CAP category differs from registered asset", specification.asset_id, target_id)
+                ContinuityFinding(
+                    "target_category_mismatch",
+                    "Target CAP category differs from registered asset",
+                    specification.asset_id,
+                    target_id,
+                )
             )
         if constraint.minimum_clearance_mm is not None and not _MEASURED.search(
             " ".join(specification.canonical_attributes.values())
         ):
             findings.append(
-                ContinuityFinding("unmeasured_geometry", "Clearance is declared but source geometry has no measurable dimensions", specification.asset_id, target_id)
+                ContinuityFinding(
+                    "unmeasured_geometry",
+                    "Clearance is declared but source geometry has no measurable dimensions",
+                    specification.asset_id,
+                    target_id,
+                )
             )
     return tuple(findings)
