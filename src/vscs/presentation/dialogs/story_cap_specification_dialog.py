@@ -18,6 +18,7 @@ from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     DependencyConstraint,
+    DependencyRelation,
 )
 from vscs.presentation.dialogs.cap_document_import_dialog import parse_mapping_lines
 
@@ -140,7 +141,7 @@ class StoryCAPSpecificationDialog(QDialog):
                 dependencies.append(
                     DependencyConstraint(
                         target_asset_id=parts[0],
-                        relation=parts[1],
+                        relation=DependencyRelation(parts[1]),
                         anchor=parts[2],
                         minimum_clearance_mm=float(parts[3]) if parts[3] else None,
                     )
@@ -156,9 +157,7 @@ class StoryCAPSpecificationDialog(QDialog):
                         for item in self.rules.toPlainText().splitlines()
                         if item.strip()
                     ),
-                    "dependency_asset_ids": tuple(
-                        item.target_asset_id for item in dependencies
-                    ),
+                    "dependency_asset_ids": tuple(item.target_asset_id for item in dependencies),
                     "dependency_constraints": tuple(dependencies),
                 }
             )
