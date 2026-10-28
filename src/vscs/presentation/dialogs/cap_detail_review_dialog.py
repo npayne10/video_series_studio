@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.completeness import REQUIRED_FIELDS
+from vscs.application.caps.design_quality import DesignQualityIssue
 from vscs.application.caps.design_completion import (
     DesignFieldReview,
     DesignReviewPackage,
@@ -36,12 +37,16 @@ class CAPDetailReviewDialog(QDialog):
         *,
         reviewer: str = "Operator",
         suggestions: tuple[ProposedDesignField, ...] = (),
+        quality_issues: tuple[DesignQualityIssue, ...] = (),
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.spec = spec
         self.reviewer = reviewer
         proposed = {item.field: item for item in suggestions}
+        issue_map: dict[str, list[str]] = {}
+        for issue in quality_issues:
+            issue_map.setdefault(issue.field, []).append(issue.message)
         self._suggestions = proposed
         self.setWindowTitle(f"Review CAP Detail Decisions — {spec.asset_id}")
         self.setMinimumSize(1050, 740)
@@ -75,8 +80,11 @@ class CAPDetailReviewDialog(QDialog):
             evidence = QTextEdit()
             evidence.setMinimumHeight(100)
             evidence.setPlaceholderText("Evidence / reason (optional; not auto-verified)")
+            comments = []
             if suggestion is not None:
-                evidence.setPlainText(f"AI design proposal: {suggestion.rationale}")
+                comments.append(f"AI design proposal: {suggestion.rationale}")
+            comments.extend(f"QUALITY REVIEW: {message}" for message in issue_map.get(field, ()))
+            evidence.setPlainText("\n".join(comments))
             row = QHBoxLayout()
             row.addWidget(value, 4)
             row.addWidget(choice, 1)
