@@ -80,7 +80,9 @@ def plan_story_spatial_evidence(
         if asset_id not in known or known[asset_id].geometry is None
     )
     unresolved = (
-        ("No explicit registered asset-ID location relationship found in approved Story description",)
+        (
+            "No explicit registered asset-ID location relationship found in approved Story description",
+        )
         if not evidence
         else ()
     )
