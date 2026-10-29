@@ -7,7 +7,9 @@ from PySide6.QtWidgets import QMessageBox
 from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.assets.models import AssetCategory
-from vscs.presentation.dialogs.story_cap_specification_dialog import StoryCAPSpecificationDialog
+from vscs.presentation.dialogs.story_cap_specification_dialog import (
+    StoryCAPSpecificationDialog,
+)
 
 
 def test_evidence_ui_requires_operator_acceptance(qtbot):
