@@ -106,9 +106,9 @@ class StoryCAPBatchDialog(QDialog):
     def review_spatial_acceptance(self) -> None:
         """Run isolated geometry test data; never query or write a project."""
         scenario = self.acceptance_scenario.currentData()
-        if not isinstance(scenario, AcceptanceScenario):
+        if not isinstance(scenario, str):
             return
-        result = run_spatial_acceptance(scenario)
+        result = run_spatial_acceptance(AcceptanceScenario(scenario))
         SpatialContinuityReportDialog(result.report, self).exec()
 
     def discover(self) -> None:
