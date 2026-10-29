@@ -46,11 +46,7 @@ def extract_explicit_story_relationships(
         parent = match.group("parent").upper()
         if child not in allowed or parent not in allowed or child == parent:
             continue
-        found.append(
-            StorySpatialEvidence(
-                child, parent, story_id, match.group(0), match.start()
-            )
-        )
+        found.append(StorySpatialEvidence(child, parent, story_id, match.group(0), match.start()))
     return tuple(found)
 
 
@@ -84,8 +80,8 @@ def plan_story_spatial_evidence(
         if asset_id not in known or known[asset_id].geometry is None
     )
     unresolved = (
-        "No explicit registered asset-ID location relationship found in approved Story description",
-    ) if not evidence else ()
-    return CoordinatedSpatialPlan(
-        story_id, parent.asset_id, evidence, tuple(missing), unresolved
+        ("No explicit registered asset-ID location relationship found in approved Story description",)
+        if not evidence
+        else ()
     )
+    return CoordinatedSpatialPlan(story_id, parent.asset_id, evidence, tuple(missing), unresolved)
