@@ -162,7 +162,9 @@ class StoryCAPSpecificationDialog(QDialog):
     def _review_story_spatial_evidence(self) -> None:
         """Show source-attributed candidate links without silently editing CAPs."""
         if self.story_evidence is None:
-            QMessageBox.information(self, "Approved Story Spatial Evidence", "No approved Story context.")
+            QMessageBox.information(
+                self, "Approved Story Spatial Evidence", "No approved Story context."
+            )
             return
         story_id, description, registered_ids = self.story_evidence
         plan = plan_story_spatial_evidence(
@@ -172,18 +174,23 @@ class StoryCAPSpecificationDialog(QDialog):
             registered_ids,
             self.spatial_candidates,
         )
-        known = {line.split("|", 1)[0].strip().upper()
-                 for line in self.dependencies.toPlainText().splitlines() if line.strip()}
+        known = {
+            line.split("|", 1)[0].strip().upper()
+            for line in self.dependencies.toPlainText().splitlines()
+            if line.strip()
+        }
         candidates = tuple(
             entry for entry in plan.evidence if entry.child_asset_id not in known
         )
         lines = [
             f"Story {plan.story_id} — parent {plan.parent_asset_id}",
             "Explicit asset-ID relations (unapproved):",
-            *(f"{item.child_asset_id} | {item.excerpt} | character {item.start_offset}"
-              for item in plan.evidence),
+            *(
+                f"{item.child_asset_id} | {item.excerpt} | character {item.start_offset}"
+                for item in plan.evidence
+            ),
             "Missing typed geometry: " + (", ".join(plan.missing_geometry) or "none"),
-            *(plan.unresolved),
+            *plan.unresolved,
         ]
         if not candidates:
             QMessageBox.information(self, "Approved Story Spatial Evidence", "\n".join(lines))
@@ -199,7 +206,9 @@ class StoryCAPSpecificationDialog(QDialog):
             return
         existing = self.dependencies.toPlainText().strip()
         additions = [f"{entry.child_asset_id}|contains||" for entry in candidates]
-        self.dependencies.setPlainText("\n".join([part for part in (existing, *additions) if part]))
+        self.dependencies.setPlainText(
+            "\n".join(part for part in (existing, *additions) if part)
+        )
 
     def _analyze_spatial_relationships(self) -> None:
         """Review only source-backed inverse links, never create dimensions."""
