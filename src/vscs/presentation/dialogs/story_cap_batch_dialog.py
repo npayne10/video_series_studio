@@ -200,6 +200,12 @@ class StoryCAPBatchDialog(QDialog):
             dialog = StoryCAPSpecificationDialog(item.proposal, self)
             if not dialog.exec():
                 return
+            # Save the operator's reviewed fields as unapproved working material.
+            # This is NOT CAP persistence, Canon approval or a provider call.
+            item = replace(item, proposal=replace(item.proposal, specification=dialog.reviewed()))
+            if self.cache is not None:
+                self.cache.save(item, asset_fingerprint, provider_fingerprint)
+            self._proposal_cache[cache_key] = item
             warnings = self.review_service.validate_reviewed_dependencies(dialog.reviewed())
             if dialog.reviewed().dependency_asset_ids:
                 graph = assess_spatial_graph(
