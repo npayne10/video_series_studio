@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
 
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
+from vscs.application.caps.spatial_graph import assess_spatial_graph
+from vscs.application.caps.spatial_report import build_spatial_review_report
 from vscs.application.caps.story_batch import (
     StoryBatchError,
     StoryBatchProposal,
@@ -26,6 +28,9 @@ from vscs.application.caps.story_specification import StoryCAPSpecificationServi
 from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
 from vscs.presentation.dialogs.cap_detail_review_dialog import CAPDetailReviewDialog
+from vscs.presentation.dialogs.spatial_continuity_report_dialog import (
+    SpatialContinuityReportDialog,
+)
 from vscs.presentation.dialogs.story_cap_specification_dialog import (
     StoryCAPSpecificationDialog,
 )
@@ -178,13 +183,15 @@ class StoryCAPBatchDialog(QDialog):
             if not dialog.exec():
                 return
             warnings = self.review_service.validate_reviewed_dependencies(dialog.reviewed())
+            if dialog.reviewed().dependency_asset_ids:
+                graph = assess_spatial_graph(
+                    dialog.reviewed(), self.review_service.batch.generator.specifications
+                )
+                report = build_spatial_review_report(graph)
+                SpatialContinuityReportDialog(report, self).exec()
             if warnings:
-                QMessageBox.information(
-                    self,
-                    "CAP Dependency Review — Unverified",
-                    "The relationship is registered, but physical continuity is NOT verified:\n"
-                    + "\n".join(warnings)
-                    + "\nThese remain Draft-only advisory findings.",
+                self.summary.setPlainText(
+                    "Dependency validation remains unverified:\n" + "\n".join(warnings)
                 )
             detail_dialog = CAPDetailReviewDialog(
                 dialog.reviewed(),
