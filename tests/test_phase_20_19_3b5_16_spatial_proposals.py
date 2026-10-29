@@ -50,9 +50,7 @@ def test_no_reverse_link_never_invents_relationship():
 
 
 def test_existing_containment_is_not_reproposed():
-    link = DependencyConstraint(
-        target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS
-    )
+    link = DependencyConstraint(target_asset_id="CAP-PRP-001", relation=DependencyRelation.CONTAINS)
     parent = _spec("CAP-LOC-001", AssetCategory.LOCATION, (link,))
     child = _spec(
         "CAP-PRP-001",
