@@ -204,8 +204,14 @@ class StoryCAPBatchDialog(QDialog):
             spatial_candidates = load_project_spatial_candidates(
                 self.review_service.batch.generator.specifications, registered_ids
             )
+            story = self.stories.story(story_id)
+            if story is None:
+                raise StoryBatchError("Approved Story disappeared during spatial review")
             dialog = StoryCAPSpecificationDialog(
-                item.proposal, self, spatial_candidates=spatial_candidates
+                item.proposal,
+                self,
+                spatial_candidates=spatial_candidates,
+                story_evidence=(story_id, story.description, registered_ids),
             )
             if not dialog.exec():
                 return
