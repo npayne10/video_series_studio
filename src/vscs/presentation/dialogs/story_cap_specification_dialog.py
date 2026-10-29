@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from vscs.application.caps.anchor_placement import AnchorPlacement
 from vscs.application.caps.completeness import assess_completeness
 from vscs.application.caps.geometry_contract import CAPGeometry
+from vscs.application.caps.spatial_proposals import propose_spatial_relationships
 from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
@@ -34,9 +35,15 @@ from vscs.presentation.dialogs.cap_geometry_editor_dialog import CAPGeometryEdit
 class StoryCAPSpecificationDialog(QDialog):
     """Review and edit unapproved canonical attributes and reference prompt."""
 
-    def __init__(self, proposal: StoryCAPProposal, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        proposal: StoryCAPProposal,
+        parent: QWidget | None = None,
+        spatial_candidates: tuple[CAPStructuredSpecification, ...] = (),
+    ) -> None:
         super().__init__(parent)
         self.proposal = proposal
+        self.spatial_candidates = spatial_candidates
         spec = proposal.specification
         self.setWindowTitle(f"Review Story CAP Draft — {spec.asset_id}")
         self.resize(860, 700)
@@ -112,6 +119,9 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Allowed variants", self.variants)
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
+        self.suggest_dependencies = QPushButton("Analyze Spatial Relationships (Offline)")
+        self.suggest_dependencies.clicked.connect(self._analyze_spatial_relationships)
+        form.addRow("Offline spatial proposal", self.suggest_dependencies)
         form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
         self.edit_geometry = QPushButton("Edit Geometry (Structured, Draft Only)")
         self.edit_geometry.clicked.connect(self._edit_geometry)
@@ -142,6 +152,43 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
+
+    def _analyze_spatial_relationships(self) -> None:
+        """Review only source-backed inverse links, never create dimensions."""
+        plan = propose_spatial_relationships(self.proposal.specification, self.spatial_candidates)
+        lines = [
+            "Offline evidence-based proposals (not Canon):",
+            *(f"{item.asset_id}|{item.relation.value} — {item.evidence}" for item in plan.proposed),
+            "Unresolved geometry and placement:",
+            *(plan.unresolved or ("none",)),
+        ]
+        if not plan.proposed:
+            QMessageBox.information(self, "Offline Spatial Proposal", "\\n".join(lines))
+            return
+        choice = QMessageBox.question(
+            self,
+            "Review Offline Spatial Proposals",
+            "\\n".join(lines)
+            + "\\n\\nAppend the proposed relationships to this Draft form? "
+            "No dimensions, anchors, clearance or CAP records will be invented.",
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        existing = self.dependencies.toPlainText().strip()
+        existing_ids = {
+            line.split("|", 1)[0].strip().upper()
+            for line in existing.splitlines()
+            if line.strip()
+        }
+        proposed_lines = [
+            f"{item.asset_id}|{item.relation.value}||"
+            for item in plan.proposed
+            if item.asset_id not in existing_ids
+        ]
+        if proposed_lines:
+            self.dependencies.setPlainText(
+                "\\n".join([line for line in (existing, *proposed_lines) if line])
+            )
 
     def _edit_geometry(self) -> None:
         """Apply validated structured geometry only to the in-memory review form."""
