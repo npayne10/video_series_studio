@@ -20,6 +20,6 @@ def test_offline_acceptance_controls_have_three_local_scenarios(qtbot, monkeypat
     dialog = StoryCAPBatchDialog(generator)
     qtbot.addWidget(dialog)
     assert dialog.acceptance_scenario.count() == 3
-    assert dialog.acceptance_scenario.itemData(0) is AcceptanceScenario.VALID
+    assert dialog.acceptance_scenario.itemData(0) == AcceptanceScenario.VALID.value
     assert dialog.spatial_acceptance.isEnabled()
     assert not dialog.preview.isEnabled()
