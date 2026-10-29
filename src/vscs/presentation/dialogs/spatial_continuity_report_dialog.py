@@ -36,12 +36,8 @@ class SpatialContinuityReportDialog(QDialog):
         self.table.setHorizontalHeaderLabels(("Status", "Assets", "Finding", "Explanation"))
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setWordWrap(True)
-        self.table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
-        )
-        self.table.horizontalHeader().setSectionResizeMode(
-            3, QHeaderView.ResizeMode.Stretch
-        )
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         for row, item in enumerate(report.rows):
             for column, value in enumerate(
                 (item.status.value, ", ".join(item.asset_ids), item.code, item.detail)
