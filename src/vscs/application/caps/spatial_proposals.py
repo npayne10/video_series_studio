@@ -59,22 +59,20 @@ def propose_spatial_relationships(
                 )
             )
     if parent.geometry is None:
-        unresolved.append(
-            "Parent geometry missing: dimensions and frame require operator evidence"
-        )
+        unresolved.append("Parent geometry missing: dimensions and frame require operator evidence")
     for item in parent.dependency_constraints:
-        child = next(
+        matching_child = next(
             (candidate for candidate in candidates if candidate.asset_id == item.target_asset_id),
             None,
         )
-        if child is None or child.geometry is None:
+        if matching_child is None or matching_child.geometry is None:
             unresolved.append(f"{item.target_asset_id}: typed geometry unavailable")
         if item.relation is DependencyRelation.CONTAINS and item.placement is None:
             unresolved.append(f"{item.target_asset_id}: no anchor placement declared")
-    for item in proposed:
-        if not item.geometry_available:
-            unresolved.append(f"{item.asset_id}: proposed child has no typed geometry")
-        unresolved.append(f"{item.asset_id}: placement/clearance not inferred")
+    for proposal in proposed:
+        if not proposal.geometry_available:
+            unresolved.append(f"{proposal.asset_id}: proposed child has no typed geometry")
+        unresolved.append(f"{proposal.asset_id}: placement/clearance not inferred")
     return SpatialProposalPlan(parent.asset_id, tuple(proposed), tuple(dict.fromkeys(unresolved)))
 
 
