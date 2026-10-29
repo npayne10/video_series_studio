@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QLabel,
     QMessageBox,
+    QPushButton,
     QScrollArea,
     QTextEdit,
     QVBoxLayout,
@@ -27,6 +28,7 @@ from vscs.application.caps.structured_specification import (
     DependencyRelation,
 )
 from vscs.presentation.dialogs.cap_document_import_dialog import parse_mapping_lines
+from vscs.presentation.dialogs.cap_geometry_editor_dialog import CAPGeometryEditorDialog
 
 
 class StoryCAPSpecificationDialog(QDialog):
@@ -111,6 +113,9 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
         form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
+        self.edit_geometry = QPushButton("Edit Geometry (Structured, Draft Only)")
+        self.edit_geometry.clicked.connect(self._edit_geometry)
+        form.addRow("Structured geometry review", self.edit_geometry)
         form.addRow("Typed geometry (mm, optional JSON Draft)", self.geometry_editor)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -137,6 +142,23 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
+
+    def _edit_geometry(self) -> None:
+        """Apply validated structured geometry only to the in-memory review form."""
+        try:
+            geometry = (
+                CAPGeometry.model_validate_json(self.geometry_editor.toPlainText())
+                if self.geometry_editor.toPlainText().strip()
+                else None
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid Draft Geometry", str(exc))
+            return
+        editor = CAPGeometryEditorDialog(geometry, self)
+        if editor.exec() and editor.result_geometry is not None:
+            self.geometry_editor.setPlainText(
+                json.dumps(editor.result_geometry.model_dump(mode="json"), indent=2)
+            )
 
     def _update_completeness(self) -> None:
         try:
