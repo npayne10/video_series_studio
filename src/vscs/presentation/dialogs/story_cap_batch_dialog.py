@@ -21,6 +21,7 @@ from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerp
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.spatial_report import build_spatial_review_report
+from vscs.application.caps.spatial_proposals import load_project_spatial_candidates
 from vscs.application.caps.story_batch import (
     StoryBatchError,
     StoryBatchProposal,
@@ -199,7 +200,13 @@ class StoryCAPBatchDialog(QDialog):
                 if self.cache is not None:
                     self.cache.save(item, asset_fingerprint, provider_fingerprint)
             self._proposal_cache[cache_key] = item
-            dialog = StoryCAPSpecificationDialog(item.proposal, self)
+            registered_ids = tuple(asset.asset_id for asset in self.generator.assets.list())
+            spatial_candidates = load_project_spatial_candidates(
+                self.review_service.batch.generator.specifications, registered_ids
+            )
+            dialog = StoryCAPSpecificationDialog(
+                item.proposal, self, spatial_candidates=spatial_candidates
+            )
             if not dialog.exec():
                 return
             # Save the operator's reviewed fields as unapproved working material.
