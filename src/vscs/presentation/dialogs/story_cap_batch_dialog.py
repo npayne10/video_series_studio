@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
+from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.spatial_report import build_spatial_review_report
 from vscs.application.caps.story_batch import (
@@ -66,6 +67,10 @@ class StoryCAPBatchDialog(QDialog):
         self.inspect = QPushButton("Discover Shot Assets")
         self.preview = QPushButton("Review Cached Proposal")
         self.regenerate = QPushButton("Generate / Regenerate Using AI (Paid)")
+        self.spatial_acceptance = QPushButton("Spatial Geometry Acceptance (Offline)")
+        self.acceptance_scenario = QComboBox()
+        for scenario in AcceptanceScenario:
+            self.acceptance_scenario.addItem(scenario.value.replace("_", " ").title(), scenario)
         self.close_button = QPushButton("Close")
         self.summary = QTextEdit()
         self.summary.setReadOnly(True)
@@ -84,14 +89,27 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(QLabel("Project-approved Story"))
         layout.addWidget(self.story)
         layout.addLayout(row)
+        acceptance_row = QHBoxLayout()
+        acceptance_row.addWidget(self.acceptance_scenario)
+        acceptance_row.addWidget(self.spatial_acceptance)
+        layout.addLayout(acceptance_row)
         layout.addWidget(self.summary)
         layout.addWidget(self.close_button)
         self.inspect.clicked.connect(self.discover)
         self.preview.clicked.connect(self.review_one)
         self.regenerate.clicked.connect(self.regenerate_one)
         self.close_button.clicked.connect(self.reject)
+        self.spatial_acceptance.clicked.connect(self.review_spatial_acceptance)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
+
+    def review_spatial_acceptance(self) -> None:
+        """Run isolated geometry test data; never query or write a project."""
+        scenario = self.acceptance_scenario.currentData()
+        if not isinstance(scenario, AcceptanceScenario):
+            return
+        result = run_spatial_acceptance(scenario)
+        SpatialContinuityReportDialog(result.report, self).exec()
 
     def discover(self) -> None:
         self.assets.clear()
