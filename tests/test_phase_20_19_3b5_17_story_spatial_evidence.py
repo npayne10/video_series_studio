@@ -50,8 +50,11 @@ def test_coordinated_plan_reports_unresolved_geometry_without_inventing_it():
 
 def test_empty_evidence_does_not_claim_new_relationships():
     plan = plan_story_spatial_evidence(
-        "STORY-001", "A diagnostic console stands nearby.",
-        _parent(), ("CAP-LOC-001", "CAP-PRP-001"), ()
+        "STORY-001",
+        "A diagnostic console stands nearby.",
+        _parent(),
+        ("CAP-LOC-001", "CAP-PRP-001"),
+        ()
     )
     assert not plan.evidence
     assert plan.unresolved
