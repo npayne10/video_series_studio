@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from vscs.application.caps.spatial_graph import SpatialSpecificationLookup
 
 from vscs.application.caps.service import CAPNotFoundError
+from vscs.application.caps.spatial_graph import SpatialSpecificationLookup
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     DependencyConstraint,
