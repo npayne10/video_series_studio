@@ -35,7 +35,11 @@ def test_offline_suggestion_requires_confirmation_and_does_not_write(qtbot):
     child = _spec(
         "CAP-PRP-001",
         AssetCategory.PROP,
-        (DependencyConstraint(target_asset_id=parent.asset_id, relation=DependencyRelation.LOCATED_IN),),
+        (
+            DependencyConstraint(
+                target_asset_id=parent.asset_id, relation=DependencyRelation.LOCATED_IN
+            ),
+        ),
     )
     dialog = StoryCAPSpecificationDialog(
         StoryCAPProposal(parent, "architecture", ()), spatial_candidates=(child,)
