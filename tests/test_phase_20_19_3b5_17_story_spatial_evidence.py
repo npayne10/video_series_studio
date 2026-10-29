@@ -54,7 +54,7 @@ def test_empty_evidence_does_not_claim_new_relationships():
         "A diagnostic console stands nearby.",
         _parent(),
         ("CAP-LOC-001", "CAP-PRP-001"),
-        ()
+        (),
     )
     assert not plan.evidence
     assert plan.unresolved
