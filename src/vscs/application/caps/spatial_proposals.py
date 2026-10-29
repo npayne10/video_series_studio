@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from vscs.application.caps.spatial_graph import SpatialSpecificationLookup
 
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.structured_specification import (
@@ -58,9 +59,14 @@ def propose_spatial_relationships(
                 )
             )
     if parent.geometry is None:
-        unresolved.append("Parent geometry missing: dimensions and frame require operator evidence")
+        unresolved.append(
+            "Parent geometry missing: dimensions and frame require operator evidence"
+        )
     for item in parent.dependency_constraints:
-        child = next((candidate for candidate in candidates if candidate.asset_id == item.target_asset_id), None)
+        child = next(
+            (candidate for candidate in candidates if candidate.asset_id == item.target_asset_id),
+            None,
+        )
         if child is None or child.geometry is None:
             unresolved.append(f"{item.target_asset_id}: typed geometry unavailable")
         if item.relation is DependencyRelation.CONTAINS and item.placement is None:
@@ -72,17 +78,14 @@ def propose_spatial_relationships(
     return SpatialProposalPlan(parent.asset_id, tuple(proposed), tuple(dict.fromkeys(unresolved)))
 
 
-def load_project_spatial_candidates(specifications: object, asset_ids: tuple[str, ...]) -> tuple[CAPStructuredSpecification, ...]:
+def load_project_spatial_candidates(
+    specifications: SpatialSpecificationLookup, asset_ids: tuple[str, ...]
+) -> tuple[CAPStructuredSpecification, ...]:
     """Read Draft CAP specs; missing/unavailable CAP records are skipped."""
-    from typing import cast
-
-    from vscs.application.caps.spatial_graph import SpatialSpecificationLookup
-
-    lookup = cast(SpatialSpecificationLookup, specifications)
     result: list[CAPStructuredSpecification] = []
     for asset_id in dict.fromkeys(asset_ids):
         try:
-            spec = lookup.get(asset_id)
+            spec = specifications.get(asset_id)
         except CAPNotFoundError:
             continue
         if spec is not None:
