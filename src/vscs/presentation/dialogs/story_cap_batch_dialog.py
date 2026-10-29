@@ -20,8 +20,8 @@ from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
-from vscs.application.caps.spatial_report import build_spatial_review_report
 from vscs.application.caps.spatial_proposals import load_project_spatial_candidates
+from vscs.application.caps.spatial_report import build_spatial_review_report
 from vscs.application.caps.story_batch import (
     StoryBatchError,
     StoryBatchProposal,
