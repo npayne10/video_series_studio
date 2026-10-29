@@ -54,7 +54,8 @@ class CAPGeometryEditorDialog(QDialog):
                 f"{anchor.position_mm.z:g}"
                 for anchor in geometry.anchors
             )
-            if geometry else ""
+            if geometry
+            else ""
         )
         form.addRow("Named anchors", self.anchors)
         self.buttons = QDialogButtonBox(
