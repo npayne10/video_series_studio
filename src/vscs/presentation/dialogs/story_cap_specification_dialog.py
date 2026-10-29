@@ -168,17 +168,14 @@ class StoryCAPSpecificationDialog(QDialog):
         choice = QMessageBox.question(
             self,
             "Review Offline Spatial Proposals",
-            "\n".join(lines)
-            + "\n\nAppend the proposed relationships to this Draft form? "
+            "\n".join(lines) + "\n\nAppend the proposed relationships to this Draft form? "
             "No dimensions, anchors, clearance or CAP records will be invented.",
         )
         if choice != QMessageBox.StandardButton.Yes:
             return
         existing = self.dependencies.toPlainText().strip()
         existing_ids = {
-            line.split("|", 1)[0].strip().upper()
-            for line in existing.splitlines()
-            if line.strip()
+            line.split("|", 1)[0].strip().upper() for line in existing.splitlines() if line.strip()
         }
         proposed_lines = [
             f"{item.asset_id}|{item.relation.value}||"
