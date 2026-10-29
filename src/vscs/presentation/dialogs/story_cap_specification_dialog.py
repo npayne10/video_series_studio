@@ -163,13 +163,13 @@ class StoryCAPSpecificationDialog(QDialog):
             *(plan.unresolved or ("none",)),
         ]
         if not plan.proposed:
-            QMessageBox.information(self, "Offline Spatial Proposal", "\\n".join(lines))
+            QMessageBox.information(self, "Offline Spatial Proposal", "\n".join(lines))
             return
         choice = QMessageBox.question(
             self,
             "Review Offline Spatial Proposals",
-            "\\n".join(lines)
-            + "\\n\\nAppend the proposed relationships to this Draft form? "
+            "\n".join(lines)
+            + "\n\nAppend the proposed relationships to this Draft form? "
             "No dimensions, anchors, clearance or CAP records will be invented.",
         )
         if choice != QMessageBox.StandardButton.Yes:
@@ -187,7 +187,7 @@ class StoryCAPSpecificationDialog(QDialog):
         ]
         if proposed_lines:
             self.dependencies.setPlainText(
-                "\\n".join([line for line in (existing, *proposed_lines) if line])
+                "\n".join([line for line in (existing, *proposed_lines) if line])
             )
 
     def _edit_geometry(self) -> None:
