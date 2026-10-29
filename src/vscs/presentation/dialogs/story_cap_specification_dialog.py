@@ -179,9 +179,7 @@ class StoryCAPSpecificationDialog(QDialog):
             for line in self.dependencies.toPlainText().splitlines()
             if line.strip()
         }
-        candidates = tuple(
-            entry for entry in plan.evidence if entry.child_asset_id not in known
-        )
+        candidates = tuple(entry for entry in plan.evidence if entry.child_asset_id not in known)
         lines = [
             f"Story {plan.story_id} — parent {plan.parent_asset_id}",
             "Explicit asset-ID relations (unapproved):",
@@ -198,17 +196,14 @@ class StoryCAPSpecificationDialog(QDialog):
         reply = QMessageBox.question(
             self,
             "Review Story Spatial Evidence",
-            "\n".join(lines)
-            + "\n\nAppend only these evidence-backed contains relationships? "
+            "\n".join(lines) + "\n\nAppend only these evidence-backed contains relationships? "
             "No dimensions, anchors or placements will be fabricated.",
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
         existing = self.dependencies.toPlainText().strip()
         additions = [f"{entry.child_asset_id}|contains||" for entry in candidates]
-        self.dependencies.setPlainText(
-            "\n".join(part for part in (existing, *additions) if part)
-        )
+        self.dependencies.setPlainText("\n".join(part for part in (existing, *additions) if part))
 
     def _analyze_spatial_relationships(self) -> None:
         """Review only source-backed inverse links, never create dimensions."""
