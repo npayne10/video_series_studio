@@ -22,6 +22,7 @@ from vscs.application.caps.anchor_placement import AnchorPlacement
 from vscs.application.caps.completeness import assess_completeness
 from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.spatial_proposals import propose_spatial_relationships
+from vscs.application.caps.story_spatial_evidence import plan_story_spatial_evidence
 from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
@@ -40,10 +41,12 @@ class StoryCAPSpecificationDialog(QDialog):
         proposal: StoryCAPProposal,
         parent: QWidget | None = None,
         spatial_candidates: tuple[CAPStructuredSpecification, ...] = (),
+        story_evidence: tuple[str, str, tuple[str, ...]] | None = None,
     ) -> None:
         super().__init__(parent)
         self.proposal = proposal
         self.spatial_candidates = spatial_candidates
+        self.story_evidence = story_evidence
         spec = proposal.specification
         self.setWindowTitle(f"Review Story CAP Draft — {spec.asset_id}")
         self.resize(860, 700)
@@ -121,6 +124,9 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Continuity (one rule per line)", self.rules)
         self.suggest_dependencies = QPushButton("Analyze Spatial Relationships (Offline)")
         self.suggest_dependencies.clicked.connect(self._analyze_spatial_relationships)
+        self.story_spatial = QPushButton("Review Approved Story Spatial Evidence (Offline)")
+        self.story_spatial.clicked.connect(self._review_story_spatial_evidence)
+        form.addRow("Approved Story evidence", self.story_spatial)
         form.addRow("Offline spatial proposal", self.suggest_dependencies)
         form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
         self.edit_geometry = QPushButton("Edit Geometry (Structured, Draft Only)")
@@ -152,6 +158,48 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
+
+    def _review_story_spatial_evidence(self) -> None:
+        """Show source-attributed candidate links without silently editing CAPs."""
+        if self.story_evidence is None:
+            QMessageBox.information(self, "Approved Story Spatial Evidence", "No approved Story context.")
+            return
+        story_id, description, registered_ids = self.story_evidence
+        plan = plan_story_spatial_evidence(
+            story_id,
+            description,
+            self.proposal.specification,
+            registered_ids,
+            self.spatial_candidates,
+        )
+        known = {line.split("|", 1)[0].strip().upper()
+                 for line in self.dependencies.toPlainText().splitlines() if line.strip()}
+        candidates = tuple(
+            entry for entry in plan.evidence if entry.child_asset_id not in known
+        )
+        lines = [
+            f"Story {plan.story_id} — parent {plan.parent_asset_id}",
+            "Explicit asset-ID relations (unapproved):",
+            *(f"{item.child_asset_id} | {item.excerpt} | character {item.start_offset}"
+              for item in plan.evidence),
+            "Missing typed geometry: " + (", ".join(plan.missing_geometry) or "none"),
+            *(plan.unresolved),
+        ]
+        if not candidates:
+            QMessageBox.information(self, "Approved Story Spatial Evidence", "\n".join(lines))
+            return
+        reply = QMessageBox.question(
+            self,
+            "Review Story Spatial Evidence",
+            "\n".join(lines)
+            + "\n\nAppend only these evidence-backed contains relationships? "
+            "No dimensions, anchors or placements will be fabricated.",
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        existing = self.dependencies.toPlainText().strip()
+        additions = [f"{entry.child_asset_id}|contains||" for entry in candidates]
+        self.dependencies.setPlainText("\n".join([part for part in (existing, *additions) if part]))
 
     def _analyze_spatial_relationships(self) -> None:
         """Review only source-backed inverse links, never create dimensions."""
