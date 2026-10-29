@@ -41,7 +41,8 @@ class StoryCAPSpecificationDialog(QDialog):
         self.setMinimumSize(520, 380)
         note = QLabel(
             "Advisory AI proposal only — distinguish story evidence from inferred design. "
-            "Saving stores Draft metadata, never approves Canon or references."
+            "Save Review & Continue retains edits in the local proposal cache. "
+            "Final CAP persistence requires separate confirmation; nothing approves Canon."
         )
         note.setWordWrap(True)
         self.intent = QTextEdit(spec.design_intent)
@@ -114,6 +115,9 @@ class StoryCAPSpecificationDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
+        save_button = buttons.button(QDialogButtonBox.StandardButton.Save)
+        if save_button is not None:
+            save_button.setText("Save Review & Continue")
         buttons.accepted.connect(self._validate)
         buttons.rejected.connect(self.reject)
         scroll_content = QWidget()
