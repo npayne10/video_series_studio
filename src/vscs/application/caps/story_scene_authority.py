@@ -40,9 +40,7 @@ class StorySceneAuthority:
         except (OSError, ValueError) as exc:
             raise ShotTextAuthorityError("Story/Scene authority ledger is invalid") from exc
 
-    def verify(
-        self, story_id: str, approved_fingerprint: str
-    ) -> VerifiedStorySceneScope:
+    def verify(self, story_id: str, approved_fingerprint: str) -> VerifiedStorySceneScope:
         data = self._read()
         entries = data.get("assignments", {})
         if not isinstance(entries, dict):
@@ -98,8 +96,7 @@ class StorySceneAuthority:
         temporary = self.path.with_suffix(".tmp")
         try:
             temporary.write_text(
-                json.dumps({"schema_version": 1, "assignments": updated}, indent=2)
-                + "\n",
+                json.dumps({"schema_version": 1, "assignments": updated}, indent=2) + "\n",
                 encoding="utf-8",
             )
             temporary.replace(self.path)
