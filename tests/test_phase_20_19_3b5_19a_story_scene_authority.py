@@ -54,6 +54,4 @@ def test_deleted_scene_invalidates_mapping(tmp_path):
 
 def test_missing_mapping_fails_closed(tmp_path):
     with pytest.raises(ShotTextAuthorityError, match="No explicitly reviewed"):
-        StorySceneAuthority(tmp_path, _Scenes(("SCN-001",))).verify(
-            "STORY-001", "fingerprint"
-        )
+        StorySceneAuthority(tmp_path, _Scenes(("SCN-001",))).verify("STORY-001", "fingerprint")
