@@ -28,5 +28,5 @@ def test_missing_verified_shot_source_leaves_review_unchanged(qtbot):
     with patch.object(QMessageBox, "information") as info:
         dialog._review_shot_spatial()
     info.assert_called_once()
-    assert "No verified Shot text reader connected" in info.call_args.args[2]
+    assert "No verified Story-to-Scene" in info.call_args.args[2]
     assert not dialog.dependencies.toPlainText()
