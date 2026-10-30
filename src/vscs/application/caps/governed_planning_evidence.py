@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from typing import Protocol
 from pathlib import Path
+from typing import Protocol
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 
