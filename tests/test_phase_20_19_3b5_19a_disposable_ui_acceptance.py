@@ -42,9 +42,7 @@ def test_disposable_persisted_shot_evidence_reaches_review_after_assignment(qtbo
     ledger = StorySceneAuthority(tmp_path, _Scenes())
     scope = ledger.assign("STORY-001", "approved-fingerprint", ("SCN-001",))
     snapshot = capture_authoritative_shot_text(reader, scope, "approved-fingerprint")
-    evidence = assert_shot_text_fresh(
-        snapshot, reader, scope, "approved-fingerprint"
-    )
+    evidence = assert_shot_text_fresh(snapshot, reader, scope, "approved-fingerprint")
     specification = CAPStructuredSpecification(
         asset_id="CAP-LOC-001",
         category=AssetCategory.LOCATION,
