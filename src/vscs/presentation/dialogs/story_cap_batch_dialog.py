@@ -212,6 +212,7 @@ class StoryCAPBatchDialog(QDialog):
                 self,
                 spatial_candidates=spatial_candidates,
                 story_evidence=(story_id, story.description, registered_ids),
+                narrative_assets=tuple(self.generator.assets.list()),
             )
             if not dialog.exec():
                 return
