@@ -27,12 +27,12 @@ from vscs.application.caps.narrative_spatial_resolution import (
 from vscs.application.caps.spatial_proposals import propose_spatial_relationships
 from vscs.application.caps.story_spatial_evidence import plan_story_spatial_evidence
 from vscs.application.caps.story_specification import StoryCAPProposal
-from vscs.domain.assets.models import Asset
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     DependencyConstraint,
     DependencyRelation,
 )
+from vscs.domain.assets.models import Asset
 from vscs.presentation.dialogs.cap_document_import_dialog import parse_mapping_lines
 from vscs.presentation.dialogs.cap_geometry_editor_dialog import CAPGeometryEditorDialog
 
@@ -178,18 +178,12 @@ class StoryCAPSpecificationDialog(QDialog):
             story_id, description, self.narrative_assets
         )
         parent_id = self.proposal.specification.asset_id
-        selected = tuple(
-            item for item in report.resolved if item.parent_asset_id == parent_id
-        )
+        selected = tuple(item for item in report.resolved if item.parent_asset_id == parent_id)
         existing = self.dependencies.toPlainText().strip()
         existing_ids = {
-            line.split("|", 1)[0].strip().upper()
-            for line in existing.splitlines()
-            if line.strip()
+            line.split("|", 1)[0].strip().upper() for line in existing.splitlines() if line.strip()
         }
-        proposed = tuple(
-            item for item in selected if item.child_asset_id not in existing_ids
-        )
+        proposed = tuple(item for item in selected if item.child_asset_id not in existing_ids)
         lines = [
             "Explicit narrative relationships (not Canon):",
             *(
@@ -205,16 +199,13 @@ class StoryCAPSpecificationDialog(QDialog):
         reply = QMessageBox.question(
             self,
             "Review Narrative Spatial Relationships",
-            "\n".join(lines)
-            + "\n\nAppend these evidenced links to the Draft form? "
+            "\n".join(lines) + "\n\nAppend these evidenced links to the Draft form? "
             "No CAP, dimensions or Canon will be created.",
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
         additions = [f"{item.child_asset_id}|contains||" for item in proposed]
-        self.dependencies.setPlainText(
-            "\n".join(part for part in (existing, *additions) if part)
-        )
+        self.dependencies.setPlainText("\n".join(part for part in (existing, *additions) if part))
 
     def _review_story_spatial_evidence(self) -> None:
         """Show source-attributed candidate links without silently editing CAPs."""
