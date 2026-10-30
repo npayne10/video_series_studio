@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
+from vscs.application.caps.governed_planning_evidence import discover_governed_shot_evidence
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
@@ -138,6 +139,23 @@ class StoryCAPBatchDialog(QDialog):
             )
             report = adapter.diagnostics()
             available = report.scene_ids
+            if not available and (root / "planning" / "episode_plans.json").is_file():
+                try:
+                    governed = discover_governed_shot_evidence(root, story_id)
+                    QMessageBox.information(
+                        self,
+                        "Governed Planning Authority Located",
+                        "The active project uses planning/episode_plans.json, "
+                        "scene_plans.json, shot_plans.json and asset_resolutions.json. "
+                        f"Story-linked Shots found: {len(governed.candidates)}. "
+                        "These are discovery-only until the original contract hash "
+                        "verification implementation is connected. No duplicate "
+                        "Scene or Shot records are needed. No CAP dependency was added.",
+                    )
+                    return
+                except ShotTextAuthorityError as exc:
+                    QMessageBox.warning(self, "Governed Planning Authority", str(exc))
+                    return
             if not available:
                 QMessageBox.information(
                     self,
