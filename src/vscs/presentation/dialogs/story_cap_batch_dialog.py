@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.authoritative_shot_text import (
     ShotTextAuthorityError,
     assert_shot_text_fresh,
@@ -25,6 +24,7 @@ from vscs.application.caps.authoritative_shot_text import (
 )
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
+from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.spatial_proposals import load_project_spatial_candidates
