@@ -70,9 +70,7 @@ def _project(root, binding_status="ready"):
 
 def test_real_planner_hashes_forward_ready_evidence(tmp_path):
     _project(tmp_path)
-    verified = verified_governed_shot_evidence(
-        tmp_path, "STORY-001", ProductionPlanningContracts()
-    )
+    verified = verified_governed_shot_evidence(tmp_path, "STORY-001", ProductionPlanningContracts())
     assert len(verified) == 1
     shots = verified_shots_to_spatial_sources(verified, selected_story_id="STORY-001")
     assert shots[0].shot_id == "EP-001-SCN-001-SHT-001"
@@ -81,7 +79,7 @@ def test_real_planner_hashes_forward_ready_evidence(tmp_path):
 
 
 def test_real_planner_hash_rejects_changed_parent(tmp_path):
-    episode, scene, _shot = _project(tmp_path)
+    episode, _scene, _shot = _project(tmp_path)
     episode["production_objective"] = "Changed upstream objective"
     _write(tmp_path, "episode_plans.json", "episodes", [episode])
     with pytest.raises(ShotTextAuthorityError, match="stale"):
