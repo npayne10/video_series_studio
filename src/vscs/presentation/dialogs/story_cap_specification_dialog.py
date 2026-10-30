@@ -183,22 +183,14 @@ class StoryCAPSpecificationDialog(QDialog):
             QMessageBox.information(self, "Shot Spatial Evidence", "No approved Story.")
             return
         story_id = self.story_evidence[0]
-        report = inspect_shot_spatial_evidence(
-            self.shot_sources, self.narrative_assets, story_id
-        )
+        report = inspect_shot_spatial_evidence(self.shot_sources, self.narrative_assets, story_id)
         parent_id = self.proposal.specification.asset_id
-        selected = tuple(
-            item for item in report.findings if item.parent_asset_id == parent_id
-        )
+        selected = tuple(item for item in report.findings if item.parent_asset_id == parent_id)
         existing = self.dependencies.toPlainText().strip()
         known = {
-            line.split("|", 1)[0].strip().upper()
-            for line in existing.splitlines()
-            if line.strip()
+            line.split("|", 1)[0].strip().upper() for line in existing.splitlines() if line.strip()
         }
-        proposed = tuple(
-            item for item in selected if item.child_asset_id not in known
-        )
+        proposed = tuple(item for item in selected if item.child_asset_id not in known)
         lines = [
             "Shot evidence (unapproved; source-scoped):",
             *(
@@ -221,9 +213,7 @@ class StoryCAPSpecificationDialog(QDialog):
         if answer != QMessageBox.StandardButton.Yes:
             return
         additions = [f"{item.child_asset_id}|contains||" for item in proposed]
-        self.dependencies.setPlainText(
-            "\n".join(part for part in (existing, *additions) if part)
-        )
+        self.dependencies.setPlainText("\n".join(part for part in (existing, *additions) if part))
 
     def _review_narrative_spatial(self) -> None:
         """Propose name-resolved locations only after explicit operator review."""
