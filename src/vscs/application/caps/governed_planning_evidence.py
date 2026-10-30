@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Protocol
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
+from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -189,3 +190,32 @@ def verified_governed_shot_evidence(
     ):
         raise ShotTextAuthorityError("Governed planning source changed during verification")
     return tuple(verified)
+
+
+def verified_shots_to_spatial_sources(
+    evidence: tuple[GovernedShotEvidence, ...],
+    *,
+    selected_story_id: str,
+) -> tuple[ShotSpatialSource, ...]:
+    """Convert only previously verified evidence to the existing Shot review contract.
+
+    Separate narrative fields retain their source labels; binding status is not
+    changed or promoted. Callers must obtain `evidence` from the verifier, not
+    from discovery, and must reverify when accepting a reviewed dependency.
+    """
+    sources: list[ShotSpatialSource] = []
+    for item in evidence:
+        if item.story_id != selected_story_id:
+            raise ShotTextAuthorityError("Cross-Story evidence cannot enter CAP review")
+        if any(status != "ready" for status in item.binding_statuses):
+            raise ShotTextAuthorityError("Unapproved bindings cannot enter verified Shot review")
+        source_text = "\n".join(f"{field}: {text}" for field, text in item.text_fields)
+        sources.append(
+            ShotSpatialSource(
+                shot_id=item.shot_id,
+                story_id=item.story_id,
+                text=source_text,
+                bound_asset_ids=item.bound_asset_ids,
+            )
+        )
+    return tuple(sources)
