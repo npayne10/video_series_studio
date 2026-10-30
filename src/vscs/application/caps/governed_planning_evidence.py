@@ -10,6 +10,10 @@ from typing import Protocol
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
+from vscs.application.story.asset_resolver import GovernedAssetResolutionService
+from vscs.application.story.episode_planning import EpisodePlanningService
+from vscs.application.story.scene_planning import ScenePlanningService
+from vscs.application.story.shot_planning import GovernedShotPlanningService
 
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -219,3 +223,19 @@ def verified_shots_to_spatial_sources(
             )
         )
     return tuple(sources)
+
+
+class ProductionPlanningContracts:
+    """Invoke original governed planner deserializers and exact hash implementations."""
+
+    def episode_contract_hash(self, episode: dict[str, object]) -> str:
+        model = EpisodePlanningService._from_dict(episode)
+        return ScenePlanningService._episode_contract_hash(model)
+
+    def scene_contract_hash(self, scene: dict[str, object]) -> str:
+        model = ScenePlanningService._from_dict(scene)
+        return GovernedShotPlanningService._scene_contract_hash(model)
+
+    def shot_contract_hash(self, shot: dict[str, object]) -> str:
+        model = GovernedShotPlanningService._from_dict(shot)
+        return GovernedAssetResolutionService._shot_contract_hash(model)
