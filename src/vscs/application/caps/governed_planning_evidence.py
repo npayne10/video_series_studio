@@ -94,16 +94,24 @@ def discover_governed_shot_evidence(
                 )
                 candidates.append(
                     GovernedShotEvidence(
-                        approved_story_id, episode_id, scene_id, shot_id,
+                        approved_story_id,
+                        episode_id,
+                        scene_id,
+                        shot_id,
                         text_fields,
-                        tuple(sorted({str(item["asset_id"]) for item in linked if item.get("asset_id")})),
+                        tuple(
+                            sorted(
+                                {str(item["asset_id"]) for item in linked if item.get("asset_id")}
+                            )
+                        ),
                         (str(hashes[0]), str(hashes[1]), str(hashes[2])),
                         tuple(str(item.get("status", "")) for item in linked),
                     )
                 )
     return GovernedPlanningDiscovery(
         tuple(candidates),
-        tuple(warnings) + (
+        (
+            *warnings,
             "Contract hashes have not been recomputed against their authoritative parent records; "
             "candidates are discovery-only, not freshness-verified CAP evidence.",
         ),
