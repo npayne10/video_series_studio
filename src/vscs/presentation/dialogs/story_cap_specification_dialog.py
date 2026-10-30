@@ -200,7 +200,10 @@ class StoryCAPSpecificationDialog(QDialog):
             *report.unresolved,
         ]
         if not self.shot_sources:
-            lines.append("No verified Shot text reader connected; no Shot relationships inferred.")
+            lines.append(
+                "Canonical Shot text: story/shots.json. No verified Story-to-Scene "
+                "association is available; no Shot relationships inferred."
+            )
         if not proposed:
             QMessageBox.information(self, "Shot Spatial Evidence", "\n".join(lines))
             return
