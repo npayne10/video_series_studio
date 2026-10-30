@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from typing import Protocol
 from pathlib import Path
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
@@ -116,3 +117,75 @@ def discover_governed_shot_evidence(
             "candidates are discovery-only, not freshness-verified CAP evidence.",
         ),
     )
+
+
+class AuthoritativePlanningContracts(Protocol):
+    """Existing production planner's hash calculator; no alternate algorithm allowed."""
+
+    def episode_contract_hash(self, episode: dict[str, object]) -> str: ...
+
+    def scene_contract_hash(self, scene: dict[str, object]) -> str: ...
+
+    def shot_contract_hash(self, shot: dict[str, object]) -> str: ...
+
+
+def verified_governed_shot_evidence(
+    project_root: Path,
+    approved_story_id: str,
+    contracts: AuthoritativePlanningContracts,
+) -> tuple[GovernedShotEvidence, ...]:
+    """Forward only current source-verified evidence; fail closed for any mismatch."""
+    episodes = _records(project_root, "episode_plans.json", "episodes")
+    scenes = _records(project_root, "scene_plans.json", "scenes")
+    shots = _records(project_root, "shot_plans.json", "shots")
+    bindings = _records(project_root, "asset_resolutions.json", "bindings")
+    discovered = discover_governed_shot_evidence(project_root, approved_story_id)
+    if discovered.warnings[:-1]:
+        raise ShotTextAuthorityError("; ".join(discovered.warnings[:-1]))
+    verified: list[GovernedShotEvidence] = []
+    for candidate in discovered.candidates:
+        episode = next(
+            (item for item in episodes if item.get("episode_id") == candidate.episode_id),
+            None,
+        )
+        scene = next(
+            (item for item in scenes if item.get("scene_id") == candidate.scene_id),
+            None,
+        )
+        shot = next(
+            (item for item in shots if item.get("shot_id") == candidate.shot_id),
+            None,
+        )
+        if episode is None or scene is None or shot is None:
+            raise ShotTextAuthorityError("Planning authority disappeared during verification")
+        if episode.get("story_id") != approved_story_id:
+            raise ShotTextAuthorityError("Cross-Story Episode is not authoritative")
+        if (
+            scene.get("episode_id") != candidate.episode_id
+            or shot.get("scene_id") != candidate.scene_id
+        ):
+            raise ShotTextAuthorityError("Planning ownership changed during verification")
+        linked = [item for item in bindings if item.get("shot_id") == candidate.shot_id]
+        actual = (
+            contracts.episode_contract_hash(episode),
+            contracts.scene_contract_hash(scene),
+            contracts.shot_contract_hash(shot),
+        )
+        if actual != candidate.contract_hashes:
+            raise ShotTextAuthorityError(
+                f"{candidate.shot_id}: planning contract hashes are stale or inconsistent"
+            )
+        if not linked or any(item.get("status") != "ready" for item in linked):
+            raise ShotTextAuthorityError(
+                f"{candidate.shot_id}: Draft or missing bindings are not approved evidence"
+            )
+        verified.append(candidate)
+    # Re-read the four source collections: a concurrent update must not forward stale text.
+    if (
+        episodes != _records(project_root, "episode_plans.json", "episodes")
+        or scenes != _records(project_root, "scene_plans.json", "scenes")
+        or shots != _records(project_root, "shot_plans.json", "shots")
+        or bindings != _records(project_root, "asset_resolutions.json", "bindings")
+    ):
+        raise ShotTextAuthorityError("Governed planning source changed during verification")
+    return tuple(verified)
