@@ -17,13 +17,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.authoritative_shot_text import (
     ShotTextAuthorityError,
     assert_shot_text_fresh,
     capture_authoritative_shot_text,
 )
 from vscs.application.caps.generator import CAPGeneratorService
-from vscs.application.caps.story_scene_authority import StorySceneAuthority
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
@@ -35,6 +35,7 @@ from vscs.application.caps.story_batch import (
     StoryCAPBatchService,
 )
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
+from vscs.application.caps.story_scene_authority import StorySceneAuthority
 from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
 from vscs.application.shots.service import ShotPlanningService
@@ -142,20 +143,22 @@ class StoryCAPBatchDialog(QDialog):
             raw, accepted = QInputDialog.getText(
                 self,
                 "Explicit Story Scene Ownership",
-                "Select Scene IDs separated by commas. Existing Scenes: "
-                + ", ".join(available),
+                "Select Scene IDs separated by commas. Existing Scenes: " + ", ".join(available),
             )
             if not accepted:
                 return
             ids = tuple(part.strip() for part in raw.split(",") if part.strip())
             if not ids:
                 return
-            if QMessageBox.question(
-                self,
-                "Confirm Story Scene Authority",
-                f"Associate {', '.join(ids)} with approved {story_id}? "
-                "This saves a separate reviewed ownership ledger, not Story Canon.",
-            ) != QMessageBox.StandardButton.Yes:
+            if (
+                QMessageBox.question(
+                    self,
+                    "Confirm Story Scene Authority",
+                    f"Associate {', '.join(ids)} with approved {story_id}? "
+                    "This saves a separate reviewed ownership ledger, not Story Canon.",
+                )
+                != QMessageBox.StandardButton.Yes
+            ):
                 return
             if fingerprint != self.review_service.batch.current_story_fingerprint(story_id):
                 raise ShotTextAuthorityError("Story changed while assigning Scenes")
@@ -259,7 +262,7 @@ class StoryCAPBatchDialog(QDialog):
             story = self.stories.story(story_id)
             if story is None:
                 raise StoryBatchError("Approved Story disappeared during spatial review")
-            verified_shots = ()
+            verified_shots: tuple[ShotSpatialSource, ...] = ()
             root = self.generator.assets.projects.project_directory
             if root is not None:
                 try:
