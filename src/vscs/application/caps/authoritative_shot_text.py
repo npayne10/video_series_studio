@@ -62,9 +62,7 @@ def _current(
     if current_story_fingerprint != scope.story_fingerprint:
         raise ShotTextAuthorityError("Approved Story fingerprint changed; Shot evidence is stale")
     allowed = set(scope.scene_ids)
-    selected = tuple(
-        shot for shot in reader.list_shots() if shot.scene_id in allowed
-    )
+    selected = tuple(shot for shot in reader.list_shots() if shot.scene_id in allowed)
     if not selected:
         raise ShotTextAuthorityError("Verified Story scenes have no persisted Shots")
     if len({shot.shot_id for shot in selected}) != len(selected):
@@ -78,9 +76,9 @@ def _current(
             shot_id=shot.shot_id,
             story_id=scope.story_id,
             text=shot.description,
-            bound_asset_ids=tuple(dict.fromkeys(
-                (*shot.subject_asset_ids, *shot.required_asset_ids)
-            )),
+            bound_asset_ids=tuple(
+                dict.fromkeys((*shot.subject_asset_ids, *shot.required_asset_ids))
+            ),
         )
         for shot in selected
     )
