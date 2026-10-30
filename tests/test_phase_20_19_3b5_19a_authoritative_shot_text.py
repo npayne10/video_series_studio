@@ -18,9 +18,7 @@ class _Reader:
         self.shots = shots
 
     def list_shots(self, scene_id: str | None = None) -> tuple[ProductionShot, ...]:
-        return tuple(
-            shot for shot in self.shots if scene_id is None or shot.scene_id == scene_id
-        )
+        return tuple(shot for shot in self.shots if scene_id is None or shot.scene_id == scene_id)
 
 
 def _shot() -> ProductionShot:
@@ -36,7 +34,9 @@ def _shot() -> ProductionShot:
 
 
 def _scope() -> VerifiedStorySceneScope:
-    return VerifiedStorySceneScope("STORY-001", "approved-digest", ("SCN-001",), "reviewed-scene-map")
+    return VerifiedStorySceneScope(
+        "STORY-001", "approved-digest", ("SCN-001",), "reviewed-scene-map"
+    )
 
 
 def test_current_shot_text_with_explicit_scene_authority():
