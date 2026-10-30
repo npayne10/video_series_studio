@@ -17,12 +17,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.caps.authoritative_shot_text import (
-    ShotTextAuthorityError,
-    assert_shot_text_fresh,
-    capture_authoritative_shot_text,
-)
+from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.generator import CAPGeneratorService
+from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
@@ -136,9 +133,22 @@ class StoryCAPBatchDialog(QDialog):
         try:
             fingerprint = self.review_service.batch.current_story_fingerprint(story_id)
             service = StoryService(self.generator.assets.projects)
-            available = tuple(scene.scene_id for scene in service.list_scenes())
+            adapter = GovernedProductionPlanAdapter(
+                root, service, ShotPlanningService(self.generator.assets.projects)
+            )
+            report = adapter.diagnostics()
+            available = report.scene_ids
             if not available:
-                QMessageBox.information(self, "Story Scene Ownership", "No persisted Scenes.")
+                QMessageBox.information(
+                    self,
+                    "Story Scene Ownership",
+                    f"No persisted Scenes in active project.\\n"
+                    f"Scene source: {report.scene_source}\\n"
+                    f"Shot source: {report.shot_source}\\n"
+                    f"Persisted Shots: {report.shot_count}\\n"
+                    "Story Workspace must show the same active project and sources. "
+                    "No duplicate records will be created.",
+                )
                 return
             raw, accepted = QInputDialog.getText(
                 self,
@@ -266,16 +276,15 @@ class StoryCAPBatchDialog(QDialog):
             root = self.generator.assets.projects.project_directory
             if root is not None:
                 try:
-                    scenes = StoryService(self.generator.assets.projects)
-                    scope = StorySceneAuthority(root, scenes).verify(story_id, fingerprint)
-                    reader = ShotPlanningService(self.generator.assets.projects)
-                    snapshot = capture_authoritative_shot_text(reader, scope, fingerprint)
-                    verified_shots = assert_shot_text_fresh(
-                        snapshot,
-                        reader,
-                        scope,
-                        self.review_service.batch.current_story_fingerprint(story_id),
+                    adapter = GovernedProductionPlanAdapter(
+                        root,
+                        StoryService(self.generator.assets.projects),
+                        ShotPlanningService(self.generator.assets.projects),
                     )
+                    snapshot = adapter.verified_snapshot(
+                        story_id, self.review_service.batch.current_story_fingerprint(story_id)
+                    )
+                    verified_shots = snapshot.shots
                 except ShotTextAuthorityError:
                     pass
             dialog = StoryCAPSpecificationDialog(
