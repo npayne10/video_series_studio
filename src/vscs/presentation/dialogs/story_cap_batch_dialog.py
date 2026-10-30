@@ -20,7 +20,12 @@ from PySide6.QtWidgets import (
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
-from vscs.application.caps.governed_planning_evidence import discover_governed_shot_evidence
+from vscs.application.caps.governed_planning_evidence import (
+    ProductionPlanningContracts,
+    discover_governed_shot_evidence,
+    verified_governed_shot_evidence,
+    verified_shots_to_spatial_sources,
+)
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
@@ -292,19 +297,36 @@ class StoryCAPBatchDialog(QDialog):
                 raise StoryBatchError("Approved Story disappeared during spatial review")
             verified_shots: tuple[ShotSpatialSource, ...] = ()
             root = self.generator.assets.projects.project_directory
+            governed_source = root is not None and (
+                root / "planning" / "episode_plans.json"
+            ).is_file()
             if root is not None:
-                try:
-                    adapter = GovernedProductionPlanAdapter(
-                        root,
-                        StoryService(self.generator.assets.projects),
-                        ShotPlanningService(self.generator.assets.projects),
-                    )
-                    snapshot = adapter.verified_snapshot(
-                        story_id, self.review_service.batch.current_story_fingerprint(story_id)
-                    )
-                    verified_shots = snapshot.shots
-                except ShotTextAuthorityError:
-                    pass
+                if governed_source:
+                    try:
+                        evidence = verified_governed_shot_evidence(
+                            root, story_id, ProductionPlanningContracts()
+                        )
+                        verified_shots = verified_shots_to_spatial_sources(
+                            evidence, selected_story_id=story_id
+                        )
+                    except (ShotTextAuthorityError, KeyError, TypeError, ValueError) as exc:
+                        self.summary.setPlainText(
+                            "Governed Shot evidence unavailable (no relationships inferred): "
+                            + str(exc)
+                        )
+                else:
+                    try:
+                        adapter = GovernedProductionPlanAdapter(
+                            root,
+                            StoryService(self.generator.assets.projects),
+                            ShotPlanningService(self.generator.assets.projects),
+                        )
+                        snapshot = adapter.verified_snapshot(
+                            story_id, self.review_service.batch.current_story_fingerprint(story_id)
+                        )
+                        verified_shots = snapshot.shots
+                    except ShotTextAuthorityError:
+                        pass
             dialog = StoryCAPSpecificationDialog(
                 item.proposal,
                 self,
@@ -315,6 +337,13 @@ class StoryCAPBatchDialog(QDialog):
             )
             if not dialog.exec():
                 return
+            if governed_source and root is not None and verified_shots:
+                refreshed = verified_shots_to_spatial_sources(
+                    verified_governed_shot_evidence(root, story_id, ProductionPlanningContracts()),
+                    selected_story_id=story_id,
+                )
+                if refreshed != verified_shots:
+                    raise StoryBatchError("Governed Shot evidence changed during CAP review")
             # Save the operator's reviewed fields as unapproved working material.
             # This is NOT CAP persistence, Canon approval or a provider call.
             item = replace(item, proposal=replace(item.proposal, specification=dialog.reviewed()))
