@@ -72,6 +72,6 @@ def inspect_shot_spatial_evidence(
                         item.start_offset,
                     )
                 )
-        for item in resolution.ambiguous:
-            unresolved.append(f"{source.shot_id}: ambiguous: {item.excerpt}")
+        for ambiguous_item in resolution.ambiguous:
+            unresolved.append(f"{source.shot_id}: ambiguous: {ambiguous_item.excerpt}")
     return ShotSpatialPlan(tuple(findings), tuple(unresolved))
