@@ -18,7 +18,6 @@ from vscs.presentation.dialogs.story_cap_specification_dialog import (
 )
 
 
-
 def _project(root):
     """Write an isolated governed planning fixture using real contract functions."""
     calculator = ProductionPlanningContracts()
