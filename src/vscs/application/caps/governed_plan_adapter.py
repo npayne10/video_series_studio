@@ -33,9 +33,7 @@ class GovernedPlanDiagnostics:
 class GovernedProductionPlanAdapter:
     """Use precisely the persisted planning services underpinning Story Workspace."""
 
-    def __init__(
-        self, root: Path, scenes: StoryService, shots: ShotPlanningService
-    ) -> None:
+    def __init__(self, root: Path, scenes: StoryService, shots: ShotPlanningService) -> None:
         self.root = root
         self.scenes = scenes
         self.shots = shots
@@ -63,16 +61,9 @@ class GovernedProductionPlanAdapter:
         report = self.diagnostics()
         if report.orphan_shot_ids:
             raise ShotTextAuthorityError(
-                "Persisted Shots reference missing Scenes: "
-                + ", ".join(report.orphan_shot_ids)
+                "Persisted Shots reference missing Scenes: " + ", ".join(report.orphan_shot_ids)
             )
-        scope = StorySceneAuthority(self.root, self.scenes).verify(
-            story_id, approved_fingerprint
-        )
-        snapshot = capture_authoritative_shot_text(
-            self.shots, scope, approved_fingerprint
-        )
-        assert_shot_text_fresh(
-            snapshot, self.shots, scope, approved_fingerprint
-        )
+        scope = StorySceneAuthority(self.root, self.scenes).verify(story_id, approved_fingerprint)
+        snapshot = capture_authoritative_shot_text(self.shots, scope, approved_fingerprint)
+        assert_shot_text_fresh(snapshot, self.shots, scope, approved_fingerprint)
         return snapshot
