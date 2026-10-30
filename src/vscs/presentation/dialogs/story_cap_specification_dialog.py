@@ -24,6 +24,10 @@ from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.narrative_spatial_resolution import (
     resolve_narrative_spatial_relationships,
 )
+from vscs.application.caps.shot_spatial_evidence import (
+    ShotSpatialSource,
+    inspect_shot_spatial_evidence,
+)
 from vscs.application.caps.spatial_proposals import propose_spatial_relationships
 from vscs.application.caps.story_spatial_evidence import plan_story_spatial_evidence
 from vscs.application.caps.story_specification import StoryCAPProposal
@@ -47,12 +51,14 @@ class StoryCAPSpecificationDialog(QDialog):
         spatial_candidates: tuple[CAPStructuredSpecification, ...] = (),
         story_evidence: tuple[str, str, tuple[str, ...]] | None = None,
         narrative_assets: tuple[Asset, ...] = (),
+        shot_sources: tuple[ShotSpatialSource, ...] = (),
     ) -> None:
         super().__init__(parent)
         self.proposal = proposal
         self.spatial_candidates = spatial_candidates
         self.story_evidence = story_evidence
         self.narrative_assets = narrative_assets
+        self.shot_sources = shot_sources
         spec = proposal.specification
         self.setWindowTitle(f"Review Story CAP Draft — {spec.asset_id}")
         self.resize(860, 700)
@@ -134,6 +140,9 @@ class StoryCAPSpecificationDialog(QDialog):
         self.story_spatial.clicked.connect(self._review_story_spatial_evidence)
         self.narrative_spatial = QPushButton("Resolve Narrative Spatial Relationships (Offline)")
         self.narrative_spatial.clicked.connect(self._review_narrative_spatial)
+        self.shot_spatial = QPushButton("Review Shot Spatial Evidence (Offline)")
+        self.shot_spatial.clicked.connect(self._review_shot_spatial)
+        form.addRow("Shot evidence review", self.shot_spatial)
         form.addRow("Narrative relationship discovery", self.narrative_spatial)
         form.addRow("Approved Story evidence", self.story_spatial)
         form.addRow("Offline spatial proposal", self.suggest_dependencies)
@@ -167,6 +176,54 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
+
+    def _review_shot_spatial(self) -> None:
+        """Only propose relationships from authenticated Shot text and bindings."""
+        if self.story_evidence is None:
+            QMessageBox.information(self, "Shot Spatial Evidence", "No approved Story.")
+            return
+        story_id = self.story_evidence[0]
+        report = inspect_shot_spatial_evidence(
+            self.shot_sources, self.narrative_assets, story_id
+        )
+        parent_id = self.proposal.specification.asset_id
+        selected = tuple(
+            item for item in report.findings if item.parent_asset_id == parent_id
+        )
+        existing = self.dependencies.toPlainText().strip()
+        known = {
+            line.split("|", 1)[0].strip().upper()
+            for line in existing.splitlines()
+            if line.strip()
+        }
+        proposed = tuple(
+            item for item in selected if item.child_asset_id not in known
+        )
+        lines = [
+            "Shot evidence (unapproved; source-scoped):",
+            *(
+                f"{item.shot_id}: {item.child_asset_id} inside {parent_id}: {item.excerpt}"
+                for item in selected
+            ),
+            *report.unresolved,
+        ]
+        if not self.shot_sources:
+            lines.append("No verified Shot text reader connected; no Shot relationships inferred.")
+        if not proposed:
+            QMessageBox.information(self, "Shot Spatial Evidence", "\n".join(lines))
+            return
+        answer = QMessageBox.question(
+            self,
+            "Review Shot Spatial Evidence",
+            "\n".join(lines)
+            + "\n\nAppend only these supported relationships to this Draft review?",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        additions = [f"{item.child_asset_id}|contains||" for item in proposed]
+        self.dependencies.setPlainText(
+            "\n".join(part for part in (existing, *additions) if part)
+        )
 
     def _review_narrative_spatial(self) -> None:
         """Propose name-resolved locations only after explicit operator review."""
