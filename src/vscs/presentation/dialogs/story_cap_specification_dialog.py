@@ -21,9 +21,13 @@ from PySide6.QtWidgets import (
 from vscs.application.caps.anchor_placement import AnchorPlacement
 from vscs.application.caps.completeness import assess_completeness
 from vscs.application.caps.geometry_contract import CAPGeometry
+from vscs.application.caps.narrative_spatial_resolution import (
+    resolve_narrative_spatial_relationships,
+)
 from vscs.application.caps.spatial_proposals import propose_spatial_relationships
 from vscs.application.caps.story_spatial_evidence import plan_story_spatial_evidence
 from vscs.application.caps.story_specification import StoryCAPProposal
+from vscs.domain.assets.models import Asset
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     DependencyConstraint,
@@ -42,11 +46,13 @@ class StoryCAPSpecificationDialog(QDialog):
         parent: QWidget | None = None,
         spatial_candidates: tuple[CAPStructuredSpecification, ...] = (),
         story_evidence: tuple[str, str, tuple[str, ...]] | None = None,
+        narrative_assets: tuple[Asset, ...] = (),
     ) -> None:
         super().__init__(parent)
         self.proposal = proposal
         self.spatial_candidates = spatial_candidates
         self.story_evidence = story_evidence
+        self.narrative_assets = narrative_assets
         spec = proposal.specification
         self.setWindowTitle(f"Review Story CAP Draft — {spec.asset_id}")
         self.resize(860, 700)
@@ -126,6 +132,9 @@ class StoryCAPSpecificationDialog(QDialog):
         self.suggest_dependencies.clicked.connect(self._analyze_spatial_relationships)
         self.story_spatial = QPushButton("Review Approved Story Spatial Evidence (Offline)")
         self.story_spatial.clicked.connect(self._review_story_spatial_evidence)
+        self.narrative_spatial = QPushButton("Resolve Narrative Spatial Relationships (Offline)")
+        self.narrative_spatial.clicked.connect(self._review_narrative_spatial)
+        form.addRow("Narrative relationship discovery", self.narrative_spatial)
         form.addRow("Approved Story evidence", self.story_spatial)
         form.addRow("Offline spatial proposal", self.suggest_dependencies)
         form.addRow("Cross-asset dependencies (reviewed, Draft only)", self.dependencies)
@@ -158,6 +167,54 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
+
+    def _review_narrative_spatial(self) -> None:
+        """Propose name-resolved locations only after explicit operator review."""
+        if self.story_evidence is None:
+            QMessageBox.information(self, "Narrative Spatial Resolution", "No approved Story.")
+            return
+        story_id, description, _registered = self.story_evidence
+        report = resolve_narrative_spatial_relationships(
+            story_id, description, self.narrative_assets
+        )
+        parent_id = self.proposal.specification.asset_id
+        selected = tuple(
+            item for item in report.resolved if item.parent_asset_id == parent_id
+        )
+        existing = self.dependencies.toPlainText().strip()
+        existing_ids = {
+            line.split("|", 1)[0].strip().upper()
+            for line in existing.splitlines()
+            if line.strip()
+        }
+        proposed = tuple(
+            item for item in selected if item.child_asset_id not in existing_ids
+        )
+        lines = [
+            "Explicit narrative relationships (not Canon):",
+            *(
+                f"{item.child_asset_id} inside {item.parent_asset_id}: {item.excerpt}"
+                for item in selected
+            ),
+            f"Ambiguous expressions requiring manual review: {len(report.ambiguous)}",
+            *(item.excerpt for item in report.ambiguous),
+        ]
+        if not proposed:
+            QMessageBox.information(self, "Narrative Spatial Resolution", "\n".join(lines))
+            return
+        reply = QMessageBox.question(
+            self,
+            "Review Narrative Spatial Relationships",
+            "\n".join(lines)
+            + "\n\nAppend these evidenced links to the Draft form? "
+            "No CAP, dimensions or Canon will be created.",
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        additions = [f"{item.child_asset_id}|contains||" for item in proposed]
+        self.dependencies.setPlainText(
+            "\n".join(part for part in (existing, *additions) if part)
+        )
 
     def _review_story_spatial_evidence(self) -> None:
         """Show source-attributed candidate links without silently editing CAPs."""
