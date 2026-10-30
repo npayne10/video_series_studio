@@ -153,9 +153,11 @@ class StoryCAPBatchDialog(QDialog):
                         "The active project uses planning/episode_plans.json, "
                         "scene_plans.json, shot_plans.json and asset_resolutions.json. "
                         f"Story-linked Shots found: {len(governed.candidates)}. "
-                        "These are discovery-only until the original contract hash "
-                        "verification implementation is connected. No duplicate "
-                        "Scene or Shot records are needed. No CAP dependency was added.",
+                        "The original production contract calculators are connected. "
+                        "Actual Shot evidence forwarding is separately verified when "
+                        "a CAP proposal is reviewed; Draft asset bindings are not approved "
+                        "evidence. No duplicate Scene or Shot records are needed. "
+                        "No CAP dependency was added.",
                     )
                     return
                 except ShotTextAuthorityError as exc:
@@ -296,6 +298,7 @@ class StoryCAPBatchDialog(QDialog):
             if story is None:
                 raise StoryBatchError("Approved Story disappeared during spatial review")
             verified_shots: tuple[ShotSpatialSource, ...] = ()
+            shot_evidence_status = ""
             root = self.generator.assets.projects.project_directory
             governed_source = (
                 root is not None and (root / "planning" / "episode_plans.json").is_file()
@@ -309,11 +312,20 @@ class StoryCAPBatchDialog(QDialog):
                         verified_shots = verified_shots_to_spatial_sources(
                             evidence, selected_story_id=story_id
                         )
+                        if not verified_shots:
+                            shot_evidence_status = (
+                                "Governed Shot source: planning/shot_plans.json. "
+                                "No Ready, contract-verified Shot evidence for this Story; "
+                                "no spatial relationships inferred."
+                            )
                     except (ShotTextAuthorityError, KeyError, TypeError, ValueError) as exc:
-                        self.summary.setPlainText(
-                            "Governed Shot evidence unavailable (no relationships inferred): "
-                            + str(exc)
+                        shot_evidence_status = (
+                            "Governed Shot source: planning/shot_plans.json. "
+                            "Evidence was not forwarded because contract or binding "
+                            f"authority was not verified: {exc}. "
+                            "No Shot relationships inferred."
                         )
+                        self.summary.setPlainText(shot_evidence_status)
                 else:
                     try:
                         adapter = GovernedProductionPlanAdapter(
@@ -334,6 +346,7 @@ class StoryCAPBatchDialog(QDialog):
                 story_evidence=(story_id, story.description, registered_ids),
                 narrative_assets=tuple(self.generator.assets.list()),
                 shot_sources=verified_shots,
+                shot_evidence_status=shot_evidence_status,
             )
             if not dialog.exec():
                 return
