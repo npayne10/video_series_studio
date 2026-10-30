@@ -297,9 +297,9 @@ class StoryCAPBatchDialog(QDialog):
                 raise StoryBatchError("Approved Story disappeared during spatial review")
             verified_shots: tuple[ShotSpatialSource, ...] = ()
             root = self.generator.assets.projects.project_directory
-            governed_source = root is not None and (
-                root / "planning" / "episode_plans.json"
-            ).is_file()
+            governed_source = (
+                root is not None and (root / "planning" / "episode_plans.json").is_file()
+            )
             if root is not None:
                 if governed_source:
                     try:
@@ -380,9 +380,7 @@ class StoryCAPBatchDialog(QDialog):
                 return
             if governed_source and root is not None and verified_shots:
                 final_sources = verified_shots_to_spatial_sources(
-                    verified_governed_shot_evidence(
-                        root, story_id, ProductionPlanningContracts()
-                    ),
+                    verified_governed_shot_evidence(root, story_id, ProductionPlanningContracts()),
                     selected_story_id=story_id,
                 )
                 if final_sources != verified_shots:
