@@ -52,6 +52,7 @@ class StoryCAPSpecificationDialog(QDialog):
         story_evidence: tuple[str, str, tuple[str, ...]] | None = None,
         narrative_assets: tuple[Asset, ...] = (),
         shot_sources: tuple[ShotSpatialSource, ...] = (),
+        shot_evidence_status: str = "",
     ) -> None:
         super().__init__(parent)
         self.proposal = proposal
@@ -59,6 +60,7 @@ class StoryCAPSpecificationDialog(QDialog):
         self.story_evidence = story_evidence
         self.narrative_assets = narrative_assets
         self.shot_sources = shot_sources
+        self.shot_evidence_status = shot_evidence_status
         spec = proposal.specification
         self.setWindowTitle(f"Review Story CAP Draft — {spec.asset_id}")
         self.resize(860, 700)
@@ -201,8 +203,11 @@ class StoryCAPSpecificationDialog(QDialog):
         ]
         if not self.shot_sources:
             lines.append(
-                "Canonical Shot text: story/shots.json. No verified Story-to-Scene "
-                "association is available; no Shot relationships inferred."
+                self.shot_evidence_status
+                or (
+                    "Legacy Shot source: story/shots.json. No verified Story-to-Scene "
+                    "association is available; no Shot relationships inferred."
+                )
             )
         if not proposed:
             QMessageBox.information(self, "Shot Spatial Evidence", "\n".join(lines))
