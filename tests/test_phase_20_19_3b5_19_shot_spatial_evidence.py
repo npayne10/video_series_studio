@@ -29,9 +29,7 @@ def test_shot_relation_provenance_from_explicit_text_and_bindings():
 
 
 def test_binding_alone_is_not_relationship_evidence():
-    source = ShotSpatialSource(
-        "SHT-001", "STORY-001", "", ("CAP-LOC-001", "CAP-PRP-001")
-    )
+    source = ShotSpatialSource("SHT-001", "STORY-001", "", ("CAP-LOC-001", "CAP-PRP-001"))
     report = inspect_shot_spatial_evidence((source,), _assets(), "STORY-001")
     assert report.findings == ()
     assert report.unresolved == ("SHT-001: Shot text unavailable; bindings are not prose",)
@@ -50,7 +48,5 @@ def test_unbound_or_other_story_relationships_are_rejected():
         "Diagnostic Console inside Engineering Control Room.",
         ("CAP-LOC-001", "CAP-PRP-001"),
     )
-    result = inspect_shot_spatial_evidence(
-        (unbound, other_story), _assets(), "STORY-001"
-    )
+    result = inspect_shot_spatial_evidence((unbound, other_story), _assets(), "STORY-001")
     assert not result.findings
