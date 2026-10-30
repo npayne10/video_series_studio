@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -16,7 +17,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.authoritative_shot_text import (
+    ShotTextAuthorityError,
+    assert_shot_text_fresh,
+    capture_authoritative_shot_text,
+)
 from vscs.application.caps.generator import CAPGeneratorService
+from vscs.application.caps.story_scene_authority import StorySceneAuthority
 from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
@@ -30,7 +37,9 @@ from vscs.application.caps.story_batch import (
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.application.caps.structured_specification import CAPStructuredSpecificationService
+from vscs.application.shots.service import ShotPlanningService
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
+from vscs.application.story.service import StoryService
 from vscs.presentation.dialogs.cap_detail_review_dialog import CAPDetailReviewDialog
 from vscs.presentation.dialogs.spatial_continuity_report_dialog import (
     SpatialContinuityReportDialog,
@@ -68,6 +77,7 @@ class StoryCAPBatchDialog(QDialog):
                 self.story.addItem(f"{story.story_id} — {story.title}", story.story_id)
         self.assets = QComboBox()
         self.inspect = QPushButton("Discover Shot Assets")
+        self.map_scenes = QPushButton("Assign Story Scenes (Reviewed)")
         self.preview = QPushButton("Review Cached Proposal")
         self.regenerate = QPushButton("Generate / Regenerate Using AI (Paid)")
         self.spatial_acceptance = QPushButton("Spatial Geometry Acceptance (Offline)")
@@ -92,6 +102,7 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(QLabel("Project-approved Story"))
         layout.addWidget(self.story)
         layout.addLayout(row)
+        layout.addWidget(self.map_scenes)
         acceptance_row = QHBoxLayout()
         acceptance_row.addWidget(self.acceptance_scenario)
         acceptance_row.addWidget(self.spatial_acceptance)
@@ -99,6 +110,7 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(self.summary)
         layout.addWidget(self.close_button)
         self.inspect.clicked.connect(self.discover)
+        self.map_scenes.clicked.connect(self.assign_story_scenes)
         self.preview.clicked.connect(self.review_one)
         self.regenerate.clicked.connect(self.regenerate_one)
         self.close_button.clicked.connect(self.reject)
@@ -113,6 +125,46 @@ class StoryCAPBatchDialog(QDialog):
             return
         result = run_spatial_acceptance(AcceptanceScenario(scenario))
         SpatialContinuityReportDialog(result.report, self).exec()
+
+    def assign_story_scenes(self) -> None:
+        """Explicit operator ownership assignment, never inferred from episode IDs."""
+        story_id = self.story.currentData()
+        root = self.generator.assets.projects.project_directory
+        if not isinstance(story_id, str) or root is None:
+            return
+        try:
+            fingerprint = self.review_service.batch.current_story_fingerprint(story_id)
+            service = StoryService(self.generator.assets.projects)
+            available = tuple(scene.scene_id for scene in service.list_scenes())
+            if not available:
+                QMessageBox.information(self, "Story Scene Ownership", "No persisted Scenes.")
+                return
+            raw, accepted = QInputDialog.getText(
+                self,
+                "Explicit Story Scene Ownership",
+                "Select Scene IDs separated by commas. Existing Scenes: "
+                + ", ".join(available),
+            )
+            if not accepted:
+                return
+            ids = tuple(part.strip() for part in raw.split(",") if part.strip())
+            if not ids:
+                return
+            if QMessageBox.question(
+                self,
+                "Confirm Story Scene Authority",
+                f"Associate {', '.join(ids)} with approved {story_id}? "
+                "This saves a separate reviewed ownership ledger, not Story Canon.",
+            ) != QMessageBox.StandardButton.Yes:
+                return
+            if fingerprint != self.review_service.batch.current_story_fingerprint(story_id):
+                raise ShotTextAuthorityError("Story changed while assigning Scenes")
+            StorySceneAuthority(root, service).assign(story_id, fingerprint, ids)
+            QMessageBox.information(
+                self, "Story Scene Authority", "Reviewed Story-to-Scene scope saved."
+            )
+        except (ShotTextAuthorityError, StoryBatchError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "Story Scene Authority", str(exc))
 
     def discover(self) -> None:
         self.assets.clear()
@@ -207,12 +259,29 @@ class StoryCAPBatchDialog(QDialog):
             story = self.stories.story(story_id)
             if story is None:
                 raise StoryBatchError("Approved Story disappeared during spatial review")
+            verified_shots = ()
+            root = self.generator.assets.projects.project_directory
+            if root is not None:
+                try:
+                    scenes = StoryService(self.generator.assets.projects)
+                    scope = StorySceneAuthority(root, scenes).verify(story_id, fingerprint)
+                    reader = ShotPlanningService(self.generator.assets.projects)
+                    snapshot = capture_authoritative_shot_text(reader, scope, fingerprint)
+                    verified_shots = assert_shot_text_fresh(
+                        snapshot,
+                        reader,
+                        scope,
+                        self.review_service.batch.current_story_fingerprint(story_id),
+                    )
+                except ShotTextAuthorityError:
+                    pass
             dialog = StoryCAPSpecificationDialog(
                 item.proposal,
                 self,
                 spatial_candidates=spatial_candidates,
                 story_evidence=(story_id, story.description, registered_ids),
                 narrative_assets=tuple(self.generator.assets.list()),
+                shot_sources=verified_shots,
             )
             if not dialog.exec():
                 return
