@@ -378,6 +378,17 @@ class StoryCAPBatchDialog(QDialog):
             )
             if confirm != QMessageBox.StandardButton.Yes:
                 return
+            if governed_source and root is not None and verified_shots:
+                final_sources = verified_shots_to_spatial_sources(
+                    verified_governed_shot_evidence(
+                        root, story_id, ProductionPlanningContracts()
+                    ),
+                    selected_story_id=story_id,
+                )
+                if final_sources != verified_shots:
+                    raise StoryBatchError(
+                        "Governed Shot evidence changed before Draft CAP persistence"
+                    )
             self.review_service.save_reviewed(
                 story_id, dialog.reviewed(), item.story_fingerprint, detail_dialog.reviewed()
             )
