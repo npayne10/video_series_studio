@@ -72,8 +72,6 @@ def resolve_narrative_spatial_relationships(
             )
             continue
         resolved.append(
-            ResolvedNarrativeRelation(
-                child_ids[0], parent_ids[0], excerpt, match.start(), story_id
-            )
+            ResolvedNarrativeRelation(child_ids[0], parent_ids[0], excerpt, match.start(), story_id)
         )
     return NarrativeSpatialResolution(tuple(resolved), tuple(ambiguous))
