@@ -6,7 +6,6 @@ import pytest
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
-from vscs.application.caps.story_scene_authority import StorySceneAuthority
 from vscs.application.shots.models import ProductionShot
 from vscs.application.shots.service import ShotPlanningService
 from vscs.application.story.service import StoryService
