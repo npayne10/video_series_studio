@@ -30,9 +30,7 @@ def test_ready_governed_evidence_requires_operator_confirmation(qtbot, tmp_path)
     evidence = verified_governed_shot_evidence(
         tmp_path, "STORY-001", ProductionPlanningContracts()
     )
-    sources = verified_shots_to_spatial_sources(
-        evidence, selected_story_id="STORY-001"
-    )
+    sources = verified_shots_to_spatial_sources(evidence, selected_story_id="STORY-001")
     spec = CAPStructuredSpecification(
         asset_id="CAP-LOC-001",
         category=AssetCategory.LOCATION,
@@ -58,3 +56,28 @@ def test_ready_governed_evidence_requires_operator_confirmation(qtbot, tmp_path)
     assert "CAP-PRP-001|contains||" in dialog.dependencies.toPlainText()
     assert not (tmp_path / "caps").exists()
     assert not (tmp_path / "story").exists()
+
+
+def test_governed_source_message_does_not_claim_legacy_shot_authority(qtbot):
+    spec = CAPStructuredSpecification(
+        asset_id="CAP-LOC-001",
+        category=AssetCategory.LOCATION,
+        design_intent="Control room",
+        canonical_attributes={"architecture": "Unknown"},
+        master_prompt="Draft only",
+    )
+    dialog = StoryCAPSpecificationDialog(
+        StoryCAPProposal(spec, "architecture", ()),
+        story_evidence=("STORY-001", "Approved", ("CAP-LOC-001",)),
+        shot_evidence_status=(
+            "Governed Shot source: planning/shot_plans.json. "
+            "Draft or missing bindings are not approved evidence."
+        ),
+    )
+    qtbot.addWidget(dialog)
+    with patch.object(QMessageBox, "information") as info:
+        dialog.shot_spatial.click()
+    message = info.call_args.args[2]
+    assert "planning/shot_plans.json" in message
+    assert "Draft or missing bindings" in message
+    assert "story/shots.json" not in message
