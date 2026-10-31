@@ -78,3 +78,19 @@ def test_contextual_review_is_non_mutating(qtbot):
         dialog.contextual_shot.click()
     assert "CAP-PRP-001 in CAP-LOC-001" in shown.call_args.args[2]
     assert dialog.dependencies.toPlainText() == ""
+
+
+def test_audit_location_first_wording_is_advisory():
+    source = ShotSpatialSource(
+        "SHT-001",
+        "STORY-001",
+        "In the empty engineering control room, the diagnostic console maintains a steady blue glow.",
+        ("CAP-LOC-001", "CAP-PRP-001"),
+    )
+    suggestions = suggest_contextual_shot_relationships(
+        (source,), _assets(), "STORY-001"
+    )
+    assert len(suggestions) == 1
+    assert suggestions[0].child_asset_id == "CAP-PRP-001"
+    assert suggestions[0].parent_asset_id == "CAP-LOC-001"
+    assert suggestions[0].confidence == "review_required"
