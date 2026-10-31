@@ -15,7 +15,13 @@ _PREPOSITION = re.compile(
     r"(?P<parent>[\w][\w '\-]{1,90}?)(?=[.,;!?]|$)",
     re.IGNORECASE,
 )
-_STOP = re.compile(r"\b(?:no|without|not|never)\b", re.IGNORECASE)
+_STOP = re.compile(r"\\b(?:no|without|not|never)\\b", re.IGNORECASE)
+_LOCATION_FIRST = re.compile(
+    r"(?:^|[.!?]\\s+)In\\s+(?:the\\s+)?"
+    r"(?P<parent>[^,.;!?]{2,100}),\\s+"
+    r"(?:the\\s+)?(?P<child>[^,.;!?]{2,120}?)(?=[,.;!?]|$)",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -67,6 +73,21 @@ def suggest_contextual_shot_relationships(
                 continue
             suggestion = ContextualShotSuggestion(
                 source.shot_id, children[0], parents[0], excerpt
+            )
+            if suggestion not in output:
+                output.append(suggestion)
+        for match in _LOCATION_FIRST.finditer(source.text):
+            parent_ids = _names(match.group("parent"), eligible)
+            child_ids = _names(match.group("child"), eligible)
+            if len(parent_ids) != 1 or len(child_ids) != 1:
+                continue
+            if parent_ids[0] == child_ids[0]:
+                continue
+            suggestion = ContextualShotSuggestion(
+                source.shot_id,
+                child_ids[0],
+                parent_ids[0],
+                match.group(0).strip(),
             )
             if suggestion not in output:
                 output.append(suggestion)
