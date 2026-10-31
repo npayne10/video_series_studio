@@ -15,11 +15,11 @@ _PREPOSITION = re.compile(
     r"(?P<parent>[\w][\w '\-]{1,90}?)(?=[.,;!?]|$)",
     re.IGNORECASE,
 )
-_STOP = re.compile(r"\\b(?:no|without|not|never)\\b", re.IGNORECASE)
+_STOP = re.compile(r"\b(?:no|without|not|never)\b", re.IGNORECASE)
 _LOCATION_FIRST = re.compile(
-    r"(?:^|[.!?]\\s+)In\\s+(?:the\\s+)?"
-    r"(?P<parent>[^,.;!?]{2,100}),\\s+"
-    r"(?:the\\s+)?(?P<child>[^,.;!?]{2,120}?)(?=[,.;!?]|$)",
+    r"(?:^|[.!?]\s+)In\s+(?:the\s+)?"
+    r"(?P<parent>[^,.;!?]{2,100}),\s+"
+    r"(?:the\s+)?(?P<child>[^,.;!?]{2,120}?)(?=[,.;!?]|$)",
     re.IGNORECASE,
 )
 
