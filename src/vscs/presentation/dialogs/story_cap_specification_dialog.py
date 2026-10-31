@@ -20,6 +20,9 @@ from PySide6.QtWidgets import (
 
 from vscs.application.caps.anchor_placement import AnchorPlacement
 from vscs.application.caps.completeness import assess_completeness
+from vscs.application.caps.contextual_shot_interpretation import (
+    suggest_contextual_shot_relationships,
+)
 from vscs.application.caps.geometry_contract import CAPGeometry
 from vscs.application.caps.narrative_spatial_resolution import (
     resolve_narrative_spatial_relationships,
@@ -144,7 +147,10 @@ class StoryCAPSpecificationDialog(QDialog):
         self.narrative_spatial.clicked.connect(self._review_narrative_spatial)
         self.shot_spatial = QPushButton("Review Shot Spatial Evidence (Offline)")
         self.shot_spatial.clicked.connect(self._review_shot_spatial)
+        self.contextual_shot = QPushButton("Inspect Contextual Shot Suggestions (Offline)")
+        self.contextual_shot.clicked.connect(self._inspect_contextual_shot)
         form.addRow("Shot evidence review", self.shot_spatial)
+        form.addRow("Contextual Shot suggestions (advisory)", self.contextual_shot)
         form.addRow("Narrative relationship discovery", self.narrative_spatial)
         form.addRow("Approved Story evidence", self.story_spatial)
         form.addRow("Offline spatial proposal", self.suggest_dependencies)
@@ -178,6 +184,35 @@ class StoryCAPSpecificationDialog(QDialog):
         layout.addWidget(buttons)
         self._reviewed: CAPStructuredSpecification | None = None
         self._update_completeness()
+
+    def _inspect_contextual_shot(self) -> None:
+        """Display advisory narrative suggestions; never mutate CAP dependencies."""
+        if self.story_evidence is None:
+            QMessageBox.information(self, "Contextual Shot Suggestions", "No approved Story.")
+            return
+        if not self.shot_sources:
+            QMessageBox.information(
+                self,
+                "Contextual Shot Suggestions",
+                self.shot_evidence_status
+                or "No verified Shot text; contextual suggestions are unavailable.",
+            )
+            return
+        suggestions = suggest_contextual_shot_relationships(
+            self.shot_sources, self.narrative_assets, self.story_evidence[0]
+        )
+        if not suggestions:
+            message = (
+                "No unambiguous, bound-asset contextual relationship found. "
+                "This is not a Canon finding."
+            )
+        else:
+            message = "Advisory only — not Canon; no dependencies will be changed:\n" + "\n".join(
+                f"{item.shot_id}: {item.child_asset_id} in {item.parent_asset_id} "
+                f"({item.excerpt})"
+                for item in suggestions
+            )
+        QMessageBox.information(self, "Contextual Shot Suggestions", message)
 
     def _review_shot_spatial(self) -> None:
         """Only propose relationships from authenticated Shot text and bindings."""
