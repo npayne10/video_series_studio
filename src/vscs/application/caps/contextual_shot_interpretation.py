@@ -71,9 +71,7 @@ def suggest_contextual_shot_relationships(
             parents = _names(match.group("parent"), eligible)
             if len(children) != 1 or len(parents) != 1 or children[0] == parents[0]:
                 continue
-            suggestion = ContextualShotSuggestion(
-                source.shot_id, children[0], parents[0], excerpt
-            )
+            suggestion = ContextualShotSuggestion(source.shot_id, children[0], parents[0], excerpt)
             if suggestion not in output:
                 output.append(suggestion)
         for match in _LOCATION_FIRST.finditer(source.text):
