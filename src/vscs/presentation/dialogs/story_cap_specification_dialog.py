@@ -208,8 +208,7 @@ class StoryCAPSpecificationDialog(QDialog):
             )
         else:
             message = "Advisory only — not Canon; no dependencies will be changed:\n" + "\n".join(
-                f"{item.shot_id}: {item.child_asset_id} in {item.parent_asset_id} "
-                f"({item.excerpt})"
+                f"{item.shot_id}: {item.child_asset_id} in {item.parent_asset_id} ({item.excerpt})"
                 for item in suggestions
             )
         QMessageBox.information(self, "Contextual Shot Suggestions", message)
