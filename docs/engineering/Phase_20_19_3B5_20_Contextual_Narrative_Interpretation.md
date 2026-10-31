@@ -3,7 +3,7 @@
 Status: Initial **offline, advisory-only** implementation; quality gates and operator acceptance pending.
 
 ## Intent
-Interpret additional explicit spatial language from verified governed Shot narratives without promoting unverified text, guessed assets, or Draft bindings into CAP authority. This slice supports named assets in simple propositions such as “Diagnostic Console remains inside Engineering Control Room.” It is intentionally narrower than a full natural-language understanding engine.
+Interpret additional explicit spatial language from verified governed Shot narratives without promoting unverified text, guessed assets, or Draft bindings into CAP authority. This slice supports named assets in propositions such as “Diagnostic Console remains inside Engineering Control Room” and location-first clauses such as “In the empty engineering control room, the diagnostic console maintains a steady blue glow.” It is intentionally narrower than a full natural-language understanding engine.
 
 ## Safety and sources
 - Uses the existing `ShotSpatialSource` contract after upstream planning authority checks.
@@ -14,7 +14,7 @@ Interpret additional explicit spatial language from verified governed Shot narra
 - The existing **Review Shot Spatial Evidence (Offline)** remains separate and retains explicit operator confirmation.
 
 ## Scope not yet implemented
-- Coreference, paraphrase or implicit spatial semantics such as “In the empty engineering control room, the diagnostic console maintains a steady blue glow” are not yet reliably interpreted. More advanced resolution needs evidence provenance, controlled ambiguity handling and separate tests.
+- Location-first narration is recognised only when both exact registered asset names are present in the same qualifying clause and both are bound to the verified Shot. Broader coreference, paraphrase, indirect implicit relationships and multi-sentence spatial context are not implemented.
 - Verified Shot availability still requires Ready bindings and recomputed production-planning contracts. The disposable Golden Path audit binds assets at Draft and will correctly lack authoritative Shot sources.
 - Positive end-to-end production UI acceptance not completed.
 
