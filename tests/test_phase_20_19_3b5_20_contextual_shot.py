@@ -33,9 +33,7 @@ def _source(story="STORY-001", bindings=("CAP-PRP-001", "CAP-LOC-001")):
 
 
 def test_contextual_registered_bound_assets_only():
-    suggestions = suggest_contextual_shot_relationships(
-        (_source(),), _assets(), "STORY-001"
-    )
+    suggestions = suggest_contextual_shot_relationships((_source(),), _assets(), "STORY-001")
     assert len(suggestions) == 1
     assert suggestions[0].child_asset_id == "CAP-PRP-001"
     assert suggestions[0].parent_asset_id == "CAP-LOC-001"
@@ -52,7 +50,8 @@ def test_contextual_cross_story_and_missing_binding_rejected():
 
 
 def test_contextual_duplicate_name_is_ambiguous():
-    conflicting = _assets() + (
+    conflicting = (
+        *_assets(),
         Asset.model_construct(asset_id="CAP-PRP-002", name="Diagnostic Console"),
     )
     source = _source(bindings=("CAP-PRP-001", "CAP-PRP-002", "CAP-LOC-001"))
@@ -87,9 +86,7 @@ def test_audit_location_first_wording_is_advisory():
         "In the empty engineering control room, the diagnostic console maintains a steady blue glow.",
         ("CAP-LOC-001", "CAP-PRP-001"),
     )
-    suggestions = suggest_contextual_shot_relationships(
-        (source,), _assets(), "STORY-001"
-    )
+    suggestions = suggest_contextual_shot_relationships((source,), _assets(), "STORY-001")
     assert len(suggestions) == 1
     assert suggestions[0].child_asset_id == "CAP-PRP-001"
     assert suggestions[0].parent_asset_id == "CAP-LOC-001"
