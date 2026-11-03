@@ -524,8 +524,20 @@ class StoryCAPBatchDialog(QDialog):
                 != context.fingerprint
             ):
                 raise StoryBatchError("CAP context changed before Draft persistence")
+            if provider_cache_fingerprint(self.generator.provider) != provider_fingerprint:
+                raise StoryBatchError("CAP provider configuration changed during review")
+            reviewed_decisions = detail_dialog.reviewed().model_copy(
+                update={
+                    "story_fingerprint": item.story_fingerprint,
+                    "context_fingerprint": context.fingerprint,
+                }
+            )
             self.review_service.save_reviewed(
-                story_id, dialog.reviewed(), item.story_fingerprint, detail_dialog.reviewed()
+                story_id,
+                dialog.reviewed(),
+                item.story_fingerprint,
+                reviewed_decisions,
+                expected_context_fingerprint=context.fingerprint,
             )
         except (StoryBatchError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(self, "CAP Batch Review", str(exc))
