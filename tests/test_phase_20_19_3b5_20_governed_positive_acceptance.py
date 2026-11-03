@@ -4,8 +4,8 @@ This is an isolated verifier/UI integration fixture, NOT an asset approval
 procedure. It never modifies the operator's project or grants Canon authority.
 """
 
-from dataclasses import asdict, replace
 import json
+from dataclasses import asdict, replace
 from unittest.mock import patch
 
 import pytest
