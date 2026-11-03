@@ -93,7 +93,8 @@ class StoryCAPBatchDialog(QDialog):
         self.summary = QTextEdit()
         self.summary.setReadOnly(True)
         self.summary.setPlainText(
-            "Select an approved Story. Discovery reads only persisted Shot asset bindings. "
+            "Select an approved Story. Discovery is limited to its Ready governed Shots. "
+            "Prepare CAP Context is offline and labels Draft Shot evidence unverified. "
             "Review Cached Proposal never calls OpenAI. "
             "Generate / Regenerate Using AI (Paid) always requires a cost confirmation. "
             "Only Draft CAP records may be created; nothing is approved."
@@ -101,13 +102,13 @@ class StoryCAPBatchDialog(QDialog):
         row = QHBoxLayout()
         row.addWidget(self.inspect)
         row.addWidget(self.assets)
-        row.addWidget(self.context_button)
         row.addWidget(self.preview)
         row.addWidget(self.regenerate)
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Project-approved Story"))
         layout.addWidget(self.story)
         layout.addLayout(row)
+        layout.addWidget(self.context_button)
         layout.addWidget(self.map_scenes)
         acceptance_row = QHBoxLayout()
         acceptance_row.addWidget(self.acceptance_scenario)
@@ -266,7 +267,7 @@ class StoryCAPBatchDialog(QDialog):
             if not candidate.has_specification:
                 self.assets.addItem(candidate.asset_id, candidate.asset_id)
         self.summary.setPlainText(
-            "\n".join(lines) if lines else "No registered bound assets found in Shot ledger."
+            "\n".join(lines) if lines else "No bound assets found in Ready governed Shots for this Story."
         )
         self.context_button.setEnabled(self.assets.count() > 0)
         self.preview.setEnabled(self.assets.count() > 0)
