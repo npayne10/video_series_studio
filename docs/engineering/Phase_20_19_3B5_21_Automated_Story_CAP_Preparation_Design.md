@@ -248,7 +248,7 @@ Status: **Code and tests committed; local regression, Ruff/Mypy and operator acc
 3. Select `CAP-LOC-001` → **Review Cached Proposal**. Expect an advisory that the legacy proposal lacks current governed Shot context verification.
 4. **Cancel the Story CAP specification review before clicking Save Review & Continue.** The latter action intentionally updates the cached working proposal even if a later detail-review step is cancelled. For a strict non-mutation acceptance on the existing project, avoid it.
 5. Confirm Canonical Profiles still shows **0 CAP(s) — 0 production ready** and reopen the queue to check `CAP-LOC-001` is still `legacy_cached`.
-6. The new field-review coverage is verified by Qt tests on isolated specifications. The new positive Draft-save path is tested with isolated review/persistence mocks; a genuine full project persistence test with real repositories remains **outstanding** before claiming end-to-end production acceptance.
+6. The new field-review coverage is verified by Qt tests on isolated specifications. The new positive Draft-save path is tested with both mocked failure gates and a real DesignReviewPersistence / CAPStructuredSpecificationService in-memory repository; a genuine full project persistence test with the disk-backed CAP repository remains **outstanding** before claiming end-to-end production acceptance.
 7. Never click **Generate / Regenerate Using AI (Paid)** to complete this acceptance.
 
 ### Operator commands
@@ -266,3 +266,5 @@ python -m pytest -q
 git diff --check
 git status --short
 ```
+
+Expected complete regression assuming unchanged B.5.21B baseline: **2,398 tests** (13 new B.5.21C parametrized test cases). This is an estimate until the operator runs pytest; Ruff and Mypy acceptance also remain pending.
