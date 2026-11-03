@@ -8,6 +8,7 @@ from pathlib import Path
 
 from vscs.application.caps.context_preparation import (
     CAPContextManifest,
+    assert_unique_planning_ownership,
     prepare_cap_context,
 )
 from vscs.application.caps.cross_asset_continuity import validate_dependencies
@@ -61,6 +62,7 @@ class StoryCAPBatchReviewService:
         if root is None or not assets.projects.is_project_open:
             raise StoryBatchError("Open a project before discovering asset requirements")
         try:
+            assert_unique_planning_ownership(root)
             scope = discover_governed_shot_evidence(root, selected)
         except (ValueError, OSError) as exc:
             raise StoryBatchError(f"Governed Shot discovery unavailable: {exc}") from exc
@@ -123,15 +125,19 @@ class StoryCAPBatchReviewService:
         asset_fingerprint = cache_fingerprint(
             asset.asset_id, asset.name, asset.category.value, asset.description
         )
+        fingerprint = self.batch.current_story_fingerprint(selected)
         try:
-            return prepare_cap_context(
+            manifest = prepare_cap_context(
                 root,
                 selected,
                 asset_id,
                 story.description,
-                self.batch.current_story_fingerprint(selected),
+                fingerprint,
                 asset_fingerprint,
             )
+            if self.batch.current_story_fingerprint(selected) != fingerprint:
+                raise StoryBatchError("Approved Story changed during CAP context preparation")
+            return manifest
         except (ValueError, OSError) as exc:
             raise StoryBatchError(str(exc)) from exc
 
