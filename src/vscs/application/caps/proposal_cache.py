@@ -83,8 +83,7 @@ class CAPProposalCache:
             ):
                 return CAPCacheInspection("stale")
             if record.version == 2 and (
-                not record.context_fingerprint
-                or record.context_fingerprint != context_fingerprint
+                not record.context_fingerprint or record.context_fingerprint != context_fingerprint
             ):
                 return CAPCacheInspection("stale")
             from vscs.application.caps.story_specification import StoryCAPProposal
@@ -110,8 +109,12 @@ class CAPProposalCache:
     ) -> StoryBatchProposal | None:
         """Preserve v1 recovery; version 2 requires the current context digest."""
         inspected = self.inspect(
-            story_id, asset_id, story_fingerprint, asset_fingerprint,
-            provider_fingerprint, context_fingerprint,
+            story_id,
+            asset_id,
+            story_fingerprint,
+            asset_fingerprint,
+            provider_fingerprint,
+            context_fingerprint,
         )
         return inspected.proposal
 
