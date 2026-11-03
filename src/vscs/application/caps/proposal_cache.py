@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,25 @@ class CachedCAPProposal(BaseModel):
     asset_fingerprint: str
     provider_fingerprint: str
     proposal: dict[str, Any]
+    context_fingerprint: str = ""
+
+
+@dataclass(frozen=True)
+class CAPCacheInspection:
+    """Metadata-only cache result; a usable proposal remains unapproved."""
+
+    status: str
+    proposal: StoryBatchProposal | None = None
+
+
+def provider_cache_fingerprint(provider: object) -> str:
+    """Use the existing provider identity and prompt contract consistently."""
+    return cache_fingerprint(
+        type(provider).__module__,
+        type(provider).__qualname__,
+        str(getattr(provider, "_model", "")),
+        "cap-design-prompt-v2",
+    )
 
 
 def cache_fingerprint(*parts: str) -> str:
@@ -38,6 +58,47 @@ class CAPProposalCache:
         digest = cache_fingerprint(story_id, asset_id)
         return self.directory / f"{digest}.json"
 
+    def inspect(
+        self,
+        story_id: str,
+        asset_id: str,
+        story_fingerprint: str,
+        asset_fingerprint: str,
+        provider_fingerprint: str,
+        context_fingerprint: str,
+    ) -> CAPCacheInspection:
+        """Read-only validation, including current context for version 2 proposals."""
+        path = self._path(story_id, asset_id)
+        if not path.is_file():
+            return CAPCacheInspection("missing")
+        try:
+            record = CachedCAPProposal.model_validate_json(path.read_text(encoding="utf-8"))
+            if (
+                record.version not in {1, 2}
+                or record.story_id != story_id
+                or record.asset_id != asset_id
+                or record.story_fingerprint != story_fingerprint
+                or record.asset_fingerprint != asset_fingerprint
+                or record.provider_fingerprint != provider_fingerprint
+            ):
+                return CAPCacheInspection("stale")
+            if record.version == 2 and (
+                not record.context_fingerprint
+                or record.context_fingerprint != context_fingerprint
+            ):
+                return CAPCacheInspection("stale")
+            from vscs.application.caps.story_specification import StoryCAPProposal
+
+            proposal = StoryCAPProposal.from_cache(record.proposal)
+            if proposal.specification.asset_id != asset_id:
+                return CAPCacheInspection("stale")
+            item = StoryBatchProposal(story_id, story_fingerprint, asset_id, proposal)
+            return CAPCacheInspection(
+                "legacy_cached" if record.version == 1 else "cached_current", item
+            )
+        except (OSError, ValueError, TypeError, KeyError):
+            return CAPCacheInspection("invalid")
+
     def load(
         self,
         story_id: str,
@@ -45,40 +106,30 @@ class CAPProposalCache:
         story_fingerprint: str,
         asset_fingerprint: str,
         provider_fingerprint: str,
+        context_fingerprint: str = "",
     ) -> StoryBatchProposal | None:
-        path = self._path(story_id, asset_id)
-        if not path.is_file():
-            return None
-        try:
-            record = CachedCAPProposal.model_validate_json(path.read_text(encoding="utf-8"))
-            if (
-                record.version != 1
-                or record.story_id != story_id
-                or record.asset_id != asset_id
-                or record.story_fingerprint != story_fingerprint
-                or record.asset_fingerprint != asset_fingerprint
-                or record.provider_fingerprint != provider_fingerprint
-            ):
-                return None
-            from vscs.application.caps.story_specification import StoryCAPProposal
-
-            proposal = StoryCAPProposal.from_cache(record.proposal)
-            if proposal.specification.asset_id != asset_id:
-                return None
-            return StoryBatchProposal(story_id, story_fingerprint, asset_id, proposal)
-        except (OSError, ValueError, TypeError, KeyError):
-            return None
+        """Preserve v1 recovery; version 2 requires the current context digest."""
+        inspected = self.inspect(
+            story_id, asset_id, story_fingerprint, asset_fingerprint,
+            provider_fingerprint, context_fingerprint,
+        )
+        return inspected.proposal
 
     def save(
-        self, item: StoryBatchProposal, asset_fingerprint: str, provider_fingerprint: str
+        self,
+        item: StoryBatchProposal,
+        asset_fingerprint: str,
+        provider_fingerprint: str,
+        context_fingerprint: str = "",
     ) -> None:
         record = CachedCAPProposal(
-            version=1,
+            version=2 if context_fingerprint else 1,
             story_id=item.story_id,
             story_fingerprint=item.story_fingerprint,
             asset_id=item.asset_id,
             asset_fingerprint=asset_fingerprint,
             provider_fingerprint=provider_fingerprint,
+            context_fingerprint=context_fingerprint,
             proposal=item.proposal.to_cache(),
         )
         self.directory.mkdir(parents=True, exist_ok=True)
