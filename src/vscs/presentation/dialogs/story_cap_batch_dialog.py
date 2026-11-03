@@ -320,8 +320,11 @@ class StoryCAPBatchDialog(QDialog):
         choice = QMessageBox.question(
             self,
             "Generate CAP Proposal Using AI (Paid)?",
-            "This makes new paid OpenAI requests and replaces any cached proposal. "
-            "Existing CAP approvals are not changed. Proceed?",
+            f"Provider: {type(self.generator.provider).__name__}; "
+            f"model: {getattr(self.generator.provider, '_model', 'unspecified')}. "
+            "This authorises ONE potentially paid CAP request and replaces its cache. "
+            "Exact price is unavailable here. No automatic batch charging. "
+            "Existing CAP approvals are unchanged. Proceed?",
         )
         if choice == QMessageBox.StandardButton.Yes:
             self.review_one(force_regenerate=True)
@@ -346,15 +349,23 @@ class StoryCAPBatchDialog(QDialog):
                 raise StoryBatchError("Asset is no longer eligible for a new CAP specification")
             context = self.review_service.prepare_context(story_id, asset_id)
             cache_key = (
-                story_id, asset_id, fingerprint, asset_fingerprint,
-                provider_fingerprint, context.fingerprint,
+                story_id,
+                asset_id,
+                fingerprint,
+                asset_fingerprint,
+                provider_fingerprint,
+                context.fingerprint,
             )
             cached = None
             cache_status = "missing"
             if not force_regenerate and self.cache is not None:
                 inspection = self.cache.inspect(
-                    story_id, asset_id, fingerprint, asset_fingerprint,
-                    provider_fingerprint, context.fingerprint,
+                    story_id,
+                    asset_id,
+                    fingerprint,
+                    asset_fingerprint,
+                    provider_fingerprint,
+                    context.fingerprint,
                 )
                 cached = inspection.proposal
                 cache_status = inspection.status
@@ -374,9 +385,10 @@ class StoryCAPBatchDialog(QDialog):
                 QMessageBox.information(
                     self,
                     "No Cached CAP Proposal",
-                    "No valid cached proposal exists for this Story, asset and AI configuration. "
-                    "Review Cached Proposal will not contact OpenAI. "
-                    "Use Generate / Regenerate Using AI (Paid) to confirm a new paid request.",
+                    f"Cache status: {cache_status}. No reusable proposal exists for the "
+                    "current Story, asset, provider and Shot context. "
+                    "Review Cached Proposal never contacts OpenAI. "
+                    "New generation requires a separate paid-request confirmation.",
                 )
                 return
             else:
@@ -388,7 +400,9 @@ class StoryCAPBatchDialog(QDialog):
                     return
                 item = batch.candidates[0]
                 if self.cache is not None:
-                    self.cache.save(item, asset_fingerprint, provider_fingerprint, context.fingerprint)
+                    self.cache.save(
+                        item, asset_fingerprint, provider_fingerprint, context.fingerprint
+                    )
             self._proposal_cache[cache_key] = item
             registered_ids = tuple(asset.asset_id for asset in self.generator.assets.list())
             spatial_candidates = load_project_spatial_candidates(
@@ -457,7 +471,10 @@ class StoryCAPBatchDialog(QDialog):
                 )
                 if refreshed != verified_shots:
                     raise StoryBatchError("Governed Shot evidence changed during CAP review")
-            if self.review_service.prepare_context(story_id, asset_id).fingerprint != context.fingerprint:
+            if (
+                self.review_service.prepare_context(story_id, asset_id).fingerprint
+                != context.fingerprint
+            ):
                 raise StoryBatchError("CAP context changed during review; reprepare queue")
             # Save the operator's reviewed fields as unapproved working material.
             # This is NOT CAP persistence, Canon approval or a provider call.
@@ -502,7 +519,10 @@ class StoryCAPBatchDialog(QDialog):
                     raise StoryBatchError(
                         "Governed Shot evidence changed before Draft CAP persistence"
                     )
-            if self.review_service.prepare_context(story_id, asset_id).fingerprint != context.fingerprint:
+            if (
+                self.review_service.prepare_context(story_id, asset_id).fingerprint
+                != context.fingerprint
+            ):
                 raise StoryBatchError("CAP context changed before Draft persistence")
             self.review_service.save_reviewed(
                 story_id, dialog.reviewed(), item.story_fingerprint, detail_dialog.reviewed()
