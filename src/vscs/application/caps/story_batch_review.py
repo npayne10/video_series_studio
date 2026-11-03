@@ -203,12 +203,28 @@ class StoryCAPBatchReviewService:
         specification: CAPStructuredSpecification,
         approved_fingerprint: str,
         review: DesignReviewPackage | None = None,
+        *,
+        expected_context_fingerprint: str | None = None,
     ) -> None:
         """Recheck Story authority and current asset/CAP state before persistence."""
         # Revalidate directly from persisted Story, never regenerate a paid AI proposal.
         current_fingerprint = self.batch.current_story_fingerprint(story_id)
         if current_fingerprint != approved_fingerprint:
             raise StoryBatchError("Story changed after proposal; review a new draft")
+        if expected_context_fingerprint is not None:
+            if review is None:
+                raise StoryBatchError("Governed CAP save requires explicit field review")
+            if (
+                not expected_context_fingerprint
+                or review.context_fingerprint != expected_context_fingerprint
+                or review.story_fingerprint != approved_fingerprint
+            ):
+                raise StoryBatchError("Reviewed Story or CAP context fingerprint is missing or stale")
+            current = self.prepare_context(story_id, specification.asset_id)
+            if current.fingerprint != expected_context_fingerprint:
+                raise StoryBatchError("CAP context changed before Draft persistence")
+        elif review is not None and review.context_fingerprint:
+            raise StoryBatchError("Context-bound CAP review requires a current context preflight")
         try:
             existing_spec = self.batch.generator.specifications.get(specification.asset_id)
         except CAPNotFoundError:
