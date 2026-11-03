@@ -26,7 +26,12 @@ from vscs.application.caps.governed_planning_evidence import (
     verified_governed_shot_evidence,
     verified_shots_to_spatial_sources,
 )
-from vscs.application.caps.proposal_cache import CAPProposalCache, cache_fingerprint
+from vscs.application.caps.preparation_queue import CAPPreparationQueueService
+from vscs.application.caps.proposal_cache import (
+    CAPProposalCache,
+    cache_fingerprint,
+    provider_cache_fingerprint,
+)
 from vscs.application.caps.shot_spatial_evidence import ShotSpatialSource
 from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spatial_acceptance
 from vscs.application.caps.spatial_graph import assess_spatial_graph
@@ -69,7 +74,7 @@ class StoryCAPBatchDialog(QDialog):
         self.review_service = StoryCAPBatchReviewService(
             StoryCAPBatchService(self.stories, proposal_service)
         )
-        self._proposal_cache: dict[tuple[str, str, str, str, str], StoryBatchProposal] = {}
+        self._proposal_cache: dict[tuple[str, ...], StoryBatchProposal] = {}
         self.cache = (
             CAPProposalCache(caps.assets.projects.project_directory)
             if caps.assets.projects.project_directory is not None
@@ -83,6 +88,7 @@ class StoryCAPBatchDialog(QDialog):
         self.inspect = QPushButton("Discover Shot Assets")
         self.map_scenes = QPushButton("Assign Story Scenes (Reviewed)")
         self.context_button = QPushButton("Prepare CAP Context (Offline)")
+        self.queue_button = QPushButton("Prepare Queue (Offline)")
         self.preview = QPushButton("Review Cached Proposal")
         self.regenerate = QPushButton("Generate / Regenerate Using AI (Paid)")
         self.spatial_acceptance = QPushButton("Spatial Geometry Acceptance (Offline)")
@@ -109,6 +115,7 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(self.story)
         layout.addLayout(row)
         layout.addWidget(self.context_button)
+        layout.addWidget(self.queue_button)
         layout.addWidget(self.map_scenes)
         acceptance_row = QHBoxLayout()
         acceptance_row.addWidget(self.acceptance_scenario)
@@ -118,6 +125,7 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(self.close_button)
         self.inspect.clicked.connect(self.discover)
         self.context_button.clicked.connect(self.prepare_selected_context)
+        self.queue_button.clicked.connect(self.prepare_queue)
         self.story.currentIndexChanged.connect(self._story_changed)
         self.map_scenes.clicked.connect(self.assign_story_scenes)
         self.preview.clicked.connect(self.review_one)
@@ -125,6 +133,7 @@ class StoryCAPBatchDialog(QDialog):
         self.close_button.clicked.connect(self.reject)
         self.spatial_acceptance.clicked.connect(self.review_spatial_acceptance)
         self.context_button.setEnabled(False)
+        self.queue_button.setEnabled(False)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
 
@@ -213,9 +222,40 @@ class StoryCAPBatchDialog(QDialog):
     def _story_changed(self, _index: int) -> None:
         self.assets.clear()
         self.context_button.setEnabled(False)
+        self.queue_button.setEnabled(False)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
         self.summary.setPlainText("Story selection changed. Click Discover Shot Assets.")
+
+    def prepare_queue(self) -> None:
+        """Inspect a selected Story's queue without providers or project writes."""
+        story_id = self.story.currentData()
+        if not isinstance(story_id, str):
+            QMessageBox.warning(self, "CAP Preparation Queue", "Select an approved Story.")
+            return
+        try:
+            queue = CAPPreparationQueueService(
+                self.review_service, self.cache, self.generator.provider
+            ).plan(story_id)
+        except (StoryBatchError, RuntimeError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "CAP Preparation Queue", str(exc))
+            return
+        lines = [
+            f"Story: {queue.story_id} — cache-first CAP preparation (offline)",
+            f"Provider: {queue.provider_label}",
+            "No paid requests, CAP writes, approvals or cache changes were made.",
+            "Legacy caches have not verified the current governed Shot context.",
+            "",
+        ]
+        for item in queue.items:
+            lines.append(
+                f"{item.asset_id} — {item.name} ({item.category}): "
+                f"{item.status} [{item.context_authority}]"
+            )
+            lines.append(f"  {item.note}")
+        if not queue.items:
+            lines.append("No eligible Shot assets found for this Story.")
+        self.summary.setPlainText("\n".join(lines))
 
     def prepare_selected_context(self) -> None:
         story_id = self.story.currentData()
@@ -272,6 +312,7 @@ class StoryCAPBatchDialog(QDialog):
             else "No bound assets found in Ready governed Shots for this Story."
         )
         self.context_button.setEnabled(self.assets.count() > 0)
+        self.queue_button.setEnabled(self.assets.count() > 0)
         self.preview.setEnabled(self.assets.count() > 0)
         self.regenerate.setEnabled(self.preview.isEnabled())
 
