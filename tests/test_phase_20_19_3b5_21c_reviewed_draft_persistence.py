@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
+from PySide6.QtWidgets import QMessageBox
 
 from vscs.application.caps.design_completion import (
     DesignFieldReview,
@@ -171,7 +172,7 @@ def test_detail_review_includes_nonrequired_populated_attributes(qtbot):
     assert "architecture" in names
     assert "materials" in names
     assert {"layout", "scale", "spatial_anchors", "lighting"}.issubset(names)
-    assert all(choice.currentData() is DetailDecision.DEFER for _, _, choice, _ in dialog.rows)
+    assert all(choice.currentData() == DetailDecision.DEFER for _, _, choice, _ in dialog.rows)
 
 
 def test_governed_save_without_field_review_refuses_all_writes():
@@ -203,3 +204,13 @@ def test_existing_non_draft_cap_is_never_overwritten():
     caps.create.assert_not_called()
     caps.update.assert_not_called()
     caps.delete.assert_not_called()
+
+
+def test_all_deferred_detail_review_is_blocked_before_dialog_accept(qtbot):
+    dialog = CAPDetailReviewDialog(_spec())
+    qtbot.addWidget(dialog)
+    with patch.object(QMessageBox, "warning") as warning:
+        dialog._accept_review()
+    warning.assert_called_once()
+    with pytest.raises(ValueError, match="No accepted review"):
+        dialog.reviewed()
