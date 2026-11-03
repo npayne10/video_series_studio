@@ -2,17 +2,22 @@
 
 import json
 from dataclasses import asdict, replace
+from types import SimpleNamespace
 
 import pytest
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.context_preparation import prepare_cap_context
+from vscs.application.caps.service import CAPNotFoundError
+from vscs.application.caps.story_batch import StoryCAPBatchService
+from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.application.caps.governed_planning_evidence import ProductionPlanningContracts
 from vscs.application.story.asset_resolver import AssetBindingStatus, ShotAssetBinding
 from vscs.application.story.episode_planning import EpisodePlan, EpisodePlanStatus
+from vscs.application.story.lifecycle import StoryRecord, StoryStatus
 from vscs.application.story.scene_planning import ScenePlan, ScenePlanStatus
 from vscs.application.story.shot_planning import ShotPlan, ShotPlanStatus
-from vscs.domain.assets.models import AssetCategory
+from vscs.domain.assets.models import Asset, AssetCategory
 
 
 def _write(root, name, key, records):
@@ -110,3 +115,91 @@ def test_wrong_story_and_wrong_asset_cannot_reuse_context(tmp_path):
         _prepare(tmp_path, story_id="STORY-OTHER")
     with pytest.raises(ValueError, match="no governed Shot binding"):
         _prepare(tmp_path, asset_id="CAP-PRP-OTHER")
+
+
+def test_duplicate_plan_ids_are_rejected_before_context_promotion(tmp_path):
+    _fixture(tmp_path)
+    path = tmp_path / "planning" / "episode_plans.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["episodes"].append(dict(payload["episodes"][0]))
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ShotTextAuthorityError, match="Ambiguous planning ownership"):
+        _prepare(tmp_path)
+
+
+def test_story_scoped_batch_discovery_excludes_foreign_assets(tmp_path):
+    shot, _bindings = _fixture(tmp_path)
+    episode_two = EpisodePlan(
+        episode_id="EP-002", story_id="STORY-002", sequence_number=1,
+        title="Second Story", story_scope="Different vessel",
+        production_objective="Another room", target_runtime_seconds=15,
+        status=EpisodePlanStatus.READY,
+    )
+    contracts = ProductionPlanningContracts()
+    ep_path = tmp_path / "planning" / "episode_plans.json"
+    episodes = json.loads(ep_path.read_text(encoding="utf-8"))["episodes"]
+    episodes.append(asdict(episode_two))
+    _write(tmp_path, "episode_plans.json", "episodes", episodes)
+    scene_two = ScenePlan(
+        scene_id="EP-002-SCN-001", episode_id=episode_two.episode_id,
+        sequence_number=1, title="Elsewhere", story_scope="Other",
+        production_objective="Other", target_runtime_seconds=15,
+        setting_requirement="Foreign room", required_events=("Another event",),
+        episode_contract_hash=contracts.episode_contract_hash(asdict(episode_two)),
+        status=ScenePlanStatus.READY,
+    )
+    sc_path = tmp_path / "planning" / "scene_plans.json"
+    scenes = json.loads(sc_path.read_text(encoding="utf-8"))["scenes"]
+    scenes.append(asdict(scene_two))
+    _write(tmp_path, "scene_plans.json", "scenes", scenes)
+    foreign = replace(
+        shot, shot_id="EP-002-SCN-001-SHT-001", scene_id=scene_two.scene_id,
+        scene_contract_hash=contracts.scene_contract_hash(asdict(scene_two)),
+    )
+    sh_path = tmp_path / "planning" / "shot_plans.json"
+    shots = json.loads(sh_path.read_text(encoding="utf-8"))["shots"]
+    shots.append(asdict(foreign))
+    _write(tmp_path, "shot_plans.json", "shots", shots)
+    ledger = tmp_path / "planning" / "asset_resolutions.json"
+    bindings = json.loads(ledger.read_text(encoding="utf-8"))["bindings"]
+    bindings.append({
+        "shot_id": foreign.shot_id,
+        "asset_id": "CAP-LOC-OTHER",
+        "expected_category": "location",
+        "status": "ready",
+        "shot_contract_hash": contracts.shot_contract_hash(asdict(foreign)),
+    })
+    _write(tmp_path, "asset_resolutions.json", "bindings", bindings)
+
+    assets = (
+        Asset.model_construct(
+            asset_id="CAP-LOC-001", name="Engineering control room",
+            category=AssetCategory.LOCATION, description="",
+        ),
+        Asset.model_construct(
+            asset_id="CAP-PRP-001", name="Diagnostic console",
+            category=AssetCategory.PROP, description="",
+        ),
+        Asset.model_construct(
+            asset_id="CAP-LOC-OTHER", name="Foreign control room",
+            category=AssetCategory.LOCATION, description="",
+        ),
+    )
+    project = SimpleNamespace(project_directory=tmp_path, is_project_open=True)
+    asset_service = SimpleNamespace(projects=project, list=lambda: assets)
+    def missing(_asset_id):
+        raise CAPNotFoundError("Not registered")
+    spec_service = SimpleNamespace(caps=SimpleNamespace(get=missing))
+    generator = SimpleNamespace(
+        generator=SimpleNamespace(assets=asset_service), specifications=spec_service
+    )
+    story_service = SimpleNamespace(
+        story=lambda story_id: StoryRecord(
+            story_id=story_id, title="Approved", description="A real Story.",
+            status=StoryStatus.APPROVED,
+        ),
+    )
+    review = StoryCAPBatchReviewService(StoryCAPBatchService(story_service, generator))
+    selected = review.discover("STORY-001")
+    assert {item.asset_id for item in selected} == {"CAP-LOC-001", "CAP-PRP-001"}
+    assert "CAP-LOC-OTHER" not in {item.asset_id for item in selected}
