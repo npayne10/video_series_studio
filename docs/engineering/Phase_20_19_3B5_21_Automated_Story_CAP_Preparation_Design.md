@@ -1,6 +1,6 @@
 # Phase 20.19.3B.5.21 — Approved Story to Automated CAP Preparation and Review
 
-Status: **B.5.21A accepted and closed — 2026-11-03. B.5.21B/C remain planned.**  
+Status: **B.5.21A and B.5.21B accepted and closed — 2026-11-03. B.5.21C remains planned.**  
 Date: 2026-11-03  
 Predecessor: B.5.20 closed at 2,371 passing tests  
 Repository: `npayne10/video_series_studio`  
@@ -169,7 +169,7 @@ Initial local validation provided by the operator: B.5.21A 7/7, B.5.20 positive 
 
 ## B.5.21B implementation record — 2026-11-03
 
-Status: **Committed; local test and operator UI acceptance pending. NOT closed.**
+Status: **Development acceptance CLOSED — 2026-11-03.**
 
 ### Implementation
 - Reused `StoryCAPBatchDialog` and added **Prepare Queue (Offline)**. After **Discover Shot Assets**, it shows a Story-scoped multi-asset queue in the existing summary panel. Queue inspection does not call the provider, write CAPs, or mutate cached proposals.
@@ -211,3 +211,12 @@ git status --short
 ```
 
 B.5.21B queue fingerprint now also includes the current persisted binding status and planning hashes (not just displayed text) so safety-relevant governance changes invalidate v2 caches. Final expected full test count if the prior 2,378 baseline is unchanged: **2,385** (seven new B.5.21B tests). Await actual operator test output before acceptance. The latest development test has not been executed in this ChatGPT environment.
+
+## B.5.21B final acceptance — 2026-11-03
+- Local operator quality gates: targeted B.5.21B **7 passed**; full pytest **2,385 passed**; Ruff check passed; Ruff format check **1,571 files already formatted**; Mypy **no issues in 664 source files**; `git diff --check` clean.
+- `git status --short` shows only preserved untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`.
+- Actual UI: **Approved Story → CAP Batch Review**, `STORY-001 — The Quiet Console — Episode Audit`, **Prepare Queue (Offline)**. Provider displayed `OpenAICAPGenerationProvider (gpt-5.5)`.
+- Four discovered assets and statuses: `CAP-ENV-001` = missing / unverified_shot; `CAP-LOC-001` = legacy_cached / unverified_shot; `CAP-PRP-001` = missing / unverified_shot; `CAP-SHP-001` = missing / unverified_shot.
+- UI explicitly reports no paid requests, CAP writes, approvals or cache modifications. Legacy proposal remains labelled as lacking governed Shot context fingerprint at generation time. No Canon or production-readiness claim is made.
+- **Acceptance scope:** cache-first read-only planning, status/provenance presentation, legacy proposal preservation, cache freshness guards and separate explicit provider consent. Operator did not perform paid generation or end-to-end Draft save for this phase.
+- **Next phase:** B.5.21C — Reviewed Draft persistence and source freshness at the actual commit boundary. Maintain explicit per-asset human design decisions, rollback safety and existing Canon/reference restrictions. H3 live-generation hold remains active.
