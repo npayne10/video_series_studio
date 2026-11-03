@@ -95,7 +95,9 @@ class CAPPreparationQueueService:
                 ),
                 "stale": "Stale cache: changed Story, asset, provider or context.",
                 "invalid": "Invalid cache record; cannot reuse automatically.",
-                "missing": "No cached proposal. New provider generation requires explicit consent.",
+                "missing": (
+                    "No cached proposal. New provider generation requires explicit consent."
+                ),
             }[cache_status]
             if candidate.has_cap:
                 note = "Existing Draft CAP without specification. " + note
