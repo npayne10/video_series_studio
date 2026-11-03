@@ -240,8 +240,8 @@ class StoryCAPBatchDialog(QDialog):
             )
         if manifest.warnings:
             lines.extend(("", "Warnings:", *manifest.warnings))
-        self.summary.setPlainText("\\n".join(lines))
-        QMessageBox.information(self, "Prepared CAP Context (Offline)", "\\n".join(lines))
+        self.summary.setPlainText("\n".join(lines))
+        QMessageBox.information(self, "Prepared CAP Context (Offline)", "\n".join(lines))
 
     def discover(self) -> None:
         self.assets.clear()
