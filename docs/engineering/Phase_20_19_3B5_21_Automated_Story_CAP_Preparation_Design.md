@@ -1,6 +1,6 @@
 # Phase 20.19.3B.5.21 — Approved Story to Automated CAP Preparation and Review
 
-Status: **B.5.21A and B.5.21B accepted and closed — 2026-11-03. B.5.21C remains planned.**  
+Status: **B.5.21A, B.5.21B and B.5.21C accepted and closed at the agreed development-acceptance scope — 2026-11-03.**  
 Date: 2026-11-03  
 Predecessor: B.5.20 closed at 2,371 passing tests  
 Repository: `npayne10/video_series_studio`  
@@ -223,7 +223,7 @@ B.5.21B queue fingerprint now also includes the current persisted binding status
 
 ## B.5.21C implementation record — 2026-11-03
 
-Status: **Code and tests committed; local regression, Ruff/Mypy and operator acceptance PENDING. Not closed.**
+Status: **Development acceptance CLOSED — 2026-11-03. Disk-backed end-to-end Draft persistence remains outstanding.**
 
 ### Existing architecture reused
 - **StoryCAPBatchDialog** retains its existing one-asset-at-a-time sequence: cached proposal → StoryCAPSpecificationDialog → local working cache → CAPDetailReviewDialog → explicit Save confirmation → StoryCAPBatchReviewService.save_reviewed. No new CAP writer, no background process, no paid provider calls from persistence.
@@ -268,3 +268,12 @@ git status --short
 ```
 
 Expected complete regression assuming unchanged B.5.21B baseline: **2,398 tests** (13 new B.5.21C parametrized test cases). This is an estimate until the operator runs pytest; Ruff and Mypy acceptance also remain pending.
+
+## B.5.21C final acceptance record — 2026-11-03
+- Operator local tests: **13 B.5.21C acceptance cases passed**. Regression suites B.5.21B (7), B.5.21A (7), and older batch review (4) passed. **Full suite 2,398 passed**.
+- Final lint after RUF043 correction: `ruff check .` passed; Ruff formatting: **1,572 files already formatted**. Mypy: **664 source files, no issues**. `git diff --check`: clean.
+- `git status --short` contained only the preserved untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`.
+- Actual operator UI: `STORY-001` with `CAP-LOC-001` reviewed by **Review Cached Proposal**. The **Legacy CAP Proposal** warning displayed and was acknowledged. The operator cancelled before **Save Review & Continue**, closed Story → CAP Batch, and returned to Canonical Profiles. Screenshot confirms **0 CAP(s) — 0 production ready**.
+- **Development scope accepted:** current Story/context preflight at governed batch save service boundary, complete populated field decisions, Draft-only persistence with reviewed metadata and provenance, isolated rollback and in-memory repository integration; real-app cancellation is non-mutating. No approval or paid call was performed.
+- **Not evidenced:** successful persistence to actual disk-backed project repositories, real-project verified Ready asset bindings, MASTER reference readiness, or H3 live execution. These require separate controlled operational acceptance; the present 0-CAP screenshot does not alone prove cache contents are unchanged, but cancellation occurred before the cache-write action.
+- B.5.21 A/B/C implementation accepted within the described development boundary; next engineering gate should test disk-backed reviewed Draft save in a disposable project before using real project assets, and address CAP/reference-production automation without bypassing approvals.
