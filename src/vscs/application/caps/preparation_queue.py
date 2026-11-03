@@ -55,8 +55,12 @@ class CAPPreparationQueueService:
             if candidate.has_specification:
                 items.append(
                     CAPQueueItem(
-                        candidate.asset_id, candidate.name, candidate.category,
-                        "already_specified", "not_inspected", "",
+                        candidate.asset_id,
+                        candidate.name,
+                        candidate.category,
+                        "already_specified",
+                        "not_inspected",
+                        "",
                         "Existing specification; use the governed revision workflow.",
                     )
                 )
@@ -66,8 +70,12 @@ class CAPPreparationQueueService:
             except (OSError, RuntimeError, ValueError) as exc:
                 items.append(
                     CAPQueueItem(
-                        candidate.asset_id, candidate.name, candidate.category,
-                        "context_blocked", "unavailable", "",
+                        candidate.asset_id,
+                        candidate.name,
+                        candidate.category,
+                        "context_blocked",
+                        "unavailable",
+                        "",
                         f"Context cannot be prepared: {exc}",
                     )
                 )
@@ -81,8 +89,12 @@ class CAPPreparationQueueService:
             )
             cache_status = (
                 self.cache.inspect(
-                    story_id, candidate.asset_id, fingerprint,
-                    manifest.asset_fingerprint, provider_fingerprint, manifest.fingerprint,
+                    story_id,
+                    candidate.asset_id,
+                    fingerprint,
+                    manifest.asset_fingerprint,
+                    provider_fingerprint,
+                    manifest.fingerprint,
                 ).status
                 if self.cache is not None
                 else "missing"
