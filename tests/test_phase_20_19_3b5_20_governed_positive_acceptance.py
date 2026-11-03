@@ -31,8 +31,7 @@ from vscs.presentation.dialogs.story_cap_specification_dialog import (
 STORY_ID = "STORY-001"
 SHOT_ID = "EP-001-SCN-001-SHT-001"
 NARRATIVE = (
-    "In the empty engineering control room, the diagnostic console "
-    "maintains a steady blue glow."
+    "In the empty engineering control room, the diagnostic console maintains a steady blue glow."
 )
 
 
@@ -121,9 +120,7 @@ def _governed_fixture(root):
 
 def test_ready_governed_contextual_qt_review_is_advisory(tmp_path, qtbot):
     _governed_fixture(tmp_path)
-    verified = verified_governed_shot_evidence(
-        tmp_path, STORY_ID, ProductionPlanningContracts()
-    )
+    verified = verified_governed_shot_evidence(tmp_path, STORY_ID, ProductionPlanningContracts())
     assert len(verified) == 1
     assert verified[0].binding_statuses == ("ready", "ready")
     sources = verified_shots_to_spatial_sources(verified, selected_story_id=STORY_ID)
@@ -161,13 +158,9 @@ def test_ready_governed_contextual_qt_review_is_advisory(tmp_path, qtbot):
 def test_governed_draft_binding_rejected(tmp_path):
     _, _, _, bindings = _governed_fixture(tmp_path)
     bindings[1] = replace(bindings[1], status=AssetBindingStatus.DRAFT)
-    _write(
-        tmp_path, "asset_resolutions.json", "bindings", [asdict(b) for b in bindings]
-    )
+    _write(tmp_path, "asset_resolutions.json", "bindings", [asdict(b) for b in bindings])
     with pytest.raises(ShotTextAuthorityError, match="Draft or missing bindings"):
-        verified_governed_shot_evidence(
-            tmp_path, STORY_ID, ProductionPlanningContracts()
-        )
+        verified_governed_shot_evidence(tmp_path, STORY_ID, ProductionPlanningContracts())
 
 
 def test_governed_stale_contract_rejected(tmp_path):
@@ -175,6 +168,4 @@ def test_governed_stale_contract_rejected(tmp_path):
     shot["required_action"] = "An unapproved rewrite"
     _write(tmp_path, "shot_plans.json", "shots", [shot])
     with pytest.raises(ShotTextAuthorityError, match="stale or inconsistent"):
-        verified_governed_shot_evidence(
-            tmp_path, STORY_ID, ProductionPlanningContracts()
-        )
+        verified_governed_shot_evidence(tmp_path, STORY_ID, ProductionPlanningContracts())
