@@ -18,7 +18,6 @@ from vscs.application.caps.structured_specification import CAPStructuredSpecific
 from vscs.domain.assets.models import AssetCategory
 from vscs.presentation.dialogs.story_cap_batch_dialog import StoryCAPBatchDialog
 
-
 STORY = "STORY-001"
 ASSET = "CAP-LOC-001"
 
@@ -88,24 +87,33 @@ def test_v2_context_change_invalidates_cache_without_deleting(tmp_path):
     cache = CAPProposalCache(tmp_path)
     fingerprint = provider_cache_fingerprint(object())
     cache.save(_proposal(), "asset-hash", fingerprint, "context-hash")
-    assert cache.inspect(
-        STORY, ASSET, "story-hash", "asset-hash", fingerprint, "context-hash"
-    ).status == "cached_current"
-    assert cache.inspect(
-        STORY, ASSET, "story-hash", "asset-hash", fingerprint, "new-context"
-    ).status == "stale"
-    assert cache.inspect(
-        STORY, ASSET, "story-hash", "changed-asset", fingerprint, "context-hash"
-    ).status == "stale"
-    assert cache.inspect(
-        STORY, ASSET, "changed-story", "asset-hash", fingerprint, "context-hash"
-    ).status == "stale"
-    assert cache.inspect(
-        STORY, ASSET, "story-hash", "asset-hash", "different-provider", "context-hash"
-    ).status == "stale"
-    assert cache.load(
-        STORY, ASSET, "story-hash", "asset-hash", fingerprint, "new-context"
-    ) is None
+    assert (
+        cache.inspect(STORY, ASSET, "story-hash", "asset-hash", fingerprint, "context-hash").status
+        == "cached_current"
+    )
+    assert (
+        cache.inspect(STORY, ASSET, "story-hash", "asset-hash", fingerprint, "new-context").status
+        == "stale"
+    )
+    assert (
+        cache.inspect(
+            STORY, ASSET, "story-hash", "changed-asset", fingerprint, "context-hash"
+        ).status
+        == "stale"
+    )
+    assert (
+        cache.inspect(
+            STORY, ASSET, "changed-story", "asset-hash", fingerprint, "context-hash"
+        ).status
+        == "stale"
+    )
+    assert (
+        cache.inspect(
+            STORY, ASSET, "story-hash", "asset-hash", "different-provider", "context-hash"
+        ).status
+        == "stale"
+    )
+    assert cache.load(STORY, ASSET, "story-hash", "asset-hash", fingerprint, "new-context") is None
 
 
 def test_queue_is_read_only_and_cache_first(tmp_path):
@@ -126,9 +134,7 @@ def test_queue_is_read_only_and_cache_first(tmp_path):
 
 def test_already_specified_does_not_invoke_context_or_cache(tmp_path):
     review = _review()
-    review.discover = lambda story_id: (
-        CAPAssetCandidate(ASSET, "Room", "location", True, True),
-    )
+    review.discover = lambda story_id: (CAPAssetCandidate(ASSET, "Room", "location", True, True),)
     review.prepare_context = Mock(side_effect=AssertionError("must not inspect"))
     cache = Mock()
     plan = CAPPreparationQueueService(review, cache, object()).plan(STORY)
@@ -154,9 +160,7 @@ def test_queue_ui_offline_and_story_switch_reset(tmp_path, monkeypatch, qtbot):
     )
     generator = SimpleNamespace(
         caps=SimpleNamespace(
-            assets=SimpleNamespace(
-                projects=SimpleNamespace(project_directory=tmp_path)
-            )
+            assets=SimpleNamespace(projects=SimpleNamespace(project_directory=tmp_path))
         ),
         provider=object(),
     )
@@ -197,9 +201,7 @@ def test_failed_context_is_classified_without_provider_calls(tmp_path):
     review = _review()
     review.prepare_context = Mock(side_effect=ValueError("Ambiguous ownership"))
     provider = Mock()
-    plan = CAPPreparationQueueService(review, CAPProposalCache(tmp_path), provider).plan(
-        STORY
-    )
+    plan = CAPPreparationQueueService(review, CAPProposalCache(tmp_path), provider).plan(STORY)
     assert len(plan.items) == 2
     assert all(item.status == "context_blocked" for item in plan.items)
     assert all("Ambiguous ownership" in item.note for item in plan.items)
