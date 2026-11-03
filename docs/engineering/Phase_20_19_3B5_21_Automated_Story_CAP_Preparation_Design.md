@@ -166,3 +166,46 @@ Initial local validation provided by the operator: B.5.21A 7/7, B.5.20 positive 
 - UI-03: Returned to Canonical Profiles; screenshot confirmed **0 CAP(s) — 0 production ready**.
 - The test verifies a read-only context operation; it **does not** certify full production asset approval or CAP/reference workflow readiness. Real governed Ready-binding positive path remains isolated automated acceptance from B.5.20. No paid generation occurred in the acceptance flow.
 - **Next:** B.5.21B — Cache-first Preparation Queue, reusing the existing batch dialog, cache and provider cost confirmation; no duplicate CAP generation system.
+
+## B.5.21B implementation record — 2026-11-03
+
+Status: **Committed; local test and operator UI acceptance pending. NOT closed.**
+
+### Implementation
+- Reused `StoryCAPBatchDialog` and added **Prepare Queue (Offline)**. After **Discover Shot Assets**, it shows a Story-scoped multi-asset queue in the existing summary panel. Queue inspection does not call the provider, write CAPs, or mutate cached proposals.
+- New `src/vscs/application/caps/preparation_queue.py` uses B.5.21A `StoryCAPBatchReviewService.discover(story_id)` and `prepare_context(story_id, asset_id)` to classify `already_specified`, `context_blocked`, `cached_current`, `legacy_cached`, `stale`, `invalid`, and `missing`.
+- Extended `CAPProposalCache` with read-only `inspect` and version 2 optional governed-context fingerprints. Existing v1 records remain recoverable, clearly labelled **legacy cached**; they are **not** claimed to prove verified Shot authority. A v2 record is reusable only when Story, asset, provider and current manifest fingerprints match.
+- Existing **Review Cached Proposal** loads a matching persisted cache with current context. For v1, the operator receives a clear legacy advisory. For stale/missing v2, the user receives a reason rather than a paid regeneration.
+- Existing **Generate / Regenerate Using AI (Paid)** remains one operator-confirmed request per asset. Its confirmation displays provider/model identifiers and explicitly says the exact price is unavailable. There is no autonomous paid batch execution.
+- The current provider-generation prompt still uses the original approved Story description; the context fingerprint is a **freshness guard**, not a claim that multi-field governed context was sent to the AI provider. Grounded enriched provider input is a separately reviewed future change.
+- Reviewed working proposals are saved as context-bound v2 caches; fresh context is rechecked before caching edits and again before the existing Draft CAP save gate.
+- Story selection changes clear asset and queue controls; direct CAP/Canon/reference approval is not performed.
+
+### B.5.21B targeted acceptance
+- `tests/test_phase_20_19_3b5_21b_preparation_queue.py`: legacy cache recovery, v2 context and provider stale rejection, multi-asset read-only cache-first inspection, skip already-specified assets, Qt queue inspection and Story change reset.
+- Also rerun B.5.21A targeted tests, legacy batch-review tests, existing cache tests, Ruff lint and formatter, mypy, full pytest suite, `git diff --check`, and `git status --short`.
+- Baseline before implementation: **2,378 passed**, **1,569 files Ruff-formatted**, **663 mypy-clean files**.
+- Do not claim acceptance until operator reports clean run and actual UI output.
+
+### Exact operator UI acceptance (only after full green automated gates)
+1. Start VSCS and open **The Quiet Console — Episode Audit**.
+2. **View → Canonical Profiles → Story → CAP Batch…**.
+3. Select `STORY-001`, click **Discover Shot Assets**, verify four assets and no new CAP.
+4. Click **Prepare Queue (Offline)**. Expect four Story-scoped entries in main summary: previously saved Engineering Control Room (`CAP-LOC-001`) may show **legacy_cached**, others **missing**, depending on real cache validity. Each line includes context authority and reasons; Draft Shot context remains unverified.
+5. Capture screenshot; do not click paid generation or save. If `CAP-LOC-001` shows stale/missing, inspect specific cache metadata and provider configuration rather than regenerating.
+6. Close and confirm Canonical Profiles still displays **0 CAP(s) — 0 production ready**; existing cached proposal and untracked audit document remain untouched.
+
+### Validation commands
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m pytest -q tests/test_phase_20_19_3b5_21b_preparation_queue.py -v
+python -m pytest -q tests/test_phase_20_19_3b5_21a_context_preparation.py -v
+python -m pytest -q tests/test_phase_20_19_3b5_1_batch_review.py -v
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q
+git diff --check
+git status --short
+```
