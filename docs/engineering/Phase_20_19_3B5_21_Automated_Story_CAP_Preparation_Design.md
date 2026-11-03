@@ -1,6 +1,6 @@
 # Phase 20.19.3B.5.21 — Approved Story to Automated CAP Preparation and Review
 
-Status: **PROPOSED DESIGN — not implemented or accepted**  
+Status: **B.5.21A implementation committed, local validation and operator UI acceptance pending**  
 Date: 2026-11-03  
 Predecessor: B.5.20 closed at 2,371 passing tests  
 Repository: `npayne10/video_series_studio`  
@@ -108,3 +108,42 @@ Develop and commit directly to the same GitHub working branch, provide pull comm
 ## Implementation order and decision gate
 
 Implement B.5.21A first (offline read-only context manifest and Story-scoped discovery); complete its targeted/UI acceptance before B and C. This avoids paid generation while the correctness of source scope and authority is still being established. Do not change runtime behaviour solely by committing this design.
+
+## B.5.21A implementation record — 2026-11-03
+
+Scope implemented on the existing VSCS working branch (no parallel CAP generator):
+- New `src/vscs/application/caps/context_preparation.py`: immutable read-only `CAPContextManifest` and source entries with Story and asset fingerprints, record ID, field, excerpt, source-level authority and warnings. Reuses existing governed evidence discovery, original production hash calculators and verifier.
+- `StoryCAPBatchReviewService.discover(story_id)` now scopes bindings to the selected Approved/Locked Story's governed Ready Episode→Scene→Shot hierarchy, checks unique plan identity and asset category, and returns deterministic candidates. Legacy no-argument access is permitted only if exactly one approved Story exists.
+- `StoryCAPBatchReviewService.prepare_context(story_id, asset_id)` validates Story authority, registered asset binding, current Story fingerprint and project root; never writes.
+- New **Prepare CAP Context (Offline)** button in the existing `Approved Story → CAP Batch Review` dialog. It shows authority labels, source text and warnings. Switching Stories clears the previous asset selection to avoid stale or cross-Story actions.
+- Actual Draft or missing bindings remain discovery-only context, marked `unverified_shot`; any Shot text is marked `verified_ready_shot` only when its snapshot equals the result of the real contract verifier. No Canon or image approval.
+- New targeted tests: `tests/test_phase_20_19_3b5_21a_context_preparation.py` covering verified, Draft, stale, wrong-Story, duplicate ownership, Story-scoped discovery and Qt button safety.
+- **Not yet executed locally**; this is *not* phase closure. No provider API calls, paid generations or source-project data mutations were performed to implement these changes.
+
+### Exact first UI acceptance sequence after clean local tests
+1. Open the test project containing **STORY-001 — The Quiet Console — Episode Audit**.
+2. Select **View → Canonical Profiles**.
+3. Click **Story → CAP Batch…**; verify title **Approved Story → CAP Batch Review**.
+4. Select **STORY-001 — The Quiet Console — Episode Audit**.
+5. Click **Discover Shot Assets**. Expected four candidates `CAP-ENV-001`, `CAP-LOC-001`, `CAP-PRP-001`, `CAP-SHP-001` (ordered by ID), assuming the same governed planning data as previously tested; all CAPs remain missing.
+6. Select `CAP-LOC-001` from the candidate dropdown.
+7. Click **Prepare CAP Context (Offline)**. Expected **Prepared CAP Context (Offline)** information dialog with Story, asset, manifest fingerprint, approved Story text and **unverified_shot** labels/warnings for Draft-bound Shot text.
+8. Verify that the dialog says no CAP/Canon changed. Click **OK**; source summary stays visible in main batch dialog.
+9. Change the Story dropdown only if another approved Story exists; the asset selection should clear and require fresh discovery.
+10. Click **Close** without any generated or reviewed Draft save. Check CAP count remains zero and existing cached proposal is intact.
+
+### Operator verification commands
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m pytest -q tests/test_phase_20_19_3b5_21a_context_preparation.py -v
+python -m pytest -q tests/test_phase_20_19_3b5_20_governed_positive_acceptance.py -v
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+No claims of full regression/format acceptance should be made until the operator runs the above checks. Untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` remains outside this phase's commits.
