@@ -129,10 +129,7 @@ def prepare_cap_context(
         story_fingerprint,
         asset_fingerprint,
         [(item.source_type, item.record_id, item.field, item.fingerprint) for item in ordered],
-        [
-            (shot.shot_id, shot.contract_hashes, shot.binding_statuses)
-            for shot in linked
-        ],
+        [(shot.shot_id, shot.contract_hashes, shot.binding_statuses) for shot in linked],
         tuple(dict.fromkeys(warnings)),
     )
     return CAPContextManifest(
