@@ -8,13 +8,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from vscs.application.caps.governed_planning_evidence import ProductionPlanningContracts
 from vscs.application.caps.story_batch import StoryBatchError
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
-from vscs.application.caps.governed_planning_evidence import ProductionPlanningContracts
 from vscs.application.story.episode_planning import EpisodePlan, EpisodePlanStatus
+from vscs.application.story.lifecycle import StoryRecord, StoryStatus
 from vscs.application.story.scene_planning import ScenePlan, ScenePlanStatus
 from vscs.application.story.shot_planning import ShotPlan, ShotPlanStatus
-from vscs.application.story.lifecycle import StoryRecord, StoryStatus
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CAPStatus
 
@@ -64,25 +64,27 @@ def review(tmp_path: Path):
         ("scene_plans.json", "scenes", scene),
         ("shot_plans.json", "shots", shot),
     ):
-        (planning / name).write_text(
-            json.dumps({key: [asdict(record)]}), encoding="utf-8"
-        )
+        (planning / name).write_text(json.dumps({key: [asdict(record)]}), encoding="utf-8")
+    shot_hash = contracts.shot_contract_hash(asdict(shot))
     (planning / "asset_resolutions.json").write_text(
         json.dumps(
             {
                 "bindings": [
                     {
                         "shot_id": shot.shot_id,
+                        "shot_contract_hash": shot_hash,
                         "asset_id": "CAP-LOC-001",
                         "expected_category": "location",
                     },
                     {
                         "shot_id": shot.shot_id,
+                        "shot_contract_hash": shot_hash,
                         "asset_id": "CAP-LOC-001",
                         "expected_category": "location",
                     },
                     {
                         "shot_id": shot.shot_id,
+                        "shot_contract_hash": shot_hash,
                         "asset_id": "CAP-PRP-001",
                         "expected_category": "prop",
                     },
