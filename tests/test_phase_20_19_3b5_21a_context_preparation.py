@@ -3,11 +3,18 @@
 import json
 from dataclasses import asdict, replace
 from types import SimpleNamespace
+from unittest.mock import patch
+
+from PySide6.QtWidgets import QMessageBox
 
 import pytest
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
-from vscs.application.caps.context_preparation import prepare_cap_context
+from vscs.application.caps.context_preparation import (
+    CAPContextManifest,
+    CAPContextSource,
+    prepare_cap_context,
+)
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.story_batch import StoryCAPBatchService
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
@@ -18,6 +25,7 @@ from vscs.application.story.lifecycle import StoryRecord, StoryStatus
 from vscs.application.story.scene_planning import ScenePlan, ScenePlanStatus
 from vscs.application.story.shot_planning import ShotPlan, ShotPlanStatus
 from vscs.domain.assets.models import Asset, AssetCategory
+from vscs.presentation.dialogs import story_cap_batch_dialog as batch_ui
 
 
 def _write(root, name, key, records):
@@ -203,3 +211,48 @@ def test_story_scoped_batch_discovery_excludes_foreign_assets(tmp_path):
     selected = review.discover("STORY-001")
     assert {item.asset_id for item in selected} == {"CAP-LOC-001", "CAP-PRP-001"}
     assert "CAP-LOC-OTHER" not in {item.asset_id for item in selected}
+
+
+def test_context_button_is_read_only_and_story_switch_clears_selection(
+    tmp_path, monkeypatch, qtbot
+):
+    approved = StoryRecord(
+        story_id="STORY-001", title="Quiet Console",
+        description="A governed control room", status=StoryStatus.APPROVED,
+    )
+    monkeypatch.setattr(
+        batch_ui,
+        "StoryLifecycleService",
+        lambda _projects: SimpleNamespace(list_stories=lambda: (approved,)),
+    )
+    project = SimpleNamespace(project_directory=tmp_path, is_project_open=True)
+    asset_service = SimpleNamespace(projects=project)
+    caps = SimpleNamespace(assets=asset_service)
+    generator = SimpleNamespace(caps=caps)
+    dialog = batch_ui.StoryCAPBatchDialog(generator)
+    qtbot.addWidget(dialog)
+    dialog.assets.addItem("CAP-LOC-001", "CAP-LOC-001")
+    dialog.context_button.setEnabled(True)
+    source = CAPContextSource(
+        "approved_story", "STORY-001", "description",
+        "A governed control room", "approved_story_context", "source-hash",
+    )
+    manifest = CAPContextManifest(
+        "STORY-001", "CAP-LOC-001", "story-hash", "asset-hash",
+        (source,), (), "manifest-hash",
+    )
+    dialog.review_service = SimpleNamespace(
+        prepare_context=lambda story_id, asset_id: (
+            manifest if (story_id, asset_id) == ("STORY-001", "CAP-LOC-001")
+            else None
+        )
+    )
+    with patch.object(QMessageBox, "information") as notice:
+        dialog.context_button.click()
+    assert "Offline inspection only" in dialog.summary.toPlainText()
+    assert "approved_story_context" in dialog.summary.toPlainText()
+    assert "manifest-hash" in notice.call_args.args[2]
+    dialog.story.addItem("STORY-002", "STORY-002")
+    dialog.story.setCurrentIndex(1)
+    assert dialog.assets.count() == 0
+    assert not dialog.context_button.isEnabled()
