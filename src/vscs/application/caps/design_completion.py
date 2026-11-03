@@ -61,6 +61,7 @@ class DesignReviewPackage(BaseModel):
     base_fingerprint: str
     fields: tuple[DesignFieldReview, ...]
     story_fingerprint: str = ""
+    context_fingerprint: str = ""
     reviewer: str = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -82,6 +83,8 @@ def apply_review(
     decisions = {item.field: item for item in review.fields}
     if not set(required).issubset(decisions):
         raise ValueError("Every required category field needs an explicit review decision")
+    if not set(spec.canonical_attributes).issubset(decisions):
+        raise ValueError("Every populated CAP attribute needs an explicit review decision")
     attributes = dict(spec.canonical_attributes)
     for item in review.fields:
         if item.decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}:
@@ -96,6 +99,7 @@ def apply_review(
         "version": 1,
         "reviewer": review.reviewer,
         "story_fingerprint": review.story_fingerprint,
+        "context_fingerprint": review.context_fingerprint,
         "base_fingerprint": review.base_fingerprint,
         "result_fingerprint": updated.fingerprint(),
         "fields": [item.model_dump(mode="json") for item in review.fields],
