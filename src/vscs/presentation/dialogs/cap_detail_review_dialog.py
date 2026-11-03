@@ -64,7 +64,9 @@ class CAPDetailReviewDialog(QDialog):
         body = QWidget()
         form = QFormLayout(body)
         form.setSpacing(14)
-        for field in REQUIRED_FIELDS.get(spec.category, ("identity",)):
+        required_fields = REQUIRED_FIELDS.get(spec.category, ("identity",))
+        fields = tuple(dict.fromkeys((*required_fields, *spec.canonical_attributes, *proposed)))
+        for field in fields:
             suggestion = proposed.get(field)
             value = QTextEdit()
             value.setPlainText(
