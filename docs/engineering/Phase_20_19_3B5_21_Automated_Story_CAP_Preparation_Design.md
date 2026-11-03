@@ -220,3 +220,49 @@ B.5.21B queue fingerprint now also includes the current persisted binding status
 - UI explicitly reports no paid requests, CAP writes, approvals or cache modifications. Legacy proposal remains labelled as lacking governed Shot context fingerprint at generation time. No Canon or production-readiness claim is made.
 - **Acceptance scope:** cache-first read-only planning, status/provenance presentation, legacy proposal preservation, cache freshness guards and separate explicit provider consent. Operator did not perform paid generation or end-to-end Draft save for this phase.
 - **Next phase:** B.5.21C — Reviewed Draft persistence and source freshness at the actual commit boundary. Maintain explicit per-asset human design decisions, rollback safety and existing Canon/reference restrictions. H3 live-generation hold remains active.
+
+## B.5.21C implementation record — 2026-11-03
+
+Status: **Code and tests committed; local regression, Ruff/Mypy and operator acceptance PENDING. Not closed.**
+
+### Existing architecture reused
+- **StoryCAPBatchDialog** retains its existing one-asset-at-a-time sequence: cached proposal → StoryCAPSpecificationDialog → local working cache → CAPDetailReviewDialog → explicit Save confirmation → StoryCAPBatchReviewService.save_reviewed. No new CAP writer, no background process, no paid provider calls from persistence.
+- **CAPDetailReviewDialog** now exposes all populated canonical attributes and all provider-proposed fields as well as the category's required fields. Each field defaults to **DEFER**, avoiding implicit acceptance of unsupported design descriptions.
+- **DesignReviewPackage** now includes optional `context_fingerprint`; audit metadata `vscs.cap_design_review.v1` retains Story and context fingerprints, review decisions, reviewer, and explicit `canon_approved=false` / `image_authorized=false`. `apply_review` rejects a package lacking decisions for any already populated canonical attribute.
+- **StoryCAPBatchReviewService.save_reviewed** accepts a new optional `expected_context_fingerprint`. When supplied (the operator's governed batch workflow), it requires a reviewed package with matching Story/context fingerprints and re-runs `prepare_context` **inside the service before the first CAP write**. Any stale or missing fingerprint refuses the operation without new CAP creation.
+- **StoryCAPBatchDialog** passes the reviewed Story/context fingerprints to the save service and validates provider identity immediately before the commit call. It retains the B.5.21B pre/post Review freshness checks and the original separate operator confirmation.
+- Existing `DesignReviewPersistence` still writes one Draft CAP metadata update. Newly created empty Draft CAPs are deleted on failed persistence only when the stored specification is absent; pre-existing Draft CAPs are not destructively rolled back. Canon and MASTER references remain unchanged.
+
+### Explicit limitations
+- The richer approved Story/Shot context is used to verify provenance and freshness, **not** automatically appended to paid provider generation prompts. Do not misrepresent Draft Shot narratives as approved Story Canon.
+- Legacy direct `save_reviewed` call sites without `expected_context_fingerprint` remain supported for previous reviewed workflows; **only the governed Story → CAP Batch operator path asserts the additional B.5.21C context gate**. Consider a future migration for every other caller.
+- A successful Draft CAP is **not** an approved Canon, reference image, or production-ready asset.
+- This phase does not perform actual paid generation, reference production, H3 execution, or modification of the test project's four missing CAP records.
+
+### Automated acceptance
+`tests/test_phase_20_19_3b5_21c_reviewed_draft_persistence.py` covers complete field decisions and provenance audit, stale/missing Story/context rejection before writes, Draft-only persistence, rollback after write failure, refusal to overwrite an approved CAP, and Qt visibility of all populated attributes. Rerun B.5.21B, B.5.21A, legacy batch review, Ruff check/format, mypy and full pytest. Prior verified baseline: **2,385 passed**, **1,571 formatted files**, **664 mypy-clean source files**.
+
+### UI operator acceptance after all code quality gates pass
+1. Open the existing **The Quiet Console — Episode Audit** project → **View → Canonical Profiles → Story → CAP Batch…**.
+2. Select `STORY-001` → **Discover Shot Assets** → **Prepare Queue (Offline)**. Expect four Draft-bound/missing CAP assets, one `legacy_cached` (`CAP-LOC-001`), three `missing`.
+3. Select `CAP-LOC-001` → **Review Cached Proposal**. Expect an advisory that the legacy proposal lacks current governed Shot context verification.
+4. Review the specification (do not infer geometry) and open **Review CAP Detail Decisions**. Verify all populated fields (e.g. `architecture`) appear alongside category-required fields; all begin **Defer**.
+5. Click **Cancel** at the field-review dialog. Confirm no CAP was created. No accepted design details or paid generation are required for safe cancellation acceptance.
+6. Verify Canonical Profiles still shows **0 CAP(s) — 0 production ready**.
+7. The positive Draft-save path is covered by isolated automated tests and should be tested on a disposable governed project before any live operator persists actual creative decisions.
+
+### Operator commands
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m pytest -q tests/test_phase_20_19_3b5_21c_reviewed_draft_persistence.py -v
+python -m pytest -q tests/test_phase_20_19_3b5_21b_preparation_queue.py -v
+python -m pytest -q tests/test_phase_20_19_3b5_21a_context_preparation.py -v
+python -m pytest -q tests/test_phase_20_19_3b5_1_batch_review.py -v
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q
+git diff --check
+git status --short
+```
