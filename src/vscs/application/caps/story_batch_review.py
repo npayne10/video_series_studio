@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.context_preparation import (
     CAPContextManifest,
     assert_unique_planning_ownership,
@@ -18,8 +19,8 @@ from vscs.application.caps.proposal_cache import cache_fingerprint
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
-from vscs.application.story.lifecycle import StoryStatus
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
+from vscs.application.story.lifecycle import StoryStatus
 from vscs.domain.caps import CAPCreate, CAPStatus
 
 
@@ -64,7 +65,7 @@ class StoryCAPBatchReviewService:
         try:
             assert_unique_planning_ownership(root)
             scope = discover_governed_shot_evidence(root, selected)
-        except (ValueError, OSError) as exc:
+        except (ShotTextAuthorityError, ValueError, OSError) as exc:
             raise StoryBatchError(f"Governed Shot discovery unavailable: {exc}") from exc
         shot_ids = {item.shot_id for item in scope.candidates}
         if not shot_ids:
@@ -138,7 +139,7 @@ class StoryCAPBatchReviewService:
             if self.batch.current_story_fingerprint(selected) != fingerprint:
                 raise StoryBatchError("Approved Story changed during CAP context preparation")
             return manifest
-        except (ValueError, OSError) as exc:
+        except (ShotTextAuthorityError, ValueError, OSError) as exc:
             raise StoryBatchError(str(exc)) from exc
 
     def validate_reviewed_dependencies(
