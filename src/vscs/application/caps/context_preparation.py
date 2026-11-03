@@ -41,7 +41,7 @@ def _digest(*items: object) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def _assert_unique_ownership(project_root: Path) -> None:
+def assert_unique_planning_ownership(project_root: Path) -> None:
     """Fail closed when repeated plan IDs could link different Stories together."""
     for name, key, identity in (
         ("episode_plans.json", "episodes", "episode_id"),
@@ -75,7 +75,7 @@ def prepare_cap_context(
     Discovery establishes structural scope; real production contracts alone
     determine whether Shot narratives are verified.
     """
-    _assert_unique_ownership(project_root)
+    assert_unique_planning_ownership(project_root)
     discovered = discover_governed_shot_evidence(project_root, story_id)
     linked = tuple(
         item for item in discovered.candidates if asset_id in item.bound_asset_ids
@@ -95,19 +95,21 @@ def prepare_cap_context(
             )
         )
     warnings = list(discovered.warnings[:-1])
-    verified_ids: set[str] = set()
+    verified_by_id: dict[str, object] = {}
     try:
         verified = verified_governed_shot_evidence(
             project_root, story_id, ProductionPlanningContracts()
         )
-        verified_ids = {
-            item.shot_id for item in verified if asset_id in item.bound_asset_ids
+        verified_by_id = {
+            item.shot_id: item for item in verified if asset_id in item.bound_asset_ids
         }
     except (ShotTextAuthorityError, KeyError, TypeError, ValueError) as exc:
         warnings.append(f"Shot evidence unverified: {exc}")
     for shot in sorted(linked, key=lambda item: (item.episode_id, item.scene_id, item.shot_id)):
         authority = (
-            "verified_ready_shot" if shot.shot_id in verified_ids else "unverified_shot"
+            "verified_ready_shot"
+            if verified_by_id.get(shot.shot_id) == shot
+            else "unverified_shot"
         )
         if authority == "unverified_shot" and not any(
             item.startswith("Shot evidence unverified:") for item in warnings
