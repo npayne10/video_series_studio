@@ -82,6 +82,7 @@ class StoryCAPBatchDialog(QDialog):
         self.assets = QComboBox()
         self.inspect = QPushButton("Discover Shot Assets")
         self.map_scenes = QPushButton("Assign Story Scenes (Reviewed)")
+        self.context_button = QPushButton("Prepare CAP Context (Offline)")
         self.preview = QPushButton("Review Cached Proposal")
         self.regenerate = QPushButton("Generate / Regenerate Using AI (Paid)")
         self.spatial_acceptance = QPushButton("Spatial Geometry Acceptance (Offline)")
@@ -100,6 +101,7 @@ class StoryCAPBatchDialog(QDialog):
         row = QHBoxLayout()
         row.addWidget(self.inspect)
         row.addWidget(self.assets)
+        row.addWidget(self.context_button)
         row.addWidget(self.preview)
         row.addWidget(self.regenerate)
         layout = QVBoxLayout(self)
@@ -114,11 +116,14 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(self.summary)
         layout.addWidget(self.close_button)
         self.inspect.clicked.connect(self.discover)
+        self.context_button.clicked.connect(self.prepare_selected_context)
+        self.story.currentIndexChanged.connect(self._story_changed)
         self.map_scenes.clicked.connect(self.assign_story_scenes)
         self.preview.clicked.connect(self.review_one)
         self.regenerate.clicked.connect(self.regenerate_one)
         self.close_button.clicked.connect(self.reject)
         self.spatial_acceptance.clicked.connect(self.review_spatial_acceptance)
+        self.context_button.setEnabled(False)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
 
@@ -204,10 +209,47 @@ class StoryCAPBatchDialog(QDialog):
         except (ShotTextAuthorityError, StoryBatchError, ValueError, OSError) as exc:
             QMessageBox.warning(self, "Story Scene Authority", str(exc))
 
+    def _story_changed(self, _index: int) -> None:
+        self.assets.clear()
+        self.context_button.setEnabled(False)
+        self.preview.setEnabled(False)
+        self.regenerate.setEnabled(False)
+        self.summary.setPlainText("Story selection changed. Click Discover Shot Assets.")
+
+    def prepare_selected_context(self) -> None:
+        story_id = self.story.currentData()
+        asset_id = self.assets.currentData()
+        if not isinstance(story_id, str) or not isinstance(asset_id, str):
+            QMessageBox.information(self, "CAP Context", "Select a Story and bound asset first.")
+            return
+        try:
+            manifest = self.review_service.prepare_context(story_id, asset_id)
+        except (StoryBatchError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "CAP Context", str(exc))
+            return
+        lines = [
+            f"Story: {manifest.story_id}  Asset: {manifest.asset_id}",
+            f"Context fingerprint: {manifest.fingerprint}",
+            "Offline inspection only; no CAP or Canon was changed.",
+            "",
+        ]
+        for source in manifest.sources:
+            lines.append(
+                f"[{source.authority}] {source.source_type} "
+                f"{source.record_id}.{source.field}: {source.excerpt}"
+            )
+        if manifest.warnings:
+            lines.extend(("", "Warnings:", *manifest.warnings))
+        self.summary.setPlainText("\\n".join(lines))
+        QMessageBox.information(self, "Prepared CAP Context (Offline)", "\\n".join(lines))
+
     def discover(self) -> None:
         self.assets.clear()
+        story_id = self.story.currentData()
         try:
-            candidates = self.review_service.discover()
+            if not isinstance(story_id, str):
+                raise StoryBatchError("Select an approved Story first")
+            candidates = self.review_service.discover(story_id)
         except (StoryBatchError, ValueError, OSError) as exc:
             QMessageBox.warning(self, "CAP Asset Discovery", str(exc))
             return
@@ -226,7 +268,8 @@ class StoryCAPBatchDialog(QDialog):
         self.summary.setPlainText(
             "\n".join(lines) if lines else "No registered bound assets found in Shot ledger."
         )
-        self.preview.setEnabled(self.assets.count() > 0 and self.story.count() > 0)
+        self.context_button.setEnabled(self.assets.count() > 0)
+        self.preview.setEnabled(self.assets.count() > 0)
         self.regenerate.setEnabled(self.preview.isEnabled())
 
     def regenerate_one(self) -> None:
@@ -258,7 +301,7 @@ class StoryCAPBatchDialog(QDialog):
                 "cap-design-prompt-v2",
             )
             cache_key = (story_id, asset_id, fingerprint, asset_fingerprint, provider_fingerprint)
-            eligible_assets = self.review_service.discover()
+            eligible_assets = self.review_service.discover(story_id)
             if asset_id not in {
                 item.asset_id for item in eligible_assets if not item.has_specification
             }:
