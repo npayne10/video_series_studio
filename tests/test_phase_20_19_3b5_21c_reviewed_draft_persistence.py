@@ -172,3 +172,34 @@ def test_detail_review_includes_nonrequired_populated_attributes(qtbot):
     assert "materials" in names
     assert {"layout", "scale", "spatial_anchors", "lighting"}.issubset(names)
     assert all(choice.currentData() is DetailDecision.DEFER for _, _, choice, _ in dialog.rows)
+
+
+def test_governed_save_without_field_review_refuses_all_writes():
+    service, caps, _specifications = _service()
+    with pytest.raises(StoryBatchError, match="explicit field review"):
+        service.save_reviewed(
+            "STORY-001",
+            _spec(),
+            "story-v1",
+            expected_context_fingerprint="context-v1",
+        )
+    caps.create.assert_not_called()
+    caps.update.assert_not_called()
+
+
+def test_existing_non_draft_cap_is_never_overwritten():
+    service, caps, _specifications = _service()
+    caps.get.side_effect = None
+    caps.get.return_value = SimpleNamespace(status=CAPStatus.APPROVED)
+    spec = _spec()
+    with pytest.raises(StoryBatchError, match="not Draft"):
+        service.save_reviewed(
+            "STORY-001",
+            spec,
+            "story-v1",
+            _review(spec),
+            expected_context_fingerprint="context-v1",
+        )
+    caps.create.assert_not_called()
+    caps.update.assert_not_called()
+    caps.delete.assert_not_called()
