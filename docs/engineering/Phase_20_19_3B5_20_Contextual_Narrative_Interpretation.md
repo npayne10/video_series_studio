@@ -1,6 +1,6 @@
 # B.5.20 — Contextual Narrative Interpretation
 
-Status: **automated baseline and negative-path operator checks passed**; isolated positive-path integration test committed, awaiting local execution and acceptance. Live-project positive UI acceptance is still outstanding.
+Status: **Development slice accepted and closed — 2026-11-03.** Controlled governed positive-path Qt integration and real-application negative-path operator evidence accepted. Live-project positive UI production readiness remains a separate outstanding operational acceptance.
 
 ## Intent
 Interpret additional explicit spatial language from verified governed Shot narratives without promoting unverified text, guessed assets, or Draft bindings into CAP authority. This slice supports named assets in propositions such as “Diagnostic Console remains inside Engineering Control Room” and location-first clauses such as “In the empty engineering control room, the diagnostic console maintains a steady blue glow.” It is intentionally narrower than a full natural-language understanding engine.
@@ -39,7 +39,7 @@ git status --short
 - The positive test verifies correct registered-asset relationship display, Shot attribution, advisory-only messaging and unchanged Draft dependencies. Negative tests reject Draft bindings and stale contracts.
 - The parser now supports location-first clauses at the beginning of verified labelled narrative fields (`required_action:`, `narrative_purpose:`, `production_objective:`).
 - This does not lift the H3 live-generation hold or authorise changing Xorix project asset statuses.
-- Once all local quality gates pass, record the resulting test counts and decide whether a separate real-project end-to-end positive UI scenario remains necessary for formal phase closure.
+- Accepted as sufficient positive-path development integration evidence for B.5.20; the original project's real-asset readiness and complete end-to-end UI acceptance are tracked separately and are not claimed as passed.
 
 ### Operator commands
 ```powershell
@@ -54,3 +54,15 @@ python -m pytest -q
 git diff --check
 git status --short
 ```
+
+## Final acceptance record — 2026-11-03
+- Operator environment: Windows, Python 3.13.7, PySide6 6.11.1, pytest 9.1.1.
+- Controlled governed positive-path tests: **3 passed**. Existing contextual tests previously confirmed: **5 passed**.
+- Full regression: **2,371 passed**.
+- Ruff lint: **all checks passed**. Ruff format: **1,566 files already formatted**.
+- Mypy: **no issues in 662 source files**. `git diff --check`: clean.
+- The sole untracked operator file `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` was preserved and not modified.
+- Operator negative-path evidence: governed Shot `EP-001-SCN-001-SHT-001` correctly refused Draft/missing binding authority and did not infer Shot relationships. The preserved cached proposal was not intentionally saved or approved during the test.
+- Controlled positive-path evidence is limited to temporary test planning records and verified Qt message/dependency behavior. It does **not** prove real approved CAP/reference authority, completed media generation, or genuine end-to-end operational UI acceptance.
+- Open follow-ups: CAP creation automation from existing approved Story/Shot evidence; explicit Story fact versus inferred design provenance; MASTER canonical reference generation and approval workflow; original-project asset/CAP readiness; real-project positive UI acceptance; improved direct **Open Canonical Profile** navigation; and separate shot-duration/provider-readiness review.
+- H3 live-generation hold remains active.
