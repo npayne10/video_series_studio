@@ -32,7 +32,9 @@ def _proposal():
         master_prompt="Draft design.",
         origin="story_intelligence_proposal",
     )
-    return StoryBatchProposal(STORY, "story-hash", ASSET, StoryCAPProposal(spec, "architecture", ()))
+    return StoryBatchProposal(
+        STORY, "story-hash", ASSET, StoryCAPProposal(spec, "architecture", ())
+    )
 
 
 def _manifest(asset_id=ASSET, fingerprint="context-hash"):
