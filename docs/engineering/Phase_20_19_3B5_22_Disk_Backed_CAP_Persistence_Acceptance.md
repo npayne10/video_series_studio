@@ -21,7 +21,7 @@ The disposable test creates:
 - A reviewed `CAPStructuredSpecification` with explicit field decisions, Story fingerprint and **current, locally calculated** CAP context fingerprint.
 
 Acceptance scenarios:
-1. **Successful reviewed Draft save and restart**. Invoke real StoryCAPBatchReviewService.save_reviewed, real DesignReviewPersistence, CAPService and CAPRepository. Close the DB, reopen it with a new DatabaseManager, and verify Draft status, unchanged Draft asset, no references, persisted structured specification, audit Story/context hashes, all review decisions and Canon/image approval flags false.
+1. **Successful reviewed Draft save and restart**. Invoke real StoryCAPBatchReviewService.save_reviewed, real DesignReviewPersistence, CAPService and CAPRepository. Close and reopen the real VSCS project, and verify Draft status, unchanged Draft asset, no references, persisted structured specification, audit Story/context hashes, all review decisions and Canon/image approval flags false.
 2. **Failure injection before metadata commit**. Make DesignReviewPersistence fail after CAP creation; the newly created empty Draft is deleted, leaving the real project SQLite repository empty.
 3. **Stale-context rejection**. Modify persisted Shot text after calculating the original manifest. Verify no Draft is created.
 4. **SQLite update failure recovery**. Inject a failure into the actual CAP repository update call; verify cleanup leaves no CAP.
