@@ -219,9 +219,7 @@ def test_disk_backed_draft_survives_database_close_and_reopen(disposable_disk_pr
     projects.close()
     projects.open(root)
     try:
-        reloaded_assets, reloaded_caps, reloaded_specs, _, _ = _services(
-            root, database, projects
-        )
+        reloaded_assets, reloaded_caps, reloaded_specs, _, _ = _services(root, database, projects)
         persisted = reloaded_caps.get(ASSET_ID)
         assert persisted.status is CAPStatus.DRAFT
         assert persisted.reference_paths == ()
@@ -235,23 +233,21 @@ def test_disk_backed_draft_survives_database_close_and_reopen(disposable_disk_pr
 
 
 def test_disk_backed_failure_removes_new_empty_draft(disposable_disk_project):
-    _root, _projects, _database, _assets, caps, _specifications, review = (
-        disposable_disk_project
-    )
-    with patch.object(
-        DesignReviewPersistence, "save", side_effect=RuntimeError("Injected save failure")
+    _root, _projects, _database, _assets, caps, _specifications, review = disposable_disk_project
+    with (
+        patch.object(
+            DesignReviewPersistence, "save", side_effect=RuntimeError("Injected save failure")
+        ),
+        pytest.raises(RuntimeError, match="Injected save failure"),
     ):
-        with pytest.raises(RuntimeError, match="Injected save failure"):
-            _save(review)
+        _save(review)
     assert caps.list() == ()
     with pytest.raises(CAPNotFoundError):
         caps.get(ASSET_ID)
 
 
 def test_disk_backed_stale_context_does_not_create_cap(disposable_disk_project):
-    root, _projects, _database, _assets, caps, _specifications, review = (
-        disposable_disk_project
-    )
+    root, _projects, _database, _assets, caps, _specifications, review = disposable_disk_project
     context = review.prepare_context(STORY_ID, ASSET_ID)
     story_fingerprint = review.batch.current_story_fingerprint(STORY_ID)
     specification = _draft_specification()
@@ -271,22 +267,20 @@ def test_disk_backed_stale_context_does_not_create_cap(disposable_disk_project):
 
 
 def test_disk_update_failure_rolls_back_new_cap(disposable_disk_project):
-    _root, _projects, _database, _assets, caps, _specifications, review = (
-        disposable_disk_project
-    )
-    with patch.object(CAPRepository, "update", side_effect=RuntimeError("Disk update failed")):
-        with pytest.raises(RuntimeError, match="Disk update failed"):
-            _save(review)
+    _root, _projects, _database, _assets, caps, _specifications, review = disposable_disk_project
+    with (
+        patch.object(CAPRepository, "update", side_effect=RuntimeError("Disk update failed")),
+        pytest.raises(RuntimeError, match="Disk update failed"),
+    ):
+        _save(review)
     assert caps.list() == ()
 
 
 def test_disk_repeated_save_does_not_overwrite_first_review(disposable_disk_project):
-    _root, _projects, _database, _assets, caps, _specifications, review = (
-        disposable_disk_project
-    )
+    _root, _projects, _database, _assets, caps, _specifications, review = disposable_disk_project
     _save(review)
     before = caps.get(ASSET_ID).production_metadata
-    with pytest.raises(StoryBatchError, match="existing|already exists|revision"):
+    with pytest.raises(StoryBatchError, match=r"existing|already exists|revision"):
         _save(review)
     assert len(caps.list()) == 1
     assert caps.get(ASSET_ID).production_metadata == before
