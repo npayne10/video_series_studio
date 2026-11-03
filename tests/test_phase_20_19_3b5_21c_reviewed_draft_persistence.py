@@ -8,6 +8,7 @@ import pytest
 from PySide6.QtWidgets import QMessageBox
 
 from vscs.application.caps.design_completion import (
+    DESIGN_REVIEW_KEY,
     DesignFieldReview,
     DesignReviewPackage,
     DetailDecision,
@@ -17,7 +18,11 @@ from vscs.application.caps.design_completion import (
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.story_batch import StoryBatchError
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
-from vscs.application.caps.structured_specification import CAPStructuredSpecification
+from vscs.application.caps.structured_specification import (
+    SPECIFICATION_METADATA_KEY,
+    CAPStructuredSpecification,
+    CAPStructuredSpecificationService,
+)
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CAPStatus
 from vscs.presentation.dialogs.cap_detail_review_dialog import CAPDetailReviewDialog
@@ -214,3 +219,63 @@ def test_all_deferred_detail_review_is_blocked_before_dialog_accept(qtbot):
     warning.assert_called_once()
     with pytest.raises(ValueError, match="No accepted review"):
         dialog.reviewed()
+
+
+def test_real_review_persistence_stores_one_unapproved_draft_and_audit():
+    class MemoryCaps:
+        def __init__(self):
+            self.records = {}
+            self.assets = SimpleNamespace(
+                get=lambda asset_id: SimpleNamespace(
+                    asset_id=asset_id,
+                    name="Engineering control room",
+                    category=AssetCategory.LOCATION,
+                )
+            )
+
+        def get(self, asset_id):
+            if asset_id not in self.records:
+                raise CAPNotFoundError("Missing")
+            return self.records[asset_id]
+
+        def create(self, record):
+            self.records[record.asset_id] = SimpleNamespace(
+                asset_id=record.asset_id,
+                status=record.status,
+                production_metadata={},
+            )
+
+        def update(self, asset_id, change):
+            self.records[asset_id].production_metadata = change.production_metadata
+
+        def delete(self, asset_id):
+            del self.records[asset_id]
+
+    caps = MemoryCaps()
+    specifications = CAPStructuredSpecificationService(caps)
+    batch = Mock()
+    batch.current_story_fingerprint.return_value = "story-v1"
+    batch.generator.specifications = specifications
+    service = StoryCAPBatchReviewService(batch)
+    service.prepare_context = Mock(return_value=SimpleNamespace(fingerprint="context-v1"))
+    service.validate_reviewed_dependencies = Mock(return_value=())
+    spec = _spec()
+    service.save_reviewed(
+        "STORY-001",
+        spec,
+        "story-v1",
+        _review(spec),
+        expected_context_fingerprint="context-v1",
+    )
+    assert len(caps.records) == 1
+    cap = caps.get(spec.asset_id)
+    assert cap.status is CAPStatus.DRAFT
+    assert SPECIFICATION_METADATA_KEY in cap.production_metadata
+    audit = json.loads(cap.production_metadata[DESIGN_REVIEW_KEY])
+    assert audit["story_fingerprint"] == "story-v1"
+    assert audit["context_fingerprint"] == "context-v1"
+    assert audit["canon_approved"] is False
+    assert audit["image_authorized"] is False
+    restored = specifications.get(spec.asset_id)
+    assert restored is not None
+    assert restored.canonical_attributes["architecture"] == "A vessel interior"
