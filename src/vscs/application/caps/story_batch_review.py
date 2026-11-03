@@ -219,7 +219,9 @@ class StoryCAPBatchReviewService:
                 or review.context_fingerprint != expected_context_fingerprint
                 or review.story_fingerprint != approved_fingerprint
             ):
-                raise StoryBatchError("Reviewed Story or CAP context fingerprint is missing or stale")
+                raise StoryBatchError(
+                    "Reviewed Story or CAP context fingerprint is missing or stale"
+                )
             current = self.prepare_context(story_id, specification.asset_id)
             if current.fingerprint != expected_context_fingerprint:
                 raise StoryBatchError("CAP context changed before Draft persistence")
