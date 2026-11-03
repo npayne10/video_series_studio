@@ -6,7 +6,7 @@ No existing operator project, paid provider, Canon approval, or media is touched
 import json
 from dataclasses import asdict
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -30,17 +30,14 @@ from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     CAPStructuredSpecificationService,
 )
-from vscs.application.story.asset_resolver import (
-    AssetBindingStatus,
-    ShotAssetBinding,
-)
+from vscs.application.story.asset_resolver import AssetBindingStatus, ShotAssetBinding
+from vscs.application.projects import ProjectService
 from vscs.application.story.episode_planning import EpisodePlan, EpisodePlanStatus
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
 from vscs.application.story.scene_planning import ScenePlan, ScenePlanStatus
 from vscs.application.story.shot_planning import ShotPlan, ShotPlanStatus
 from vscs.domain.assets.models import AssetCategory, AssetCreate, AssetStatus
 from vscs.domain.caps import CAPStatus
-from vscs.domain.projects import ProjectMetadata
 from vscs.infrastructure.database import DatabaseManager
 
 STORY_ID = "STORY-001"
@@ -110,8 +107,7 @@ def _create_planning(root):
         _write_plan(root, name, key, record)
 
 
-def _services(root, database):
-    projects = SimpleNamespace(project_directory=root, is_project_open=True)
+def _services(root, database, projects):
     assets = AssetService(projects, AssetRepository(database))
     caps = CAPService(assets, CAPRepository(database))
     specifications = CAPStructuredSpecificationService(caps)
@@ -127,11 +123,10 @@ def _services(root, database):
 @pytest.fixture
 def disposable_disk_project(tmp_path):
     root = tmp_path / "B5_22_DISPOSABLE_CAP_ACCEPTANCE"
-    root.mkdir()
-    metadata = ProjectMetadata(name="Disposable CAP acceptance")
     database = DatabaseManager()
-    database.open(root, metadata)
-    assets, caps, specifications, stories, review = _services(root, database)
+    projects = ProjectService(Mock(), database)
+    projects.create(root, name="Disposable CAP acceptance")
+    assets, caps, specifications, stories, review = _services(root, database, projects)
     assets.create(
         AssetCreate(
             asset_id=ASSET_ID,
@@ -147,8 +142,9 @@ def disposable_disk_project(tmp_path):
     assert story.story_id == STORY_ID
     stories.set_status(STORY_ID, StoryStatus.APPROVED)
     _create_planning(root)
-    yield root, metadata, database, assets, caps, specifications, review
-    database.close()
+    yield root, projects, database, assets, caps, specifications, review
+    if projects.is_project_open:
+        projects.close()
 
 
 def _draft_specification():
@@ -204,7 +200,7 @@ def _save(review):
 
 
 def test_disk_backed_draft_survives_database_close_and_reopen(disposable_disk_project):
-    root, metadata, database, assets, caps, specifications, review = disposable_disk_project
+    root, projects, database, assets, caps, specifications, review = disposable_disk_project
     _save(review)
     assert len(caps.list()) == 1
     original = caps.get(ASSET_ID)
@@ -220,24 +216,26 @@ def test_disk_backed_draft_survives_database_close_and_reopen(disposable_disk_pr
     assert len(audit["fields"]) == 6
     assert specifications.get(ASSET_ID) is not None
 
-    database.close()
-    reopened = DatabaseManager()
-    reopened.open(root, metadata)
+    projects.close()
+    projects.open(root)
     try:
-        reloaded_assets, reloaded_caps, reloaded_specs, _, _ = _services(root, reopened)
+        reloaded_assets, reloaded_caps, reloaded_specs, _, _ = _services(
+            root, database, projects
+        )
         persisted = reloaded_caps.get(ASSET_ID)
         assert persisted.status is CAPStatus.DRAFT
         assert persisted.reference_paths == ()
         assert persisted.production_metadata == original.production_metadata
         assert reloaded_specs.get(ASSET_ID) is not None
         assert reloaded_assets.get(ASSET_ID).status is AssetStatus.DRAFT
-        assert reopened.check_integrity()
+        assert database.check_integrity()
+        assert (root / "project.vscs").is_file()
     finally:
-        reopened.close()
+        projects.close()
 
 
 def test_disk_backed_failure_removes_new_empty_draft(disposable_disk_project):
-    _root, _metadata, _database, _assets, caps, _specifications, review = (
+    _root, _projects, _database, _assets, caps, _specifications, review = (
         disposable_disk_project
     )
     with patch.object(
@@ -251,7 +249,7 @@ def test_disk_backed_failure_removes_new_empty_draft(disposable_disk_project):
 
 
 def test_disk_backed_stale_context_does_not_create_cap(disposable_disk_project):
-    root, _metadata, _database, _assets, caps, _specifications, review = (
+    root, _projects, _database, _assets, caps, _specifications, review = (
         disposable_disk_project
     )
     context = review.prepare_context(STORY_ID, ASSET_ID)
@@ -273,7 +271,7 @@ def test_disk_backed_stale_context_does_not_create_cap(disposable_disk_project):
 
 
 def test_disk_update_failure_rolls_back_new_cap(disposable_disk_project):
-    _root, _metadata, _database, _assets, caps, _specifications, review = (
+    _root, _projects, _database, _assets, caps, _specifications, review = (
         disposable_disk_project
     )
     with patch.object(CAPRepository, "update", side_effect=RuntimeError("Disk update failed")):
@@ -283,7 +281,7 @@ def test_disk_update_failure_rolls_back_new_cap(disposable_disk_project):
 
 
 def test_disk_repeated_save_does_not_overwrite_first_review(disposable_disk_project):
-    _root, _metadata, _database, _assets, caps, _specifications, review = (
+    _root, _projects, _database, _assets, caps, _specifications, review = (
         disposable_disk_project
     )
     _save(review)
