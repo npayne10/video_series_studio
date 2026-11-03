@@ -17,7 +17,7 @@ _PREPOSITION = re.compile(
 )
 _STOP = re.compile(r"\b(?:no|without|not|never)\b", re.IGNORECASE)
 _LOCATION_FIRST = re.compile(
-    r"(?:^|[.!?]\s+)In\s+(?:the\s+)?"
+    r"(?:^|[.!?]\s+|(?:^|\n)(?:required_action|narrative_purpose|production_objective):\s+)In\s+(?:the\s+)?"
     r"(?P<parent>[^,.;!?]{2,100}),\s+"
     r"(?:the\s+)?(?P<child>[^,.;!?]{2,120}?)(?=[,.;!?]|$)",
     re.IGNORECASE,
