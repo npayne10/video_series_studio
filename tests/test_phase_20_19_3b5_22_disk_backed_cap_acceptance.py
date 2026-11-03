@@ -20,6 +20,7 @@ from vscs.application.caps.design_completion import (
     DetailDecision,
     DetailOrigin,
 )
+from vscs.application.caps.governed_planning_evidence import ProductionPlanningContracts
 from vscs.application.caps.repository import CAPRepository
 from vscs.application.caps.service import CAPNotFoundError, CAPService
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
@@ -29,7 +30,6 @@ from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     CAPStructuredSpecificationService,
 )
-from vscs.application.caps.governed_planning_evidence import ProductionPlanningContracts
 from vscs.application.story.asset_resolver import (
     AssetBindingStatus,
     ShotAssetBinding,
@@ -270,3 +270,25 @@ def test_disk_backed_stale_context_does_not_create_cap(disposable_disk_project):
             expected_context_fingerprint=context.fingerprint,
         )
     assert caps.list() == ()
+
+
+def test_disk_update_failure_rolls_back_new_cap(disposable_disk_project):
+    _root, _metadata, _database, _assets, caps, _specifications, review = (
+        disposable_disk_project
+    )
+    with patch.object(CAPRepository, "update", side_effect=RuntimeError("Disk update failed")):
+        with pytest.raises(RuntimeError, match="Disk update failed"):
+            _save(review)
+    assert caps.list() == ()
+
+
+def test_disk_repeated_save_does_not_overwrite_first_review(disposable_disk_project):
+    _root, _metadata, _database, _assets, caps, _specifications, review = (
+        disposable_disk_project
+    )
+    _save(review)
+    before = caps.get(ASSET_ID).production_metadata
+    with pytest.raises(StoryBatchError, match="existing|already exists|revision"):
+        _save(review)
+    assert len(caps.list()) == 1
+    assert caps.get(ASSET_ID).production_metadata == before
