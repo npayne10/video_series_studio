@@ -1,4 +1,4 @@
-"""Controlled B.5.20 positive-path acceptance with the real planning contract calculators.
+"""B.5.20 positive acceptance using real planning contract calculators.
 
 This is an isolated verifier/UI integration fixture, NOT an asset approval
 procedure. It never modifies the operator's project or grants Canon authority.
@@ -97,20 +97,33 @@ def _governed_fixture(root):
             status=AssetBindingStatus.READY,
         )
         for index, role, name, category, asset_id in (
-            (1, "Location", "Engineering control room", AssetCategory.LOCATION, "CAP-LOC-001"),
+            (
+                1,
+                "Location",
+                "Engineering control room",
+                AssetCategory.LOCATION,
+                "CAP-LOC-001",
+            ),
             (2, "Prop", "Diagnostic console", AssetCategory.PROP, "CAP-PRP-001"),
         )
     ]
     _write(root, "episode_plans.json", "episodes", [episode_data])
     _write(root, "scene_plans.json", "scenes", [scene_data])
     _write(root, "shot_plans.json", "shots", [shot_data])
-    _write(root, "asset_resolutions.json", "bindings", [asdict(item) for item in bindings])
+    _write(
+        root,
+        "asset_resolutions.json",
+        "bindings",
+        [asdict(item) for item in bindings],
+    )
     return episode_data, scene_data, shot_data, bindings
 
 
 def test_ready_governed_contextual_qt_review_is_advisory(tmp_path, qtbot):
     _governed_fixture(tmp_path)
-    verified = verified_governed_shot_evidence(tmp_path, STORY_ID, ProductionPlanningContracts())
+    verified = verified_governed_shot_evidence(
+        tmp_path, STORY_ID, ProductionPlanningContracts()
+    )
     assert len(verified) == 1
     assert verified[0].binding_statuses == ("ready", "ready")
     sources = verified_shots_to_spatial_sources(verified, selected_story_id=STORY_ID)
@@ -148,9 +161,13 @@ def test_ready_governed_contextual_qt_review_is_advisory(tmp_path, qtbot):
 def test_governed_draft_binding_rejected(tmp_path):
     _, _, _, bindings = _governed_fixture(tmp_path)
     bindings[1] = replace(bindings[1], status=AssetBindingStatus.DRAFT)
-    _write(tmp_path, "asset_resolutions.json", "bindings", [asdict(b) for b in bindings])
+    _write(
+        tmp_path, "asset_resolutions.json", "bindings", [asdict(b) for b in bindings]
+    )
     with pytest.raises(ShotTextAuthorityError, match="Draft or missing bindings"):
-        verified_governed_shot_evidence(tmp_path, STORY_ID, ProductionPlanningContracts())
+        verified_governed_shot_evidence(
+            tmp_path, STORY_ID, ProductionPlanningContracts()
+        )
 
 
 def test_governed_stale_contract_rejected(tmp_path):
@@ -158,4 +175,6 @@ def test_governed_stale_contract_rejected(tmp_path):
     shot["required_action"] = "An unapproved rewrite"
     _write(tmp_path, "shot_plans.json", "shots", [shot])
     with pytest.raises(ShotTextAuthorityError, match="stale or inconsistent"):
-        verified_governed_shot_evidence(tmp_path, STORY_ID, ProductionPlanningContracts())
+        verified_governed_shot_evidence(
+            tmp_path, STORY_ID, ProductionPlanningContracts()
+        )
