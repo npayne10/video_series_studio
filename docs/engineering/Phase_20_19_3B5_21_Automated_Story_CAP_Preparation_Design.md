@@ -147,3 +147,7 @@ git status --short
 ```
 
 No claims of full regression/format acceptance should be made until the operator runs the above checks. Untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` remains outside this phase's commits.
+
+### Regression correction note — 2026-11-03
+
+Initial local validation provided by the operator: B.5.21A 7/7, B.5.20 positive acceptance 3/3, mypy clean (663 source files), full regression 2 failed / 2,376 passed. The two failures were in legacy `tests/test_phase_20_19_3b5_1_batch_review.py` tests, which did not construct an approved Story or actual governed Episode/Scene/Shot evidence after the stricter Story-scoped discovery contract was introduced. Their fixtures were migrated to real planner records and authentic contract hashes rather than introducing a bypass. Ruff import-order and formatting fixes were applied in GitHub. These corrective commits require a fresh local verification before acceptance.
