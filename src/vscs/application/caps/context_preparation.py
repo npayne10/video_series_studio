@@ -41,6 +41,26 @@ def _digest(*items: object) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def _assert_unique_ownership(project_root: Path) -> None:
+    """Fail closed when repeated plan IDs could link different Stories together."""
+    for name, key, identity in (
+        ("episode_plans.json", "episodes", "episode_id"),
+        ("scene_plans.json", "scenes", "scene_id"),
+        ("shot_plans.json", "shots", "shot_id"),
+    ):
+        path = project_root / "planning" / name
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            records = payload[key]
+            if not isinstance(records, list):
+                raise ValueError("Invalid planning records")
+            ids = [str(item[identity]) for item in records]
+        except (OSError, KeyError, TypeError, ValueError) as exc:
+            raise ShotTextAuthorityError(f"Invalid governed source: {name}") from exc
+        if len(ids) != len(set(ids)):
+            raise ShotTextAuthorityError(f"Ambiguous planning ownership: {name}")
+
+
 def prepare_cap_context(
     project_root: Path,
     story_id: str,
@@ -55,6 +75,7 @@ def prepare_cap_context(
     Discovery establishes structural scope; real production contracts alone
     determine whether Shot narratives are verified.
     """
+    _assert_unique_ownership(project_root)
     discovered = discover_governed_shot_evidence(project_root, story_id)
     linked = tuple(
         item for item in discovered.candidates if asset_id in item.bound_asset_ids
