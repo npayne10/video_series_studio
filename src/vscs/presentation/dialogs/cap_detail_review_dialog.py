@@ -22,6 +22,7 @@ from vscs.application.caps.design_completion import (
     DesignReviewPackage,
     DetailDecision,
     DetailOrigin,
+    apply_review,
 )
 from vscs.application.caps.design_quality import DesignQualityIssue
 from vscs.application.caps.provider_design_expansion import ProposedDesignField
@@ -53,7 +54,7 @@ class CAPDetailReviewDialog(QDialog):
         self.rows: list[tuple[str, QTextEdit, QComboBox, QTextEdit]] = []
         layout = QVBoxLayout(self)
         note = QLabel(
-            "Every required field needs Accept/Edit/Reject/Defer. "
+            "Every required or populated field needs Accept/Edit/Reject/Defer. "
             "Suggested details are not proven Story Canon. "
             "This creates only a Draft specification and review record."
         )
@@ -136,6 +137,9 @@ class CAPDetailReviewDialog(QDialog):
                 reviewer=self.reviewer,
                 fields=tuple(fields),
             )
+            # Validate the completed Draft in memory; reject all-deferred or
+            # incomplete decisions before any CAP or cache persistence.
+            apply_review(self.spec, package)
         except ValueError as exc:
             QMessageBox.warning(self, "Invalid Detail Review", str(exc))
             return
