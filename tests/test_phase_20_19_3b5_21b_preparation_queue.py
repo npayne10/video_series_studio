@@ -170,6 +170,37 @@ def test_queue_ui_offline_and_story_switch_reset(tmp_path, monkeypatch, qtbot):
     warning.assert_not_called()
     assert "cache-first CAP preparation (offline)" in dialog.summary.toPlainText()
     assert "missing" in dialog.summary.toPlainText()
+    with (
+        patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No),
+        patch.object(dialog, "review_one") as generate,
+    ):
+        dialog.regenerate_one()
+    generate.assert_not_called()
     dialog.story.addItem("STORY-002", "STORY-002")
     dialog.story.setCurrentIndex(1)
     assert not dialog.queue_button.isEnabled()
+
+
+def test_invalid_cache_is_not_auto_reused(tmp_path):
+    cache = CAPProposalCache(tmp_path)
+    cache.directory.mkdir(parents=True)
+    path = cache._path(STORY, ASSET)
+    path.write_text("{not valid JSON", encoding="utf-8")
+    inspection = cache.inspect(
+        STORY, ASSET, "story-hash", "asset-hash", "provider-hash", "context-hash"
+    )
+    assert inspection.status == "invalid"
+    assert inspection.proposal is None
+
+
+def test_failed_context_is_classified_without_provider_calls(tmp_path):
+    review = _review()
+    review.prepare_context = Mock(side_effect=ValueError("Ambiguous ownership"))
+    provider = Mock()
+    plan = CAPPreparationQueueService(review, CAPProposalCache(tmp_path), provider).plan(
+        STORY
+    )
+    assert len(plan.items) == 2
+    assert all(item.status == "context_blocked" for item in plan.items)
+    assert all("Ambiguous ownership" in item.note for item in plan.items)
+    provider.generate_cap.assert_not_called()
