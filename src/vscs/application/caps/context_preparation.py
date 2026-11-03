@@ -77,9 +77,7 @@ def prepare_cap_context(
     """
     assert_unique_planning_ownership(project_root)
     discovered = discover_governed_shot_evidence(project_root, story_id)
-    linked = tuple(
-        item for item in discovered.candidates if asset_id in item.bound_asset_ids
-    )
+    linked = tuple(item for item in discovered.candidates if asset_id in item.bound_asset_ids)
     if not linked:
         raise ValueError(f"{asset_id}: no governed Shot binding in {story_id}")
     sources: list[CAPContextSource] = []
@@ -107,9 +105,7 @@ def prepare_cap_context(
         warnings.append(f"Shot evidence unverified: {exc}")
     for shot in sorted(linked, key=lambda item: (item.episode_id, item.scene_id, item.shot_id)):
         authority = (
-            "verified_ready_shot"
-            if verified_by_id.get(shot.shot_id) == shot
-            else "unverified_shot"
+            "verified_ready_shot" if verified_by_id.get(shot.shot_id) == shot else "unverified_shot"
         )
         if authority == "unverified_shot" and not any(
             item.startswith("Shot evidence unverified:") for item in warnings
@@ -135,6 +131,11 @@ def prepare_cap_context(
         [(item.source_type, item.record_id, item.field, item.fingerprint) for item in ordered],
     )
     return CAPContextManifest(
-        story_id, asset_id, story_fingerprint, asset_fingerprint,
-        ordered, tuple(dict.fromkeys(warnings)), fingerprint,
+        story_id,
+        asset_id,
+        story_fingerprint,
+        asset_fingerprint,
+        ordered,
+        tuple(dict.fromkeys(warnings)),
+        fingerprint,
     )
