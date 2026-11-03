@@ -122,7 +122,7 @@ def test_stale_review_rejected_before_any_cap_write(context, actual, story):
     service, caps, _specifications = _service()
     service.prepare_context.return_value.fingerprint = actual
     spec = _spec()
-    with pytest.raises(StoryBatchError, match="fingerprint|context changed"):
+    with pytest.raises(StoryBatchError, match=r"fingerprint|context changed"):
         service.save_reviewed(
             "STORY-001",
             spec,
