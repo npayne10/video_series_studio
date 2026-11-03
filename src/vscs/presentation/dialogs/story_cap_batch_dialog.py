@@ -267,7 +267,9 @@ class StoryCAPBatchDialog(QDialog):
             if not candidate.has_specification:
                 self.assets.addItem(candidate.asset_id, candidate.asset_id)
         self.summary.setPlainText(
-            "\n".join(lines) if lines else "No bound assets found in Ready governed Shots for this Story."
+            "\n".join(lines)
+            if lines
+            else "No bound assets found in Ready governed Shots for this Story."
         )
         self.context_button.setEnabled(self.assets.count() > 0)
         self.preview.setEnabled(self.assets.count() > 0)
