@@ -30,8 +30,8 @@ from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     CAPStructuredSpecificationService,
 )
-from vscs.application.story.asset_resolver import AssetBindingStatus, ShotAssetBinding
 from vscs.application.projects import ProjectService
+from vscs.application.story.asset_resolver import AssetBindingStatus, ShotAssetBinding
 from vscs.application.story.episode_planning import EpisodePlan, EpisodePlanStatus
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
 from vscs.application.story.scene_planning import ScenePlan, ScenePlanStatus
