@@ -6,11 +6,18 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.caps.context_preparation import (
+    CAPContextManifest,
+    prepare_cap_context,
+)
 from vscs.application.caps.cross_asset_continuity import validate_dependencies
 from vscs.application.caps.design_completion import DesignReviewPackage, DesignReviewPersistence
+from vscs.application.caps.governed_planning_evidence import discover_governed_shot_evidence
+from vscs.application.caps.proposal_cache import cache_fingerprint
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
+from vscs.application.story.lifecycle import StoryStatus
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 from vscs.domain.caps import CAPCreate, CAPStatus
 
@@ -32,14 +39,35 @@ class StoryCAPBatchReviewService:
     def __init__(self, batch: StoryCAPBatchService) -> None:
         self.batch = batch
 
-    def discover(self) -> tuple[CAPAssetCandidate, ...]:
+    def _approved_story_id(self, story_id: str | None) -> str:
+        """Explicit selection preferred; legacy calls require one approved Story."""
+        if story_id is None:
+            available = tuple(
+                item.story_id
+                for item in self.batch.stories.list_stories()
+                if item.status in {StoryStatus.APPROVED, StoryStatus.LOCKED}
+            )
+            if len(available) != 1:
+                raise StoryBatchError("Select one approved Story before discovering Shot assets")
+            story_id = available[0]
+        self.batch.current_story_fingerprint(story_id)
+        return story_id
+
+    def discover(self, story_id: str | None = None) -> tuple[CAPAssetCandidate, ...]:
+        """Discover only registered assets bound to this approved Story's governed Shots."""
+        selected = self._approved_story_id(story_id)
         assets = self.batch.generator.generator.assets
         root: Path | None = assets.projects.project_directory
         if root is None or not assets.projects.is_project_open:
             raise StoryBatchError("Open a project before discovering asset requirements")
-        ledger = root / "planning" / "asset_resolutions.json"
-        if not ledger.is_file():
+        try:
+            scope = discover_governed_shot_evidence(root, selected)
+        except (ValueError, OSError) as exc:
+            raise StoryBatchError(f"Governed Shot discovery unavailable: {exc}") from exc
+        shot_ids = {item.shot_id for item in scope.candidates}
+        if not shot_ids:
             return ()
+        ledger = root / "planning" / "asset_resolutions.json"
         try:
             raw = json.loads(ledger.read_text(encoding="utf-8"))
             bindings = raw["bindings"]
@@ -52,6 +80,8 @@ class StoryCAPBatchReviewService:
         for binding in bindings:
             if not isinstance(binding, dict):
                 raise StoryBatchError("Invalid binding entry")
+            if binding.get("shot_id") not in shot_ids:
+                continue
             asset_id = str(binding.get("asset_id", "")).strip().upper()
             if not asset_id or asset_id in by_id or asset_id not in registered:
                 continue
@@ -62,11 +92,7 @@ class StoryCAPBatchReviewService:
             caps = self.batch.generator.specifications.caps
             try:
                 cap = caps.get(asset_id)
-            except Exception as exc:
-                from vscs.application.caps.service import CAPNotFoundError
-
-                if not isinstance(exc, CAPNotFoundError):
-                    raise
+            except CAPNotFoundError:
                 cap = None
             specification = (
                 self.batch.generator.specifications.get(asset_id) if cap is not None else None
@@ -78,7 +104,36 @@ class StoryCAPBatchReviewService:
                 cap is not None,
                 specification is not None,
             )
-        return tuple(by_id.values())
+        return tuple(sorted(by_id.values(), key=lambda item: item.asset_id))
+
+    def prepare_context(self, story_id: str, asset_id: str) -> CAPContextManifest:
+        """Build an offline source manifest; no CAP, approval, or paid provider writes."""
+        selected = self._approved_story_id(story_id)
+        candidates = self.discover(selected)
+        if asset_id not in {item.asset_id for item in candidates}:
+            raise StoryBatchError(f"{asset_id}: asset is not bound to {selected}")
+        assets = self.batch.generator.generator.assets
+        root = assets.projects.project_directory
+        if root is None:
+            raise StoryBatchError("Open a project before preparing CAP context")
+        story = self.batch.stories.story(selected)
+        if story is None:
+            raise StoryBatchError("Approved Story is missing")
+        asset = assets.get(asset_id)
+        asset_fingerprint = cache_fingerprint(
+            asset.asset_id, asset.name, asset.category.value, asset.description
+        )
+        try:
+            return prepare_cap_context(
+                root,
+                selected,
+                asset_id,
+                story.description,
+                self.batch.current_story_fingerprint(selected),
+                asset_fingerprint,
+            )
+        except (ValueError, OSError) as exc:
+            raise StoryBatchError(str(exc)) from exc
 
     def validate_reviewed_dependencies(
         self, specification: CAPStructuredSpecification
