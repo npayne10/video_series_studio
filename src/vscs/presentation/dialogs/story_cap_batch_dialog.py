@@ -506,7 +506,9 @@ class StoryCAPBatchDialog(QDialog):
                 "Create Reviewed Draft CAP?",
                 f"Save the reviewed CAP specification for {asset_id}?\n"
                 "A missing CAP record will be created in Draft status.\n"
-                "No canon, reference, or production approval will be granted.",
+                "All required and populated design fields must be explicitly reviewed.\n"
+                "Current Story, asset and governed Shot context will be rechecked at save.\n"
+                "No Canon, reference, image, or production approval will be granted.",
             )
             if confirm != QMessageBox.StandardButton.Yes:
                 return
