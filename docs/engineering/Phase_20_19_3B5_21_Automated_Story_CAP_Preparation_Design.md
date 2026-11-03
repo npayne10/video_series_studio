@@ -1,6 +1,6 @@
 # Phase 20.19.3B.5.21 — Approved Story to Automated CAP Preparation and Review
 
-Status: **B.5.21A implementation committed, local validation and operator UI acceptance pending**  
+Status: **B.5.21A accepted and closed — 2026-11-03. B.5.21B/C remain planned.**  
 Date: 2026-11-03  
 Predecessor: B.5.20 closed at 2,371 passing tests  
 Repository: `npayne10/video_series_studio`  
@@ -151,3 +151,18 @@ No claims of full regression/format acceptance should be made until the operator
 ### Regression correction note — 2026-11-03
 
 Initial local validation provided by the operator: B.5.21A 7/7, B.5.20 positive acceptance 3/3, mypy clean (663 source files), full regression 2 failed / 2,376 passed. The two failures were in legacy `tests/test_phase_20_19_3b5_1_batch_review.py` tests, which did not construct an approved Story or actual governed Episode/Scene/Shot evidence after the stricter Story-scoped discovery contract was introduced. Their fixtures were migrated to real planner records and authentic contract hashes rather than introducing a bypass. Ruff import-order and formatting fixes were applied in GitHub. These corrective commits require a fresh local verification before acceptance.
+
+## B.5.21A final acceptance record — 2026-11-03
+
+**Development acceptance: CLOSED.** Operator validation on Windows / Python 3.13.7 / PySide6 6.11.1:
+- Legacy `test_phase_20_19_3b5_1_batch_review.py`: **4 passed**.
+- New `test_phase_20_19_3b5_21a_context_preparation.py`: **7 passed**.
+- Full regression: **2,378 passed**.
+- Ruff check clean; Ruff format check: **1,569 files already formatted**.
+- Mypy: **663 source files clean**.
+- `git diff --check`: clean. Existing untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` preserved.
+- UI-01: Selected approved `STORY-001 — The Quiet Console — Episode Audit`; **Discover Shot Assets** returned four missing CAPs in ascending ID order: `CAP-ENV-001`, `CAP-LOC-001`, `CAP-PRP-001`, `CAP-SHP-001`.
+- UI-02: Selected `CAP-LOC-001`, clicked **Prepare CAP Context (Offline)**; observed Story/asset IDs, context fingerprint, `approved_story_context` from Story description, three `unverified_shot` fields (`required_action`, `narrative_purpose`, `production_objective`) and the authority warning that Draft/missing bindings are not approved evidence.
+- UI-03: Returned to Canonical Profiles; screenshot confirmed **0 CAP(s) — 0 production ready**.
+- The test verifies a read-only context operation; it **does not** certify full production asset approval or CAP/reference workflow readiness. Real governed Ready-binding positive path remains isolated automated acceptance from B.5.20. No paid generation occurred in the acceptance flow.
+- **Next:** B.5.21B — Cache-first Preparation Queue, reusing the existing batch dialog, cache and provider cost confirmation; no duplicate CAP generation system.
