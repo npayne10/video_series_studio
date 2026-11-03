@@ -240,16 +240,16 @@ Status: **Code and tests committed; local regression, Ruff/Mypy and operator acc
 - This phase does not perform actual paid generation, reference production, H3 execution, or modification of the test project's four missing CAP records.
 
 ### Automated acceptance
-`tests/test_phase_20_19_3b5_21c_reviewed_draft_persistence.py` covers complete field decisions and provenance audit, stale/missing Story/context rejection before writes, Draft-only persistence, rollback after write failure, refusal to overwrite an approved CAP, and Qt visibility of all populated attributes. Rerun B.5.21B, B.5.21A, legacy batch review, Ruff check/format, mypy and full pytest. Prior verified baseline: **2,385 passed**, **1,571 formatted files**, **664 mypy-clean source files**.
+`tests/test_phase_20_19_3b5_21c_reviewed_draft_persistence.py` covers complete field decisions and provenance audit, stale/missing Story/context rejection before writes, Draft-only persistence, rollback after write failure, refusal to overwrite an approved CAP, and Qt visibility of all populated attributes. Rerun B.5.21B, B.5.21A, legacy batch review, Ruff check/format, mypy and full pytest. The Qt dialog also rejects an all-DEFER review before it reaches persistence. Prior verified baseline: **2,385 passed**, **1,571 formatted files**, **664 mypy-clean source files**.
 
 ### UI operator acceptance after all code quality gates pass
 1. Open the existing **The Quiet Console — Episode Audit** project → **View → Canonical Profiles → Story → CAP Batch…**.
 2. Select `STORY-001` → **Discover Shot Assets** → **Prepare Queue (Offline)**. Expect four Draft-bound/missing CAP assets, one `legacy_cached` (`CAP-LOC-001`), three `missing`.
 3. Select `CAP-LOC-001` → **Review Cached Proposal**. Expect an advisory that the legacy proposal lacks current governed Shot context verification.
-4. Review the specification (do not infer geometry) and open **Review CAP Detail Decisions**. Verify all populated fields (e.g. `architecture`) appear alongside category-required fields; all begin **Defer**.
-5. Click **Cancel** at the field-review dialog. Confirm no CAP was created. No accepted design details or paid generation are required for safe cancellation acceptance.
-6. Verify Canonical Profiles still shows **0 CAP(s) — 0 production ready**.
-7. The positive Draft-save path is covered by isolated automated tests and should be tested on a disposable governed project before any live operator persists actual creative decisions.
+4. **Cancel the Story CAP specification review before clicking Save Review & Continue.** The latter action intentionally updates the cached working proposal even if a later detail-review step is cancelled. For a strict non-mutation acceptance on the existing project, avoid it.
+5. Confirm Canonical Profiles still shows **0 CAP(s) — 0 production ready** and reopen the queue to check `CAP-LOC-001` is still `legacy_cached`.
+6. The new field-review coverage is verified by Qt tests on isolated specifications. The new positive Draft-save path is tested with isolated review/persistence mocks; a genuine full project persistence test with real repositories remains **outstanding** before claiming end-to-end production acceptance.
+7. Never click **Generate / Regenerate Using AI (Paid)** to complete this acceptance.
 
 ### Operator commands
 ```powershell
