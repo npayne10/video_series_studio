@@ -182,7 +182,7 @@ Status: **Committed; local test and operator UI acceptance pending. NOT closed.*
 - Story selection changes clear asset and queue controls; direct CAP/Canon/reference approval is not performed.
 
 ### B.5.21B targeted acceptance
-- `tests/test_phase_20_19_3b5_21b_preparation_queue.py`: legacy cache recovery, v2 context and provider stale rejection, multi-asset read-only cache-first inspection, skip already-specified assets, Qt queue inspection and Story change reset.
+- `tests/test_phase_20_19_3b5_21b_preparation_queue.py`: legacy cache recovery, v2 context and provider stale rejection, multi-asset read-only cache-first inspection, skip already-specified assets, Qt queue inspection, Story change reset and declined paid consent; invalid cache rejection; blocked-context reporting without provider calls.
 - Also rerun B.5.21A targeted tests, legacy batch-review tests, existing cache tests, Ruff lint and formatter, mypy, full pytest suite, `git diff --check`, and `git status --short`.
 - Baseline before implementation: **2,378 passed**, **1,569 files Ruff-formatted**, **663 mypy-clean files**.
 - Do not claim acceptance until operator reports clean run and actual UI output.
@@ -209,3 +209,5 @@ python -m pytest -q
 git diff --check
 git status --short
 ```
+
+B.5.21B queue fingerprint now also includes the current persisted binding status and planning hashes (not just displayed text) so safety-relevant governance changes invalidate v2 caches. Final expected full test count if the prior 2,378 baseline is unchanged: **2,385** (seven new B.5.21B tests). Await actual operator test output before acceptance. The latest development test has not been executed in this ChatGPT environment.
