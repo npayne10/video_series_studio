@@ -98,11 +98,22 @@ def test_integrated_review_loads_accepted_and_deferred_decisions(qtbot):
     qtbot.addWidget(panel)
     assert panel.objectName() == "capReviewedSpecificationPanel"
     assert panel.fields_table.rowCount() == 3
+    assert panel.fields_table.columnCount() == 3
     assert panel.fields_table.item(1, 1).text() == "Edit"
-    assert panel.fields_table.item(1, 2).text() == "Rectangular room with one door"
+    assert panel.fields_table.item(1, 2).text() == "Yes"
+    assert panel.final_value_view.toPlainText() == "Console beside workstation"
+    panel.fields_table.setCurrentCell(1, 0)
+    assert panel.final_value_view.toPlainText() == "Rectangular room with one door"
+    assert panel.proposed_value_view.toPlainText() == "Room with entry door"
+    panel.fields_table.setCurrentCell(2, 0)
     assert panel.fields_table.item(2, 1).text() == "Defer"
-    assert panel.fields_table.item(2, 2).text() == "—"
-    assert panel.fields_table.item(2, 3).text() == "Indicator pulses once"
+    assert panel.fields_table.item(2, 2).text() == "No"
+    assert panel.final_value_view.toPlainText() == "(not persisted)"
+    assert panel.proposed_value_view.toPlainText() == "Indicator pulses once"
+    assert "Shot event" in panel.review_reason_view.toPlainText()
+    assert panel.final_value_view.isReadOnly()
+    assert panel.proposed_value_view.isReadOnly()
+    assert panel.review_reason_view.isReadOnly()
     assert not (panel.fields_table.item(1, 2).flags() & Qt.ItemFlag.ItemIsEditable)
 
 
