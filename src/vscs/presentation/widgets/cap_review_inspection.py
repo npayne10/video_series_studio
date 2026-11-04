@@ -73,7 +73,7 @@ def load_review_snapshot(
                 raise ValueError(f"Deferred/rejected field {field.field} became canonical")
     except (ValueError, TypeError, KeyError) as exc:
         return None, None, f"Stored CAP review cannot be verified: {exc}"
-    return spec, review, "Stored reviewed Draft CAP — no Canon or image approval."
+    return spec, review, "Persisted design review audit — this review does not approve Canon or images."
 
 
 class CAPReviewedSpecificationPanel(QWidget):
