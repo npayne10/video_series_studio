@@ -461,9 +461,7 @@ class StoryCAPBatchDialog(QDialog):
                 raise StoryBatchError(
                     "Cached CAP design has grounding issues; discard and regenerate "
                     "with explicit paid consent: "
-                    + "; ".join(
-                        f"{issue.field}: {issue.code}" for issue in cached_issues
-                    )
+                    + "; ".join(f"{issue.field}: {issue.code}" for issue in cached_issues)
                 )
             verified_shots: tuple[ShotSpatialSource, ...] = ()
             shot_evidence_status = ""
