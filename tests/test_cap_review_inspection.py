@@ -2,13 +2,14 @@
 
 import json
 
+from PySide6.QtCore import Qt
+
 from vscs.application.caps.design_completion import (
     DESIGN_REVIEW_KEY,
     DesignFieldReview,
     DesignReviewPackage,
     DetailDecision,
     DetailOrigin,
-    apply_review,
 )
 from vscs.application.caps.structured_specification import (
     SPECIFICATION_METADATA_KEY,
@@ -60,14 +61,28 @@ def _metadata():
             ),
         ),
     )
-    # The fixture covers the viewer; it does not require every production
-    # category field to be present in this simplified persisted record.
-    from vscs.application.caps.design_completion import apply_review
-
-    reviewed, audit = apply_review(original, review)
+    stored = original.model_copy(
+        update={
+            "canonical_attributes": {
+                "architecture": "Console beside workstation",
+                "layout": "Rectangular room with one door",
+            }
+        }
+    )
+    audit = {
+        "version": 1,
+        "reviewer": review.reviewer,
+        "story_fingerprint": review.story_fingerprint,
+        "context_fingerprint": review.context_fingerprint,
+        "base_fingerprint": review.base_fingerprint,
+        "result_fingerprint": stored.fingerprint(),
+        "fields": [item.model_dump(mode="json") for item in review.fields],
+        "image_authorized": False,
+        "canon_approved": False,
+    }
     return {
-        SPECIFICATION_METADATA_KEY: json.dumps(reviewed.model_dump(mode="json")),
-        DESIGN_REVIEW_KEY: audit,
+        SPECIFICATION_METADATA_KEY: json.dumps(stored.model_dump(mode="json")),
+        DESIGN_REVIEW_KEY: json.dumps(audit),
     }
 
 
@@ -88,8 +103,8 @@ def test_integrated_review_loads_accepted_and_deferred_decisions(qtbot):
     assert panel.fields_table.item(2, 1).text() == "Defer"
     assert panel.fields_table.item(2, 2).text() == "—"
     assert panel.fields_table.item(2, 3).text() == "Indicator pulses once"
-    assert not panel.fields_table.item(1, 2).flags() & (
-        __import__("PySide6.QtCore", fromlist=["Qt"]).Qt.ItemFlag.ItemIsEditable
+    assert not (
+        panel.fields_table.item(1, 2).flags() & Qt.ItemFlag.ItemIsEditable
     )
 
 
