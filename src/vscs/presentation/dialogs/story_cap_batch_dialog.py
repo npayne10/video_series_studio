@@ -410,7 +410,10 @@ class StoryCAPBatchDialog(QDialog):
                 # authority and freshness on the GUI thread before caching its result.
                 if self.review_service.batch.current_story_fingerprint(story_id) != fingerprint:
                     raise StoryBatchError("Approved Story changed during CAP generation")
-                if self.review_service.prepare_context(story_id, asset_id).fingerprint != context.fingerprint:
+                if (
+                    self.review_service.prepare_context(story_id, asset_id).fingerprint
+                    != context.fingerprint
+                ):
                     raise StoryBatchError("Governed Shot context changed during CAP generation")
                 latest_asset = self.generator.assets.get(asset_id)
                 if cache_fingerprint(
