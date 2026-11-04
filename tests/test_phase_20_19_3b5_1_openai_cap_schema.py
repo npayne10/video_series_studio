@@ -314,3 +314,41 @@ def test_cap_generation_instructions_separate_identity_from_shot_events(monkeypa
     assert "Single-occurrence actions" in captured["instructions"]
     assert "preserve unambiguous ownership" in captured["instructions"].lower()
     assert "do not promote those events" in captured["input_text"]
+
+
+def test_cap_stable_identity_needs_no_extra_paid_draft_pass(monkeypatch):
+    from vscs.domain.caps.generation import (
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+        CanonicalFactExtraction,
+    )
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context="A diagnostic console stands beside a workstation.",
+    )
+    stable = GeneratedCAPDraft(
+        title="Engineering room",
+        canonical_description="An empty engineering control room.",
+        visual_identity="Console beside the workstation.",
+        continuity_rules=("Preserve their fixed positions.",),
+    )
+    calls = []
+    monkeypatch.setattr(
+        provider, "_extract_facts", lambda _request: CanonicalFactExtraction()
+    )
+    monkeypatch.setattr(
+        provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis()
+    )
+
+    def draft_stage(_request, _analysis, *, corrections=()):
+        calls.append(corrections)
+        return stable
+
+    monkeypatch.setattr(provider, "_generate_draft", draft_stage)
+    assert provider.generate_cap(request) == stable
+    assert calls == [()]
