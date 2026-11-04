@@ -177,6 +177,7 @@ class SettingsDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
+        self._settings_buttons = buttons
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
 
@@ -236,6 +237,7 @@ class SettingsDialog(QDialog):
             return
         self.openai_model_status.setText("Retrieving API-visible models…")
         self.refresh_openai_models_button.setEnabled(False)
+        self._settings_buttons.button(QDialogButtonBox.StandardButton.Save).setEnabled(False)
         worker = _OpenAIModelDiscovery(api_key, self)
         self._model_discovery = worker
         worker.models_loaded.connect(self._models_loaded)
@@ -263,6 +265,7 @@ class SettingsDialog(QDialog):
         worker = self._model_discovery
         self._model_discovery = None
         self._update_ai_controls()
+        self._settings_buttons.button(QDialogButtonBox.StandardButton.Save).setEnabled(True)
         if worker is not None:
             worker.deleteLater()
 
@@ -343,6 +346,8 @@ class SettingsDialog(QDialog):
         )
 
     def _save(self) -> None:
+        if self._model_discovery is not None:
+            return
         settings = self.configuration.settings
         settings.theme = self.theme_combo.currentData()
         settings.maximum_recent_projects = self.maximum_recent_spin.value()
