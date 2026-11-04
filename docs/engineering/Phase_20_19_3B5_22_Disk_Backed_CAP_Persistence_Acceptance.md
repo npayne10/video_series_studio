@@ -1,6 +1,6 @@
 # Phase 20.19.3B.5.22 — Controlled disk-backed reviewed Draft CAP acceptance
 
-**Status: IMPLEMENTED TEST FIXTURE — NOT YET ACCEPTED**  
+**Status: AUTOMATED DISK-BACKED ACCEPTANCE CLOSED — 2026-11-04. Desktop operator UI end-to-end remains outstanding.**  
 Date: 2026-11-03  
 Baseline: B.5.21C development acceptance closed at 2,398 passing tests.
 
@@ -49,3 +49,11 @@ git status --short
 Expected number of newly added tests: **5**. Full suite should have **2,403** tests if the previous 2,398-test baseline is unchanged. These counts are targets, not verified results. Report any failures so they can be fixed in GitHub before formal acceptance.
 
 Preserve the user's untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`. Do not perform paid generation, modify existing acceptance projects, create real CAPs in Xorix, or change the H3 live execution hold.
+
+## B.5.22 automated closure — 2026-11-04
+- Operator Windows local run: disk-backed targeted integration **5 passed** after final lint fixes.
+- Full regression verified before test-only Ruff corrections: **2,403 passed**. B.5.21C suite: **13 passed**.
+- Ruff lint: **all checks passed**; Ruff format: **1,574 files already formatted**; Mypy prior run: **no issues in 664 source files**.
+- `git diff --check` clean. `git status --short` retains only untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`.
+- Actual `ProjectService.create` / `close` / `open`, real SQLite CAP and asset repositories, reviewed Draft metadata, context audit, stale rejection, rollback and duplicate-save protection were exercised by disposable-project tests.
+- **Scope limitation:** Automated disk-backed gate accepted. This is not evidence that a human can complete the full GUI save pathway, nor does it authorise real-project Canon, references, H3 execution or paid generation. Manual desktop UI acceptance must use a fresh disposable project, **not** the pre-existing `B5_19A_ACCEPTANCE` baseline.
