@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSplitter,
     QStyle,
@@ -58,6 +59,10 @@ class CanonicalReferenceGallery(QWidget):
         self.gallery.setGridSize(QSize(210, 185))
         self.gallery.setSpacing(8)
         self.gallery.setWordWrap(True)
+        # Thumbnail scrolling is independent of the CAP editor and details pane.
+        self.gallery.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.gallery.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.gallery.currentItemChanged.connect(self._selection_changed)
         self.gallery.itemDoubleClicked.connect(self._activate_item)
 
@@ -128,11 +133,20 @@ class CanonicalReferenceGallery(QWidget):
 
         detail_widget = QWidget()
         detail_widget.setLayout(details)
+        self.details_scroll = QScrollArea(self)
+        self.details_scroll.setObjectName("canonicalReferenceDetailsScroll")
+        self.details_scroll.setWidgetResizable(True)
+        self.details_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.details_scroll.setWidget(detail_widget)
+        self.details_scroll.setMinimumWidth(240)
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setObjectName("canonicalReferenceGallerySplitter")
         splitter.addWidget(self.gallery)
-        splitter.addWidget(detail_widget)
+        splitter.addWidget(self.details_scroll)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
+        splitter.setChildrenCollapsible(False)
         splitter.setSizes([620, 360])
 
         heading = QLabel("Canonical Reference Gallery")
