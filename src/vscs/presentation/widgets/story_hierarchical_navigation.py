@@ -197,7 +197,8 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     story_root: QTreeWidgetItem | None = None
     for index in range(controller.count()):
         source = controller.item(index)
-        item = QTreeWidgetItem(tree, [source.text()])
+        label = "Production Packages" if source.text() == "Production Planning" else source.text()
+        item = QTreeWidgetItem(tree, [label])
         item.setData(0, SECTION_ROLE, index)
         top_level[index] = item
         if source.text() == "Story":
@@ -232,7 +233,7 @@ def install_story_hierarchical_navigation(window: Any) -> QTreeWidget:
     _story_item(canonical_library, "Bind Shot Assets…", "story.bind_shot_assets")
 
     _story_item(story_root, "Proposal Review", "story.proposal_review")
-    _story_item(story_root, "Production Planning", "story.episode_planning")
+    _story_item(story_root, "Episode Planner", "story.episode_planning")
     _story_item(
         story_root,
         "Integration & Functional Acceptance…",
