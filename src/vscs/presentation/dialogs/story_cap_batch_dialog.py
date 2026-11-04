@@ -324,7 +324,9 @@ class StoryCAPBatchDialog(QDialog):
             "Generate CAP Proposal Using AI (Paid)?",
             f"Provider: {type(self.generator.provider).__name__}; "
             f"model: {getattr(self.generator.provider, '_model', 'unspecified')}. "
-            "This authorises ONE potentially paid CAP request and replaces its cache. "
+            "This authorises ONE CAP-generation operation for the selected asset. "
+            "The provider may make several billable API calls and at most ONE "
+            "additional corrective Draft call if a stable-identity quality check fails. "
             "Exact price is unavailable here. No automatic batch charging. "
             "Existing CAP approvals are unchanged. Proceed?",
         )
