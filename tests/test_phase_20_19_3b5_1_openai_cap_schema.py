@@ -154,3 +154,160 @@ def test_settings_connection_checks_selected_dropdown_model(qtbot, monkeypatch):
     monkeypatch.setattr(settings_dialog.QMessageBox, "information", lambda *_args: None)
     dialog._test_openai_connection()
     assert checked == ["gpt-6.1-terra"]
+
+
+def test_cap_identity_quality_rejects_single_shot_indicator_action():
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    draft = GeneratedCAPDraft(
+        title="Engineering control room",
+        canonical_description="An empty engineering control room.",
+        visual_identity="Fixed diagnostic console beside a workstation.",
+        continuity_rules=("Have the small indicator pulse once, then return to steady.",),
+    )
+    assert OpenAICAPGenerationProvider._identity_quality_issues(draft)
+    corrected = draft.model_copy(
+        update={
+            "continuity_rules": (
+                "Maintain the fixed console beside the workstation across shots.",
+            )
+        }
+    )
+    assert OpenAICAPGenerationProvider._identity_quality_issues(corrected) == ()
+
+
+def test_cap_event_quality_guard_regenerates_draft_only_once(monkeypatch):
+    from vscs.domain.caps.generation import (
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+        CanonicalFactExtraction,
+    )
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context="The indicator pulses once and returns to steady glow.",
+    )
+    calls = []
+    transient = GeneratedCAPDraft(
+        title="Engineering control room",
+        canonical_description="The indicator pulses once.",
+        visual_identity="A fixed diagnostic console.",
+    )
+    stable = GeneratedCAPDraft(
+        title="Engineering control room",
+        canonical_description="An empty engineering control room.",
+        visual_identity="A fixed diagnostic console.",
+        continuity_rules=("Preserve console placement.",),
+    )
+    monkeypatch.setattr(
+        provider,
+        "_extract_facts",
+        lambda _request: CanonicalFactExtraction(),
+    )
+    monkeypatch.setattr(
+        provider,
+        "_analyse_canon",
+        lambda _request, _facts: CAPCanonAnalysis(),
+    )
+
+    def draft_stage(_request, _analysis, *, corrections=()):
+        calls.append(corrections)
+        return transient if len(calls) == 1 else stable
+
+    monkeypatch.setattr(provider, "_generate_draft", draft_stage)
+    assert provider.generate_cap(request) == stable
+    assert len(calls) == 2
+    assert calls[0] == ()
+    assert "Shot-specific" in calls[1][0]
+
+
+def test_cap_unresolved_transient_after_retry_refuses_result(monkeypatch):
+    import pytest
+
+    from vscs.domain.caps.generation import (
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+        CanonicalFactExtraction,
+    )
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+    from vscs.infrastructure.ai.provider import AIProviderError
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context="A single indicator pulse.",
+    )
+    transient = GeneratedCAPDraft(
+        title="Engineering room",
+        canonical_description="The indicator pulses once then returns to a steady glow.",
+        visual_identity="A fixed console.",
+    )
+    calls = []
+    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
+    monkeypatch.setattr(
+        provider,
+        "_analyse_canon",
+        lambda _request, _facts: CAPCanonAnalysis(),
+    )
+
+    def draft_stage(_request, _analysis, *, corrections=()):
+        calls.append(corrections)
+        return transient
+
+    monkeypatch.setattr(provider, "_generate_draft", draft_stage)
+    with pytest.raises(AIProviderError, match="quality gate failed"):
+        provider.generate_cap(request)
+    assert len(calls) == 2
+
+
+def test_cap_generation_instructions_separate_identity_from_shot_events(monkeypatch):
+    from vscs.domain.caps.generation import (
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+    )
+    from vscs.infrastructure.ai.openai_provider import (
+        OpenAICAPGenerationProvider,
+        _StrictGeneratedCAPDraft,
+    )
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context="A console's display glows blue.",
+    )
+    captured = {}
+
+    def parse(*, instructions, input_text, result_type, stage):
+        captured.update(instructions=instructions, input_text=input_text, stage=stage)
+        return _StrictGeneratedCAPDraft(
+            title="Engineering room",
+            canonical_description="The engineering room is empty.",
+            visual_identity="Console beside workstation.",
+            production_notes="",
+            continuity_rules=("Preserve fixed placement.",),
+            prohibited_variations=(),
+            functional_capabilities=(),
+            semantic_tags=(),
+            production_classifications=(),
+            behaviour_references=(),
+            production_metadata=(),
+            unresolved_questions=(),
+            source_summary="",
+            canonical_facts=(),
+            contradictions=(),
+            confidence={field: 0.5 for field in _StrictGeneratedCAPDraft.model_fields["confidence"].annotation.model_fields},
+        )
+
+    monkeypatch.setattr(provider, "_parse", parse)
+    provider._generate_draft(request, CAPCanonAnalysis())
+    assert "Single-occurrence actions" in captured["instructions"]
+    assert "preserve unambiguous ownership" in captured["instructions"].lower()
+    assert "do not promote those events" in captured["input_text"]
