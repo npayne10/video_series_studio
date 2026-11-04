@@ -33,6 +33,22 @@ from vscs.domain.caps import (
 )
 
 
+def preserve_governed_review_metadata(
+    current: dict[str, str], edited: dict[str, str]
+) -> dict[str, str]:
+    """Ordinary editor changes cannot add, replace or remove review authority."""
+    from vscs.application.caps.design_completion import DESIGN_REVIEW_KEY
+    from vscs.application.caps.structured_specification import SPECIFICATION_METADATA_KEY
+
+    retained = dict(edited)
+    for key in (SPECIFICATION_METADATA_KEY, DESIGN_REVIEW_KEY):
+        if key in current:
+            retained[key] = current[key]
+        else:
+            retained.pop(key, None)
+    return retained
+
+
 def _add_row(table: QTableWidget, values: tuple[str, ...]) -> None:
     row = table.rowCount()
     table.insertRow(row)
@@ -239,19 +255,13 @@ def install_structured_cap_editor() -> None:
     def structured_update_value(self: Any):
         value = original_update_value(self)
         knowledge = _read_knowledge(self)
-        # The general editor is not an approval/review workflow. Preserve
-        # governed CAP specification and review records even if the editable
-        # freeform metadata table is changed or its rows are removed.
-        from vscs.application.caps.design_completion import DESIGN_REVIEW_KEY
-        from vscs.application.caps.structured_specification import SPECIFICATION_METADATA_KEY
-
-        metadata = dict(knowledge.production_metadata)
-        if self.profile is not None:
-            for key in (SPECIFICATION_METADATA_KEY, DESIGN_REVIEW_KEY):
-                if key in self.profile.production_metadata:
-                    metadata[key] = self.profile.production_metadata[key]
-                else:
-                    metadata.pop(key, None)
+        # The generic editor is not an authority-changing review workflow.
+        existing_metadata = (
+            self.profile.production_metadata if self.profile is not None else {}
+        )
+        metadata = preserve_governed_review_metadata(
+            existing_metadata, knowledge.production_metadata
+        )
         return value.model_copy(
             update={
                 "structured_schema_version": knowledge.schema_version,
