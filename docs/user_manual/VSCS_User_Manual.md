@@ -160,6 +160,26 @@ The hierarchical sidebar is now relabelled (without changing action IDs or inter
 
 **Next operator action:** In the currently open Episode Planner, select `EP-001`, click **Scene Planner…**, and verify `EP-001-SCN-001` is present and Ready. Do not create another Episode or manually alter the 35-second accepted runtime.
 
+### 5.2 B.5.22 governed Episode and Scene compilation — UI verified 2026-11-04
+
+**Actual operator evidence:** `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, `STORY-001` Approved. One Episode and one Scene proposal were generated and explicitly human-reviewed/accepted. Their compilation popup reported **Episodes 1 created, Scenes 1 created, Shots 0 created, Ready promotions 2, Blockers 0**. The Episode Planner independently showed `EP-001` Ready at **0:35**. The Scene Planner independently showed `EP-001-SCN-001` Ready at **0:35**, with the entire Episode budget allocated and **0:00 remaining**.
+
+The current direct button path into the Scene is **Story → Episode Planner → select EP-001 → Scene Planner…**. The two similarly named navigation entries were relabelled in GitHub as **Story → Episode Planner** and **Production Packages**; update local VSCS and verify before reporting the label change as accepted.
+
+**Important 35-second Scene rule:** The Scene is 35 seconds, but target *individual generated Shots* at 15–20 seconds. VSCS must allocate the complete 35-second Scene to its proposed Shots without truncating or inventing narrative action; two shots totaling 35 seconds (e.g. 17+18 seconds) could be appropriate if approved by the Shot proposal/review path. Never change approved Episode/Scene runtime merely to force a single provider-compatible Shot.
+
+**Next step:** create Shots by **Story → Automation → Shot Proposals** (not the manual Shot Planner). This command is provider-backed; avoid rerunning after success. Review, accept and compile accepted Shot proposals, then verify their governed identities/statuses in the actual Shot Planner.
+
+**Accidental rejection note:** The operator accidentally rejected the Story Interpretation proposal while reviewing. `AutomationProposalService.reject` records Rejected, and the ordinary UI has no direct revert to Reviewed. This did **not** prevent the Episode+Scene compilation (0 blockers). Avoid manual editing of automation JSON; the planned UX fix should add explicit rejection confirmation and audited recovery.
+
+### 5.3 Shared Automation Progress (first integration slice — code committed, local acceptance pending)
+
+The Story Automation actions **Planning Proposals…** and **Shot Proposals…** now use `AutomationProgressRunner` in `src/vscs/presentation/widgets/automation_progress.py`. It displays an indeterminate, modal **[Action] — Running** progress window, the selected Story ID, elapsed seconds, and a truthful provider-cost caution. The worker performs the existing proposal operation off the GUI thread; the dialog cannot pretend to cancel the paid operation. A second attempt while the runner is active is rejected.
+
+The new progress window does **not** generate planning authority, auto-accept proposals or run an extra paid call. It is a UI execution wrapper around the existing services. In particular, re-running Planning Proposals on an already accepted Story revision is **not** required to test the new progress widget.
+
+**Not yet integrated:** Resolve Assets, Performance, Environment, Camera & Lighting, Continuity and Review Gaps. They still require threading/SQLite safety checks. Full test acceptance and real Windows UI confirmation of the two migrated actions are pending; the prior baseline of **2,405 passed** predates these new changes.
+
 ## 6. Assets, CAPs and the canonical workflow — UI verified through read-only acceptance
 
 ### 6.1 Asset discovery and context
