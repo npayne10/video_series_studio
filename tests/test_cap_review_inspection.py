@@ -140,3 +140,30 @@ def test_missing_audit_is_reported():
     spec, review, message = load_review_snapshot(metadata)
     assert spec is None and review is None
     assert "Incomplete" in message
+
+
+def test_generic_editor_preserves_governed_review_metadata():
+    from vscs.presentation.widgets.cap_structured_knowledge import (
+        preserve_governed_review_metadata,
+    )
+
+    original = _metadata()
+    edited = {
+        SPECIFICATION_METADATA_KEY: "overwritten",
+        "ordinary": "updated",
+    }
+    preserved = preserve_governed_review_metadata(original, edited)
+    assert preserved[SPECIFICATION_METADATA_KEY] == original[SPECIFICATION_METADATA_KEY]
+    assert preserved[DESIGN_REVIEW_KEY] == original[DESIGN_REVIEW_KEY]
+    assert preserved["ordinary"] == "updated"
+
+
+def test_generic_editor_cannot_inject_review_metadata_into_new_cap():
+    from vscs.presentation.widgets.cap_structured_knowledge import (
+        preserve_governed_review_metadata,
+    )
+
+    result = preserve_governed_review_metadata(
+        {}, {DESIGN_REVIEW_KEY: "untrusted", SPECIFICATION_METADATA_KEY: "untrusted"}
+    )
+    assert result == {}
