@@ -344,3 +344,140 @@ def test_cap_stable_identity_needs_no_extra_paid_draft_pass(monkeypatch):
     monkeypatch.setattr(provider, "_generate_draft", draft_stage)
     assert provider.generate_cap(request) == stable
     assert calls == [()]
+
+
+def test_cap_source_grounding_detects_lost_console_display_relationship():
+    from vscs.domain.caps.generation import CAPGenerationRequest
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context=(
+            "A diagnostic console stands beside a workstation, "
+            "its blue display glowing steadily. A small indicator pulses once."
+        ),
+    )
+    incorrect = GeneratedCAPDraft(
+        title="Engineering room",
+        canonical_description="A diagnostic console stands beside a workstation.",
+        visual_identity=(
+            "The room contains a blue display and a small indicator. "
+            "Their ownership and the indicator's location are unspecified."
+        ),
+    )
+    issues = OpenAICAPGenerationProvider._source_relationship_issues(request, incorrect)
+    assert len(issues) == 1
+    assert "do not invent" in issues[0]
+    corrected = incorrect.model_copy(
+        update={
+            "visual_identity": (
+                "The diagnostic console beside the workstation has a blue display. "
+                "The small indicator's attachment remains unresolved."
+            )
+        }
+    )
+    assert OpenAICAPGenerationProvider._source_relationship_issues(request, corrected) == ()
+
+
+def test_cap_source_grounding_does_not_invent_unspecified_display_owner():
+    from vscs.domain.caps.generation import CAPGenerationRequest
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context="A room contains a diagnostic console and a separate blue display.",
+    )
+    draft = GeneratedCAPDraft(
+        title="Engineering room",
+        canonical_description="Room with equipment.",
+        visual_identity="The display's ownership is unspecified.",
+    )
+    assert OpenAICAPGenerationProvider._source_relationship_issues(request, draft) == ()
+
+
+def test_cap_grounding_quality_gate_requests_at_most_one_corrective_pass(monkeypatch):
+    from vscs.domain.caps.generation import (
+        CanonicalFactExtraction,
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+    )
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context=(
+            "A diagnostic console stands beside a workstation, "
+            "its blue display glowing steadily."
+        ),
+    )
+    first = GeneratedCAPDraft(
+        title="Engineering room",
+        canonical_description="The room contains a console beside a workstation.",
+        visual_identity="The blue display's ownership is unspecified.",
+    )
+    corrected = first.model_copy(
+        update={"visual_identity": "The diagnostic console has a blue display."}
+    )
+    calls = []
+    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
+    monkeypatch.setattr(provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis())
+
+    def draft_stage(_request, _analysis, *, corrections=()):
+        calls.append(corrections)
+        return first if len(calls) == 1 else corrected
+
+    monkeypatch.setattr(provider, "_generate_draft", draft_stage)
+    assert provider.generate_cap(request) == corrected
+    assert len(calls) == 2
+    assert "blue display" in calls[1][0]
+
+
+def test_cap_draft_generation_rechecks_original_story_text(monkeypatch):
+    from vscs.domain.caps.generation import CAPCanonAnalysis, CAPGenerationRequest
+    from vscs.infrastructure.ai.openai_provider import (
+        OpenAICAPGenerationProvider,
+        _StrictCAPConfidence,
+        _StrictGeneratedCAPDraft,
+    )
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context="The diagnostic console's blue display glows steadily.",
+    )
+    observed = {}
+
+    def parse(*, instructions, input_text, result_type, stage):
+        observed.update(input_text=input_text, stage=stage)
+        return _StrictGeneratedCAPDraft(
+            title="Engineering room",
+            canonical_description="An engineering room.",
+            visual_identity="Console and workstation.",
+            production_notes="",
+            continuity_rules=(),
+            prohibited_variations=(),
+            functional_capabilities=(),
+            semantic_tags=(),
+            production_classifications=(),
+            behaviour_references=(),
+            production_metadata=(),
+            unresolved_questions=(),
+            source_summary="",
+            canonical_facts=(),
+            contradictions=(),
+            confidence=dict.fromkeys(_StrictCAPConfidence.model_fields, 0.5),
+        )
+
+    monkeypatch.setattr(provider, "_parse", parse)
+    provider._generate_draft(request, CAPCanonAnalysis())
+    assert request.story_context in observed["input_text"]
+    assert "source-grounding cross-check" in observed["input_text"]
