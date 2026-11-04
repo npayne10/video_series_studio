@@ -176,3 +176,46 @@ def test_invalid_generated_shot_is_not_saved_to_proposal_repository():
             baseline=SimpleNamespace(story_id="STORY-001", source_revision="source-revision"),
         )
     assert store.saved == []
+
+
+def test_accepted_shot_is_never_overwritten_by_regeneration():
+    scene = _scene(35)
+    prior = AutomationProposal(
+        proposal_id="AUT-SHOT-ACCEPTED",
+        proposal_type=AutomationProposalType.SHOT,
+        target_id="EP-001-SCN-001-SHT-001",
+        payload={"target_runtime_seconds": 35},
+        provenance=scene.provenance,
+        status=AutomationProposalStatus.ACCEPTED,
+        reviewed_by="VSCS Acceptance Test",
+        accepted_by="VSCS Acceptance Test",
+    )
+
+    class Store:
+        def __init__(self):
+            self.saved = []
+
+        def list_proposals(self):
+            return (scene, prior)
+
+        def save(self, proposal):
+            self.saved.append(proposal)
+            return proposal
+
+    class Provider:
+        provider_name = "test-openai"
+        model_name = "test-model"
+
+        def propose_scene_shots(self, **_kwargs):
+            raise AssertionError("Provider must not be called after human acceptance")
+
+    store = Store()
+    service = SceneShotProposalAutomationService(Provider(), store)
+    with pytest.raises(ValueError, match="Cannot regenerate"):
+        service.generate(
+            story_id="STORY-001",
+            source_text="An empty room",
+            source_revision="source-revision",
+            baseline=SimpleNamespace(story_id="STORY-001", source_revision="source-revision"),
+        )
+    assert store.saved == []
