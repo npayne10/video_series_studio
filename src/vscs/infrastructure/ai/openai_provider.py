@@ -220,10 +220,10 @@ class OpenAICAPGenerationProvider:
             )
         ).lower()
         transient_patterns = (
-            r"\\bpuls(?:es|e|ed|ing)\\s+(?:exactly\\s+)?once\\b",
-            r"\\bindicator\\s+(?:then\\s+)?returns?\\s+to\\s+(?:a\\s+)?steady\\s+glow\\b",
-            r"\\bafter\\s+the\\s+indicator\\s+pulse\\b",
-            r"\\bbefore\\s+the\\s+indicator\\s+pulse\\b",
+            r"\bpuls(?:es|e|ed|ing)\s+(?:exactly\s+)?once\b",
+            r"\bindicator\s+(?:then\s+)?returns?\s+to\s+(?:a\s+)?steady\s+glow\b",
+            r"\bafter\s+the\s+indicator\s+pulse\b",
+            r"\bbefore\s+the\s+indicator\s+pulse\b",
         )
         if any(re.search(pattern, identity_text) for pattern in transient_patterns):
             return (
@@ -272,11 +272,11 @@ class OpenAICAPGenerationProvider:
             f"Approved canon analysis:\n{analysis.model_dump_json(indent=2)}\n\n"
             "The analysis includes source facts and may include transient narrative events; "
             "do not promote those events into permanent asset identity or CAP continuity rules.\n"
-            + (
+        )
+        if corrections:
+            input_text += (
                 "CORRECT THE PREVIOUS DRAFT QUALITY ISSUES:\n"
                 + "\n".join(f"- {issue}" for issue in corrections)
-                if corrections
-                else ""
             )
         )
         wire_draft = self._parse(
