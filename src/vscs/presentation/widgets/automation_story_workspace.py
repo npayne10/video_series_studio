@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -13,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from vscs.application.automation import (
     ActionPerformanceProposalAutomationService,
+    AutomationProposal,
     AutomationProposalService,
     CameraLightingProposalAutomationService,
     CanonicalEntityAssetResolutionAutomationService,
@@ -43,6 +46,7 @@ from vscs.presentation.dialogs.automation_proposal_review_dialog import (
     AutomationProposalReviewDialog,
 )
 
+from .automation_progress import AutomationOperationError, AutomationProgressRunner
 from .browseable_story_workspace import BrowseableStoryWorkspaceWidget
 
 
@@ -171,6 +175,19 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             return None
         return resolution
 
+    def _run_proposal_operation(
+        self,
+        title: str,
+        story_id: str,
+        operation: Callable[[], tuple[AutomationProposal, ...]],
+    ) -> tuple[AutomationProposal, ...]:
+        """Reuse one non-cancellable operation progress surface for Story automation."""
+        runner = getattr(self, "_proposal_progress_runner", None)
+        if runner is None:
+            runner = AutomationProgressRunner(self)
+            self._proposal_progress_runner = runner
+        return runner.run(title, story_id, operation)
+
     def _generate_planning_proposals(self) -> None:
         story = self._selected_story()
         if (
@@ -187,22 +204,30 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         resolution = self._current_entity_resolution(story, source_text)
         if resolution is None:
             return
-        try:
-            semantic = self.semantic_interpretation_service.interpret(
+        interpretation_service = self.semantic_interpretation_service
+        planning_service = self.episode_scene_automation_service
+
+        def generate() -> tuple[AutomationProposal, ...]:
+            semantic = interpretation_service.interpret(
                 story_id=story.story_id,
                 source_text=source_text,
                 source_revision=revision,
                 baseline=baseline,
                 entity_resolution=resolution,
             )
-            proposals = self.episode_scene_automation_service.generate(
+            return planning_service.generate(
                 story_id=story.story_id,
                 source_text=source_text,
                 source_revision=revision,
                 baseline=baseline,
                 semantic=semantic,
             )
-        except (AIProviderError, ValueError) as exc:
+
+        try:
+            proposals = self._run_proposal_operation(
+                "Planning Proposals", story.story_id, generate
+            )
+        except (AutomationOperationError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
         episodes = sum(item.proposal_type.value == "episode" for item in proposals)
@@ -222,14 +247,19 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         if current is None:
             return
         source_text, revision, baseline = current
+        shot_service = self.scene_shot_automation_service
         try:
-            proposals = self.scene_shot_automation_service.generate(
-                story_id=story.story_id,
-                source_text=source_text,
-                source_revision=revision,
-                baseline=baseline,
+            proposals = self._run_proposal_operation(
+                "Shot Proposals",
+                story.story_id,
+                lambda: shot_service.generate(
+                    story_id=story.story_id,
+                    source_text=source_text,
+                    source_revision=revision,
+                    baseline=baseline,
+                ),
             )
-        except (AIProviderError, ValueError) as exc:
+        except (AutomationOperationError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
         scenes = len({item.payload.get("scene_id", "") for item in proposals})
