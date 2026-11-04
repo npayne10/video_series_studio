@@ -130,8 +130,9 @@ class StoryCAPSpecificationService:
         if not approved_story_context.strip():
             raise ValueError("Approved Story context is required")
         asset = self.generator.assets.get(asset_id)
-        return self.generate_from_snapshot(
-            asset, approved_story_context, self.generator.provider
+        draft = self.generator.generate_draft(asset_id, approved_story_context)
+        return self.proposal_from_draft(
+            asset, approved_story_context, draft, self.generator.provider
         )
 
     @staticmethod
@@ -154,6 +155,18 @@ class StoryCAPSpecificationService:
             story_context=approved_story_context,
         )
         draft: GeneratedCAPDraft = provider.generate_cap(request)
+        return StoryCAPSpecificationService.proposal_from_draft(
+            asset, approved_story_context, draft, provider
+        )
+
+    @staticmethod
+    def proposal_from_draft(
+        asset: Asset,
+        approved_story_context: str,
+        draft: GeneratedCAPDraft,
+        provider: CAPGenerationProvider,
+    ) -> StoryCAPProposal:
+        """Pure proposal assembly; the provider may run paid design expansion."""
         key = _CATEGORY_KEYS.get(asset.category, "identity")
         identity = draft.visual_identity.strip() or draft.canonical_description.strip()
         if not identity:
