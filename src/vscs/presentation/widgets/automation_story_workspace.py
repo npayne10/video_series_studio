@@ -314,11 +314,16 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         if current is None:
             return
         source_text, revision, _baseline = current
+        service = self.action_performance_automation_service
         try:
-            proposals = self.action_performance_automation_service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+            proposals = self._run_proposal_operation(
+                "Performance Proposals",
+                story.story_id,
+                lambda: service.generate(
+                    story_id=story.story_id, source_text=source_text, source_revision=revision
+                ),
             )
-        except (AIProviderError, ValueError) as exc:
+        except (AutomationOperationError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
         dialogue = sum(
@@ -339,11 +344,16 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         if current is None:
             return
         source_text, revision, _baseline = current
+        service = self.environment_automation_service
         try:
-            proposals = self.environment_automation_service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+            proposals = self._run_proposal_operation(
+                "Environment Proposals",
+                story.story_id,
+                lambda: service.generate(
+                    story_id=story.story_id, source_text=source_text, source_revision=revision
+                ),
             )
-        except (AIProviderError, ValueError) as exc:
+        except (AutomationOperationError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
         unknown_physics = sum(
@@ -367,11 +377,16 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
         if current is None:
             return
         source_text, revision, _baseline = current
+        service = self.camera_lighting_automation_service
         try:
-            proposals = self.camera_lighting_automation_service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+            proposals = self._run_proposal_operation(
+                "Camera & Lighting Proposals",
+                story.story_id,
+                lambda: service.generate(
+                    story_id=story.story_id, source_text=source_text, source_revision=revision
+                ),
             )
-        except (AIProviderError, ValueError) as exc:
+        except (AutomationOperationError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
         cameras = sum(item.proposal_type.value == "camera" for item in proposals)
@@ -397,10 +412,14 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             )
             self.continuity_automation_service = service
         try:
-            proposals = service.generate(
-                story_id=story.story_id, source_text=source_text, source_revision=revision
+            proposals = self._run_proposal_operation(
+                "Continuity Proposals",
+                story.story_id,
+                lambda: service.generate(
+                    story_id=story.story_id, source_text=source_text, source_revision=revision
+                ),
             )
-        except ValueError as exc:
+        except (AutomationOperationError, ValueError) as exc:
             self._error(str(exc))
             return
         conflicts = sum(bool(item.payload.get("continuity_conflicts")) for item in proposals)
