@@ -151,7 +151,8 @@ def test_cap_provider_work_uses_shared_progress_off_gui_thread(qtbot):
         ),
     )
     assert started.is_set()
-    assert seen == [(seen[0][0], "STORY-LOC-001", "An empty engineering control room.")]
+    assert len(seen) == 1
+    assert seen[0][1:] == ("STORY-LOC-001", "An empty engineering control room.")
     assert seen[0][0] != gui_thread
     assert proposal.specification.asset_id == "STORY-LOC-001"
     assert proposal.specification.origin == "story_intelligence_proposal"
@@ -196,8 +197,8 @@ def test_cap_paid_confirmation_controls_exactly_one_call(monkeypatch):
 
     from PySide6.QtWidgets import QMessageBox
 
-    from vscs.presentation.dialogs.story_cap_batch_dialog import StoryCAPBatchDialog
     from vscs.presentation.dialogs import story_cap_batch_dialog
+    from vscs.presentation.dialogs.story_cap_batch_dialog import StoryCAPBatchDialog
 
     calls = []
     host = SimpleNamespace(
@@ -218,3 +219,60 @@ def test_cap_paid_confirmation_controls_exactly_one_call(monkeypatch):
     )
     StoryCAPBatchDialog.regenerate_one(host)
     assert calls == [{"force_regenerate": True}]
+
+
+def test_cap_design_expansion_runs_under_same_progress(qtbot):
+    """B.5.24: secondary paid design-expansion call is also off the UI thread."""
+    from types import SimpleNamespace
+
+    from vscs.application.caps.provider_design_expansion import (
+        DesignExpansionResponse,
+        ProposedDesignField,
+    )
+    from vscs.application.caps.story_specification import StoryCAPSpecificationService
+    from vscs.domain.assets.models import AssetCategory
+    from vscs.domain.caps.generation import GeneratedCAPDraft
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    calls = []
+    gui_thread = get_ident()
+
+    class Provider:
+        def generate_cap(self, _request):
+            calls.append(("generate", get_ident()))
+            return GeneratedCAPDraft(
+                title="Engineering control room",
+                canonical_description="A fixed interior.",
+                visual_identity="A diagnostic console beside the workstation.",
+            )
+
+        def expand_cap_design(self, _spec, _story_context):
+            calls.append(("expand", get_ident()))
+            return DesignExpansionResponse(
+                fields=(
+                    ProposedDesignField(
+                        field="layout",
+                        proposed_value="Proposed room layout.",
+                        rationale="For repeatable continuity.",
+                    ),
+                )
+            )
+
+    asset = SimpleNamespace(
+        asset_id="STORY-LOC-001",
+        name="Engineering control room",
+        category=AssetCategory.LOCATION,
+        description="",
+    )
+    proposal = AutomationProgressRunner(host).run(
+        "CAP Proposal Generation",
+        "STORY-001",
+        lambda: StoryCAPSpecificationService.generate_from_snapshot(
+            asset, "An engineering control room contains a console.", Provider()
+        ),
+    )
+    assert [stage for stage, _thread in calls] == ["generate", "expand"]
+    assert all(thread != gui_thread for _stage, thread in calls)
+    assert proposal.design_suggestions
+    assert proposal.design_suggestions[0].field == "layout"
