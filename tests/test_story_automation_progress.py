@@ -107,3 +107,114 @@ def test_running_operation_rejects_duplicate_without_second_call(qtbot):
     assert calls == ["original"]
     assert len(blocked) == 1
     assert not runner.active
+
+
+def test_cap_provider_work_uses_shared_progress_off_gui_thread(qtbot):
+    """B.5.24: the only background work is an immutable asset snapshot and provider."""
+    from types import SimpleNamespace
+
+    from vscs.application.caps.story_specification import StoryCAPSpecificationService
+    from vscs.domain.assets.models import AssetCategory
+    from vscs.domain.caps.generation import GeneratedCAPDraft
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    runner = AutomationProgressRunner(host)
+    started = Event()
+    release = Event()
+    seen = []
+    gui_thread = get_ident()
+
+    class Provider:
+        def generate_cap(self, request):
+            seen.append((get_ident(), request.asset_id, request.story_context))
+            started.set()
+            assert release.wait(8)
+            return GeneratedCAPDraft(
+                title="Engineering room",
+                canonical_description="An empty engineering control room.",
+                visual_identity="An empty engineering control room with a console.",
+            )
+
+    asset = SimpleNamespace(
+        asset_id="STORY-LOC-001",
+        name="Engineering room",
+        category=AssetCategory.LOCATION,
+        description="A fixed location.",
+    )
+    QTimer.singleShot(100, release.set)
+    proposal = runner.run(
+        "CAP Proposal Generation",
+        "STORY-001",
+        lambda: StoryCAPSpecificationService.generate_from_snapshot(
+            asset, "An empty engineering control room.", Provider()
+        ),
+    )
+    assert started.is_set()
+    assert seen == [(seen[0][0], "STORY-LOC-001", "An empty engineering control room.")]
+    assert seen[0][0] != gui_thread
+    assert proposal.specification.asset_id == "STORY-LOC-001"
+    assert proposal.specification.origin == "story_intelligence_proposal"
+    assert not runner.active
+
+
+def test_cap_provider_failure_resets_shared_progress(qtbot):
+    """B.5.24: failed paid call must not display a success result or create a CAP."""
+    from types import SimpleNamespace
+
+    from vscs.application.caps.story_specification import StoryCAPSpecificationService
+    from vscs.domain.assets.models import AssetCategory
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    runner = AutomationProgressRunner(host)
+
+    class FailingProvider:
+        def generate_cap(self, _request):
+            raise RuntimeError("Injected Terra API failure")
+
+    asset = SimpleNamespace(
+        asset_id="STORY-LOC-001",
+        name="Engineering room",
+        category=AssetCategory.LOCATION,
+        description="",
+    )
+    with pytest.raises(AutomationOperationError, match="Injected Terra API failure"):
+        runner.run(
+            "CAP Proposal Generation",
+            "STORY-001",
+            lambda: StoryCAPSpecificationService.generate_from_snapshot(
+                asset, "Approved source.", FailingProvider()
+            ),
+        )
+    assert not runner.active
+
+
+def test_cap_paid_confirmation_controls_exactly_one_call(monkeypatch):
+    """B.5.24: declining consent never invokes paid generation."""
+    from types import SimpleNamespace
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.dialogs.story_cap_batch_dialog import StoryCAPBatchDialog
+    from vscs.presentation.dialogs import story_cap_batch_dialog
+
+    calls = []
+    host = SimpleNamespace(
+        generator=SimpleNamespace(provider=SimpleNamespace(_model="gpt-6.1-terra")),
+        review_one=lambda **kw: calls.append(kw),
+    )
+    monkeypatch.setattr(
+        story_cap_batch_dialog.QMessageBox,
+        "question",
+        lambda *_args: QMessageBox.StandardButton.No,
+    )
+    StoryCAPBatchDialog.regenerate_one(host)
+    assert calls == []
+    monkeypatch.setattr(
+        story_cap_batch_dialog.QMessageBox,
+        "question",
+        lambda *_args: QMessageBox.StandardButton.Yes,
+    )
+    StoryCAPBatchDialog.regenerate_one(host)
+    assert calls == [{"force_regenerate": True}]
