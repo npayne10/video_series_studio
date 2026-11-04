@@ -169,8 +169,8 @@ def test_scene_shot_automation_normalizes_runtime_overflow() -> None:
     actions = [str(item.payload["required_action"]) for item in proposals]
     assert actions.count("Event one") == 1
     assert actions.count("Event two") == 1
-    assert "Event one" == actions[0]
-    assert "Event two" == actions[2]
+    assert actions[0] == "Event one"
+    assert actions[2] == "Event two"
     assert all(
         any("proportionally fitted" in diagnostic for diagnostic in item.payload["diagnostics"])
         for item in proposals
