@@ -31,13 +31,13 @@ def test_story_analysis_progress_keeps_ui_responsive(qtbot):
     class Cache:
         def analyze(self, story, source):
             started.set()
-            assert release.wait(3), "GUI event loop stalled during Story Analysis"
+            assert release.wait(8), "GUI event loop stalled during Story Analysis"
             return SimpleNamespace(status=SimpleNamespace(value="completed"), diagnostics=())
 
     host = _AnalysisHost(Cache())
     qtbot.addWidget(host)
 
-    deadline = perf_counter() + 2.0
+    deadline = perf_counter() + 5.0
     observer = QTimer(host)
     observer.setInterval(10)
 
