@@ -177,6 +177,31 @@ class ProductionProjectionDialog(QDialog):
         return "\n".join(lines) if lines else "No readiness gaps."
 
 
+def arrange_cap_contract_columns(dialog: Any) -> QSplitter | None:
+    """Move existing widgets into resizable left/right panes without recreating them."""
+    asset_scroll = dialog.findChild(QScrollArea, "capEditorScrollArea")
+    gallery = getattr(dialog, "reference_gallery", None)
+    outer = dialog.layout()
+    if asset_scroll is None or gallery is None or not isinstance(outer, QVBoxLayout):
+        return None
+    for widget in (asset_scroll, gallery):
+        index = outer.indexOf(widget)
+        if index < 0:
+            return None
+    for widget in (asset_scroll, gallery):
+        outer.takeAt(outer.indexOf(widget))
+    columns = QSplitter(Qt.Orientation.Horizontal, dialog)
+    columns.setObjectName("capProductionContractColumns")
+    columns.setChildrenCollapsible(False)
+    columns.addWidget(asset_scroll)
+    columns.addWidget(gallery)
+    columns.setStretchFactor(0, 11)
+    columns.setStretchFactor(1, 10)
+    columns.setSizes([680, 600])
+    outer.insertWidget(1, columns, 1)
+    return columns
+
+
 def install_cap_editor_contract_refactoring() -> None:
     """Retire redundant generation UI and clarify governed reference ownership.
 
@@ -248,34 +273,12 @@ def install_cap_editor_contract_refactoring() -> None:
                         form = candidate
                         break
             if isinstance(form, QFormLayout):
-                form.insertRow(
-                    max(0, form.rowCount() - 1),
-                    "Reviewed CAP Specification & Decisions",
-                    panel,
-                )
+                form.insertRow(max(0, form.rowCount() - 1), panel)
             else:
                 self.layout().insertWidget(max(0, self.layout().count() - 1), panel)
 
-        # The managed reference gallery used to sit below the entire asset
-        # form. Keep its lifecycle signals and widgets intact while moving it
-        # into a separately resizable right-hand pane.
-        asset_scroll = self.findChild(QScrollArea, "capEditorScrollArea")
-        gallery = getattr(self, "reference_gallery", None)
-        outer = self.layout()
-        if asset_scroll is not None and gallery is not None:
-            for widget in (asset_scroll, gallery):
-                index = outer.indexOf(widget)
-                if index >= 0:
-                    outer.takeAt(index)
-            columns = QSplitter(Qt.Orientation.Horizontal, self)
-            columns.setObjectName("capProductionContractColumns")
-            columns.setChildrenCollapsible(False)
-            columns.addWidget(asset_scroll)
-            columns.addWidget(gallery)
-            columns.setStretchFactor(0, 11)
-            columns.setStretchFactor(1, 10)
-            columns.setSizes([680, 600])
-            outer.insertWidget(1, columns, 1)
+        columns = arrange_cap_contract_columns(self)
+        if columns is not None:
             self.production_contract_columns = columns
             self.setMinimumSize(max(self.minimumWidth(), 1000), max(self.minimumHeight(), 680))
             self.resize(max(self.width(), 1350), max(self.height(), 800))
