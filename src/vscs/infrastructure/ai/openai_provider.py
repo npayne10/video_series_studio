@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from importlib import import_module
 import re
+from importlib import import_module
 from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, Field
@@ -278,7 +278,6 @@ class OpenAICAPGenerationProvider:
                 "CORRECT THE PREVIOUS DRAFT QUALITY ISSUES:\n"
                 + "\n".join(f"- {issue}" for issue in corrections)
             )
-        )
         wire_draft = self._parse(
             instructions=instructions,
             input_text=input_text,
