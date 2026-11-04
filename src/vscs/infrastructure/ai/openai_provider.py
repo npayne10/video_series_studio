@@ -196,11 +196,9 @@ class OpenAICAPGenerationProvider:
             response = self._parse(
                 instructions=instructions,
                 input_text=(
-                    source
-                    + "\\nCorrect these grounding violations in the previous "
+                    source + "\\nCorrect these grounding violations in the previous "
                     "design suggestions. Preserve acceptable design choices; "
-                    "omit a field if it cannot be corrected without invention.\\n"
-                    + correction
+                    "omit a field if it cannot be corrected without invention.\\n" + correction
                 ),
                 result_type=DesignExpansionResponse,
                 stage="CAP design detail correction",
