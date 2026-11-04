@@ -12,8 +12,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFormLayout,
-    QHeaderView,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPlainTextEdit,
     QTableWidget,
@@ -116,9 +116,7 @@ class CAPReviewedSpecificationPanel(QWidget):
         self.fields_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.fields_table.setWordWrap(False)
         self.fields_table.verticalHeader().setVisible(False)
-        self.fields_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
+        self.fields_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.fields_table.horizontalHeader().setSectionResizeMode(
             1, QHeaderView.ResizeMode.ResizeToContents
         )
@@ -217,7 +215,6 @@ class CAPReviewedSpecificationPanel(QWidget):
                 if part
             )
         )
-
 
     @staticmethod
     def _wrapped(value: str) -> QLabel:
