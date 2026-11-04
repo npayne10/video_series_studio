@@ -249,7 +249,9 @@ def test_cap_unresolved_transient_after_retry_refuses_result(monkeypatch):
         visual_identity="A fixed console.",
     )
     calls = []
-    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
+    monkeypatch.setattr(
+        provider, "_extract_facts", lambda _request: CanonicalFactExtraction()
+    )
     monkeypatch.setattr(
         provider,
         "_analyse_canon",
@@ -273,6 +275,7 @@ def test_cap_generation_instructions_separate_identity_from_shot_events(monkeypa
     )
     from vscs.infrastructure.ai.openai_provider import (
         OpenAICAPGenerationProvider,
+        _StrictCAPConfidence,
         _StrictGeneratedCAPDraft,
     )
 
@@ -303,7 +306,7 @@ def test_cap_generation_instructions_separate_identity_from_shot_events(monkeypa
             source_summary="",
             canonical_facts=(),
             contradictions=(),
-            confidence={field: 0.5 for field in _StrictGeneratedCAPDraft.model_fields["confidence"].annotation.model_fields},
+            confidence=dict.fromkeys(_StrictCAPConfidence.model_fields, 0.5),
         )
 
     monkeypatch.setattr(provider, "_parse", parse)
