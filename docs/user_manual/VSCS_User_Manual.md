@@ -148,6 +148,18 @@ Use **Production Planning** to inspect actual governed Episode, Scene and Shot r
 
 For B.5.22, after reviewing and compiling the accepted Episode and Scene, validate those records before proceeding to Shot proposals and governed Shot planning. Any conversion/compilation blockers must be resolved with their operator diagnostics, not manual JSON edits.
 
+### 5.1 Distinguish Episode Planner from Production Packages (UI naming corrected 2026-11-04)
+
+The earlier visible navigation contained **two different entries both named Production Planning**. This caused a real operator routing error during B.5.22: the Story-level item opened the **Episode Planner — The Quiet Console** dialog, whereas the top-level item selected the downstream **production-package workspace**.
+
+The hierarchical sidebar is now relabelled (without changing action IDs or internal page selection):
+- **Story → Episode Planner** — opens the governed Episode Planner for the selected Story; click **Scene Planner…** from a selected Episode to inspect the compiled Scene. This was the correct location for the verified **EP-001 Ready, 0:35** checkpoint.
+- **Production Packages** (top level) — downstream compilation/production-task workspace; do **not** use this to verify whether the Episode/Scene proposals were compiled.
+
+**Actual B.5.22 operator screenshot:** `EP-001` was persisted in the Episode Planner at **Ready** with **0:35** runtime. Scene verification is still pending. The naming improvement is committed to GitHub but **must pass local Ruff/Mypy/full regression and restarted-app UI inspection** before being counted as accepted.
+
+**Next operator action:** In the currently open Episode Planner, select `EP-001`, click **Scene Planner…**, and verify `EP-001-SCN-001` is present and Ready. Do not create another Episode or manually alter the 35-second accepted runtime.
+
 ## 6. Assets, CAPs and the canonical workflow — UI verified through read-only acceptance
 
 ### 6.1 Asset discovery and context
