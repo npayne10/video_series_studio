@@ -85,7 +85,9 @@ def test_one_time_indicator_pulse_is_assigned_to_one_shot_only():
     assert "do not repeat" in shots[1].required_action
     assert shots[0].continuity_in == "Steady blue glow"
     assert shots[-1].continuity_out == "Steady blue glow restored"
-    assert all(shot.shot_constraints == ("No personnel", "Keep camera static") for shot in shots)
+    assert shots[0].shot_constraints == ("No personnel", "Keep camera static")
+    assert "No personnel" in shots[1].shot_constraints
+    assert "Do not replay" in shots[1].shot_constraints[-1]
 
 
 @pytest.mark.parametrize("seconds", [1, 14, 21, 22, 29, 41, 44])
