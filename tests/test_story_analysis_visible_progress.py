@@ -1,6 +1,7 @@
 """Story Analysis must visibly run without freezing the Qt event loop."""
 
 from threading import Event
+from time import perf_counter
 from types import SimpleNamespace
 
 from PySide6.QtCore import QTimer
@@ -36,16 +37,29 @@ def test_story_analysis_progress_keeps_ui_responsive(qtbot):
     host = _AnalysisHost(Cache())
     qtbot.addWidget(host)
 
+    deadline = perf_counter() + 2.0
+    observer = QTimer(host)
+    observer.setInterval(10)
+
     def check_running():
         active = QApplication.activeModalWidget()
-        seen.append(
-            started.is_set()
-            and active is not None
+        visible = (
+            active is not None
             and active.objectName() == "storyAnalysisProgress"
+            and active.isVisible()
         )
-        release.set()
+        # Avoid assuming the worker starts within a fixed 70 ms under full-suite load.
+        if started.is_set() and visible:
+            seen.append(True)
+            observer.stop()
+            release.set()
+        elif perf_counter() >= deadline:
+            seen.append(False)
+            observer.stop()
+            release.set()
 
-    QTimer.singleShot(70, check_running)
+    observer.timeout.connect(check_running)
+    observer.start()
     succeeded = BrowseableStoryWorkspaceWidget._run_analysis(
         host, StoryRecord(story_id="STORY-001", title="Disposable"), "Test story"
     )
