@@ -103,9 +103,7 @@ def test_integrated_review_loads_accepted_and_deferred_decisions(qtbot):
     assert panel.fields_table.item(2, 1).text() == "Defer"
     assert panel.fields_table.item(2, 2).text() == "—"
     assert panel.fields_table.item(2, 3).text() == "Indicator pulses once"
-    assert not (
-        panel.fields_table.item(1, 2).flags() & Qt.ItemFlag.ItemIsEditable
-    )
+    assert not (panel.fields_table.item(1, 2).flags() & Qt.ItemFlag.ItemIsEditable)
 
 
 def test_missing_review_never_appears_approved(qtbot):
