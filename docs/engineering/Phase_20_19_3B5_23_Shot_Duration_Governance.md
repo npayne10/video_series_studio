@@ -56,3 +56,9 @@ git status --short
 6. If any tests or UI output disagree, stop rather than promoting an invalid Shot.
 
 The user-maintained untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` remains untouched; pre-existing `B5_19A_ACCEPTANCE` is not used.
+
+## Regeneration guard added before provider calls
+
+The proposal service now **refuses to regenerate Shots when any existing Shot proposal for this Story revision is already Reviewed, Accepted or Rejected**. This protects human decisions and prevents unexpected provider charges. Existing **Proposed-only** Shot proposals remain eligible for controlled regeneration (the current B.5.22 original 35-second Shot was still Proposed). A generation whose new Shot count would leave stale extra proposed identities is also rejected, rather than silently leaving old Shots in the review tree. A dedicated regression case confirms the provider is not called after human acceptance.
+
+**Local test target:** 17 new pytest cases; prior 2,409 regression tests → **2,426 expected**, subject to existing tests impacted by the intentionally stricter policy.
