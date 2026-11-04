@@ -149,6 +149,16 @@ class OpenAICAPGenerationProvider:
             return DesignExpansionResponse(fields=())
         instructions = (
             "Act as a production designer, NOT a canon extraction agent. "
+            "CAP design fields define STABLE physical identity across shots. "
+            "Never embed a one-time Shot event, such as an indicator pulsing once "
+            "or returning to steady glow, in lighting, geometry, spatial anchors "
+            "or any other permanent design field. The indicator may exist and "
+            "have a steady default state, but its pulse belongs only to the Shot. "
+            "Never assign a named Story object's precise attachment or mounting "
+            "position (e.g. the indicator beside a doorway) without explicit "
+            "Story support; leave that object's location unresolved instead. "
+            "Unspecified room dimensions, finishes, doors and general lighting "
+            "may be newly PROPOSED as creative design choices, never Story canon. "
             "Suggest a DISTINCTIVE, repeatable, camera-independent physical asset. "
             "For locations establish a coordinate-independent fixed layout, key equipment relationships, "
             "doorways or access points when appropriate, consistent surfaces and practical lighting fixtures. "
@@ -168,12 +178,40 @@ class OpenAICAPGenerationProvider:
             f"Fields to propose: {missing}\\n"
             f"Story context (source, not permission to invent canon): {story_context}"
         )
-        return self._parse(
+        from vscs.application.caps.design_quality import assess_design_grounding
+
+        response = self._parse(
             instructions=instructions,
             input_text=source,
             result_type=DesignExpansionResponse,
             stage="CAP design detail proposals",
         )
+        issues = assess_design_grounding(story_context, response.fields)
+        if issues:
+            # The original paid CAP consent covers one bounded corrective
+            # design call. Do not silently change or approve provider output.
+            correction = "\\n".join(
+                f"- {issue.field}: {issue.code}: {issue.message}" for issue in issues
+            )
+            response = self._parse(
+                instructions=instructions,
+                input_text=(
+                    source
+                    + "\\nCorrect these grounding violations in the previous "
+                    "design suggestions. Preserve acceptable design choices; "
+                    "omit a field if it cannot be corrected without invention.\\n"
+                    + correction
+                ),
+                result_type=DesignExpansionResponse,
+                stage="CAP design detail correction",
+            )
+            unresolved = assess_design_grounding(story_context, response.fields)
+            if unresolved:
+                raise AIProviderError(
+                    "CAP design-expansion grounding failed after one correction: "
+                    + "; ".join(f"{issue.field}: {issue.code}" for issue in unresolved)
+                )
+        return response
 
     def _extract_facts(self, request: CAPGenerationRequest) -> CanonicalFactExtraction:
         instructions = (
