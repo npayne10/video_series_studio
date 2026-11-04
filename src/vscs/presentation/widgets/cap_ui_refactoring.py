@@ -30,8 +30,8 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps import CAPError, ProductionProjectionService
-from vscs.presentation.widgets.cap_review_inspection import CAPReviewedSpecificationPanel
 from vscs.domain.caps import ProductionProjection, ReadinessSeverity
+from vscs.presentation.widgets.cap_review_inspection import CAPReviewedSpecificationPanel
 
 
 class ProductionProjectionDialog(QDialog):
@@ -232,9 +232,7 @@ def install_cap_editor_contract_refactoring() -> None:
         # Persisted structured CAP/review data is not part of the legacy
         # general-purpose CAP fields. Expose it without editing or approvals.
         if self.profile is not None:
-            panel = CAPReviewedSpecificationPanel(
-                dict(self.profile.production_metadata), self
-            )
+            panel = CAPReviewedSpecificationPanel(dict(self.profile.production_metadata), self)
             self.reviewed_specification_panel = panel
             scroll = self.findChild(QScrollArea, "capEditorScrollArea")
             form = (
@@ -255,9 +253,7 @@ def install_cap_editor_contract_refactoring() -> None:
                     panel,
                 )
             else:
-                self.layout().insertWidget(
-                    max(0, self.layout().count() - 1), panel
-                )
+                self.layout().insertWidget(max(0, self.layout().count() - 1), panel)
 
     editor.__init__ = contract_init
     editor._phase_18_2_11_2_9_installed = True
