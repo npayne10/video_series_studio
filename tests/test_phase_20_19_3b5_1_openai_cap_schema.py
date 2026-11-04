@@ -334,9 +334,7 @@ def test_cap_stable_identity_needs_no_extra_paid_draft_pass(monkeypatch):
         continuity_rules=("Preserve their fixed positions.",),
     )
     calls = []
-    monkeypatch.setattr(
-        provider, "_extract_facts", lambda _request: CanonicalFactExtraction()
-    )
+    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
     monkeypatch.setattr(provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis())
 
     def draft_stage(_request, _analysis, *, corrections=()):
