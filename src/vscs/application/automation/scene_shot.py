@@ -197,8 +197,7 @@ class SceneShotProposalAutomationService:
             and proposal.provenance.source_revision == revision
         )
         if any(
-            proposal.status is not AutomationProposalStatus.PROPOSED
-            for proposal in existing_shots
+            proposal.status is not AutomationProposalStatus.PROPOSED for proposal in existing_shots
         ):
             raise ValueError(
                 "Cannot regenerate Shot proposals after human review, acceptance or "
@@ -214,7 +213,7 @@ class SceneShotProposalAutomationService:
             if runtime <= 0 or minimum_shots > maximum_shots:
                 raise ValueError(
                     f"Scene {scene.target_id} has an unpartitionable {runtime}s runtime "
-                    f"under the {self.MIN_SHOT_SECONDS}–{self.MAX_SHOT_SECONDS}s Shot policy. "
+                    f"under the {self.MIN_SHOT_SECONDS}-{self.MAX_SHOT_SECONDS}s Shot policy. "
                     "Review the Scene budget before invoking a provider."
                 )
 
@@ -413,15 +412,14 @@ class SceneShotProposalAutomationService:
                 for delta in range(-cls.MAX_SHOT_SECONDS, cls.MAX_SHOT_SECONDS + 1):
                     if not delta:
                         continue
-                    if (
-                        cls._feasible_shot_duration(seconds + delta)
-                        and cls._feasible_shot_duration(available - delta)
+                    if cls._feasible_shot_duration(seconds + delta) and cls._feasible_shot_duration(
+                        available - delta
                     ):
                         adjustments.append((abs(delta), neighbor, delta))
             if not adjustments:
                 raise ValueError(
                     f"Scene {scene.target_id} contains a {seconds}s provider Shot that "
-                    "cannot be rebalanced into the 15–20s policy without changing "
+                    "cannot be rebalanced into the 15-20s policy without changing "
                     "narrative ownership. Review the Scene pacing."
                 )
             _size, neighbor, delta = min(adjustments)
@@ -431,8 +429,7 @@ class SceneShotProposalAutomationService:
             if tuple(durations) == original:
                 return draft
             detail = ", ".join(
-                f"{before}s→{after}s"
-                for before, after in zip(original, durations, strict=True)
+                f"{before}s→{after}s" for before, after in zip(original, durations, strict=True)
             )
             return SceneShotProposalDraft(
                 shots=tuple(
@@ -442,7 +439,7 @@ class SceneShotProposalAutomationService:
                 diagnostics=(
                     *draft.diagnostics,
                     f"VSCS rebalanced provider narrative runtimes ({detail}) to meet "
-                    "15–20s clip constraints without changing Scene duration; "
+                    "15-20s clip constraints without changing Scene duration; "
                     "human review is required.",
                 ),
             )
@@ -487,7 +484,7 @@ class SceneShotProposalAutomationService:
             if count * cls.MIN_SHOT_SECONDS > runtime:
                 raise ValueError(
                     f"Cannot split {runtime}s Shot in Scene {scene.target_id} into "
-                    f"{cls.MIN_SHOT_SECONDS}–{cls.MAX_SHOT_SECONDS}s segments. "
+                    f"{cls.MIN_SHOT_SECONDS}-{cls.MAX_SHOT_SECONDS}s segments. "
                     "Revisit the Scene duration or Shot pacing."
                 )
             base, extra = divmod(runtime, count)
@@ -500,9 +497,7 @@ class SceneShotProposalAutomationService:
                     replace(
                         shot,
                         sequence_number=len(result) + 1,
-                        title=(
-                            shot.title if first else f"{shot.title} — continuation {index + 1}"
-                        ),
+                        title=(shot.title if first else f"{shot.title} — continuation {index + 1}"),
                         target_runtime_seconds=duration,
                         required_action=(
                             shot.required_action
@@ -526,15 +521,17 @@ class SceneShotProposalAutomationService:
                         shot_constraints=(
                             shot.shot_constraints
                             if first
-                            else tuple(
-                                constraint
-                                for constraint in shot.shot_constraints
-                                if not any(
-                                    event_word in constraint.casefold()
-                                    for event_word in ("pulse", "once", "repeat")
-                                )
+                            else (
+                                *(
+                                    constraint
+                                    for constraint in shot.shot_constraints
+                                    if not any(
+                                        event_word in constraint.casefold()
+                                        for event_word in ("pulse", "once", "repeat")
+                                    )
+                                ),
+                                "Do not replay the preceding Shot's one-time events.",
                             )
-                            + ("Do not replay the preceding Shot's one-time events.",)
                         ),
                         continuity_in=(
                             shot.continuity_in
@@ -560,7 +557,7 @@ class SceneShotProposalAutomationService:
             )
         diagnostic = (
             f"VSCS split {split_count} oversized Shot(s) to the "
-            f"{cls.MIN_SHOT_SECONDS}–{cls.MAX_SHOT_SECONDS}s generation policy. "
+            f"{cls.MIN_SHOT_SECONDS}-{cls.MAX_SHOT_SECONDS}s generation policy. "
             "Original actions are assigned to the first segment; continuations "
             "hold state without repeating events. Human review is required."
         )
