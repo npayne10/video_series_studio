@@ -355,8 +355,9 @@ def test_cap_source_grounding_detects_lost_console_display_relationship():
         asset_name="Engineering control room",
         asset_category="location",
         story_context=(
-            "A diagnostic console stands beside a workstation, "
-            "its blue display glowing steadily. A small indicator pulses once."
+            "A diagnostic console stands beside a workstation. "
+            "The diagnostic console's blue display glows steadily. "
+            "A small indicator pulses once."
         ),
     )
     incorrect = GeneratedCAPDraft(
@@ -413,8 +414,8 @@ def test_cap_grounding_quality_gate_requests_at_most_one_corrective_pass(monkeyp
         asset_name="Engineering control room",
         asset_category="location",
         story_context=(
-            "A diagnostic console stands beside a workstation, "
-            "its blue display glowing steadily."
+            "A diagnostic console stands beside a workstation. "
+            "The diagnostic console's blue display glows steadily."
         ),
     )
     first = GeneratedCAPDraft(
@@ -481,3 +482,24 @@ def test_cap_draft_generation_rechecks_original_story_text(monkeypatch):
     provider._generate_draft(request, CAPCanonAnalysis())
     assert request.story_context in observed["input_text"]
     assert "source-grounding cross-check" in observed["input_text"]
+
+
+def test_cap_ambiguous_pronoun_does_not_force_console_ownership():
+    from vscs.domain.caps.generation import CAPGenerationRequest
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    request = CAPGenerationRequest(
+        asset_id="STORY-LOC-001",
+        asset_name="Engineering control room",
+        asset_category="location",
+        story_context=(
+            "A diagnostic console stands beside a workstation, "
+            "its blue display glowing steadily."
+        ),
+    )
+    draft = GeneratedCAPDraft(
+        title="Engineering room",
+        canonical_description="Engineering room with a console and a workstation.",
+        visual_identity="The blue display's owner is uncertain.",
+    )
+    assert OpenAICAPGenerationProvider._source_relationship_issues(request, draft) == ()
