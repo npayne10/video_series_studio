@@ -39,7 +39,7 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [x] Story Automation actions inventory — code confirmed
 - [x] CAP batch read-only discovery and caching — prior operator UI verified
 - [x] Disk-backed Draft CAP durability — automated integration verified
-- [ ] Proposal review/accept/compile — awaiting current operator UI walkthrough
+- [x] Proposal review/accept/compile — UI verified for one Episode and one Scene, no blockers
 - [ ] Shot proposal review → governed Shot plan — awaiting current operator UI walkthrough
 - [ ] Actual desktop Draft CAP save/reopen — awaiting current operator UI walkthrough
 - [ ] Asset and reference canonical approval
@@ -47,7 +47,11 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [ ] Production Task / H3 readiness / scheduling
 - [ ] Generated media, Episode Assembly and Post-production
 - [ ] Project preferences, export, backup/restore, diagnostics
-- [ ] Complete Automation progress indicator implementation
+- [ ] Complete Automation progress indicator implementation — shared Planning/Shot runner committed, local acceptance pending; other actions outstanding
 - [ ] Context-sensitive Help integration in VSCS
 
 **No part of this index lifts the H3 live-execution hold or authorises paid provider work without explicit operator action.**
+
+## Latest operator checkpoint — 2026-11-04
+
+The `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` Episode and Scene both show Ready and 0:35 runtime, with 0:00 Scene budget remaining. Navigation relabelled in GitHub (Story → Episode Planner, top-level Production Packages) and approved by operator, awaiting local quality gates. Shared progress runner for Planning/Shot proposal generation committed, awaiting targeted and full regression. **Do not rerun Planning Proposals to test progress; it could overwrite accepted proposal records.** Run Shot Proposals once only after local validation, then inspect resulting proposal IDs/durations before human acceptance.
