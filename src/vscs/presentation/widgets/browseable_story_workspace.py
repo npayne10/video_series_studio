@@ -51,6 +51,13 @@ from .story_intelligence_dashboard import StoryIntelligenceDashboardDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
 
 
+class StoryAnalysisProgressDialog(QProgressDialog):
+    """Progress cannot be dismissed while a provider operation is in flight."""
+
+    def reject(self) -> None:
+        return
+
+
 class StoryAnalysisWorker(QThread):
     """Run Story Analysis outside the GUI thread while retaining the cache contract."""
 
@@ -335,7 +342,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         if self.analysis_cache is None:
             return False
         worker = StoryAnalysisWorker(self.analysis_cache, story, source_text, self)
-        progress = QProgressDialog(
+        progress = StoryAnalysisProgressDialog(
             "Story Analysis is running. The configured provider may incur a charge.",
             "",
             0,
