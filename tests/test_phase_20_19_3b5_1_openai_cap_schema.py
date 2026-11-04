@@ -168,9 +168,7 @@ def test_cap_identity_quality_rejects_single_shot_indicator_action():
     assert OpenAICAPGenerationProvider._identity_quality_issues(draft)
     corrected = draft.model_copy(
         update={
-            "continuity_rules": (
-                "Maintain the fixed console beside the workstation across shots.",
-            )
+            "continuity_rules": ("Maintain the fixed console beside the workstation across shots.",)
         }
     )
     assert OpenAICAPGenerationProvider._identity_quality_issues(corrected) == ()
@@ -178,9 +176,9 @@ def test_cap_identity_quality_rejects_single_shot_indicator_action():
 
 def test_cap_event_quality_guard_regenerates_draft_only_once(monkeypatch):
     from vscs.domain.caps.generation import (
+        CanonicalFactExtraction,
         CAPCanonAnalysis,
         CAPGenerationRequest,
-        CanonicalFactExtraction,
     )
     from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
 
@@ -229,9 +227,9 @@ def test_cap_unresolved_transient_after_retry_refuses_result(monkeypatch):
     import pytest
 
     from vscs.domain.caps.generation import (
+        CanonicalFactExtraction,
         CAPCanonAnalysis,
         CAPGenerationRequest,
-        CanonicalFactExtraction,
     )
     from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
     from vscs.infrastructure.ai.provider import AIProviderError
@@ -249,9 +247,7 @@ def test_cap_unresolved_transient_after_retry_refuses_result(monkeypatch):
         visual_identity="A fixed console.",
     )
     calls = []
-    monkeypatch.setattr(
-        provider, "_extract_facts", lambda _request: CanonicalFactExtraction()
-    )
+    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
     monkeypatch.setattr(
         provider,
         "_analyse_canon",
@@ -318,9 +314,9 @@ def test_cap_generation_instructions_separate_identity_from_shot_events(monkeypa
 
 def test_cap_stable_identity_needs_no_extra_paid_draft_pass(monkeypatch):
     from vscs.domain.caps.generation import (
+        CanonicalFactExtraction,
         CAPCanonAnalysis,
         CAPGenerationRequest,
-        CanonicalFactExtraction,
     )
     from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
 
@@ -341,9 +337,7 @@ def test_cap_stable_identity_needs_no_extra_paid_draft_pass(monkeypatch):
     monkeypatch.setattr(
         provider, "_extract_facts", lambda _request: CanonicalFactExtraction()
     )
-    monkeypatch.setattr(
-        provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis()
-    )
+    monkeypatch.setattr(provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis())
 
     def draft_stage(_request, _analysis, *, corrections=()):
         calls.append(corrections)
