@@ -104,3 +104,7 @@ The operator authorised a common progress system before generating B.5.22 Shot p
 - Existing Story Analysis progress remains its previously accepted implementation; further consolidation of both implementations is a distinct engineering task.
 
 **Revised audit statuses**: Planning Proposals and Shot Proposals = **implemented, unverified**. The other five proposal generation actions, asset resolution and Review Gaps remain **progress missing / code audit**. No global “all Automation tasks fixed” claim is justified.
+
+### Extension of the first implementation slice — additional four proposal handlers
+
+After confirming these handlers' normal dependencies are the project-backed JSON proposal store and provider boundary, the same shared runner was integrated with **Performance**, **Environment**, **Camera & Lighting**, and **Continuity** generation. All six generation handlers (Planning, Shot, Performance, Environment, Camera & Lighting, Continuity) are now **code-implemented / local validation pending**. **Resolve Assets** still calls through an AssetService/catalog dependency with potential SQLite thread affinity and has **not** been moved to the worker; **Review Gaps** also remains synchronous. Separate code and Qt acceptance is required before claiming the remaining actions fixed.
