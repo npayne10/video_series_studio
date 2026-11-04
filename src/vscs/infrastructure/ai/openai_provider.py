@@ -173,8 +173,12 @@ class OpenAICAPGenerationProvider:
         instructions = (
             "You are stage one of the VSCS CAP intelligence pipeline. Extract only explicit, "
             "asset-relevant facts from the supplied source. Do not infer design details. For each "
-            "fact, include concise source evidence and a confidence score. Put ambiguous, implied, "
-            "or incomplete claims in candidate_claims instead of facts."
+            "fact, include concise source evidence and a confidence score. Preserve clear "
+            "object ownership and spatial relationships: if the grammar identifies a display "
+            "as belonging to the console, do not treat that ownership as ambiguous. "
+            "Label one-time Shot events as temporal source facts, never fixed physical "
+            "characteristics. Put ambiguous, implied, or incomplete claims in "
+            "candidate_claims instead of facts."
         )
         return self._parse(
             instructions=instructions,
@@ -191,8 +195,11 @@ class OpenAICAPGenerationProvider:
         instructions = (
             "You are stage two of the VSCS CAP intelligence pipeline. Review the extracted facts "
             "against the original source. Retain only established canon. Move unsupported, "
-            "ambiguous, or conflicting material into uncertainties or contradictions. Do not add "
-            "new facts. Produce a concise source summary."
+            "ambiguous, or conflicting material into uncertainties or contradictions. Preserve "
+            "explicit ownership and fixed spatial relationships without inventing missing "
+            "geometry. Distinguish facts describing fixed asset identity from temporal "
+            "events that belong to a Shot; retain event facts as evidence, not permanent "
+            "identity constraints. Do not add new facts. Produce a concise source summary."
         )
         input_text = (
             f"Original request:\n{self._request_text(request)}\n\n"
