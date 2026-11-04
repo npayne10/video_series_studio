@@ -74,3 +74,59 @@ def assess_design_quality(
                 )
             )
     return tuple(issues)
+
+
+# B.5.25 — Guard source-grounding separately from creative design suitability.
+# Only check patterns for which source-independent event ownership or a missing
+# explicit spatial relation can be determined conservatively.
+_SHOT_EVENT = re.compile(
+    r"\b(?:indicator|light|display|screen)\b.{0,100}"
+    r"\b(?:pulses?|flashes?|blinks?)\s+(?:exactly\s+)?once\b"
+    r"|\b(?:after|before)\s+the\s+(?:indicator|light|display)\s+"
+    r"(?:pulses?|flashes?|blinks?)\b"
+    r"|\b(?:indicator|light|display)\b.{0,100}"
+    r"\b(?:pulses?|flashes?|blinks?)\s+and\s+(?:then\s+)?returns?\b",
+    re.IGNORECASE | re.DOTALL,
+)
+_INDICATOR_BY_DOOR = re.compile(
+    r"\b(?:small\s+)?indicator\b.{0,90}\b(?:beside|by|next to|near|at|adjacent to)"
+    r"\s+(?:the\s+|a\s+)?(?:doorway|door|hatch|entrance)\b"
+    r"|\b(?:doorway|door|hatch|entrance)\b.{0,90}"
+    r"\b(?:beside|by|next to|near|at|adjacent to)\s+(?:the\s+|a\s+)?"
+    r"(?:small\s+)?indicator\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def assess_design_grounding(
+    story_context: str, items: tuple[ProposedDesignField, ...]
+) -> tuple[DesignQualityIssue, ...]:
+    """Flag unsupported permanence/placement, without promoting creative proposals to canon.
+
+    The Story is a grounding boundary, not a mandate to copy temporal Shot
+    events into permanent asset design. Explicitly sourced door placement can
+    be retained; otherwise the indicator's precise mounting is left open.
+    """
+    issues: list[DesignQualityIssue] = []
+    for item in items:
+        value = item.proposed_value
+        if _SHOT_EVENT.search(value):
+            issues.append(
+                DesignQualityIssue(
+                    item.field,
+                    "transient_shot_event",
+                    "One-time pulses, flashes and their timing belong in Shot plans, "
+                    "not permanent CAP design details.",
+                )
+            )
+        if _INDICATOR_BY_DOOR.search(value) and not _INDICATOR_BY_DOOR.search(story_context):
+            issues.append(
+                DesignQualityIssue(
+                    item.field,
+                    "unsupported_indicator_placement",
+                    "A named indicator's placement beside a door is not supported "
+                    "by the approved Story. Leave its precise attachment unresolved; "
+                    "creative doorway design may still be proposed separately.",
+                )
+            )
+    return tuple(issues)
