@@ -23,6 +23,7 @@ from vscs.application.caps.structured_specification import (
 )
 from vscs.domain.assets.models import Asset, AssetCategory
 from vscs.domain.caps.generation import CAPGenerationRequest, GeneratedCAPDraft
+from vscs.infrastructure.ai.provider import CAPGenerationProvider
 
 _CATEGORY_KEYS: dict[AssetCategory, str] = {
     AssetCategory.CHARACTER: "anatomy",
@@ -135,7 +136,7 @@ class StoryCAPSpecificationService:
 
     @staticmethod
     def generate_from_snapshot(
-        asset: Asset, approved_story_context: str, provider: object
+        asset: Asset, approved_story_context: str, provider: CAPGenerationProvider
     ) -> StoryCAPProposal:
         """Provider-only generation from an immutable snapshot, safe for a worker thread.
 
@@ -143,12 +144,8 @@ class StoryCAPSpecificationService:
         It returns advisory material only; governance, cache and persistence
         remain with the UI-thread caller.
         """
-        from vscs.infrastructure.ai.provider import CAPGenerationProvider
-
         if not approved_story_context.strip():
             raise ValueError("Approved Story context is required")
-        if not isinstance(provider, CAPGenerationProvider):
-            raise ValueError("Configured CAP provider is unavailable")
         request = CAPGenerationRequest(
             asset_id=asset.asset_id,
             asset_name=asset.name,
