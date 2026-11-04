@@ -149,7 +149,8 @@ def test_invalid_generated_shot_is_not_saved_to_proposal_repository():
     scene = _scene(22)
 
     class Store:
-        saved = []
+        def __init__(self):
+            self.saved = []
 
         def list_proposals(self):
             return (scene,)
