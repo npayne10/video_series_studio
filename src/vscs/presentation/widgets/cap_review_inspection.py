@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QFormLayout,
     QHeaderView,
+    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QTableWidget,
@@ -107,20 +108,57 @@ class CAPReviewedSpecificationPanel(QWidget):
         summary.addRow("Context fingerprint", self._wrapped(self.review.context_fingerprint))
         layout.addLayout(summary)
 
-        self.fields_table = QTableWidget(0, 5)
+        self.fields_table = QTableWidget(0, 3)
         self.fields_table.setObjectName("capReviewedFieldDecisions")
-        self.fields_table.setHorizontalHeaderLabels(
-            ("Field", "Decision", "Persisted value", "Proposed value", "Origin / rationale")
-        )
+        self.fields_table.setHorizontalHeaderLabels(("Field", "Decision", "Saved?"))
         self.fields_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.fields_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.fields_table.setWordWrap(True)
+        self.fields_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.fields_table.setWordWrap(False)
         self.fields_table.verticalHeader().setVisible(False)
         self.fields_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
+            0, QHeaderView.ResizeMode.Stretch
         )
-        self.fields_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.fields_table.setMinimumHeight(230)
+        self.fields_table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.fields_table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.fields_table.verticalHeader().setDefaultSectionSize(28)
+        self.fields_table.setMinimumWidth(210)
+        self.fields_table.setMinimumHeight(220)
+
+        self.final_value_view = QPlainTextEdit()
+        self.final_value_view.setObjectName("capReviewedFinalValue")
+        self.proposed_value_view = QPlainTextEdit()
+        self.proposed_value_view.setObjectName("capReviewedProposedValue")
+        self.review_reason_view = QPlainTextEdit()
+        self.review_reason_view.setObjectName("capReviewedOriginRationale")
+        for view in (
+            self.final_value_view,
+            self.proposed_value_view,
+            self.review_reason_view,
+        ):
+            view.setReadOnly(True)
+            view.setMinimumHeight(75)
+
+        detail_container = QWidget()
+        detail_layout = QVBoxLayout(detail_container)
+        for heading, view in (
+            ("Persisted final value", self.final_value_view),
+            ("Original AI proposal", self.proposed_value_view),
+            ("Origin, evidence and review rationale", self.review_reason_view),
+        ):
+            label = QLabel(heading)
+            label.setStyleSheet("font-weight: 600;")
+            detail_layout.addWidget(label)
+            detail_layout.addWidget(view)
+
+        decisions_layout = QHBoxLayout()
+        decisions_layout.addWidget(self.fields_table, 2)
+        decisions_layout.addWidget(detail_container, 3)
+        layout.addLayout(decisions_layout)
 
         attributes = self.specification.canonical_attributes
         for review_field in self.review.fields:
@@ -129,25 +167,41 @@ class CAPReviewedSpecificationPanel(QWidget):
             cells = (
                 review_field.field,
                 review_field.decision.value.title(),
-                attributes.get(review_field.field, "—"),
-                review_field.proposed_value or "—",
-                " | ".join(
-                    value
-                    for value in (
-                        review_field.origin.value,
-                        review_field.rationale,
-                        review_field.evidence,
-                    )
-                    if value
-                ),
+                "Yes" if review_field.field in attributes else "No",
             )
             for column, value in enumerate(cells):
                 item = QTableWidgetItem(value)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 item.setToolTip(value)
                 self.fields_table.setItem(row, column, item)
-            self.fields_table.resizeRowToContents(row)
-        layout.addWidget(self.fields_table)
+        self.fields_table.currentCellChanged.connect(self._show_decision)
+        if self.fields_table.rowCount():
+            self.fields_table.setCurrentCell(0, 0)
+
+    def _show_decision(
+        self, row: int, _column: int, _previous_row: int, _previous_column: int
+    ) -> None:
+        if self.review is None or self.specification is None:
+            return
+        if row < 0 or row >= len(self.review.fields):
+            return
+        field = self.review.fields[row]
+        self.final_value_view.setPlainText(
+            self.specification.canonical_attributes.get(field.field, "(not persisted)")
+        )
+        self.proposed_value_view.setPlainText(field.proposed_value or "(none)")
+        self.review_reason_view.setPlainText(
+            "\\n".join(
+                part
+                for part in (
+                    f"Decision: {field.decision.value.title()}",
+                    f"Origin: {field.origin.value}",
+                    f"Rationale: {field.rationale}" if field.rationale else "",
+                    f"Evidence: {field.evidence}" if field.evidence else "",
+                )
+                if part
+            )
+        )
 
         for heading, text in (
             ("Design intent", self.specification.design_intent),
