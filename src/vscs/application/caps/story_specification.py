@@ -202,9 +202,7 @@ class StoryCAPSpecificationService:
             if grounding_issues:
                 raise ValueError(
                     "Design-expansion grounding must be corrected before review: "
-                    + "; ".join(
-                        f"{issue.field}: {issue.code}" for issue in grounding_issues
-                    )
+                    + "; ".join(f"{issue.field}: {issue.code}" for issue in grounding_issues)
                 )
         return StoryCAPProposal(
             proposed,
