@@ -111,12 +111,18 @@ class OpenAICAPGenerationProvider:
             extraction = self._extract_facts(request)
             analysis = self._analyse_canon(request, extraction)
             draft = self._generate_draft(request, analysis)
-            issues = self._identity_quality_issues(draft)
+            issues = (
+                *self._identity_quality_issues(draft),
+                *self._source_relationship_issues(request, draft),
+            )
             if issues:
                 # One bounded corrective draft call, reusing the same verified facts.
                 # Never silently accept a recurring Shot-event leak into asset identity.
                 draft = self._generate_draft(request, analysis, corrections=issues)
-                remaining = self._identity_quality_issues(draft)
+                remaining = (
+                    *self._identity_quality_issues(draft),
+                    *self._source_relationship_issues(request, draft),
+                )
                 if remaining:
                     raise AIProviderError(
                         "CAP identity quality gate failed after one corrective generation: "
@@ -239,6 +245,41 @@ class OpenAICAPGenerationProvider:
             )
         return ()
 
+    @staticmethod
+    def _source_relationship_issues(
+        request: CAPGenerationRequest, draft: GeneratedCAPDraft
+    ) -> tuple[str, ...]:
+        """Flag an avoidable loss of a source-linked relationship for review.
+
+        A possible grammatical attachment is *not* itself promoted to canon.
+        The corrective model must inspect the original sentence and leave
+        genuinely ambiguous relationships unresolved.
+        """
+        source = request.story_context.lower()
+        identity = " ".join(
+            (draft.canonical_description, draft.visual_identity, *draft.continuity_rules)
+        ).lower()
+        source_links_display = bool(
+            re.search(
+                r"\\b(?:diagnostic\\s+)?console\\b.{0,160}\\bits\\s+blue\\s+display\\b",
+                source,
+                flags=re.DOTALL,
+            )
+            or re.search(r"\\bconsole['’]s\\s+blue\\s+display\\b", source)
+        )
+        if source_links_display and re.search(
+            r"\\b(?:display['’]s\\s+)?ownership\\s+(?:is\\s+)?unspecified\\b"
+            r"|\\btheir\\s+ownership\\b",
+            identity,
+        ):
+            return (
+                "The source links the blue display to a console by possessive "
+                "wording, but the Draft discards that link. Re-read the original "
+                "source grammar; preserve a supported ownership relationship, "
+                "but do not invent the small indicator's precise attachment.",
+            )
+        return ()
+
     def _generate_draft(
         self,
         request: CAPGenerationRequest,
@@ -277,6 +318,10 @@ class OpenAICAPGenerationProvider:
             f"Asset name: {request.asset_name}\n"
             f"Category: {request.asset_category}\n\n"
             f"Approved canon analysis:\n{analysis.model_dump_json(indent=2)}\n\n"
+            f"Original approved Story text for source-grounding cross-check:\n"
+            f"{request.story_context}\n\n"
+            "Use the source only to verify an extracted relationship or resolve an "
+            "apparent loss of relationship; never infer new physical design facts. "
             "The analysis includes source facts and may include transient narrative events; "
             "do not promote those events into permanent asset identity or CAP continuity rules.\n"
         )
