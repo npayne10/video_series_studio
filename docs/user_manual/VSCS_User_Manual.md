@@ -247,3 +247,15 @@ Maintain this document alongside UI code in the same GitHub development branch. 
 ### 5.4 Progress runner expansion — code committed, operator acceptance pending
 
 The shared `AutomationProgressRunner` also wraps **Performance Proposals**, **Environment Proposals**, **Camera & Lighting Proposals**, and **Continuity Proposals**. The existing generator services, output proposals and authority boundaries are unchanged. The indeterminate non-cancellable UI is common to these six actions. **Resolve Assets** is deliberately excluded pending a thread-safe SQLite service review. **Review Gaps** and other major production modules remain outside this phase. Do not claim the changes are complete until the local Qt, Ruff, Mypy and full pytest gates and representative UI screenshots pass.
+
+## 11. Shot-duration generation policy — B.5.23 (implementation committed, not accepted)
+
+**Observed issue (B.5.22 disposable UI):** The approved 35-second Scene `EP-001-SCN-001` generated one **35-second** Shot proposal (`AUT-SHOT-7B2D66C11E48`). This was correctly withheld from human review/acceptance/compilation. The shared Automation Progress dialog and proposal completion feedback were verified separately.
+
+**Corrected existing Scene → Shot pipeline:** After provider generation and runtime-budget fitting, the new `SceneShotProposalAutomationService._enforce_shot_duration_policy` requires every Shot to last **15–20 seconds** and the full Scene runtime to be accounted for. One 35-second Shot becomes **18 + 17 seconds**, with sequential IDs `...SHT-001` and `...SHT-002`. One-time actions such as the indicator pulse belong to the first segment; the second holds state with an explicit no-replay instruction. Impossible durations are blocked before proposal persistence rather than producing invalid Shot authority.
+
+**Current state:** Source/tests and engineering notes committed in GitHub; local pytest/Ruff/Mypy and operator re-generation still pending. The previous 35-second unaccepted proposal should remain in the disposable project until the new implementation passes validation.
+
+**Operator sequence after passing tests:** (1) restart VSCS (2) open disposable `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` (3) select approved `STORY-001` (4) run **Story → Automation → Shot Proposals** **once** (5) confirm progress and **2** proposal results (6) inspect runtimes, provenance and event uniqueness in **Story → Proposal Review** **before** reviewing/accepting/compiling. Do not rerun Planning Proposals, change the governed 35-second Scene or modify project JSON.
+
+Further technical details and test boundaries: [Phase B.5.23 engineering acceptance](../engineering/Phase_20_19_3B5_23_Shot_Duration_Governance.md).
