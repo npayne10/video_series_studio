@@ -263,7 +263,10 @@ class OpenAICAPGenerationProvider:
         # possessive wording establishes ownership for this conservative gate.
         source_links_display = bool(
             re.search(r"\bconsole['’]s\s+blue\s+display\b", source)
-            or re.search(r"\bblue\s+display\s+of\s+the\s+(?:diagnostic\s+)?console\b", source)
+            or re.search(
+                r"\bblue\s+display\s+of\s+the\s+(?:diagnostic\s+)?console\b",
+                source,
+            )
         )
         if source_links_display and re.search(
             r"\b(?:display['’]s\s+)?ownership\s+(?:is\s+)?unspecified\b"
