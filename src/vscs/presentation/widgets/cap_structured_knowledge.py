@@ -239,6 +239,19 @@ def install_structured_cap_editor() -> None:
     def structured_update_value(self: Any):
         value = original_update_value(self)
         knowledge = _read_knowledge(self)
+        # The general editor is not an approval/review workflow. Preserve
+        # governed CAP specification and review records even if the editable
+        # freeform metadata table is changed or its rows are removed.
+        from vscs.application.caps.design_completion import DESIGN_REVIEW_KEY
+        from vscs.application.caps.structured_specification import SPECIFICATION_METADATA_KEY
+
+        metadata = dict(knowledge.production_metadata)
+        if self.profile is not None:
+            for key in (SPECIFICATION_METADATA_KEY, DESIGN_REVIEW_KEY):
+                if key in self.profile.production_metadata:
+                    metadata[key] = self.profile.production_metadata[key]
+                else:
+                    metadata.pop(key, None)
         return value.model_copy(
             update={
                 "structured_schema_version": knowledge.schema_version,
@@ -248,7 +261,7 @@ def install_structured_cap_editor() -> None:
                 "semantic_tags": knowledge.semantic_tags,
                 "production_classifications": knowledge.production_classifications,
                 "behaviour_references": knowledge.behaviour_references,
-                "production_metadata": knowledge.production_metadata,
+                "production_metadata": metadata,
             }
         )
 
