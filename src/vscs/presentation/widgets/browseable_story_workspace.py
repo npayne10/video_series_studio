@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter
 from typing import ClassVar
+
+from PySide6.QtCore import QThread, QTimer, Signal
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -11,6 +14,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QMessageBox,
+    QProgressDialog,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -44,6 +48,33 @@ from .story_analysis_acceptance import StoryAnalysisAcceptanceDialog
 from .story_analysis_workspace import StoryAnalysisWorkspaceDialog
 from .story_intelligence_dashboard import StoryIntelligenceDashboardDialog
 from .story_workspace import StoryEditorDialog, StoryWorkspaceWidget
+
+
+class StoryAnalysisWorker(QThread):
+    """Run Story Analysis outside the GUI thread while retaining the cache contract."""
+
+    completed = Signal(object)
+    failed = Signal(str)
+
+    def __init__(
+        self,
+        cache: StoryAnalysisCacheService,
+        story: StoryRecord,
+        source_text: str,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.cache = cache
+        self.story = story
+        self.source_text = source_text
+
+    def run(self) -> None:
+        try:
+            result = self.cache.analyze(self.story, self.source_text)
+        except Exception as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.completed.emit(result)
 
 
 class BrowseableStoryEditorDialog(StoryEditorDialog):
@@ -299,12 +330,58 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         self.refresh()
 
     def _run_analysis(self, story: StoryRecord, source_text: str) -> bool:
+        """Expose indeterminate progress while analysis executes in a worker thread."""
         if self.analysis_cache is None:
             return False
-        try:
-            report = self.analysis_cache.analyze(story, source_text)
-        except StoryAnalysisCacheError as exc:
-            self._error(str(exc))
+        worker = StoryAnalysisWorker(self.analysis_cache, story, source_text, self)
+        progress = QProgressDialog(
+            "Story Analysis is running. The configured provider may incur a charge.",
+            "",
+            0,
+            0,
+            self,
+        )
+        progress.setObjectName("storyAnalysisProgress")
+        progress.setWindowTitle("Story Analysis — Running")
+        progress.setCancelButton(None)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(False)
+        progress.setAutoReset(False)
+        started = perf_counter()
+        heartbeat = QTimer(progress)
+        heartbeat.setInterval(1000)
+
+        def update_elapsed() -> None:
+            elapsed = int(perf_counter() - started)
+            progress.setLabelText(
+                "Story Analysis is running. The configured provider may incur a charge.\n"
+                f"Elapsed: {elapsed} seconds. The application remains responsive."
+            )
+
+        heartbeat.timeout.connect(update_elapsed)
+        outcome: dict[str, object] = {}
+
+        def succeeded(report: object) -> None:
+            outcome["report"] = report
+
+        def failed(message: str) -> None:
+            outcome["error"] = message
+
+        worker.completed.connect(succeeded)
+        worker.failed.connect(failed)
+        worker.finished.connect(progress.accept)
+        update_elapsed()
+        heartbeat.start()
+        worker.start()
+        progress.exec()
+        heartbeat.stop()
+        worker.wait()
+        if "error" in outcome:
+            self._error(f"Story Analysis failed: {outcome['error']}")
+            return False
+        report = outcome.get("report")
+        if report is None:
+            self._error("Story Analysis ended without a result.")
             return False
         if report.status.value != "completed":
             self._error("\n".join(report.diagnostics) or "Story Analysis failed.")
