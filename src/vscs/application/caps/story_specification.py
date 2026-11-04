@@ -9,7 +9,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from vscs.application.caps.design_quality import DesignQualityIssue, assess_design_quality
+from vscs.application.caps.design_quality import (
+    DesignQualityIssue,
+    assess_design_grounding,
+    assess_design_quality,
+)
 from vscs.application.caps.detail_expansion import CanonicalDetailExpansion, expand_details
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.provider_design_expansion import (
@@ -194,6 +198,14 @@ class StoryCAPSpecificationService:
             response = provider.expand_cap_design(proposed, approved_story_context)
             verified = validate_design_expansion(proposed, response)
             suggestions = tuple(verified.values())
+            grounding_issues = assess_design_grounding(approved_story_context, suggestions)
+            if grounding_issues:
+                raise ValueError(
+                    "Design-expansion grounding must be corrected before review: "
+                    + "; ".join(
+                        f"{issue.field}: {issue.code}" for issue in grounding_issues
+                    )
+                )
         return StoryCAPProposal(
             proposed,
             key,
