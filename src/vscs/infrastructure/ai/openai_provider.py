@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+import re
 from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, Field
@@ -109,7 +110,19 @@ class OpenAICAPGenerationProvider:
         try:
             extraction = self._extract_facts(request)
             analysis = self._analyse_canon(request, extraction)
-            return self._generate_draft(request, analysis)
+            draft = self._generate_draft(request, analysis)
+            issues = self._identity_quality_issues(draft)
+            if issues:
+                # One bounded corrective draft call, reusing the same verified facts.
+                # Never silently accept a recurring Shot-event leak into asset identity.
+                draft = self._generate_draft(request, analysis, corrections=issues)
+                remaining = self._identity_quality_issues(draft)
+                if remaining:
+                    raise AIProviderError(
+                        "CAP identity quality gate failed after one corrective generation: "
+                        + "; ".join(remaining)
+                    )
+            return draft
         except AIProviderError:
             raise
         except Exception as exc:
@@ -192,10 +205,39 @@ class OpenAICAPGenerationProvider:
             stage="canon analysis",
         )
 
+    @staticmethod
+    def _identity_quality_issues(draft: GeneratedCAPDraft) -> tuple[str, ...]:
+        """Detect clear transient Shot events leaking into persistent CAP identity.
+
+        This is deliberately conservative: unresolved ambiguity is left for review,
+        not rewritten as canon. The full source facts remain available as evidence.
+        """
+        identity_text = " ".join(
+            (
+                draft.canonical_description,
+                draft.visual_identity,
+                *draft.continuity_rules,
+            )
+        ).lower()
+        transient_patterns = (
+            r"\\bpuls(?:es|e|ed|ing)\\s+(?:exactly\\s+)?once\\b",
+            r"\\bindicator\\s+(?:then\\s+)?returns?\\s+to\\s+(?:a\\s+)?steady\\s+glow\\b",
+            r"\\bafter\\s+the\\s+indicator\\s+pulse\\b",
+            r"\\bbefore\\s+the\\s+indicator\\s+pulse\\b",
+        )
+        if any(re.search(pattern, identity_text) for pattern in transient_patterns):
+            return (
+                "Shot-specific indicator pulse or sequence appears in persistent CAP identity "
+                "or continuity rules. Move it to narrative evidence only.",
+            )
+        return ()
+
     def _generate_draft(
         self,
         request: CAPGenerationRequest,
         analysis: CAPCanonAnalysis,
+        *,
+        corrections: tuple[str, ...] = (),
     ) -> GeneratedCAPDraft:
         instructions = (
             "You are stage three of the VSCS CAP intelligence pipeline. Create a production-ready "
@@ -206,7 +248,19 @@ class OpenAICAPGenerationProvider:
             "production_classifications, behaviour_references, and production_metadata key/value entries only when "
             "they are directly supported by the approved canonical facts. Functional capabilities "
             "must describe what the asset can actually do in production, not visual adjectives. "
-            "Continuity rules and prohibited variations must be explicit production constraints. "
+            "Asset identity and continuity rules describe PERSISTENT, CAMERA-INDEPENDENT "
+            "physical characteristics, fixed relationships and constraints across shots. "
+            "Single-occurrence actions, transitions, timing, lighting changes, dialogue and "
+            "other Shot events remain in source evidence/production notes, NEVER in "
+            "canonical_description, visual_identity, or continuity_rules. For example, "
+            "'an indicator pulses once then returns to steady' is a Shot action; the "
+            "CAP may describe only the presence and fixed placement of that indicator. "
+            "Continuity rules and prohibited variations must govern stable identity, "
+            "not dictate which Shot contains an action. Preserve unambiguous ownership "
+            "and pronoun references in the source (e.g. a console's blue display belongs "
+            "to the console), never invent a new ambiguity. "
+            "Do not invent dimensions, materials or geometry. Leave unresolved facts "
+            "unresolved; proposed design details require separate human review. "
             "Leave a structured collection empty rather than inventing unsupported information. "
             "Score confidence for every draft section and overall, lowering confidence when facts "
             "are sparse, indirect, or incomplete."
@@ -215,7 +269,15 @@ class OpenAICAPGenerationProvider:
             f"Asset ID: {request.asset_id}\n"
             f"Asset name: {request.asset_name}\n"
             f"Category: {request.asset_category}\n\n"
-            f"Approved canon analysis:\n{analysis.model_dump_json(indent=2)}"
+            f"Approved canon analysis:\n{analysis.model_dump_json(indent=2)}\n\n"
+            "The analysis includes source facts and may include transient narrative events; "
+            "do not promote those events into permanent asset identity or CAP continuity rules.\n"
+            + (
+                "CORRECT THE PREVIOUS DRAFT QUALITY ISSUES:\n"
+                + "\n".join(f"- {issue}" for issue in corrections)
+                if corrections
+                else ""
+            )
         )
         wire_draft = self._parse(
             instructions=instructions,
