@@ -256,9 +256,7 @@ def install_structured_cap_editor() -> None:
         value = original_update_value(self)
         knowledge = _read_knowledge(self)
         # The generic editor is not an authority-changing review workflow.
-        existing_metadata = (
-            self.profile.production_metadata if self.profile is not None else {}
-        )
+        existing_metadata = self.profile.production_metadata if self.profile is not None else {}
         metadata = preserve_governed_review_metadata(
             existing_metadata, knowledge.production_metadata
         )
