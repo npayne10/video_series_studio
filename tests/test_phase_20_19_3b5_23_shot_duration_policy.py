@@ -164,11 +164,11 @@ def test_invalid_generated_shot_is_not_saved_to_proposal_repository():
         model_name = "test-model"
 
         def propose_scene_shots(self, **_kwargs):
-            return SceneShotProposalDraft(shots=(_shot(22),))
+            raise AssertionError("Impossible Scene must be rejected before the provider call")
 
     store = Store()
     service = SceneShotProposalAutomationService(Provider(), store)
-    with pytest.raises(ValueError, match="Cannot split"):
+    with pytest.raises(ValueError, match="unpartitionable"):
         service.generate(
             story_id="STORY-001",
             source_text="A short scene.",
