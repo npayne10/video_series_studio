@@ -374,7 +374,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         worker.finished.connect(progress.accept)
         update_elapsed()
         heartbeat.start()
-        worker.start()
+        QTimer.singleShot(0, worker.start)
         progress.exec()
         heartbeat.stop()
         worker.wait()
