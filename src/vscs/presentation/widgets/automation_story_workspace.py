@@ -224,9 +224,7 @@ class AutomationStoryWorkspaceWidget(BrowseableStoryWorkspaceWidget):
             )
 
         try:
-            proposals = self._run_proposal_operation(
-                "Planning Proposals", story.story_id, generate
-            )
+            proposals = self._run_proposal_operation("Planning Proposals", story.story_id, generate)
         except (AutomationOperationError, AIProviderError, ValueError) as exc:
             self._error(str(exc))
             return
