@@ -68,7 +68,8 @@ def test_story_navigation_is_hierarchical_and_complete(tmp_path: Path, qtbot) ->
         _child(canonical_library, "Bind Shot Assets…")
 
         _child(story, "Proposal Review")
-        _child(story, "Production Planning")
+        _child(story, "Episode Planner")
+        _top(tree, "Production Packages")
         _child(story, "Integration & Functional Acceptance…")
 
 
