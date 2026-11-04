@@ -178,31 +178,6 @@ class CAPReviewedSpecificationPanel(QWidget):
         if self.fields_table.rowCount():
             self.fields_table.setCurrentCell(0, 0)
 
-    def _show_decision(
-        self, row: int, _column: int, _previous_row: int, _previous_column: int
-    ) -> None:
-        if self.review is None or self.specification is None:
-            return
-        if row < 0 or row >= len(self.review.fields):
-            return
-        field = self.review.fields[row]
-        self.final_value_view.setPlainText(
-            self.specification.canonical_attributes.get(field.field, "(not persisted)")
-        )
-        self.proposed_value_view.setPlainText(field.proposed_value or "(none)")
-        self.review_reason_view.setPlainText(
-            "\\n".join(
-                part
-                for part in (
-                    f"Decision: {field.decision.value.title()}",
-                    f"Origin: {field.origin.value}",
-                    f"Rationale: {field.rationale}" if field.rationale else "",
-                    f"Evidence: {field.evidence}" if field.evidence else "",
-                )
-                if part
-            )
-        )
-
         for heading, text in (
             ("Design intent", self.specification.design_intent),
             ("Reviewed master reference prompt (unapproved)", self.specification.master_prompt),
@@ -217,6 +192,32 @@ class CAPReviewedSpecificationPanel(QWidget):
             field.setPlainText(text or "(none)")
             field.setMaximumHeight(105)
             layout.addWidget(field)
+
+    def _show_decision(
+        self, row: int, _column: int, _previous_row: int, _previous_column: int
+    ) -> None:
+        if self.review is None or self.specification is None:
+            return
+        if row < 0 or row >= len(self.review.fields):
+            return
+        field = self.review.fields[row]
+        self.final_value_view.setPlainText(
+            self.specification.canonical_attributes.get(field.field, "(not persisted)")
+        )
+        self.proposed_value_view.setPlainText(field.proposed_value or "(none)")
+        self.review_reason_view.setPlainText(
+            "\n".join(
+                part
+                for part in (
+                    f"Decision: {field.decision.value.title()}",
+                    f"Origin: {field.origin.value}",
+                    f"Rationale: {field.rationale}" if field.rationale else "",
+                    f"Evidence: {field.evidence}" if field.evidence else "",
+                )
+                if part
+            )
+        )
+
 
     @staticmethod
     def _wrapped(value: str) -> QLabel:
