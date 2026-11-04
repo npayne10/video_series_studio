@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFormLayout,
@@ -54,12 +55,22 @@ def load_review_snapshot(
                 "context_fingerprint": audit.get("context_fingerprint", ""),
             }
         )
+        # The reviewed master prompt is rebuilt after apply_review generated
+        # result_fingerprint; therefore the audit hash does not identify the
+        # final serialized CAP. Validate persisted field decisions directly.
         if (
-            audit.get("result_fingerprint") != spec.fingerprint()
+            review.asset_id != spec.asset_id
+            or not audit.get("result_fingerprint")
             or audit.get("canon_approved") is not False
             or audit.get("image_authorized") is not False
         ):
-            raise ValueError("Stored review fingerprint or authority mismatch")
+            raise ValueError("Stored review identity or authority mismatch")
+        for field in review.fields:
+            actual = spec.canonical_attributes.get(field.field)
+            if field.decision.value in {"accept", "edit"} and actual != field.final_value:
+                raise ValueError(f"Reviewed field {field.field} does not match saved CAP")
+            if field.decision.value in {"reject", "defer"} and actual is not None:
+                raise ValueError(f"Deferred/rejected field {field.field} became canonical")
     except (ValueError, TypeError, KeyError) as exc:
         return None, None, f"Stored CAP review cannot be verified: {exc}"
     return spec, review, "Stored reviewed Draft CAP — no Canon or image approval."
@@ -154,7 +165,5 @@ class CAPReviewedSpecificationPanel(QWidget):
     def _wrapped(value: str) -> QLabel:
         label = QLabel(value or "—")
         label.setWordWrap(True)
-        label.setTextInteractionFlags(
-            label.textInteractionFlags() | label.TextInteractionFlag.TextSelectableByMouse
-        )
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         return label
