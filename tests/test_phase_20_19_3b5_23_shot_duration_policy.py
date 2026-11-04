@@ -92,7 +92,7 @@ def test_one_time_indicator_pulse_is_assigned_to_one_shot_only():
 
 @pytest.mark.parametrize("seconds", [1, 14, 21, 22, 29, 41, 44])
 def test_impossible_duration_is_rejected_not_silently_approved(seconds):
-    with pytest.raises(ValueError, match="minimum|Cannot split"):
+    with pytest.raises(ValueError, match=r"minimum|Cannot split"):
         _transform(seconds)
 
 
