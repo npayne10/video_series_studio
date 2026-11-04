@@ -119,14 +119,10 @@ def test_settings_model_refresh_is_nonblocking(qtbot, monkeypatch):
         assert release.wait(5)
         return ("gpt-6-luna", "gpt-6.1-terra")
 
-    monkeypatch.setattr(
-        settings_dialog.OpenAICAPGenerationProvider, "list_available_models", fetch
-    )
+    monkeypatch.setattr(settings_dialog.OpenAICAPGenerationProvider, "list_available_models", fetch)
     dialog.refresh_openai_models_button.click()
     qtbot.waitUntil(started.is_set, timeout=3000)
-    assert not dialog._settings_buttons.button(
-        QDialogButtonBox.StandardButton.Save
-    ).isEnabled()
+    assert not dialog._settings_buttons.button(QDialogButtonBox.StandardButton.Save).isEnabled()
     release.set()
     qtbot.waitUntil(lambda: dialog._model_discovery is None, timeout=5000)
     assert dialog.openai_model.count() == 2
