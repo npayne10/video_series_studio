@@ -416,12 +416,15 @@ class StoryCAPBatchDialog(QDialog):
                 ):
                     raise StoryBatchError("Governed Shot context changed during CAP generation")
                 latest_asset = self.generator.assets.get(asset_id)
-                if cache_fingerprint(
-                    latest_asset.asset_id,
-                    latest_asset.name,
-                    latest_asset.category.value,
-                    latest_asset.description,
-                ) != asset_fingerprint:
+                if (
+                    cache_fingerprint(
+                        latest_asset.asset_id,
+                        latest_asset.name,
+                        latest_asset.category.value,
+                        latest_asset.description,
+                    )
+                    != asset_fingerprint
+                ):
                     raise StoryBatchError("Asset changed during CAP generation")
                 if provider_cache_fingerprint(self.generator.provider) != provider_fingerprint:
                     raise StoryBatchError("CAP provider changed during generation")
