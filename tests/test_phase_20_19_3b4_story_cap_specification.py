@@ -57,3 +57,72 @@ def test_save_draft_rejects_existing_specification():
     with pytest.raises(ValueError, match="revision review"):
         service.save_reviewed(proposal)
     specs.save_draft.assert_not_called()
+
+
+def test_b525_other_providers_cannot_cache_ungrounded_design_suggestions():
+    from vscs.application.caps.provider_design_expansion import (
+        DesignExpansionResponse,
+        ProposedDesignField,
+    )
+
+    asset = SimpleNamespace(
+        asset_id="STORY-LOC-001", name="Engineering control room", category=AssetCategory.LOCATION
+    )
+    draft = GeneratedCAPDraft(
+        title="Engineering control room",
+        visual_identity="Diagnostic console beside the workstation.",
+        canonical_description="Engineering control room on an unmanned ship.",
+    )
+    provider = SimpleNamespace(
+        expand_cap_design=lambda _spec, _story: DesignExpansionResponse(
+            fields=(
+                ProposedDesignField(
+                    field="lighting",
+                    proposed_value="A small indicator pulses once before returning to steady glow.",
+                    rationale="Shot event",
+                ),
+            )
+        )
+    )
+    with pytest.raises(ValueError, match="Design-expansion grounding must be corrected"):
+        StoryCAPSpecificationService.proposal_from_draft(
+            asset,
+            "The indicator pulses once in the approved Shot.",
+            draft,
+            provider,
+        )
+
+
+def test_b525_other_providers_can_propose_permanent_design_choices():
+    from vscs.application.caps.provider_design_expansion import (
+        DesignExpansionResponse,
+        ProposedDesignField,
+    )
+
+    asset = SimpleNamespace(
+        asset_id="STORY-LOC-001", name="Engineering control room", category=AssetCategory.LOCATION
+    )
+    draft = GeneratedCAPDraft(
+        title="Engineering control room",
+        visual_identity="Diagnostic console beside the workstation.",
+        canonical_description="Engineering control room on an unmanned ship.",
+    )
+    provider = SimpleNamespace(
+        expand_cap_design=lambda _spec, _story: DesignExpansionResponse(
+            fields=(
+                ProposedDesignField(
+                    field="lighting",
+                    proposed_value="Proposed fixed recessed lighting fixtures.",
+                    rationale="Stable design choice, not Story canon",
+                ),
+            )
+        )
+    )
+    proposal = StoryCAPSpecificationService.proposal_from_draft(
+        asset,
+        "An engineering control room holds a diagnostic console.",
+        draft,
+        provider,
+    )
+    assert proposal.design_suggestions[0].field == "lighting"
+    assert proposal.specification.origin == "story_intelligence_proposal"
