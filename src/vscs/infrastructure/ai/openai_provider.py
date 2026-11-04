@@ -261,15 +261,15 @@ class OpenAICAPGenerationProvider:
         ).lower()
         source_links_display = bool(
             re.search(
-                r"\\b(?:diagnostic\\s+)?console\\b.{0,160}\\bits\\s+blue\\s+display\\b",
+                r"\b(?:diagnostic\s+)?console\b.{0,160}\bits\s+blue\s+display\b",
                 source,
                 flags=re.DOTALL,
             )
-            or re.search(r"\\bconsole['’]s\\s+blue\\s+display\\b", source)
+            or re.search(r"\bconsole['’]s\s+blue\s+display\b", source)
         )
         if source_links_display and re.search(
-            r"\\b(?:display['’]s\\s+)?ownership\\s+(?:is\\s+)?unspecified\\b"
-            r"|\\btheir\\s+ownership\\b",
+            r"\b(?:display['’]s\s+)?ownership\s+(?:is\s+)?unspecified\b"
+            r"|\btheir\s+ownership\b",
             identity,
         ):
             return (
