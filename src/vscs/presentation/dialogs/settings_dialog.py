@@ -371,7 +371,7 @@ class SettingsDialog(QDialog):
 
         settings.recent_projects = settings.recent_projects[: settings.maximum_recent_projects]
         settings.ai.provider = self.ai_provider.currentData()
-        settings.ai.openai_model = self.openai_model.text().strip()
+        settings.ai.openai_model = self.openai_model.currentText().strip()
         try:
             self.configuration.save()
         except (CredentialStorageError, ValueError, RuntimeError) as exc:
