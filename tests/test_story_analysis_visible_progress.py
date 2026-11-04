@@ -4,7 +4,7 @@ from threading import Event
 from types import SimpleNamespace
 
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 from vscs.application.story.lifecycle import StoryRecord
 from vscs.presentation.widgets.browseable_story_workspace import (
@@ -37,7 +37,12 @@ def test_story_analysis_progress_keeps_ui_responsive(qtbot):
     qtbot.addWidget(host)
 
     def check_running():
-        seen.append(started.is_set())
+        active = QApplication.activeModalWidget()
+        seen.append(
+            started.is_set()
+            and active is not None
+            and active.objectName() == "storyAnalysisProgress"
+        )
         release.set()
 
     QTimer.singleShot(70, check_running)
