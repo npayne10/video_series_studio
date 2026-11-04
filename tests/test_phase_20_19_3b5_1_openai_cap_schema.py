@@ -492,10 +492,7 @@ def test_cap_ambiguous_pronoun_does_not_force_console_ownership():
         asset_id="STORY-LOC-001",
         asset_name="Engineering control room",
         asset_category="location",
-        story_context=(
-            "A diagnostic console stands beside a workstation, "
-            "its blue display glowing steadily."
-        ),
+        story_context="A diagnostic console stands beside a workstation, its blue display glowing steadily.",
     )
     draft = GeneratedCAPDraft(
         title="Engineering room",
