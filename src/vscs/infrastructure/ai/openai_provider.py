@@ -281,9 +281,8 @@ class OpenAICAPGenerationProvider:
             "do not promote those events into permanent asset identity or CAP continuity rules.\n"
         )
         if corrections:
-            input_text += (
-                "CORRECT THE PREVIOUS DRAFT QUALITY ISSUES:\n"
-                + "\n".join(f"- {issue}" for issue in corrections)
+            input_text += "CORRECT THE PREVIOUS DRAFT QUALITY ISSUES:\n" + "\n".join(
+                f"- {issue}" for issue in corrections
             )
         wire_draft = self._parse(
             instructions=instructions,
