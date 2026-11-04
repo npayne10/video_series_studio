@@ -89,6 +89,21 @@ class OpenAICAPGenerationProvider:
         except Exception as exc:
             raise AIProviderError(f"OpenAI connection test failed: {exc}") from exc
 
+    @classmethod
+    def list_available_models(cls, *, api_key: str) -> tuple[str, ...]:
+        """Return API-visible model IDs; visibility does not guarantee CAP compatibility."""
+        provider = cls(api_key=api_key, model="model-discovery")
+        try:
+            response = provider._client.models.list()
+            identifiers = {
+                model.id.strip()
+                for model in response.data
+                if isinstance(getattr(model, "id", None), str) and model.id.strip()
+            }
+        except Exception as exc:
+            raise AIProviderError(f"OpenAI model discovery failed: {exc}") from exc
+        return tuple(sorted(identifiers, key=str.casefold))
+
     def generate_cap(self, request: CAPGenerationRequest) -> GeneratedCAPDraft:
         """Run fact extraction, canon analysis, and draft generation in sequence."""
         try:
