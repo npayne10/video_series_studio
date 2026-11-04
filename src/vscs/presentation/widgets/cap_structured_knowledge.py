@@ -307,6 +307,17 @@ def _make_editor_scrollable(dialog: Any) -> None:
     scroll.setWidget(content)
     outer_layout.insertWidget(form_index, scroll, 1)
 
+    # CAP editor patches are installed in layers. The Production Contract
+    # wrapper can execute before this scroll area exists; arrange the
+    # side-by-side panes here, after the final asset scroll is constructed.
+    from vscs.presentation.widgets.cap_ui_refactoring import (
+        arrange_cap_contract_columns,
+    )
+
+    columns = arrange_cap_contract_columns(dialog)
+    if columns is not None:
+        dialog.production_contract_columns = columns
+
     dialog.setMinimumSize(600, 420)
     screen = dialog.screen()
     if screen is None:
