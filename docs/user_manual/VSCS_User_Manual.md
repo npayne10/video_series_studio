@@ -259,3 +259,5 @@ The shared `AutomationProgressRunner` also wraps **Performance Proposals**, **En
 **Operator sequence after passing tests:** (1) restart VSCS (2) open disposable `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` (3) select approved `STORY-001` (4) run **Story → Automation → Shot Proposals** **once** (5) confirm progress and **2** proposal results (6) inspect runtimes, provenance and event uniqueness in **Story → Proposal Review** **before** reviewing/accepting/compiling. Do not rerun Planning Proposals, change the governed 35-second Scene or modify project JSON.
 
 Further technical details and test boundaries: [Phase B.5.23 engineering acceptance](../engineering/Phase_20_19_3B5_23_Shot_Duration_Governance.md).
+
+**Regeneration safety:** The B.5.23 service rejects re-generation over any Shot that has entered Reviewed, Accepted or Rejected, without calling the provider. It permits controlled replacement of **Proposed-only** Shot data, but stops if this would leave stale extra Shot identities. The B.5.22 initial 35-second Shot is Proposed, so it remains eligible **only after all automated tests are green**.
