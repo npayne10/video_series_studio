@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
+from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
 from vscs.application.caps.governed_planning_evidence import (
@@ -451,6 +452,19 @@ class StoryCAPBatchDialog(QDialog):
             story = self.stories.story(story_id)
             if story is None:
                 raise StoryBatchError("Approved Story disappeared during spatial review")
+            # Cached proposals predate later quality gates. Never allow a
+            # previously cached ungrounded design to bypass current policy.
+            cached_issues = assess_design_grounding(
+                story.description, item.proposal.design_suggestions
+            )
+            if cached_issues:
+                raise StoryBatchError(
+                    "Cached CAP design has grounding issues; discard and regenerate "
+                    "with explicit paid consent: "
+                    + "; ".join(
+                        f"{issue.field}: {issue.code}" for issue in cached_issues
+                    )
+                )
             verified_shots: tuple[ShotSpatialSource, ...] = ()
             shot_evidence_status = ""
             root = self.generator.assets.projects.project_directory
