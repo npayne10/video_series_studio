@@ -146,7 +146,10 @@ class TemplateSceneShotProposalProvider:
 
 
 class SceneShotProposalAutomationService:
-    """Generate Shot proposals from current Scene proposals without creating Shot Plans."""
+    """Generate policy-compliant Shot proposals without creating governed Shot Plans."""
+
+    MIN_SHOT_SECONDS = 15
+    MAX_SHOT_SECONDS = 20
 
     def __init__(
         self,
@@ -196,6 +199,7 @@ class SceneShotProposalAutomationService:
             if not draft.shots:
                 raise ValueError(f"Scene/Shot provider returned no Shots for {scene.target_id}")
             draft = self._fit_runtime_budget(scene, draft)
+            draft = self._enforce_shot_duration_policy(scene, draft)
             self._validate_runtime_budget(scene, draft)
             for shot in draft.shots:
                 generated.append(
@@ -330,6 +334,111 @@ class SceneShotProposalAutomationService:
         )
         return SceneShotProposalDraft(
             shots=fitted,
+            diagnostics=(*draft.diagnostics, diagnostic),
+        )
+
+    @classmethod
+    def _enforce_shot_duration_policy(
+        cls,
+        scene: AutomationProposal,
+        draft: SceneShotProposalDraft,
+    ) -> SceneShotProposalDraft:
+        """Split oversized Shots while assigning narrative actions to one segment only.
+
+        Never duplicate a one-time event across the continuation segments. Reject
+        under-budget and mathematically impossible durations, instead of approving
+        an unrenderable Shot or silently altering the approved Scene duration.
+        """
+        expected = cls._scene_runtime(scene)
+        total = sum(shot.target_runtime_seconds for shot in draft.shots)
+        if total != expected:
+            raise ValueError(
+                f"Scene {scene.target_id} requires {expected}s of Shot proposals; "
+                f"the provider supplied {total}s. No Shot authority was created."
+            )
+
+        result: list[ShotProposalDraft] = []
+        split_count = 0
+        for shot in draft.shots:
+            runtime = shot.target_runtime_seconds
+            if runtime < cls.MIN_SHOT_SECONDS:
+                raise ValueError(
+                    f"Scene {scene.target_id} has a {runtime}s Shot below the "
+                    f"{cls.MIN_SHOT_SECONDS}s minimum; review the Scene pacing."
+                )
+            if runtime <= cls.MAX_SHOT_SECONDS:
+                result.append(replace(shot, sequence_number=len(result) + 1))
+                continue
+            count = (runtime + cls.MAX_SHOT_SECONDS - 1) // cls.MAX_SHOT_SECONDS
+            if count * cls.MIN_SHOT_SECONDS > runtime:
+                raise ValueError(
+                    f"Cannot split {runtime}s Shot in Scene {scene.target_id} into "
+                    f"{cls.MIN_SHOT_SECONDS}–{cls.MAX_SHOT_SECONDS}s segments. "
+                    "Revisit the Scene duration or Shot pacing."
+                )
+            base, extra = divmod(runtime, count)
+            durations = tuple(base + (1 if index < extra else 0) for index in range(count))
+            split_count += 1
+            for index, duration in enumerate(durations):
+                first = index == 0
+                last = index == count - 1
+                result.append(
+                    replace(
+                        shot,
+                        sequence_number=len(result) + 1,
+                        title=(
+                            shot.title if first else f"{shot.title} — continuation {index + 1}"
+                        ),
+                        target_runtime_seconds=duration,
+                        required_action=(
+                            shot.required_action
+                            if first
+                            else (
+                                "Hold the established state from the preceding Shot; "
+                                "do not repeat any event, pulse, movement or dialogue."
+                            )
+                        ),
+                        narrative_purpose=(
+                            shot.narrative_purpose
+                            if first
+                            else "Continue observing the established state without a new event."
+                        ),
+                        production_objective=(
+                            shot.production_objective
+                            if first
+                            else "Preserve visual and asset continuity; do not replay actions."
+                        ),
+                        dialogue_requirement=shot.dialogue_requirement if first else "",
+                        continuity_in=(
+                            shot.continuity_in
+                            if first
+                            else "Maintain precisely the preceding Shot end state."
+                        ),
+                        continuity_out=(
+                            shot.continuity_out
+                            if last
+                            else "Continue the same scene and asset state without resetting."
+                        ),
+                    )
+                )
+        if any(
+            not cls.MIN_SHOT_SECONDS <= shot.target_runtime_seconds <= cls.MAX_SHOT_SECONDS
+            for shot in result
+        ):
+            raise ValueError(f"Shot duration policy violation in Scene {scene.target_id}")
+        if not split_count:
+            return SceneShotProposalDraft(
+                shots=tuple(result),
+                diagnostics=draft.diagnostics,
+            )
+        diagnostic = (
+            f"VSCS split {split_count} oversized Shot(s) to the "
+            f"{cls.MIN_SHOT_SECONDS}–{cls.MAX_SHOT_SECONDS}s generation policy. "
+            "Original actions are assigned to the first segment; continuations "
+            "hold state without repeating events. Human review is required."
+        )
+        return SceneShotProposalDraft(
+            shots=tuple(result),
             diagnostics=(*draft.diagnostics, diagnostic),
         )
 
