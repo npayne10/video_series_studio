@@ -409,6 +409,19 @@ class SceneShotProposalAutomationService:
                             else "Preserve visual and asset continuity; do not replay actions."
                         ),
                         dialogue_requirement=shot.dialogue_requirement if first else "",
+                        shot_constraints=(
+                            shot.shot_constraints
+                            if first
+                            else tuple(
+                                constraint
+                                for constraint in shot.shot_constraints
+                                if not any(
+                                    event_word in constraint.casefold()
+                                    for event_word in ("pulse", "once", "repeat")
+                                )
+                            )
+                            + ("Do not replay the preceding Shot's one-time events.",)
+                        ),
                         continuity_in=(
                             shot.continuity_in
                             if first
