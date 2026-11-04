@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -254,6 +255,30 @@ def install_cap_editor_contract_refactoring() -> None:
                 )
             else:
                 self.layout().insertWidget(max(0, self.layout().count() - 1), panel)
+
+        # The managed reference gallery used to sit below the entire asset
+        # form. Keep its lifecycle signals and widgets intact while moving it
+        # into a separately resizable right-hand pane.
+        asset_scroll = self.findChild(QScrollArea, "capEditorScrollArea")
+        gallery = getattr(self, "reference_gallery", None)
+        outer = self.layout()
+        if asset_scroll is not None and gallery is not None:
+            for widget in (asset_scroll, gallery):
+                index = outer.indexOf(widget)
+                if index >= 0:
+                    outer.takeAt(index)
+            columns = QSplitter(Qt.Orientation.Horizontal, self)
+            columns.setObjectName("capProductionContractColumns")
+            columns.setChildrenCollapsible(False)
+            columns.addWidget(asset_scroll)
+            columns.addWidget(gallery)
+            columns.setStretchFactor(0, 11)
+            columns.setStretchFactor(1, 10)
+            columns.setSizes([680, 600])
+            outer.insertWidget(1, columns, 1)
+            self.production_contract_columns = columns
+            self.setMinimumSize(max(self.minimumWidth(), 1000), max(self.minimumHeight(), 680))
+            self.resize(max(self.width(), 1350), max(self.height(), 800))
 
     editor.__init__ = contract_init
     editor._phase_18_2_11_2_9_installed = True
