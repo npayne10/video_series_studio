@@ -90,7 +90,7 @@ def test_integrated_review_loads_accepted_and_deferred_decisions(qtbot):
     metadata = _metadata()
     spec, review, message = load_review_snapshot(metadata)
     assert spec is not None and review is not None
-    assert "no Canon" in message
+    assert "does not approve Canon" in message
     assert spec.canonical_attributes["layout"] == "Rectangular room with one door"
     assert "lighting" not in spec.canonical_attributes
 
