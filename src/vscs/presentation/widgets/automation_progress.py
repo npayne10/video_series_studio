@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from time import perf_counter
-from typing import Generic, TypeVar, cast
+from typing import TypeVar, cast
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
-from PySide6.QtWidgets import QDialog, QProgressBar, QVBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 ResultT = TypeVar("ResultT")
 
