@@ -73,7 +73,11 @@ def load_review_snapshot(
                 raise ValueError(f"Deferred/rejected field {field.field} became canonical")
     except (ValueError, TypeError, KeyError) as exc:
         return None, None, f"Stored CAP review cannot be verified: {exc}"
-    return spec, review, "Persisted design review audit — this review does not approve Canon or images."
+    return (
+        spec,
+        review,
+        "Persisted design review audit — this review does not approve Canon or images.",
+    )
 
 
 class CAPReviewedSpecificationPanel(QWidget):
@@ -115,9 +119,7 @@ class CAPReviewedSpecificationPanel(QWidget):
         self.fields_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
         )
-        self.fields_table.horizontalHeader().setSectionResizeMode(
-            2, QHeaderView.ResizeMode.Stretch
-        )
+        self.fields_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self.fields_table.setMinimumHeight(230)
 
         attributes = self.specification.canonical_attributes
@@ -141,6 +143,7 @@ class CAPReviewedSpecificationPanel(QWidget):
             )
             for column, value in enumerate(cells):
                 item = QTableWidgetItem(value)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 item.setToolTip(value)
                 self.fields_table.setItem(row, column, item)
             self.fields_table.resizeRowToContents(row)
