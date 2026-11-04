@@ -243,3 +243,7 @@ For each test, record: project name/path; branch/commit; UI screenshot; Story ID
 ## 10. Updating this manual
 
 Maintain this document alongside UI code in the same GitHub development branch. After every accepted phase, update: control names/screenshots, prerequisites, evidence outcomes, known gaps and rollback procedure. Publish a complete user manual (and context-sensitive Help) only after every material section is verified. README/architecture guides are supplemental, not substitute operating instructions.
+
+### 5.4 Progress runner expansion — code committed, operator acceptance pending
+
+The shared `AutomationProgressRunner` also wraps **Performance Proposals**, **Environment Proposals**, **Camera & Lighting Proposals**, and **Continuity Proposals**. The existing generator services, output proposals and authority boundaries are unchanged. The indeterminate non-cancellable UI is common to these six actions. **Resolve Assets** is deliberately excluded pending a thread-safe SQLite service review. **Review Gaps** and other major production modules remain outside this phase. Do not claim the changes are complete until the local Qt, Ruff, Mypy and full pytest gates and representative UI screenshots pass.
