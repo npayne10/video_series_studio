@@ -306,3 +306,12 @@ A conservative automated CAP identity-quality gate inspects the generated identi
 **Scope:** This is not a universal semantic entailment engine. The deterministic quality gate covers a demonstrated source-pattern failure; future generalisation should use evidence-linked relationship extraction and validation across asset categories. Human review remains required. Previously generated caches are not retroactively changed.
 
 **Acceptance:** Run CAP schema targeted tests, Ruff lint/format, Mypy and complete regression. After all gates pass, discard the old preview (do not save it), restart VSCS, deliberately regenerate the Engineering Control Room with Terra (paid), then verify the output preserves the console's blue display, does not assert the indicator's unspecified mounting as an established fact, and keeps the one-off pulse out of permanent room identity and continuity. Do not mark a CAP Approved or asset Ready based only on model output.
+
+
+## Canonical Reference Gallery scrolling — UI acceptance pending
+
+**Location:** Canonical Profiles → select an existing CAP → Edit Selected → Canonical Reference Gallery. The gallery is split into a thumbnail list on the left and reference metadata, preview, lifecycle controls on the right.
+
+The thumbnail list now explicitly permits its own horizontal and vertical scrollbars as needed. The right-hand reference-detail pane is independently scrollable, including long metadata and lifecycle controls. The resizable splitter keeps both panes available and prevents either from collapsing completely. Scrollbar changes do not modify CAP or reference records and do not grant approval or change workflow authority.
+
+**Test:** Open an existing CAP and inspect the gallery. For an empty gallery, the scrollbars may be hidden because there is no content to scroll; populate enough **non-approved test references** in a disposable project to exercise both vertical and horizontal scrolling, then confirm that scrolling one pane does not scroll the other and the existing metadata, selection, double-click and lifecycle controls remain accessible. No reference approval should be performed merely for this UI test. Run `tests/test_canonical_reference_gallery_scrolling.py`, Ruff lint/format, Mypy and regression before desktop acceptance. 
