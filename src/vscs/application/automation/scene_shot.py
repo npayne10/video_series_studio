@@ -206,6 +206,18 @@ class SceneShotProposalAutomationService:
                 "revision/recovery workflow."
             )
 
+        # Reject impossible Scene budgets before an optional paid AI provider call.
+        for scene in scene_proposals:
+            runtime = self._scene_runtime(scene)
+            minimum_shots = (runtime + self.MAX_SHOT_SECONDS - 1) // self.MAX_SHOT_SECONDS
+            maximum_shots = runtime // self.MIN_SHOT_SECONDS
+            if runtime <= 0 or minimum_shots > maximum_shots:
+                raise ValueError(
+                    f"Scene {scene.target_id} has an unpartitionable {runtime}s runtime "
+                    f"under the {self.MIN_SHOT_SECONDS}–{self.MAX_SHOT_SECONDS}s Shot policy. "
+                    "Review the Scene budget before invoking a provider."
+                )
+
         generated: list[AutomationProposal] = []
         for scene in sorted(scene_proposals, key=lambda item: item.target_id):
             draft = self._provider.propose_scene_shots(
