@@ -229,6 +229,7 @@ class SceneShotProposalAutomationService:
             if not draft.shots:
                 raise ValueError(f"Scene/Shot provider returned no Shots for {scene.target_id}")
             draft = self._fit_runtime_budget(scene, draft)
+            draft = self._rebalance_provider_runtimes(scene, draft)
             draft = self._enforce_shot_duration_policy(scene, draft)
             self._validate_runtime_budget(scene, draft)
             previous = tuple(
@@ -376,6 +377,78 @@ class SceneShotProposalAutomationService:
         return SceneShotProposalDraft(
             shots=fitted,
             diagnostics=(*draft.diagnostics, diagnostic),
+        )
+
+    @classmethod
+    def _feasible_shot_duration(cls, seconds: int) -> bool:
+        """A duration can be divided exactly into compliant generation segments."""
+        if seconds < cls.MIN_SHOT_SECONDS:
+            return False
+        min_count = (seconds + cls.MAX_SHOT_SECONDS - 1) // cls.MAX_SHOT_SECONDS
+        max_count = seconds // cls.MIN_SHOT_SECONDS
+        return min_count <= max_count
+
+    @classmethod
+    def _rebalance_provider_runtimes(
+        cls,
+        scene: AutomationProposal,
+        draft: SceneShotProposalDraft,
+    ) -> SceneShotProposalDraft:
+        """Adjust neighboring narrative durations only when required for Shot policy.
+
+        Preserve the total Scene runtime and the existing order of distinct actions.
+        If no safe pairwise adjustment exists, fail before persisting proposals.
+        """
+        durations = [shot.target_runtime_seconds for shot in draft.shots]
+        if sum(durations) != cls._scene_runtime(scene):
+            return draft
+        original = tuple(durations)
+        for index, seconds in enumerate(durations):
+            if cls._feasible_shot_duration(seconds):
+                continue
+            adjustments: list[tuple[int, int, int]] = []
+            for neighbor, available in enumerate(durations):
+                if neighbor == index:
+                    continue
+                for delta in range(-cls.MAX_SHOT_SECONDS, cls.MAX_SHOT_SECONDS + 1):
+                    if not delta:
+                        continue
+                    if (
+                        cls._feasible_shot_duration(seconds + delta)
+                        and cls._feasible_shot_duration(available - delta)
+                    ):
+                        adjustments.append((abs(delta), neighbor, delta))
+            if not adjustments:
+                raise ValueError(
+                    f"Scene {scene.target_id} contains a {seconds}s provider Shot that "
+                    "cannot be rebalanced into the 15–20s policy without changing "
+                    "narrative ownership. Review the Scene pacing."
+                )
+            _size, neighbor, delta = min(adjustments)
+            durations[index] += delta
+            durations[neighbor] -= delta
+        if all(cls._feasible_shot_duration(value) for value in durations):
+            if tuple(durations) == original:
+                return draft
+            detail = ", ".join(
+                f"{before}s→{after}s"
+                for before, after in zip(original, durations, strict=True)
+            )
+            return SceneShotProposalDraft(
+                shots=tuple(
+                    replace(shot, target_runtime_seconds=duration)
+                    for shot, duration in zip(draft.shots, durations, strict=True)
+                ),
+                diagnostics=(
+                    *draft.diagnostics,
+                    f"VSCS rebalanced provider narrative runtimes ({detail}) to meet "
+                    "15–20s clip constraints without changing Scene duration; "
+                    "human review is required.",
+                ),
+            )
+        raise ValueError(
+            f"Scene {scene.target_id} contains noncompliant provider Shot runtimes "
+            "after attempted rebalancing."
         )
 
     @classmethod
