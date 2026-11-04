@@ -57,3 +57,20 @@ Preserve the user's untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.
 - `git diff --check` clean. `git status --short` retains only untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`.
 - Actual `ProjectService.create` / `close` / `open`, real SQLite CAP and asset repositories, reviewed Draft metadata, context audit, stale rejection, rollback and duplicate-save protection were exercised by disposable-project tests.
 - **Scope limitation:** Automated disk-backed gate accepted. This is not evidence that a human can complete the full GUI save pathway, nor does it authorise real-project Canon, references, H3 execution or paid generation. Manual desktop UI acceptance must use a fresh disposable project, **not** the pre-existing `B5_19A_ACCEPTANCE` baseline.
+
+## B.5.22 desktop testing — Story Analysis progress visibility issue (2026-11-04)
+
+During disposable desktop acceptance on `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, the operator reported that selecting **Story → Automation → Story Analysis** provided no visible indication that the provider analysis was in progress. The approved Story's source document is attached and metadata is 100%; analysis is needed before the Story can be approved.
+
+### Cause confirmed in code
+`BrowseableStoryWorkspaceWidget._run_analysis` previously invoked `self.analysis_cache.analyze(...)` directly on the Qt GUI thread. The analysis workspace was only opened after this call returned. Consequently a long-running or paid provider call could appear unresponsive.
+
+### Change committed
+- Extend **existing** Story Workspace workflow with a `QThread`-based Story Analysis worker (no second analysis pipeline).
+- Immediately present a modal, non-cancellable indeterminate `Story Analysis — Running` dialog, with an elapsed-second status updated by `QTimer` while keeping the Qt event loop responsive.
+- Continue using `StoryAnalysisCacheService.analyze` unchanged, including its existing atomic cache-save semantics and Story approval requirements.
+- Preserve the previous successful-analysis UI transition and error display, and prevent dismissal of a running provider operation. No estimated percentage is invented.
+- Add `tests/test_story_analysis_visible_progress.py` covering responsive Qt progress and controlled provider failure with a fake cache; no paid call in automated tests.
+
+### Acceptance still required
+Update local GitHub branch, run new targeted Qt tests, Ruff check/format, mypy, and full regression; then restart VSCS and re-run the disposable Story Analysis. Confirm progress dialog visible immediately, elapsed time increments, provider response resolves to review UI or error, and no duplicate provider call occurs. This is a **new UX fix under testing**, not proof that the user's existing in-progress GUI call has completed. Do not change `B5_19A_ACCEPTANCE`, Canon or H3 hold.
