@@ -91,14 +91,17 @@ def test_scene_shot_automation_creates_reviewable_shot_proposals() -> None:
         baseline=baseline,
     )
 
-    assert len(proposals) == 2
+    assert len(proposals) == 4
     assert all(item.proposal_type is AutomationProposalType.SHOT for item in proposals)
     assert all(item.status is AutomationProposalStatus.PROPOSED for item in proposals)
     assert all(not item.consumable for item in proposals)
     assert [item.target_id for item in proposals] == [
         "EP-001-SC-001-SHT-001",
         "EP-001-SC-001-SHT-002",
+        "EP-001-SC-001-SHT-003",
+        "EP-001-SC-001-SHT-004",
     ]
+    assert [item.payload["target_runtime_seconds"] for item in proposals] == [15] * 4
     assert sum(int(item.payload["target_runtime_seconds"]) for item in proposals) == 60
     assert all(item.metadata["parent_scene_proposal_id"] == "AUT-SCENE-001" for item in proposals)
 
@@ -153,16 +156,26 @@ def test_scene_shot_automation_normalizes_runtime_overflow() -> None:
         baseline=baseline,
     )
 
-    assert len(proposals) == 2
+    assert len(proposals) == 4
     assert [item.target_id for item in proposals] == [
         "EP-001-SC-001-SHT-001",
         "EP-001-SC-001-SHT-002",
+        "EP-001-SC-001-SHT-003",
+        "EP-001-SC-001-SHT-004",
     ]
     runtimes = [int(item.payload["target_runtime_seconds"]) for item in proposals]
     assert sum(runtimes) == 60
-    assert runtimes[0] > runtimes[1]
-    assert [item.payload["required_action"] for item in proposals] == ["Event one", "Event two"]
+    assert runtimes == [15] * 4
+    actions = [str(item.payload["required_action"]) for item in proposals]
+    assert actions.count("Event one") == 1
+    assert actions.count("Event two") == 1
+    assert "Event one" == actions[0]
+    assert "Event two" == actions[2]
     assert all(
         any("proportionally fitted" in diagnostic for diagnostic in item.payload["diagnostics"])
+        for item in proposals
+    )
+    assert all(
+        any("rebalanced provider" in diagnostic for diagnostic in item.payload["diagnostics"])
         for item in proposals
     )
