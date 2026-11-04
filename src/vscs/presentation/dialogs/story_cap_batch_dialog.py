@@ -56,6 +56,7 @@ from vscs.presentation.dialogs.spatial_continuity_report_dialog import (
 from vscs.presentation.dialogs.story_cap_specification_dialog import (
     StoryCAPSpecificationDialog,
 )
+from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
 
 
 class StoryCAPBatchDialog(QDialog):
@@ -67,6 +68,7 @@ class StoryCAPBatchDialog(QDialog):
         self.setMinimumSize(760, 490)
         caps = generator.caps
         self.generator = generator
+        self._generation_progress = AutomationProgressRunner(self)
         self.stories = StoryLifecycleService(caps.assets.projects)
         proposal_service = StoryCAPSpecificationService(
             generator, CAPStructuredSpecificationService(caps)
@@ -392,13 +394,41 @@ class StoryCAPBatchDialog(QDialog):
                 )
                 return
             else:
-                batch = self.review_service.batch.preview(story_id, (asset_id,))
-                if not batch.candidates:
-                    QMessageBox.warning(
-                        self, "CAP Batch Review", "\n".join(batch.skipped) or "No eligible proposal"
-                    )
-                    return
-                item = batch.candidates[0]
+                story_snapshot = self.stories.story(story_id)
+                if story_snapshot is None:
+                    raise StoryBatchError("Approved Story disappeared before provider submission")
+                approved_context = story_snapshot.description.strip()
+                asset_snapshot = asset.model_copy(deep=True)
+                proposal = self._generation_progress.run(
+                    f"CAP Proposal Generation — {asset.name}",
+                    story_id,
+                    lambda: StoryCAPSpecificationService.generate_from_snapshot(
+                        asset_snapshot, approved_context, provider
+                    ),
+                )
+                # The provider worker never reads/writes project repositories. Recheck
+                # authority and freshness on the GUI thread before caching its result.
+                if self.review_service.batch.current_story_fingerprint(story_id) != fingerprint:
+                    raise StoryBatchError("Approved Story changed during CAP generation")
+                if self.review_service.prepare_context(story_id, asset_id).fingerprint != context.fingerprint:
+                    raise StoryBatchError("Governed Shot context changed during CAP generation")
+                latest_asset = self.generator.assets.get(asset_id)
+                if cache_fingerprint(
+                    latest_asset.asset_id,
+                    latest_asset.name,
+                    latest_asset.category.value,
+                    latest_asset.description,
+                ) != asset_fingerprint:
+                    raise StoryBatchError("Asset changed during CAP generation")
+                if provider_cache_fingerprint(self.generator.provider) != provider_fingerprint:
+                    raise StoryBatchError("CAP provider changed during generation")
+                if asset_id not in {
+                    candidate.asset_id
+                    for candidate in self.review_service.discover(story_id)
+                    if not candidate.has_specification
+                }:
+                    raise StoryBatchError("Asset is no longer eligible after CAP generation")
+                item = StoryBatchProposal(story_id, fingerprint, asset_id, proposal)
                 if self.cache is not None:
                     self.cache.save(
                         item, asset_fingerprint, provider_fingerprint, context.fingerprint
