@@ -21,8 +21,8 @@ from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
     CAPStructuredSpecificationService,
 )
-from vscs.domain.assets.models import AssetCategory
-from vscs.domain.caps.generation import GeneratedCAPDraft
+from vscs.domain.assets.models import Asset, AssetCategory
+from vscs.domain.caps.generation import CAPGenerationRequest, GeneratedCAPDraft
 
 _CATEGORY_KEYS: dict[AssetCategory, str] = {
     AssetCategory.CHARACTER: "anatomy",
@@ -129,7 +129,34 @@ class StoryCAPSpecificationService:
         if not approved_story_context.strip():
             raise ValueError("Approved Story context is required")
         asset = self.generator.assets.get(asset_id)
-        draft: GeneratedCAPDraft = self.generator.generate_draft(asset_id, approved_story_context)
+        return self.generate_from_snapshot(
+            asset, approved_story_context, self.generator.provider
+        )
+
+    @staticmethod
+    def generate_from_snapshot(
+        asset: Asset, approved_story_context: str, provider: object
+    ) -> StoryCAPProposal:
+        """Provider-only generation from an immutable snapshot, safe for a worker thread.
+
+        Never access project repositories or Qt widgets from this operation.
+        It returns advisory material only; governance, cache and persistence
+        remain with the UI-thread caller.
+        """
+        from vscs.infrastructure.ai.provider import CAPGenerationProvider
+
+        if not approved_story_context.strip():
+            raise ValueError("Approved Story context is required")
+        if not isinstance(provider, CAPGenerationProvider):
+            raise ValueError("Configured CAP provider is unavailable")
+        request = CAPGenerationRequest(
+            asset_id=asset.asset_id,
+            asset_name=asset.name,
+            asset_category=asset.category.value,
+            asset_description=asset.description,
+            story_context=approved_story_context,
+        )
+        draft: GeneratedCAPDraft = provider.generate_cap(request)
         key = _CATEGORY_KEYS.get(asset.category, "identity")
         identity = draft.visual_identity.strip() or draft.canonical_description.strip()
         if not identity:
@@ -153,7 +180,6 @@ class StoryCAPSpecificationService:
         )
         proposed.validate_category_contract()
         suggestions: tuple[ProposedDesignField, ...] = ()
-        provider = self.generator.provider
         if isinstance(provider, CAPDesignExpansionProvider):
             response = provider.expand_cap_design(proposed, approved_story_context)
             verified = validate_design_expansion(proposed, response)
