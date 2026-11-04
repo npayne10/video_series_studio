@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -27,6 +28,25 @@ from vscs.infrastructure.ai import AICredentialStore, CredentialStorageError
 from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
 from vscs.infrastructure.ai.provider import AIProviderError
 from vscs.infrastructure.configuration import AIProvider, ConfigurationService, Theme
+
+
+class _OpenAIModelDiscovery(QThread):
+    """Run model listing without blocking the Settings UI."""
+
+    models_loaded = Signal(tuple)
+    models_failed = Signal(str)
+
+    def __init__(self, api_key: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.api_key = api_key
+
+    def run(self) -> None:
+        try:
+            models = OpenAICAPGenerationProvider.list_available_models(api_key=self.api_key)
+        except (AIProviderError, RuntimeError, ValueError) as exc:
+            self.models_failed.emit(str(exc))
+        else:
+            self.models_loaded.emit(models)
 
 
 class SettingsDialog(QDialog):
@@ -105,7 +125,24 @@ class SettingsDialog(QDialog):
             self.ai_provider.findData(configuration.settings.ai.provider)
         )
 
-        self.openai_model = QLineEdit(configuration.settings.ai.openai_model)
+        self.openai_model = QComboBox()
+        self.openai_model.setObjectName("openaiModelSelector")
+        self.openai_model.setEditable(True)
+        self.openai_model.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.openai_model.addItem(configuration.settings.ai.openai_model)
+        self.openai_model.setCurrentText(configuration.settings.ai.openai_model)
+        self.openai_model.setToolTip(
+            "Search or enter an exact API model ID. Refresh retrieves models visible "
+            "to your key; not every model supports structured CAP generation."
+        )
+        self.refresh_openai_models_button = QPushButton("Refresh Models", self)
+        self.refresh_openai_models_button.setObjectName("refreshOpenAIModels")
+        self.refresh_openai_models_button.clicked.connect(self._refresh_openai_models)
+        self.openai_model_status = QLabel(
+            "Use Refresh Models to list API-visible models. Manual entry remains available."
+        )
+        self.openai_model_status.setWordWrap(True)
+        self._model_discovery: _OpenAIModelDiscovery | None = None
         self.openai_key_status = QLabel()
         self.set_openai_key_button = QPushButton("Set / Change API Key…")
         self.remove_openai_key_button = QPushButton("Remove API Key")
@@ -127,7 +164,11 @@ class SettingsDialog(QDialog):
 
         ai_form = QFormLayout()
         ai_form.addRow("Provider", self.ai_provider)
-        ai_form.addRow("OpenAI model", self.openai_model)
+        model_row = QHBoxLayout()
+        model_row.addWidget(self.openai_model, 1)
+        model_row.addWidget(self.refresh_openai_models_button)
+        ai_form.addRow("OpenAI model", model_row)
+        ai_form.addRow("", self.openai_model_status)
         ai_form.addRow("OpenAI API key", api_key_layout)
         ai_form.addRow("", self.test_openai_button)
         ai_group = QGroupBox("AI Generation")
@@ -175,10 +216,65 @@ class SettingsDialog(QDialog):
     def _update_ai_controls(self) -> None:
         openai_enabled = self.ai_provider.currentData() == AIProvider.OPENAI
         self.openai_model.setEnabled(openai_enabled)
+        self.refresh_openai_models_button.setEnabled(
+            openai_enabled and self._model_discovery is None
+        )
         self.openai_key_status.setEnabled(openai_enabled)
         self.set_openai_key_button.setEnabled(openai_enabled)
         self.remove_openai_key_button.setEnabled(openai_enabled)
         self.test_openai_button.setEnabled(openai_enabled)
+
+    def _refresh_openai_models(self) -> None:
+        if self._model_discovery is not None:
+            return
+        try:
+            api_key = self.credentials.get_openai_api_key()
+            if not api_key:
+                raise ValueError("Set an OpenAI API key before refreshing models.")
+        except (CredentialStorageError, ValueError) as exc:
+            QMessageBox.warning(self, "OpenAI Models", str(exc))
+            return
+        self.openai_model_status.setText("Retrieving API-visible models…")
+        self.refresh_openai_models_button.setEnabled(False)
+        worker = _OpenAIModelDiscovery(api_key, self)
+        self._model_discovery = worker
+        worker.models_loaded.connect(self._models_loaded)
+        worker.models_failed.connect(self._models_failed)
+        worker.finished.connect(self._model_discovery_finished)
+        worker.start()
+
+    def _models_loaded(self, models: tuple[str, ...]) -> None:
+        current = self.openai_model.currentText()
+        self.openai_model.clear()
+        self.openai_model.addItems(models)
+        self.openai_model.setCurrentText(current)
+        self.openai_model_status.setText(
+            f"{len(models)} API-visible models loaded. "
+            "Model visibility does not guarantee structured CAP compatibility."
+        )
+
+    def _models_failed(self, reason: str) -> None:
+        self.openai_model_status.setText(
+            "Model retrieval failed; your current selection and manual entry are unchanged."
+        )
+        QMessageBox.warning(self, "OpenAI Models", reason)
+
+    def _model_discovery_finished(self) -> None:
+        worker = self._model_discovery
+        self._model_discovery = None
+        self._update_ai_controls()
+        if worker is not None:
+            worker.deleteLater()
+
+    def reject(self) -> None:
+        if self._model_discovery is not None:
+            QMessageBox.information(
+                self,
+                "OpenAI Models",
+                "Model retrieval is still running. Close Settings after it finishes.",
+            )
+            return
+        super().reject()
 
     def _set_openai_api_key(self) -> None:
         api_key, accepted = QInputDialog.getText(
@@ -231,7 +327,7 @@ class SettingsDialog(QDialog):
         )
 
     def _test_openai_connection(self) -> None:
-        model = self.openai_model.text().strip()
+        model = self.openai_model.currentText().strip()
         try:
             api_key = self.credentials.get_openai_api_key()
             if not api_key:
