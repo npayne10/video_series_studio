@@ -1,4 +1,4 @@
-"""B.5.23: provider Shot proposals must respect 15–20s without replaying events."""
+"""B.5.23: provider Shot proposals must respect 15-20s without replaying events."""
 
 from types import SimpleNamespace
 
@@ -100,9 +100,7 @@ def test_shorter_provider_output_does_not_silently_trim_scene_budget():
     scene = _scene(35)
     service = SceneShotProposalAutomationService
     with pytest.raises(ValueError, match="requires 35s"):
-        service._enforce_shot_duration_policy(
-            scene, SceneShotProposalDraft(shots=(_shot(17),))
-        )
+        service._enforce_shot_duration_policy(scene, SceneShotProposalDraft(shots=(_shot(17),)))
 
 
 def test_complete_service_creates_two_unapproved_shots_not_governed_authority():
