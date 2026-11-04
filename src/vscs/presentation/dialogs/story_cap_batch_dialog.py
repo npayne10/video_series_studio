@@ -325,9 +325,11 @@ class StoryCAPBatchDialog(QDialog):
             f"Provider: {type(self.generator.provider).__name__}; "
             f"model: {getattr(self.generator.provider, '_model', 'unspecified')}. "
             "This authorises ONE CAP-generation operation for the selected asset. "
-            "The provider may make several billable API calls and at most ONE "
-            "additional corrective Draft call if a stable-identity quality check fails. "
-            "Exact price is unavailable here. No automatic batch charging. "
+            "The provider may make several billable API calls, including up to "
+            "ONE corrective identity Draft call AND up to ONE corrective design-expansion "
+            "call if their respective grounding checks fail. These corrective calls "
+            "may incur additional charges. Exact price is unavailable here. "
+            "No automatic batch charging. "
             "Existing CAP approvals are unchanged. Proceed?",
         )
         if choice == QMessageBox.StandardButton.Yes:
