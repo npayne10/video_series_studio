@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from time import perf_counter
-from typing import ClassVar
+from typing import ClassVar, cast
 
-from PySide6.QtCore import QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -37,6 +37,7 @@ from vscs.application.story_analysis import (
     StoryAnalysisCacheService,
     StoryAnalysisCacheState,
     StoryAnalysisEngine,
+    StoryAnalysisReport,
     StoryIntelligenceDashboardService,
     StorySourceReader,
     StorySourceReadError,
@@ -342,6 +343,7 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
             self,
         )
         progress.setObjectName("storyAnalysisProgress")
+        progress.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
         progress.setWindowTitle("Story Analysis — Running")
         progress.setCancelButton(None)
         progress.setMinimumDuration(0)
@@ -379,10 +381,11 @@ class BrowseableStoryWorkspaceWidget(StoryWorkspaceWidget):
         if "error" in outcome:
             self._error(f"Story Analysis failed: {outcome['error']}")
             return False
-        report = outcome.get("report")
-        if report is None:
+        raw_report = outcome.get("report")
+        if raw_report is None:
             self._error("Story Analysis ended without a result.")
             return False
+        report = cast(StoryAnalysisReport, raw_report)
         if report.status.value != "completed":
             self._error("\n".join(report.diagnostics) or "Story Analysis failed.")
             return False
