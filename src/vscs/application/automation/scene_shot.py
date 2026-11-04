@@ -11,6 +11,7 @@ from vscs.domain.story_analysis import AnalysisResult
 
 from .contracts import (
     AutomationProposal,
+    AutomationProposalStatus,
     AutomationProposalType,
     AutomationProvenance,
     AutomationSourceKind,
@@ -188,6 +189,23 @@ class SceneShotProposalAutomationService:
                 "Generate current Episode/Scene proposals before generating Shot proposals"
             )
 
+        existing_shots = tuple(
+            proposal
+            for proposal in self._proposals.list_proposals()
+            if proposal.proposal_type is AutomationProposalType.SHOT
+            and proposal.provenance.source_story_id == normalized_story
+            and proposal.provenance.source_revision == revision
+        )
+        if any(
+            proposal.status is not AutomationProposalStatus.PROPOSED
+            for proposal in existing_shots
+        ):
+            raise ValueError(
+                "Cannot regenerate Shot proposals after human review, acceptance or "
+                "rejection. Preserve the proposal history and use a governed "
+                "revision/recovery workflow."
+            )
+
         generated: list[AutomationProposal] = []
         for scene in sorted(scene_proposals, key=lambda item: item.target_id):
             draft = self._provider.propose_scene_shots(
@@ -201,6 +219,17 @@ class SceneShotProposalAutomationService:
             draft = self._fit_runtime_budget(scene, draft)
             draft = self._enforce_shot_duration_policy(scene, draft)
             self._validate_runtime_budget(scene, draft)
+            previous = tuple(
+                proposal
+                for proposal in existing_shots
+                if proposal.target_id.startswith(f"{scene.target_id}-SHT-")
+            )
+            if len(previous) > len(draft.shots):
+                raise ValueError(
+                    f"Scene {scene.target_id} already has {len(previous)} proposed Shots; "
+                    "the corrected generation would leave stale orphan proposals. "
+                    "Use a governed proposal-set replacement before regenerating."
+                )
             for shot in draft.shots:
                 generated.append(
                     self._proposals.save(
