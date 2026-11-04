@@ -7,7 +7,6 @@ from time import perf_counter
 from typing import ClassVar, cast
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
-
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
