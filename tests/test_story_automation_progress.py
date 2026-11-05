@@ -244,7 +244,7 @@ def test_cap_design_expansion_runs_under_same_progress(qtbot):
             return GeneratedCAPDraft(
                 title="Engineering control room",
                 canonical_description="A fixed interior.",
-                visual_identity="A diagnostic console beside the workstation.",
+                visual_identity="The engineering control room contains a diagnostic console beside the workstation.",
             )
 
         def expand_cap_design(self, _spec, _story_context):
