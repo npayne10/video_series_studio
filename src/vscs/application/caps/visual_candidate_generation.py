@@ -115,6 +115,16 @@ class VisualCandidateGenerationService:
                 "Local provider must return exactly one reviewable image candidate"
             )
         result = outputs[0]
+        if (
+            result.prompt != request.prompt
+            or result.negative_prompt != request.negative_prompt
+            or result.seed != request.seed
+            or result.width != request.width
+            or result.height != request.height
+        ):
+            raise VisualCandidateGenerationError(
+                "Provider returned image provenance that differs from the reviewed request"
+            )
         if result.media_type != "image/png" or not result.content.startswith(_PNG_SIGNATURE):
             raise VisualCandidateGenerationError(
                 "Candidate provider must return a nonempty PNG image"
