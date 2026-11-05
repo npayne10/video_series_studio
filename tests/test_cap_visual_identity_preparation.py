@@ -2,8 +2,6 @@
 
 from types import SimpleNamespace
 
-import pytest
-
 from vscs.application.caps.completeness import REQUIRED_FIELDS
 from vscs.application.caps.design_completion import (
     DESIGN_REVIEW_KEY,
