@@ -193,3 +193,34 @@ def test_prep_dialog_allows_copy_for_nonblocked_candidate(qtbot):
     qtbot.addWidget(dialog)
     assert dialog.copy_button.isEnabled()
     assert "not approved" in dialog.status_label.text().lower()
+
+
+def test_active_master_reference_blocks_duplicate_candidate_preparation():
+    cap = _cap(AssetCategory.LOCATION, {"layout": "Fixed room with console"})
+    prepared = prepare_visual_identity(
+        cap,
+        (CanonicalReferenceView.MASTER, CanonicalReferenceView.PRIMARY_THREE_QUARTER),
+        (CanonicalReferenceView.MASTER,),
+    )
+    assert not prepared.ready_for_master_candidate
+    assert "active MASTER" in " ".join(prepared.blockers)
+    assert prepared.missing_reference_views == (CanonicalReferenceView.PRIMARY_THREE_QUARTER,)
+
+
+def test_visual_preparation_does_not_modify_persisted_cap_metadata():
+    cap = _cap(AssetCategory.PROP, {"components": "Three buttons and one rotary dial."})
+    before = dict(cap.production_metadata)
+    _prepare(cap)
+    assert cap.production_metadata == before
+
+
+def test_invalid_approval_flag_blocks_preparation():
+    import json
+
+    cap = _cap(AssetCategory.LOCATION, {"layout": "Fixed room"})
+    raw = json.loads(cap.production_metadata[DESIGN_REVIEW_KEY])
+    raw["image_authorized"] = True
+    cap.production_metadata[DESIGN_REVIEW_KEY] = json.dumps(raw)
+    result = _prepare(cap)
+    assert not result.ready_for_master_candidate
+    assert "approval authority" in " ".join(result.blockers)
