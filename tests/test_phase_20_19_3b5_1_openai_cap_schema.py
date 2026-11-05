@@ -508,9 +508,9 @@ def test_cap_ambiguous_pronoun_does_not_force_console_ownership():
 
 def test_b525_ship_identity_gate_repairs_interior_prop_substitution(monkeypatch):
     from vscs.domain.caps.generation import (
+        CanonicalFactExtraction,
         CAPCanonAnalysis,
         CAPGenerationRequest,
-        CanonicalFactExtraction,
     )
     from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
 
@@ -557,9 +557,9 @@ def test_b525_ship_identity_gate_rejects_repeat_substitution(monkeypatch):
     import pytest
 
     from vscs.domain.caps.generation import (
+        CanonicalFactExtraction,
         CAPCanonAnalysis,
         CAPGenerationRequest,
-        CanonicalFactExtraction,
     )
     from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
     from vscs.infrastructure.ai.provider import AIProviderError
