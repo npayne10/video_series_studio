@@ -198,7 +198,10 @@ def install_visual_identity_preparation(cap_manager: QWidget) -> QPushButton | N
     if references is None or caps is None:
         return None
     service = VisualCandidateGenerationService(references)
-    button = QPushButton("Prepare MASTER Candidate (Offline)")
+    button = QPushButton("Prepare Visual Identity…")
+    button.setToolTip(
+        "Inspect reviewed CAP design offline; optionally generate a local ComfyUI Candidate"
+    )
     button.setObjectName("prepareVisualIdentityOffline")
 
     def open_dialog() -> None:
