@@ -133,7 +133,7 @@ def test_cap_provider_work_uses_shared_progress_off_gui_thread(qtbot):
             return GeneratedCAPDraft(
                 title="Engineering room",
                 canonical_description="An empty engineering control room.",
-                visual_identity="An empty engineering control room with a console.",
+                visual_identity="An empty engineering control room contains a console.",
             )
 
     asset = SimpleNamespace(
