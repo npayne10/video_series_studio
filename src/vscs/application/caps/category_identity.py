@@ -17,11 +17,23 @@ def _match(pattern: str, value: str) -> bool:
 
 _SHIP = r"(?:ship|vessel|spacecraft|starship|shuttle|craft)"
 _EXTERIOR = r"(?:hull|silhouette|outline|exterior|external\s+shape|outer\s+shape|outer\s+profile)"
-_UNKNOWN = r"(?:unresolved|unknown|unspecified|undetermined|not\s+(?:yet\s+)?established|not\s+(?:yet\s+)?defined)"
+_UNKNOWN = (
+    r"(?:unresolved|unknown|unspecified|undetermined|"
+    r"not\s+(?:yet\s+)?established|not\s+(?:yet\s+)?defined)"
+)
 _LOCATION = r"(?:room|chamber|interior|location|environment|corridor|bay|bridge|facility)"
-_LOCATION_STRUCTURE = r"(?:layout|walls?|floor|ceiling|door|space|contains?|houses?|arrangement|geometry|interior)"
-_PROP = r"(?:console|workstation|terminal|device|instrument|equipment|prop|display\s+unit|control\s+panel)"
-_PROP_STRUCTURE = r"(?:display|screen|housing|panel|buttons?|geometry|dimensions?|shape|surface|enclosure|controls?)"
+_LOCATION_STRUCTURE = (
+    r"(?:layout|walls?|floor|ceiling|door|space|contains?|"
+    r"houses?|arrangement|geometry|interior)"
+)
+_PROP = (
+    r"(?:console|workstation|terminal|device|instrument|equipment|"
+    r"prop|display\s+unit|control\s+panel)"
+)
+_PROP_STRUCTURE = (
+    r"(?:display|screen|housing|panel|buttons?|geometry|"
+    r"dimensions?|shape|surface|enclosure|controls?)"
+)
 
 
 def category_identity_issues(
