@@ -22,9 +22,9 @@ from vscs.application.caps.visual_identity_preparation import (
 from vscs.domain.caps import (
     CanonicalAssetGenerationRequest,
     CanonicalReferenceCreate,
-    GeneratedCanonicalAsset,
     CanonicalReferenceRole,
     CanonicalReferenceType,
+    GeneratedCanonicalAsset,
 )
 from vscs.infrastructure.ai.image_provider import CanonicalImageGenerationProvider
 from vscs.infrastructure.xcic import XCICImageProvider
@@ -137,6 +137,11 @@ class VisualCandidateGenerationService:
                 "CAP design or reference state changed during image generation; "
                 "discarding stale output"
             )
+        current_project = self.references.caps.assets.projects.project_directory
+        if current_project is None or current_project.resolve(strict=False) != project:
+            raise VisualCandidateGenerationError(
+                "Active project changed during image generation; discarding stale output"
+            )
         cap = self.references.caps.get(asset_id)
         root = project / "Canonical Assets" / cap.asset_id / "Images" / "Visual Candidates"
         manifest_root = project / "Canonical Assets" / cap.asset_id / ".metadata" / "visual"
@@ -190,4 +195,5 @@ class VisualCandidateGenerationService:
             destination.unlink(missing_ok=True)
             manifest.unlink(missing_ok=True)
             raise
+        assert reference_id is not None
         return reference_id
