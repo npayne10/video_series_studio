@@ -50,6 +50,11 @@ def test_category_gate_rejects_cross_asset_identity(category, name, identity):
             "The ship's hull has a compact, faceted silhouette.",
         ),
         (
+            AssetCategory.SHIP,
+            "Unmanned exploration vessel",
+            "The hull has a compact wedge-shaped silhouette.",
+        ),
+        (
             AssetCategory.LOCATION,
             "Engineering control room",
             "The engineering control room contains a diagnostic console beside a workstation.",
