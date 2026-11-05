@@ -79,13 +79,16 @@ def prepare_visual_identity(
             raise ValueError("CAP specification asset identity differs from profile")
         if audit.get("version") != 1 or not audit.get("result_fingerprint"):
             raise ValueError("Design review audit is invalid or incomplete")
-        if audit.get("image_authorized") is not False:
-            raise ValueError("Design review unexpectedly contains image authority")
+        if audit.get("image_authorized") is not False or audit.get("canon_approved") is not False:
+            raise ValueError("Design review unexpectedly contains approval authority")
+        if not isinstance(audit.get("reviewer"), str) or not audit["reviewer"].strip():
+            raise ValueError("Design review actor is missing")
         decisions = audit.get("fields")
         if not isinstance(decisions, list):
             raise ValueError("Design decision records are missing")
         accepted_keys: set[str] = set()
         deferred_keys: set[str] = set()
+        seen_keys: set[str] = set()
         for decision in decisions:
             if not isinstance(decision, dict):
                 raise ValueError("Malformed CAP field decision")
@@ -93,6 +96,9 @@ def prepare_visual_identity(
             kind = decision.get("decision")
             if not isinstance(field, str) or not field:
                 raise ValueError("Invalid field name in review")
+            if field in seen_keys:
+                raise ValueError("Duplicate review decision for a CAP field")
+            seen_keys.add(field)
             if kind in ("accept", "edit"):
                 if decision.get("final_value") != spec.canonical_attributes.get(field):
                     raise ValueError("Persisted accepted design differs from review decision")
@@ -105,8 +111,6 @@ def prepare_visual_identity(
                 raise ValueError("Unknown design decision")
         if set(spec.canonical_attributes) != accepted_keys:
             raise ValueError("CAP includes fields without accepted review decisions")
-        if spec.category.value != cap.production_metadata.get("vscs.category", spec.category.value):
-            raise ValueError("CAP category evidence mismatch")
         accepted = tuple(sorted(spec.canonical_attributes.items()))
         deferred = tuple(sorted(deferred_keys))
     except (TypeError, ValueError, KeyError) as exc:
@@ -118,8 +122,10 @@ def prepare_visual_identity(
 
     category = spec.category if spec is not None else AssetCategory.OTHER
     required = _REQUIRED_VISUAL_FIELDS.get(category, ())
+    attributes = dict(accepted)
     if required and not any(
-        key in dict(accepted) and not any(term in dict(accepted)[key].lower() for term in _UNRESOLVED)
+        key in attributes
+        and not any(term in attributes[key].lower() for term in _UNRESOLVED)
         for key in required
     ):
         blockers.append(
@@ -128,7 +134,9 @@ def prepare_visual_identity(
         )
     if spec is not None and category is AssetCategory.SHIP and "silhouette" in deferred:
         if not any("visual identity is unresolved" in item for item in blockers):
-            blockers.append("Ship silhouette is deferred; establish and review exterior identity first")
+            blockers.append(
+                "Ship silhouette is deferred; establish and review exterior identity first"
+            )
 
     source_hash = spec.fingerprint() if spec is not None else ""
     review_hash = (
