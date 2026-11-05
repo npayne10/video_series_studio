@@ -58,9 +58,8 @@ def category_identity_issues(
             or _match(rf"\b{_EXTERIOR}\b[^.\n]{{0,160}}\b{_SHIP}\b", value)
             or _match(r"\b(?:hull|ship\s+silhouette|vessel\s+exterior)\b", value)
         )
-        unresolved_subject = (
-            _match(rf"\b{_SHIP}\b[^.\n]{{0,160}}\b{_UNKNOWN}\b", value)
-            or _match(rf"\b{_EXTERIOR}\b[^.\n]{{0,160}}\b{_UNKNOWN}\b", value)
+        unresolved_subject = _match(rf"\b{_SHIP}\b[^.\n]{{0,160}}\b{_UNKNOWN}\b", value) or _match(
+            rf"\b{_EXTERIOR}\b[^.\n]{{0,160}}\b{_UNKNOWN}\b", value
         )
         if not ship_exterior and not unresolved_subject:
             return (
@@ -83,27 +82,33 @@ def category_identity_issues(
                 "exterior the primary silhouette statement.",
             )
     elif category is AssetCategory.LOCATION:
-        if _match(rf"\b{_PROP}\b", value) and not _match(
-            rf"\b{_LOCATION}\b[^.\n]{{0,130}}\b{_LOCATION_STRUCTURE}\b"
-            rf"|\b{_LOCATION_STRUCTURE}\b[^.\n]{{0,130}}\b{_LOCATION}\b",
-            value,
+        if (
+            _match(rf"\b{_PROP}\b", value)
+            and not _match(
+                rf"\b{_LOCATION}\b[^.\n]{{0,130}}\b{_LOCATION_STRUCTURE}\b"
+                rf"|\b{_LOCATION_STRUCTURE}\b[^.\n]{{0,130}}\b{_LOCATION}\b",
+                value,
+            )
+            and not _match(rf"\b{_LOCATION}\b[^.\n]{{0,120}}\b{_UNKNOWN}\b", value)
         ):
-            if not _match(rf"\b{_LOCATION}\b[^.\n]{{0,120}}\b{_UNKNOWN}\b", value):
-                return (
-                    "Location architecture describes another asset rather than "
-                    "the room or location. Describe the room's supported layout "
-                    "or leave its architecture unresolved.",
-                )
+            return (
+                "Location architecture describes another asset rather than "
+                "the room or location. Describe the room's supported layout "
+                "or leave its architecture unresolved.",
+            )
     elif category in (AssetCategory.PROP, AssetCategory.TECHNOLOGY):
-        if _match(rf"\b{_LOCATION}\b", value) and not _match(
-            rf"\b{_PROP}\b[^.\n]{{0,130}}\b{_PROP_STRUCTURE}\b"
-            rf"|\b{_PROP_STRUCTURE}\b[^.\n]{{0,130}}\b{_PROP}\b",
-            value,
+        if (
+            _match(rf"\b{_LOCATION}\b", value)
+            and not _match(
+                rf"\b{_PROP}\b[^.\n]{{0,130}}\b{_PROP_STRUCTURE}\b"
+                rf"|\b{_PROP_STRUCTURE}\b[^.\n]{{0,130}}\b{_PROP}\b",
+                value,
+            )
+            and not _match(rf"\b{_PROP}\b[^.\n]{{0,120}}\b{_UNKNOWN}\b", value)
         ):
-            if not _match(rf"\b{_PROP}\b[^.\n]{{0,120}}\b{_UNKNOWN}\b", value):
-                return (
-                    "Prop/technology geometry describes its containing location "
-                    "instead of the physical asset. Describe the prop's supported "
-                    "geometry or leave it unresolved.",
-                )
+            return (
+                "Prop/technology geometry describes its containing location "
+                "instead of the physical asset. Describe the prop's supported "
+                "geometry or leave it unresolved.",
+            )
     return ()
