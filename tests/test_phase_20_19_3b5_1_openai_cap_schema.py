@@ -193,12 +193,12 @@ def test_cap_event_quality_guard_regenerates_draft_only_once(monkeypatch):
     transient = GeneratedCAPDraft(
         title="Engineering control room",
         canonical_description="The indicator pulses once.",
-        visual_identity="A fixed diagnostic console.",
+        visual_identity="The engineering control room contains a fixed diagnostic console.",
     )
     stable = GeneratedCAPDraft(
         title="Engineering control room",
         canonical_description="An empty engineering control room.",
-        visual_identity="A fixed diagnostic console.",
+        visual_identity="The engineering control room contains a fixed diagnostic console.",
         continuity_rules=("Preserve console placement.",),
     )
     monkeypatch.setattr(
@@ -330,7 +330,7 @@ def test_cap_stable_identity_needs_no_extra_paid_draft_pass(monkeypatch):
     stable = GeneratedCAPDraft(
         title="Engineering room",
         canonical_description="An empty engineering control room.",
-        visual_identity="Console beside the workstation.",
+        visual_identity="The engineering control room contains a console beside the workstation.",
         continuity_rules=("Preserve their fixed positions.",),
     )
     calls = []
@@ -424,7 +424,7 @@ def test_cap_grounding_quality_gate_requests_at_most_one_corrective_pass(monkeyp
         visual_identity="The blue display's ownership is unspecified.",
     )
     corrected = first.model_copy(
-        update={"visual_identity": "The diagnostic console has a blue display."}
+        update={"visual_identity": "The engineering control room contains a diagnostic console with a blue display."}
     )
     calls = []
     monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
@@ -500,3 +500,87 @@ def test_cap_ambiguous_pronoun_does_not_force_console_ownership():
         visual_identity="The blue display's owner is uncertain.",
     )
     assert OpenAICAPGenerationProvider._source_relationship_issues(request, draft) == ()
+
+
+def test_b525_ship_identity_gate_repairs_interior_prop_substitution(monkeypatch):
+    from vscs.domain.caps.generation import (
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+        CanonicalFactExtraction,
+    )
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-SHI-001",
+        asset_name="Unmanned exploration vessel",
+        asset_category="ship",
+        story_context="Inside an unmanned exploration vessel is an engineering control room.",
+    )
+    incorrect = GeneratedCAPDraft(
+        title="Unmanned exploration vessel",
+        canonical_description="An unmanned exploration vessel contains a control room.",
+        visual_identity=(
+            "The diagnostic console has a blue display. "
+            "A small indicator is present, but no exterior appearance is established."
+        ),
+        continuity_rules=("Keep the control room aboard the unmanned vessel.",),
+    )
+    fixed = incorrect.model_copy(
+        update={
+            "visual_identity": "The vessel's exterior silhouette remains unresolved.",
+            "continuity_rules": (
+                "The vessel contains an engineering control room.",
+                "A separate diagnostic console is inside the room.",
+            ),
+        }
+    )
+    calls = []
+    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
+    monkeypatch.setattr(provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis())
+
+    def draft_stage(_request, _analysis, *, corrections=()):
+        calls.append(corrections)
+        return incorrect if len(calls) == 1 else fixed
+
+    monkeypatch.setattr(provider, "_generate_draft", draft_stage)
+    assert provider.generate_cap(request) == fixed
+    assert len(calls) == 2
+    assert "silhouette" in " ".join(calls[1]).lower()
+
+
+def test_b525_ship_identity_gate_rejects_repeat_substitution(monkeypatch):
+    import pytest
+
+    from vscs.domain.caps.generation import (
+        CAPCanonAnalysis,
+        CAPGenerationRequest,
+        CanonicalFactExtraction,
+    )
+    from vscs.infrastructure.ai.openai_provider import OpenAICAPGenerationProvider
+    from vscs.infrastructure.ai.provider import AIProviderError
+
+    provider = object.__new__(OpenAICAPGenerationProvider)
+    request = CAPGenerationRequest(
+        asset_id="STORY-SHI-001",
+        asset_name="Unmanned exploration vessel",
+        asset_category="ship",
+        story_context="A ship has an internal engineering control room.",
+    )
+    invalid = GeneratedCAPDraft(
+        title="Unmanned exploration vessel",
+        canonical_description="An unmanned ship contains a room.",
+        visual_identity="The diagnostic console has a blue display.",
+    )
+    calls = []
+    monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
+    monkeypatch.setattr(provider, "_analyse_canon", lambda _request, _facts: CAPCanonAnalysis())
+
+    def draft_stage(_request, _analysis, *, corrections=()):
+        calls.append(corrections)
+        return invalid
+
+    monkeypatch.setattr(provider, "_generate_draft", draft_stage)
+    with pytest.raises(AIProviderError, match="quality gate failed after one"):
+        provider.generate_cap(request)
+    assert len(calls) == 2
