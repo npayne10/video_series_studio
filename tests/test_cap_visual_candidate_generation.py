@@ -117,7 +117,7 @@ def test_rejected_non_png_cannot_create_reference(tmp_path):
 def test_changed_review_before_persistence_fails_closed(tmp_path):
     prep = _prep()
     service, refs, _provider = _service(tmp_path, prep)
-    project, request = service.prepare_request(prep)
+    project, request = service.prepare_request(prep, seed=5)
     image = service.render(prep, project, request)
     service.prepare = lambda _asset_id: replace(prep, review_fingerprint="changed")
     with pytest.raises(VisualCandidateGenerationError, match="changed"):
@@ -198,3 +198,12 @@ def test_operator_confirmation_uses_progress_before_gui_persistence(
         preparation, tmp_path, request, render_result
     )
     assert dialog.result() == dialog.DialogCode.Accepted
+
+
+def test_provider_provenance_mismatch_is_rejected(tmp_path):
+    prep = _prep()
+    service, refs, _provider = _service(tmp_path, prep)
+    # Fixture reports seed 5; the request asks for a different seed.
+    with pytest.raises(VisualCandidateGenerationError, match="provenance"):
+        service.generate(prep.asset_id, seed=6)
+    refs.create.assert_not_called()
