@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from vscs.application.caps.category_identity import category_identity_issues
 from vscs.application.caps.design_quality import (
     DesignQualityIssue,
     assess_design_grounding,
@@ -176,6 +177,12 @@ class StoryCAPSpecificationService:
         if not identity:
             raise ValueError("Provider returned no reviewable visual identity")
         description = draft.canonical_description.strip() or identity
+        identity_issues = category_identity_issues(asset.category, asset.name, identity)
+        if identity_issues:
+            raise ValueError(
+                "CAP category identity gate must be corrected before review: "
+                + "; ".join(identity_issues)
+            )
         # The provider output is a *proposed* visual anchor; no story entailment claimed.
         prompt = (
             f"Canonical reference image of {asset.name}. {description}. "
