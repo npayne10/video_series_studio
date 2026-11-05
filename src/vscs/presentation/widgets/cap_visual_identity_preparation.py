@@ -82,6 +82,16 @@ class VisualIdentityPreparationDialog(QDialog):
             "\n".join(preparation.deferred_fields) or "(none)",
             "visualIdentityDeferredFields",
         )
+        readonly(
+            "Cross-asset continuity (context only, not a substitute for physical identity)",
+            "\\n".join(preparation.continuity_context) or "(none)",
+            "visualIdentityContinuityContext",
+        )
+        readonly(
+            "Related canonical asset IDs (reference-only)",
+            "\\n".join(preparation.dependency_asset_ids) or "(none)",
+            "visualIdentityRelatedAssets",
+        )
         self.prompt_view = readonly(
             "Provider-neutral proposed MASTER prompt (not an approved reference)",
             preparation.master_candidate_prompt,
