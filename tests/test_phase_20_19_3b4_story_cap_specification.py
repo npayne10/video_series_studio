@@ -111,7 +111,7 @@ def test_b525_other_providers_can_propose_permanent_design_choices():
     )
     draft = GeneratedCAPDraft(
         title="Engineering control room",
-        visual_identity="Diagnostic console beside the workstation.",
+        visual_identity="The engineering control room contains a diagnostic console beside the workstation.",
         canonical_description="Engineering control room on an unmanned ship.",
     )
     provider = SimpleNamespace(
