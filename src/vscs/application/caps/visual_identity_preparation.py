@@ -37,6 +37,8 @@ class VisualIdentityPreparation:
     review_fingerprint: str
     accepted_fields: tuple[tuple[str, str], ...]
     deferred_fields: tuple[str, ...]
+    continuity_context: tuple[str, ...]
+    dependency_asset_ids: tuple[str, ...]
     blockers: tuple[str, ...]
     master_candidate_prompt: str
     negative_prompt: str
@@ -144,6 +146,8 @@ def prepare_visual_identity(
         "Preserve asset category identity, physical geometry, materials and stable appearance. "
         "Do not add unreviewed features, internal assets as exterior silhouette, "
         "temporary Shot actions, characters, extra signage, or unsupported equipment. "
+        "Related assets retain separate canonical identities; do not invent their "
+        "physical appearance from containment or adjacency alone. "
         "Unresolved/deferred features are NOT authoritative; do not guess them. "
         "Neutral studio reference, complete subject visible, reproducible framing."
     )
@@ -161,6 +165,8 @@ def prepare_visual_identity(
         review_fingerprint=review_hash,
         accepted_fields=accepted,
         deferred_fields=deferred,
+        continuity_context=spec.continuity_rules if spec is not None else (),
+        dependency_asset_ids=spec.dependency_asset_ids if spec is not None else (),
         blockers=tuple(blockers),
         master_candidate_prompt=prompt,
         negative_prompt=negative,
