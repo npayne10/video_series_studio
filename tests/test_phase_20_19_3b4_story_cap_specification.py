@@ -144,10 +144,7 @@ def test_b525_ship_prop_substitution_is_blocked_before_design_expansion():
     draft = GeneratedCAPDraft(
         title=asset.name,
         canonical_description="Unmanned vessel containing an engineering room.",
-        visual_identity=(
-            "The diagnostic console has a blue display. "
-            "No exterior appearance is established."
-        ),
+        visual_identity="The diagnostic console has a blue display. No exterior appearance is established.",
     )
     provider = Mock()
     with pytest.raises(ValueError, match="CAP category identity gate"):
