@@ -133,3 +133,49 @@ def test_b525_other_providers_can_propose_permanent_design_choices():
     )
     assert proposal.design_suggestions[0].field == "lighting"
     assert proposal.specification.origin == "story_intelligence_proposal"
+
+
+def test_b525_ship_prop_substitution_is_blocked_before_design_expansion():
+    asset = SimpleNamespace(
+        asset_id="STORY-SHI-001",
+        name="Unmanned exploration vessel",
+        category=AssetCategory.SHIP,
+    )
+    draft = GeneratedCAPDraft(
+        title=asset.name,
+        canonical_description="Unmanned vessel containing an engineering room.",
+        visual_identity=(
+            "The diagnostic console has a blue display. "
+            "No exterior appearance is established."
+        ),
+    )
+    provider = Mock()
+    with pytest.raises(ValueError, match="CAP category identity gate"):
+        StoryCAPSpecificationService.proposal_from_draft(
+            asset, "An unmanned exploration vessel has an engineering room.", draft, provider
+        )
+    provider.expand_cap_design.assert_not_called()
+
+
+def test_b525_ship_unresolved_exterior_preserves_containment_without_invention():
+    asset = SimpleNamespace(
+        asset_id="STORY-SHI-001",
+        name="Unmanned exploration vessel",
+        category=AssetCategory.SHIP,
+    )
+    draft = GeneratedCAPDraft(
+        title=asset.name,
+        canonical_description="Unmanned vessel with an engineering control room.",
+        visual_identity="The vessel's exterior silhouette remains unresolved.",
+        continuity_rules=(
+            "Engineering control room is inside the vessel.",
+            "Diagnostic console is beside a workstation inside the room.",
+        ),
+    )
+    proposal = StoryCAPSpecificationService.proposal_from_draft(
+        asset, "An unmanned vessel contains a control room.", draft, Mock()
+    )
+    assert "unresolved" in proposal.specification.canonical_attributes["silhouette"]
+    assert "diagnostic console" not in proposal.specification.canonical_attributes["silhouette"]
+    assert proposal.specification.continuity_rules == draft.continuity_rules
+    assert "Unmanned exploration vessel" in proposal.specification.master_prompt
