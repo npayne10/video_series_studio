@@ -142,3 +142,59 @@ def test_ready_visual_candidate_button_requires_explicit_operator_action(qtbot):
     qtbot.addWidget(dialog)
     assert dialog.generate_button.isEnabled()
     service.render.assert_not_called()
+
+
+def test_operator_declines_local_generation_without_calling_provider(qtbot, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    service = Mock()
+    dialog = VisualIdentityPreparationDialog(_prep(), service)
+    qtbot.addWidget(dialog)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args, **_kw: QMessageBox.StandardButton.No
+    )
+    dialog._generate_local()
+    service.prepare_request.assert_not_called()
+    service.render.assert_not_called()
+    service.persist_candidate.assert_not_called()
+
+
+def test_operator_confirmation_uses_progress_before_gui_persistence(
+    qtbot, monkeypatch, tmp_path
+):
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+
+    preparation = _prep()
+    service = Mock()
+    request = SimpleNamespace(prompt=preparation.master_candidate_prompt)
+    service.prepare_request.return_value = (tmp_path, request)
+    render_result = object()
+    events = []
+
+    def run(_runner, _title, _asset_id, operation):
+        events.append("render")
+        assert operation() is render_result
+        return render_result
+
+    def persist(*_args):
+        events.append("persist")
+        return 77
+
+    service.render.return_value = render_result
+    service.persist_candidate.side_effect = persist
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args, **_kw: QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(QMessageBox, "information", lambda *_args, **_kw: None)
+    monkeypatch.setattr(AutomationProgressRunner, "run", run)
+
+    dialog = VisualIdentityPreparationDialog(preparation, service)
+    qtbot.addWidget(dialog)
+    dialog._generate_local()
+    assert events == ["render", "persist"]
+    service.persist_candidate.assert_called_once_with(
+        preparation, tmp_path, request, render_result
+    )
+    assert dialog.result() == dialog.DialogCode.Accepted
