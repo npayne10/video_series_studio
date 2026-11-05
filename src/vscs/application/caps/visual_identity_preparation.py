@@ -81,7 +81,8 @@ def prepare_visual_identity(
             raise ValueError("Design review audit is invalid or incomplete")
         if audit.get("image_authorized") is not False or audit.get("canon_approved") is not False:
             raise ValueError("Design review unexpectedly contains approval authority")
-        if not isinstance(audit.get("reviewer"), str) or not audit["reviewer"].strip():
+        reviewer = audit.get("reviewer")
+        if not isinstance(reviewer, str) or not reviewer.strip():
             raise ValueError("Design review actor is missing")
         decisions = audit.get("fields")
         if not isinstance(decisions, list):
