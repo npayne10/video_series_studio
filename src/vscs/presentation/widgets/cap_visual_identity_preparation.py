@@ -16,8 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from vscs.application.caps.reference_library import ReferenceLibraryService
-from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
+from vscs.application.caps.visual_candidate_generation import VisualCandidateGenerationService
 from vscs.application.caps.visual_identity_preparation import (
     VisualIdentityPreparation,
     prepare_visual_identity,
@@ -28,10 +27,14 @@ class VisualIdentityPreparationDialog(QDialog):
     """Inspect candidate preparation; deliberately no image or CAP write actions."""
 
     def __init__(
-        self, preparation: VisualIdentityPreparation, parent: QWidget | None = None
+        self,
+        preparation: VisualIdentityPreparation,
+        generation_service: VisualCandidateGenerationService | None = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.preparation = preparation
+        self.generation_service = generation_service
         self.setWindowTitle(f"Prepare MASTER Candidate (Offline) — {preparation.title}")
         self.setMinimumSize(850, 680)
         outer = QVBoxLayout(self)
@@ -117,9 +120,18 @@ class VisualIdentityPreparationDialog(QDialog):
         self.copy_button.setEnabled(preparation.ready_for_master_candidate)
         self.copy_button.clicked.connect(self._copy_prompt)
         layout.addWidget(self.copy_button)
+        self.generate_button = QPushButton("Generate One Local Image Candidate (ComfyUI)")
+        self.generate_button.setObjectName("generateLocalVisualCandidate")
+        self.generate_button.setEnabled(
+            generation_service is not None and preparation.ready_for_master_candidate
+        )
+        self.generate_button.clicked.connect(self._generate_local)
+        layout.addWidget(self.generate_button)
         note = QLabel(
-            "Preparation is offline, makes zero paid/provider calls, and does not create "
-            "images, candidate references, approved Canon or Production Approval. "
+            "Inspection and prompt preparation are offline, with zero provider calls. "
+            "The separate Generate One Local Image Candidate action requires confirmation "
+            "and calls XCIC/ComfyUI; it creates only a reviewable Candidate image, not a MASTER. "
+            "No action grants approved Canon or Production Approval. "
             "Resolve blockers through a reviewed CAP design decision before continuing. "
             "Once an approved MASTER is locked, use Generate Production References "
             "for MASTER-conditioned derived views."
@@ -129,6 +141,47 @@ class VisualIdentityPreparationDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         outer.addWidget(buttons)
+
+    def _generate_local(self) -> None:
+        service = self.generation_service
+        if service is None or not self.preparation.ready_for_master_candidate:
+            return
+        answer = QMessageBox.question(
+            self,
+            "Local Visual Candidate Generation",
+            "Generate ONE candidate image using the configured local XCIC/ComfyUI "
+            "text-to-image workflow? This uses local GPU resources but no paid "
+            "OpenAI image request. Output remains Candidate only and is NOT a "
+            "ChatGPT MASTER. No Canon or Production Approval will be granted.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+
+            project, request = service.prepare_request(self.preparation)
+            rendered = AutomationProgressRunner(self).run(
+                "Local Visual Candidate",
+                self.preparation.asset_id,
+                lambda: service.render(self.preparation, project, request),
+            )
+            # Only the provider render ran in the worker. Persist references
+            # on the UI thread after revalidating the CAP and review snapshot.
+            reference_id = service.persist_candidate(
+                self.preparation, project, request, rendered
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.critical(self, "Local Visual Candidate", str(exc))
+            return
+        QMessageBox.information(
+            self,
+            "Visual Candidate Saved",
+            f"Candidate reference {reference_id} created for review. "
+            "It is not approved, not a MASTER and not a production reference.",
+        )
+        self.accept()
 
     def _copy_prompt(self) -> None:
         if self.preparation.ready_for_master_candidate:
@@ -141,8 +194,7 @@ def install_visual_identity_preparation(cap_manager: QWidget) -> QPushButton | N
     caps = getattr(cap_manager, "caps", None)
     if references is None or caps is None:
         return None
-    library = ReferenceLibraryService(references)
-    templates = CategoryReferenceTemplateService(references, library)
+    service = VisualCandidateGenerationService(references)
     button = QPushButton("Prepare MASTER Candidate (Offline)")
     button.setObjectName("prepareVisualIdentityOffline")
 
@@ -152,19 +204,12 @@ def install_visual_identity_preparation(cap_manager: QWidget) -> QPushButton | N
             QMessageBox.information(cap_manager, "Visual Identity", "Select a CAP first.")
             return
         try:
-            cap = caps.get(selected)
-            coverage = templates.coverage(selected)
-            preparation = prepare_visual_identity(
-                cap, coverage.template.required_views, coverage.present_views
-            )
-            if preparation.specification_fingerprint:
-                asset = caps.assets.get(selected)
-                if preparation.category != asset.category:
-                    raise ValueError("Reviewed CAP category differs from the registered asset")
+            preparation = service.prepare(selected)
         except (OSError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(cap_manager, "Visual Identity Preparation", str(exc))
             return
-        VisualIdentityPreparationDialog(preparation, cap_manager).exec()
+        if VisualIdentityPreparationDialog(preparation, service, cap_manager).exec():
+            cap_manager.refresh()
 
     button.clicked.connect(open_dialog)
     outer = cap_manager.layout()
