@@ -65,6 +65,9 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
 )
 from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 from vscs.presentation.widgets.cap_readiness_widget import install_cap_readiness
+from vscs.presentation.widgets.cap_visual_identity_preparation import (
+    install_visual_identity_preparation,
+)
 from vscs.presentation.widgets.dashboard import DashboardWidget
 from vscs.presentation.widgets.episode_assembly_workspace import EpisodeAssemblyWorkspace
 from vscs.presentation.widgets.generated_media_workspace import GeneratedMediaWorkspaceWidget
@@ -226,6 +229,9 @@ class MainWindow(QMainWindow):
             self.canonical_references,
         )
         self.derived_reference_button = install_derived_reference_generation(self.cap_manager)
+        self.visual_identity_preparation_button = install_visual_identity_preparation(
+            self.cap_manager
+        )
         self.cap_readiness_button = install_cap_readiness(
             self.cap_manager,
             self.production_projection,
