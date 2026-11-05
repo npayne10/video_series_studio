@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -33,7 +34,14 @@ class VisualIdentityPreparationDialog(QDialog):
         self.preparation = preparation
         self.setWindowTitle(f"Prepare MASTER Candidate (Offline) — {preparation.title}")
         self.setMinimumSize(850, 680)
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        scroll = QScrollArea(self)
+        scroll.setObjectName("visualIdentityPreparationScroll")
+        scroll.setWidgetResizable(True)
+        body = QWidget()
+        layout = QVBoxLayout(body)
+        scroll.setWidget(body)
+        outer.addWidget(scroll, 1)
 
         status = (
             "BLOCKED — cannot prepare image generation"
@@ -48,8 +56,12 @@ class VisualIdentityPreparationDialog(QDialog):
         form = QFormLayout()
         form.addRow("Asset", QLabel(f"{preparation.asset_id} — {preparation.category.value}"))
         form.addRow("Default execution preference", QLabel("Local / ComfyUI; no provider called"))
-        form.addRow("Source fingerprint", QLabel(preparation.specification_fingerprint or "Missing"))
-        form.addRow("Decision audit fingerprint", QLabel(preparation.review_fingerprint or "Missing"))
+        form.addRow(
+            "Source fingerprint", QLabel(preparation.specification_fingerprint or "Missing")
+        )
+        form.addRow(
+            "Decision audit fingerprint", QLabel(preparation.review_fingerprint or "Missing")
+        )
         required = ", ".join(view.value for view in preparation.required_reference_views)
         missing = ", ".join(view.value for view in preparation.missing_reference_views)
         form.addRow("Category-required views", QLabel(required or "(none)"))
@@ -84,12 +96,12 @@ class VisualIdentityPreparationDialog(QDialog):
         )
         readonly(
             "Cross-asset continuity (context only, not a substitute for physical identity)",
-            "\\n".join(preparation.continuity_context) or "(none)",
+            "\n".join(preparation.continuity_context) or "(none)",
             "visualIdentityContinuityContext",
         )
         readonly(
             "Related canonical asset IDs (reference-only)",
-            "\\n".join(preparation.dependency_asset_ids) or "(none)",
+            "\n".join(preparation.dependency_asset_ids) or "(none)",
             "visualIdentityRelatedAssets",
         )
         self.prompt_view = readonly(
@@ -116,7 +128,7 @@ class VisualIdentityPreparationDialog(QDialog):
         layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        outer.addWidget(buttons)
 
     def _copy_prompt(self) -> None:
         if self.preparation.ready_for_master_candidate:
@@ -145,6 +157,10 @@ def install_visual_identity_preparation(cap_manager: QWidget) -> QPushButton | N
             preparation = prepare_visual_identity(
                 cap, coverage.template.required_views, coverage.present_views
             )
+            if preparation.specification_fingerprint:
+                asset = caps.assets.get(selected)
+                if preparation.category != asset.category:
+                    raise ValueError("Reviewed CAP category differs from the registered asset")
         except (OSError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(cap_manager, "Visual Identity Preparation", str(exc))
             return
