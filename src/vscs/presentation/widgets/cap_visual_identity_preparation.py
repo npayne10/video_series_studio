@@ -24,7 +24,7 @@ from vscs.application.caps.visual_identity_preparation import (
 
 
 class VisualIdentityPreparationDialog(QDialog):
-    """Inspect candidate preparation; deliberately no image or CAP write actions."""
+    """Inspect reviewed design; local candidate rendering needs explicit consent."""
 
     def __init__(
         self,
@@ -49,7 +49,7 @@ class VisualIdentityPreparationDialog(QDialog):
         status = (
             "BLOCKED — cannot prepare image generation"
             if preparation.blockers
-            else "READY FOR HUMAN-REVIEWED MASTER CANDIDATE GENERATION — not approved"
+            else "READY FOR LOCAL VISUAL CANDIDATE — MASTER approval separate; not approved"
         )
         self.status_label = QLabel(status)
         self.status_label.setObjectName("visualIdentityPreparationStatus")
@@ -58,7 +58,10 @@ class VisualIdentityPreparationDialog(QDialog):
 
         form = QFormLayout()
         form.addRow("Asset", QLabel(f"{preparation.asset_id} — {preparation.category.value}"))
-        form.addRow("Default execution preference", QLabel("Local / ComfyUI; no provider called"))
+        form.addRow(
+            "Default execution preference",
+            QLabel("Local / ComfyUI; only called by the explicit Generate action"),
+        )
         form.addRow(
             "Source fingerprint", QLabel(preparation.specification_fingerprint or "Missing")
         )
