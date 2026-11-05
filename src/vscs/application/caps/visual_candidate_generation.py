@@ -22,6 +22,7 @@ from vscs.application.caps.visual_identity_preparation import (
 from vscs.domain.caps import (
     CanonicalAssetGenerationRequest,
     CanonicalReferenceCreate,
+    GeneratedCanonicalAsset,
     CanonicalReferenceRole,
     CanonicalReferenceType,
 )
@@ -64,44 +65,74 @@ class VisualCandidateGenerationService:
     def generate(
         self, asset_id: str, *, seed: int = 0, width: int = 1280, height: int = 720
     ) -> int:
-        before = self.prepare(asset_id)
-        if not before.ready_for_master_candidate:
+        """Synchronous orchestration for CLI/batch callers."""
+        preparation = self.prepare(asset_id)
+        project, request = self.prepare_request(
+            preparation, seed=seed, width=width, height=height
+        )
+        rendered = self.render(preparation, project, request)
+        return self.persist_candidate(preparation, project, request, rendered)
+
+    def prepare_request(
+        self,
+        preparation: VisualIdentityPreparation,
+        *,
+        seed: int = 0,
+        width: int = 1280,
+        height: int = 720,
+    ) -> tuple[Path, CanonicalAssetGenerationRequest]:
+        if not preparation.ready_for_master_candidate:
             raise VisualCandidateGenerationError(
-                "Visual candidate generation blocked: " + "; ".join(before.blockers)
+                "Visual candidate generation blocked: " + "; ".join(preparation.blockers)
             )
         project = self.references.caps.assets.projects.project_directory
         if project is None:
             raise VisualCandidateGenerationError("Open a VSCS project before image generation")
         project = project.resolve(strict=False)
         request = CanonicalAssetGenerationRequest(
-            prompt=before.master_candidate_prompt,
-            negative_prompt=before.negative_prompt,
+            prompt=preparation.master_candidate_prompt,
+            negative_prompt=preparation.negative_prompt,
             model="XCIC / local ComfyUI Qwen text-to-image",
             width=width,
             height=height,
             seed=seed,
             variations=1,
         )
-        # XCIC owns workflow execution; this call may take time or fail if
-        # ComfyUI/XCIC are not configured. No external paid API is used here.
+        return project, request
+
+    def render(
+        self,
+        preparation: VisualIdentityPreparation,
+        project: Path,
+        request: CanonicalAssetGenerationRequest,
+    ) -> GeneratedCanonicalAsset:
+        """Worker-safe local provider invocation: no CAP or reference writes."""
         outputs = self.provider_factory(project).generate_images(
-            before.asset_id, before.title, request
+            preparation.asset_id, preparation.title, request
         )
         if len(outputs) != 1:
             raise VisualCandidateGenerationError(
                 "Local provider must return exactly one reviewable image candidate"
             )
-        generated = outputs[0]
-        if generated.media_type != "image/png" or not generated.content.startswith(
-            _PNG_SIGNATURE
-        ):
+        result = outputs[0]
+        if result.media_type != "image/png" or not result.content.startswith(_PNG_SIGNATURE):
             raise VisualCandidateGenerationError(
                 "Candidate provider must return a nonempty PNG image"
             )
-        # Do not let an in-flight project edit or changed reference lifecycle
-        # reuse the old design fingerprint, even if generation itself succeeded.
-        after = self.prepare(asset_id)
-        if before != after:
+        return result
+
+    def persist_candidate(
+        self,
+        preparation: VisualIdentityPreparation,
+        project: Path,
+        request: CanonicalAssetGenerationRequest,
+        generated: GeneratedCanonicalAsset,
+    ) -> int:
+        """GUI-thread phase: recheck current authority before writing Candidate only."""
+        asset_id = preparation.asset_id
+        if not preparation.ready_for_master_candidate:
+            raise VisualCandidateGenerationError("Unreviewed CAP cannot publish a visual candidate")
+        if self.prepare(asset_id) != preparation:
             raise VisualCandidateGenerationError(
                 "CAP design or reference state changed during image generation; "
                 "discarding stale output"
@@ -116,8 +147,8 @@ class VisualCandidateGenerationService:
         manifest = manifest_root / f"{destination.stem}.json"
         provenance = {
             "asset_id": cap.asset_id,
-            "specification_fingerprint": before.specification_fingerprint,
-            "review_fingerprint": before.review_fingerprint,
+            "specification_fingerprint": preparation.specification_fingerprint,
+            "review_fingerprint": preparation.review_fingerprint,
             "provider": "VSCS XCIC / local ComfyUI",
             "model": generated.model,
             "seed": generated.seed,
