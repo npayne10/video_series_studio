@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from vscs.application.caps.completeness import REQUIRED_FIELDS
 from vscs.application.caps.design_completion import (
     DESIGN_REVIEW_KEY,
     DesignFieldReview,
@@ -31,6 +32,11 @@ def _cap(
     deferred: tuple[str, ...] = (),
     status: CAPStatus = CAPStatus.DRAFT,
 ):
+    deferred = tuple(
+        dict.fromkeys(
+            (*deferred, *(key for key in REQUIRED_FIELDS[category] if key not in values))
+        )
+    )
     spec = CAPStructuredSpecification(
         asset_id="STORY-TEST-001",
         category=category,
