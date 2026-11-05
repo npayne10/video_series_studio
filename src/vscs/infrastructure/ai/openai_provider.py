@@ -114,6 +114,7 @@ class OpenAICAPGenerationProvider:
             issues = (
                 *self._identity_quality_issues(draft),
                 *self._source_relationship_issues(request, draft),
+                *self._category_identity_issues(request, draft),
             )
             if issues:
                 # One bounded corrective draft call, reusing the same verified facts.
@@ -122,6 +123,7 @@ class OpenAICAPGenerationProvider:
                 remaining = (
                     *self._identity_quality_issues(draft),
                     *self._source_relationship_issues(request, draft),
+                    *self._category_identity_issues(request, draft),
                 )
                 if remaining:
                     raise AIProviderError(
@@ -317,6 +319,24 @@ class OpenAICAPGenerationProvider:
             )
         return ()
 
+    @staticmethod
+    def _category_identity_issues(
+        request: CAPGenerationRequest, draft: GeneratedCAPDraft
+    ) -> tuple[str, ...]:
+        """Check that the physical identity belongs to the requested asset."""
+        from vscs.application.caps.category_identity import category_identity_issues
+        from vscs.domain.assets.models import AssetCategory
+
+        try:
+            category = AssetCategory(request.asset_category)
+        except ValueError:
+            return ()
+        return category_identity_issues(
+            category,
+            request.asset_name,
+            draft.visual_identity.strip() or draft.canonical_description.strip(),
+        )
+
     def _generate_draft(
         self,
         request: CAPGenerationRequest,
@@ -344,6 +364,16 @@ class OpenAICAPGenerationProvider:
             "not dictate which Shot contains an action. Preserve unambiguous ownership "
             "and pronoun references in the source (e.g. a console's blue display belongs "
             "to the console), never invent a new ambiguity. "
+            "Asset-category identity is mandatory: a SHIP/VESSEL silhouette must "
+            "describe the vessel exterior/hull/shape or EXPLICITLY state that the "
+            "vessel exterior remains unresolved. Do NOT fill its silhouette field "
+            "with a diagnostic console, indicator, or room interior. A LOCATION "
+            "architecture describes the room/layout rather than a separate prop. "
+            "A PROP/TECHNOLOGY geometry describes the prop rather than its containing "
+            "room. Store containment and other asset relationships in narrative "
+            "description or continuity, never as a substitute for the asset's "
+            "physical identity. Explicitly unresolved appearance is preferable "
+            "to an invented design. "
             "Do not invent dimensions, materials or geometry. Leave unresolved facts "
             "unresolved; proposed design details require separate human review. "
             "Leave a structured collection empty rather than inventing unsupported information. "
