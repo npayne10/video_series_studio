@@ -25,9 +25,16 @@ def test_generates_category_specific_review_only_proposal(category, key):
     generator.assets.get.return_value = SimpleNamespace(
         asset_id="CAP-TEST-001", name="Test Asset", category=category
     )
+    identities = {
+        AssetCategory.CHARACTER: "A character with a fixed canonical appearance.",
+        AssetCategory.LOCATION: "The room contains a console and workstation.",
+        AssetCategory.SHIP: "The vessel's exterior silhouette remains unresolved.",
+        AssetCategory.PROP: "The console has a blue display.",
+        AssetCategory.ENVIRONMENT: "The environment is deep space.",
+    }
     generator.generate_draft.return_value = GeneratedCAPDraft(
         title="Test Asset",
-        visual_identity="Fixed canonical silhouette",
+        visual_identity=identities[category],
         canonical_description="Controlled story asset",
         continuity_rules=("Preserve dimensions",),
     )
@@ -70,7 +77,7 @@ def test_b525_other_providers_cannot_cache_ungrounded_design_suggestions():
     )
     draft = GeneratedCAPDraft(
         title="Engineering control room",
-        visual_identity="Diagnostic console beside the workstation.",
+        visual_identity="The engineering control room contains a console beside the workstation.",
         canonical_description="Engineering control room on an unmanned ship.",
     )
     provider = SimpleNamespace(
