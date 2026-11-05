@@ -133,11 +133,15 @@ def prepare_visual_identity(
             f"{category.value.title()} visual identity is unresolved. Review a distinctive "
             f"physical design before generating a MASTER candidate."
         )
-    if spec is not None and category is AssetCategory.SHIP and "silhouette" in deferred:
-        if not any("visual identity is unresolved" in item for item in blockers):
-            blockers.append(
-                "Ship silhouette is deferred; establish and review exterior identity first"
-            )
+    if (
+        spec is not None
+        and category is AssetCategory.SHIP
+        and "silhouette" in deferred
+        and not any("visual identity is unresolved" in item for item in blockers)
+    ):
+        blockers.append(
+            "Ship silhouette is deferred; establish and review exterior identity first"
+        )
 
     source_hash = spec.fingerprint() if spec is not None else ""
     review_hash = (
@@ -166,6 +170,11 @@ def prepare_visual_identity(
         "text overlays, unverified attachments, inconsistent geometry"
     )
     missing = tuple(view for view in required_views if view not in present_views)
+    if CanonicalReferenceView.MASTER in present_views:
+        blockers.append(
+            "An active MASTER reference already exists. Use its governed "
+            "review/approval lifecycle instead of preparing a duplicate."
+        )
     return VisualIdentityPreparation(
         asset_id=cap.asset_id,
         title=cap.title,
