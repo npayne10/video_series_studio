@@ -109,7 +109,7 @@ def test_rejected_non_png_cannot_create_reference(tmp_path):
     prep = _prep()
     service, refs, _provider = _service(tmp_path, prep, content=b"not an image")
     with pytest.raises(VisualCandidateGenerationError, match="PNG"):
-        service.generate(prep.asset_id)
+        service.generate(prep.asset_id, seed=5)
     refs.create.assert_not_called()
     assert list(tmp_path.rglob("*.png")) == []
 
