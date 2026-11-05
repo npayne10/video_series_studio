@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
+from vscs.application.caps.category_identity import category_identity_issues
 from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
@@ -457,6 +458,18 @@ class StoryCAPBatchDialog(QDialog):
             cached_issues = assess_design_grounding(
                 story.description, item.proposal.design_suggestions
             )
+            category_issues = category_identity_issues(
+                asset.category,
+                asset.name,
+                item.proposal.specification.canonical_attributes.get(
+                    item.proposal.suggested_attribute_key, ""
+                ),
+            )
+            if category_issues:
+                raise StoryBatchError(
+                    "Cached CAP identity is category-inconsistent; regenerate only "
+                    "with explicit paid consent: " + "; ".join(category_issues)
+                )
             if cached_issues:
                 raise StoryBatchError(
                     "Cached CAP design has grounding issues; discard and regenerate "
