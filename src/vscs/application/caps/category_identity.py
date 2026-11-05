@@ -16,7 +16,7 @@ def _match(pattern: str, value: str) -> bool:
 
 
 _SHIP = r"(?:ship|vessel|spacecraft|starship|shuttle|craft)"
-_EXTERIOR = r"(?:hull|silhouette|outline|exterior|external\s+shape|outer\s+shape|form|profile)"
+_EXTERIOR = r"(?:hull|silhouette|outline|exterior|external\s+shape|outer\s+shape|outer\s+profile)"
 _UNKNOWN = r"(?:unresolved|unknown|unspecified|undetermined|not\s+(?:yet\s+)?established|not\s+(?:yet\s+)?defined)"
 _LOCATION = r"(?:room|chamber|interior|location|environment|corridor|bay|bridge|facility)"
 _LOCATION_STRUCTURE = r"(?:layout|walls?|floor|ceiling|door|space|contains?|houses?|arrangement|geometry|interior)"
@@ -44,6 +44,7 @@ def category_identity_issues(
         ship_exterior = (
             _match(rf"\b{_SHIP}\b[^.\n]{{0,160}}\b{_EXTERIOR}\b", value)
             or _match(rf"\b{_EXTERIOR}\b[^.\n]{{0,160}}\b{_SHIP}\b", value)
+            or _match(r"\b(?:hull|ship\s+silhouette|vessel\s+exterior)\b", value)
         )
         unresolved_subject = (
             _match(rf"\b{_SHIP}\b[^.\n]{{0,160}}\b{_UNKNOWN}\b", value)
