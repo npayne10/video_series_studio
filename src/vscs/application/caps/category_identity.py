@@ -52,7 +52,7 @@ def category_identity_issues(
     if not value:
         return ("Missing asset identity; leave its physical design unresolved.",)
 
-    if category in (AssetCategory.SHIP, AssetCategory.VEHICLE):
+    if category is AssetCategory.SHIP:
         ship_exterior = (
             _match(rf"\b{_SHIP}\b[^.\n]{{0,160}}\b{_EXTERIOR}\b", value)
             or _match(rf"\b{_EXTERIOR}\b[^.\n]{{0,160}}\b{_SHIP}\b", value)
