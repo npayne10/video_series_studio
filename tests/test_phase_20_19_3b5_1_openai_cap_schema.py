@@ -424,7 +424,11 @@ def test_cap_grounding_quality_gate_requests_at_most_one_corrective_pass(monkeyp
         visual_identity="The blue display's ownership is unspecified.",
     )
     corrected = first.model_copy(
-        update={"visual_identity": "The engineering control room contains a diagnostic console with a blue display."}
+        update={
+            "visual_identity": (
+                "The engineering control room contains a diagnostic console with a blue display."
+            )
+        }
     )
     calls = []
     monkeypatch.setattr(provider, "_extract_facts", lambda _request: CanonicalFactExtraction())
