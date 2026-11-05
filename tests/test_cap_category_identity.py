@@ -87,3 +87,11 @@ def test_unrelated_categories_remain_unaffected():
         )
         == ()
     )
+
+
+def test_ship_hull_rules_do_not_apply_to_terrestrial_vehicles():
+    assert not category_identity_issues(
+        AssetCategory.VEHICLE,
+        "Survey rover",
+        "A wheeled survey rover with a compact chassis.",
+    )
