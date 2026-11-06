@@ -156,6 +156,7 @@ def _review_selected(dialog: Any) -> None:
             "Candidate Quality Review",
             snapshot.asset_id,
             lambda: service.evaluate(snapshot, semantic_provider=provider),
+            may_charge=provider is not None,
         )
         report_path = service.save(result)
     except (OSError, RuntimeError, ValueError) as exc:
