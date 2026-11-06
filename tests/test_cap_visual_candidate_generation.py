@@ -58,7 +58,9 @@ def _service(tmp_path: Path, preparation: VisualIdentityPreparation, *, content=
         seed=5,
     )
     provider = SimpleNamespace(generate_images=Mock(return_value=(output,)))
-    cap = SimpleNamespace(id=7, asset_id=preparation.asset_id, title=preparation.title, version="1.0")
+    cap = SimpleNamespace(
+        id=7, asset_id=preparation.asset_id, title=preparation.title, version="1.0"
+    )
     refs = SimpleNamespace(
         caps=SimpleNamespace(
             get=Mock(return_value=cap),
@@ -159,9 +161,7 @@ def test_operator_declines_local_generation_without_calling_provider(qtbot, monk
     service.persist_candidate.assert_not_called()
 
 
-def test_operator_confirmation_uses_progress_before_gui_persistence(
-    qtbot, monkeypatch, tmp_path
-):
+def test_operator_confirmation_uses_progress_before_gui_persistence(qtbot, monkeypatch, tmp_path):
     from PySide6.QtWidgets import QMessageBox
 
     from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
@@ -194,9 +194,7 @@ def test_operator_confirmation_uses_progress_before_gui_persistence(
     qtbot.addWidget(dialog)
     dialog._generate_local()
     assert events == ["render", "persist"]
-    service.persist_candidate.assert_called_once_with(
-        preparation, tmp_path, request, render_result
-    )
+    service.persist_candidate.assert_called_once_with(preparation, tmp_path, request, render_result)
     assert dialog.result() == dialog.DialogCode.Accepted
 
 
