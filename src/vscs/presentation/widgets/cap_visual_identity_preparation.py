@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QApplication,
+    QHBoxLayout,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -17,10 +18,8 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.visual_candidate_generation import VisualCandidateGenerationService
-from vscs.application.caps.visual_identity_preparation import (
-    VisualIdentityPreparation,
-    prepare_visual_identity,
-)
+from vscs.application.caps.visual_identity_preparation import VisualIdentityPreparation
+from vscs.presentation.widgets.cap_manager import CAPManagerWidget
 
 
 class VisualIdentityPreparationDialog(QDialog):
@@ -91,8 +90,7 @@ class VisualIdentityPreparationDialog(QDialog):
         )
         readonly(
             "Reviewed Draft design fields",
-            "\n".join(f"{key}: {value}" for key, value in preparation.accepted_fields)
-            or "(none)",
+            "\n".join(f"{key}: {value}" for key, value in preparation.accepted_fields) or "(none)",
             "visualIdentityReviewedFields",
         )
         readonly(
@@ -172,9 +170,7 @@ class VisualIdentityPreparationDialog(QDialog):
             )
             # Only the provider render ran in the worker. Persist references
             # on the UI thread after revalidating the CAP and review snapshot.
-            reference_id = service.persist_candidate(
-                self.preparation, project, request, rendered
-            )
+            reference_id = service.persist_candidate(self.preparation, project, request, rendered)
         except (OSError, RuntimeError, ValueError) as exc:
             QMessageBox.critical(self, "Local Visual Candidate", str(exc))
             return
@@ -191,7 +187,7 @@ class VisualIdentityPreparationDialog(QDialog):
             QApplication.clipboard().setText(self.prompt_view.toPlainText())
 
 
-def install_visual_identity_preparation(cap_manager: QWidget) -> QPushButton | None:
+def install_visual_identity_preparation(cap_manager: CAPManagerWidget) -> QPushButton | None:
     """Integrate B.5.26 into Canonical Profiles using existing CAP reference services."""
     references = getattr(cap_manager, "references", None)
     caps = getattr(cap_manager, "caps", None)
@@ -221,9 +217,11 @@ def install_visual_identity_preparation(cap_manager: QWidget) -> QPushButton | N
     outer = cap_manager.layout()
     if outer is None or not outer.count():
         return None
-    controls = outer.itemAt(0).layout()
-    if controls is None:
+    first = outer.itemAt(0)
+    if first is None:
+        return None
+    controls = first.layout()
+    if not isinstance(controls, QHBoxLayout):
         return None
     controls.insertWidget(max(0, controls.count() - 3), button)
-    cap_manager.visual_identity_preparation_button = button
     return button
