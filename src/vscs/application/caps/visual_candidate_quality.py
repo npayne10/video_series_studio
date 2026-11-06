@@ -41,6 +41,7 @@ class CandidateQualitySnapshot:
     project_root: Path
     image_path: Path
     image_sha256: str
+    primary_reference_path: Path | None
     specification_fingerprint: str
     review_fingerprint: str
     accepted_fields: tuple[tuple[str, str], ...]
@@ -82,6 +83,11 @@ class CandidateQualityResult:
             "reference_status": snap.reference_status,
             "image": str(snap.image_path.relative_to(snap.project_root)),
             "image_sha256": snap.image_sha256,
+            "approved_primary_reference": (
+                str(snap.primary_reference_path.relative_to(snap.project_root))
+                if snap.primary_reference_path is not None
+                else None
+            ),
             "specification_fingerprint": snap.specification_fingerprint,
             "review_fingerprint": snap.review_fingerprint,
             "reviewed_fields": dict(snap.accepted_fields),
@@ -169,6 +175,25 @@ class CandidateQualityReviewService:
         prompt = manifest.get("prompt")
         if not isinstance(prompt, str) or not prompt.strip() or prompt != reference.description:
             raise CandidateQualityError("Candidate generation prompt provenance mismatch")
+        primary: Path | None = None
+        for other in refs.list_for_cap(asset_id):
+            if (
+                other.id != reference.id
+                and other.reference_type is CanonicalReferenceType.IMAGE
+                and other.role is CanonicalReferenceRole.PRIMARY
+                and other.status is CanonicalReferenceStatus.APPROVED
+            ):
+                candidate_primary = (root / other.file_path).resolve(strict=False)
+                try:
+                    candidate_primary.relative_to(root)
+                except ValueError as exc:
+                    raise CandidateQualityError(
+                        "Approved primary reference lies outside the VSCS project"
+                    ) from exc
+                if not candidate_primary.is_file():
+                    raise CandidateQualityError("Approved primary reference is missing")
+                primary = candidate_primary
+                break
         return CandidateQualitySnapshot(
             asset_id=asset_id,
             asset_name=asset.name,
@@ -177,6 +202,7 @@ class CandidateQualityReviewService:
             project_root=root,
             image_path=image_path,
             image_sha256=image_digest,
+            primary_reference_path=primary,
             specification_fingerprint=preparation.specification_fingerprint,
             review_fingerprint=preparation.review_fingerprint,
             accepted_fields=preparation.accepted_fields,
@@ -215,7 +241,12 @@ class CandidateQualityReviewService:
                 f"Cross-asset continuity context:\n{continuity}\n"
                 f"Related governed IDs: {dependencies}. "
                 "If a separate console/workstation appears, distinguish placement "
-                "from unverified appearance. No approved primary reference exists."
+                "from unverified appearance. "
+                + (
+                    "An approved primary reference is supplied for comparison."
+                    if snapshot.primary_reference_path is not None
+                    else "No approved primary reference exists."
+                )
             )
             semantic = SemanticImageEvaluationEngine(semantic_provider).evaluate(
                 snapshot.image_path,
@@ -228,6 +259,7 @@ class CandidateQualityReviewService:
                 ),
                 production_notes=notes,
                 generation_prompt=snapshot.generation_prompt,
+                primary_reference_path=snapshot.primary_reference_path,
             )
         recommendations: list[str] = list(technical.manual_checks)
         recommendations.extend(technical.warnings)
