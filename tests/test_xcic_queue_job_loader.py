@@ -10,10 +10,7 @@ from vscs.infrastructure.xcic_core.models import XCICCoreJob
 from vscs.infrastructure.xcic_core.queue import XCICCoreQueueWriter
 
 NODE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "custom_nodes"
-    / "vscs_xcic"
-    / "xcic_queue_loader.py"
+    Path(__file__).resolve().parents[1] / "custom_nodes" / "vscs_xcic" / "xcic_queue_loader.py"
 )
 spec = importlib.util.spec_from_file_location("vscs_xcic_queue_loader_test", NODE_PATH)
 assert spec is not None and spec.loader is not None
