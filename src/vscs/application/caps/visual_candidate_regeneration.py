@@ -258,7 +258,13 @@ class CandidateRegenerationService:
         manifest = json.loads(self._manifest_path(snapshot).read_text(encoding="utf-8"))
         old_seed = manifest.get("seed")
         seed = old_seed + attempt if type(old_seed) is int and old_seed >= 0 else attempt
-        project, base = self.generator.prepare_request(current, seed=seed)
+        old_width = manifest.get("width")
+        old_height = manifest.get("height")
+        width = old_width if type(old_width) is int and 256 <= old_width <= 8192 else 1280
+        height = old_height if type(old_height) is int and 256 <= old_height <= 8192 else 720
+        project, base = self.generator.prepare_request(
+            current, seed=seed, width=width, height=height
+        )
         if project != project_root:
             raise CandidateRegenerationError("Project switched while preparing correction")
         request = base.model_copy(
