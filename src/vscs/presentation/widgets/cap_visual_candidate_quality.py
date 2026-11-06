@@ -15,9 +15,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_candidate_quality import (
     CandidateQualityResult,
     CandidateQualityReviewService,
+)
+from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
+    ControlledCandidateRegenerationDialog,
 )
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.openai_semantic_evaluator import OpenAISemanticImageEvaluator
@@ -34,8 +38,10 @@ class CandidateQualityReportDialog(QDialog):
         report: CandidateQualityResult,
         relative_report_path: str,
         parent: QWidget | None = None,
+        references: CanonicalReferenceService | None = None,
     ) -> None:
         super().__init__(parent)
+        self.references = references
         self.setWindowTitle("Visual Candidate Quality Review — Advisory")
         self.setObjectName("visualCandidateQualityReport")
         self.resize(900, 660)
@@ -103,9 +109,41 @@ class CandidateQualityReportDialog(QDialog):
         )
         details.setPlainText("\n".join(sections))
         layout.addWidget(details, 1)
+        self.correction_button = QPushButton("Prepare Corrected Local Candidate…")
+        self.correction_button.setObjectName("prepareControlledCandidateRegeneration")
+        self.correction_button.setEnabled(
+            references is not None
+            and report.semantic is not None
+            and report.semantic.decision.value == "regenerate"
+            and report.decision == "REGENERATE_RECOMMENDED"
+        )
+        self.correction_button.clicked.connect(
+            lambda: self._prepare_correction(report, relative_report_path)
+        )
+        layout.addWidget(self.correction_button)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _prepare_correction(
+        self, report: CandidateQualityResult, relative_report_path: str
+    ) -> None:
+        if self.references is None:
+            return
+        path = report.snapshot.project_root / relative_report_path
+        try:
+            dialog = ControlledCandidateRegenerationDialog(
+                self.references,
+                report.snapshot.asset_id,
+                report.snapshot.reference_id,
+                path,
+                self,
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.warning(self, "Corrective Candidate Blocked", str(exc))
+            return
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.accept()
 
 
 def _review_selected(dialog: Any) -> None:
@@ -162,9 +200,11 @@ def _review_selected(dialog: Any) -> None:
     except (OSError, RuntimeError, ValueError) as exc:
         QMessageBox.critical(dialog, "Candidate Quality", str(exc))
         return
-    CandidateQualityReportDialog(
-        result, str(report_path.relative_to(snapshot.project_root)), dialog
-    ).exec()
+    report_dialog = CandidateQualityReportDialog(
+        result, str(report_path.relative_to(snapshot.project_root)), dialog, refs
+    )
+    if report_dialog.exec() == QDialog.DialogCode.Accepted:
+        dialog._refresh_references()
 
 
 def _update_button(dialog: Any) -> None:
