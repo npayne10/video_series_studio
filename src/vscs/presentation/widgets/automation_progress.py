@@ -39,7 +39,9 @@ class _OperationWorker(QThread):
 
 
 class _OperationDialog(QDialog):
-    def __init__(self, title: str, story_id: str, parent: QWidget) -> None:
+    def __init__(
+        self, title: str, story_id: str, parent: QWidget, *, may_charge: bool = True
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("automationOperationProgress")
         self.setWindowTitle(f"{title} — Running")
@@ -47,9 +49,14 @@ class _OperationDialog(QDialog):
         self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
         self.setMinimumWidth(460)
         layout = QVBoxLayout(self)
+        charge_note = (
+            "The configured provider may incur a charge."
+            if may_charge
+            else "This is an offline technical review; no provider charge applies."
+        )
         self.status_label = QLabel(
             f"{title} for {story_id} is running.\n"
-            "The configured provider may incur a charge. Please do not repeat this operation.",
+            f"{charge_note} Please do not repeat this operation.",
             self,
         )
         self.status_label.setWordWrap(True)
@@ -77,13 +84,20 @@ class AutomationProgressRunner:
     def active(self) -> bool:
         return self._active
 
-    def run(self, title: str, story_id: str, operation: Callable[[], ResultT]) -> ResultT:
+    def run(
+        self,
+        title: str,
+        story_id: str,
+        operation: Callable[[], ResultT],
+        *,
+        may_charge: bool = True,
+    ) -> ResultT:
         if self._active:
             raise AutomationOperationError(
                 "An Automation operation is already running; wait for its outcome."
             )
         self._active = True
-        dialog = _OperationDialog(title, story_id, self.parent)
+        dialog = _OperationDialog(title, story_id, self.parent, may_charge=may_charge)
         worker = _OperationWorker(operation, dialog)
         timer = QTimer(dialog)
         timer.setInterval(1000)
