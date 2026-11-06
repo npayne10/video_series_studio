@@ -11,14 +11,13 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_candidate_generation import VisualCandidateGenerationService
 from vscs.application.caps.visual_candidate_quality import (
-    CandidateQualityError,
     CandidateQualityReviewService,
     CandidateQualitySnapshot,
 )
 from vscs.application.caps.visual_identity_preparation import VisualIdentityPreparation
-from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.domain.caps import CanonicalAssetGenerationRequest
 
 MAX_CORRECTION_ATTEMPTS = 2
@@ -134,7 +133,9 @@ class CandidateRegenerationService:
             project_root / "Canonical Assets" / asset_id / ".metadata" / "evaluation"
         ).resolve(strict=False)
         if path.parent != directory or not path.name.endswith(".candidate_quality.json"):
-            raise CandidateRegenerationError("Review report is outside governed CAP audit directory")
+            raise CandidateRegenerationError(
+                "Review report is outside governed CAP audit directory"
+            )
         try:
             report_bytes = path.read_bytes()
             data = json.loads(report_bytes)
@@ -165,7 +166,8 @@ class CandidateRegenerationService:
         semantic = data.get("semantic")
         if not isinstance(semantic, dict) or semantic.get("decision") != "regenerate":
             raise CandidateRegenerationError(
-                "Controlled correction requires a failed semantic review, not technical scores alone"
+                "Controlled correction requires a failed semantic review, "
+                "not technical scores alone"
             )
         overall = semantic.get("overall_score")
         if type(overall) is not int or not 0 <= overall <= 100:
