@@ -135,6 +135,8 @@ class VisualCandidateGenerationService:
         project: Path,
         request: CanonicalAssetGenerationRequest,
         generated: GeneratedCanonicalAsset,
+        *,
+        regeneration: dict[str, str | int] | None = None,
     ) -> int:
         """GUI-thread phase: recheck current authority before writing Candidate only."""
         asset_id = preparation.asset_id
@@ -172,6 +174,20 @@ class VisualCandidateGenerationService:
             "image_sha256": hashlib.sha256(generated.content).hexdigest(),
             "governance": "non-authoritative_candidate_not_MASTER",
         }
+        if regeneration is not None:
+            # Never mark an ordinary local visual Candidate as a regenerated
+            # image without evidence and explicit higher-level authorisation.
+            if (
+                type(regeneration.get("original_reference_id")) is not int
+                or type(regeneration.get("parent_reference_id")) is not int
+                or type(regeneration.get("attempt")) is not int
+                or not 1 <= regeneration["attempt"] <= 2
+                or not isinstance(regeneration.get("source_quality_report"), str)
+                or not isinstance(regeneration.get("source_quality_report_sha256"), str)
+                or not isinstance(regeneration.get("source_image_sha256"), str)
+            ):
+                raise VisualCandidateGenerationError("Invalid corrective Candidate provenance")
+            provenance["regeneration"] = regeneration
         reference_id: int | None = None
         try:
             destination.write_bytes(generated.content)
