@@ -13,8 +13,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from vscs.domain.assets.models import AssetCategory
-
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_identity_preparation import prepare_visual_identity
 from vscs.application.ciee import CanonicalImageEvaluationEngine
@@ -22,6 +20,7 @@ from vscs.application.ciee.models import CanonicalImageEvaluation
 from vscs.application.siee import SemanticImageEvaluationEngine
 from vscs.application.siee.models import SemanticImageEvaluation
 from vscs.application.siee.provider import SemanticEvaluationProvider
+from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import (
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
