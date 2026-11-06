@@ -282,3 +282,16 @@ def test_paid_review_progress_discloses_possible_charge(qtbot):
     )
     qtbot.addWidget(dialog)
     assert "may incur a charge" in dialog.status_label.text()
+
+
+def test_repeated_reviews_preserve_individual_audit_files(tmp_path, monkeypatch):
+    service, _refs, prep, _image, _manifest = _scenario(tmp_path)
+    snap = _snapshot(service, prep, monkeypatch)
+    report = service.evaluate(snap)
+    first = service.save(report)
+    second = service.save(report)
+    assert first != second
+    assert first.exists() and second.exists()
+    assert json.loads(first.read_text(encoding="utf-8"))["report_id"] != json.loads(
+        second.read_text(encoding="utf-8")
+    )["report_id"]
