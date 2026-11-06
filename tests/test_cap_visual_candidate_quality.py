@@ -226,9 +226,7 @@ def test_operator_without_candidate_is_informed(qtbot, monkeypatch):
     assert messages == ["info"]
 
 
-def test_operator_cancel_never_starts_semantic_or_offline_work(
-    qtbot, tmp_path, monkeypatch
-):
+def test_operator_cancel_never_starts_semantic_or_offline_work(qtbot, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QWidget
 
     from vscs.presentation.widgets import cap_visual_candidate_quality as ui
@@ -246,9 +244,7 @@ def test_operator_cancel_never_starts_semantic_or_offline_work(
     )
     widget = QWidget()
     qtbot.addWidget(widget)
-    widget.reference_gallery = SimpleNamespace(
-        selected_reference=lambda: refs.get.return_value
-    )
+    widget.reference_gallery = SimpleNamespace(selected_reference=lambda: refs.get.return_value)
     widget.profile = SimpleNamespace(asset_id=preparation.asset_id)
     widget.reference_service = refs
     _review_selected(widget)
@@ -264,9 +260,7 @@ def test_offline_review_progress_explicitly_states_no_charge(qtbot):
 
     host = QWidget()
     qtbot.addWidget(host)
-    dialog = _OperationDialog(
-        "Candidate Quality Review", "STORY-LOC-001", host, may_charge=False
-    )
+    dialog = _OperationDialog("Candidate Quality Review", "STORY-LOC-001", host, may_charge=False)
     qtbot.addWidget(dialog)
     assert "no provider charge" in dialog.status_label.text().lower()
 
@@ -278,9 +272,7 @@ def test_paid_review_progress_discloses_possible_charge(qtbot):
 
     host = QWidget()
     qtbot.addWidget(host)
-    dialog = _OperationDialog(
-        "Candidate Quality Review", "STORY-LOC-001", host, may_charge=True
-    )
+    dialog = _OperationDialog("Candidate Quality Review", "STORY-LOC-001", host, may_charge=True)
     qtbot.addWidget(dialog)
     assert "may incur a charge" in dialog.status_label.text()
 
@@ -293,14 +285,13 @@ def test_repeated_reviews_preserve_individual_audit_files(tmp_path, monkeypatch)
     second = service.save(report)
     assert first != second
     assert first.exists() and second.exists()
-    assert json.loads(first.read_text(encoding="utf-8"))["report_id"] != json.loads(
-        second.read_text(encoding="utf-8")
-    )["report_id"]
+    assert (
+        json.loads(first.read_text(encoding="utf-8"))["report_id"]
+        != json.loads(second.read_text(encoding="utf-8"))["report_id"]
+    )
 
 
-def test_approved_primary_is_forwarded_only_as_a_separate_comparison_image(
-    tmp_path, monkeypatch
-):
+def test_approved_primary_is_forwarded_only_as_a_separate_comparison_image(tmp_path, monkeypatch):
     service, refs, prep, image, _manifest = _scenario(tmp_path)
     primary = image.parent / "approved_primary.png"
     primary.write_bytes(image.read_bytes())
