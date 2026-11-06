@@ -17,7 +17,7 @@ from vscs.application.caps.structured_specification import (
 )
 from vscs.application.caps.visual_identity_preparation import prepare_visual_identity
 from vscs.domain.assets.models import AssetCategory
-from vscs.domain.caps import CAPStatus, CanonicalReferenceView
+from vscs.domain.caps import CanonicalReferenceView, CAPStatus
 from vscs.presentation.widgets.cap_visual_identity_preparation import (
     VisualIdentityPreparationDialog,
 )
@@ -31,9 +31,7 @@ def _cap(
     status: CAPStatus = CAPStatus.DRAFT,
 ):
     deferred = tuple(
-        dict.fromkeys(
-            (*deferred, *(key for key in REQUIRED_FIELDS[category] if key not in values))
-        )
+        dict.fromkeys((*deferred, *(key for key in REQUIRED_FIELDS[category] if key not in values)))
     )
     spec = CAPStructuredSpecification(
         asset_id="STORY-TEST-001",
@@ -41,7 +39,7 @@ def _cap(
         design_intent=f"An existing {category.value} asset",
         canonical_attributes={
             **values,
-            **{field: "Unresolved" for field in deferred},
+            **dict.fromkeys(deferred, "Unresolved"),
         },
         master_prompt="Provider output, not approved.",
         continuity_rules=("Containment is a separate relationship.",),
