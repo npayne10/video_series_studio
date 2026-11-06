@@ -149,7 +149,11 @@ class CandidateQualityReviewService:
             raise CandidateQualityError("CAP review provenance is invalid")
 
         manifest_path = (
-            root / "Canonical Assets" / asset_id / ".metadata" / "visual"
+            root
+            / "Canonical Assets"
+            / asset_id
+            / ".metadata"
+            / "visual"
             / f"{image_path.stem}.json"
         )
         try:
