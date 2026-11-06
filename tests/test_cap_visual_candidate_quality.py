@@ -223,3 +223,62 @@ def test_operator_without_candidate_is_informed(qtbot, monkeypatch):
     )
     _review_selected(widget)
     assert messages == ["info"]
+
+
+def test_operator_cancel_never_starts_semantic_or_offline_work(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtWidgets import QWidget
+
+    from vscs.presentation.widgets import cap_visual_candidate_quality as ui
+
+    service, refs, preparation, _image, _manifest = _scenario(tmp_path)
+    snapshot = _snapshot(service, preparation, monkeypatch)
+    service.snapshot = Mock(return_value=snapshot)
+    service.evaluate = Mock()
+    service.save = Mock()
+    monkeypatch.setattr(ui, "CandidateQualityReviewService", lambda _refs: service)
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Cancel,
+    )
+    widget = QWidget()
+    qtbot.addWidget(widget)
+    widget.reference_gallery = SimpleNamespace(
+        selected_reference=lambda: refs.get.return_value
+    )
+    widget.profile = SimpleNamespace(asset_id=preparation.asset_id)
+    widget.reference_service = refs
+    _review_selected(widget)
+    service.evaluate.assert_not_called()
+    service.save.assert_not_called()
+    refs.approve.assert_not_called()
+
+
+def test_offline_review_progress_explicitly_states_no_charge(qtbot):
+    from PySide6.QtWidgets import QWidget
+
+    from vscs.presentation.widgets.automation_progress import _OperationDialog
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    dialog = _OperationDialog(
+        "Candidate Quality Review", "STORY-LOC-001", host, may_charge=False
+    )
+    qtbot.addWidget(dialog)
+    assert "no provider charge" in dialog.status_label.text().lower()
+
+
+def test_paid_review_progress_discloses_possible_charge(qtbot):
+    from PySide6.QtWidgets import QWidget
+
+    from vscs.presentation.widgets.automation_progress import _OperationDialog
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    dialog = _OperationDialog(
+        "Candidate Quality Review", "STORY-LOC-001", host, may_charge=True
+    )
+    qtbot.addWidget(dialog)
+    assert "may incur a charge" in dialog.status_label.text()
