@@ -117,9 +117,11 @@ class CandidateQualityReportDialog(QDialog):
                     (
                         "Design consistency: "
                         f"{previous.previous_design_consistency_score} -> "
-                        f"{report.current_design_consistency_score}"
-                        if report.semantic is not None
-                        else "NOT RUN"
+                        + (
+                            str(report.current_design_consistency_score)
+                            if report.semantic is not None
+                            else "NOT RUN"
+                        )
                     ),
                     "Improvement in technical score does not establish visual "
                     "continuity. A new consented semantic evaluation is required.",
@@ -131,7 +133,8 @@ class CandidateQualityReportDialog(QDialog):
                 *[f"  {item}" for item in report.recommendations],
                 f"Report stored in: {relative_report_path}",
                 "Use the existing gallery's Archive action for an unsuitable Candidate. "
-                "Regenerate a fresh local Candidate through Prepare Visual Identity. "
+                "If a failed semantic report recommends regeneration, use "
+                "Prepare Corrected Local Candidate to review a grounded correction. "
                 "An evaluator PASS never triggers Approve or Set as Primary.",
             )
         )
