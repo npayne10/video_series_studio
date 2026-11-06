@@ -357,4 +357,4 @@ def test_saved_report_correction_gallery_action_never_calls_terra(
     widget.reference_service = SimpleNamespace()
     ui._correct_from_saved_report(widget)
     assert requests == [(snap.asset_id, 7, report)]
-    service.generator.render.assert_not_called() if hasattr(service.generator, "render") else None
+    service.generator.prepare_request.assert_not_called()
