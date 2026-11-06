@@ -83,11 +83,7 @@ class XCICQueueJobLoader:
         jobs = source.get("jobs")
         if not isinstance(jobs, list) or not jobs:
             raise ValueError("XCIC queue must contain a nonempty jobs list")
-        if (
-            type(job_index) is not int
-            or job_index < 0
-            or job_index >= len(jobs)
-        ):
+        if type(job_index) is not int or job_index < 0 or job_index >= len(jobs):
             raise ValueError(f"XCIC queue job_index {job_index} is out of range")
         if source.get("job_count") != len(jobs):
             raise ValueError("XCIC queue job_count disagrees with jobs")
