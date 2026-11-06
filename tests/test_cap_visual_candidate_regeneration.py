@@ -8,12 +8,12 @@ from unittest.mock import Mock
 
 import pytest
 
+from vscs.application.caps.visual_candidate_quality import CandidateQualitySnapshot
 from vscs.application.caps.visual_candidate_regeneration import (
     CandidateRegenerationError,
     CandidateRegenerationService,
     MAX_CORRECTION_ATTEMPTS,
 )
-from vscs.application.caps.visual_candidate_quality import CandidateQualitySnapshot
 from vscs.application.caps.visual_identity_preparation import VisualIdentityPreparation
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CanonicalAssetGenerationRequest
