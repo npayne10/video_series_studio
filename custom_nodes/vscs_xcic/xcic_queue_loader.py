@@ -16,7 +16,7 @@ class XCICQueueJobLoader:
     """Load one explicitly indexed XCIC job from the VSCS-generated queue."""
 
     @classmethod
-    def INPUT_TYPES(cls) -> dict[str, dict[str, Any]]:
+    def INPUT_TYPES(cls) -> dict[str, dict[str, Any]]:  # noqa: N802 - ComfyUI API
         return {
             "required": {
                 "queue_file": ("STRING", {"default": "", "multiline": False}),
@@ -51,9 +51,7 @@ class XCICQueueJobLoader:
     CATEGORY = "VSCS/XCIC"
 
     @classmethod
-    def IS_CHANGED(
-        cls, queue_file: str, job_index: int, quality_mode: str = "standard"
-    ) -> float:
+    def IS_CHANGED(cls, queue_file: str, job_index: int, quality_mode: str = "standard") -> float:  # noqa: N802 - ComfyUI API
         """Read current queue each invocation; avoid stale ComfyUI node cache."""
         return float("nan")
 
@@ -94,9 +92,7 @@ class XCICQueueJobLoader:
             raise ValueError(f"Unsupported XCIC quality_mode: {quality_mode}")
         job_mode = job.get("quality_mode", "standard")
         if not isinstance(job_mode, str) or job_mode != quality_mode:
-            raise ValueError(
-                "XCIC quality_mode differs from current governed queue job"
-            )
+            raise ValueError("XCIC quality_mode differs from current governed queue job")
 
         positive = cls._required_text(job.get("positive_prompt"), "positive_prompt")
         negative = job.get("negative_prompt", "")
@@ -119,9 +115,7 @@ class XCICQueueJobLoader:
         directory = cls._required_text(
             output.get("candidate_directory"), "output.candidate_directory"
         )
-        filename = cls._required_text(
-            output.get("candidate_filename"), "output.candidate_filename"
-        )
+        filename = cls._required_text(output.get("candidate_filename"), "output.candidate_filename")
         # Reject paths that could escape the expected candidate folder.
         if (
             not Path(directory).is_absolute()
