@@ -227,3 +227,89 @@ def test_unreviewed_visual_identity_cannot_regenerate(tmp_path):
     )
     with pytest.raises(CandidateRegenerationError, match="not ready"):
         service.prepare(snap.asset_id, snap.reference_id, report)
+
+
+def test_regeneration_dialog_is_read_only_and_requires_operator_consent(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock()
+    service.generator.render = Mock()
+    service.generator.persist_candidate = Mock()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args, **_kw: QMessageBox.StandardButton.No
+    )
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    assert dialog.corrected_prompt.isReadOnly()
+    assert dialog.generate_button.isEnabled()
+    assert "ONE access door" in dialog.corrected_prompt.toPlainText()
+    dialog._generate()
+    service.verify_current.assert_not_called()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
+
+
+def test_regeneration_ui_performs_only_one_local_generation_after_yes(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+    from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock()
+    service.generator.render = Mock(return_value="rendered")
+    service.generator.persist_candidate = Mock(return_value=88)
+    service.generator.references = SimpleNamespace()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args, **_kw: QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(QMessageBox, "information", lambda *_args, **_kw: None)
+    monkeypatch.setattr(
+        ui,
+        "CandidateQualityReviewService",
+        lambda _refs: SimpleNamespace(
+            snapshot=Mock(side_effect=RuntimeError("offline unavailable"))
+        ),
+    )
+
+    calls = []
+
+    def run(_runner, _title, _asset, action, *, may_charge=True):
+        assert may_charge is False
+        calls.append("render")
+        return action()
+
+    monkeypatch.setattr(AutomationProgressRunner, "run", run)
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    dialog._generate()
+    assert calls == ["render"]
+    assert service.verify_current.call_count == 2
+    service.generator.render.assert_called_once_with(
+        plan.preparation, plan.source.project_root, plan.request
+    )
+    service.generator.persist_candidate.assert_called_once_with(
+        plan.preparation,
+        plan.source.project_root,
+        plan.request,
+        "rendered",
+        regeneration=plan.lineage,
+    )
+    assert dialog.result() == dialog.DialogCode.Accepted
