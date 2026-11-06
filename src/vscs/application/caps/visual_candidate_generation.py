@@ -177,11 +177,13 @@ class VisualCandidateGenerationService:
         if regeneration is not None:
             # Never mark an ordinary local visual Candidate as a regenerated
             # image without evidence and explicit higher-level authorisation.
+            attempt = regeneration.get("attempt")
             if (
                 type(regeneration.get("original_reference_id")) is not int
                 or type(regeneration.get("parent_reference_id")) is not int
-                or type(regeneration.get("attempt")) is not int
-                or not 1 <= regeneration["attempt"] <= 2
+                or type(attempt) is not int
+                or not isinstance(attempt, int)
+                or not 1 <= attempt <= 2
                 or not isinstance(regeneration.get("source_quality_report"), str)
                 or not isinstance(regeneration.get("source_quality_report_sha256"), str)
                 or not isinstance(regeneration.get("source_image_sha256"), str)
