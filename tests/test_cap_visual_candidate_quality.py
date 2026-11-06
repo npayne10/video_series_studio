@@ -325,3 +325,96 @@ def test_approved_primary_is_forwarded_only_as_a_separate_comparison_image(tmp_p
     report = service.evaluate(snap, semantic_provider=provider)
     assert report.semantic is not None
     assert provider.evaluate.call_args.kwargs["primary_reference_path"] == primary
+
+
+def _corrected_quality_scenario(tmp_path, monkeypatch):
+    service, refs, prep, image, _manifest = _scenario(tmp_path)
+    source = _snapshot(service, prep, monkeypatch)
+    source_audit = (
+        tmp_path / "Canonical Assets" / source.asset_id / ".metadata"
+        / "evaluation" / "room.previous.candidate_quality.json"
+    )
+    source_audit.parent.mkdir(parents=True, exist_ok=True)
+    source_audit.write_text(
+        json.dumps(
+            {
+                "asset_id": source.asset_id,
+                "reference_id": 7,
+                "image_sha256": source.image_sha256,
+                "technical": {"overall_score": 82},
+                "semantic": {
+                    "overall_score": 72,
+                    "metrics": [
+                        {"name": "Draft design consistency", "score": 45},
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    child = image.parent / "room_corrected.png"
+    child.write_bytes(image.read_bytes())
+    child_hash = hashlib.sha256(child.read_bytes()).hexdigest()
+    provenance = {
+        "asset_id": source.asset_id,
+        "image_sha256": child_hash,
+        "specification_fingerprint": prep.specification_fingerprint,
+        "review_fingerprint": prep.review_fingerprint,
+        "governance": "non-authoritative_candidate_not_MASTER",
+        "prompt": "CORRECTED reviewed design",
+        "regeneration": {
+            "original_reference_id": 7,
+            "parent_reference_id": 7,
+            "attempt": 1,
+            "source_quality_report": str(source_audit.relative_to(tmp_path)),
+            "source_quality_report_sha256": hashlib.sha256(
+                source_audit.read_bytes()
+            ).hexdigest(),
+            "source_image_sha256": source.image_sha256,
+        },
+    }
+    child_manifest = _manifest.with_name("room_corrected.json")
+    child_manifest.write_text(json.dumps(provenance), encoding="utf-8")
+    old_reference = refs.get.return_value
+    new_reference = SimpleNamespace(
+        id=8,
+        cap_id=old_reference.cap_id,
+        reference_type=old_reference.reference_type,
+        role=old_reference.role,
+        status=old_reference.status,
+        locked=False,
+        file_path=child.relative_to(tmp_path),
+        description=provenance["prompt"],
+    )
+    refs.get.return_value = new_reference
+    refs.list_for_cap.return_value = (old_reference, new_reference)
+    return service, prep, child_manifest, source_audit
+
+
+def test_corrected_quality_report_compares_to_saved_semantic_source(tmp_path, monkeypatch):
+    service, prep, _manifest, _audit = _corrected_quality_scenario(
+        tmp_path, monkeypatch
+    )
+    snap = service.snapshot(prep.asset_id, 8)
+    assert snap.correction_attempt == 1
+    assert snap.parent_reference_id == 7
+    assert snap.previous_technical_score == 82
+    assert snap.previous_semantic_score == 72
+    assert snap.previous_design_consistency_score == 45
+    report = service.evaluate(snap)
+    comparison = report.as_dict()["correction_comparison"]
+    assert comparison["previous_technical"] == 82
+    assert comparison["current_semantic"] is None
+    assert comparison["semantic_delta"] is None
+    assert comparison["previous_design_consistency"] == 45
+
+
+def test_corrected_quality_report_fails_when_source_audit_was_modified(
+    tmp_path, monkeypatch
+):
+    service, prep, _manifest, audit = _corrected_quality_scenario(
+        tmp_path, monkeypatch
+    )
+    audit.write_text("{}", encoding="utf-8")
+    with pytest.raises(CandidateQualityError, match="source evidence mismatch"):
+        service.snapshot(prep.asset_id, 8)
