@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QApplication,
-    QHBoxLayout,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QPlainTextEdit,
