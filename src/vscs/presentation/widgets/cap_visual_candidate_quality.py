@@ -97,6 +97,32 @@ class CandidateQualityReportDialog(QDialog):
                     *[f"  {item}" for item in report.semantic.violations],
                 )
             )
+        if report.snapshot.correction_attempt is not None:
+            previous = report.snapshot
+            sections.extend(
+                (
+                    "B.5.26D CORRECTIVE GENERATION COMPARISON",
+                    f"Correction attempt: {previous.correction_attempt}",
+                    f"Source Candidate: {previous.parent_reference_id}",
+                    (
+                        "Technical: "
+                        f"{previous.previous_technical_score} -> "
+                        f"{report.technical.overall_score}"
+                    ),
+                    (
+                        "Semantic: "
+                        f"{previous.previous_semantic_score} -> "
+                        f"{report.semantic.overall_score if report.semantic else 'NOT RUN'}"
+                    ),
+                    (
+                        "Design consistency: "
+                        f"{previous.previous_design_consistency_score} -> "
+                        f"{report.current_design_consistency_score if report.semantic else 'NOT RUN'}"
+                    ),
+                    "Improvement in technical score does not establish visual "
+                    "continuity. A new consented semantic evaluation is required.",
+                )
+            )
         sections.extend(
             (
                 "SUGGESTED CORRECTIONS / HUMAN CHECKS",
