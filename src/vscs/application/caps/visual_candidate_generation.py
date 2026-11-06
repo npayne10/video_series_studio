@@ -67,9 +67,7 @@ class VisualCandidateGenerationService:
     ) -> int:
         """Synchronous orchestration for CLI/batch callers."""
         preparation = self.prepare(asset_id)
-        project, request = self.prepare_request(
-            preparation, seed=seed, width=width, height=height
-        )
+        project, request = self.prepare_request(preparation, seed=seed, width=width, height=height)
         rendered = self.render(preparation, project, request)
         return self.persist_candidate(preparation, project, request, rendered)
 
@@ -177,9 +175,7 @@ class VisualCandidateGenerationService:
         reference_id: int | None = None
         try:
             destination.write_bytes(generated.content)
-            manifest.write_text(
-                json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
-            )
+            manifest.write_text(json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8")
             reference = self.references.create(
                 cap.asset_id,
                 CanonicalReferenceCreate(
