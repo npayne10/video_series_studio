@@ -55,14 +55,7 @@ def _scenario(tmp_path: Path):
         required_reference_views=(),
         missing_reference_views=(),
     )
-    manifest = (
-        tmp_path
-        / "Canonical Assets"
-        / asset_id
-        / ".metadata"
-        / "visual"
-        / "room.json"
-    )
+    manifest = tmp_path / "Canonical Assets" / asset_id / ".metadata" / "visual" / "room.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(
         json.dumps(
@@ -88,7 +81,9 @@ def _scenario(tmp_path: Path):
         description="PROPOSED room",
     )
     cap = SimpleNamespace(id=9, asset_id=asset_id, production_metadata={})
-    asset = SimpleNamespace(asset_id=asset_id, name="Engineering control room", category=AssetCategory.LOCATION)
+    asset = SimpleNamespace(
+        asset_id=asset_id, name="Engineering control room", category=AssetCategory.LOCATION
+    )
     refs = SimpleNamespace(
         get=Mock(return_value=reference),
         approve=Mock(),
@@ -127,7 +122,7 @@ def test_technical_only_review_is_explicitly_not_semantic_pass(tmp_path, monkeyp
     snap = _snapshot(service, prep, monkeypatch)
     report = service.evaluate(snap)
     assert report.semantic is None
-    assert report.decision == "SEMANTIC_REVIEW_NOT_RUN" or report.decision == "REGENERATE_RECOMMENDED"
+    assert report.decision in {"SEMANTIC_REVIEW_NOT_RUN", "REGENERATE_RECOMMENDED"}
     assert any("cannot identify objects" in item for item in report.recommendations)
     saved = service.save(report)
     payload = json.loads(saved.read_text(encoding="utf-8"))
