@@ -214,6 +214,6 @@ def install_visual_candidate_quality_review() -> None:
         original_refresh(self)
         _update_button(self)
 
-    setattr(editor, "__init__", quality_init)
-    setattr(editor, "_refresh_references", quality_refresh)
-    setattr(editor, "_candidate_quality_installed", True)
+    editor.__init__ = quality_init  # type: ignore[method-assign]
+    editor._refresh_references = quality_refresh  # type: ignore[method-assign]
+    editor._candidate_quality_installed = True  # type: ignore[attr-defined]
