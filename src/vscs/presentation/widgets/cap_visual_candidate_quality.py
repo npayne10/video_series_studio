@@ -16,19 +16,19 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.reference_service import CanonicalReferenceService
-from vscs.application.caps.visual_candidate_regeneration import CandidateRegenerationService
 from vscs.application.caps.visual_candidate_quality import (
     CandidateQualityResult,
     CandidateQualityReviewService,
 )
-from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
-    ControlledCandidateRegenerationDialog,
-)
+from vscs.application.caps.visual_candidate_regeneration import CandidateRegenerationService
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.openai_semantic_evaluator import OpenAISemanticImageEvaluator
 from vscs.infrastructure.configuration import ConfigurationService
 from vscs.presentation.widgets import cap_manager
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
+    ControlledCandidateRegenerationDialog,
+)
 
 
 class CandidateQualityReportDialog(QDialog):
