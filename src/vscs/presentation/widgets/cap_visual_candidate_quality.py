@@ -214,6 +214,6 @@ def install_visual_candidate_quality_review() -> None:
         original_refresh(self)
         _update_button(self)
 
-    editor.__init__ = quality_init
-    editor._refresh_references = quality_refresh
-    editor._candidate_quality_installed = True
+    setattr(editor, "__init__", quality_init)
+    setattr(editor, "_refresh_references", quality_refresh)
+    setattr(editor, "_candidate_quality_installed", True)
