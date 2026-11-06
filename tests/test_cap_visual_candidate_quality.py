@@ -86,6 +86,7 @@ def _scenario(tmp_path: Path):
     )
     refs = SimpleNamespace(
         get=Mock(return_value=reference),
+        list_for_cap=Mock(return_value=(reference,)),
         approve=Mock(),
         archive=Mock(),
         set_primary=Mock(),
@@ -295,3 +296,41 @@ def test_repeated_reviews_preserve_individual_audit_files(tmp_path, monkeypatch)
     assert json.loads(first.read_text(encoding="utf-8"))["report_id"] != json.loads(
         second.read_text(encoding="utf-8")
     )["report_id"]
+
+
+def test_approved_primary_is_forwarded_only_as_a_separate_comparison_image(
+    tmp_path, monkeypatch
+):
+    service, refs, prep, image, _manifest = _scenario(tmp_path)
+    primary = image.parent / "approved_primary.png"
+    primary.write_bytes(image.read_bytes())
+    refs.list_for_cap.return_value = (
+        refs.get.return_value,
+        SimpleNamespace(
+            id=19,
+            reference_type=CanonicalReferenceType.IMAGE,
+            role=CanonicalReferenceRole.PRIMARY,
+            status=CanonicalReferenceStatus.APPROVED,
+            file_path=primary.relative_to(tmp_path),
+        ),
+    )
+    snap = _snapshot(service, prep, monkeypatch)
+    assert snap.primary_reference_path == primary
+    good = SemanticMetric(name="Identity", score=85, summary="Consistent appearance")
+    model = SemanticModelResult(
+        prompt_adherence=good,
+        category_validity=good,
+        visible_text=good,
+        canon_consistency=good,
+        engineering_plausibility=good,
+        cinematic_quality=good,
+        summary="Candidate has plausible geometry",
+    )
+    provider = SimpleNamespace(
+        provider_name="Fake vision",
+        model_name="test",
+        evaluate=Mock(return_value=model),
+    )
+    report = service.evaluate(snap, semantic_provider=provider)
+    assert report.semantic is not None
+    assert provider.evaluate.call_args.kwargs["primary_reference_path"] == primary
