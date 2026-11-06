@@ -411,3 +411,27 @@ The generated PNG is stored under `Canonical Assets/<ASSET-ID>/Images/Visual Can
 Each Candidate quality run creates a separate uniquely identified report rather than overwriting previous offline or paid reviews. This preserves comparison history and review provenance.
 
 When a separately governed **Approved Primary** image exists for the selected CAP, the integrated semantic evaluation supplies that reference as a separate comparison image. It never substitutes the primary reference for the reviewed Draft design or treats the new candidate as approved. Without an Approved Primary, the evaluator explicitly reports the absence of a comparison reference.
+
+
+## B.5.26D — Evidence-grounded Candidate correction & controlled local regeneration
+
+**Entry point:** Select an unlocked B.5.26 local *Supplementary Candidate* in **Canonical Profiles → Edit Selected → Canonical Reference Gallery → Review Visual Candidate…**. Explicitly authorise one Terra/SIEE semantic evaluation. If the saved report includes both `REGENERATE_RECOMMENDED` and a `regenerate` semantic decision, its result dialog offers **Prepare Corrected Local Candidate…**. This action does **not** run generation until the operator reviews and confirms the plan.
+
+**Evidence contract:** The correction service reopens the immutable Candidate quality-report JSON and verifies its CAP/asset ID, source reference ID, original image SHA256, current reviewed CAP specification/review fingerprints, accepted Draft attributes, and advisory governance. Technical-only reports, positive reviews, forged paths and changed/stale source evidence cannot trigger correction. Semantic violations are displayed for operator context **but NEVER inserted verbatim into image-generation prompts as canonical authority**. The corrected provider-neutral prompt is deterministically rebuilt from the original accepted CAP fields, with explicit reminders against invented doors, equipment, extra lighting and deferred design details.
+
+**Generation and limits:** Only one local XCIC/ComfyUI Candidate is generated for each explicit operator confirmation. The default hard limit is **two corrective attempts per original local Candidate**, across branches; attempts are counted from retained provenance manifests, not an in-memory counter, and cannot be reset by restarting the application. The corrected request uses a changed seed, retaining the reviewed CAP, original candidate and all prior images. Before rendering and again before Candidate persistence, VSCS rechecks source review evidence and the attempt budget. In-flight operations use the existing noncancellable **Automation Progress** UI, accurately labelled as local/free. No OpenAI request is made for corrective rendering.
+
+**Persistence and lineage:** Regenerated images enter the same Supplementary Candidate lifecycle as any B.5.26 local image (never MASTER, PRIMARY, Canon or Approved). Their existing SHA256/provenance manifest additionally records original reference ID, immediate parent ID, correction number, source quality-report path/hash, original image hash, and previous technical/semantic scores. No previous source Candidate is overwritten, archived, or altered automatically.
+
+**Re-evaluation:** After a new candidate is created, VSCS automatically performs a **free technical CIEE** check and stores a separate immutable evaluation report. The confirmation compares new and previous *technical* scores, but does not claim semantic design consistency has improved. For true design-quality comparison, select the **new** Candidate and rerun **Review Visual Candidate…** with a separate explicit Terra/SIEE cost approval. The subsequent review includes previous and current semantic and design-consistency scores, with deltas in the stored JSON report when the required source evidence is present. A better score is still not an approval.
+
+**Acceptance sequence for B5_22 disposable project:**
+1. Run `tests/test_cap_visual_candidate_regeneration.py` and existing visual quality/generation/progress tests; then Ruff lint/format, Mypy and full regression.
+2. Select the existing Engineering Control Room Candidate and run a separately authorised semantic review yielding `REGENERATE_RECOMMENDED`.
+3. Click **Prepare Corrected Local Candidate…**. Verify the prompt includes one centred short-wall door, workstation/console layout and reviewed floor markings, while displaying Terra's findings separately.
+4. Confirm **one** free local ComfyUI generation and inspect the new supplementary Candidate and its provenance. Confirm original Candidate is unchanged, no approval is granted, and the source report remains in the evaluation history.
+5. Confirm the new offline CIEE report is stored and its technical score compared with the previous 82/100 baseline.
+6. Separately authorise one SIEE review if desired, compare visual design consistency against the previous score (45/100) and decide whether to retain, archive or request another correction. No automatic regeneration or approval follows from evaluation.
+7. Verify the retry cap prevents a third regeneration from the same original Candidate. No operators need to manually rewrite the CAP or paste Terra recommendations into a prompt.
+
+**Remaining boundaries:** This increment uses an intentionally deterministic, accepted-field-grounded correction prompt. It does not redesign a deferred CAP visual identity, automatically edit the Story or CAP, automatically regenerate multiple times, or promote locally generated images into the ChatGPT MASTER reference lifecycle.
