@@ -51,6 +51,11 @@ class CandidateQualitySnapshot:
     generation_prompt: str
     reference_role: str
     reference_status: str
+    correction_attempt: int | None = None
+    parent_reference_id: int | None = None
+    previous_technical_score: int | None = None
+    previous_semantic_score: int | None = None
+    previous_design_consistency_score: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +97,27 @@ class CandidateQualityResult:
             "review_fingerprint": snap.review_fingerprint,
             "reviewed_fields": dict(snap.accepted_fields),
             "deferred_fields": list(snap.deferred_fields),
+            "correction_comparison": {
+                "attempt": snap.correction_attempt,
+                "parent_reference_id": snap.parent_reference_id,
+                "previous_technical": snap.previous_technical_score,
+                "current_technical": self.technical.overall_score,
+                "technical_delta": (
+                    self.technical.overall_score - snap.previous_technical_score
+                    if snap.previous_technical_score is not None
+                    else None
+                ),
+                "previous_semantic": snap.previous_semantic_score,
+                "current_semantic": (
+                    self.semantic.overall_score if self.semantic is not None else None
+                ),
+                "semantic_delta": (
+                    self.semantic.overall_score - snap.previous_semantic_score
+                    if self.semantic is not None and snap.previous_semantic_score is not None
+                    else None
+                ),
+                "previous_design_consistency": snap.previous_design_consistency_score,
+            },
             "continuity": list(snap.continuity),
             "related_asset_ids": list(snap.dependencies),
             "decision": self.decision,
@@ -179,6 +205,65 @@ class CandidateQualityReviewService:
         prompt = manifest.get("prompt")
         if not isinstance(prompt, str) or not prompt.strip() or prompt != reference.description:
             raise CandidateQualityError("Candidate generation prompt provenance mismatch")
+        attempt: int | None = None
+        parent_reference_id: int | None = None
+        previous_technical: int | None = None
+        previous_semantic: int | None = None
+        previous_consistency: int | None = None
+        lineage = manifest.get("regeneration")
+        if lineage is not None:
+            if not isinstance(lineage, dict):
+                raise CandidateQualityError("Malformed Candidate correction lineage")
+            attempt_value = lineage.get("attempt")
+            parent_value = lineage.get("parent_reference_id")
+            source_path = lineage.get("source_quality_report")
+            if (
+                type(attempt_value) is not int
+                or type(parent_value) is not int
+                or not isinstance(source_path, str)
+            ):
+                raise CandidateQualityError("Missing Candidate correction provenance")
+            report_path = (root / source_path).resolve(strict=False)
+            expected_audit = (
+                root / "Canonical Assets" / asset_id / ".metadata" / "evaluation"
+            ).resolve(strict=False)
+            if report_path.parent != expected_audit:
+                raise CandidateQualityError("Correction source report outside CAP audit")
+            try:
+                source_bytes = report_path.read_bytes()
+                source_report = json.loads(source_bytes)
+            except (OSError, ValueError) as exc:
+                raise CandidateQualityError("Correction source report missing") from exc
+            if (
+                not isinstance(source_report, dict)
+                or source_report.get("reference_id") != parent_value
+                or source_report.get("asset_id") != asset_id
+                or source_report.get("image_sha256") != lineage.get("source_image_sha256")
+                or hashlib.sha256(source_bytes).hexdigest()
+                != lineage.get("source_quality_report_sha256")
+            ):
+                raise CandidateQualityError("Candidate correction source evidence mismatch")
+            attempt = attempt_value
+            parent_reference_id = parent_value
+            past_technical = source_report.get("technical")
+            past_semantic = source_report.get("semantic")
+            if isinstance(past_technical, dict):
+                score = past_technical.get("overall_score")
+                previous_technical = score if type(score) is int else None
+            if isinstance(past_semantic, dict):
+                score = past_semantic.get("overall_score")
+                previous_semantic = score if type(score) is int else None
+                metrics = past_semantic.get("metrics")
+                if isinstance(metrics, list):
+                    for metric in metrics:
+                        if isinstance(metric, dict) and (
+                            "consistency" in str(metric.get("name", "")).lower()
+                            or "canon" in str(metric.get("name", "")).lower()
+                        ):
+                            score = metric.get("score")
+                            if type(score) is int:
+                                previous_consistency = score
+                                break
         primary: Path | None = None
         for other in refs.list_for_cap(asset_id):
             if (
@@ -216,6 +301,11 @@ class CandidateQualityReviewService:
             generation_prompt=prompt,
             reference_role=reference.role.value,
             reference_status=reference.status.value,
+            correction_attempt=attempt,
+            parent_reference_id=parent_reference_id,
+            previous_technical_score=previous_technical,
+            previous_semantic_score=previous_semantic,
+            previous_design_consistency_score=previous_consistency,
         )
 
     def evaluate(
