@@ -313,3 +313,48 @@ def test_regeneration_ui_performs_only_one_local_generation_after_yes(
         regeneration=plan.lineage,
     )
     assert dialog.result() == dialog.DialogCode.Accepted
+
+
+def test_latest_saved_semantic_report_is_reused_without_paid_provider(tmp_path):
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    assert service.latest_semantic_report(snap.asset_id, snap.reference_id) == report
+
+
+def test_latest_semantic_review_ignores_newer_technical_only_audit(tmp_path):
+    service, snap, _prep, report, payload, _manifest = _setup(tmp_path)
+    other = report.with_name("room.later.candidate_quality.json")
+    payload["semantic"] = None
+    other.write_text(json.dumps(payload), encoding="utf-8")
+    assert service.latest_semantic_report(snap.asset_id, snap.reference_id) == report
+
+
+def test_saved_report_correction_gallery_action_never_calls_terra(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtWidgets import QDialog, QWidget
+
+    from vscs.presentation.widgets import cap_visual_candidate_quality as ui
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    service.latest_semantic_report = Mock(return_value=report)
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    requests = []
+
+    class FakeCorrectionDialog:
+        def __init__(self, _refs, asset_id, ref_id, saved_report, _parent):
+            requests.append((asset_id, ref_id, saved_report))
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(ui, "ControlledCandidateRegenerationDialog", FakeCorrectionDialog)
+    widget = QWidget()
+    qtbot.addWidget(widget)
+    widget.reference_gallery = SimpleNamespace(
+        selected_reference=lambda: SimpleNamespace(id=7)
+    )
+    widget.profile = SimpleNamespace(asset_id=snap.asset_id)
+    widget.reference_service = SimpleNamespace()
+    ui._correct_from_saved_report(widget)
+    assert requests == [(snap.asset_id, 7, report)]
+    service.generator.render.assert_not_called() if hasattr(service.generator, "render") else None
