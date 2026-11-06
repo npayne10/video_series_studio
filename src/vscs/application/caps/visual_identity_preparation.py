@@ -16,7 +16,7 @@ from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
 )
 from vscs.domain.assets.models import AssetCategory
-from vscs.domain.caps import CanonicalAssetProfile, CAPStatus, CanonicalReferenceView
+from vscs.domain.caps import CanonicalAssetProfile, CanonicalReferenceView, CAPStatus
 
 _REQUIRED_VISUAL_FIELDS: dict[AssetCategory, tuple[str, ...]] = {
     AssetCategory.SHIP: ("silhouette",),
@@ -125,8 +125,7 @@ def prepare_visual_identity(
     required = _REQUIRED_VISUAL_FIELDS.get(category, ())
     attributes = dict(accepted)
     if required and not any(
-        key in attributes
-        and not any(term in attributes[key].lower() for term in _UNRESOLVED)
+        key in attributes and not any(term in attributes[key].lower() for term in _UNRESOLVED)
         for key in required
     ):
         blockers.append(
@@ -139,9 +138,7 @@ def prepare_visual_identity(
         and "silhouette" in deferred
         and not any("visual identity is unresolved" in item for item in blockers)
     ):
-        blockers.append(
-            "Ship silhouette is deferred; establish and review exterior identity first"
-        )
+        blockers.append("Ship silhouette is deferred; establish and review exterior identity first")
 
     source_hash = spec.fingerprint() if spec is not None else ""
     review_hash = (
