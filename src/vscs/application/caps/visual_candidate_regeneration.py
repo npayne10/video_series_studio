@@ -18,6 +18,7 @@ from vscs.application.caps.visual_candidate_quality import (
     CandidateQualitySnapshot,
 )
 from vscs.application.caps.visual_identity_preparation import VisualIdentityPreparation
+from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.domain.caps import CanonicalAssetGenerationRequest
 
 MAX_CORRECTION_ATTEMPTS = 2
@@ -61,7 +62,7 @@ class CandidateRegenerationPlan:
 class CandidateRegenerationService:
     """Prepare, validate and count correction attempts in the existing CAP project."""
 
-    def __init__(self, references: object) -> None:
+    def __init__(self, references: CanonicalReferenceService) -> None:
         self.quality = CandidateQualityReviewService(references)
         self.generator = VisualCandidateGenerationService(references)
 
