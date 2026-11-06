@@ -35,6 +35,9 @@ from vscs.presentation.widgets.cap_reference_regeneration import (
 from vscs.presentation.widgets.cap_reference_semantic_evaluation import (
     install_semantic_image_evaluation,
 )
+from vscs.presentation.widgets.cap_visual_candidate_quality import (
+    install_visual_candidate_quality_review,
+)
 from vscs.presentation.widgets.universal_approval_provenance_workspace import (
     install_universal_approval_provenance_workspace,
 )
@@ -48,6 +51,7 @@ install_canonical_reference_file_management()
 install_canonical_reference_deletion()
 install_canonical_image_evaluation()
 install_semantic_image_evaluation()
+install_visual_candidate_quality_review()
 install_production_readiness_evaluation()
 install_feedback_regeneration()
 install_universal_validation_refinement()
