@@ -76,8 +76,18 @@ class CandidateQualityResult:
         # Even a provider PASS is advisory, not a human approval.
         return "HUMAN_REVIEW_REQUIRED"
 
+    @property
+    def current_design_consistency_score(self) -> int | None:
+        if self.semantic is None:
+            return None
+        for metric in self.semantic.metrics:
+            if "consistency" in metric.name.lower() or "canon" in metric.name.lower():
+                return metric.score
+        return None
+
     def as_dict(self) -> dict[str, object]:
         snap = self.snapshot
+        design_score = self.current_design_consistency_score
         return {
             "schema_version": 1,
             "evaluation_type": "vscs_cap_visual_candidate_quality",
@@ -117,6 +127,13 @@ class CandidateQualityResult:
                     else None
                 ),
                 "previous_design_consistency": snap.previous_design_consistency_score,
+                "current_design_consistency": design_score,
+                "design_consistency_delta": (
+                    design_score - snap.previous_design_consistency_score
+                    if design_score is not None
+                    and snap.previous_design_consistency_score is not None
+                    else None
+                ),
             },
             "continuity": list(snap.continuity),
             "related_asset_ids": list(snap.dependencies),
