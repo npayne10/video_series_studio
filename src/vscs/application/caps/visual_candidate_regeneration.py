@@ -123,6 +123,39 @@ class CandidateRegenerationService:
                 count += 1
         return count
 
+    def latest_semantic_report(self, asset_id: str, reference_id: int) -> Path:
+        """Find the latest saved semantic review without a new paid API call."""
+        snapshot = self.quality.snapshot(asset_id, reference_id)
+        audit_dir = (
+            snapshot.project_root / "Canonical Assets" / asset_id / ".metadata"
+            / "evaluation"
+        )
+        pattern = f"{snapshot.image_path.stem}.*.candidate_quality.json"
+        candidates = sorted(
+            audit_dir.glob(pattern),
+            key=lambda item: item.stat().st_mtime_ns,
+            reverse=True,
+        )
+        for candidate in candidates:
+            try:
+                payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                raise CandidateRegenerationError(
+                    "Saved semantic audit cannot be read safely"
+                ) from exc
+            if not isinstance(payload, dict):
+                raise CandidateRegenerationError("Malformed saved quality audit")
+            if (
+                payload.get("reference_id") == reference_id
+                and payload.get("asset_id") == asset_id
+                and isinstance(payload.get("semantic"), dict)
+            ):
+                return candidate
+        raise CandidateRegenerationError(
+            "No saved semantic Candidate review found. "
+            "Run Review Visual Candidate with explicit semantic consent first."
+        )
+
     def prepare(
         self, asset_id: str, reference_id: int, report_path: Path
     ) -> CandidateRegenerationPlan:
