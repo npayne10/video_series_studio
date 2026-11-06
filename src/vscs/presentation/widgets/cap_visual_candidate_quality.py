@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.application.caps.visual_candidate_regeneration import CandidateRegenerationService
 from vscs.application.caps.visual_candidate_quality import (
     CandidateQualityResult,
     CandidateQualityReviewService,
@@ -238,24 +239,49 @@ def _review_selected(dialog: Any) -> None:
         dialog._refresh_references()
 
 
-def _update_button(dialog: Any) -> None:
-    button = getattr(dialog, "candidate_quality_button", None)
+def _correct_from_saved_report(dialog: Any) -> None:
     gallery = getattr(dialog, "reference_gallery", None)
     selected = None if gallery is None else gallery.selected_reference()
-    if button is not None:
-        from vscs.domain.caps import (
-            CanonicalReferenceRole,
-            CanonicalReferenceStatus,
-            CanonicalReferenceType,
+    profile = getattr(dialog, "profile", None)
+    refs = getattr(dialog, "reference_service", None)
+    if selected is None or profile is None or refs is None:
+        QMessageBox.information(dialog, "Controlled Correction", "Select a local Candidate.")
+        return
+    try:
+        service = CandidateRegenerationService(refs)
+        path = service.latest_semantic_report(profile.asset_id, selected.id)
+        window = ControlledCandidateRegenerationDialog(
+            refs, profile.asset_id, selected.id, path, dialog
         )
+    except (OSError, RuntimeError, ValueError) as exc:
+        QMessageBox.warning(dialog, "Controlled Correction Unavailable", str(exc))
+        return
+    if window.exec() == QDialog.DialogCode.Accepted:
+        dialog._refresh_references()
 
-        button.setEnabled(
-            selected is not None
-            and selected.reference_type is CanonicalReferenceType.IMAGE
-            and selected.role is CanonicalReferenceRole.SUPPLEMENTARY
-            and selected.status is CanonicalReferenceStatus.CANDIDATE
-            and not selected.locked
-        )
+
+def _update_button(dialog: Any) -> None:
+    button = getattr(dialog, "candidate_quality_button", None)
+    correction_button = getattr(dialog, "candidate_correction_button", None)
+    gallery = getattr(dialog, "reference_gallery", None)
+    selected = None if gallery is None else gallery.selected_reference()
+    from vscs.domain.caps import (
+        CanonicalReferenceRole,
+        CanonicalReferenceStatus,
+        CanonicalReferenceType,
+    )
+
+    enabled = (
+        selected is not None
+        and selected.reference_type is CanonicalReferenceType.IMAGE
+        and selected.role is CanonicalReferenceRole.SUPPLEMENTARY
+        and selected.status is CanonicalReferenceStatus.CANDIDATE
+        and not selected.locked
+    )
+    if button is not None:
+        button.setEnabled(enabled)
+    if correction_button is not None:
+        correction_button.setEnabled(enabled)
 
 
 def install_visual_candidate_quality_review() -> None:
@@ -275,6 +301,15 @@ def install_visual_candidate_quality_review() -> None:
         )
         self.candidate_quality_button.clicked.connect(lambda: _review_selected(self))
         self.layout().insertWidget(2, self.candidate_quality_button)
+        self.candidate_correction_button = QPushButton("Correct From Saved Review…")
+        self.candidate_correction_button.setObjectName("correctFromSavedCandidateReview")
+        self.candidate_correction_button.setToolTip(
+            "Reopen the latest persisted semantic review; no new Terra request"
+        )
+        self.candidate_correction_button.clicked.connect(
+            lambda: _correct_from_saved_report(self)
+        )
+        self.layout().insertWidget(3, self.candidate_correction_button)
         if hasattr(self, "reference_gallery"):
             self.reference_gallery.gallery.currentItemChanged.connect(
                 lambda *_: _update_button(self)
