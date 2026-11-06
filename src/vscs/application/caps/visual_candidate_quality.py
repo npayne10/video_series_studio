@@ -11,7 +11,9 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from uuid import uuid4
+
+from vscs.domain.assets.models import AssetCategory
 
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_identity_preparation import prepare_visual_identity
@@ -35,7 +37,7 @@ class CandidateQualityError(RuntimeError):
 class CandidateQualitySnapshot:
     asset_id: str
     asset_name: str
-    category: Any
+    category: AssetCategory
     reference_id: int
     project_root: Path
     image_path: Path
@@ -148,7 +150,9 @@ class CandidateQualityReviewService:
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
-            raise CandidateQualityError("Local candidate provenance manifest is unavailable") from exc
+            raise CandidateQualityError(
+                "Local candidate provenance manifest is unavailable"
+            ) from exc
         if not isinstance(manifest, dict) or any(
             manifest.get(key) != expected
             for key, expected in (
@@ -258,17 +262,19 @@ class CandidateQualityReviewService:
                 "discarding stale review"
             )
         snapshot = result.snapshot
+        report_id = uuid4().hex
         target = (
             snapshot.project_root
             / "Canonical Assets"
             / snapshot.asset_id
             / ".metadata"
             / "evaluation"
-            / f"{snapshot.image_path.stem}.candidate_quality.json"
+            / f"{snapshot.image_path.stem}.{report_id}.candidate_quality.json"
         )
         target.parent.mkdir(parents=True, exist_ok=True)
         payload = result.as_dict()
         payload["evaluated_at"] = datetime.now(UTC).isoformat()
+        payload["report_id"] = report_id
         temporary = target.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         temporary.replace(target)
