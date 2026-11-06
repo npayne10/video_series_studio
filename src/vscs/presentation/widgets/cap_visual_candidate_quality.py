@@ -117,7 +117,9 @@ class CandidateQualityReportDialog(QDialog):
                     (
                         "Design consistency: "
                         f"{previous.previous_design_consistency_score} -> "
-                        f"{report.current_design_consistency_score if report.semantic else 'NOT RUN'}"
+                        f"{report.current_design_consistency_score}"
+                        if report.semantic is not None
+                        else "NOT RUN"
                     ),
                     "Improvement in technical score does not establish visual "
                     "continuity. A new consented semantic evaluation is required.",
