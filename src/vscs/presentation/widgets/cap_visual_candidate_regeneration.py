@@ -153,7 +153,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             QMessageBox.critical(
                 self,
                 "Corrective Candidate Failed",
-                f"Stage: {stage}\\n{type(exc).__name__}: {exc}\\n\\n"
+                f"Stage: {stage}\n{type(exc).__name__}: {exc}\n\n"
                 "No successful Candidate registration was confirmed. "
                 "If rendering started, inspect the gallery and ComfyUI queue "
                 "before attempting another GPU request.",
