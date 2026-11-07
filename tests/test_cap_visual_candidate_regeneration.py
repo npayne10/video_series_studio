@@ -339,3 +339,85 @@ def test_saved_report_correction_gallery_action_never_calls_terra(qtbot, tmp_pat
     ui._correct_from_saved_report(widget)
     assert requests == [(snap.asset_id, 7, report)]
     service.generator.prepare_request.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("stage", "exception", "expected_stage"),
+    [
+        ("preflight", AttributeError("missing review attribute"), "preflight"),
+        ("render", TypeError("provider interface mismatch"), "local ComfyUI rendering"),
+        ("post_render", KeyError("stale authority field"), "post-render authority"),
+        ("registration", AttributeError("reference registration mismatch"), "Candidate registration"),
+    ],
+)
+def test_unexpected_qt_slot_exception_is_visible_and_retry_safe(
+    qtbot, tmp_path, monkeypatch, stage, exception, expected_stage
+):
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+    from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock()
+    service.generator.render = Mock(return_value="rendered")
+    service.generator.persist_candidate = Mock(return_value=88)
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args, **_kw: QMessageBox.StandardButton.Yes
+    )
+    messages = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "critical",
+        lambda _parent, title, body: messages.append((title, body)),
+    )
+    if stage == "preflight":
+        service.verify_current.side_effect = exception
+    elif stage == "render":
+        service.generator.render.side_effect = exception
+    elif stage == "post_render":
+        service.verify_current.side_effect = [None, exception]
+    else:
+        service.generator.persist_candidate.side_effect = exception
+
+    def run(_runner, _title, _asset, operation, *, may_charge=True):
+        assert may_charge is False
+        return operation()
+
+    monkeypatch.setattr(AutomationProgressRunner, "run", run)
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    dialog._generate()
+
+    assert len(messages) == 1
+    assert "Corrective Candidate Failed" == messages[0][0]
+    assert expected_stage in messages[0][1]
+    assert type(exception).__name__ in messages[0][1]
+    assert dialog.generate_button.isEnabled()
+    assert not dialog._generation_active
+    assert dialog.result() != dialog.DialogCode.Accepted
+    if stage == "preflight":
+        service.generator.render.assert_not_called()
+        service.generator.persist_candidate.assert_not_called()
+    if stage in {"render", "post_render"}:
+        service.generator.persist_candidate.assert_not_called()
+
+
+def test_duplicate_click_is_ignored_while_generation_active(qtbot, tmp_path, monkeypatch):
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    service.prepare = Mock(return_value=service.prepare(snap.asset_id, snap.reference_id, report))
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    dialog._generation_active = True
+    dialog._generate()
+    service.generator.prepare_request.assert_not_called()
