@@ -48,9 +48,7 @@ class CandidateRegenerationPlan:
             "original_reference_id": self.original_reference_id,
             "parent_reference_id": self.source.reference_id,
             "attempt": self.attempt,
-            "source_quality_report": str(
-                self.report_path.relative_to(self.source.project_root)
-            ),
+            "source_quality_report": str(self.report_path.relative_to(self.source.project_root)),
             "source_quality_report_sha256": self.report_sha256,
             "source_image_sha256": self.source.image_sha256,
             "previous_technical_score": self.previous_technical_score,
@@ -100,11 +98,7 @@ class CandidateRegenerationService:
     @staticmethod
     def _count_attempts(snapshot: CandidateQualitySnapshot, root: int) -> int:
         directory = (
-            snapshot.project_root
-            / "Canonical Assets"
-            / snapshot.asset_id
-            / ".metadata"
-            / "visual"
+            snapshot.project_root / "Canonical Assets" / snapshot.asset_id / ".metadata" / "visual"
         )
         count = 0
         for path in directory.glob("*.json"):
@@ -127,8 +121,7 @@ class CandidateRegenerationService:
         """Find the latest saved semantic review without a new paid API call."""
         snapshot = self.quality.snapshot(asset_id, reference_id)
         audit_dir = (
-            snapshot.project_root / "Canonical Assets" / asset_id / ".metadata"
-            / "evaluation"
+            snapshot.project_root / "Canonical Assets" / asset_id / ".metadata" / "evaluation"
         )
         pattern = f"{snapshot.image_path.stem}.*.candidate_quality.json"
         candidates = sorted(
@@ -231,13 +224,10 @@ class CandidateRegenerationService:
         # Free-form semantic text is displayed to the operator only, never put
         # into the provider prompt as if it were approved canonical evidence.
         findings = semantic.get("violations", [])
-        if not isinstance(findings, list) or not all(
-            isinstance(item, str) for item in findings
-        ):
+        if not isinstance(findings, list) or not all(isinstance(item, str) for item in findings):
             raise CandidateRegenerationError("Malformed semantic evidence")
         corrections = tuple(
-            f"MANDATORY reviewed {field}: {value}"
-            for field, value in snapshot.accepted_fields
+            f"MANDATORY reviewed {field}: {value}" for field, value in snapshot.accepted_fields
         )
         if not corrections:
             raise CandidateRegenerationError("No accepted design exists to ground corrections")
@@ -267,9 +257,7 @@ class CandidateRegenerationService:
         )
         if project != project_root:
             raise CandidateRegenerationError("Project switched while preparing correction")
-        request = base.model_copy(
-            update={"prompt": prompt, "negative_prompt": negative}
-        )
+        request = base.model_copy(update={"prompt": prompt, "negative_prompt": negative})
         return CandidateRegenerationPlan(
             preparation=current,
             source=snapshot,
@@ -286,9 +274,7 @@ class CandidateRegenerationService:
         )
 
     def verify_current(self, plan: CandidateRegenerationPlan) -> None:
-        current = self.prepare(
-            plan.source.asset_id, plan.source.reference_id, plan.report_path
-        )
+        current = self.prepare(plan.source.asset_id, plan.source.reference_id, plan.report_path)
         if current != plan:
             raise CandidateRegenerationError(
                 "Source evaluation, attempt budget, CAP or Candidate changed during generation"
