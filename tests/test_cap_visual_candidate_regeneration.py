@@ -10,9 +10,9 @@ import pytest
 
 from vscs.application.caps.visual_candidate_quality import CandidateQualitySnapshot
 from vscs.application.caps.visual_candidate_regeneration import (
+    MAX_CORRECTION_ATTEMPTS,
     CandidateRegenerationError,
     CandidateRegenerationService,
-    MAX_CORRECTION_ATTEMPTS,
 )
 from vscs.application.caps.visual_identity_preparation import VisualIdentityPreparation
 from vscs.domain.assets.models import AssetCategory
@@ -21,14 +21,7 @@ from vscs.domain.caps import CanonicalAssetGenerationRequest
 
 def _setup(tmp_path: Path):
     asset_id = "STORY-LOC-001"
-    image = (
-        tmp_path
-        / "Canonical Assets"
-        / asset_id
-        / "Images"
-        / "Visual Candidates"
-        / "room.png"
-    )
+    image = tmp_path / "Canonical Assets" / asset_id / "Images" / "Visual Candidates" / "room.png"
     image.parent.mkdir(parents=True)
     image.write_bytes(b"candidate-image")
     spec_fingerprint = "reviewed-spec-fingerprint"
@@ -72,15 +65,11 @@ def _setup(tmp_path: Path):
         reference_role="supplementary",
         reference_status="candidate",
     )
-    manifest_root = (
-        tmp_path / "Canonical Assets" / asset_id / ".metadata" / "visual"
-    )
+    manifest_root = tmp_path / "Canonical Assets" / asset_id / ".metadata" / "visual"
     manifest_root.mkdir(parents=True)
     manifest = manifest_root / "room.json"
     manifest.write_text(json.dumps({"seed": 0}), encoding="utf-8")
-    audit_root = (
-        tmp_path / "Canonical Assets" / asset_id / ".metadata" / "evaluation"
-    )
+    audit_root = tmp_path / "Canonical Assets" / asset_id / ".metadata" / "evaluation"
     audit_root.mkdir(parents=True)
     report = audit_root / "room.test.candidate_quality.json"
     document = {
@@ -107,7 +96,6 @@ def _setup(tmp_path: Path):
         },
     }
     report.write_text(json.dumps(document), encoding="utf-8")
-    refs = SimpleNamespace()
     service = CandidateRegenerationService.__new__(CandidateRegenerationService)
     service.quality = SimpleNamespace(snapshot=Mock(return_value=snapshot))
     service.generator = SimpleNamespace(
@@ -146,9 +134,10 @@ def test_regeneration_lineage_tracks_source_report_and_original(tmp_path):
     plan = service.prepare(snap.asset_id, snap.reference_id, report)
     assert plan.lineage["original_reference_id"] == 7
     assert plan.lineage["parent_reference_id"] == 7
-    assert plan.lineage["source_quality_report_sha256"] == hashlib.sha256(
-        report.read_bytes()
-    ).hexdigest()
+    assert (
+        plan.lineage["source_quality_report_sha256"]
+        == hashlib.sha256(report.read_bytes()).hexdigest()
+    )
 
 
 def test_attempt_count_is_bounded_across_separate_source_candidate_branches(tmp_path):
@@ -222,9 +211,7 @@ def test_unreviewed_visual_identity_cannot_regenerate(tmp_path):
     from dataclasses import replace
 
     service, snap, prep, report, _data, _manifest = _setup(tmp_path)
-    service.generator.prepare.return_value = replace(
-        prep, blockers=("Ship silhouette unresolved",)
-    )
+    service.generator.prepare.return_value = replace(prep, blockers=("Ship silhouette unresolved",))
     with pytest.raises(CandidateRegenerationError, match="not ready"):
         service.prepare(snap.asset_id, snap.reference_id, report)
 
@@ -259,9 +246,7 @@ def test_regeneration_dialog_is_read_only_and_requires_operator_consent(
     service.generator.persist_candidate.assert_not_called()
 
 
-def test_regeneration_ui_performs_only_one_local_generation_after_yes(
-    qtbot, tmp_path, monkeypatch
-):
+def test_regeneration_ui_performs_only_one_local_generation_after_yes(qtbot, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QMessageBox
 
     from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
@@ -328,9 +313,7 @@ def test_latest_semantic_review_ignores_newer_technical_only_audit(tmp_path):
     assert service.latest_semantic_report(snap.asset_id, snap.reference_id) == report
 
 
-def test_saved_report_correction_gallery_action_never_calls_terra(
-    qtbot, tmp_path, monkeypatch
-):
+def test_saved_report_correction_gallery_action_never_calls_terra(qtbot, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QDialog, QWidget
 
     from vscs.presentation.widgets import cap_visual_candidate_quality as ui
@@ -350,9 +333,7 @@ def test_saved_report_correction_gallery_action_never_calls_terra(
     monkeypatch.setattr(ui, "ControlledCandidateRegenerationDialog", FakeCorrectionDialog)
     widget = QWidget()
     qtbot.addWidget(widget)
-    widget.reference_gallery = SimpleNamespace(
-        selected_reference=lambda: SimpleNamespace(id=7)
-    )
+    widget.reference_gallery = SimpleNamespace(selected_reference=lambda: SimpleNamespace(id=7))
     widget.profile = SimpleNamespace(asset_id=snap.asset_id)
     widget.reference_service = SimpleNamespace()
     ui._correct_from_saved_report(widget)
