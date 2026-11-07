@@ -24,7 +24,6 @@ from vscs.application.caps.visual_candidate_regeneration import (
 )
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
 
-
 _LOGGER = logging.getLogger(__name__)
 
 
