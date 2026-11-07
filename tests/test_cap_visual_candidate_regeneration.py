@@ -347,7 +347,11 @@ def test_saved_report_correction_gallery_action_never_calls_terra(qtbot, tmp_pat
         ("preflight", AttributeError("missing review attribute"), "preflight"),
         ("render", TypeError("provider interface mismatch"), "local ComfyUI rendering"),
         ("post_render", KeyError("stale authority field"), "post-render authority"),
-        ("registration", AttributeError("reference registration mismatch"), "Candidate registration"),
+        (
+            "registration",
+            AttributeError("reference registration mismatch"),
+            "Candidate registration",
+        ),
     ],
 )
 def test_unexpected_qt_slot_exception_is_visible_and_retry_safe(
@@ -412,7 +416,8 @@ def test_duplicate_click_is_ignored_while_generation_active(qtbot, tmp_path, mon
     from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
 
     service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
-    service.prepare = Mock(return_value=service.prepare(snap.asset_id, snap.reference_id, report))
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
     monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
     dialog = ui.ControlledCandidateRegenerationDialog(
         SimpleNamespace(), snap.asset_id, snap.reference_id, report
@@ -421,3 +426,37 @@ def test_duplicate_click_is_ignored_while_generation_active(qtbot, tmp_path, mon
     dialog._generation_active = True
     dialog._generate()
     service.generator.prepare_request.assert_not_called()
+
+
+def test_clicked_generate_button_reports_unexpected_preflight_failure(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock(side_effect=AttributeError("missing review binding"))
+    service.generator.render = Mock()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args, **_kw: QMessageBox.StandardButton.Yes
+    )
+    errors = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "critical",
+        lambda _parent, title, body: errors.append((title, body)),
+    )
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    dialog.generate_button.click()
+    assert len(errors) == 1
+    assert "preflight" in errors[0][1]
+    assert "AttributeError" in errors[0][1]
+    assert "missing review binding" in errors[0][1]
+    service.generator.render.assert_not_called()
