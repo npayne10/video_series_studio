@@ -331,8 +331,12 @@ def _corrected_quality_scenario(tmp_path, monkeypatch):
     service, refs, prep, image, _manifest = _scenario(tmp_path)
     source = _snapshot(service, prep, monkeypatch)
     source_audit = (
-        tmp_path / "Canonical Assets" / source.asset_id / ".metadata"
-        / "evaluation" / "room.previous.candidate_quality.json"
+        tmp_path
+        / "Canonical Assets"
+        / source.asset_id
+        / ".metadata"
+        / "evaluation"
+        / "room.previous.candidate_quality.json"
     )
     source_audit.parent.mkdir(parents=True, exist_ok=True)
     source_audit.write_text(
@@ -367,9 +371,7 @@ def _corrected_quality_scenario(tmp_path, monkeypatch):
             "parent_reference_id": 7,
             "attempt": 1,
             "source_quality_report": str(source_audit.relative_to(tmp_path)),
-            "source_quality_report_sha256": hashlib.sha256(
-                source_audit.read_bytes()
-            ).hexdigest(),
+            "source_quality_report_sha256": hashlib.sha256(source_audit.read_bytes()).hexdigest(),
             "source_image_sha256": source.image_sha256,
         },
     }
@@ -392,9 +394,7 @@ def _corrected_quality_scenario(tmp_path, monkeypatch):
 
 
 def test_corrected_quality_report_compares_to_saved_semantic_source(tmp_path, monkeypatch):
-    service, prep, _manifest, _audit = _corrected_quality_scenario(
-        tmp_path, monkeypatch
-    )
+    service, prep, _manifest, _audit = _corrected_quality_scenario(tmp_path, monkeypatch)
     snap = service.snapshot(prep.asset_id, 8)
     assert snap.correction_attempt == 1
     assert snap.parent_reference_id == 7
@@ -409,12 +409,8 @@ def test_corrected_quality_report_compares_to_saved_semantic_source(tmp_path, mo
     assert comparison["previous_design_consistency"] == 45
 
 
-def test_corrected_quality_report_fails_when_source_audit_was_modified(
-    tmp_path, monkeypatch
-):
-    service, prep, _manifest, audit = _corrected_quality_scenario(
-        tmp_path, monkeypatch
-    )
+def test_corrected_quality_report_fails_when_source_audit_was_modified(tmp_path, monkeypatch):
+    service, prep, _manifest, audit = _corrected_quality_scenario(tmp_path, monkeypatch)
     audit.write_text("{}", encoding="utf-8")
     with pytest.raises(CandidateQualityError, match="source evidence mismatch"):
         service.snapshot(prep.asset_id, 8)
