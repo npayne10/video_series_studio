@@ -399,7 +399,7 @@ def test_unexpected_qt_slot_exception_is_visible_and_retry_safe(
     dialog._generate()
 
     assert len(messages) == 1
-    assert "Corrective Candidate Failed" == messages[0][0]
+    assert messages[0][0] == "Corrective Candidate Failed"
     assert expected_stage in messages[0][1]
     assert type(exception).__name__ in messages[0][1]
     assert dialog.generate_button.isEnabled()
@@ -423,14 +423,14 @@ def test_duplicate_click_is_ignored_while_generation_active(qtbot, tmp_path, mon
         SimpleNamespace(), snap.asset_id, snap.reference_id, report
     )
     qtbot.addWidget(dialog)
+    # The dialog preparation occurs before this duplicate-click check.
+    service.generator.prepare_request.reset_mock()
     dialog._generation_active = True
     dialog._generate()
     service.generator.prepare_request.assert_not_called()
 
 
-def test_clicked_generate_button_reports_unexpected_preflight_failure(
-    qtbot, tmp_path, monkeypatch
-):
+def test_clicked_generate_button_reports_unexpected_preflight_failure(qtbot, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QMessageBox
 
     from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
