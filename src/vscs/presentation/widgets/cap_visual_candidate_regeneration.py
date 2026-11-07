@@ -117,9 +117,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             image = AutomationProgressRunner(self).run(
                 "Controlled Candidate Regeneration",
                 plan.source.asset_id,
-                lambda: generator.render(
-                    plan.preparation, plan.source.project_root, plan.request
-                ),
+                lambda: generator.render(plan.preparation, plan.source.project_root, plan.request),
                 may_charge=False,
             )
             # Thread-bound project and reference operations remain on the UI thread.
