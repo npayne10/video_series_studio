@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -22,6 +23,9 @@ from vscs.application.caps.visual_candidate_regeneration import (
     CandidateRegenerationService,
 )
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class ControlledCandidateRegenerationDialog(QDialog):
@@ -88,6 +92,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.generate_button = QPushButton("Generate ONE Corrected Local Candidate")
         self.generate_button.setObjectName("confirmControlledCandidateRegeneration")
         self.generate_button.clicked.connect(self._generate)
+        self._generation_active = False
         layout.addWidget(self.generate_button)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
@@ -95,6 +100,8 @@ class ControlledCandidateRegenerationDialog(QDialog):
         layout.addWidget(buttons)
 
     def _generate(self) -> None:
+        if self._generation_active:
+            return
         plan = self.plan
         choice = QMessageBox.question(
             self,
@@ -108,20 +115,28 @@ class ControlledCandidateRegenerationDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if choice is not QMessageBox.StandardButton.Yes:
+        if choice != QMessageBox.StandardButton.Yes:
             return
+        self._generation_active = True
+        self.generate_button.setEnabled(False)
+        stage = "preflight (no GPU request submitted)"
         try:
-            # Validate the audit, operator budget and CAP before starting a GPU job.
+            # Validate source authority before ANY render attempt. Unexpected
+            # exceptions must be visible; Qt otherwise prints and swallows them.
             self.service.verify_current(plan)
             generator = self.service.generator
+            stage = "local ComfyUI rendering (check provider queue before retrying)"
             image = AutomationProgressRunner(self).run(
                 "Controlled Candidate Regeneration",
                 plan.source.asset_id,
                 lambda: generator.render(plan.preparation, plan.source.project_root, plan.request),
                 may_charge=False,
             )
-            # Thread-bound project and reference operations remain on the UI thread.
+            # GUI-thread reference operations, including a second authority
+            # check, remain outside the worker thread.
+            stage = "post-render authority check (image may already have rendered)"
             self.service.verify_current(plan)
+            stage = "Candidate registration (check gallery before retrying)"
             new_id = generator.persist_candidate(
                 plan.preparation,
                 plan.source.project_root,
@@ -129,8 +144,22 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 image,
                 regeneration=plan.lineage,
             )
-        except (OSError, RuntimeError, ValueError) as exc:
-            QMessageBox.critical(self, "Corrective Candidate Failed", str(exc))
+        except Exception as exc:
+            _LOGGER.exception(
+                "B.5.26D controlled regeneration failed at %s for %s",
+                stage,
+                plan.source.asset_id,
+            )
+            QMessageBox.critical(
+                self,
+                "Corrective Candidate Failed",
+                f"Stage: {stage}\\n{type(exc).__name__}: {exc}\\n\\n"
+                "No successful Candidate registration was confirmed. "
+                "If rendering started, inspect the gallery and ComfyUI queue "
+                "before attempting another GPU request.",
+            )
+            self.generate_button.setEnabled(True)
+            self._generation_active = False
             return
 
         # Offline re-evaluation is free and never promotes the image; if the
@@ -154,9 +183,14 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 "Use Review Visual Candidate… with separate consent for "
                 "semantic comparison against the previous result."
             )
-        except (OSError, RuntimeError, ValueError) as exc:
+        except Exception as exc:
+            _LOGGER.exception(
+                "B.5.26D Candidate %s was saved but its offline review failed",
+                new_id,
+            )
             report_note = (
-                f"Offline technical re-evaluation was unavailable: {exc}. "
+                f"Offline technical re-evaluation was unavailable: "
+                f"{type(exc).__name__}: {exc}. "
                 "The new Candidate remains unapproved; review it in the gallery."
             )
 
