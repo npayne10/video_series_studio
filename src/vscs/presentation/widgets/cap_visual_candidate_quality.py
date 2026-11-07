@@ -306,9 +306,7 @@ def install_visual_candidate_quality_review() -> None:
         self.candidate_correction_button.setToolTip(
             "Reopen the latest persisted semantic review; no new Terra request"
         )
-        self.candidate_correction_button.clicked.connect(
-            lambda: _correct_from_saved_report(self)
-        )
+        self.candidate_correction_button.clicked.connect(lambda: _correct_from_saved_report(self))
         self.layout().insertWidget(3, self.candidate_correction_button)
         if hasattr(self, "reference_gallery"):
             self.reference_gallery.gallery.currentItemChanged.connect(
