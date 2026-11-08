@@ -540,9 +540,7 @@ def test_regression_warning_is_visible_but_cancel_does_not_render(qtbot, tmp_pat
     monkeypatch.setattr(
         QMessageBox,
         "question",
-        lambda _parent, _title, body, *_args: (
-            prompts.append(body) or QMessageBox.StandardButton.No
-        ),
+        lambda _parent, _title, body, *_args: prompts.append(body) or QMessageBox.StandardButton.No,
     )
     dialog = ui.ControlledCandidateRegenerationDialog(
         SimpleNamespace(), snap.asset_id, snap.reference_id, report

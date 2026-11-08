@@ -119,8 +119,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             "This creates a new image and provenance, retains the original, "
             "and performs FREE offline technical re-evaluation. "
             "It does not make a paid OpenAI call, re-approve Canon, "
-            "or automatically retry on failure.\n"
-            + "\n".join(plan.effectiveness_warnings),
+            "or automatically retry on failure.\n" + "\n".join(plan.effectiveness_warnings),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
