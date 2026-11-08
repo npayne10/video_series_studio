@@ -17,11 +17,13 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.application.caps.spatial_candidate_guidance import inspect_spatial_guidance
 from vscs.application.caps.visual_candidate_quality import CandidateQualityReviewService
 from vscs.application.caps.visual_candidate_regeneration import (
     CandidateRegenerationPlan,
     CandidateRegenerationService,
 )
+from vscs.infrastructure.xcic.config import XCICConfiguration
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
 
 _LOGGER = logging.getLogger(__name__)
@@ -97,6 +99,10 @@ class ControlledCandidateRegenerationDialog(QDialog):
             self.plan.request.prompt,
             "correctedVisualCandidatePrompt",
         )
+        self.inspect_spatial_button = QPushButton("Inspect Spatial Guidance (No Generation)")
+        self.inspect_spatial_button.setObjectName("inspectSpatialGuidance")
+        self.inspect_spatial_button.clicked.connect(self._inspect_spatial_guidance)
+        layout.addWidget(self.inspect_spatial_button)
         self.generate_button = QPushButton("Generate ONE Corrected Local Candidate")
         self.generate_button.setObjectName("confirmControlledCandidateRegeneration")
         self.generate_button.clicked.connect(self._generate)
@@ -106,6 +112,19 @@ class ControlledCandidateRegenerationDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _inspect_spatial_guidance(self) -> None:
+        """Report limitations of the configured workflow without any execution."""
+        try:
+            result = inspect_spatial_guidance(XCICConfiguration.load())
+            QMessageBox.information(self, "B.5.26F — Spatial Guidance Inspection", result.describe())
+        except Exception as exc:
+            _LOGGER.exception("B.5.26F offline spatial inspection failed")
+            QMessageBox.critical(
+                self,
+                "Spatial Guidance Inspection Failed",
+                f"{type(exc).__name__}: {exc}\\nNo generation was submitted.",
+            )
 
     def _generate(self) -> None:
         if self._generation_active:
