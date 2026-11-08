@@ -67,7 +67,9 @@ def _loopback_base(url: str) -> str:
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Never follow a local service redirect to an untrusted host."""
 
-    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+    def redirect_request(
+        self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str
+    ) -> None:
         return None
 
 
@@ -160,7 +162,7 @@ def assess_guided_edit_capability(
     blockers = [
         "Installed node names and model choices do not prove a connected edit graph.",
         "No verified source-image/mask contract or source-preservation test exists.",
-        "GPU total/free memory is not a peak model VRAM measurement; 16 GiB execution is unverified.",
+        "GPU total/free VRAM is not peak model usage; 16 GiB execution is unverified.",
         "F3 provenance/authority contract and F4 governed provider integration are outstanding.",
     ]
     if not devices:
