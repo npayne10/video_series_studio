@@ -93,11 +93,11 @@ def _device_rows(stats: dict[str, Any]) -> tuple[str, ...]:
             name = str(item.get("name", "unknown GPU"))
             total = item.get("vram_total")
             free = item.get("vram_free")
-            if type(total) in (int, float) and total > 0:
+            if isinstance(total, (int, float)) and not isinstance(total, bool) and total > 0:
                 total_gib = total / (1024**3)
                 free_gib = (
                     f", free {free / (1024**3):.1f} GiB"
-                    if type(free) in (int, float) and free >= 0
+                    if isinstance(free, (int, float)) and not isinstance(free, bool) and free >= 0
                     else ""
                 )
                 rows.append(f"{name}: total {total_gib:.1f} GiB{free_gib}")
@@ -112,8 +112,7 @@ def _models_and_nodes(info: dict[str, Any]) -> tuple[tuple[str, ...], tuple[str,
         for name in info
         if isinstance(name, str)
         and any(
-            token in name.lower()
-            for token in (*_EDIT_TOKENS, *_IMAGE_TOKENS, *_CONTROL_TOKENS)
+            token in name.lower() for token in (*_EDIT_TOKENS, *_IMAGE_TOKENS, *_CONTROL_TOKENS)
         )
     )
     models: set[str] = set()
