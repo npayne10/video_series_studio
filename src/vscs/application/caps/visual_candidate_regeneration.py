@@ -41,6 +41,7 @@ class CandidateRegenerationPlan:
     review_findings: tuple[str, ...]
     previous_technical_score: int
     previous_semantic_score: int
+    effectiveness_warnings: tuple[str, ...]
 
     @property
     def lineage(self) -> dict[str, str | int]:
@@ -231,13 +232,41 @@ class CandidateRegenerationService:
         )
         if not corrections:
             raise CandidateRegenerationError("No accepted design exists to ground corrections")
-        negative = current.negative_prompt
+        # B.5.26E: derived from reviewed CAP fields, never evaluator prose.
+        # A changed seed alone cannot encode counts, positions, or prohibitions.
+        negative = (
+            current.negative_prompt.rstrip()
+            + ", dimension labels, measurement text, rulers, drafting lines, "
+            "dimension arrows, annotation overlays, watermarks, captions, "
+            "blueprint markings, unsolicited doors, duplicate access points"
+        )
+        warnings: list[str] = []
+        comparison = data.get("correction_comparison")
+        if snapshot.correction_attempt is not None and isinstance(comparison, dict):
+            for metric, label in (
+                ("semantic_delta", "semantic quality"),
+                ("design_consistency_delta", "design consistency"),
+            ):
+                delta = comparison.get(metric)
+                if type(delta) is int and delta <= 0:
+                    warnings.append(
+                        f"Previous correction did not improve {label} ({delta:+d}); "
+                        "inspect the failed image and governed CAP before another attempt."
+                    )
         prompt = (
             current.master_candidate_prompt
             + "\nCONTROLLED B.5.26D CORRECTION — only reviewed Draft details below "
             "are authoritative for this new candidate. Previous image is rejected "
             "as a visual match; do not replicate its unreviewed details. "
-            "Follow each mandatory field literally. "
+            "HARD CONSTRAINT CONTRACT: Treat every explicitly accepted count, "
+            "location, object relationship and route as an invariant, not a suggestion. "
+            "A requirement for ONE door means exactly ONE visible door, with no "
+            "secondary doors, openings or duplicate entrances. A specified "
+            "continuous route must remain visibly connected without interruption. "
+            "Produce a clean cinematic reference image, not a dimensioned drawing: "
+            "NO numerical labels, measurement lines, scale bars or technical overlays. "
+            "Do not invent spatial geometry from deferred fields. "
+            "Follow each mandatory reviewed field literally: "
             + " ".join(corrections)
             + " Do not introduce extra doors, equipment, markings, fixtures or lighting "
             "beyond the reviewed design; deferred features remain undecided. "
@@ -271,6 +300,7 @@ class CandidateRegenerationService:
             review_findings=tuple(findings),
             previous_technical_score=technical_score,
             previous_semantic_score=overall,
+            effectiveness_warnings=tuple(warnings),
         )
 
     def verify_current(self, plan: CandidateRegenerationPlan) -> None:
