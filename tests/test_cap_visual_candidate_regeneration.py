@@ -513,3 +513,47 @@ def test_improvement_does_not_trigger_regression_warning(tmp_path):
     report.write_text(json.dumps(payload), encoding="utf-8")
     plan = service.prepare(snap.asset_id, snap.reference_id, report)
     assert not plan.effectiveness_warnings
+
+
+def test_regression_warning_is_visible_but_cancel_does_not_render(qtbot, tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(
+        return_value=replace(
+            plan,
+            effectiveness_warnings=(
+                "Previous correction did not improve semantic quality (-14); inspect first.",
+            ),
+        )
+    )
+    service.verify_current = Mock()
+    service.generator.render = Mock()
+    service.generator.persist_candidate = Mock()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    prompts = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda _parent, _title, body, *_args: (
+            prompts.append(body) or QMessageBox.StandardButton.No
+        ),
+    )
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    warning = dialog.findChild(ui.QLabel, "correctionEffectivenessWarning")
+    assert warning is not None
+    assert "semantic quality (-14)" in warning.text()
+    dialog.generate_button.click()
+    assert len(prompts) == 1
+    assert "semantic quality (-14)" in prompts[0]
+    service.verify_current.assert_not_called()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
