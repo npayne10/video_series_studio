@@ -45,6 +45,7 @@ class SpatialCorrectionContract:
     mask_path: Path | None
     mask_sha256: str | None
     workflow_path: Path
+    trusted_workflow_directory: Path
     workflow_sha256: str
     workflow_id: str
     model_identifier: str
@@ -73,6 +74,7 @@ class SpatialCorrectionContract:
             "mask_path": str(self.mask_path) if self.mask_path is not None else None,
             "mask_sha256": self.mask_sha256,
             "workflow_path": str(self.workflow_path),
+            "trusted_workflow_directory": str(self.trusted_workflow_directory),
             "workflow_sha256": self.workflow_sha256,
             "workflow_id": self.workflow_id,
             "model_identifier": self.model_identifier,
@@ -187,7 +189,8 @@ def prepare_spatial_contract(
         raise SpatialCorrectionContractError("No accepted CAP constraints exist")
     if not workflow_id.strip() or not model_identifier.strip():
         raise SpatialCorrectionContractError("Workflow and model identifiers are required")
-    workflow = _contained_file(workflow_path, trusted_workflow_directory, suffix=".json")
+    trusted_directory = trusted_workflow_directory.resolve(strict=False)
+    workflow = _contained_file(workflow_path, trusted_directory, suffix=".json")
     try:
         graph = json.loads(workflow.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
@@ -225,6 +228,7 @@ def prepare_spatial_contract(
         "mask_path": str(mask) if mask is not None else None,
         "mask_sha256": mask_hash,
         "workflow_path": str(workflow),
+        "trusted_workflow_directory": str(trusted_directory),
         "workflow_sha256": workflow_hash,
         "workflow_id": workflow_id,
         "model_identifier": model_identifier,
@@ -246,6 +250,7 @@ def prepare_spatial_contract(
         mask_path=mask,
         mask_sha256=mask_hash,
         workflow_path=workflow,
+        trusted_workflow_directory=trusted_directory,
         workflow_sha256=workflow_hash,
         workflow_id=workflow_id,
         model_identifier=model_identifier,
@@ -262,7 +267,11 @@ def verify_spatial_contract(
     contract.verify_seal()
     service.verify_current(plan)
     if (
-        contract.source_reference_id != plan.source.reference_id
+        contract.project_root != plan.source.project_root.resolve(strict=False)
+        or contract.source_path != plan.source.image_path.resolve(strict=False)
+        or contract.quality_report_path != plan.report_path.resolve(strict=False)
+        or contract.asset_id != plan.source.asset_id
+        or contract.source_reference_id != plan.source.reference_id
         or contract.original_reference_id != plan.original_reference_id
         or contract.correction_attempt != plan.attempt
         or contract.specification_fingerprint != plan.source.specification_fingerprint
@@ -270,6 +279,19 @@ def verify_spatial_contract(
         or contract.accepted_fields != plan.source.accepted_fields
     ):
         raise SpatialCorrectionContractError("Correction plan authority changed")
+    _contained_file(
+        contract.source_path,
+        contract.project_root / "Canonical Assets" / contract.asset_id / "Images" / "Visual Candidates",
+        suffix=".png",
+    )
+    _contained_file(
+        contract.quality_report_path,
+        contract.project_root / "Canonical Assets" / contract.asset_id / ".metadata" / "evaluation",
+        suffix=".json",
+    )
+    _contained_file(
+        contract.workflow_path, contract.trusted_workflow_directory, suffix=".json"
+    )
     if _read_hashed(contract.source_path) != contract.source_sha256:
         raise SpatialCorrectionContractError("Source Candidate changed")
     if _read_hashed(contract.quality_report_path) != contract.quality_report_sha256:
