@@ -63,6 +63,15 @@ class ControlledCandidateRegenerationDialog(QDialog):
         )
         label.setWordWrap(True)
         layout.addWidget(label)
+        if self.plan.effectiveness_warnings:
+            warning = QLabel(
+                "B.5.26E — Previous correction effectiveness warning:\\n"
+                + "\\n".join(self.plan.effectiveness_warnings)
+                + "\\nReview these findings before consuming another local attempt."
+            )
+            warning.setWordWrap(True)
+            warning.setObjectName("correctionEffectivenessWarning")
+            layout.addWidget(warning)
 
         def readonly(title: str, value: str, object_name: str) -> QPlainTextEdit:
             layout.addWidget(QLabel(title))
@@ -110,7 +119,8 @@ class ControlledCandidateRegenerationDialog(QDialog):
             "This creates a new image and provenance, retains the original, "
             "and performs FREE offline technical re-evaluation. "
             "It does not make a paid OpenAI call, re-approve Canon, "
-            "or automatically retry on failure.",
+            "or automatically retry on failure.\\n"
+            + "\\n".join(plan.effectiveness_warnings),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
