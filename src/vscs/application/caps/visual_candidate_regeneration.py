@@ -253,6 +253,12 @@ class CandidateRegenerationService:
                         f"Previous correction did not improve {label} ({delta:+d}); "
                         "inspect the failed image and governed CAP before another attempt."
                     )
+        single_door_rule = (
+            "The approved ONE-door requirement means exactly ONE visible door; "
+            "no secondary doors or duplicate entrances. "
+            if any("one" in value.lower() and "door" in value.lower() for _, value in snapshot.accepted_fields)
+            else ""
+        )
         prompt = (
             current.master_candidate_prompt
             + "\nCONTROLLED B.5.26D CORRECTION — only reviewed Draft details below "
@@ -260,9 +266,9 @@ class CandidateRegenerationService:
             "as a visual match; do not replicate its unreviewed details. "
             "HARD CONSTRAINT CONTRACT: Treat every explicitly accepted count, "
             "location, object relationship and route as an invariant, not a suggestion. "
-            "A requirement for ONE door means exactly ONE visible door, with no "
-            "secondary doors, openings or duplicate entrances. A specified "
-            "continuous route must remain visibly connected without interruption. "
+            + single_door_rule
+            + "A specified continuous route must remain visibly connected "
+            "without interruption. "
             "Produce a clean cinematic reference image, not a dimensioned drawing: "
             "NO numerical labels, measurement lines, scale bars or technical overlays. "
             "Do not invent spatial geometry from deferred fields. "
