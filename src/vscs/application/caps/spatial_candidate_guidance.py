@@ -83,9 +83,12 @@ def inspect_spatial_guidance(config: XCICConfiguration) -> SpatialGuidanceInspec
             classes.append(kind)
             lower = kind.lower()
             names = {str(key).lower() for key in inputs}
-            if "loadimage" in lower or "imageedit" in lower or "image_edit" in lower:
-                image.append(kind)
-            elif names & _IMAGE_INPUTS and any(token in lower for token in _EDIT_TOKENS):
+            if (
+                "loadimage" in lower
+                or "imageedit" in lower
+                or "image_edit" in lower
+                or (names & _IMAGE_INPUTS and any(token in lower for token in _EDIT_TOKENS))
+            ):
                 image.append(kind)
             if "mask" in lower or "inpaint" in lower or names & _MASK_INPUTS:
                 mask.append(kind)
