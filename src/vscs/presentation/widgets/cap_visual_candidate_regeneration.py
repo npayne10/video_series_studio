@@ -103,7 +103,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.inspect_spatial_button.setObjectName("inspectSpatialGuidance")
         self.inspect_spatial_button.clicked.connect(self._inspect_spatial_guidance)
         layout.addWidget(self.inspect_spatial_button)
-        self.generate_button = QPushButton("Generate ONE Corrected Local Candidate")
+        self.generate_button = QPushButton("Generate ONE Text-Only Candidate (No Spatial Control)")
         self.generate_button.setObjectName("confirmControlledCandidateRegeneration")
         self.generate_button.clicked.connect(self._generate)
         self._generation_active = False
