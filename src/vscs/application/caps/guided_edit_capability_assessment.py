@@ -64,9 +64,17 @@ def _loopback_base(url: str) -> str:
     return url.rstrip("/")
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a local service redirect to an untrusted host."""
+
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+        return None
+
+
 def _get_json(base: str, path: str, timeout: float) -> dict[str, Any]:
     req = urllib.request.Request(base + path, method="GET")
-    with urllib.request.urlopen(req, timeout=timeout) as response:
+    opener = urllib.request.build_opener(_NoRedirect())
+    with opener.open(req, timeout=timeout) as response:
         data = json.load(response)
     if not isinstance(data, dict):
         raise ValueError(f"{path} returned a non-object JSON response")
