@@ -555,3 +555,43 @@ def test_regression_warning_is_visible_but_cancel_does_not_render(qtbot, tmp_pat
     service.verify_current.assert_not_called()
     service.generator.render.assert_not_called()
     service.generator.persist_candidate.assert_not_called()
+
+
+def test_spatial_inspection_button_cannot_generate_or_consume_attempt(qtbot, tmp_path, monkeypatch):
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _data, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock()
+    service.generator.render = Mock()
+    service.generator.persist_candidate = Mock()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    monkeypatch.setattr(
+        ui,
+        "XCICConfiguration",
+        SimpleNamespace(load=lambda: SimpleNamespace(text_workflow_path=tmp_path)),
+    )
+    inspection = Mock()
+    inspection.return_value.describe.return_value = "Guided execution verified: NO"
+    monkeypatch.setattr(ui, "inspect_spatial_guidance", inspection)
+    results = []
+    monkeypatch.setattr(
+        ui.QMessageBox,
+        "information",
+        lambda _parent, title, message: results.append((title, message)),
+    )
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    button = dialog.findChild(ui.QPushButton, "inspectSpatialGuidance")
+    assert button is not None
+    button.click()
+    inspection.assert_called_once()
+    assert len(results) == 1
+    assert "Guided execution verified: NO" in results[0][1]
+    service.verify_current.assert_not_called()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
+    assert dialog.generate_button.isEnabled()
