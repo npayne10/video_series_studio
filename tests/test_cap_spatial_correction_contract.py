@@ -14,10 +14,10 @@ from vscs.application.caps.spatial_correction_contract import (
     prepare_spatial_contract,
     verify_spatial_contract,
 )
+from vscs.application.caps.visual_candidate_quality import CandidateQualitySnapshot
 from vscs.application.caps.visual_candidate_regeneration import (
     CandidateRegenerationPlan,
 )
-from vscs.application.caps.visual_candidate_quality import CandidateQualitySnapshot
 from vscs.application.caps.visual_identity_preparation import VisualIdentityPreparation
 from vscs.domain.assets.models import AssetCategory
 from vscs.domain.caps import CanonicalAssetGenerationRequest
@@ -25,9 +25,7 @@ from vscs.domain.caps import CanonicalAssetGenerationRequest
 
 def _fixture(tmp_path):
     asset = "STORY-LOC-001"
-    candidate_dir = (
-        tmp_path / "Canonical Assets" / asset / "Images" / "Visual Candidates"
-    )
+    candidate_dir = tmp_path / "Canonical Assets" / asset / "Images" / "Visual Candidates"
     candidate_dir.mkdir(parents=True)
     source = candidate_dir / "room.png"
     Image.new("RGB", (16, 12), "gray").save(source)
