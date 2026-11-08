@@ -167,8 +167,8 @@ def prepare_spatial_contract(
     project = plan.source.project_root.resolve(strict=False)
     if project != plan.source.project_root or not project.is_dir():
         raise SpatialCorrectionContractError("Active project root is not canonical")
-    if plan.attempt != 2 or plan.max_attempts != 2:
-        raise SpatialCorrectionContractError("F3 expects the reserved second correction attempt")
+    if not 1 <= plan.attempt <= plan.max_attempts <= 2:
+        raise SpatialCorrectionContractError("Invalid bounded correction attempt")
     source = _validated_source(plan, project)
     size = _source_size(source)
     report_dir = project / "Canonical Assets" / plan.source.asset_id / ".metadata" / "evaluation"
@@ -206,6 +206,8 @@ def prepare_spatial_contract(
         if mask_path is not None
         else None
     )
+    mask_hash = _read_hashed(mask) if mask is not None else None
+    workflow_hash = _read_hashed(workflow)
     evidence = {
         "schema_version": 1,
         "asset_id": plan.source.asset_id,
@@ -221,9 +223,9 @@ def prepare_spatial_contract(
         "review_fingerprint": plan.source.review_fingerprint,
         "accepted_fields": list(plan.source.accepted_fields),
         "mask_path": str(mask) if mask is not None else None,
-        "mask_sha256": _read_hashed(mask) if mask is not None else None,
+        "mask_sha256": mask_hash,
         "workflow_path": str(workflow),
-        "workflow_sha256": _read_hashed(workflow),
+        "workflow_sha256": workflow_hash,
         "workflow_id": workflow_id,
         "model_identifier": model_identifier,
     }
@@ -242,9 +244,9 @@ def prepare_spatial_contract(
         review_fingerprint=plan.source.review_fingerprint,
         accepted_fields=plan.source.accepted_fields,
         mask_path=mask,
-        mask_sha256=evidence["mask_sha256"],
+        mask_sha256=mask_hash,
         workflow_path=workflow,
-        workflow_sha256=evidence["workflow_sha256"],
+        workflow_sha256=workflow_hash,
         workflow_id=workflow_id,
         model_identifier=model_identifier,
         evidence_sha256=seal,
