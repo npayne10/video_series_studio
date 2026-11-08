@@ -131,9 +131,7 @@ def _validated_mask(path: Path, project: Path, asset_id: str, size: tuple[int, i
 
 
 def _validated_source(plan: CandidateRegenerationPlan, project: Path) -> Path:
-    expected = (
-        project / "Canonical Assets" / plan.source.asset_id / "Images" / "Visual Candidates"
-    )
+    expected = project / "Canonical Assets" / plan.source.asset_id / "Images" / "Visual Candidates"
     path = _contained_file(plan.source.image_path, expected, suffix=".png")
     if _read_hashed(path) != plan.source.image_sha256:
         raise SpatialCorrectionContractError("Source Candidate image hash changed")
@@ -295,9 +293,7 @@ def verify_spatial_contract(
         contract.project_root / "Canonical Assets" / contract.asset_id / ".metadata" / "evaluation",
         suffix=".json",
     )
-    _contained_file(
-        contract.workflow_path, contract.trusted_workflow_directory, suffix=".json"
-    )
+    _contained_file(contract.workflow_path, contract.trusted_workflow_directory, suffix=".json")
     if _read_hashed(contract.source_path) != contract.source_sha256:
         raise SpatialCorrectionContractError("Source Candidate changed")
     if _read_hashed(contract.quality_report_path) != contract.quality_report_sha256:
