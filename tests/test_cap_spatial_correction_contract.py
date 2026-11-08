@@ -137,7 +137,10 @@ def test_f3_detects_changed_evidence(tmp_path, tamper):
         "workflow": workflow,
         "report": plan.report_path,
     }[tamper]
-    path.write_bytes(b"changed evidence")
+    if tamper == "mask":
+        Image.new("L", (16, 12), 255).save(path)
+    else:
+        path.write_bytes(b"changed evidence")
     with pytest.raises(SpatialCorrectionContractError, match="changed"):
         verify_spatial_contract(service, plan, contract)
 
