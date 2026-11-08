@@ -117,13 +117,15 @@ class ControlledCandidateRegenerationDialog(QDialog):
         """Report limitations of the configured workflow without any execution."""
         try:
             result = inspect_spatial_guidance(XCICConfiguration.load())
-            QMessageBox.information(self, "B.5.26F — Spatial Guidance Inspection", result.describe())
+            QMessageBox.information(
+                self, "B.5.26F — Spatial Guidance Inspection", result.describe()
+            )
         except Exception as exc:
             _LOGGER.exception("B.5.26F offline spatial inspection failed")
             QMessageBox.critical(
                 self,
                 "Spatial Guidance Inspection Failed",
-                f"{type(exc).__name__}: {exc}\\nNo generation was submitted.",
+                f"{type(exc).__name__}: {exc}\nNo generation was submitted.",
             )
 
     def _generate(self) -> None:
