@@ -256,7 +256,10 @@ class CandidateRegenerationService:
         single_door_rule = (
             "The approved ONE-door requirement means exactly ONE visible door; "
             "no secondary doors or duplicate entrances. "
-            if any("one" in value.lower() and "door" in value.lower() for _, value in snapshot.accepted_fields)
+            if any(
+                "one" in value.lower() and "door" in value.lower()
+                for _, value in snapshot.accepted_fields
+            )
             else ""
         )
         prompt = (
