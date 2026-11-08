@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from vscs.application.caps.spatial_correction_contract import (
@@ -180,7 +180,7 @@ def inspect_guided_edit_graph(
         and isinstance(value, str)
     ]
     if model.name not in {
-        Path(name.replace("\\\\", "/")).name for name in referenced_models
+        PureWindowsPath(name).name for name in referenced_models
     }:
         blockers.append("Qwen edit checkpoint is not selected in workflow graph")
     # Even with a linked graph, dynamic source binding and ComfyUI execution
