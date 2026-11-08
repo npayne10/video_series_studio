@@ -172,6 +172,17 @@ def inspect_guided_edit_graph(
         blockers.append("Supplied mask has no mask/inpainting node")
     if contract.model_identifier.lower() not in model.name.lower():
         blockers.append("Contract model identifier and checkpoint do not match")
+    referenced_models = [
+        value
+        for node in graph.values()
+        for key, value in node["inputs"].items()
+        if key in {"unet_name", "model_name", "ckpt_name"}
+        and isinstance(value, str)
+    ]
+    if model.name not in {
+        Path(name.replace("\\\\", "/")).name for name in referenced_models
+    }:
+        blockers.append("Qwen edit checkpoint is not selected in workflow graph")
     # Even with a linked graph, dynamic source binding and ComfyUI execution
     # are unavailable until an explicit operator-approved provider is implemented.
     blockers.append(
