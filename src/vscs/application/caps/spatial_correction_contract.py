@@ -281,7 +281,13 @@ def verify_spatial_contract(
         raise SpatialCorrectionContractError("Correction plan authority changed")
     _contained_file(
         contract.source_path,
-        contract.project_root / "Canonical Assets" / contract.asset_id / "Images" / "Visual Candidates",
+        (
+            contract.project_root
+            / "Canonical Assets"
+            / contract.asset_id
+            / "Images"
+            / "Visual Candidates"
+        ),
         suffix=".png",
     )
     _contained_file(
