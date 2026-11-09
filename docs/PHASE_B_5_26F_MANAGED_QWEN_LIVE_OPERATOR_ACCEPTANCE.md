@@ -17,9 +17,14 @@ New dedicated CAP correction services:
   with a governed queue, a supplementary source Candidate instead of MASTER,
   CAP-reviewed positive/negative prompt, and isolated output path. Masks
   are NOT supported by this managed graph and are refused.
+- `managed_qwen_model_inventory.py`: compares the exact workflow
+  checkpoint, Lightning LoRA, text encoder and VAE against read-only
+  ComfyUI `/object_info` model choices BEFORE attempt reservation.
 - `managed_qwen_worker_execution.py`: worker-safe, single local ComfyUI
   submission after source, report and graph SHA-256 checks, installed-node
-  preflight, and atomic once-only reservation. Captures and decodes output
+  preflight, and atomic once-only reservation. It also reconstructs the
+  approved API graph and queue to detect in-memory tampering before POST.
+  Captures and decodes output
   PNG. Never touches CAP/SQLite or registers an output in the worker.
 - `guided_edit_candidate_registration.py`: GUI-thread post-render CAP
   authority recheck, exact SHA/PNG/provenance validation, Candidate-only
@@ -85,13 +90,13 @@ git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
 python -m ruff check .
 python -m ruff format --check --no-cache .
 python -m mypy src
-python -m pytest -q tests/test_cap_managed_qwen_edit_inspection.py tests/test_cap_managed_qwen_correction_job.py tests/test_cap_managed_qwen_live_correction.py tests/test_cap_managed_qwen_worker_execution.py tests/test_cap_guided_edit_candidate_registration.py tests/test_cap_guided_edit_attempt_journal.py tests/test_cap_guided_edit_live_transport.py tests/test_cap_guided_edit_workflow_binding.py tests/test_cap_guided_edit_provider_preflight.py tests/test_cap_spatial_correction_contract.py tests/test_cap_visual_candidate_regeneration.py
+python -m pytest -q tests/test_cap_managed_qwen_edit_inspection.py tests/test_cap_managed_qwen_correction_job.py tests/test_cap_managed_qwen_live_correction.py tests/test_cap_managed_qwen_worker_execution.py tests/test_cap_managed_qwen_model_inventory.py tests/test_cap_guided_edit_candidate_registration.py tests/test_cap_guided_edit_attempt_journal.py tests/test_cap_guided_edit_live_transport.py tests/test_cap_guided_edit_workflow_binding.py tests/test_cap_guided_edit_provider_preflight.py tests/test_cap_spatial_correction_contract.py tests/test_cap_visual_candidate_regeneration.py
 python -m pytest -q
 git diff --check
 git status --short
 ```
 
-Previously accepted baseline: **2625 passed, 1 skipped**. Eighteen
+Previously accepted baseline: **2625 passed, 1 skipped**. Twenty-two
 new tests are expected in the four new test modules. The count is
 provisional until the actual Windows regression run.
 Preserve `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` untracked.
