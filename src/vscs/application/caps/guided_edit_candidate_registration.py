@@ -68,8 +68,12 @@ def register_guided_edit_candidate(
         raise GuidedEditRegistrationError("Guided output PNG dimensions disagree with provenance")
     if contract.correction_attempt != plan.attempt or not 1 <= plan.attempt <= 2:
         raise GuidedEditRegistrationError("Correction attempt lineage is inconsistent")
+    executed_prompt = getattr(output, "executed_prompt", "") or plan.request.prompt
+    if not isinstance(executed_prompt, str) or not executed_prompt.strip():
+        raise GuidedEditRegistrationError("Guided edit prompt provenance is missing")
     request = plan.request.model_copy(
         update={
+            "prompt": executed_prompt,
             "model": "XCIC / local ComfyUI Qwen-Image-Edit-2511",
             "width": output.width,
             "height": output.height,
@@ -92,6 +96,7 @@ def register_guided_edit_candidate(
         "guided_edit_contract_sha256": contract.evidence_sha256,
         "guided_edit_workflow_sha256": contract.workflow_sha256,
         "guided_edit_output_sha256": output.image_sha256,
+        "guided_edit_prompt_sha256": hashlib.sha256(executed_prompt.encode("utf-8")).hexdigest(),
         "guided_edit_prompt_id": output.prompt_id,
         "guided_edit_source_sha256": contract.source_sha256,
         "guided_edit_model_identifier": contract.model_identifier,
