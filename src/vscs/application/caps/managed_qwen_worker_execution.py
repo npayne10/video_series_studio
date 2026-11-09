@@ -7,6 +7,7 @@ immediately before this call and again before Candidate registration.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import time
@@ -45,6 +46,39 @@ def _unchanged(contract: SpatialCorrectionContract, job: ManagedQwenCorrectionJo
     ):
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise GuidedEditExecutionError("Qwen edit evidence changed after operator approval")
+    jobs = job.queue.get("jobs")
+    if not isinstance(jobs, list) or len(jobs) != 1 or not isinstance(jobs[0], dict):
+        raise GuidedEditExecutionError("Managed edit must contain exactly one queue job")
+    item = jobs[0]
+    output = item.get("output")
+    prompt = "\\n".join(
+        f"MANDATORY reviewed {key}: {value}" for key, value in contract.accepted_fields
+    )
+    if (
+        item.get("reference_inputs") != [str(contract.source_path)]
+        or item.get("positive_prompt") != prompt
+        or not isinstance(output, dict)
+        or output.get("candidate_directory") != str(job.output_path.parent)
+        or output.get("candidate_filename") != job.output_path.name
+        or type(item.get("seed")) is not int
+    ):
+        raise GuidedEditExecutionError("Prepared Qwen queue diverged from approved CAP evidence")
+    original = json.loads(contract.workflow_path.read_text(encoding="utf-8"))
+    if not isinstance(original, dict):
+        raise GuidedEditExecutionError("Sealed Qwen workflow is not a graph")
+    expected_graph = copy.deepcopy(original)
+    loader = job.workflow.get("171")
+    if not isinstance(loader, dict) or not isinstance(loader.get("inputs"), dict):
+        raise GuidedEditExecutionError("Managed Qwen queue loader is missing")
+    queue_file = loader["inputs"].get("queue_file")
+    if not isinstance(queue_file, str):
+        raise GuidedEditExecutionError("Managed Qwen queue file is missing")
+    expected_graph["171"]["inputs"]["queue_file"] = queue_file
+    expected_graph["171"]["inputs"]["job_index"] = 0
+    expected_graph["171"]["inputs"]["quality_mode"] = "standard"
+    expected_graph["170:169"]["inputs"]["seed"] = item["seed"]
+    if job.workflow != expected_graph:
+        raise GuidedEditExecutionError("Prepared Qwen API graph was altered after review")
 
 
 def execute_prepared_managed_qwen_edit(
