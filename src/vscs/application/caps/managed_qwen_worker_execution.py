@@ -20,6 +20,9 @@ from vscs.application.caps.guided_edit_live_transport import (
     _loopback_endpoint,
 )
 from vscs.application.caps.managed_qwen_correction_job import ManagedQwenCorrectionJob
+from vscs.application.caps.managed_qwen_model_inventory import (
+    validate_managed_qwen_model_choices,
+)
 from vscs.application.caps.spatial_correction_contract import SpatialCorrectionContract
 from vscs.infrastructure.xcic_core.client import XCICCoreClient
 
@@ -74,6 +77,7 @@ def execute_prepared_managed_qwen_edit(
     provider = client if client is not None else XCICCoreClient(base)
     provider.healthcheck()
     provider.validate_nodes(job.workflow)
+    validate_managed_qwen_model_choices(job.workflow, provider.object_info())
     _unchanged(contract, job)
     # The journal is written before queue construction and any network POST.
     reserve_guided_edit_attempt(contract)
