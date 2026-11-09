@@ -173,3 +173,21 @@ def test_f4b_cleanup_keeps_modified_staging_file(tmp_path, monkeypatch):
     staged.source_path.write_bytes(b"changed")
     staged.cleanup()
     assert staged.source_path.exists()
+
+def test_f4b_refuses_symlink_comfyui_input_root(tmp_path, monkeypatch):
+    service, plan, contract, _mapping, comfy = _fixture(tmp_path)
+    monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
+    target = tmp_path / "outside"
+    target.mkdir()
+    (comfy / "input").rmdir()
+    try:
+        (comfy / "input").symlink_to(target, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Directory symlinks are not available on this platform")
+    with pytest.raises(binding.GuidedEditBindingError, match="symlink"):
+        binding.stage_guided_edit_inputs(
+            service, plan, contract,
+            comfyui_input_directory=comfy / "input",
+            trusted_comfyui_directory=comfy,
+        )
+    assert not list(target.iterdir())
