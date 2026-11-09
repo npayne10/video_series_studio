@@ -127,9 +127,7 @@ def test_managed_qwen_live_refuses_mask_without_submission(tmp_path, monkeypatch
     client.submit.assert_not_called()
 
 
-def test_managed_qwen_live_preserves_unknown_attempt_after_submit_error(
-    tmp_path, monkeypatch
-):
+def test_managed_qwen_live_preserves_unknown_attempt_after_submit_error(tmp_path, monkeypatch):
     service, plan, contract = _fixture(tmp_path)
     monkeypatch.setattr(live, "verify_spatial_contract", Mock())
     monkeypatch.setattr(compiler, "verify_spatial_contract", Mock())
