@@ -29,8 +29,9 @@ from vscs.application.caps.managed_qwen_edit_inspection import (
 from vscs.application.caps.managed_qwen_worker_execution import (
     execute_prepared_managed_qwen_edit,
 )
+from vscs.application.caps.qwen_f5_dual_inspection import inspect_dual_workflows
+from vscs.application.caps.qwen_f5_preflight import inspect_qwen_f5_hardware
 from vscs.application.caps.reference_service import CanonicalReferenceService
-from vscs.application.caps.spatial_candidate_guidance import inspect_spatial_guidance
 from vscs.application.caps.spatial_correction_contract import prepare_spatial_contract
 from vscs.application.caps.visual_candidate_quality import CandidateQualityReviewService
 from vscs.application.caps.visual_candidate_regeneration import (
@@ -113,10 +114,24 @@ class ControlledCandidateRegenerationDialog(QDialog):
             self.plan.request.prompt,
             "correctedVisualCandidatePrompt",
         )
-        self.inspect_spatial_button = QPushButton("Inspect Spatial Guidance (No Generation)")
+        self.inspect_spatial_button = QPushButton(
+            "Inspect Both Workflows (No Generation)"
+        )
         self.inspect_spatial_button.setObjectName("inspectSpatialGuidance")
         self.inspect_spatial_button.clicked.connect(self._inspect_spatial_guidance)
         layout.addWidget(self.inspect_spatial_button)
+        self.f5_preflight_button = QPushButton(
+            "Check Qwen F5 Hardware Readiness (No Generation)"
+        )
+        self.f5_preflight_button.setObjectName("checkQwenF5HardwareReadiness")
+        self.f5_preflight_button.clicked.connect(self._inspect_f5_hardware)
+        layout.addWidget(self.f5_preflight_button)
+        self.f5_status_label = QLabel("F5 hardware readiness: NOT CHECKED — no GPU test authorized.")
+        self.f5_status_label.setObjectName("qwenF5HardwareStatus")
+        self.f5_status_label.setWordWrap(True)
+        layout.addWidget(self.f5_status_label)
+        self._f5_preflight_sha256: str | None = None
+        self._f5_preflight_endpoint: str | None = None
         self.generate_button = QPushButton("Generate ONE Text-Only Candidate (No Spatial Control)")
         self.generate_button.setObjectName("confirmControlledCandidateRegeneration")
         self.generate_button.clicked.connect(self._generate)
@@ -134,23 +149,88 @@ class ControlledCandidateRegenerationDialog(QDialog):
         layout.addWidget(buttons)
 
     def _inspect_spatial_guidance(self) -> None:
-        """Report limitations of the configured workflow without any execution."""
+        """Compare the legacy XCIC and managed Qwen graphs without generation."""
         try:
-            result = inspect_spatial_guidance(XCICConfiguration.load())
+            result = inspect_dual_workflows(XCICConfiguration.load())
             QMessageBox.information(
-                self, "B.5.26F — Spatial Guidance Inspection", result.describe()
+                self, "B.5.26F F5.1 — Dual Workflow Inspection", result.describe()
             )
         except Exception as exc:
-            _LOGGER.exception("B.5.26F offline spatial inspection failed")
+            _LOGGER.exception("F5.1 read-only dual workflow inspection failed")
             QMessageBox.critical(
                 self,
-                "Spatial Guidance Inspection Failed",
+                "Dual Workflow Inspection Failed",
+                f"{type(exc).__name__}: {exc}\nNo generation was submitted.",
+            )
+
+    def _inspect_f5_hardware(self) -> None:
+        """Probe ComfyUI and nvidia-smi only: never reserve or submit an attempt."""
+        if self._generation_active:
+            return
+        self._f5_preflight_sha256 = None
+        self._f5_preflight_endpoint = None
+        self.f5_status_label.setText("F5 hardware readiness: CHECKING (no generation).")
+        try:
+            endpoint = XCICConfiguration.load().comfyui_url
+            report = AutomationProgressRunner(self).run(
+                "Read-Only Qwen F5 Hardware Preflight",
+                self.plan.source.asset_id,
+                lambda: inspect_qwen_f5_hardware(comfyui_url=endpoint),
+                may_charge=False,
+            )
+            if report.status == "PREFLIGHT_READY_NO_GPU_INFERENCE":
+                self._f5_preflight_sha256 = report.graph_sha256
+                self._f5_preflight_endpoint = report.endpoint
+                self.f5_status_label.setText(
+                    "F5 hardware readiness: PREFLIGHT READY (no inference tested). "
+                    "One GPU request still requires separate operator consent."
+                )
+            else:
+                self.f5_status_label.setText(
+                    "F5 hardware readiness: BLOCKED. Do not submit Qwen generation."
+                )
+            details = [
+                f"Status: {report.status}",
+                f"Endpoint: {report.endpoint}",
+                f"ComfyUI reachable: {report.comfyui_reachable}",
+                f"All Qwen model choices available: {report.nodes_and_models_available}",
+                f"Workflow SHA-256: {report.graph_sha256 or '(unavailable)'}",
+                "Detected GPUs:",
+                *(
+                    f"- {gpu['name']} | free {gpu['memory_free_mib']} MiB / "
+                    f"total {gpu['memory_total_mib']} MiB | driver {gpu['driver_version']}"
+                    for gpu in report.gpu_inventory
+                ),
+                *(f"ERROR: {error}" for error in report.errors),
+                "",
+                "READ-ONLY: no image generated, attempt reserved or Canon approved.",
+                "GPU inference performance and 16 GB memory fit remain UNTESTED.",
+            ]
+            QMessageBox.information(
+                self, "B.5.26F F5.1 — Hardware Readiness", "\n".join(details)
+            )
+        except Exception as exc:
+            self._f5_preflight_sha256 = None
+            self._f5_preflight_endpoint = None
+            self.f5_status_label.setText("F5 hardware readiness: ERROR — no GPU test authorized.")
+            _LOGGER.exception("F5.1 read-only hardware preflight failed")
+            QMessageBox.critical(
+                self,
+                "Hardware Readiness Failed",
                 f"{type(exc).__name__}: {exc}\nNo generation was submitted.",
             )
 
     def _generate_guided_edit(self) -> None:
         """Explicit consent for the managed source-conditioned Qwen correction."""
         if self._generation_active:
+            return
+        if self._f5_preflight_sha256 is None or self._f5_preflight_endpoint is None:
+            QMessageBox.warning(
+                self,
+                "Qwen Hardware Preflight Required",
+                "Run 'Check Qwen F5 Hardware Readiness (No Generation)' first. "
+                "The F5 readiness check does not consume an attempt.",
+            )
             return
         plan = self.plan
         stage = "read-only governance and managed workflow preflight"
@@ -170,8 +250,12 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 model_identifier="qwen_image_edit_2511_fp8mixed",
             )
             inspection = inspect_managed_qwen_edit_workflow(workflow)
-            if contract.workflow_sha256 != inspection.workflow_sha256:
-                raise RuntimeError("Managed Qwen editing workflow has changed")
+            if (
+                contract.workflow_sha256 != inspection.workflow_sha256
+                or contract.workflow_sha256 != self._f5_preflight_sha256
+            ):
+                self._f5_preflight_sha256 = None
+                raise RuntimeError("Qwen workflow changed since F5 hardware preflight")
         except Exception as exc:
             _LOGGER.exception("Governed Qwen preflight failed")
             QMessageBox.critical(
@@ -216,10 +300,13 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 job_id=job_id,
             )
             stage = "one-shot local ComfyUI Qwen Image Edit rendering"
+            endpoint = self._f5_preflight_endpoint
             output = AutomationProgressRunner(self).run(
                 "Governed Source-Conditioned Qwen Edit",
                 plan.source.asset_id,
-                lambda: execute_prepared_managed_qwen_edit(contract, job, operator_confirmed=True),
+                lambda: execute_prepared_managed_qwen_edit(
+                    contract, job, operator_confirmed=True, comfyui_url=endpoint
+                ),
                 may_charge=False,
             )
             stage = "post-render CAP revalidation and Candidate-only registration"
