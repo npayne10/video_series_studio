@@ -115,4 +115,5 @@ def render_one_managed_qwen_correction(
         filename=output_path.name,
         workflow_sha256=job.workflow_sha256,
         contract_sha256=contract.evidence_sha256,
+        executed_prompt=str(job.queue["jobs"][0]["positive_prompt"]),
     )
