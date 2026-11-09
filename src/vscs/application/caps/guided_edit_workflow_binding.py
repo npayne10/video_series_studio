@@ -62,9 +62,13 @@ class GuidedEditStagedInputs:
             (self.source_path, self.source_sha256),
             (self.mask_path, self.mask_sha256),
         ):
-            if path is not None and expected is not None and path.is_file():
-                if _digest(path.read_bytes()) == expected:
-                    path.unlink()
+            if (
+                path is not None
+                and expected is not None
+                and path.is_file()
+                and _digest(path.read_bytes()) == expected
+            ):
+                path.unlink()
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,18 +141,24 @@ def bind_guided_edit_workflow(
         raise GuidedEditBindingError("Editing workflow is not a JSON object")
     editable = copy.deepcopy(graph)
     source = _input_slot(
-        editable, mapping.source_node_id, mapping.source_input,
+        editable,
+        mapping.source_node_id,
+        mapping.source_input,
         frozenset({"LoadImage"}),
     )
     positive = _input_slot(
-        editable, mapping.prompt_node_id, mapping.prompt_input,
+        editable,
+        mapping.prompt_node_id,
+        mapping.prompt_input,
         frozenset({"TextEncodeQwenImageEdit", "TextEncodeQwenImageEditPlus"}),
     )
     if contract.mask_path is not None:
         if mapping.mask_node_id is None or mapping.mask_input is None:
             raise GuidedEditBindingError("Mask mapping is incomplete")
         mask = _input_slot(
-            editable, mapping.mask_node_id, mapping.mask_input,
+            editable,
+            mapping.mask_node_id,
+            mapping.mask_input,
             frozenset({"LoadImageMask"}),
         )
         if mask_filename is None:
