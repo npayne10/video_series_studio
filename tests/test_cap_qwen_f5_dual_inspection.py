@@ -27,9 +27,7 @@ def _config(tmp_path):
 
 def test_dual_inspection_describes_both_graphs_without_provider_calls(tmp_path):
     result = inspect_dual_workflows(_config(tmp_path))
-    assert "XCICQueueJobLoader" in result.legacy_description or "XCIC queue loaders: 1" in (
-        result.legacy_description
-    )
+    assert "XCIC queue loaders: 1" in result.legacy_description
     assert result.managed_source_conditioned
     assert result.managed_workflow_sha256
     assert not result.execution_authorized
@@ -60,6 +58,7 @@ def test_tampered_managed_source_graph_fail_closed(tmp_path):
     result = inspect_dual_workflows(_config(tmp_path), managed_path=path)
     assert not result.managed_source_conditioned
     assert "graph has changed" in str(result.managed_error)
+
 
 def test_missing_legacy_graph_does_not_block_managed_qwen_inspection(tmp_path):
     config = _config(tmp_path)
