@@ -16,6 +16,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.guided_edit_candidate_registration import (
+    register_guided_edit_candidate,
+)
+from vscs.application.caps.managed_qwen_edit_inspection import (
+    inspect_managed_qwen_edit_workflow,
+)
+from vscs.application.caps.managed_qwen_live_correction import (
+    render_one_managed_qwen_correction,
+)
+from vscs.application.caps.spatial_correction_contract import prepare_spatial_contract
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.spatial_candidate_guidance import inspect_spatial_guidance
 from vscs.application.caps.visual_candidate_quality import CandidateQualityReviewService
@@ -108,6 +118,12 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.generate_button.clicked.connect(self._generate)
         self._generation_active = False
         layout.addWidget(self.generate_button)
+        self.guided_edit_button = QPushButton(
+            "Generate ONE Qwen Image-Edited Candidate (Source Conditioned)"
+        )
+        self.guided_edit_button.setObjectName("confirmGovernedQwenCandidateCorrection")
+        self.guided_edit_button.clicked.connect(self._generate_guided_edit)
+        layout.addWidget(self.guided_edit_button)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         buttons.rejected.connect(self.reject)
@@ -127,6 +143,99 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 "Spatial Guidance Inspection Failed",
                 f"{type(exc).__name__}: {exc}\nNo generation was submitted.",
             )
+
+    def _generate_guided_edit(self) -> None:
+        """Explicit consent for the managed source-conditioned Qwen correction."""
+        if self._generation_active:
+            return
+        plan = self.plan
+        stage = "read-only governance and managed workflow preflight"
+        try:
+            workflow = (
+                Path(__file__).resolve().parents[2]
+                / "workflows"
+                / "image"
+                / "VSCS_Qwen_Derived_Reference_Workflow_API_v2.1.json"
+            )
+            contract = prepare_spatial_contract(
+                self.service,
+                plan,
+                workflow_path=workflow,
+                trusted_workflow_directory=workflow.parent,
+                workflow_id="qwen.derived-reference.v2.1",
+                model_identifier="qwen_image_edit_2511_fp8mixed",
+            )
+            inspection = inspect_managed_qwen_edit_workflow(workflow)
+            if contract.workflow_sha256 != inspection.workflow_sha256:
+                raise RuntimeError("Managed Qwen editing workflow has changed")
+        except Exception as exc:
+            _LOGGER.exception("Governed Qwen preflight failed")
+            QMessageBox.critical(
+                self,
+                "Qwen Editing Not Ready",
+                f"{type(exc).__name__}: {exc}\\nNo GPU work was submitted.",
+            )
+            return
+        choice = QMessageBox.question(
+            self,
+            "Confirm ONE Source-Conditioned Qwen Edit",
+            f"Edit supplementary Candidate #{plan.source.reference_id} using the "
+            f"verified Qwen Image Edit 2511 graph?\\n"
+            f"Correction attempt {plan.attempt}/{plan.max_attempts}.\\n\\n"
+            "The 19.12 GB checkpoint may exceed 16 GB VRAM and require "
+            "CPU offloading. Hardware compatibility is not proven.\\n"
+            "After a submission, even a timeout is UNKNOWN and cannot be retried "
+            "automatically; inspect the journal and ComfyUI queue.\\n\\n"
+            "The original is preserved. Output is a supplementary Candidate only, "
+            "never MASTER or Canon. No paid API call will be made.\\n\\n"
+            "Proceed with exactly ONE local GPU request?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        self._generation_active = True
+        self.guided_edit_button.setEnabled(False)
+        self.generate_button.setEnabled(False)
+        try:
+            stage = "one-shot local ComfyUI Qwen Image Edit rendering"
+            output = AutomationProgressRunner(self).run(
+                "Governed Source-Conditioned Qwen Edit",
+                plan.source.asset_id,
+                lambda: render_one_managed_qwen_correction(
+                    self.service, plan, contract, operator_confirmed=True
+                ),
+                may_charge=False,
+            )
+            stage = "post-render CAP revalidation and Candidate-only registration"
+            new_id = register_guided_edit_candidate(
+                self.service, plan, contract, output, operator_confirmed=True
+            )
+        except Exception as exc:
+            _LOGGER.exception("Governed Qwen editing failed during %s", stage)
+            QMessageBox.critical(
+                self,
+                "Qwen Candidate Editing Failed",
+                f"Stage: {stage}\\n{type(exc).__name__}: {exc}\\n\\n"
+                "No successful Candidate registration is confirmed. "
+                "Do not repeat the GPU request without inspecting the "
+                "ComfyUI queue, output and once-only attempt journal.",
+            )
+            self.guided_edit_button.setEnabled(True)
+            self.generate_button.setEnabled(True)
+            self._generation_active = False
+            return
+        QMessageBox.information(
+            self,
+            "Qwen Edited Candidate Created",
+            f"Supplementary Candidate: #{new_id}\\n"
+            f"Source: #{plan.source.reference_id}\\n"
+            f"Correction: {plan.attempt}/{plan.max_attempts}\\n"
+            f"ComfyUI prompt: {output.prompt_id}\\n"
+            "No MASTER or Canon approval. Review the new Candidate "
+            "and run a separate semantic evaluation before acceptance.",
+        )
+        self.accept()
 
     def _generate(self) -> None:
         if self._generation_active:
