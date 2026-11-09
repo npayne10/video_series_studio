@@ -1,17 +1,21 @@
 """F4B2: register only validated guided outputs as supplementary Candidates."""
 
 import hashlib
+import io
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from PIL import Image
 
 from vscs.application.caps import guided_edit_candidate_registration as registration
 
 
 def _setup():
-    data = b"\x89PNG\r\n\x1a\n" + b"new edit image"
-    source = b"\x89PNG\r\n\x1a\n" + b"original image"
+    image = io.BytesIO()
+    Image.new("RGB", (512, 512), "gray").save(image, format="PNG")
+    data = image.getvalue()
+    source = b"original image bytes"
     output = SimpleNamespace(
         content=data,
         image_sha256=hashlib.sha256(data).hexdigest(),
