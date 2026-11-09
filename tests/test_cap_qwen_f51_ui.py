@@ -35,6 +35,11 @@ def _dialog(qtbot, monkeypatch, tmp_path):
     return dialog, service
 
 
+def _run_read_only(_runner, _title, _asset, callback, *, may_charge=True):
+    assert may_charge is False
+    return callback()
+
+
 def _ready_report():
     return SimpleNamespace(
         status="PREFLIGHT_READY_NO_GPU_INFERENCE",
@@ -81,13 +86,7 @@ def test_f51_preflight_ready_does_not_submit_or_reserve(qtbot, tmp_path, monkeyp
     )
     read_only = Mock(return_value=_ready_report())
     monkeypatch.setattr(ui, "inspect_qwen_f5_hardware", read_only)
-    monkeypatch.setattr(
-        ui.AutomationProgressRunner,
-        "run",
-        lambda _runner, _title, _asset, callback, *, may_charge: (
-            callback() if may_charge is False else None
-        ),
-    )
+    monkeypatch.setattr(ui.AutomationProgressRunner, "run", _run_read_only)
     notice = Mock()
     monkeypatch.setattr(QMessageBox, "information", notice)
     dialog.f5_preflight_button.click()
@@ -130,11 +129,7 @@ def test_f51_failed_preflight_disables_qwen_execution(qtbot, tmp_path, monkeypat
         errors=("Missing Qwen model",),
     )
     monkeypatch.setattr(ui, "inspect_qwen_f5_hardware", lambda **_kw: failed)
-    monkeypatch.setattr(
-        ui.AutomationProgressRunner,
-        "run",
-        lambda _runner, _title, _asset, callback, *, may_charge: callback(),
-    )
+    monkeypatch.setattr(ui.AutomationProgressRunner, "run", _run_read_only)
     monkeypatch.setattr(QMessageBox, "information", Mock())
     warning = Mock()
     monkeypatch.setattr(QMessageBox, "warning", warning)
@@ -146,9 +141,7 @@ def test_f51_failed_preflight_disables_qwen_execution(qtbot, tmp_path, monkeypat
     service.generator.render.assert_not_called()
 
 
-def test_f51_stale_workflow_invalidates_prior_hardware_readiness(
-    qtbot, tmp_path, monkeypatch
-):
+def test_f51_stale_workflow_invalidates_prior_hardware_readiness(qtbot, tmp_path, monkeypatch):
     dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
     dialog._f5_preflight_sha256 = "old-workflow"
     dialog._f5_preflight_endpoint = "http://127.0.0.1:8188"
@@ -169,9 +162,8 @@ def test_f51_stale_workflow_invalidates_prior_hardware_readiness(
     consent.assert_not_called()
     service.generator.render.assert_not_called()
 
-def test_f51_final_attempt_needs_separate_acknowledgement(
-    qtbot, tmp_path, monkeypatch
-):
+
+def test_f51_final_attempt_needs_separate_acknowledgement(qtbot, tmp_path, monkeypatch):
     dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
     dialog._f5_preflight_sha256 = "reviewed-workflow-sha"
     dialog._f5_preflight_endpoint = "http://127.0.0.1:8188"
