@@ -38,6 +38,7 @@ class GuidedEditOutput:
     filename: str
     workflow_sha256: str
     contract_sha256: str
+    executed_prompt: str = ""
 
     @property
     def candidate_registered(self) -> bool:
