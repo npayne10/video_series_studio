@@ -29,11 +29,7 @@ def _bound():
 def _history(filename="result.png", *, subfolder="", folder_type="output"):
     return {
         "outputs": {
-            "7": {
-                "images": [
-                    {"filename": filename, "subfolder": subfolder, "type": folder_type}
-                ]
-            }
+            "7": {"images": [{"filename": filename, "subfolder": subfolder, "type": folder_type}]}
         }
     }
 
@@ -89,9 +85,7 @@ def test_f4b2_retrieves_one_bounded_local_png_without_post(monkeypatch):
 )
 def test_f4b2_blocks_unsafe_history_output(name, subfolder, folder_type):
     with pytest.raises(transport.GuidedEditExecutionError, match="safe root PNG"):
-        transport._history_file(
-            _history(name, subfolder=subfolder, folder_type=folder_type), "7"
-        )
+        transport._history_file(_history(name, subfolder=subfolder, folder_type=folder_type), "7")
 
 
 def test_f4b2_rejects_multiple_outputs():
