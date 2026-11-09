@@ -126,7 +126,9 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.f5_preflight_button.setObjectName("checkQwenF5HardwareReadiness")
         self.f5_preflight_button.clicked.connect(self._inspect_f5_hardware)
         layout.addWidget(self.f5_preflight_button)
-        self.f5_status_label = QLabel("F5 hardware readiness: NOT CHECKED — no GPU test authorized.")
+        self.f5_status_label = QLabel(
+            "F5 hardware readiness: NOT CHECKED — no GPU test authorized."
+        )
         self.f5_status_label.setObjectName("qwenF5HardwareStatus")
         self.f5_status_label.setWordWrap(True)
         layout.addWidget(self.f5_status_label)
@@ -296,7 +298,9 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 contract,
                 workflow_path=contract.workflow_path,
                 queue_path=runtime / "queues" / f"cap_correction_{job_id}.json",
-                output_path=(runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"),
+                output_path=(
+                    runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"
+                ),
                 job_id=job_id,
             )
             stage = "one-shot local ComfyUI Qwen Image Edit rendering"
