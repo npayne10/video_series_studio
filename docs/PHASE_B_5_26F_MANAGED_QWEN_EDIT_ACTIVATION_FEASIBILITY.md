@@ -51,6 +51,24 @@ mismatch and unreviewed output. Tests use the real checked-in graph.
 Therefore no new submit button or GPU job was activated. The final
 correction attempt 2/2 remains reserved.
 
+## Candidate-correction queue adapter (implemented offline)
+
+`src/vscs/application/caps/managed_qwen_correction_job.py` prepares
+the real custom-loader queue and patched API graph from the F3 contract,
+without writing a queue or submitting a prompt. It maps the governed
+supplementary source to `reference_inputs[0]`, accepted CAP constraints
+to `positive_prompt`, the reviewed correction negative prompt, the
+seed, and a unique isolated output path. It checks the immutable
+workflow hash and refuses mask-based corrections because this graph
+has no accepted mask input. Five regression tests exercise the checked-in
+graph, safe binding, path isolation, drift and duplicate outputs.
+
+This **does not** yet activate live execution. The existing derived-reference
+provider remains MASTER-only. The offline correction adapter must
+be connected to a new explicit operator-consent dialog and a submission/
+reconciliation state machine. No existing CAP generation button is
+repurposed as an image-edit request.
+
 ## Required next implementation
 
 Build a **dedicated candidate-correction adapter** for the managed graph,
@@ -75,7 +93,7 @@ git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
 python -m ruff check .
 python -m ruff format --check --no-cache .
 python -m mypy src
-python -m pytest -q tests/test_cap_managed_qwen_edit_inspection.py tests/test_cap_guided_edit_candidate_registration.py tests/test_cap_guided_edit_attempt_journal.py tests/test_cap_guided_edit_live_transport.py tests/test_cap_guided_edit_workflow_binding.py tests/test_cap_guided_edit_provider_preflight.py tests/test_cap_spatial_correction_contract.py tests/test_cap_visual_candidate_regeneration.py
+python -m pytest -q tests/test_cap_managed_qwen_correction_job.py tests/test_cap_managed_qwen_edit_inspection.py tests/test_cap_guided_edit_candidate_registration.py tests/test_cap_guided_edit_attempt_journal.py tests/test_cap_guided_edit_live_transport.py tests/test_cap_guided_edit_workflow_binding.py tests/test_cap_guided_edit_provider_preflight.py tests/test_cap_spatial_correction_contract.py tests/test_cap_visual_candidate_regeneration.py
 python -m pytest -q
 git diff --check
 git status --short
