@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -10,6 +11,15 @@ import pytest
 from PIL import Image
 
 from vscs.application.caps import managed_qwen_worker_execution as worker
+
+_TEMPLATE = (
+    Path(__file__).resolve().parents[1]
+    / "src"
+    / "vscs"
+    / "workflows"
+    / "image"
+    / "VSCS_Qwen_Derived_Reference_Workflow_API_v2.1.json"
+)
 
 
 def _fixture(tmp_path):
@@ -20,7 +30,7 @@ def _fixture(tmp_path):
     report = root / "review.json"
     report.write_bytes(b"review evidence")
     workflow = root / "qwen_api.json"
-    workflow.write_bytes(b"workflow evidence")
+    workflow.write_bytes(_TEMPLATE.read_bytes())
     job_id = "job123"
     runtime = root / ".vscs" / "runtime" / "comfyui"
     output = runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"
@@ -37,18 +47,33 @@ def _fixture(tmp_path):
         original_reference_id=1,
         correction_attempt=2,
         mask_path=None,
+        accepted_fields=(("door_count", "one"),),
         verify_seal=Mock(),
     )
+    graph = json.loads(workflow.read_text(encoding="utf-8"))
+    graph["171"]["inputs"]["queue_file"] = str(queue)
+    graph["171"]["inputs"]["job_index"] = 0
+    graph["171"]["inputs"]["quality_mode"] = "standard"
+    graph["170:169"]["inputs"]["seed"] = 7
     job = SimpleNamespace(
         contract_sha256=contract.evidence_sha256,
         workflow_sha256=contract.workflow_sha256,
         source_sha256=contract.source_sha256,
         output_path=output,
-        workflow={"171": {"class_type": "XCICQwenReferenceJobLoader", "inputs": {
-            "queue_file": str(queue),
-            "job_index": 0,
-        }}},
-        queue={"jobs": [{"reference_inputs": [str(source)], "positive_prompt": "reviewed CAP"}]},
+        workflow=graph,
+        queue={
+            "jobs": [
+                {
+                    "reference_inputs": [str(source)],
+                    "positive_prompt": "MANDATORY reviewed door_count: one",
+                    "seed": 7,
+                    "output": {
+                        "candidate_directory": str(output.parent),
+                        "candidate_filename": output.name,
+                    },
+                }
+            ]
+        },
     )
     return contract, job, queue, output
 
