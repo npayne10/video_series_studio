@@ -62,6 +62,15 @@ def execute_prepared_managed_qwen_edit(
     if contract.mask_path is not None:
         raise GuidedEditExecutionError("Managed Qwen correction does not support masks")
     _unchanged(contract, job)
+    queue_jobs = job.queue.get("jobs")
+    if (
+        not isinstance(queue_jobs, list)
+        or len(queue_jobs) != 1
+        or not isinstance(queue_jobs[0], dict)
+        or not isinstance(queue_jobs[0].get("positive_prompt"), str)
+        or not queue_jobs[0]["positive_prompt"].strip()
+    ):
+        raise GuidedEditExecutionError("Managed Qwen edit prompt is missing")
     provider = client if client is not None else XCICCoreClient(base)
     provider.healthcheck()
     provider.validate_nodes(job.workflow)
@@ -114,4 +123,5 @@ def execute_prepared_managed_qwen_edit(
         filename=output_path.name,
         workflow_sha256=job.workflow_sha256,
         contract_sha256=contract.evidence_sha256,
+        executed_prompt=str(job.queue["jobs"][0]["positive_prompt"]),
     )
