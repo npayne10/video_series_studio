@@ -236,7 +236,9 @@ class ControlledCandidateRegenerationDialog(QDialog):
         """Explicit consent for the managed source-conditioned Qwen correction."""
         if self._generation_active:
             return
-        if self._f5_preflight_sha256 is None or self._f5_preflight_endpoint is None:
+        preflight_sha = self._f5_preflight_sha256
+        endpoint = self._f5_preflight_endpoint
+        if preflight_sha is None or endpoint is None:
             QMessageBox.warning(
                 self,
                 "Qwen Hardware Preflight Required",
@@ -277,7 +279,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             inspection = inspect_managed_qwen_edit_workflow(workflow)
             if (
                 contract.workflow_sha256 != inspection.workflow_sha256
-                or contract.workflow_sha256 != self._f5_preflight_sha256
+                or contract.workflow_sha256 != preflight_sha
             ):
                 self._f5_preflight_sha256 = None
                 raise RuntimeError("Qwen workflow changed since F5 hardware preflight")
@@ -327,7 +329,6 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 job_id=job_id,
             )
             stage = "one-shot local ComfyUI Qwen Image Edit rendering"
-            endpoint = self._f5_preflight_endpoint
             output = AutomationProgressRunner(self).run(
                 "Governed Source-Conditioned Qwen Edit",
                 plan.source.asset_id,
