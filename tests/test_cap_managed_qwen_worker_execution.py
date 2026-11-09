@@ -63,11 +63,13 @@ def test_worker_one_submission_no_cap_db(tmp_path, monkeypatch):
     contract, job, queue, output = _fixture(tmp_path)
     reserve = Mock()
     monkeypatch.setattr(worker, "reserve_guided_edit_attempt", reserve)
+    monkeypatch.setattr(worker, "validate_managed_qwen_model_choices", Mock())
 
     class Provider:
         def __init__(self):
             self.healthcheck = Mock()
             self.validate_nodes = Mock()
+            self.object_info = Mock(return_value={})
             self.submit = Mock(return_value="prompt-one")
 
         def wait(self, prompt_id, timeout_seconds):
@@ -107,6 +109,7 @@ def test_worker_refuses_modified_source_before_submission(tmp_path, monkeypatch)
     client = SimpleNamespace(submit=Mock(), healthcheck=Mock())
     reserve = Mock()
     monkeypatch.setattr(worker, "reserve_guided_edit_attempt", reserve)
+    monkeypatch.setattr(worker, "validate_managed_qwen_model_choices", Mock())
     with pytest.raises(worker.GuidedEditExecutionError, match="evidence changed"):
         worker.execute_prepared_managed_qwen_edit(
             contract, job, operator_confirmed=True, client=client
@@ -119,10 +122,12 @@ def test_worker_unknown_post_outcome_keeps_reservation(tmp_path, monkeypatch):
     contract, job, queue, output = _fixture(tmp_path)
     reserve = Mock()
     monkeypatch.setattr(worker, "reserve_guided_edit_attempt", reserve)
+    monkeypatch.setattr(worker, "validate_managed_qwen_model_choices", Mock())
     client = SimpleNamespace(
         submit=Mock(side_effect=RuntimeError("POST result unknown")),
         healthcheck=Mock(),
         validate_nodes=Mock(),
+        object_info=Mock(return_value={}),
     )
     with pytest.raises(RuntimeError, match="unknown"):
         worker.execute_prepared_managed_qwen_edit(
