@@ -71,7 +71,7 @@ def _prepare(fixture):
 
 def test_managed_qwen_compiles_offline_candidate_edit_job(tmp_path, monkeypatch):
     fixture = _fixture(tmp_path)
-    service, plan, contract, graph, queue, output, job_id = fixture
+    service, plan, contract, graph, queue, output, _job_id = fixture
     validation = Mock()
     monkeypatch.setattr(correction, "verify_spatial_contract", validation)
     result = _prepare(fixture)
