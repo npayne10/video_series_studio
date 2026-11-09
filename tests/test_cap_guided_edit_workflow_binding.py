@@ -60,14 +60,17 @@ def _fixture(tmp_path, *, masked=False):
 
 def _bind(service, plan, contract, mapping):
     return binding.bind_guided_edit_workflow(
-        service, plan, contract, mapping,
+        service,
+        plan,
+        contract,
+        mapping,
         source_filename="staged.png",
         mask_filename="mask.png" if contract.mask_path is not None else None,
     )
 
 
 def test_f4b_binds_governed_constraints_to_copy_without_writing_source(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, mapping, _comfy = _fixture(tmp_path)
     validation = Mock()
     monkeypatch.setattr(binding, "verify_spatial_contract", validation)
     result = _bind(service, plan, contract, mapping)
@@ -81,29 +84,32 @@ def test_f4b_binds_governed_constraints_to_copy_without_writing_source(tmp_path,
 
 
 def test_f4b_offline_mask_binding_requires_explicit_mapping(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path, masked=True)
+    service, plan, contract, mapping, _comfy = _fixture(tmp_path, masked=True)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     result = _bind(service, plan, contract, mapping)
     assert result.prompt["4"]["inputs"]["image"] == "mask.png"
     mapping = binding.GuidedEditNodeMap("1", "image", "2", "text")
-    with pytest.raises(binding.GuidedEditBindingError, match="Mask"):
+    with pytest.raises(binding.GuidedEditBindingError, match="mask"):
         _bind(service, plan, contract, mapping)
 
 
 @pytest.mark.parametrize("filename", ["../evil.png", "bad/other.png", "http:x.png", "bad.png.bak"])
 def test_f4b_rejects_untrusted_staging_filenames(tmp_path, monkeypatch, filename):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, mapping, _comfy = _fixture(tmp_path)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     with pytest.raises(binding.GuidedEditBindingError, match="unsafe"):
         binding.bind_guided_edit_workflow(
-            service, plan, contract, mapping,
+            service,
+            plan,
+            contract,
+            mapping,
             source_filename=filename,
             mask_filename=None,
         )
 
 
 def test_f4b_rejects_stale_workflow(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, mapping, _comfy = _fixture(tmp_path)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     contract.workflow_path.write_text("{}", encoding="utf-8")
     with pytest.raises(binding.GuidedEditBindingError, match="changed"):
@@ -111,7 +117,7 @@ def test_f4b_rejects_stale_workflow(tmp_path, monkeypatch):
 
 
 def test_f4b_rejects_wrong_node_mapping(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, _mapping, _comfy = _fixture(tmp_path)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     wrong = binding.GuidedEditNodeMap("3", "positive", "2", "text")
     with pytest.raises(binding.GuidedEditBindingError, match="mapping"):
@@ -119,10 +125,12 @@ def test_f4b_rejects_wrong_node_mapping(tmp_path, monkeypatch):
 
 
 def test_f4b_stages_and_cleans_immutable_source_without_mutating_it(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path, masked=True)
+    service, plan, contract, _mapping, comfy = _fixture(tmp_path, masked=True)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     staged = binding.stage_guided_edit_inputs(
-        service, plan, contract,
+        service,
+        plan,
+        contract,
         comfyui_input_directory=comfy / "input",
         trusted_comfyui_directory=comfy,
     )
@@ -137,25 +145,29 @@ def test_f4b_stages_and_cleans_immutable_source_without_mutating_it(tmp_path, mo
 
 
 def test_f4b_rejects_wrong_staging_directory(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, _mapping, comfy = _fixture(tmp_path)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     other = tmp_path / "other"
     other.mkdir()
     with pytest.raises(binding.GuidedEditBindingError, match="differs"):
         binding.stage_guided_edit_inputs(
-            service, plan, contract,
+            service,
+            plan,
+            contract,
             comfyui_input_directory=other,
             trusted_comfyui_directory=comfy,
         )
 
 
 def test_f4b_rejects_tampered_source_before_any_write(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, _mapping, comfy = _fixture(tmp_path)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     Image.new("RGB", (16, 12), "black").save(contract.source_path)
     with pytest.raises(binding.GuidedEditBindingError, match="changed"):
         binding.stage_guided_edit_inputs(
-            service, plan, contract,
+            service,
+            plan,
+            contract,
             comfyui_input_directory=comfy / "input",
             trusted_comfyui_directory=comfy,
         )
@@ -163,16 +175,19 @@ def test_f4b_rejects_tampered_source_before_any_write(tmp_path, monkeypatch):
 
 
 def test_f4b_cleanup_keeps_modified_staging_file(tmp_path, monkeypatch):
-    service, plan, contract, mapping, comfy = _fixture(tmp_path)
+    service, plan, contract, _mapping, comfy = _fixture(tmp_path)
     monkeypatch.setattr(binding, "verify_spatial_contract", Mock())
     staged = binding.stage_guided_edit_inputs(
-        service, plan, contract,
+        service,
+        plan,
+        contract,
         comfyui_input_directory=comfy / "input",
         trusted_comfyui_directory=comfy,
     )
     staged.source_path.write_bytes(b"changed")
     staged.cleanup()
     assert staged.source_path.exists()
+
 
 def test_f4b_refuses_symlink_comfyui_input_root(tmp_path, monkeypatch):
     service, plan, contract, _mapping, comfy = _fixture(tmp_path)
@@ -186,7 +201,9 @@ def test_f4b_refuses_symlink_comfyui_input_root(tmp_path, monkeypatch):
         pytest.skip("Directory symlinks are not available on this platform")
     with pytest.raises(binding.GuidedEditBindingError, match="symlink"):
         binding.stage_guided_edit_inputs(
-            service, plan, contract,
+            service,
+            plan,
+            contract,
             comfyui_input_directory=comfy / "input",
             trusted_comfyui_directory=comfy,
         )
