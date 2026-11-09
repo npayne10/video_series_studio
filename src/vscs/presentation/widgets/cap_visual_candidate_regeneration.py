@@ -20,18 +20,18 @@ from PySide6.QtWidgets import (
 from vscs.application.caps.guided_edit_candidate_registration import (
     register_guided_edit_candidate,
 )
-from vscs.application.caps.managed_qwen_edit_inspection import (
-    inspect_managed_qwen_edit_workflow,
-)
 from vscs.application.caps.managed_qwen_correction_job import (
     prepare_managed_qwen_correction,
+)
+from vscs.application.caps.managed_qwen_edit_inspection import (
+    inspect_managed_qwen_edit_workflow,
 )
 from vscs.application.caps.managed_qwen_worker_execution import (
     execute_prepared_managed_qwen_edit,
 )
-from vscs.application.caps.spatial_correction_contract import prepare_spatial_contract
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.spatial_candidate_guidance import inspect_spatial_guidance
+from vscs.application.caps.spatial_correction_contract import prepare_spatial_contract
 from vscs.application.caps.visual_candidate_quality import CandidateQualityReviewService
 from vscs.application.caps.visual_candidate_regeneration import (
     CandidateRegenerationPlan,
@@ -212,18 +212,14 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 contract,
                 workflow_path=contract.workflow_path,
                 queue_path=runtime / "queues" / f"cap_correction_{job_id}.json",
-                output_path=(
-                    runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"
-                ),
+                output_path=(runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"),
                 job_id=job_id,
             )
             stage = "one-shot local ComfyUI Qwen Image Edit rendering"
             output = AutomationProgressRunner(self).run(
                 "Governed Source-Conditioned Qwen Edit",
                 plan.source.asset_id,
-                lambda: execute_prepared_managed_qwen_edit(
-                    contract, job, operator_confirmed=True
-                ),
+                lambda: execute_prepared_managed_qwen_edit(contract, job, operator_confirmed=True),
                 may_charge=False,
             )
             stage = "post-render CAP revalidation and Candidate-only registration"
