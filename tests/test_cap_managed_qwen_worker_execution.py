@@ -48,7 +48,7 @@ def _fixture(tmp_path):
             "queue_file": str(queue),
             "job_index": 0,
         }}},
-        queue={"jobs": [{"reference_inputs": [str(source)]}]},
+        queue={"jobs": [{"reference_inputs": [str(source)], "positive_prompt": "reviewed CAP"}]},
     )
     return contract, job, queue, output
 
