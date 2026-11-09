@@ -118,7 +118,7 @@ def test_worker_one_submission_no_cap_db(tmp_path, monkeypatch):
 
 
 def test_worker_rejects_no_consent_before_any_io(tmp_path):
-    contract, job, queue, output = _fixture(tmp_path)
+    contract, job, _queue, _output = _fixture(tmp_path)
     provider = SimpleNamespace(submit=Mock(), healthcheck=Mock())
     with pytest.raises(worker.GuidedEditExecutionError, match="confirmation"):
         worker.execute_prepared_managed_qwen_edit(
@@ -129,7 +129,7 @@ def test_worker_rejects_no_consent_before_any_io(tmp_path):
 
 
 def test_worker_refuses_modified_source_before_submission(tmp_path, monkeypatch):
-    contract, job, queue, output = _fixture(tmp_path)
+    contract, job, _queue, _output = _fixture(tmp_path)
     contract.source_path.write_bytes(b"changed")
     client = SimpleNamespace(submit=Mock(), healthcheck=Mock())
     reserve = Mock()
@@ -144,7 +144,7 @@ def test_worker_refuses_modified_source_before_submission(tmp_path, monkeypatch)
 
 
 def test_worker_unknown_post_outcome_keeps_reservation(tmp_path, monkeypatch):
-    contract, job, queue, output = _fixture(tmp_path)
+    contract, job, queue, _output = _fixture(tmp_path)
     reserve = Mock()
     monkeypatch.setattr(worker, "reserve_guided_edit_attempt", reserve)
     monkeypatch.setattr(worker, "validate_managed_qwen_model_choices", Mock())
