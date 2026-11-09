@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from pathlib import Path
 from uuid import uuid4
 
 from vscs.application.caps.guided_edit_attempt_journal import reserve_guided_edit_attempt
