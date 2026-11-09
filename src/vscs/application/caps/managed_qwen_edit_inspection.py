@@ -15,8 +15,8 @@ from typing import Any
 _LOADER = "171"
 _SOURCE = "170:160"
 _ENCODE = "170:156"
-_POSITIVE = "170:149"
-_NEGATIVE = "170:151"
+_POSITIVE = "170:151"
+_NEGATIVE = "170:149"
 _LORA = "170:153"
 _MODEL = "170:161"
 _SAMPLER = "170:169"
@@ -79,7 +79,7 @@ def inspect_managed_qwen_edit_workflow(path: Path) -> ManagedQwenEditInspection:
     _edge(vae_latent, "pixels", _SOURCE, 0)
     positive = _node(graph, _POSITIVE, "TextEncodeQwenImageEditPlus")
     negative = _node(graph, _NEGATIVE, "TextEncodeQwenImageEditPlus")
-    for conditioning, port in ((positive, 2), (negative, 1)):
+    for conditioning, port in ((positive, 1), (negative, 2)):
         _edge(conditioning, "prompt", _LOADER, port)
         _edge(conditioning, "image1", _SOURCE, 0)
     model = _node(graph, _MODEL, "UNETLoader")
