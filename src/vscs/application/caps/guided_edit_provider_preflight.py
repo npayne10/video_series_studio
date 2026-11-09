@@ -58,9 +58,14 @@ class GuidedEditPreflight:
 
 
 def _links(value: Any, nodes: dict[str, Any]) -> tuple[str, ...]:
-    if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str):
-        if value[0] in nodes and type(value[1]) is int:
-            return (value[0],)
+    if (
+        isinstance(value, list)
+        and len(value) == 2
+        and isinstance(value[0], str)
+        and value[0] in nodes
+        and type(value[1]) is int
+    ):
+        return (value[0],)
     return ()
 
 
@@ -114,29 +119,25 @@ def inspect_guided_edit_graph(
         graph = json.loads(contract.workflow_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise GuidedEditPreflightError("Cannot parse edit graph") from exc
-    if not isinstance(graph, dict) or not graph or not all(
-        isinstance(node_id, str)
-        and isinstance(node, dict)
-        and isinstance(node.get("class_type"), str)
-        and isinstance(node.get("inputs"), dict)
-        for node_id, node in graph.items()
+    if (
+        not isinstance(graph, dict)
+        or not graph
+        or not all(
+            isinstance(node_id, str)
+            and isinstance(node, dict)
+            and isinstance(node.get("class_type"), str)
+            and isinstance(node.get("inputs"), dict)
+            for node_id, node in graph.items()
+        )
     ):
         raise GuidedEditPreflightError("Malformed editing API graph")
     typed: dict[str, list[str]] = {}
     for node_id, node in graph.items():
         typed.setdefault(node["class_type"], []).append(node_id)
-    source_nodes = tuple(
-        node_id for kind in _IMAGE_LOADERS for node_id in typed.get(kind, [])
-    )
-    samplers = tuple(
-        node_id for kind in _SAMPLERS for node_id in typed.get(kind, [])
-    )
-    output_nodes = tuple(
-        node_id for kind in _OUTPUT for node_id in typed.get(kind, [])
-    )
-    decoders = tuple(
-        node_id for kind in _DECODE for node_id in typed.get(kind, [])
-    )
+    source_nodes = tuple(node_id for kind in _IMAGE_LOADERS for node_id in typed.get(kind, []))
+    samplers = tuple(node_id for kind in _SAMPLERS for node_id in typed.get(kind, []))
+    output_nodes = tuple(node_id for kind in _OUTPUT for node_id in typed.get(kind, []))
+    decoders = tuple(node_id for kind in _DECODE for node_id in typed.get(kind, []))
     encoder_nodes = tuple(
         node_id
         for node_id, node in graph.items()
@@ -153,16 +154,22 @@ def inspect_guided_edit_graph(
         blockers.append("No decode-to-output path")
     if any(node["class_type"] in _LATENT_INPUT for node in graph.values()):
         blockers.append("Fresh empty-latent node present; editing must use source conditioning")
-    if source_nodes and samplers and not any(
-        set(source_nodes) & _upstream(graph, sampler) for sampler in samplers
+    if (
+        source_nodes
+        and samplers
+        and not any(set(source_nodes) & _upstream(graph, sampler) for sampler in samplers)
     ):
         blockers.append("Source image is not upstream of any sampler")
-    if encoder_nodes and samplers and not any(
-        set(encoder_nodes) & _upstream(graph, sampler) for sampler in samplers
+    if (
+        encoder_nodes
+        and samplers
+        and not any(set(encoder_nodes) & _upstream(graph, sampler) for sampler in samplers)
     ):
         blockers.append("Qwen editing conditioning is not upstream of sampling")
-    if decoders and output_nodes and not any(
-        set(decoders) & _upstream(graph, output) for output in output_nodes
+    if (
+        decoders
+        and output_nodes
+        and not any(set(decoders) & _upstream(graph, output) for output in output_nodes)
     ):
         blockers.append("No decoded image connected to an output node")
     if contract.mask_path is not None and not any(
@@ -176,12 +183,9 @@ def inspect_guided_edit_graph(
         value
         for node in graph.values()
         for key, value in node["inputs"].items()
-        if key in {"unet_name", "model_name", "ckpt_name"}
-        and isinstance(value, str)
+        if key in {"unet_name", "model_name", "ckpt_name"} and isinstance(value, str)
     ]
-    if model.name not in {
-        PureWindowsPath(name).name for name in referenced_models
-    }:
+    if model.name not in {PureWindowsPath(name).name for name in referenced_models}:
         blockers.append("Qwen edit checkpoint is not selected in workflow graph")
     # Even with a linked graph, dynamic source binding and ComfyUI execution
     # are unavailable until an explicit operator-approved provider is implemented.
