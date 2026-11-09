@@ -115,15 +115,11 @@ class ControlledCandidateRegenerationDialog(QDialog):
             self.plan.request.prompt,
             "correctedVisualCandidatePrompt",
         )
-        self.inspect_spatial_button = QPushButton(
-            "Inspect Both Workflows (No Generation)"
-        )
+        self.inspect_spatial_button = QPushButton("Inspect Both Workflows (No Generation)")
         self.inspect_spatial_button.setObjectName("inspectSpatialGuidance")
         self.inspect_spatial_button.clicked.connect(self._inspect_spatial_guidance)
         layout.addWidget(self.inspect_spatial_button)
-        self.f5_preflight_button = QPushButton(
-            "Check Qwen F5 Hardware Readiness (No Generation)"
-        )
+        self.f5_preflight_button = QPushButton("Check Qwen F5 Hardware Readiness (No Generation)")
         self.f5_preflight_button.setObjectName("checkQwenF5HardwareReadiness")
         self.f5_preflight_button.clicked.connect(self._inspect_f5_hardware)
         layout.addWidget(self.f5_preflight_button)
@@ -138,9 +134,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             "Candidate lineage; use a fresh disposable lineage for F5 GPU testing."
         )
         self.f5_final_attempt_ack.setObjectName("qwenF5FinalAttemptAcknowledgement")
-        self.f5_final_attempt_ack.setVisible(
-            self.plan.attempt == self.plan.max_attempts
-        )
+        self.f5_final_attempt_ack.setVisible(self.plan.attempt == self.plan.max_attempts)
         layout.addWidget(self.f5_final_attempt_ack)
         self._f5_preflight_sha256: str | None = None
         self._f5_preflight_endpoint: str | None = None
