@@ -61,9 +61,7 @@ def reserve_guided_edit_attempt(
     journal_root.mkdir(exist_ok=True)
     if journal_root.resolve(strict=True).parent != expected.resolve(strict=True):
         raise GuidedEditAttemptError("Guided-edit journal escaped CAP metadata")
-    filename = (
-        f"root_{contract.original_reference_id}_attempt_{contract.correction_attempt}.json"
-    )
+    filename = f"root_{contract.original_reference_id}_attempt_{contract.correction_attempt}.json"
     path = journal_root / filename
     payload = {
         "schema_version": 1,
