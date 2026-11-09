@@ -1,6 +1,5 @@
 """F5.1 CAP dialog tests: inspection never submits or reserves GPU attempts."""
 
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -153,6 +152,7 @@ def test_f51_stale_workflow_invalidates_prior_hardware_readiness(
     dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
     dialog._f5_preflight_sha256 = "old-workflow"
     dialog._f5_preflight_endpoint = "http://127.0.0.1:8188"
+    dialog.f5_final_attempt_ack.setChecked(True)
     contract = SimpleNamespace(workflow_sha256="new-workflow")
     monkeypatch.setattr(ui, "prepare_spatial_contract", Mock(return_value=contract))
     monkeypatch.setattr(
@@ -168,3 +168,20 @@ def test_f51_stale_workflow_invalidates_prior_hardware_readiness(
     critical.assert_called_once()
     consent.assert_not_called()
     service.generator.render.assert_not_called()
+
+def test_f51_final_attempt_needs_separate_acknowledgement(
+    qtbot, tmp_path, monkeypatch
+):
+    dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
+    dialog._f5_preflight_sha256 = "reviewed-workflow-sha"
+    dialog._f5_preflight_endpoint = "http://127.0.0.1:8188"
+    warning = Mock()
+    monkeypatch.setattr(QMessageBox, "warning", warning)
+    consent = Mock()
+    monkeypatch.setattr(QMessageBox, "question", consent)
+    assert not dialog.f5_final_attempt_ack.isChecked()
+    dialog._generate_guided_edit()
+    warning.assert_called_once()
+    consent.assert_not_called()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
