@@ -105,7 +105,10 @@ def prepare_managed_qwen_correction(
     loader["job_index"] = 0
     loader["quality_mode"] = "standard"
     editable[inspection.sampler_node_id]["inputs"]["seed"] = plan.request.seed
-    positive = "\n".join(f"MANDATORY reviewed {key}: {value}" for key, value in contract.accepted_fields)
+    positive = "
+".join(
+        f"MANDATORY reviewed {key}: {value}" for key, value in contract.accepted_fields
+    )
     category = plan.source.asset_id.upper().split("-")
     kinds = {
         "CHR": "character",
