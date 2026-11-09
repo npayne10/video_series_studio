@@ -81,8 +81,8 @@ git status --short
 ```
 
 Previously accepted baseline: **2,655 passed, 1 Windows symlink skip**.
-F5.1 adds three dual-inspection tests and six Qt UI checks. The expected
-new total is **2,664 passed, 1 skip**, subject to Windows confirmation.
+F5.1 adds four dual-inspection tests and six Qt UI checks. The expected
+new total is **2,665 passed, 1 skip**, subject to Windows confirmation.
 
 Do not modify the untracked
 `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`.
