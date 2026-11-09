@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from uuid import uuid4
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -22,8 +23,11 @@ from vscs.application.caps.guided_edit_candidate_registration import (
 from vscs.application.caps.managed_qwen_edit_inspection import (
     inspect_managed_qwen_edit_workflow,
 )
-from vscs.application.caps.managed_qwen_live_correction import (
-    render_one_managed_qwen_correction,
+from vscs.application.caps.managed_qwen_correction_job import (
+    prepare_managed_qwen_correction,
+)
+from vscs.application.caps.managed_qwen_worker_execution import (
+    execute_prepared_managed_qwen_edit,
 )
 from vscs.application.caps.spatial_correction_contract import prepare_spatial_contract
 from vscs.application.caps.reference_service import CanonicalReferenceService
@@ -198,16 +202,32 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.guided_edit_button.setEnabled(False)
         self.generate_button.setEnabled(False)
         try:
+            stage = "GUI-thread current authority and immutable job compilation"
+            self.service.verify_current(plan)
+            job_id = uuid4().hex
+            runtime = plan.source.project_root / ".vscs" / "runtime" / "comfyui"
+            job = prepare_managed_qwen_correction(
+                self.service,
+                plan,
+                contract,
+                workflow_path=contract.workflow_path,
+                queue_path=runtime / "queues" / f"cap_correction_{job_id}.json",
+                output_path=(
+                    runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"
+                ),
+                job_id=job_id,
+            )
             stage = "one-shot local ComfyUI Qwen Image Edit rendering"
             output = AutomationProgressRunner(self).run(
                 "Governed Source-Conditioned Qwen Edit",
                 plan.source.asset_id,
-                lambda: render_one_managed_qwen_correction(
-                    self.service, plan, contract, operator_confirmed=True
+                lambda: execute_prepared_managed_qwen_edit(
+                    contract, job, operator_confirmed=True
                 ),
                 may_charge=False,
             )
             stage = "post-render CAP revalidation and Candidate-only registration"
+            self.service.verify_current(plan)
             new_id = register_guided_edit_candidate(
                 self.service, plan, contract, output, operator_confirmed=True
             )
