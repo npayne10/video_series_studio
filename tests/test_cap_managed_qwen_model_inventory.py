@@ -27,9 +27,7 @@ def _fixture():
         kind = node["class_type"]
         for name in ("unet_name", "lora_name", "clip_name", "vae_name"):
             if name in node["inputs"]:
-                inventory[kind] = {
-                    "input": {"required": {name: [[node["inputs"][name]]]}}
-                }
+                inventory[kind] = {"input": {"required": {name: [[node["inputs"][name]]]}}}
     return graph, inventory
 
 
