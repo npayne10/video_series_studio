@@ -145,13 +145,14 @@ def bind_guided_edit_workflow(
         frozenset({"TextEncodeQwenImageEdit", "TextEncodeQwenImageEditPlus"}),
     )
     if contract.mask_path is not None:
-        assert mapping.mask_node_id is not None
-        assert mapping.mask_input is not None
+        if mapping.mask_node_id is None or mapping.mask_input is None:
+            raise GuidedEditBindingError("Mask mapping is incomplete")
         mask = _input_slot(
             editable, mapping.mask_node_id, mapping.mask_input,
             frozenset({"LoadImageMask"}),
         )
-        assert mask_filename is not None
+        if mask_filename is None:
+            raise GuidedEditBindingError("Mask staging filename is missing")
         mask[mapping.mask_input] = mask_filename
     # Only the reviewed CAP rules are executable instructions. Semantic
     # evaluator free text is excluded. No direct edits to Canon/MASTER.
@@ -183,10 +184,13 @@ def stage_guided_edit_inputs(
     network access, Canon mutation or attempt consumption.
     """
     verify_spatial_contract(service, plan, contract)
-    input_root = (trusted_comfyui_directory / "input").resolve(strict=True)
+    configured_root = trusted_comfyui_directory / "input"
+    if configured_root.is_symlink():
+        raise GuidedEditBindingError("ComfyUI input root cannot be a symlink")
+    input_root = configured_root.resolve(strict=True)
     if comfyui_input_directory.resolve(strict=True) != input_root:
         raise GuidedEditBindingError("Input directory differs from trusted ComfyUI input root")
-    if not input_root.is_dir() or input_root.is_symlink():
+    if not input_root.is_dir():
         raise GuidedEditBindingError("ComfyUI input root must be a normal directory")
     source = contract.source_path.read_bytes()
     if not source.startswith(_PNG) or _digest(source) != contract.source_sha256:
