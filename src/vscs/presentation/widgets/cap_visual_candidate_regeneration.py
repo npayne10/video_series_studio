@@ -261,6 +261,23 @@ class ControlledCandidateRegenerationDialog(QDialog):
         if self._generation_active:
             return
         plan = self.plan
+        reservation = (
+            plan.source.project_root
+            / "Canonical Assets"
+            / plan.source.asset_id
+            / ".metadata"
+            / "guided_edit_attempts"
+            / f"root_{plan.original_reference_id}_attempt_{plan.attempt}.json"
+        )
+        if reservation.exists():
+            QMessageBox.warning(
+                self,
+                "Correction Attempt Already Reserved",
+                "This correction attempt was reserved for governed Qwen editing. "
+                "Inspect the ComfyUI queue and edit journal before any other "
+                "generation; do not issue a second GPU request.",
+            )
+            return
         choice = QMessageBox.question(
             self,
             "Confirm Controlled Local Regeneration",
