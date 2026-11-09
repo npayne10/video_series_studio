@@ -51,7 +51,7 @@ def _unchanged(contract: SpatialCorrectionContract, job: ManagedQwenCorrectionJo
         raise GuidedEditExecutionError("Managed edit must contain exactly one queue job")
     item = jobs[0]
     output = item.get("output")
-    prompt = "\\n".join(
+    prompt = "\n".join(
         f"MANDATORY reviewed {key}: {value}" for key, value in contract.accepted_fields
     )
     if (
