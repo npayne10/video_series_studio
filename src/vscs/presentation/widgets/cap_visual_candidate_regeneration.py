@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QLabel,
@@ -132,6 +133,15 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.f5_status_label.setObjectName("qwenF5HardwareStatus")
         self.f5_status_label.setWordWrap(True)
         layout.addWidget(self.f5_status_label)
+        self.f5_final_attempt_ack = QCheckBox(
+            "I acknowledge this is the FINAL correction attempt for this "
+            "Candidate lineage; use a fresh disposable lineage for F5 GPU testing."
+        )
+        self.f5_final_attempt_ack.setObjectName("qwenF5FinalAttemptAcknowledgement")
+        self.f5_final_attempt_ack.setVisible(
+            self.plan.attempt == self.plan.max_attempts
+        )
+        layout.addWidget(self.f5_final_attempt_ack)
         self._f5_preflight_sha256: str | None = None
         self._f5_preflight_endpoint: str | None = None
         self.generate_button = QPushButton("Generate ONE Text-Only Candidate (No Spatial Control)")
@@ -232,6 +242,19 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 "Qwen Hardware Preflight Required",
                 "Run 'Check Qwen F5 Hardware Readiness (No Generation)' first. "
                 "The F5 readiness check does not consume an attempt.",
+            )
+            return
+        if (
+            self.f5_final_attempt_ack.isVisible()
+            and not self.f5_final_attempt_ack.isChecked()
+        ):
+            QMessageBox.warning(
+                self,
+                "Final Correction Attempt Is Protected",
+                "This source is at its final correction attempt. For F5 hardware "
+                "acceptance, choose a fresh disposable Candidate lineage. "
+                "Only acknowledge this final-attempt risk if you deliberately "
+                "intend to use the remaining attempt.",
             )
             return
         plan = self.plan
