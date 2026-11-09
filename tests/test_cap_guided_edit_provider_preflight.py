@@ -59,7 +59,7 @@ def _setup(tmp_path: Path, *, connected: bool = True, mask: bool = False):
 
 
 def test_f4_linked_source_and_checkpoint_still_refuse_execution(tmp_path, monkeypatch):
-    service, plan, contract, model, root, graph = _setup(tmp_path)
+    service, plan, contract, model, root, _graph = _setup(tmp_path)
     validation = Mock()
     monkeypatch.setattr(preflight, "verify_spatial_contract", validation)
     result = preflight.inspect_guided_edit_graph(
@@ -79,7 +79,7 @@ def test_f4_linked_source_and_checkpoint_still_refuse_execution(tmp_path, monkey
 
 
 def test_f4_rejects_disconnected_source(tmp_path, monkeypatch):
-    service, plan, contract, model, root, graph = _setup(tmp_path, connected=False)
+    service, plan, contract, model, root, _graph = _setup(tmp_path, connected=False)
     monkeypatch.setattr(preflight, "verify_spatial_contract", Mock())
     result = preflight.inspect_guided_edit_graph(
         service, plan, contract, model_file=model, trusted_model_directory=root
@@ -99,7 +99,7 @@ def test_f4_rejects_text_to_image_empty_latent(tmp_path, monkeypatch):
 
 
 def test_f4_missing_mask_conditioning_is_blocked(tmp_path, monkeypatch):
-    service, plan, contract, model, root, graph = _setup(tmp_path)
+    service, plan, contract, model, root, _graph = _setup(tmp_path)
     contract.mask_path = tmp_path / "m.png"
     monkeypatch.setattr(preflight, "verify_spatial_contract", Mock())
     result = preflight.inspect_guided_edit_graph(
@@ -120,7 +120,7 @@ def test_f4_mismatched_workflow_checkpoint_fails_closed(tmp_path, monkeypatch):
 
 
 def test_f4_refuses_checkpoint_outside_comfyui_models(tmp_path, monkeypatch):
-    service, plan, contract, model, root, graph = _setup(tmp_path)
+    service, plan, contract, model, root, _graph = _setup(tmp_path)
     external = tmp_path / model.name
     external.write_bytes(b"untrusted")
     monkeypatch.setattr(preflight, "verify_spatial_contract", Mock())
@@ -131,7 +131,7 @@ def test_f4_refuses_checkpoint_outside_comfyui_models(tmp_path, monkeypatch):
 
 
 def test_f4_revalidates_f3_before_inspection(tmp_path, monkeypatch):
-    service, plan, contract, model, root, graph = _setup(tmp_path)
+    service, plan, contract, model, root, _graph = _setup(tmp_path)
     from vscs.application.caps.spatial_correction_contract import (
         SpatialCorrectionContractError,
     )
