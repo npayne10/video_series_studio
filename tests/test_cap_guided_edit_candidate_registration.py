@@ -57,9 +57,7 @@ def _setup():
         correction_attempt=2,
         model_identifier="qwen_image_edit_2511_fp8mixed",
     )
-    service = SimpleNamespace(
-        generator=SimpleNamespace(persist_candidate=Mock(return_value=42))
-    )
+    service = SimpleNamespace(generator=SimpleNamespace(persist_candidate=Mock(return_value=42)))
     return service, plan, contract, output
 
 
@@ -67,9 +65,12 @@ def test_f4b2_valid_output_is_candidate_only(monkeypatch):
     service, plan, contract, output = _setup()
     verification = Mock()
     monkeypatch.setattr(registration, "verify_spatial_contract", verification)
-    assert registration.register_guided_edit_candidate(
-        service, plan, contract, output, operator_confirmed=True
-    ) == 42
+    assert (
+        registration.register_guided_edit_candidate(
+            service, plan, contract, output, operator_confirmed=True
+        )
+        == 42
+    )
     verification.assert_called_once_with(service, plan, contract)
     service.generator.persist_candidate.assert_called_once()
     _, _, request, generated = service.generator.persist_candidate.call_args.args
