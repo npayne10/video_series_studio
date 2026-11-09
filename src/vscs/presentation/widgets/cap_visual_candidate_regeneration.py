@@ -245,7 +245,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             )
             return
         if (
-            self.f5_final_attempt_ack.isVisible()
+            self.plan.attempt == self.plan.max_attempts
             and not self.f5_final_attempt_ack.isChecked()
         ):
             QMessageBox.warning(
