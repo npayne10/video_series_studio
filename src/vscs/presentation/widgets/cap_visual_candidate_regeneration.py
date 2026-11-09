@@ -177,21 +177,21 @@ class ControlledCandidateRegenerationDialog(QDialog):
             QMessageBox.critical(
                 self,
                 "Qwen Editing Not Ready",
-                f"{type(exc).__name__}: {exc}\\nNo GPU work was submitted.",
+                f"{type(exc).__name__}: {exc}\nNo GPU work was submitted.",
             )
             return
         choice = QMessageBox.question(
             self,
             "Confirm ONE Source-Conditioned Qwen Edit",
             f"Edit supplementary Candidate #{plan.source.reference_id} using the "
-            f"verified Qwen Image Edit 2511 graph?\\n"
-            f"Correction attempt {plan.attempt}/{plan.max_attempts}.\\n\\n"
+            f"verified Qwen Image Edit 2511 graph?\n"
+            f"Correction attempt {plan.attempt}/{plan.max_attempts}.\n\n"
             "The 19.12 GB checkpoint may exceed 16 GB VRAM and require "
-            "CPU offloading. Hardware compatibility is not proven.\\n"
+            "CPU offloading. Hardware compatibility is not proven.\n"
             "After a submission, even a timeout is UNKNOWN and cannot be retried "
-            "automatically; inspect the journal and ComfyUI queue.\\n\\n"
+            "automatically; inspect the journal and ComfyUI queue.\n\n"
             "The original is preserved. Output is a supplementary Candidate only, "
-            "never MASTER or Canon. No paid API call will be made.\\n\\n"
+            "never MASTER or Canon. No paid API call will be made.\n\n"
             "Proceed with exactly ONE local GPU request?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -236,7 +236,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
             QMessageBox.critical(
                 self,
                 "Qwen Candidate Editing Failed",
-                f"Stage: {stage}\\n{type(exc).__name__}: {exc}\\n\\n"
+                f"Stage: {stage}\n{type(exc).__name__}: {exc}\n\n"
                 "No successful Candidate registration is confirmed. "
                 "Do not repeat the GPU request without inspecting the "
                 "ComfyUI queue, output and once-only attempt journal.",
@@ -248,10 +248,10 @@ class ControlledCandidateRegenerationDialog(QDialog):
         QMessageBox.information(
             self,
             "Qwen Edited Candidate Created",
-            f"Supplementary Candidate: #{new_id}\\n"
-            f"Source: #{plan.source.reference_id}\\n"
-            f"Correction: {plan.attempt}/{plan.max_attempts}\\n"
-            f"ComfyUI prompt: {output.prompt_id}\\n"
+            f"Supplementary Candidate: #{new_id}\n"
+            f"Source: #{plan.source.reference_id}\n"
+            f"Correction: {plan.attempt}/{plan.max_attempts}\n"
+            f"ComfyUI prompt: {output.prompt_id}\n"
             "No MASTER or Canon approval. Review the new Candidate "
             "and run a separate semantic evaluation before acceptance.",
         )
