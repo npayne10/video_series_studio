@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import hashlib
 
-from vscs.application.caps.guided_edit_live_transport import GuidedEditOutput
+from vscs.application.caps.guided_edit_live_transport import (
+    GuidedEditExecutionError,
+    GuidedEditOutput,
+    _checked_png,
+)
 from vscs.application.caps.spatial_correction_contract import (
     SpatialCorrectionContract,
     verify_spatial_contract,
@@ -56,6 +60,12 @@ def register_guided_edit_candidate(
         raise GuidedEditRegistrationError("Guided output is invalid or unchanged from source")
     if not 256 <= output.width <= 8192 or not 256 <= output.height <= 8192:
         raise GuidedEditRegistrationError("Guided output dimensions are outside CAP limits")
+    try:
+        verified_size = _checked_png(output.content, maximum_bytes=40 * 1024 * 1024)
+    except GuidedEditExecutionError as exc:
+        raise GuidedEditRegistrationError("Guided output is not a verified PNG") from exc
+    if verified_size != (output.width, output.height):
+        raise GuidedEditRegistrationError("Guided output PNG dimensions disagree with provenance")
     if contract.correction_attempt != plan.attempt or not 1 <= plan.attempt <= 2:
         raise GuidedEditRegistrationError("Correction attempt lineage is inconsistent")
     request = plan.request.model_copy(
