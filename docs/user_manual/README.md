@@ -49,6 +49,15 @@ actual saved Draft and subsequent Visual Identity inspection are verified.
 **Immediate operator action:** Cancel the open Diagnostic Console Geometry editor; leave Geometry **Defer**, preserve Materials/Components/Scale and Engineering Control Room Candidate 2 attempt 2/2. See [automation-first corrective procedure](VSCS_User_Manual.md#vscs-automation-principle--correction-to-f53-acceptance).
 
 
+## Automated existing Draft CAP field proposals — implementation update
+
+The former manual Geometry-entry route is superseded by **Generate / Regenerate Field Proposal (AI — Paid)** in the existing Draft CAP editor. The operator reviews automatically generated, source-grounded fields, which are **read-only** in the dialog. The separate **Load Latest Cached Field Proposal (No AI Charge)** button reopens a completed proposal without another provider call; **Reject Generated Proposal (Keep Draft)** clears the selection without changing the CAP. Saving still requires a separate reviewed Draft-only confirmation.
+
+[Read the full numbered operator acceptance and safe paid-provider test procedure](VSCS_User_Manual.md#b526f--automated-existing-draft-cap-field-regeneration-operator-procedure).
+
+**Status:** Committed to GitHub and **not yet operator-accepted**. Ruff/Mypy/full regression and UI checks are required before initiating a paid test. The Diagnostic Console Geometry is still deferred; no automatically generated CAP value has been accepted yet. The Engineering Control Room Candidate 2 attempt **2/2** remains out of scope.
+
+
 ## Required documentation for each UI action
 
 | Item | Requirement |
@@ -82,7 +91,8 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [ ] Project preferences, export, backup/restore, diagnostics
 - [ ] Complete Automation progress indicator implementation — shared Planning/Shot runner committed, local acceptance pending; other actions outstanding
 - [x] F5.1 dual-workflow and F5.2 ComfyUI memory-release operator guidance — documented and UI observed
-- [ ] Existing Draft CAP field revision — implementation committed; regression and UI acceptance pending
+- [x] Existing Draft CAP guarded manual-review persistence — 2,695 passed, 1 skipped baseline
+- [ ] Automated existing Draft field generation and cache UI — implementation committed; regression and operator acceptance pending
 - [ ] F5.3 clean disposable Qwen GPU inference and Candidate quality — awaiting actual local test
 - [ ] Context-sensitive Help integration in VSCS
 
