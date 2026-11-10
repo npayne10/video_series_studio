@@ -657,7 +657,9 @@ def test_f54_refuses_unaccepted_field_and_duplicate_decision(tmp_path):
     kwargs = {
         "reviewer": "Operator Reviewer",
         "accepted_field": "layout",
-        "observed_discrepancy": "A second door is visible despite the reviewed one-door requirement.",
+        "observed_discrepancy": (
+            "A second door is visible despite the reviewed one-door requirement."
+        ),
     }
     save_human_correction_disposition(snap, report, **kwargs)
     with pytest.raises(HumanCorrectionDispositionError, match="already exists"):
