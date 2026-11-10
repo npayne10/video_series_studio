@@ -744,3 +744,14 @@ The operator executed **exactly one** GPU submission for the already prepared ex
 6. Report whether the new external image visually improves the console. **Never import/promote it directly into the CAP gallery** as a correction without a separately approved governance design.
 
 **Accepted milestone:** Genuine **source-conditioned managed Qwen Image Edit GPU inference** and **isolated PNG output validation** are achieved. **Outstanding:** visual comparison, independent CAP record preservation audit and any future governed operator-overridden correction path. This is not permission to turn a `HUMAN_REVIEW_REQUIRED` report into `REGENERATE_RECOMMENDED`.
+
+
+### B.5.26F F5.3 — Isolated Qwen image visual inspection (2026-11-10)
+
+**Operator supplied the actual isolated output image** `qwen_acceptance_output.png` for inspection after the single successful GPU run, output **1392 × 752**, SHA-256 reported by the execution runner as `59832d36eaa59fe3746e91ca29639e2ab2361122b5771607e91692e75d696778`. The reviewed Draft called for a graphite freestanding upright console, blue display, three round buttons, a **recessed** rotary dial, ribbed grips, and a **separate** adjacent workstation.
+
+**Visual observations:** The image presents the blue front display, graphite freestanding console, three buttons and ribbed sides clearly. The dial appears **raised on the shelf**, not convincingly recessed. A tabletop and cabinet remain immediately adjacent behind/right and are visually ambiguous as a separate workstation. The output does **not convincingly resolve the two specifically requested geometry edits**. Precise physical dimensions cannot be verified from this single perspective.
+
+**Acceptance separation:** Hardware Qwen inference / PNG transport PASS; preservation of general console identity visually PASS; **specific edit-instruction adherence NOT established**. The test output remains an **external, unregistered** image, not a Candidate, MASTER, Canon or production reference. The operator still needs to independently inspect the original Gallery Candidate 3 and its saved genuine `HUMAN_REVIEW_REQUIRED` semantic report, verify both are unchanged, and confirm no new Candidate, CAP promotion or correction attempt was recorded. Never use the isolated image to replace Candidate 3 or modify the saved report.
+
+**Future engineering priority:** Improve managed Qwen edit instruction fidelity and the human-review disposition path as distinct projects. Do not treat the presence of a valid PNG as evidence that a precise physical design correction occurred; do not force a semantic regeneration result to enable a test.
