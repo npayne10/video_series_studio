@@ -200,7 +200,9 @@ class CandidateRegenerationService:
             raise CandidateRegenerationError("Regeneration requires a recorded review failure")
         semantic = data.get("semantic")
         if not isinstance(semantic, dict):
-            raise CandidateRegenerationError("Controlled correction requires a failed semantic review")
+            raise CandidateRegenerationError(
+                "Controlled correction requires a failed semantic review"
+            )
         human_path: Path | None = None
         human_sha: str | None = None
         human_field: str | None = None
