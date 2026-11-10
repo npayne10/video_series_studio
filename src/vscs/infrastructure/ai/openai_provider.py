@@ -145,7 +145,9 @@ class OpenAICAPGenerationProvider:
     ) -> DesignExpansionResponse:
         """Paid, scoped existing-Draft design proposal; never modifies CAP."""
         from vscs.application.caps.design_quality import assess_design_grounding
-        from vscs.application.caps.provider_design_expansion import validate_scoped_field_regeneration
+        from vscs.application.caps.provider_design_expansion import (
+            validate_scoped_field_regeneration,
+        )
 
         if not field or field in spec.canonical_attributes:
             raise AIProviderError("Selected Draft field is not eligible for regeneration")
