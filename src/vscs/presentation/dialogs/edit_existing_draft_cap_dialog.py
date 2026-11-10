@@ -95,6 +95,10 @@ class EditExistingDraftCAPDialog(QDialog):
         self.generate_button.setObjectName("generateExistingDraftFieldProposal")
         self.generate_button.clicked.connect(self._generate_proposal)
         layout.addWidget(self.generate_button)
+        self.load_cached_button = QPushButton("Load Latest Cached Field Proposal (No AI Charge)")
+        self.load_cached_button.setObjectName("loadCachedDraftFieldProposal")
+        self.load_cached_button.clicked.connect(self._load_cached_proposal)
+        layout.addWidget(self.load_cached_button)
         self.reject_button = QPushButton("Reject Generated Proposal (Keep Draft)")
         self.reject_button.setObjectName("rejectExistingDraftFieldProposal")
         self.reject_button.clicked.connect(self._reject_proposal)
@@ -140,6 +144,53 @@ class EditExistingDraftCAPDialog(QDialog):
         self.proposal_status.setText(
             "No generated proposal selected. The current Draft remains unchanged."
         )
+
+    def _load_cached_proposal(self) -> None:
+        """Reopen the last complete AI result; do not send a provider request."""
+        field = self.field.currentData()
+        if not isinstance(field, str):
+            return
+        self._reject_proposal()
+        try:
+            root = self.service.batch.generator.generator.assets.projects.project_directory
+            if root is None:
+                raise DraftCAPFieldGenerationError("No active project")
+            provider = self.service.batch.generator.generator.provider
+            cache = DraftCAPFieldProposalCache(root)
+            initial = prepare_field_request(
+                self.service,
+                self.snapshot,
+                field=field,
+                provider=provider,
+                generation_number=1,
+            )
+            last = cache.latest_completed_number(initial)
+            if last is None:
+                raise DraftCAPFieldGenerationError("No completed cached field proposal")
+            request = prepare_field_request(
+                self.service,
+                self.snapshot,
+                field=field,
+                provider=provider,
+                generation_number=last,
+            )
+            proposal = cache.load(request)
+            verify_proposal_for_review(self.service, request, proposal)
+            self._request = request
+            self._proposal = proposal
+            self.value.setPlainText(proposal.proposed_value)
+            self.rationale.setPlainText(
+                f"{proposal.rationale}\n\n"
+                f"Authority: {proposal.source_type}\n"
+                f"Request fingerprint: {proposal.request_fingerprint}"
+            )
+            self.proposal_status.setText(
+                f"Cached generated proposal {last} restored without provider charge."
+            )
+            if self.save_button is not None:
+                self.save_button.setEnabled(True)
+        except (RuntimeError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "Cached Field Proposal Unavailable", str(exc))
 
     def _generate_proposal(self) -> None:
         """One explicitly consented provider call; no draft save on generation."""
