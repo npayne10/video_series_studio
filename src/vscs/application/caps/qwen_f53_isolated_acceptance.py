@@ -127,21 +127,23 @@ def prepare_isolated_qwen_acceptance(
     graph["171"]["inputs"]["quality_mode"] = "standard"
     graph[inspected.sampler_node_id]["inputs"]["seed"] = seed
     queue = {
-        "jobs": [{
-            "job_id": "isolated-qwen-acceptance",
-            "asset_id": "F5_3_DISPOSABLE_GPU_SMOKE_TEST",
-            "asset_category": "test",
-            "reference_inputs": [str(source_copy)],
-            "positive_prompt": prompt.strip(),
-            "negative_prompt": "additional objects, changed identity, text overlays",
-            "generation": {"enable_turbo_mode": True},
-            "generation_policy": {"force_standard_mode": True},
-            "seed": seed,
-            "output": {
-                "candidate_directory": str(bundle),
-                "candidate_filename": _OUTPUT,
-            },
-        }]
+        "jobs": [
+            {
+                "job_id": "isolated-qwen-acceptance",
+                "asset_id": "F5_3_DISPOSABLE_GPU_SMOKE_TEST",
+                "asset_category": "test",
+                "reference_inputs": [str(source_copy)],
+                "positive_prompt": prompt.strip(),
+                "negative_prompt": "additional objects, changed identity, text overlays",
+                "generation": {"enable_turbo_mode": True},
+                "generation_policy": {"force_standard_mode": True},
+                "seed": seed,
+                "output": {
+                    "candidate_directory": str(bundle),
+                    "candidate_filename": _OUTPUT,
+                },
+            }
+        ]
     }
     _save_once(queue_path, queue)
     _save_once(bundle / _GRAPH, graph)
@@ -273,11 +275,14 @@ def execute_isolated_qwen_acceptance(
     provider.validate_nodes(graph)
     validate_managed_qwen_model_choices(graph, provider.object_info())
     # Record the one allowed attempt BEFORE a possibly ambiguous network POST.
-    _save_once(bundle / _RESERVATION, {
-        "status": "RESERVED_UNKNOWN_UNTIL_RESULT",
-        "graph_sha256": manifest["graph_sha256"],
-        "source_sha256": manifest["source_sha256"],
-    })
+    _save_once(
+        bundle / _RESERVATION,
+        {
+            "status": "RESERVED_UNKNOWN_UNTIL_RESULT",
+            "graph_sha256": manifest["graph_sha256"],
+            "source_sha256": manifest["source_sha256"],
+        },
+    )
     started = time.monotonic()
     prompt_id = provider.submit(graph)
     history = provider.wait(prompt_id, timeout_seconds=timeout_seconds)
@@ -335,13 +340,13 @@ def main() -> int:
             )
             print(json.dumps(asdict(result), indent=2, sort_keys=True))
         else:
-            result = execute_isolated_qwen_acceptance(
+            execution_result = execute_isolated_qwen_acceptance(
                 bundle_directory=args.bundle,
                 project_root=args.project_root,
                 operator_confirmed=args.confirm_one_gpu_run,
                 comfyui_url=args.comfyui_url,
             )
-            print(json.dumps(result, indent=2, sort_keys=True))
+            print(json.dumps(execution_result, indent=2, sort_keys=True))
         return 0
     except (
         GuidedEditExecutionError,
