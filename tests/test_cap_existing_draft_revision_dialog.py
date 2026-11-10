@@ -30,6 +30,7 @@ def _dialog(qtbot):
         ),
     )
     snapshot = SimpleNamespace(
+        story_id="STORY-001",
         asset_id="STORY-PRO-TEST",
         review=SimpleNamespace(fields=fields),
     )
