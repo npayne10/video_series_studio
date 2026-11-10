@@ -755,3 +755,36 @@ The operator executed **exactly one** GPU submission for the already prepared ex
 **Acceptance separation:** Hardware Qwen inference / PNG transport PASS; preservation of general console identity visually PASS; **specific edit-instruction adherence NOT established**. The test output remains an **external, unregistered** image, not a Candidate, MASTER, Canon or production reference. The operator still needs to independently inspect the original Gallery Candidate 3 and its saved genuine `HUMAN_REVIEW_REQUIRED` semantic report, verify both are unchanged, and confirm no new Candidate, CAP promotion or correction attempt was recorded. Never use the isolated image to replace Candidate 3 or modify the saved report.
 
 **Future engineering priority:** Improve managed Qwen edit instruction fidelity and the human-review disposition path as distinct projects. Do not treat the presence of a valid PNG as evidence that a precise physical design correction occurred; do not force a semantic regeneration result to enable a test.
+
+
+### B.5.26F F5.4 — Governed Human-Review Correction and Qwen Edit Fidelity
+
+**Implementation committed in GitHub; operator/regression acceptance pending.** F5.4 introduces a separate reviewer-signed correction disposition for a saved `HUMAN_REVIEW_REQUIRED` visual quality report. The original saved semantic report remains immutable, keeps its own model decision and score, and cannot be rewritten to `REGENERATE_RECOMMENDED`. The initial gated `REGENERATE_RECOMMENDED` provider path remains valid without a human disposition; F5.4 adds an independently checked human-review route.
+
+**Operator UI — use existing evidence and avoid duplicate AI charges:**
+
+1. Open the disposable project `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` and select **Diagnostic console**, asset `STORY-PRO-B00D168E43`.
+2. In **Canonical Reference Gallery**, select **Candidate 3**; ensure it is **Supplementary / Candidate / unapproved**. Do not modify Candidate 3, its prior evaluation JSON or CAP reviewed fields.
+3. Click **Record Human Correction From Saved Review…**. This uses the latest saved semantic report for the selected Candidate **without another OpenAI provider request**. If none exists, it fails closed.
+4. A separate **F5.4 — Human-Reviewed Candidate Correction** dialog opens. Select **one already accepted Draft CAP field** (for this console, the expected correction scope is `geometry`). Previously deferred or unreviewed fields are not available. Enter the real **Reviewer identity** and a specific factual **Observed visual discrepancy** of at least 15 characters, e.g. `The rotary dial is raised rather than recessed, and the adjacent workstation is not visibly separate.`. This sentence is human audit evidence only; it does not become new design authority or raw Qwen prompt instructions.
+5. Click **Save** only after the reviewer has independently inspected the original image. Cancel makes no decision. Saving writes one **exclusive immutable** `.human_correction.json` record beside the original `.candidate_quality.json` in the asset's evaluation metadata. The decision binds the image SHA-256, original report SHA-256, CAP specification fingerprint, review fingerprint, selected accepted field/value SHA-256, reviewer and observed discrepancy. Saving never approves, archives, promotes or modifies the semantic report, and never generates an image.
+6. Click **Correct From Saved Review…** to inspect the existing governed **Controlled Corrected Local Candidate** dialog. This time the service may prepare an attempt when a current, valid human disposition exists. Verify the source image, source report hash, accepted field, lineage and remaining **2 maximum** correction attempts. The existing source Candidate and signed record are revalidated before use; a stale or modified record causes a hard block.
+7. Review the automatically assembled edit prompt. F5.4 Qwen source conditioning now specifies the reviewer-selected **accepted field** as the edit target, keeps all accepted fields as preservation constraints, instructs strict control recesses and clear separation of distinct adjacent objects when the accepted CAP requires them, and prohibits invented features. The reviewer free text never enters the model prompt as Canon.
+8. **Do not click Generate One Qwen Image-Edited Candidate yet.** First run Ruff/Mypy/pytest and UI inspection, inspect F5 hardware readiness (no generation), compare the prepared prompt with accepted Geometry, confirm attempt budget and preserve a project backup. Generation still needs separate explicit operator consent, durable attempt reservation, current authority and an idle ComfyUI queue.
+9. If approved in a later checkpoint, only **one** controlled local correction may be submitted. The worker verifies the sealed reviewer disposition checksum before provider submission and after GPU execution, and the outcome creates a **new supplementary Candidate** (not a MASTER or Canon). Never reuse the F5.3 isolated acceptance bundle as a governed correction.
+
+**Limits:** A saved human disposition is **not** a provider semantic `regenerate` verdict; it is separate operator evidence. It does not grant implied approval, add a missing design attribute, change Candidate 3's existing score (semantic 88 / Draft design 75), override the two-attempt lineage budget or permit altering the original asset. For Candidate 3, the external F5.3 Qwen GPU output was valid but did not convincingly recess the dial or separate the workstation. F5.4 improves instruction fidelity but remains **unverified on real GPU** until a separately authorized governed correction is inspected.
+
+**Local acceptance commands** (run after GitHub pull):
+
+```powershell
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_visual_candidate_regeneration.py tests/test_cap_visual_candidate_quality.py tests/test_cap_managed_qwen_correction_job.py tests/test_cap_managed_qwen_worker_execution.py tests/test_cap_guided_edit_attempt_journal.py tests/test_cap_qwen_f53_isolated_acceptance.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+**Acceptance boundaries:** New UI entry point, immutable reviewer provenance, scoped plan eligibility, Qwen edit prompt and worker review-record checks are committed; static validation, local tests and operator walkthrough remain pending. The F5.3 GPU hardware inference result itself has already passed separately.
