@@ -16,7 +16,7 @@ from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.draft_cap_revision import DraftCAPRevisionSnapshot
 from vscs.application.caps.provider_design_expansion import (
     CAPSingleFieldRegenerationProvider,
-    validate_design_expansion,
+    validate_scoped_field_regeneration,
 )
 from vscs.application.caps.proposal_cache import cache_fingerprint, provider_cache_fingerprint
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
@@ -235,12 +235,9 @@ def generate_field_proposal(
         request.story_context,
         original.proposed_value,
     )
-    proposals = validate_design_expansion(request.snapshot.specification, response)
-    if set(proposals) != {request.field}:
-        raise DraftCAPFieldGenerationError(
-            "Provider must return exactly one scoped field proposal"
-        )
-    selected = proposals[request.field]
+    selected = validate_scoped_field_regeneration(
+        request.snapshot.specification, request.field, response
+    )
     issues = [issue for issue in assess_design_grounding(request.story_context, (selected,))]
     if issues:
         raise DraftCAPFieldGenerationError("Generated field failed source-grounding validation")
