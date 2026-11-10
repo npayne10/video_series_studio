@@ -124,9 +124,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.f5_preflight_button.setObjectName("checkQwenF5HardwareReadiness")
         self.f5_preflight_button.clicked.connect(self._inspect_f5_hardware)
         layout.addWidget(self.f5_preflight_button)
-        self.f5_release_memory_button = QPushButton(
-            "Release ComfyUI GPU Memory (Idle Queue Only)"
-        )
+        self.f5_release_memory_button = QPushButton("Release ComfyUI GPU Memory (Idle Queue Only)")
         self.f5_release_memory_button.setObjectName("releaseComfyUiGpuMemory")
         self.f5_release_memory_button.clicked.connect(self._release_comfyui_memory)
         layout.addWidget(self.f5_release_memory_button)
@@ -252,17 +250,13 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.f5_preflight_button.setEnabled(False)
         self._f5_preflight_sha256 = None
         self._f5_preflight_endpoint = None
-        self.f5_status_label.setText(
-            "F5 hardware readiness: RECHECK REQUIRED after cache cleanup."
-        )
+        self.f5_status_label.setText("F5 hardware readiness: RECHECK REQUIRED after cache cleanup.")
         try:
             endpoint = XCICConfiguration.load().comfyui_url
             result = AutomationProgressRunner(self).run(
                 "Release Idle ComfyUI GPU Memory",
                 self.plan.source.asset_id,
-                lambda: release_idle_comfyui_memory(
-                    comfyui_url=endpoint, operator_confirmed=True
-                ),
+                lambda: release_idle_comfyui_memory(comfyui_url=endpoint, operator_confirmed=True),
                 may_charge=False,
             )
             QMessageBox.information(
