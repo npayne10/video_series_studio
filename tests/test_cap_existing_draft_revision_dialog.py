@@ -57,11 +57,7 @@ def test_cancelled_field_confirmation_makes_no_write(qtbot, monkeypatch):
     dialog, _service = _dialog(qtbot)
     save = Mock()
     monkeypatch.setattr(ui, "save_draft_cap_field_revision", save)
-    monkeypatch.setattr(
-        QMessageBox,
-        "question",
-        lambda *_args: QMessageBox.StandardButton.No,
-    )
+    monkeypatch.setattr(QMessageBox, "warning", Mock())
     dialog._save()
     save.assert_not_called()
 
