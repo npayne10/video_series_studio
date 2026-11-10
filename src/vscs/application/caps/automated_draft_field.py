@@ -189,6 +189,10 @@ def prepare_field_request(
         raise DraftCAPFieldGenerationError("No approved Story or verified Shot context available")
     if generation_number < 1:
         raise DraftCAPFieldGenerationError("Invalid proposal sequence")
+    if not isinstance(provider, CAPSingleFieldRegenerationProvider):
+        raise DraftCAPFieldGenerationError(
+            "Configured CAP provider cannot regenerate one Draft field"
+        )
     story_context = "\n".join(trusted)
     identity = provider_cache_fingerprint(provider)
     digest = cache_fingerprint(
