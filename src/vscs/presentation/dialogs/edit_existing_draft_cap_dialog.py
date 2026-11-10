@@ -15,8 +15,10 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.automated_draft_field import (
-    DraftCAPFieldProposalCache,
+    CachedDraftCAPFieldProposal,
     DraftCAPFieldGenerationError,
+    DraftCAPFieldProposalCache,
+    DraftCAPFieldRequest,
     generate_field_proposal,
     prepare_field_request,
     verify_proposal_for_review,
@@ -26,6 +28,9 @@ from vscs.application.caps.draft_cap_revision import (
     DraftCAPRevisionError,
     DraftCAPRevisionSnapshot,
     save_draft_cap_field_revision,
+)
+from vscs.application.caps.provider_design_expansion import (
+    CAPSingleFieldRegenerationProvider,
 )
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
@@ -108,9 +113,9 @@ class EditExistingDraftCAPDialog(QDialog):
         )
         self.proposal_status.setWordWrap(True)
         layout.addWidget(self.proposal_status)
-        self._request = None
-        self._proposal = None
-        self.save_button = None
+        self._request: DraftCAPFieldRequest | None = None
+        self._proposal: CachedDraftCAPFieldProposal | None = None
+        self.save_button: QPushButton | None = None
         self._runner = AutomationProgressRunner(self)
         self.field.currentIndexChanged.connect(self._show_original)
         self._show_original()
@@ -199,6 +204,14 @@ class EditExistingDraftCAPDialog(QDialog):
             QMessageBox.warning(self, "Field Proposal", "Select a deferred field.")
             return
         provider = self.service.batch.generator.generator.provider
+        if not isinstance(provider, CAPSingleFieldRegenerationProvider):
+            QMessageBox.warning(
+                self,
+                "Unsupported CAP Provider",
+                "The configured provider cannot generate a scoped Draft field. "
+                "No paid request has been submitted.",
+            )
+            return
         projects = self.service.batch.generator.generator.assets.projects
         root = projects.project_directory
         if root is None:
