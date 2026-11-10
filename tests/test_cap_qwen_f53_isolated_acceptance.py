@@ -180,11 +180,13 @@ def test_ambiguous_post_failure_preserves_reservation_and_blocks_retry(tmp_path,
 
 
 def test_wrong_project_is_rejected_before_provider(tmp_path):
-    project, _source, bundle, _ = _prepared(tmp_path)
+    _project, _source, bundle, _ = _prepared(tmp_path)
     other = tmp_path / "other_project"
     other.mkdir()
     client = SimpleNamespace(submit=Mock(), healthcheck=Mock())
-    with pytest.raises(isolated.IsolatedQwenAcceptanceError, match="changed"):
+    with pytest.raises(
+        isolated.IsolatedQwenAcceptanceError, match="Original source is outside"
+    ):
         isolated.execute_isolated_qwen_acceptance(
             bundle_directory=bundle,
             project_root=other,
@@ -202,12 +204,6 @@ def test_busy_comfyui_queue_blocks_live_execution(tmp_path, monkeypatch):
         isolated,
         "_ensure_idle_local_queue",
         Mock(side_effect=isolated.IsolatedQwenAcceptanceError("ComfyUI is busy")),
-    )
-    client = SimpleNamespace(
-        healthcheck=Mock(),
-        validate_nodes=Mock(),
-        object_info=Mock(return_value={}),
-        submit=submitted,
     )
     with pytest.raises(isolated.IsolatedQwenAcceptanceError, match="busy"):
         # A real live call has the queue check; this verifies its fail-closed helper.
