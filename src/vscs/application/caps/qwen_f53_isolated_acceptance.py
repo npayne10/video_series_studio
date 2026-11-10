@@ -11,7 +11,6 @@ import argparse
 import copy
 import hashlib
 import json
-import shutil
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -28,10 +27,7 @@ from vscs.application.caps.managed_qwen_edit_inspection import (
 from vscs.application.caps.managed_qwen_model_inventory import (
     validate_managed_qwen_model_choices,
 )
-from vscs.application.caps.qwen_f5_preflight import (
-    default_workflow_path,
-    inspect_qwen_f5_hardware,
-)
+from vscs.application.caps.qwen_f5_preflight import default_workflow_path
 from vscs.infrastructure.xcic_core.client import XCICCoreClient
 
 _MAX_IMAGE_BYTES = 40 * 1024 * 1024
@@ -105,7 +101,7 @@ def prepare_isolated_qwen_acceptance(
         raise IsolatedQwenAcceptanceError("Invalid deterministic edit seed")
     bundle, project = _ensure_external(bundle_directory, project_root)
     original = source_image.resolve(strict=True)
-    if original.is_symlink() or not original.is_file() or project not in original.parents:
+    if source_image.is_symlink() or not original.is_file() or project not in original.parents:
         raise IsolatedQwenAcceptanceError("Source must be a regular file in the active project")
     if original.suffix.lower() != ".png":
         raise IsolatedQwenAcceptanceError("Source Candidate must be a PNG image")
@@ -195,17 +191,33 @@ def execute_isolated_qwen_acceptance(
     manifest = _json(bundle / _MANIFEST)
     graph = _json(bundle / _GRAPH)
     queue = _json(bundle / _QUEUE)
+    original_text = manifest.get("original_source_path")
+    original_path = Path(original_text) if isinstance(original_text, str) else project
+    if (
+        not original_path.is_file()
+        or original_path.is_symlink()
+        or project not in original_path.resolve(strict=True).parents
+    ):
+        raise IsolatedQwenAcceptanceError("Original source is outside the active project")
+    jobs = queue.get("jobs")
+    if not isinstance(jobs, list) or len(jobs) != 1 or not isinstance(jobs[0], dict):
+        raise IsolatedQwenAcceptanceError("Acceptance queue must contain exactly one job")
+    item = jobs[0]
     if (
         manifest.get("kind") != "ISOLATED_QWEN_GPU_ACCEPTANCE_NO_CAP"
         or manifest.get("project_root") != str(project)
         or manifest.get("source_sha256") != _hash(bundle / _SOURCE)
-        or manifest.get("original_source_sha256") != _hash(Path(manifest["original_source_path"]))
+        or manifest.get("original_source_sha256") != _hash(original_path)
         or manifest.get("graph_sha256") != _hash(bundle / _GRAPH)
         or manifest.get("queue_sha256") != _hash(bundle / _QUEUE)
         or graph.get("171", {}).get("inputs", {}).get("queue_file") != str(bundle / _QUEUE)
-        or queue.get("jobs", [{}])[0].get("reference_inputs") != [str(bundle / _SOURCE)]
-        or queue.get("jobs", [{}])[0].get("output", {}).get("candidate_directory") != str(bundle)
-        or queue.get("jobs", [{}])[0].get("output", {}).get("candidate_filename") != _OUTPUT
+        or item.get("reference_inputs") != [str(bundle / _SOURCE)]
+        or not isinstance(item.get("output"), dict)
+        or item["output"].get("candidate_directory") != str(bundle)
+        or item["output"].get("candidate_filename") != _OUTPUT
+        or item.get("positive_prompt") != manifest.get("prompt")
+        or item.get("seed") != manifest.get("seed")
+        or graph.get("170:169", {}).get("inputs", {}).get("seed") != manifest.get("seed")
         or manifest.get("candidate_registration_allowed") is not False
         or manifest.get("correction_attempt_allowed") is not False
         or manifest.get("canon_mutation_allowed") is not False
