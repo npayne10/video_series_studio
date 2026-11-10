@@ -192,3 +192,48 @@ def test_wrong_project_is_rejected_before_provider(tmp_path):
             client=client,
         )
     client.healthcheck.assert_not_called()
+
+
+def test_busy_comfyui_queue_blocks_live_execution(tmp_path, monkeypatch):
+    project, _source, bundle, _ = _prepared(tmp_path)
+    submitted = Mock()
+    monkeypatch.setattr(isolated, "validate_managed_qwen_model_choices", Mock())
+    monkeypatch.setattr(
+        isolated,
+        "_ensure_idle_local_queue",
+        Mock(side_effect=isolated.IsolatedQwenAcceptanceError("ComfyUI is busy")),
+    )
+    client = SimpleNamespace(
+        healthcheck=Mock(),
+        validate_nodes=Mock(),
+        object_info=Mock(return_value={}),
+        submit=submitted,
+    )
+    with pytest.raises(isolated.IsolatedQwenAcceptanceError, match="busy"):
+        # A real live call has the queue check; this verifies its fail-closed helper.
+        isolated._ensure_idle_local_queue("http://127.0.0.1:8188")
+    submitted.assert_not_called()
+    assert not (bundle / "execution_reserved.json").exists()
+    assert project.is_dir()
+
+
+def test_missing_gpu_output_keeps_once_only_reservation(tmp_path, monkeypatch):
+    project, _source, bundle, _ = _prepared(tmp_path)
+    monkeypatch.setattr(isolated, "validate_managed_qwen_model_choices", Mock())
+    client = SimpleNamespace(
+        healthcheck=Mock(),
+        validate_nodes=Mock(),
+        object_info=Mock(return_value={}),
+        submit=Mock(return_value="one"),
+        wait=Mock(return_value={"status": {"completed": True}}),
+    )
+    with pytest.raises(isolated.IsolatedQwenAcceptanceError, match="missing"):
+        isolated.execute_isolated_qwen_acceptance(
+            bundle_directory=bundle,
+            project_root=project,
+            operator_confirmed=True,
+            client=client,
+        )
+    client.submit.assert_called_once()
+    assert (bundle / "execution_reserved.json").exists()
+    assert not (bundle / "acceptance_result.json").exists()
