@@ -34,7 +34,11 @@ def _fixture():
         asset_id="STORY-PRO-TEST",
         category=AssetCategory.PROP,
         design_intent="Diagnostic console",
-        canonical_attributes={"components": "Blue display", "materials": "Graphite"},
+        canonical_attributes={
+            "components": "Blue display",
+            "materials": "Graphite",
+            "scale": "1.10 m high, 0.55 m wide, 0.40 m deep",
+        },
         master_prompt="Unapproved proposal",
     )
     fields = (
@@ -53,6 +57,14 @@ def _fixture():
             decision=DetailDecision.ACCEPT,
             origin=DetailOrigin.DESIGN_PROPOSAL,
             evidence="Reviewed materials",
+        ),
+        DesignFieldReview(
+            field="scale",
+            proposed_value="1.10 m high, 0.55 m wide, 0.40 m deep",
+            final_value="1.10 m high, 0.55 m wide, 0.40 m deep",
+            decision=DetailDecision.ACCEPT,
+            origin=DetailOrigin.DESIGN_PROPOSAL,
+            evidence="Reviewed scale",
         ),
         DesignFieldReview(
             field="geometry",
@@ -85,9 +97,7 @@ def _fixture():
     repo = SimpleNamespace(compare_and_swap_draft_metadata=Mock())
     caps = SimpleNamespace(
         get=Mock(return_value=cap),
-        assets=SimpleNamespace(
-            get=Mock(return_value=SimpleNamespace(category=AssetCategory.PROP))
-        ),
+        assets=SimpleNamespace(get=Mock(return_value=SimpleNamespace(category=AssetCategory.PROP))),
         repository=repo,
     )
     batch = SimpleNamespace(
@@ -122,6 +132,7 @@ def test_revise_deferred_field_preserves_accepted_review_and_unrelated_metadata(
     )
     assert revised.canonical_attributes["components"] == "Blue display"
     assert revised.canonical_attributes["materials"] == "Graphite"
+    assert revised.canonical_attributes["scale"] == "1.10 m high, 0.55 m wide, 0.40 m deep"
     assert revised.canonical_attributes["geometry"] == "Operator-reviewed rectangular housing"
     kwargs = repo.compare_and_swap_draft_metadata.call_args.kwargs
     assert kwargs["expected"] == cap.production_metadata
@@ -133,6 +144,7 @@ def test_revise_deferred_field_preserves_accepted_review_and_unrelated_metadata(
     assert [(f["field"], f["decision"]) for f in audit["fields"]] == [
         ("components", "accept"),
         ("materials", "accept"),
+        ("scale", "accept"),
         ("geometry", "edit"),
     ]
     history = json.loads(new_meta[REVISION_HISTORY_KEY])
@@ -145,8 +157,12 @@ def test_cannot_change_already_accepted_field():
     snap = prepare_draft_cap_revision(service, "STORY-001", cap.asset_id)
     with pytest.raises(DraftCAPRevisionError, match="deferred/rejected"):
         save_draft_cap_field_revision(
-            service, snap, field="materials", reviewed_value="Steel",
-            rationale="Would overwrite accepted value", reviewer="Operator",
+            service,
+            snap,
+            field="materials",
+            reviewed_value="Steel",
+            rationale="Would overwrite accepted value",
+            reviewer="Operator",
         )
     repo.compare_and_swap_draft_metadata.assert_not_called()
 
@@ -156,8 +172,12 @@ def test_requires_nonempty_value_rationale_and_reviewer():
     snap = prepare_draft_cap_revision(service, "STORY-001", cap.asset_id)
     with pytest.raises(DraftCAPRevisionError, match="required"):
         save_draft_cap_field_revision(
-            service, snap, field="geometry", reviewed_value="Rectangle",
-            rationale="", reviewer="Operator",
+            service,
+            snap,
+            field="geometry",
+            reviewed_value="Rectangle",
+            rationale="",
+            reviewer="Operator",
         )
     repo.compare_and_swap_draft_metadata.assert_not_called()
 
@@ -175,8 +195,12 @@ def test_rejects_stale_story_or_context_before_write():
     service.batch.current_story_fingerprint.return_value = "story-changed"
     with pytest.raises(DraftCAPRevisionError, match="Story changed"):
         save_draft_cap_field_revision(
-            service, snap, field="geometry", reviewed_value="Rectangle",
-            rationale="Reviewed", reviewer="Operator",
+            service,
+            snap,
+            field="geometry",
+            reviewed_value="Rectangle",
+            rationale="Reviewed",
+            reviewer="Operator",
         )
     repo.compare_and_swap_draft_metadata.assert_not_called()
 
