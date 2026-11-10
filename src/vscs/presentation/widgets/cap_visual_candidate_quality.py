@@ -296,9 +296,38 @@ def _correct_from_saved_report(dialog: Any) -> None:
         dialog._refresh_references()
 
 
+def _record_human_from_saved_report(dialog: Any) -> None:
+    """Use previously billed semantic evidence; no new AI provider call."""
+    gallery = getattr(dialog, "reference_gallery", None)
+    selected = None if gallery is None else gallery.selected_reference()
+    profile = getattr(dialog, "profile", None)
+    refs = getattr(dialog, "reference_service", None)
+    if selected is None or profile is None or refs is None:
+        QMessageBox.information(dialog, "Human Review", "Select a local Candidate first.")
+        return
+    try:
+        service = CandidateRegenerationService(refs)
+        saved_report = service.latest_semantic_report(profile.asset_id, selected.id)
+        snapshot = service.quality.snapshot(profile.asset_id, selected.id)
+        editor = HumanCorrectionDispositionDialog(snapshot, saved_report, dialog)
+    except (OSError, RuntimeError, ValueError) as exc:
+        QMessageBox.warning(dialog, "Human Correction Unavailable", str(exc))
+        return
+    if editor.exec() == QDialog.DialogCode.Accepted:
+        QMessageBox.information(
+            dialog,
+            "Human Correction Recorded",
+            "Review finding saved separately from the semantic report. "
+            "Now select 'Correct From Saved Review…' to inspect attempt "
+            "eligibility and the proposed source-conditioned edit. "
+            "No generation has occurred.",
+        )
+
+
 def _update_button(dialog: Any) -> None:
     button = getattr(dialog, "candidate_quality_button", None)
     correction_button = getattr(dialog, "candidate_correction_button", None)
+    human_button = getattr(dialog, "candidate_human_correction_button", None)
     gallery = getattr(dialog, "reference_gallery", None)
     selected = None if gallery is None else gallery.selected_reference()
     from vscs.domain.caps import (
@@ -318,6 +347,8 @@ def _update_button(dialog: Any) -> None:
         button.setEnabled(enabled)
     if correction_button is not None:
         correction_button.setEnabled(enabled)
+    if human_button is not None:
+        human_button.setEnabled(enabled)
 
 
 def install_visual_candidate_quality_review() -> None:
@@ -344,6 +375,20 @@ def install_visual_candidate_quality_review() -> None:
         )
         self.candidate_correction_button.clicked.connect(lambda: _correct_from_saved_report(self))
         self.layout().insertWidget(3, self.candidate_correction_button)
+        self.candidate_human_correction_button = QPushButton(
+            "Record Human Correction From Saved Review…"
+        )
+        self.candidate_human_correction_button.setObjectName(
+            "recordHumanCorrectionFromSavedReview"
+        )
+        self.candidate_human_correction_button.setToolTip(
+            "Use saved semantic evidence, no repeat OpenAI charge; "
+            "record a separately attributable correction finding."
+        )
+        self.candidate_human_correction_button.clicked.connect(
+            lambda: _record_human_from_saved_report(self)
+        )
+        self.layout().insertWidget(4, self.candidate_human_correction_button)
         if hasattr(self, "reference_gallery"):
             self.reference_gallery.gallery.currentItemChanged.connect(
                 lambda *_: _update_button(self)
