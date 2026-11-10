@@ -93,7 +93,9 @@ def test_rejection_clears_generated_proposal_and_blocks_save(qtbot):
 
 def _automatic_test_setup(dialog, service, monkeypatch, tmp_path):
     service.batch.generator.generator.assets.projects.project_directory = tmp_path
-    service.batch.generator.generator.provider = Mock()
+    service.batch.generator.generator.provider = SimpleNamespace(
+        regenerate_draft_cap_field=Mock()
+    )
     request = SimpleNamespace(field="geometry")
     proposal = SimpleNamespace(
         field="geometry",
