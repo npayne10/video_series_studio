@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, or_, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
@@ -141,6 +141,43 @@ class CAPRepository:
                 return self._to_domain(record)
         except SQLAlchemyError as exc:
             raise CAPRepositoryError(f"Unable to update CAP for {asset_id}: {exc}") from exc
+
+    def compare_and_swap_draft_metadata(
+        self,
+        asset_id: str,
+        *,
+        expected: dict[str, str],
+        replacement: dict[str, str],
+    ) -> CanonicalAssetProfile:
+        """Atomically replace only unchanged Draft metadata, or reject stale edits."""
+        prior = self._serialize_json(expected)
+        updated = self._serialize_json(replacement)
+        try:
+            with self.database.session() as session:
+                result = session.execute(
+                    update(CanonicalAssetProfileRecord)
+                    .where(
+                        CanonicalAssetProfileRecord.asset_id == asset_id,
+                        CanonicalAssetProfileRecord.status == CAPStatus.DRAFT.value,
+                        CanonicalAssetProfileRecord.production_metadata_json == prior,
+                    )
+                    .values(production_metadata_json=updated)
+                )
+                if result.rowcount != 1:
+                    raise CAPRepositoryError(
+                        "Draft CAP changed, was approved, or no longer exists; "
+                        "reopen the review before saving"
+                    )
+                record = session.scalar(
+                    select(CanonicalAssetProfileRecord).where(
+                        CanonicalAssetProfileRecord.asset_id == asset_id
+                    )
+                )
+                if record is None:
+                    raise CAPRepositoryError("Draft CAP disappeared during revision")
+                return self._to_domain(record)
+        except SQLAlchemyError as exc:
+            raise CAPRepositoryError(f"Unable to revise Draft metadata: {exc}") from exc
 
     def delete(self, asset_id: str) -> bool:
         try:
