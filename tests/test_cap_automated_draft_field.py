@@ -34,8 +34,8 @@ class _Provider:
         self.calls = []
         self.fields = fields
 
-    def expand_cap_design(self, spec, story_context):
-        self.calls.append((spec, story_context))
+    def regenerate_draft_cap_field(self, spec, field, story_context, original_proposal):
+        self.calls.append((spec, field, story_context, original_proposal))
         fields = self.fields
         if fields is None:
             fields = (
@@ -118,7 +118,9 @@ def test_scoped_provider_receives_only_accepted_attributes_and_authoritative_sto
     assert proposal.field == "geometry"
     assert proposal.source_type.startswith("AI-proposed design")
     assert len(provider.calls) == 1
-    spec, source = provider.calls[0]
+    spec, field, source, original = provider.calls[0]
+    assert field == "geometry"
+    assert original == ""
     assert spec.canonical_attributes["components"] == "Blue display"
     assert "diagnostic console" in source.lower()
     assert "UNVERIFIED" not in source
@@ -155,7 +157,8 @@ def test_cache_reservation_and_reopen_are_non_authoritative(tmp_path):
     cache = DraftCAPFieldProposalCache(tmp_path)
     assert cache.next_number(request) == 1
     cache.reserve(request)
-    assert cache.next_number(request) == 2
+    with pytest.raises(DraftCAPFieldGenerationError, match="unresolved"):
+        cache.next_number(request)
     with pytest.raises(DraftCAPFieldGenerationError, match="already reserved"):
         cache.reserve(request)
     proposal = generate_field_proposal(request, provider)
