@@ -629,6 +629,8 @@ def test_f54_human_review_requires_separate_immutable_disposition(tmp_path):
     assert plan.human_correction_field == "layout"
     assert plan.human_disposition_sha256 == digest
     assert plan.human_disposition_path == decision
+    assert plan.lineage["human_disposition_sha256"] == digest
+    assert plan.lineage["human_correction_field"] == "layout"
     assert plan.attempt == 1
     assert "SOURCE-CONDITIONED EDIT SCOPE" in plan.request.prompt
     assert "ONE access door" in plan.request.prompt
