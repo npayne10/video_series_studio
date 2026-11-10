@@ -163,7 +163,7 @@ class CAPRepository:
                     )
                     .values(production_metadata_json=updated)
                 )
-                if result.rowcount != 1:
+                if getattr(result, "rowcount", 0) != 1:
                     raise CAPRepositoryError(
                         "Draft CAP changed, was approved, or no longer exists; "
                         "reopen the review before saving"
