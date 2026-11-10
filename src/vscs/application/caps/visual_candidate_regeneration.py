@@ -11,6 +11,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from vscs.application.caps.human_review_disposition import (
+    verify_human_correction_disposition,
+)
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_candidate_generation import VisualCandidateGenerationService
 from vscs.application.caps.visual_candidate_quality import (
@@ -42,6 +45,9 @@ class CandidateRegenerationPlan:
     previous_technical_score: int
     previous_semantic_score: int
     effectiveness_warnings: tuple[str, ...]
+    human_disposition_path: Path | None = None
+    human_disposition_sha256: str | None = None
+    human_correction_field: str | None = None
 
     @property
     def lineage(self) -> dict[str, str | int]:
@@ -188,10 +194,21 @@ class CandidateRegenerationService:
                 )
         if data.get("reviewed_fields") != dict(snapshot.accepted_fields):
             raise CandidateRegenerationError("Reviewed fields changed since image evaluation")
-        if data.get("decision") != "REGENERATE_RECOMMENDED":
+        decision = data.get("decision")
+        if decision not in {"REGENERATE_RECOMMENDED", "HUMAN_REVIEW_REQUIRED"}:
             raise CandidateRegenerationError("Regeneration requires a recorded review failure")
         semantic = data.get("semantic")
-        if not isinstance(semantic, dict) or semantic.get("decision") != "regenerate":
+        if not isinstance(semantic, dict):
+            raise CandidateRegenerationError("Controlled correction requires a failed semantic review")
+        human_path: Path | None = None
+        human_sha: str | None = None
+        human_field: str | None = None
+        if decision == "HUMAN_REVIEW_REQUIRED":
+            # This is an independent reviewer decision, NOT a rewritten semantic result.
+            human_path, human_sha, human_field = verify_human_correction_disposition(
+                snapshot, path
+            )
+        elif semantic.get("decision") != "regenerate":
             raise CandidateRegenerationError(
                 "Controlled correction requires a failed semantic review, "
                 "not technical scores alone"
@@ -262,6 +279,19 @@ class CandidateRegenerationService:
             )
             else ""
         )
+        fidelity_instruction = (
+            "\nF5.4 SOURCE-CONDITIONED EDIT SCOPE: Preserve the existing source "
+            "image's identity, materials, screen, visible button count, side grips, "
+            "perspective and studio lighting. Modify only the accepted CAP field "
+            f"'{human_field}' against its mandatory reviewed value: "
+            f"{dict(snapshot.accepted_fields)[human_field]}. "
+            "Do not copy unreviewed objects into the result. Keep the console "
+            "physically separate from an adjacent workstation. A rotary dial "
+            "specified as recessed must be below or flush with the surrounding "
+            "shelf, not raised. Do not introduce unrelated features. "
+            if human_field is not None
+            else ""
+        )
         prompt = (
             current.master_candidate_prompt
             + "\nCONTROLLED B.5.26D CORRECTION — only reviewed Draft details below "
@@ -281,6 +311,7 @@ class CandidateRegenerationService:
             "beyond the reviewed design; deferred features remain undecided. "
             "Show a complete, coherent reference composition. "
             "This is a visual proposal only, not Canon or MASTER."
+            + fidelity_instruction
         )
         # Explicitly change seed to avoid silently repeating identical output.
         manifest = json.loads(self._manifest_path(snapshot).read_text(encoding="utf-8"))
@@ -310,6 +341,9 @@ class CandidateRegenerationService:
             previous_technical_score=technical_score,
             previous_semantic_score=overall,
             effectiveness_warnings=tuple(warnings),
+            human_disposition_path=human_path,
+            human_disposition_sha256=human_sha,
+            human_correction_field=human_field,
         )
 
     def verify_current(self, plan: CandidateRegenerationPlan) -> None:
