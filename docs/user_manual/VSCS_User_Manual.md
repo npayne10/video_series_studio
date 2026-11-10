@@ -440,3 +440,82 @@ When a separately governed **Approved Primary** image exists for the selected CA
 
 
 **B.5.26D corrective-generation visibility safeguard (2026-11-07):** On the disposable acceptance project, the first Yes confirmation was followed by no visible progress and no second reference. The control now compares the Qt confirmation value by equality (not Python object identity), blocks duplicate submissions, and reports *all* unexpected Python exceptions at the exact preflight, render, post-render, or reference-persistence stage. It also logs exception traces to the application's configured Python logging service. A preflight failure guarantees no GPU render was initiated; a later failure may already have rendered an image, so inspect the Gallery and ComfyUI history before retrying. The original Candidate and approved-cap authority must be unchanged, and any new Candidate remains non-authoritative. Verify this with `test_clicked_generate_button_reports_unexpected_preflight_failure` and `test_unexpected_qt_slot_exception_is_visible_and_retry_safe`. Do not assume that a silent click constitutes a successful operation.
+
+
+## B.5.26F — Qwen Image Editing, F5 Hardware Tests and GPU Memory Release (operator procedure)
+
+**Documentation status (2026-11-10):** F5.1 and F5.2 have passed local Ruff, Mypy and automated tests (**2,681 passed, 1 Windows directory-symlink skip**). The operator has verified that the new cache-release button submits an accepted `/free` request and a subsequent read-only F5 preflight reports approximately **14,174 MiB available of 16,311 MiB** on the RTX 5060 Ti. **Actual Qwen-Image-Edit-2511 inference and Candidate registration on this hardware have NOT been accepted.** A successful cache release is not an image-generation test.
+
+### F5.0 Mandatory procedure for every testing recommendation or new VSCS function
+
+All future development recommendations, not just formal test plans, **must include concrete step-by-step instructions for the operator** when they imply creating, choosing, configuring, editing, evaluating, testing or accepting anything. An instruction like *"use a fresh disposable Candidate lineage"* is **incomplete** without the exact project creation, CAP prerequisites, Candidate generation, review, authority and checkpoint actions documented below.
+
+For every feature acceptance update, document and supply:
+
+1. **Purpose and test classification:** read-only, mocked/unit, disposable local hardware, paid-provider or production; never equate one with another.
+2. **Actual entry point:** VSCS menu/navigation, exact button label and project/asset/reference identifiers; distinguish code-confirmed screens from operator-verified screens.
+3. **Starting state:** GitHub branch, fresh or reused project directory, source and reviewed CAP status, prior Candidate lineage, ComfyUI installation/queue, model inventory, VRAM and cost implications.
+4. **Isolation:** what must remain unchanged, what disposable files will be created, and how to avoid using a previously exhausted or final-attempt lineage.
+5. **Numbered actions:** one action per step, expected UI response and stop condition. Do not say simply "create a test Candidate" without the prerequisite workflow.
+6. **Evidence:** report filename/ID, source and resulting Candidate IDs, source/report hashes, ComfyUI prompt ID where applicable, free/peak GPU memory, elapsed time, screenshots and relevant logs.
+7. **Failure and retry policy:** whether a job could already have been submitted, where the once-only journal resides, and how to reconcile uncertainty before retrying.
+8. **Pass/fail criteria:** static/automated, real UI, local provider inference, image quality and governance acceptance are separate stages.
+9. **Documentation:** update **this living manual and `docs/user_manual/README.md` in the same GitHub branch and implementation increment**; add or update tests and operator screenshots after real UI verification. Mark incomplete/untested details explicitly.
+
+Never fabricate sample CAP evidence, manually edit project SQLite, overwrite approved records, duplicate saved semantic reports as if new, or bypass a governance gate to make a test pass.
+
+### F5.1 Choosing and creating a clean disposable test environment — step by step
+
+**Current preserved example:** `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` contains an Engineering Control Room supplementary **Candidate 2**, with a saved failed semantic report and **correction attempt 2/2**. The operator has visually confirmed this. **Do not use Candidate 2 for the initial hardware qualification or check its final-attempt acknowledgment.** Earlier B5_22 work is an existing acceptance baseline, not a blank project.
+
+**Preferred F5.3 hardware-test setup (some CAP screens still require operator UI verification):**
+
+1. Complete all repository static and automated regression checks before creating or modifying a project. Preserve any existing untracked audit/measurement files.
+2. Open VSCS and choose **File → New Project** (project-creation path verified in section 2.1). Choose an **unused directory and distinct project name**, for example `B5_26F_F53_QWEN_DISPOSABLE_01`. Do **not** copy or reopen `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` as the "fresh" test: that may carry existing manifests, review reports and correction budgets.
+3. Confirm **Dashboard → Active Project** shows the new project and directory. Stop if VSCS still shows B5_22 or a production project.
+4. Create/import a *small, original, disposable* Story source following **section 3.1**, fill genuine metadata, run **Analyse Story** once (provider-backed and potentially billable), review the analysis, then **Approve** it following sections 3.2–3.3. Do not reuse an accepted production Story or assume analysis/approval because a title is visible. **If the CAP test can legitimately be set up with a simpler already-supported path, verify it in the UI rather than inventing a shortcut.**
+5. Through the existing **Story → Automation → Planning Proposals… / Review Proposals… / Compile Accepted…** sequence in section 4.2, create only the governed records genuinely required for the disposable CAP. Confirm actual production-planning records; a generated proposal is not compiled authority. **Do not rerun proposal generation merely to obtain a convenient asset.**
+6. Use the documented **asset discovery and reviewed Draft CAP** workflow in section 6 to register/select a new **disposable location asset** such as a simple engineering control room. Prepare the CAP context/queue, inspect the proposed attributes and save a genuine, human-reviewed Draft. Confirm accepted geometry/materials; leave unknown attributes deferred. Stop on CAP blockers. **Do not manufacture accepted values or edit a database/manifest to get past readiness.**
+7. Select that new asset in **Canonical Profiles → Edit Selected**, then open **Prepare Visual Identity…** as documented in B.5.26A–B. Verify no unresolved blockers. Select **Generate One Local Image Candidate (ComfyUI)** and approve **one** local rendering only if you intend to create the disposable test input. This is a *separate text-to-image generation*, not yet the Qwen image-edit test. Review the returned **Supplementary Candidate** in **Canonical Reference Gallery**; record its reference ID, asset ID and image path.
+8. Select **that Candidate** and click **Review Visual Candidate…** (B.5.26C). **No** executes free technical checks only, **Cancel** does nothing, and **Yes** additionally authorizes one **billable OpenAI semantic review**. An actual F3 governed correction requires a **genuine failed semantic report** with `REGENERATE_RECOMMENDED` and a `regenerate` decision; a technical-only report cannot substitute. Review the result. If the first image passes, **do not falsify a failure**: use a different naturally failing disposable image or stop and report that the prerequisite is not met. Obtain explicit cost approval before selecting Yes.
+9. From the failed report click **Prepare Corrected Local Candidate…**, or later select the same Candidate and **Correct From Saved Review…** (no repeat paid review). Verify the correct source image, displayed asset/reference ID, accepted CAP fields and **Attempt 1/2** on a genuinely fresh lineage. If it shows **2/2**, a previous reservation, or a mismatched asset, **stop**; do not click either generation button.
+10. Only after passing the read-only checks below and receiving separate operator approval should you perform the **one** F5.3 Qwen image-edit GPU request. Capture the actual output and leave Canon/MASTER unchanged. A new supplementary Candidate is not an approved reference.
+
+**Important:** Steps 4–7 are grounded in documented VSCS workflows but the full new-project-to-CAP route has **not been walked end to end for F5.3**. Treat each screen as a checkpoint. If a button, prerequisite or status differs, **stop and report the exact UI state** rather than creating a false test environment or improvising files. Do not use B5_19A_ACCEPTANCE or an actual Xorix production project as a disposable workaround.
+
+### F5.1 Read-only dual workflow and hardware inspection — step by step
+
+1. Start ComfyUI at the configured local endpoint, normally `http://127.0.0.1:8188`. Confirm its console has finished startup and no prompt is queued.
+2. Open the governed correction dialog for the intended **disposable** source Candidate; inspect its source ID, attempt number, reviewed CAP fields and advisory findings.
+3. Click **Inspect Both Workflows (No Generation)**. The report has **A. LEGACY XCIC — TEXT-TO-IMAGE**, which lacks source-image editing, and **B. MANAGED QWEN-IMAGE-EDIT-2511 — SOURCE-CONDITIONED**, which checks the actual edit graph. It reports that a validated spatial **mask/inpainting path is not available**. The legacy lack of editing nodes must not be interpreted as the managed Qwen workflow failing.
+4. Click **Check Qwen F5 Hardware Readiness (No Generation)**. Read the returned status, endpoint, workflow SHA-256, Qwen node/model choices and reported GPU free/total VRAM. A valid **`PREFLIGHT_READY_NO_GPU_INFERENCE`** means only *readiness*—not successful GPU inference. If `BLOCKED` or `ERROR`, stop.
+5. For a final attempt **2/2**, the separate unchecked **final-attempt acknowledgement** appears. Do **not** check it for the preserved Candidate 2; use the fresh lineage above.
+6. Close/cancel the dialog. Confirm no generated Candidate, ComfyUI prompt or `guided_edit_attempts` journal was created by these two inspection actions.
+
+### F5.2 Release ComfyUI GPU Memory (Idle Queue Only) — step by step
+
+1. Make sure **no ComfyUI job is running or pending**; stop other tools from submitting prompts during the operation. The button checks `GET /queue`, but there is no server-side atomic lock against another client's submission.
+2. Open the controlled correction dialog. Click **Release ComfyUI GPU Memory (Idle Queue Only)**.
+3. Read the separate Yes/No confirmation. Click **No** to test cancellation (no request) or **Yes** to request cleanup. It **must refuse** a busy/unknown queue.
+4. On Yes, VSCS sends a single local `POST /free` with `unload_models=true` and `free_memory=true`. Confirm the **ComfyUI Cache Release Requested** message. A 2xx response confirms request acceptance; it does **not** prove a specific number of MiB was reclaimed.
+5. Confirm the F5 status changes to **RECHECK REQUIRED**. Click **Check Qwen F5 Hardware Readiness (No Generation)** again; record the new free/total VRAM and compare against the previous snapshot. In the operator's 2026-11-10 acceptance, the preflight measured **14,174 MiB free / 16,311 MiB total** with Qwen inventory valid.
+6. If cleanup fails or the queue is busy, stop and retain the error; do not retry while work is running. The cleanup button does **not** submit any GPU inference, reserve a CAP correction attempt or register an image.
+
+**Status:** F5.2 software regression **2,681 passed, 1 environmental skip**, UI button present, local idle-queue `/free` accepted, and post-cleanup readiness/VRAM observed. The actual RTX 5060 Ti Qwen generation test remains **unperformed**.
+
+### F5.3 Controlled Qwen Image Edit — only after a valid disposable source exists
+
+1. Record the disposable project's project path, asset ID, source Candidate ID, original correction lineage, saved failed semantic report and attempt number. Confirm no existing `Canonical Assets/<asset>/.metadata/guided_edit_attempts/root_<original-id>_attempt_<n>.json` reservation. Do **not** remove a journal file to force a retry.
+2. Run **Inspect Both Workflows** and **Check Qwen F5 Hardware Readiness** in the same correction dialog. Optionally release models first while idle, then rerun readiness; cleanup invalidates the prior readiness result.
+3. Start `nvidia-smi --query-gpu=timestamp,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv -l 2` in a separate PowerShell terminal and preserve the ComfyUI console.
+4. Verify **Source Candidate**, **Attempt 1/2** (fresh lineage), accepted design constraints and the selected source image. Do not proceed on an exhausted source or mismatched project.
+5. Click **Generate ONE Qwen Image-Edited Candidate (Source Conditioned)**. Read the one-shot/VRAM warning. Only **Yes** authorizes one real local GPU request; **No** cancels.
+6. Record whether the edit checkpoint and LoRA load, any CPU offloading, generation time and peak observed VRAM. On success, record the ComfyUI prompt ID, output file, resulting supplementary Candidate ID, output dimensions and exact source/provenance linkage. Confirm original image, MASTER, CAP and approved Canon unchanged.
+7. Run a **separate** technical review and optional, separately consented **billable** semantic evaluation of the **new** Candidate. Check visible improvements against genuinely accepted CAP constraints. A generated picture or high technical score alone is **not** an F5 semantic success.
+8. **If ComfyUI times out, crashes, returns OOM or gives ambiguous transport status:** stop, preserve output, queue/history and the once-only journal; do not click Generate again. The journal intentionally reserves unknown outcomes pending reconciliation.
+
+**Acceptance:** A software test or read-only F5 preflight does not count as F5.3. Final hardware acceptance requires one genuine image-conditioned local render, verified single supplementary Candidate registration, preserved governance, actual GPU/memory/time evidence and a reviewed quality result. Record pass, partial, blocked or untested honestly.
+
+### Feature documentation acceptance rules
+
+For every later feature/change, update the relevant procedure in this manual **in the same GitHub commit series as source and tests**, update the manual index, supply an executable/stepwise operator plan in the ChatGPT handoff, and list any parts still requiring real operator acceptance. Do not close a feature merely because CI, a mock provider or a button press succeeded. Existing protected projects and Candidate correction budgets must not be repurposed for convenient testing.
