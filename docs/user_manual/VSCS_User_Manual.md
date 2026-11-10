@@ -483,6 +483,26 @@ Never fabricate sample CAP evidence, manually edit project SQLite, overwrite app
 
 **Important:** Steps 4–7 are grounded in documented VSCS workflows but the full new-project-to-CAP route has **not been walked end to end for F5.3**. Treat each screen as a checkpoint. If a button, prerequisite or status differs, **stop and report the exact UI state** rather than creating a false test environment or improvising files. Do not use B5_19A_ACCEPTANCE or an actual Xorix production project as a disposable workaround.
 
+### F5.3 faster alternative: reuse an untouched asset within the existing disposable project
+
+**Operator guidance updated 2026-11-10:** A new *project* is not always necessary. An existing disposable project may contain a separate asset with an **independent original Candidate and correction budget**. This can greatly reduce setup time without reusing a source already at attempt 2/2.
+
+In `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, the operator's CAP list shows Engineering Control Room (`STORY-LOC-A9ED8B387E`), Diagnostic Console (`STORY-PRO-B00D168E43`) and Unmanned Exploration Vessel (`STORY-SHI-B6DF03DB7B`). All are Draft, 12% ready and production-blocked. Those statuses **do not by themselves establish** local Candidate-generation readiness.
+
+**Preferred low-disruption alternative: Diagnostic Console — exact checkpoint sequence:**
+
+1. Keep `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` as the active project; confirm its exact directory in **Dashboard → Active Project**. Do not use Engineering Control Room Candidate 2; its remaining correction is attempt **2/2**.
+2. Select **Diagnostic console** (`STORY-PRO-B00D168E43`) from the CAP asset list.
+3. Open **Canonical Profiles → Edit Selected** and inspect its current **reviewed Draft CAP**. Check that core physical identity, appearance and materials are genuinely accepted. **Do not create or alter Draft attributes merely to manufacture test eligibility.**
+4. Open **Prepare Visual Identity…** and examine its exact preparation result, blockers, or missing required fields. This is a **read-only checkpoint**; **do not generate yet**. If the UI labels the prop blocked, stop and record the actual blocker rather than using another asset's profile or manually editing project files.
+5. Inspect **Canonical Reference Gallery** for this Diagnostic Console, recording any *existing* supplementary Candidate ID and origin. An existing genuine local Candidate with **no prior correction reservations/attempts** may be used as a source; a previously corrected or production-approved reference may not be silently repurposed.
+6. If eligible but no Candidate exists, make a separately approved **Generate One Local Image Candidate (ComfyUI)** request only after checking local ComfyUI idle status, that the source is the **Diagnostic Console** and that the generator's candidate result is supplementary. It is distinct from the later **Qwen image-edit** GPU test.
+7. Run **Review Visual Candidate…** on that Candidate. **No** runs free technical-only checks, **Cancel** does nothing, **Yes** authorizes one potentially **billable** semantic evaluation. Qwen governed correction requires a **real failed semantic report** with the supported regeneration decision. If the image passes, stop rather than inventing a failure or bypassing the gate.
+8. From the genuine failed report, select **Prepare Corrected Local Candidate…** or **Correct From Saved Review…**; confirm the **same Diagnostic Console** asset/source reference, accepted fields and **Attempt 1/2**. Check for any existing `guided_edit_attempts` reservation before generation; stop on unexpected attempt numbers.
+9. Follow F5.1 read-only inspections and F5.2 idle-queue memory release, then the F5.3 single real Qwen request and evidence collection below. Never click **Generate** during prerequisite inspection.
+
+**Checkpoint required before further actions:** Capture the Diagnostic Console **Prepare Visual Identity…** readiness window and whether its own gallery contains a supplementary Candidate. These results distinguish a usable clean lineage from a false test environment. Do not assume the Unmanned Exploration Vessel is ready; its deferred exterior silhouette has previously blocked visual Candidate preparation.
+
 ### F5.1 Read-only dual workflow and hardware inspection — step by step
 
 1. Start ComfyUI at the configured local endpoint, normally `http://127.0.0.1:8188`. Confirm its console has finished startup and no prompt is queued.
