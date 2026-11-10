@@ -85,7 +85,9 @@ def _fixture():
     repo = SimpleNamespace(compare_and_swap_draft_metadata=Mock())
     caps = SimpleNamespace(
         get=Mock(return_value=cap),
-        assets=SimpleNamespace(get=Mock(return_value=SimpleNamespace(category=AssetCategory.PROP))),
+        assets=SimpleNamespace(
+            get=Mock(return_value=SimpleNamespace(category=AssetCategory.PROP))
+        ),
         repository=repo,
     )
     batch = SimpleNamespace(
