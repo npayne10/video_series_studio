@@ -110,9 +110,7 @@ def test_queue_redirect_is_rejected_without_post(monkeypatch):
             posts.append(request.get_method())
             return _Response("http://example.org/queue", b"{}")
 
-    monkeypatch.setattr(
-        cleanup.urllib.request, "build_opener", lambda *_a: RedirectOpener()
-    )
+    monkeypatch.setattr(cleanup.urllib.request, "build_opener", lambda *_a: RedirectOpener())
     with pytest.raises(cleanup.ComfyMemoryReleaseError, match="redirected"):
         cleanup.release_idle_comfyui_memory(operator_confirmed=True)
     assert posts == ["GET"]
@@ -131,9 +129,7 @@ def test_free_http_failure_does_not_report_success(monkeypatch):
                 )
             return _Response("http://127.0.0.1:8188/free", status=503)
 
-    monkeypatch.setattr(
-        cleanup.urllib.request, "build_opener", lambda *_a: RejectedOpener()
-    )
+    monkeypatch.setattr(cleanup.urllib.request, "build_opener", lambda *_a: RejectedOpener())
     with pytest.raises(cleanup.ComfyMemoryReleaseError, match="rejected"):
         cleanup.release_idle_comfyui_memory(operator_confirmed=True)
     assert calls == ["GET", "POST"]
@@ -152,7 +148,5 @@ def test_malformed_json_refused(monkeypatch):
 def test_timeout_is_bounded(monkeypatch):
     calls, _posts = _opener(monkeypatch)
     with pytest.raises(cleanup.ComfyMemoryReleaseError, match="timeout"):
-        cleanup.release_idle_comfyui_memory(
-            operator_confirmed=True, timeout_seconds=45
-        )
+        cleanup.release_idle_comfyui_memory(operator_confirmed=True, timeout_seconds=45)
     assert not calls
