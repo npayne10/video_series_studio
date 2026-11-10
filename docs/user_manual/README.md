@@ -101,8 +101,8 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [ ] Complete Automation progress indicator implementation — shared Planning/Shot runner committed, local acceptance pending; other actions outstanding
 - [x] F5.1 dual-workflow and F5.2 ComfyUI memory-release operator guidance — documented and UI observed
 - [x] Existing Draft CAP guarded manual-review persistence — 2,695 passed, 1 skipped baseline
-- [ ] Automated existing Draft field generation and cache UI — implementation committed; regression and operator acceptance pending
-- [ ] F5.3 isolated one-shot Qwen GPU acceptance — runner/tests committed, local validation and live GPU test pending
+- [x] Automated existing Draft field generation/cache UI — Diagnostic Console Geometry proposal recovered without additional provider charge and saved in governed Draft; Visual Identity READY, operator observed
+- [x] F5.3 isolated one-shot Qwen GPU inference — RTX 5060 Ti actual run completed 2026-11-10: 1392 × 752 PNG, 371.54 s, verified output SHA-256; independent CAP isolation audit and visual quality comparison pending
 - [ ] F5.3 governed Qwen Candidate correction — separate, still requires genuinely eligible review
 - [ ] Context-sensitive Help integration in VSCS
 
@@ -113,3 +113,7 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 The `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` Episode and Scene both show Ready and 0:35 runtime, with 0:00 Scene budget remaining. Navigation relabelled in GitHub (Story → Episode Planner, top-level Production Packages) and approved by operator, awaiting local quality gates. Shared progress runner for Planning/Shot proposal generation committed, awaiting targeted and full regression. **Do not rerun Planning Proposals to test progress; it could overwrite accepted proposal records.** Run Shot Proposals once only after local validation, then inspect resulting proposal IDs/durations before human acceptance.
 
 **Automation UX scope update:** shared progress is now committed for six Story proposal-generation actions; SQLite-linked Resolve Assets and synchronous Review Gaps are not migrated. Local acceptance is pending.
+
+## F5.3 confirmed hardware inference — 2026-11-10
+
+The operator completed the **first real RTX 5060 Ti 16 GB source-conditioned Qwen Image Edit run** using the external `D:\VSCS_QWEN_F53_ACCEPTANCE\run_001` bundle. `GPU_OUTPUT_VERIFIED_NO_CAP_CHANGES` was reported, output **1392 × 752**, runtime **371.54 s**, checksum `59832d36eaa59fe3746e91ca29639e2ab2361122b5771607e91692e75d696778`; external bundle includes the reservation and result evidence. Post-run GPU allocation was **13,018 MiB** of **16,311 MiB**, but **peak was not measured**. The implementation reports no Candidate registration, Canon approval or correction attempt. Independent GUI persistence audit and visual-quality assessment remain outstanding; Candidate 3's original semantic decision remains `HUMAN_REVIEW_REQUIRED` and cannot be rewritten. **Never rerun `run_001`.** See [F5.3 hardware acceptance evidence and non-generative next steps](VSCS_User_Manual.md#b526f-f53--real-rtx-5060-ti-hardware-acceptance-evidence-2026-11-10).
