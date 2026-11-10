@@ -18,7 +18,9 @@ def _dialog(qtbot, monkeypatch):
     generator = SimpleNamespace(caps=caps, provider=Mock())
     stories = SimpleNamespace(
         list_stories=lambda: (
-            SimpleNamespace(story_id="STORY-001", title="Disposable", status=ui.StoryStatus.APPROVED),
+            SimpleNamespace(
+                story_id="STORY-001", title="Disposable", status=ui.StoryStatus.APPROVED
+            ),
         )
     )
     monkeypatch.setattr(ui, "StoryLifecycleService", lambda _projects: stories)
