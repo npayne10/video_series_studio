@@ -49,6 +49,26 @@ class CAPDesignExpansionProvider(Protocol):
     ) -> DesignExpansionResponse: ...
 
 
+def validate_scoped_field_regeneration(
+    spec: CAPStructuredSpecification,
+    field: str,
+    response: DesignExpansionResponse,
+) -> ProposedDesignField:
+    """Check exactly the selected field, whether required or optional.
+
+    The governed application service separately verifies that the original
+    stored review decision for this field was explicitly Defer or Reject.
+    """
+    if not field or field in spec.canonical_attributes:
+        raise ValueError("Scoped target field is invalid or already accepted")
+    if len(response.fields) != 1 or response.fields[0].field != field:
+        raise ValueError("Provider must return only the requested Draft field")
+    result = response.fields[0]
+    if not result.proposed_value.strip() or not result.rationale.strip():
+        raise ValueError("Scoped field requires a proposed value and rationale")
+    return result
+
+
 @runtime_checkable
 class CAPSingleFieldRegenerationProvider(Protocol):
     """Provider must return only the explicitly selected missing Draft field."""
