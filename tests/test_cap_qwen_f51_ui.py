@@ -149,7 +149,8 @@ def test_f51_stale_workflow_invalidates_prior_hardware_readiness(qtbot, tmp_path
     contract = SimpleNamespace(workflow_sha256="new-workflow")
     monkeypatch.setattr(ui, "prepare_spatial_contract", Mock(return_value=contract))
     monkeypatch.setattr(
-        ui, "inspect_managed_qwen_edit_workflow",
+        ui,
+        "inspect_managed_qwen_edit_workflow",
         Mock(return_value=SimpleNamespace(workflow_sha256="new-workflow")),
     )
     critical = Mock()
