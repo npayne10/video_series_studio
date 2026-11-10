@@ -705,3 +705,28 @@ def test_f54_worker_prompt_is_accepted_field_only():
     assert "F5.4 SOURCE IMAGE EDIT" not in managed_qwen_positive_prompt(fields)
     with pytest.raises(ManagedQwenCorrectionError, match="not an accepted"):
         managed_qwen_positive_prompt(fields, "invented")
+
+
+def test_f54_operator_dialog_does_not_generate_or_change_review(qtbot, tmp_path):
+    from vscs.presentation.dialogs.human_correction_disposition_dialog import (
+        HumanCorrectionDispositionDialog,
+    )
+
+    _service, snap, _prep, report, payload, _manifest = _setup(tmp_path)
+    payload["decision"] = "HUMAN_REVIEW_REQUIRED"
+    payload["semantic"]["decision"] = "pass"
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    before = report.read_bytes()
+    dialog = HumanCorrectionDispositionDialog(snap, report)
+    qtbot.addWidget(dialog)
+    assert dialog.objectName() == "humanCandidateCorrectionDisposition"
+    assert dialog.field.count() == len(snap.accepted_fields)
+    assert dialog.saved_path is None
+    dialog.reviewer.setText("Operator Reviewer")
+    dialog.reason.setPlainText(
+        "The image visibly contains a second door, contrary to one reviewed door."
+    )
+    dialog._save()
+    assert dialog.saved_path is not None
+    assert dialog.saved_path.is_file()
+    assert report.read_bytes() == before
