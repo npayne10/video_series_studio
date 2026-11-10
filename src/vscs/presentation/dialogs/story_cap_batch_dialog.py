@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.category_identity import category_identity_issues
 from vscs.application.caps.design_quality import assess_design_grounding
+from vscs.application.caps.draft_cap_revision import prepare_draft_cap_revision
 from vscs.application.caps.generator import CAPGeneratorService
 from vscs.application.caps.governed_plan_adapter import GovernedProductionPlanAdapter
 from vscs.application.caps.governed_planning_evidence import (
@@ -39,6 +40,7 @@ from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spa
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.spatial_proposals import load_project_spatial_candidates
 from vscs.application.caps.spatial_report import build_spatial_review_report
+from vscs.domain.caps import CAPStatus
 from vscs.application.caps.story_batch import (
     StoryBatchError,
     StoryBatchProposal,
@@ -52,6 +54,9 @@ from vscs.application.shots.service import ShotPlanningService
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
 from vscs.application.story.service import StoryService
 from vscs.presentation.dialogs.cap_detail_review_dialog import CAPDetailReviewDialog
+from vscs.presentation.dialogs.edit_existing_draft_cap_dialog import (
+    EditExistingDraftCAPDialog,
+)
 from vscs.presentation.dialogs.spatial_continuity_report_dialog import (
     SpatialContinuityReportDialog,
 )
@@ -89,6 +94,10 @@ class StoryCAPBatchDialog(QDialog):
             if story.status in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
                 self.story.addItem(f"{story.story_id} — {story.title}", story.story_id)
         self.assets = QComboBox()
+        self.existing_assets = QComboBox()
+        self.existing_assets.setObjectName("existingDraftCAPAssets")
+        self.edit_existing = QPushButton("Edit Existing Draft CAP…")
+        self.edit_existing.setObjectName("editExistingDraftCAP")
         self.inspect = QPushButton("Discover Shot Assets")
         self.map_scenes = QPushButton("Assign Story Scenes (Reviewed)")
         self.context_button = QPushButton("Prepare CAP Context (Offline)")
@@ -118,6 +127,11 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(QLabel("Project-approved Story"))
         layout.addWidget(self.story)
         layout.addLayout(row)
+        revision_row = QHBoxLayout()
+        revision_row.addWidget(QLabel("Existing Draft CAPs (separate from new proposals)"))
+        revision_row.addWidget(self.existing_assets)
+        revision_row.addWidget(self.edit_existing)
+        layout.addLayout(revision_row)
         layout.addWidget(self.context_button)
         layout.addWidget(self.queue_button)
         layout.addWidget(self.map_scenes)
@@ -128,6 +142,7 @@ class StoryCAPBatchDialog(QDialog):
         layout.addWidget(self.summary)
         layout.addWidget(self.close_button)
         self.inspect.clicked.connect(self.discover)
+        self.edit_existing.clicked.connect(self.edit_existing_draft_cap)
         self.context_button.clicked.connect(self.prepare_selected_context)
         self.queue_button.clicked.connect(self.prepare_queue)
         self.story.currentIndexChanged.connect(self._story_changed)
@@ -140,6 +155,7 @@ class StoryCAPBatchDialog(QDialog):
         self.queue_button.setEnabled(False)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
+        self.edit_existing.setEnabled(False)
 
     def review_spatial_acceptance(self) -> None:
         """Run isolated geometry test data; never query or write a project."""
@@ -224,6 +240,8 @@ class StoryCAPBatchDialog(QDialog):
             QMessageBox.warning(self, "Story Scene Authority", str(exc))
 
     def _story_changed(self, _index: int) -> None:
+        self.existing_assets.clear()
+        self.edit_existing.setEnabled(False)
         self.assets.clear()
         self.context_button.setEnabled(False)
         self.queue_button.setEnabled(False)
@@ -290,6 +308,8 @@ class StoryCAPBatchDialog(QDialog):
 
     def discover(self) -> None:
         self.assets.clear()
+        self.existing_assets.clear()
+        self.edit_existing.setEnabled(False)
         story_id = self.story.currentData()
         try:
             if not isinstance(story_id, str):
@@ -310,15 +330,44 @@ class StoryCAPBatchDialog(QDialog):
             lines.append(f"{candidate.asset_id} — {candidate.name} ({candidate.category}): {state}")
             if not candidate.has_specification:
                 self.assets.addItem(candidate.asset_id, candidate.asset_id)
+            elif candidate.has_cap:
+                cap = self.generator.caps.get(candidate.asset_id)
+                if cap.status is CAPStatus.DRAFT:
+                    self.existing_assets.addItem(
+                        f"{candidate.name} — {candidate.asset_id}", candidate.asset_id
+                    )
         self.summary.setPlainText(
             "\n".join(lines)
             if lines
             else "No bound assets found in Ready governed Shots for this Story."
         )
+        self.edit_existing.setEnabled(self.existing_assets.count() > 0)
         self.context_button.setEnabled(self.assets.count() > 0)
         self.queue_button.setEnabled(self.assets.count() > 0)
         self.preview.setEnabled(self.assets.count() > 0)
         self.regenerate.setEnabled(self.preview.isEnabled())
+
+    def edit_existing_draft_cap(self) -> None:
+        """Open a governed Draft-only revision, never a proposal regeneration."""
+        story_id = self.story.currentData()
+        asset_id = self.existing_assets.currentData()
+        if not isinstance(story_id, str) or not isinstance(asset_id, str):
+            QMessageBox.warning(self, "Draft CAP Revision", "Select an existing Draft CAP.")
+            return
+        try:
+            snapshot = prepare_draft_cap_revision(self.review_service, story_id, asset_id)
+            editor = EditExistingDraftCAPDialog(self.review_service, snapshot, self)
+        except (RuntimeError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "Draft CAP Revision Blocked", str(exc))
+            return
+        if editor.exec() == QDialog.DialogCode.Accepted:
+            QMessageBox.information(
+                self,
+                "Draft CAP Revision",
+                "Reviewed Draft field revised. The CAP remains Draft; "
+                "reopen Visual Identity to inspect eligibility.",
+            )
+            self.discover()
 
     def regenerate_one(self) -> None:
         choice = QMessageBox.question(
