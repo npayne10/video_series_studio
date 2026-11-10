@@ -52,6 +52,35 @@ class ManagedQwenCorrectionJob:
         return False
 
 
+def managed_qwen_positive_prompt(
+    accepted_fields: tuple[tuple[str, str], ...],
+    human_correction_field: str | None = None,
+) -> str:
+    """Build model instructions only from accepted CAP fields, never reviewer prose."""
+    original = "\n".join(
+        f"MANDATORY reviewed {key}: {value}" for key, value in accepted_fields
+    )
+    if human_correction_field is None:
+        return original
+    approved = dict(accepted_fields)
+    if human_correction_field not in approved:
+        raise ManagedQwenCorrectionError("Reviewer target is not an accepted CAP field")
+    return (
+        "F5.4 SOURCE IMAGE EDIT. Retain all source identity traits except the "
+        "specific visual mismatch in the selected accepted field. "
+        "Do not change screen, count, material, lighting or surrounding objects "
+        "unless the accepted CAP field explicitly requires it. "
+        f"EDIT TARGET — reviewed {human_correction_field}: "
+        f"{approved[human_correction_field]}. "
+        "Any control specified as recessed must appear visually recessed, not "
+        "raised. When the CAP describes distinct adjacent objects, maintain a "
+        "clear visible boundary; do not attach or merge them. Preserve the "
+        "source camera view and recognizable design. "
+        "No invented attachments, labels or furnishings.\n"
+        + original
+    )
+
+
 def prepare_managed_qwen_correction(
     service: CandidateRegenerationService,
     plan: CandidateRegenerationPlan,
@@ -105,8 +134,8 @@ def prepare_managed_qwen_correction(
     loader["job_index"] = 0
     loader["quality_mode"] = "standard"
     editable[inspection.sampler_node_id]["inputs"]["seed"] = plan.request.seed
-    positive = "\n".join(
-        f"MANDATORY reviewed {key}: {value}" for key, value in contract.accepted_fields
+    positive = managed_qwen_positive_prompt(
+        contract.accepted_fields, plan.human_correction_field
     )
     category = plan.source.asset_id.upper().split("-")
     kinds = {
