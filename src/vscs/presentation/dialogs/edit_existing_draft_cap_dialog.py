@@ -15,8 +15,8 @@ from PySide6.QtWidgets import (
 
 from vscs.application.caps.design_completion import DetailDecision
 from vscs.application.caps.draft_cap_revision import (
-    DraftCAPRevisionSnapshot,
     DraftCAPRevisionError,
+    DraftCAPRevisionSnapshot,
     save_draft_cap_field_revision,
 )
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
@@ -82,8 +82,7 @@ class EditExistingDraftCAPDialog(QDialog):
         self.field.currentIndexChanged.connect(self._show_original)
         self._show_original()
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
         save = buttons.button(QDialogButtonBox.StandardButton.Save)
         if save is not None:
