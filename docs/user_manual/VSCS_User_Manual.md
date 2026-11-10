@@ -542,6 +542,47 @@ This finding supersedes any earlier F5.3 instruction suggesting that **Review Ca
 5. Await the automated scoped proposal-generation increment before attempting the F5.3 Candidate test.
 
 
+### B.5.26F — Automated Existing Draft CAP Field Regeneration (operator procedure)
+
+**Implementation status (2026-11-10):** Code and regression tests committed to the VSCS GitHub development branch. **Windows Ruff/Mypy/full-regression and real paid-provider operator acceptance pending.** The former manual typing/pasting instructions are **superseded**. Do not use hand-written Geometry to qualify the Qwen pipeline.
+
+**Automation-first contract:** VSCS constructs a single-field request from the project-approved Story and verified governed Shot context, accepted CAP fields and its original deferred proposal. The configured OpenAI CAP provider submits **exactly ONE structured generation request per explicit consent**; no automatic retry. Output is an unapproved design proposal, not an established Story fact, approved MASTER, Canon or a production asset. Saved Draft changes require a **separate explicit operator review and approval**. Previously accepted fields remain locked.
+
+**New controls in** `Canonical Profiles → Story → CAP Batch… → Discover Shot Assets → Existing Draft CAPs → Diagnostic console → Edit Existing Draft CAP…`:
+
+- **Generate / Regenerate Field Proposal (AI — Paid):** one explicit provider consent. A numbered `.pending` reservation is stored **before** the provider call; an unresolved reservation prevents further paid requests until reconciled.
+- **Load Latest Cached Field Proposal (No AI Charge):** recover a previously completed AI proposal after closing the dialog, provided Story/context/asset/provider fingerprints still match. No provider call.
+- **Reject Generated Proposal (Keep Draft):** clears the currently selected proposal and disables Save, leaving the original Draft unchanged. Cached generation audit remains.
+- **Generated proposed value (read-only)** and **Generated rationale / provenance (read-only):** these are populated by validated AI output, not manually entered.
+- **Save Reviewed Draft Revision:** initially disabled. Only enabled after a generated/cached proposal passes provenance checks. A second Yes/No confirmation saves the single selected field through Draft-only atomic compare-and-swap. A reviewer identity remains operator-controlled.
+
+**Exact first acceptance test — stop before any paid request:**
+
+1. Back up `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` as a complete inactive-project copy before testing any real persistent edit. Do not overwrite the original or production projects.
+2. Pull the GitHub development branch and run the focused automated field/provider/UI tests, prior CAP governance tests, full `pytest -q`, Ruff check/format, Mypy, `git diff --check` and `git status --short`. Stop on any failure.
+3. Start VSCS and check **Dashboard → Active Project** points to the original disposable `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, not the backup or a production Story.
+4. Open **Canonical Profiles → Story → CAP Batch…**; select `STORY-001 — The Quiet Console — CAP Persistence Acceptance`, click **Discover Shot Assets**, then select **Diagnostic console — STORY-PRO-B00D168E43** under the **separate Existing Draft CAPs** selector.
+5. Click **Edit Existing Draft CAP…**. Verify Materials, Components and Scale remain read-only. Geometry must read **(defer)**. Check that the previously manually editable value and rationale fields are now **read-only** and blank.
+6. Confirm **Save Reviewed Draft Revision** is disabled. Click **Load Latest Cached Field Proposal (No AI Charge)**. On a never-used lineage, expect **No completed cached field proposal**. This must not contact the provider. If an existing result appears, stop and inspect its origin.
+7. Click **Generate / Regenerate Field Proposal (AI — Paid)** only to inspect the confirmation, then click **No**. Verify no `.pending` journal, new proposal file or Draft modification was created. Confirm the Save button remains disabled.
+8. Capture a screenshot of the dialog showing all three proposal actions and the disabled Save button. **Stop here and provide the static and UI evidence**. No AI call or image generation has occurred.
+
+**Separately authorized paid-provider test — only after the above acceptance passes:**
+
+1. Ensure Settings → AI Generation points to a known, working **OpenAI CAP provider/model capable of structured field responses**; listing a model does not establish compatibility. Do not change unrelated shared model settings merely to force a test.
+2. Reopen the same Diagnostic Console **Edit Existing Draft CAP…** dialog, with the same approved Story and no pending field-generation reservation.
+3. Click **Generate / Regenerate Field Proposal (AI — Paid)**. Read the disclosure: **ONE potentially billable OpenAI structured field request**, no automatic retry. Select **Yes** only when you consciously authorize this single provider expense.
+4. Observe the modal progress panel; do not close VSCS, start a second proposal or alter the project while the request is in flight.
+5. On success, check the read-only **Geometry** proposal and rationale, `AI-proposed design; not established Story canon` authority marker, request fingerprint and generated proposal number. Record model, elapsed time, actual output and `production/caps/draft_field_proposals` cache files. Check that the status says **ready for review** and Save is enabled.
+6. **STOP before Save.** Inspect whether the generated shape respects the accepted console scale, graphite materials, existing blue display and control placement, and does not invent extra Story Canon or temporal Shot actions. Record whether it is an acceptable *proposed Draft design*.
+7. To reject, click **Reject Generated Proposal (Keep Draft)**. To revisit a completed proposal without paying again, click **Load Latest Cached Field Proposal (No AI Charge)**. To regenerate, a new explicit paid consent is required and creates another numbered request. An unresolved `.pending` reservation **blocks** retries; preserve and investigate it, never delete or manually change it to force the gate.
+8. Only after a genuinely acceptable generated value is reviewed, click **Save Reviewed Draft Revision**, verify the asset and field in the separate confirmation and choose **Yes**. The service rechecks Story/context, accepted field decisions and Draft metadata. Cancel/No performs no write.
+9. Reopen **Canonical Profiles → Edit Selected** and verify Geometry now **Edit / Saved Yes** with the generated value; Materials, Components and Scale unchanged. Confirm the CAP remains **Draft**, original images and Engineering Control Room Candidate 2 correction attempt **2/2** remain untouched.
+10. Reopen **Prepare Visual Identity…** and inspect current readiness. Do not automatically generate MASTER or run Qwen. Record any remaining blocker, which may require separate governed remediation.
+
+**Safety limitations:** This workflow uses API-backed AI text generation, which can incur cost, and is not a ComfyUI GPU generation test. Provider-produced design assumptions are **proposals** needing human review. Invalid/ungrounded AI responses are rejected, not silently corrected by further paid requests. Cache files are local unapproved evidence, not authority. If the provider request crashes or times out, an unresolved reservation intentionally prevents blind retries.
+
+
 ### B.5.26F F5.3 prerequisite — Edit Existing Draft CAP (new governed revision workflow)
 
 **Status 2026-11-10:** Implemented in the development branch, **awaiting Windows static, regression and desktop operator acceptance**. This workflow is distinct from CAP Batch's new-CAP proposal dropdown. Do not treat the presence of the button alone as successful revision acceptance.
