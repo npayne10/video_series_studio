@@ -64,7 +64,9 @@ class DraftCAPFieldProposalCache:
         self.directory = project_root / "production" / "caps" / "draft_field_proposals"
 
     def _path(self, request: DraftCAPFieldRequest) -> Path:
-        digest = cache_fingerprint(request.snapshot.story_id, request.snapshot.asset_id, request.field)
+        digest = cache_fingerprint(
+            request.snapshot.story_id, request.snapshot.asset_id, request.field
+        )
         return self.directory / digest / f"{request.generation_number:04d}.json"
 
     def next_number(self, request: DraftCAPFieldRequest) -> int:
@@ -107,20 +109,32 @@ class DraftCAPFieldProposalCache:
             with path.open("x", encoding="utf-8") as file:
                 file.write(request.request_fingerprint)
         except FileExistsError as exc:
-            raise DraftCAPFieldGenerationError("This provider request was already reserved") from exc
+            raise DraftCAPFieldGenerationError(
+                "This provider request was already reserved"
+            ) from exc
 
     def save(self, request: DraftCAPFieldRequest, proposal: CachedDraftCAPFieldProposal) -> None:
         path = self._path(request)
         path.parent.mkdir(parents=True, exist_ok=True)
+        reservation = path.with_suffix(".pending")
+        if not reservation.is_file():
+            raise DraftCAPFieldGenerationError("Missing paid provider reservation")
+        if reservation.read_text(encoding="utf-8") != request.request_fingerprint:
+            raise DraftCAPFieldGenerationError("Provider reservation identity changed")
+        if (
+            proposal.request_fingerprint != request.request_fingerprint
+            or proposal.generation_number != request.generation_number
+            or proposal.field != request.field
+        ):
+            raise DraftCAPFieldGenerationError("Provider output is not bound to reservation")
         # Exclusive creation: failed or uncertain requests must not overwrite evidence.
         try:
             with path.open("x", encoding="utf-8") as file:
                 file.write(proposal.model_dump_json())
         except FileExistsError as exc:
-            raise DraftCAPFieldGenerationError("Proposal generation number already used") from exc
-        reservation = path.with_suffix(".pending")
-        if reservation.read_text(encoding="utf-8") != request.request_fingerprint:
-            raise DraftCAPFieldGenerationError("Provider reservation identity changed")
+            raise DraftCAPFieldGenerationError(
+                "Proposal generation number already used"
+            ) from exc
         reservation.unlink()
 
     def load(self, request: DraftCAPFieldRequest) -> CachedDraftCAPFieldProposal:
@@ -128,7 +142,9 @@ class DraftCAPFieldProposalCache:
             raw = self._path(request).read_text(encoding="utf-8")
             proposal = CachedDraftCAPFieldProposal.model_validate_json(raw)
         except (OSError, ValueError) as exc:
-            raise DraftCAPFieldGenerationError("Cached field proposal unavailable or invalid") from exc
+            raise DraftCAPFieldGenerationError(
+                "Cached field proposal unavailable or invalid"
+            ) from exc
         if (
             proposal.contract != CONTRACT_VERSION
             or proposal.story_id != request.snapshot.story_id
