@@ -146,9 +146,7 @@ class OpenAICAPGenerationProvider:
         """Paid, scoped existing-Draft design proposal; never modifies CAP."""
         from vscs.application.caps.completeness import REQUIRED_FIELDS
         from vscs.application.caps.design_quality import assess_design_grounding
-        from vscs.application.caps.provider_design_expansion import (
-            validate_design_expansion,
-        )
+        from vscs.application.caps.provider_design_expansion import validate_design_expansion
 
         if (
             field not in REQUIRED_FIELDS.get(spec.category, ("identity",))
