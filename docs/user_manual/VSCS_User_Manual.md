@@ -713,3 +713,34 @@ For every later feature/change, update the relevant procedure in this manual **i
 10. Verify the output exists **only** in `D:\VSCS_QWEN_F53_ACCEPTANCE\run_001`. Confirm the original project Gallery still lists Candidate 3 unchanged, no new reference ID is registered, the semantic report unchanged, no CAP/MASTER/Canon changes and no correction attempt consumed. Accept GPU hardware inference only after the actual user GPU run succeeds and the image is verified. A mocked passing test proves software boundaries, **not** RTX 5060 Ti hardware success.
 
 **Critical isolation limits:** The acceptance tool operates on a source copy, produces an external test result and does **not** change CAP authority. It intentionally does **not** claim visual-correction quality, approve Candidate 3, or provide spatial mask/inpainting control. A separate later governed decision is needed to handle operator-confirmed visual defects in a genuine Candidate without forging semantic regeneration recommendations.
+
+
+### B.5.26F F5.3 — Real RTX 5060 Ti hardware acceptance evidence (2026-11-10)
+
+**Status: PASS — isolated Qwen GPU inference and output validation. CAP-state independent verification and visual-quality review are still pending.**
+
+The operator executed **exactly one** GPU submission for the already prepared external bundle `D:\VSCS_QWEN_F53_ACCEPTANCE\run_001`, using `python -m vscs.application.caps.qwen_f53_isolated_acceptance --execute --project-root "$project" --bundle "$bundle" --confirm-one-gpu-run`. The ComfyUI managed graph returned:
+
+- **Result status:** `GPU_OUTPUT_VERIFIED_NO_CAP_CHANGES`.
+- **GPU:** NVIDIA RTX 5060 Ti 16 GB, Windows WDDM, driver 616.64.
+- **Elapsed:** **371.54 seconds** (6 min 11.54 s); this is a single observed run, not a throughput benchmark.
+- **Real output:** `D:\VSCS_QWEN_F53_ACCEPTANCE\run_001\qwen_acceptance_output.png`; **1392 × 752**, **796,999 bytes**; the runner decoded and validated the PNG.
+- **Output SHA-256:** `59832d36eaa59fe3746e91ca29639e2ab2361122b5771607e91692e75d696778`.
+- **Source SHA-256:** `ecca865ab45e8dc83d2539c2c776f8120f949bfecee4afe2d7cb7db268a3a22c`.
+- **Managed workflow SHA-256:** `d2c7d11a3a8b3a4670f0905fe82c0395909cd4b2a7f4e03e030b752448ec86f7`.
+- **ComfyUI prompt ID:** `c3a81ffe-a100-4769-87ac-7cdc4fd689d1`.
+- **External bundle files:** original manifest, graph, queue, source copy plus `execution_reserved.json`, `acceptance_result.json` and `qwen_acceptance_output.png`. The reservation timestamp preceded the generated PNG; never reuse `run_001`.
+- **Runner result flags:** `candidate_registered: false`, `canon_approved: false`, `correction_attempt_consumed: false`. These reflect the isolated runner design and successful execution; independent project-state verification is still necessary.
+- **GPU allocations:** 3,890 MiB / 16,311 MiB before execution; 13,018 MiB / 16,311 MiB in the post-run sample (roughly 3,293 MiB free post-run). `gpu_peak_vram_mib: null`; peak, offload and runtime memory trajectory are **not established**.
+- **Last software validation:** Ruff lint passed; Ruff format **1,661 files already formatted**; Mypy **695 source files** passed; focused **32 passed**; full regression **2,721 passed, 1 skipped**. No subsequent code changes were required for this run.
+
+**Immediate operator evidence checks — non-generative, non-billable:**
+
+1. **Do not rerun `run_001`.** Preserve `execution_reserved.json`, `acceptance_result.json`, original copied source, queue, API graph and output image in the external bundle.
+2. Independently calculate output hash: `Get-FileHash -LiteralPath "$bundle\qwen_acceptance_output.png" -Algorithm SHA256`; confirm it equals the recorded SHA-256 above. View **both source and Qwen output** side by side; determine whether dial recess and console/workstation separation actually improved. Image integrity is verified; semantic/design adherence is *not*.
+3. Inspect the original Candidate 3 in the VSCS Canonical Reference Gallery. Verify it remains **Supplementary / Candidate / unapproved**, with the same original path and **source checksum**. Verify **no new gallery Candidate**, no MASTER or Canon approval, and no correction attempt used.
+4. Open the saved original semantic review (without generating a new billable review). Confirm it remains `HUMAN_REVIEW_REQUIRED`, overall **88/100**, Draft design consistency **75/100**, and the genuine recorded violations. Do **not** change or rerun the review to manufacture a correction.
+5. Preserve any captured ComfyUI logs, VRAM samples and the exact prompt ID. If no peak VRAM telemetry exists, explicitly record **not measured**.
+6. Report whether the new external image visually improves the console. **Never import/promote it directly into the CAP gallery** as a correction without a separately approved governance design.
+
+**Accepted milestone:** Genuine **source-conditioned managed Qwen Image Edit GPU inference** and **isolated PNG output validation** are achieved. **Outstanding:** visual comparison, independent CAP record preservation audit and any future governed operator-overridden correction path. This is not permission to turn a `HUMAN_REVIEW_REQUIRED` report into `REGENERATE_RECOMMENDED`.
