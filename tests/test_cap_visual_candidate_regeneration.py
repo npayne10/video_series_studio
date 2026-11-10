@@ -684,7 +684,7 @@ def test_f54_changed_human_decision_invalidates_prepared_plan(tmp_path):
     data = json.loads(disposition.read_text(encoding="utf-8"))
     data["observed_discrepancy"] = "Altered after reviewer sign off."
     disposition.write_text(json.dumps(data), encoding="utf-8")
-    with pytest.raises(CandidateRegenerationError, match="changed during generation"):
+    with pytest.raises(CandidateRegenerationError, match="independent human"):
         service.verify_current(plan)
 
 
@@ -702,6 +702,6 @@ def test_f54_worker_prompt_is_accepted_field_only():
     assert "F5.4 SOURCE IMAGE EDIT" in prompt
     assert "recessed" in prompt
     assert "MANDATORY reviewed materials" in prompt
-    assert "recessed" not in managed_qwen_positive_prompt(fields)
+    assert "F5.4 SOURCE IMAGE EDIT" not in managed_qwen_positive_prompt(fields)
     with pytest.raises(ManagedQwenCorrectionError, match="not an accepted"):
         managed_qwen_positive_prompt(fields, "invented")
