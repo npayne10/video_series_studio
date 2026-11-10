@@ -70,7 +70,9 @@ def _report(snapshot: CandidateQualitySnapshot, path: Path) -> tuple[bytes, dict
         raise HumanCorrectionDispositionError("Review evidence is stale or not eligible")
     semantic = document.get("semantic")
     if not isinstance(semantic, dict) or semantic.get("decision") == "regenerate":
-        raise HumanCorrectionDispositionError("A separate, completed advisory semantic review is required")
+        raise HumanCorrectionDispositionError(
+            "A separate, completed advisory semantic review is required"
+        )
     return raw, document
 
 
@@ -86,7 +88,9 @@ def _evidence(
     if not 2 <= len(reviewer) <= 100 or any(ord(char) < 32 for char in reviewer):
         raise HumanCorrectionDispositionError("Reviewer must provide a valid identity")
     if not 15 <= len(reason) <= 2000 or any(ord(char) < 32 for char in reason):
-        raise HumanCorrectionDispositionError("Describe a specific visual discrepancy (15–2000 characters)")
+        raise HumanCorrectionDispositionError(
+            "Describe a specific visual discrepancy (15–2000 characters)"
+        )
     if not _SAFE_FIELD.fullmatch(field) or field not in dict(snapshot.accepted_fields):
         raise HumanCorrectionDispositionError("Correction scope must be one accepted CAP field")
     report_bytes, _ = _report(snapshot, report_path)
@@ -105,7 +109,9 @@ def _evidence(
         "specification_fingerprint": snapshot.specification_fingerprint,
         "review_fingerprint": snapshot.review_fingerprint,
         "accepted_field": field,
-        "accepted_field_value_sha256": _digest(dict(snapshot.accepted_fields)[field].encode("utf-8")),
+        "accepted_field_value_sha256": _digest(
+            dict(snapshot.accepted_fields)[field].encode("utf-8")
+        ),
         "reviewer": reviewer,
         "observed_discrepancy": reason,
         "semantic_decision_overridden": False,
