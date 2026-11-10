@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.1 (living documentation, 2026-11-04)  
+**Version:** v0.2 (living documentation, updated 2026-11-10)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -15,6 +15,17 @@
 `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` → `STORY-001` Approved → Story Analysis complete → **Planning Proposals generated** (1 Episode + 1 Scene, no authority yet) → **Review Proposals…** → review/accept → **Compile Accepted…** → inspect actual **Production Planning** Episode/Scene records.
 
 Next: Shot Proposals, review/accept/compile, register and bind assets, CAP context/queue/review, reviewed Draft CAP save, project close/reopen and provenance/status check. Each stage is a separate acceptance checkpoint. Do not modify `B5_19A_ACCEPTANCE`.
+
+## B.5.26F F5 operator procedures — updated 2026-11-10
+
+Read [VSCS User Manual — B.5.26F, F5.0–F5.3](VSCS_User_Manual.md#b526f--qwen-image-editing-f5-hardware-tests-and-gpu-memory-release-operator-procedure) for the **mandatory numbered procedure** when creating a fresh disposable Candidate lineage, running dual-workflow inspection, checking F5 hardware readiness, releasing ComfyUI GPU cache and conducting the first controlled source-conditioned Qwen edit.
+
+**Operator-verified:** F5.1 and F5.2 code validated with **2,681 passed, 1 Windows symlink skip**; release button sent one accepted local `/free` request while idle; refreshed F5 readiness showed **14,174 MiB free of 16,311 MiB**, with Qwen nodes/model choices available. **Still pending:** genuine local Qwen GPU inference, new Candidate registration and visual quality acceptance.
+
+The old `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` Engineering Control Room source **Candidate 2 is at attempt 2/2**, so do not use it for initial F5.3 hardware qualification. The manual now describes how to establish an **independent disposable project, genuine approved Draft CAP, source Candidate and saved failed semantic report** without fabricating evidence. Screens not yet walked end to end are marked as checkpoints. The paid semantic review requires separate cost approval.
+
+**Mandatory documentation contract:** Every future recommendation implying action by the operator must provide a numbered, UI-accurate, reproducible step-by-step procedure, explicit preconditions, isolation, expected responses, evidence, stop/retry rules and separate acceptance gates. Update this index and the User Manual in the **same development phase and GitHub branch as the feature**. Do not present a mock-test pass or read-only preflight as real GPU acceptance.
+
 
 ## Required documentation for each UI action
 
@@ -48,6 +59,8 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [ ] Generated media, Episode Assembly and Post-production
 - [ ] Project preferences, export, backup/restore, diagnostics
 - [ ] Complete Automation progress indicator implementation — shared Planning/Shot runner committed, local acceptance pending; other actions outstanding
+- [x] F5.1 dual-workflow and F5.2 ComfyUI memory-release operator guidance — documented and UI observed
+- [ ] F5.3 clean disposable Qwen GPU inference and Candidate quality — awaiting actual local test
 - [ ] Context-sensitive Help integration in VSCS
 
 **No part of this index lifts the H3 live-execution hold or authorises paid provider work without explicit operator action.**
