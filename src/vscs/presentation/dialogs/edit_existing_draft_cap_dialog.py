@@ -240,7 +240,13 @@ class EditExistingDraftCAPDialog(QDialog):
             )
             return
         try:
-            verify_proposal_for_review(self.service, self._request, self._proposal)
+            root = self.service.batch.generator.generator.assets.projects.project_directory
+            if root is None:
+                raise DraftCAPFieldGenerationError("No active project for proposal audit")
+            verified = DraftCAPFieldProposalCache(root).load(self._request)
+            if verified != self._proposal:
+                raise DraftCAPFieldGenerationError("Generated proposal changed before approval")
+            verify_proposal_for_review(self.service, self._request, verified)
         except (DraftCAPFieldGenerationError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(self, "Stale Field Proposal", str(exc))
             return
