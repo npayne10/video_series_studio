@@ -601,6 +601,22 @@ The subsequent **Prepare MASTER Candidate (Offline) — Diagnostic console** scr
 This acceptance checkpoint verifies local **initial Candidate creation and registration**, not image quality, validated geometry compliance or Qwen F5.3 hardware completion.
 
 
+### B.5.26F — Diagnostic Console Candidate 3 semantic outcome and next decision (2026-11-10)
+
+**Operator-observed:** For project `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, asset `STORY-PRO-B00D168E43`, supplementary visual Candidate reference **3**, the separately consented OpenAI semantic review produced **`HUMAN_REVIEW_REQUIRED`**, technical **81/100**, overall semantic **88/100**, prompt adherence **78/100**, category validity **100/100**, Draft design consistency **75/100**, engineering plausibility **87/100** and cinematic quality **89/100**. The report identifies a raised (not recessed) dial, an unreviewed workstation-like tabletop/cabinet, ambiguous console/workstation separation and apparently overly broad proportions (not metrically verifiable from the image).
+
+**Guarded decision:** This is *not* `REGENERATE_RECOMMENDED`. The `Prepare Corrected Local Candidate…` control is correctly disabled by `cap_visual_candidate_quality.py` because the underlying semantic decision is not `regenerate`. Never modify the JSON report or fabricate a failure to open a Qwen correction path. A high overall semantic score also does not automatically approve this Candidate.
+
+**Stepwise next action (no provider call):**
+
+1. Preserve the saved semantic report and Candidate 3 image unchanged; record the reference ID, report path, score details and violations.
+2. Close the advisory Quality Review window and inspect Candidate 3 again in the **Canonical Reference Gallery**. Compare the actual image to the reviewed Draft CAP: recessed dial, separate adjacent workstation and consistent prop silhouette.
+3. Record the operator's judgment as **acceptable despite advisory findings** or **not suitable for approval**. If uncertain, keep the Candidate in Candidate status; do not Approve, Reject, Archive or Set as Primary merely to progress a test.
+4. If unsuitable, preserve the report as advisory evidence and use the governed gallery lifecycle (such as Archive if appropriate) only after an intentional review. Any fresh local image Candidate requires a separate, explicit generation action; the original saved review is never altered into a regenerate report.
+5. Treat **Qwen F5.3 hardware qualification** as a separate engineering need. A valid isolated source-conditioned **GPU smoke test** should be designed with a test-only output and no CAP Candidate registration, no correction-budget consumption and no promotion to Canon/MASTER. Only after that isolated test proves real inference should the governed Qwen correction workflow be acceptance-tested with a genuinely eligible regeneration source. This isolated hardware path is **proposed work, not yet implemented or accepted**.
+
+**Acceptance status:** Real text-to-image Candidate generation and real paid semantic review have succeeded; Candidate 3 remains unapproved with human review required. Actual source-conditioned Qwen inference on RTX 5060 Ti **remains untested**.
+
 ### B.5.26F F5.3 prerequisite — Edit Existing Draft CAP (new governed revision workflow)
 
 **Status:** Existing Draft-only persistence passed local automated regression (2,695 passed, 1 skipped); automated field generation is a separate later increment, with new regression and operator acceptance pending. This workflow is distinct from CAP Batch's new-CAP proposal dropdown. Do not treat the presence of the button alone as successful revision acceptance.
