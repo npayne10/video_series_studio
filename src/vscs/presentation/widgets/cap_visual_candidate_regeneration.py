@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.comfyui_memory_release import release_idle_comfyui_memory
 from vscs.application.caps.guided_edit_candidate_registration import (
     register_guided_edit_candidate,
 )
@@ -123,6 +124,12 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.f5_preflight_button.setObjectName("checkQwenF5HardwareReadiness")
         self.f5_preflight_button.clicked.connect(self._inspect_f5_hardware)
         layout.addWidget(self.f5_preflight_button)
+        self.f5_release_memory_button = QPushButton(
+            "Release ComfyUI GPU Memory (Idle Queue Only)"
+        )
+        self.f5_release_memory_button.setObjectName("releaseComfyUiGpuMemory")
+        self.f5_release_memory_button.clicked.connect(self._release_comfyui_memory)
+        layout.addWidget(self.f5_release_memory_button)
         self.f5_status_label = QLabel(
             "F5 hardware readiness: NOT CHECKED — no GPU test authorized."
         )
@@ -223,6 +230,61 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 "Hardware Readiness Failed",
                 f"{type(exc).__name__}: {exc}\nNo generation was submitted.",
             )
+
+    def _release_comfyui_memory(self) -> None:
+        """Operator-controlled cache cleanup; no CAP/GPU generation work."""
+        if self._generation_active:
+            return
+        choice = QMessageBox.question(
+            self,
+            "Release Cached ComfyUI Models?",
+            "This unloads cached models and clears ComfyUI's execution cache. "
+            "It may slow the next model load. The operation is refused if "
+            "ComfyUI reports any running or pending jobs.\n\n"
+            "Proceed with local GPU cache cleanup?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        self.f5_release_memory_button.setEnabled(False)
+        self.f5_preflight_button.setEnabled(False)
+        self._f5_preflight_sha256 = None
+        self._f5_preflight_endpoint = None
+        self.f5_status_label.setText(
+            "F5 hardware readiness: RECHECK REQUIRED after cache cleanup."
+        )
+        try:
+            endpoint = XCICConfiguration.load().comfyui_url
+            result = AutomationProgressRunner(self).run(
+                "Release Idle ComfyUI GPU Memory",
+                self.plan.source.asset_id,
+                lambda: release_idle_comfyui_memory(
+                    comfyui_url=endpoint, operator_confirmed=True
+                ),
+                may_charge=False,
+            )
+            QMessageBox.information(
+                self,
+                "ComfyUI Cache Release Requested",
+                f"ComfyUI accepted the cache release request at {result.endpoint}.\n"
+                "The queue was idle at the time of the check. GPU memory "
+                "recovery is not guaranteed.\n\n"
+                "Click 'Check Qwen F5 Hardware Readiness (No Generation)' "
+                "to measure available VRAM again before any Qwen generation.",
+            )
+        except Exception as exc:
+            _LOGGER.exception("F5 ComfyUI memory release blocked or failed")
+            QMessageBox.warning(
+                self,
+                "ComfyUI Memory Release Not Confirmed",
+                f"{type(exc).__name__}: {exc}\n\n"
+                "No CAP correction was submitted. Recheck queue state, "
+                "ComfyUI health, and GPU memory before continuing.",
+            )
+        finally:
+            self.f5_release_memory_button.setEnabled(True)
+            self.f5_preflight_button.setEnabled(True)
 
     def _generate_guided_edit(self) -> None:
         """Explicit consent for the managed source-conditioned Qwen correction."""
