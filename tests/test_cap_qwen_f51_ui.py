@@ -178,3 +178,73 @@ def test_f51_final_attempt_needs_separate_acknowledgement(qtbot, tmp_path, monke
     consent.assert_not_called()
     service.generator.render.assert_not_called()
     service.generator.persist_candidate.assert_not_called()
+
+
+def test_f52_memory_release_decline_does_not_touch_comfyui(
+    qtbot, tmp_path, monkeypatch
+):
+    dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.No
+    )
+    release = Mock()
+    monkeypatch.setattr(ui, "release_idle_comfyui_memory", release)
+    dialog.f5_release_memory_button.click()
+    release.assert_not_called()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
+    assert dialog._f5_preflight_sha256 is None
+
+
+def test_f52_memory_release_requires_new_preflight(
+    qtbot, tmp_path, monkeypatch
+):
+    dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
+    dialog._f5_preflight_sha256 = "previous-sha"
+    dialog._f5_preflight_endpoint = "http://127.0.0.1:8188"
+    monkeypatch.setattr(
+        ui.XCICConfiguration,
+        "load",
+        lambda: SimpleNamespace(comfyui_url="http://127.0.0.1:8188"),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(QMessageBox, "information", Mock())
+    monkeypatch.setattr(ui.AutomationProgressRunner, "run", _run_read_only)
+    cleanup = Mock(return_value=SimpleNamespace(endpoint="http://127.0.0.1:8188"))
+    monkeypatch.setattr(ui, "release_idle_comfyui_memory", cleanup)
+    dialog.f5_release_memory_button.click()
+    cleanup.assert_called_once_with(
+        comfyui_url="http://127.0.0.1:8188", operator_confirmed=True
+    )
+    assert dialog._f5_preflight_sha256 is None
+    assert dialog._f5_preflight_endpoint is None
+    assert "RECHECK REQUIRED" in dialog.f5_status_label.text()
+    assert dialog.f5_release_memory_button.isEnabled()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
+
+
+def test_f52_busy_queue_reports_failure_without_consuming_attempt(
+    qtbot, tmp_path, monkeypatch
+):
+    dialog, service = _dialog(qtbot, monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        ui.XCICConfiguration,
+        "load",
+        lambda: SimpleNamespace(comfyui_url="http://127.0.0.1:8188"),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(QMessageBox, "warning", Mock())
+    monkeypatch.setattr(ui.AutomationProgressRunner, "run", _run_read_only)
+    monkeypatch.setattr(
+        ui, "release_idle_comfyui_memory", Mock(side_effect=RuntimeError("queue busy"))
+    )
+    dialog.f5_release_memory_button.click()
+    assert dialog.f5_release_memory_button.isEnabled()
+    assert "RECHECK REQUIRED" in dialog.f5_status_label.text()
+    service.generator.render.assert_not_called()
+    service.generator.persist_candidate.assert_not_called()
