@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict
 from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.draft_cap_revision import DraftCAPRevisionSnapshot
 from vscs.application.caps.provider_design_expansion import (
-    CAPDesignExpansionProvider,
+    CAPSingleFieldRegenerationProvider,
     validate_design_expansion,
 )
 from vscs.application.caps.proposal_cache import cache_fingerprint, provider_cache_fingerprint
@@ -194,21 +194,27 @@ def prepare_field_request(
 
 def generate_field_proposal(
     request: DraftCAPFieldRequest,
-    provider: CAPDesignExpansionProvider,
+    provider: CAPSingleFieldRegenerationProvider,
 ) -> CachedDraftCAPFieldProposal:
     """Pure provider-bound call; no Qt/project DB access from the worker thread."""
-    if not isinstance(provider, CAPDesignExpansionProvider):
+    if not isinstance(provider, CAPSingleFieldRegenerationProvider):
         raise DraftCAPFieldGenerationError(
-            "Selected CAP provider does not support structured design expansion"
+            "Selected CAP provider does not support scoped Draft field regeneration"
         )
-    response = provider.expand_cap_design(request.snapshot.specification, request.story_context)
+    original = next(
+        item for item in request.snapshot.review.fields if item.field == request.field
+    )
+    response = provider.regenerate_draft_cap_field(
+        request.snapshot.specification,
+        request.field,
+        request.story_context,
+        original.proposed_value,
+    )
     proposals = validate_design_expansion(request.snapshot.specification, response)
     if set(proposals) != {request.field}:
         raise DraftCAPFieldGenerationError(
             "Provider must return exactly one scoped field proposal"
         )
-    if request.field not in proposals:
-        raise DraftCAPFieldGenerationError("Provider returned no scoped proposal for target field")
     selected = proposals[request.field]
     issues = [issue for issue in assess_design_grounding(request.story_context, (selected,))]
     if issues:
