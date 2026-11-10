@@ -116,7 +116,9 @@ class StoryCAPBatchDialog(QDialog):
             "Prepare CAP Context is offline and labels Draft Shot evidence unverified. "
             "Review Cached Proposal never calls OpenAI. "
             "Generate / Regenerate Using AI (Paid) always requires a cost confirmation. "
-            "Only Draft CAP records may be created; nothing is approved."
+            "The new-CAP selector excludes already specified assets; use the separate "
+            "Edit Existing Draft CAP control for a governed Draft-only field revision. "
+            "No action here approves Canon or MASTER."
         )
         row = QHBoxLayout()
         row.addWidget(self.inspect)
