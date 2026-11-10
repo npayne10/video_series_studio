@@ -20,7 +20,10 @@ from vscs.application.caps.guided_edit_live_transport import (
     _checked_png,
     _loopback_endpoint,
 )
-from vscs.application.caps.managed_qwen_correction_job import ManagedQwenCorrectionJob
+from vscs.application.caps.managed_qwen_correction_job import (
+    ManagedQwenCorrectionJob,
+    managed_qwen_positive_prompt,
+)
 from vscs.application.caps.managed_qwen_model_inventory import (
     validate_managed_qwen_model_choices,
 )
@@ -63,9 +66,18 @@ def _unchanged(contract: SpatialCorrectionContract, job: ManagedQwenCorrectionJo
         raise GuidedEditExecutionError("Managed edit must contain exactly one queue job")
     item = jobs[0]
     output = item.get("output")
-    prompt = "\n".join(
-        f"MANDATORY reviewed {key}: {value}" for key, value in contract.accepted_fields
-    )
+    human_field: str | None = None
+    if human_path is not None:
+        try:
+            record = json.loads(human_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise GuidedEditExecutionError("Reviewer decision cannot be read") from exc
+        if not isinstance(record, dict) or not isinstance(
+            record.get("accepted_field"), str
+        ):
+            raise GuidedEditExecutionError("Reviewer decision field is malformed")
+        human_field = record["accepted_field"]
+    prompt = managed_qwen_positive_prompt(contract.accepted_fields, human_field)
     if (
         item.get("reference_inputs") != [str(contract.source_path)]
         or item.get("positive_prompt") != prompt
