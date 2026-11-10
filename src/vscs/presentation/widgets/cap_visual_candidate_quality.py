@@ -24,6 +24,9 @@ from vscs.application.caps.visual_candidate_regeneration import CandidateRegener
 from vscs.infrastructure.ai import AICredentialStore
 from vscs.infrastructure.ai.openai_semantic_evaluator import OpenAISemanticImageEvaluator
 from vscs.infrastructure.configuration import ConfigurationService
+from vscs.presentation.dialogs.human_correction_disposition_dialog import (
+    HumanCorrectionDispositionDialog,
+)
 from vscs.presentation.widgets import cap_manager
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
 from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
@@ -153,9 +156,42 @@ class CandidateQualityReportDialog(QDialog):
             lambda: self._prepare_correction(report, relative_report_path)
         )
         layout.addWidget(self.correction_button)
+        self.human_disposition_button = QPushButton(
+            "Record Human Correction Finding (No Generation)"
+        )
+        self.human_disposition_button.setObjectName("recordHumanCandidateCorrection")
+        self.human_disposition_button.setEnabled(
+            references is not None
+            and report.semantic is not None
+            and report.decision == "HUMAN_REVIEW_REQUIRED"
+            and bool(report.snapshot.accepted_fields)
+        )
+        self.human_disposition_button.clicked.connect(
+            lambda: self._record_human_disposition(report, relative_report_path)
+        )
+        layout.addWidget(self.human_disposition_button)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _record_human_disposition(
+        self, report: CandidateQualityResult, relative_report_path: str
+    ) -> None:
+        if self.references is None:
+            return
+        source = report.snapshot.project_root / relative_report_path
+        editor = HumanCorrectionDispositionDialog(report.snapshot, source, self)
+        if editor.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.human_disposition_button.setEnabled(False)
+        QMessageBox.information(
+            self,
+            "Human Review Decision Saved",
+            "A separate, immutable reviewer finding was recorded. "
+            "The original semantic report remains unchanged. "
+            "Use Correct From Saved Review to inspect the governed correction "
+            "attempt; no image has been generated.",
+        )
 
     def _prepare_correction(
         self, report: CandidateQualityResult, relative_report_path: str
