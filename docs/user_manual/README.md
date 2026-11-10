@@ -27,6 +27,21 @@ The old `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` Engineering Control Room source **C
 **Mandatory documentation contract:** Every future recommendation implying action by the operator must provide a numbered, UI-accurate, reproducible step-by-step procedure, explicit preconditions, isolation, expected responses, evidence, stop/retry rules and separate acceptance gates. Update this index and the User Manual in the **same development phase and GitHub branch as the feature**. Do not present a mock-test pass or read-only preflight as real GPU acceptance.
 
 
+## Governed revision of existing Draft CAPs — development update
+
+The existing CAP Batch **Discover Shot Assets** dropdown excludes assets
+already holding a structured CAP. The new separate **Existing Draft CAPs**
+selector and **Edit Existing Draft CAP…** dialog enable a review-controlled
+revision of **one Deferred/Rejected field**, preserving all accepted field
+decisions and failing stale or approved database writes.
+
+See the numbered
+[Diagnostic Console revision acceptance procedure](VSCS_User_Manual.md#b526f-f53-prerequisite--edit-existing-draft-cap-new-governed-revision-workflow).
+**Development status:** committed; Windows regression and real UI acceptance
+pending. Never infer that the Geometry blocker is cleared before the
+actual saved Draft and subsequent Visual Identity inspection are verified.
+
+
 ## Required documentation for each UI action
 
 | Item | Requirement |
@@ -60,6 +75,7 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [ ] Project preferences, export, backup/restore, diagnostics
 - [ ] Complete Automation progress indicator implementation — shared Planning/Shot runner committed, local acceptance pending; other actions outstanding
 - [x] F5.1 dual-workflow and F5.2 ComfyUI memory-release operator guidance — documented and UI observed
+- [ ] Existing Draft CAP field revision — implementation committed; regression and UI acceptance pending
 - [ ] F5.3 clean disposable Qwen GPU inference and Candidate quality — awaiting actual local test
 - [ ] Context-sensitive Help integration in VSCS
 
