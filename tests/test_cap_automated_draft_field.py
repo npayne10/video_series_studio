@@ -149,7 +149,9 @@ def test_rejects_stale_context_before_provider_call():
     service, snap = _review_fixture()
     service.prepare_context.return_value.fingerprint = "changed"
     with pytest.raises(DraftCAPFieldGenerationError, match="context changed"):
-        prepare_field_request(service, snap, field="geometry", provider=_Provider(), generation_number=1)
+        prepare_field_request(
+            service, snap, field="geometry", provider=_Provider(), generation_number=1
+        )
 
 
 def test_cache_reservation_and_reopen_are_non_authoritative(tmp_path):
@@ -184,4 +186,6 @@ def test_tampered_cache_cannot_be_reused(tmp_path):
 def test_approved_field_cannot_be_generated():
     service, snap = _review_fixture()
     with pytest.raises(DraftCAPFieldGenerationError, match="deferred/rejected"):
-        prepare_field_request(service, snap, field="materials", provider=_Provider(), generation_number=1)
+        prepare_field_request(
+            service, snap, field="materials", provider=_Provider(), generation_number=1
+        )
