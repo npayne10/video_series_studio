@@ -81,7 +81,7 @@ def test_wrong_field_is_rejected_after_exactly_one_request():
             )
         )
     )
-    with pytest.raises(ValueError, match="already-defined"):
+    with pytest.raises(ValueError, match="only the requested"):
         provider.regenerate_draft_cap_field(
             _spec(), "geometry", "The diagnostic console has a blue display.", "Original"
         )
@@ -90,7 +90,7 @@ def test_wrong_field_is_rejected_after_exactly_one_request():
 
 def test_empty_or_incomplete_response_does_not_trigger_silent_retry():
     provider = _provider(DesignExpansionResponse(fields=()))
-    with pytest.raises(AIProviderError, match="exactly the requested"):
+    with pytest.raises(ValueError, match="only the requested"):
         provider.regenerate_draft_cap_field(
             _spec(), "geometry", "The diagnostic console has a blue display.", "Original"
         )
