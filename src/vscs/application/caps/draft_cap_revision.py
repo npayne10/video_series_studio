@@ -25,7 +25,7 @@ from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
 )
 from vscs.domain.caps import CAPStatus
-from vscs.presentation.widgets.cap_review_inspection import load_review_snapshot
+from vscs.application.caps.review_snapshot import load_review_snapshot
 
 REVISION_HISTORY_KEY = "vscs.cap_design_revision_history.v1"
 
