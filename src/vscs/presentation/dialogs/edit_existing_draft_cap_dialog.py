@@ -106,6 +106,7 @@ class EditExistingDraftCAPDialog(QDialog):
         layout.addWidget(self.proposal_status)
         self._request = None
         self._proposal = None
+        self.save_button = None
         self._runner = AutomationProgressRunner(self)
         self.field.currentIndexChanged.connect(self._show_original)
         self._show_original()
