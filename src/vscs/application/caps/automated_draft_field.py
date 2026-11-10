@@ -14,11 +14,11 @@ from pydantic import BaseModel, ConfigDict
 
 from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.draft_cap_revision import DraftCAPRevisionSnapshot
+from vscs.application.caps.proposal_cache import cache_fingerprint, provider_cache_fingerprint
 from vscs.application.caps.provider_design_expansion import (
     CAPSingleFieldRegenerationProvider,
     validate_scoped_field_regeneration,
 )
-from vscs.application.caps.proposal_cache import cache_fingerprint, provider_cache_fingerprint
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 
 CONTRACT_VERSION = "draft-cap-field-regeneration-v1"
@@ -132,9 +132,7 @@ class DraftCAPFieldProposalCache:
             with path.open("x", encoding="utf-8") as file:
                 file.write(proposal.model_dump_json())
         except FileExistsError as exc:
-            raise DraftCAPFieldGenerationError(
-                "Proposal generation number already used"
-            ) from exc
+            raise DraftCAPFieldGenerationError("Proposal generation number already used") from exc
         reservation.unlink()
 
     def load(self, request: DraftCAPFieldRequest) -> CachedDraftCAPFieldProposal:
@@ -226,9 +224,7 @@ def generate_field_proposal(
         raise DraftCAPFieldGenerationError(
             "Selected CAP provider does not support scoped Draft field regeneration"
         )
-    original = next(
-        item for item in request.snapshot.review.fields if item.field == request.field
-    )
+    original = next(item for item in request.snapshot.review.fields if item.field == request.field)
     response = provider.regenerate_draft_cap_field(
         request.snapshot.specification,
         request.field,
@@ -238,7 +234,7 @@ def generate_field_proposal(
     selected = validate_scoped_field_regeneration(
         request.snapshot.specification, request.field, response
     )
-    issues = [issue for issue in assess_design_grounding(request.story_context, (selected,))]
+    issues = list(assess_design_grounding(request.story_context, (selected,)))
     if issues:
         raise DraftCAPFieldGenerationError("Generated field failed source-grounding validation")
     return CachedDraftCAPFieldProposal(
