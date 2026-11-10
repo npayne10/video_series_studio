@@ -136,6 +136,61 @@ class OpenAICAPGenerationProvider:
         except Exception as exc:
             raise AIProviderError(f"OpenAI CAP generation failed: {exc}") from exc
 
+    def regenerate_draft_cap_field(
+        self,
+        spec: CAPStructuredSpecification,
+        field: str,
+        story_context: str,
+        original_proposal: str,
+    ) -> DesignExpansionResponse:
+        """Paid, scoped existing-Draft design proposal; never modifies CAP."""
+        from vscs.application.caps.completeness import REQUIRED_FIELDS
+        from vscs.application.caps.design_quality import assess_design_grounding
+        from vscs.application.caps.provider_design_expansion import (
+            validate_design_expansion,
+        )
+
+        if (
+            field not in REQUIRED_FIELDS.get(spec.category, ("identity",))
+            or field in spec.canonical_attributes
+        ):
+            raise AIProviderError("Selected Draft field is not eligible for regeneration")
+        instructions = (
+            "You are the VSCS production designer resolving exactly ONE deferred "
+            "physical design field in an EXISTING Draft CAP. Return exactly one "
+            "structured proposal for the named field, no other fields. "
+            "Preserve every accepted attribute as immutable. Separate facts explicitly "
+            "supported by approved Story text from creative design proposals; never "
+            "claim an invented silhouette, dimension or attachment is Story Canon. "
+            "Do not insert temporary Shot events or camera framing into stable geometry. "
+            "For a Prop geometry field describe the repeatable physical form and placement "
+            "of already accepted components without introducing extra equipment. "
+            "If no responsible proposed design is possible, return an empty fields list. "
+            "Each proposed value must be usable as a stable physical identity, while "
+            "the rationale must identify its creative assumptions. No image generation."
+        )
+        source = (
+            f"Asset: {spec.asset_id}\nCategory: {spec.category.value}\n"
+            f"Design intent: {spec.design_intent}\n"
+            f"IMMUTABLE previously accepted attributes: {spec.canonical_attributes}\n"
+            f"TARGET FIELD ONLY: {field}\n"
+            f"Earlier deferred proposal (advisory, may be incomplete): {original_proposal}\n"
+            f"Approved Story and verified Shot evidence: {story_context}"
+        )
+        result = self._parse(
+            instructions=instructions,
+            input_text=source,
+            result_type=DesignExpansionResponse,
+            stage="single-field existing Draft CAP regeneration",
+        )
+        # Structural/grounding validation prevents a second implicit AI request.
+        checked = validate_design_expansion(spec, result)
+        if set(checked) != {field}:
+            raise AIProviderError("Provider did not return exactly the requested Draft field")
+        if assess_design_grounding(story_context, result.fields):
+            raise AIProviderError("Generated field conflicts with governed source grounding")
+        return result
+
     def expand_cap_design(
         self, spec: CAPStructuredSpecification, story_context: str
     ) -> DesignExpansionResponse:
