@@ -42,6 +42,13 @@ pending. Never infer that the Geometry blocker is cleared before the
 actual saved Draft and subsequent Visual Identity inspection are verified.
 
 
+## Automation-first existing Draft CAP revisions — correction (2026-11-10)
+
+**The current Edit Existing Draft CAP workflow is an audited manual-review/persistence mechanism, not automated content generation.** It is **not accepted for F5.3 automated source preparation** until VSCS can propose the deferred Geometry field itself from governed Story and accepted CAP context. The operator must review and approve a generated, evidence-labelled proposal, rather than type/paste a replacement just to clear readiness. Explicit paid-provider consent, structured validation, cached provenance and governed one-field persistence are mandatory.
+
+**Immediate operator action:** Cancel the open Diagnostic Console Geometry editor; leave Geometry **Defer**, preserve Materials/Components/Scale and Engineering Control Room Candidate 2 attempt 2/2. See [automation-first corrective procedure](VSCS_User_Manual.md#vscs-automation-principle--correction-to-f53-acceptance).
+
+
 ## Required documentation for each UI action
 
 | Item | Requirement |
