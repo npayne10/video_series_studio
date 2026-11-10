@@ -63,9 +63,7 @@ def test_provider_requests_one_field_only_with_immutable_accepted_design():
 def test_existing_accepted_field_is_rejected_without_api_request():
     provider = _provider(DesignExpansionResponse(fields=()))
     with pytest.raises(AIProviderError, match="not eligible"):
-        provider.regenerate_draft_cap_field(
-            _spec(), "materials", "A console.", "Original"
-        )
+        provider.regenerate_draft_cap_field(_spec(), "materials", "A console.", "Original")
     provider._parse.assert_not_called()
 
 
