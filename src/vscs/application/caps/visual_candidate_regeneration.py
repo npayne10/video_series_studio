@@ -282,13 +282,14 @@ class CandidateRegenerationService:
         fidelity_instruction = (
             "\nF5.4 SOURCE-CONDITIONED EDIT SCOPE: Preserve the existing source "
             "image's identity, materials, screen, visible button count, side grips, "
-            "perspective and studio lighting. Modify only the accepted CAP field "
+            "perspective and studio lighting where consistent with the accepted "
+            "Draft. Modify only the accepted CAP field "
             f"'{human_field}' against its mandatory reviewed value: "
             f"{dict(snapshot.accepted_fields)[human_field]}. "
-            "Do not copy unreviewed objects into the result. Keep the console "
-            "physically separate from an adjacent workstation. A rotary dial "
-            "specified as recessed must be below or flush with the surrounding "
-            "shelf, not raised. Do not introduce unrelated features. "
+            "Keep distinct objects physically separate where their accepted "
+            "relationships require it. Preserve specified recesses and counts "
+            "literally; do not raise recessed controls, invent attachments, "
+            "or introduce unrelated features. "
             if human_field is not None
             else ""
         )
