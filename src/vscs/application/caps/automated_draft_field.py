@@ -7,7 +7,6 @@ reviewed confirmation may call the existing Draft compare-and-swap path.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -177,6 +176,10 @@ def generate_field_proposal(
         )
     response = provider.expand_cap_design(request.snapshot.specification, request.story_context)
     proposals = validate_design_expansion(request.snapshot.specification, response)
+    if set(proposals) != {request.field}:
+        raise DraftCAPFieldGenerationError(
+            "Provider must return exactly one scoped field proposal"
+        )
     if request.field not in proposals:
         raise DraftCAPFieldGenerationError("Provider returned no scoped proposal for target field")
     selected = proposals[request.field]
