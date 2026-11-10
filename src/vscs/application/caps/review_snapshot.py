@@ -62,4 +62,3 @@ def load_review_snapshot(
         review,
         "Persisted design review audit — this review does not approve Canon or images.",
     )
-
