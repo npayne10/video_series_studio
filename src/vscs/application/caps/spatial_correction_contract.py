@@ -50,6 +50,8 @@ class SpatialCorrectionContract:
     workflow_id: str
     model_identifier: str
     evidence_sha256: str
+    human_disposition_path: Path | None = None
+    human_disposition_sha256: str | None = None
 
     @property
     def execution_authorized(self) -> bool:
@@ -78,6 +80,12 @@ class SpatialCorrectionContract:
             "workflow_sha256": self.workflow_sha256,
             "workflow_id": self.workflow_id,
             "model_identifier": self.model_identifier,
+            "human_disposition_path": (
+                str(self.human_disposition_path)
+                if self.human_disposition_path is not None
+                else None
+            ),
+            "human_disposition_sha256": self.human_disposition_sha256,
         }
 
     def verify_seal(self) -> None:
@@ -230,6 +238,12 @@ def prepare_spatial_contract(
         "workflow_sha256": workflow_hash,
         "workflow_id": workflow_id,
         "model_identifier": model_identifier,
+        "human_disposition_path": (
+            str(plan.human_disposition_path)
+            if plan.human_disposition_path is not None
+            else None
+        ),
+        "human_disposition_sha256": plan.human_disposition_sha256,
     }
     seal = _digest(json.dumps(evidence, sort_keys=True).encode("utf-8"))
     return SpatialCorrectionContract(
@@ -253,6 +267,8 @@ def prepare_spatial_contract(
         workflow_id=workflow_id,
         model_identifier=model_identifier,
         evidence_sha256=seal,
+        human_disposition_path=plan.human_disposition_path,
+        human_disposition_sha256=plan.human_disposition_sha256,
     )
 
 
@@ -275,6 +291,8 @@ def verify_spatial_contract(
         or contract.specification_fingerprint != plan.source.specification_fingerprint
         or contract.review_fingerprint != plan.source.review_fingerprint
         or contract.accepted_fields != plan.source.accepted_fields
+        or contract.human_disposition_path != plan.human_disposition_path
+        or contract.human_disposition_sha256 != plan.human_disposition_sha256
     ):
         raise SpatialCorrectionContractError("Correction plan authority changed")
     _contained_file(
@@ -300,6 +318,13 @@ def verify_spatial_contract(
         raise SpatialCorrectionContractError("Semantic review report changed")
     if _read_hashed(contract.workflow_path) != contract.workflow_sha256:
         raise SpatialCorrectionContractError("Editing workflow changed")
+    if contract.human_disposition_path is not None:
+        if (
+            contract.human_disposition_sha256 is None
+            or _read_hashed(contract.human_disposition_path)
+            != contract.human_disposition_sha256
+        ):
+            raise SpatialCorrectionContractError("Human correction disposition changed")
     if contract.mask_path is not None:
         if contract.mask_sha256 is None:
             raise SpatialCorrectionContractError("Mask hash missing")
