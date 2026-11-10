@@ -676,3 +676,40 @@ This acceptance checkpoint verifies local **initial Candidate creation and regis
 ### Feature documentation acceptance rules
 
 For every later feature/change, update the relevant procedure in this manual **in the same GitHub commit series as source and tests**, update the manual index, supply an executable/stepwise operator plan in the ChatGPT handoff, and list any parts still requiring real operator acceptance. Do not close a feature merely because CI, a mock provider or a button press succeeded. Existing protected projects and Candidate correction budgets must not be repurposed for convenient testing.
+
+
+### B.5.26F F5.3 — Isolated managed Qwen GPU acceptance, no CAP correction
+
+**Implementation status (2026-11-10):** A dedicated offline-preparation and one-shot GPU execution CLI has been committed. **Windows static/full regression and real ComfyUI GPU acceptance are pending.** It is not a governed Candidate correction and is never permitted to register, promote, approve or overwrite images in the CAP project. The existing Diagnostic Console supplementary Candidate **reference 3**, its saved semantic `HUMAN_REVIEW_REQUIRED` report and the Engineering Control Room Candidate 2 final correction **attempt 2/2** are preserved.
+
+**Why this path exists:** Candidate 3 has a real semantic quality assessment (overall semantic 88/100, Draft consistency 75/100) but no `REGENERATE_RECOMMENDED` decision. The correction gate correctly stays closed. Hardware acceptance cannot justify forging that decision. Instead, this utility copies the genuine source PNG to a separate acceptance bundle outside the VSCS project, uses the **exact managed source-conditioned Qwen Image Edit API v2.1 graph** and submits at most one isolated ComfyUI request. All queue, prompt, output and result files stay in the separate bundle, never the project's Canonical Assets or correction journal.
+
+**Precondition and operator checkpoint — do not rush directly into GPU inference:**
+
+1. Complete GitHub pull and validate `python -m ruff check .`, `python -m ruff format --check --no-cache .`, `python -m mypy src`, focused `tests/test_cap_qwen_f53_isolated_acceptance.py`, complete `python -m pytest -q`, `git diff --check` and `git status --short`. Stop if any fails. Baseline before implementation: **2,710 passed, 1 skipped**.
+2. Keep the disposable `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` project active. In **Canonical Profiles → Edit Selected → Canonical Reference Gallery**, select Diagnostic Console Candidate **3**, confirm **Role Supplementary / Status Candidate**, and copy the exact PNG path shown by the UI. Do not click Approve, Archive, Set as Primary, Correct, or rerun semantic evaluation.
+3. Close VSCS, back up the entire disposable project if needed, then reopen the original. The acceptance bundle must be a **new unused absolute directory outside the project**; never run a test inside `Canonical Assets` or `.vscs`.
+4. From the VSCS virtual environment, create the parent directory for test bundles, e.g. `New-Item -ItemType Directory -Force D:\VSCS_QWEN_F53_ACCEPTANCE`. Record the exact original project root and Candidate 3 PNG file path; **do not guess them from the displayed example**.
+5. **Offline preparation only:**
+
+   ```powershell
+   $project = "ACTUAL_ABSOLUTE_PATH_TO_B5_22_PROJECT"
+   $source  = "ACTUAL_ABSOLUTE_PATH_TO_CANDIDATE_3_PNG"
+   $bundle  = "D:\VSCS_QWEN_F53_ACCEPTANCE\run_001"
+   python -m vscs.application.caps.qwen_f53_isolated_acceptance --prepare --project-root "$project" --source "$source" --bundle "$bundle" --prompt "Retain the console identity and accepted control arrangement; recess the existing rotary dial into the shelf; do not introduce or merge a separate workstation." --seed 43
+   ```
+
+   This prepares a copied source image, a queue, derived graph and a checksum manifest without contacting ComfyUI. If the bundle exists, the command **fails instead of overwriting** it. Confirm `source.png`, `acceptance_manifest.json`, `qwen_acceptance_queue.json`, and `qwen_acceptance_graph.json` are in the **external** bundle. There must be **no** `execution_reserved.json`, `qwen_acceptance_output.png` or `acceptance_result.json` yet. Original Candidate 3 image and semantic report must remain unchanged.
+6. Perform read-only F5 preflight (`python -m vscs.application.caps.qwen_f5_preflight`) while ComfyUI is running and idle. Record graph SHA, installed Qwen checkpoint/LoRA/text encoder/VAE, GPU total/free VRAM and ComfyUI node status. A ready preflight does **not** prove GPU fit. If model inventory or queue is not ready, stop.
+7. **STOP AND SUBMIT EVIDENCE** after preparation and preflight. No GPU request is authorized by the preparation step. Confirm free VRAM and have an independent ComfyUI GPU session without other clients queuing prompts.
+8. After separate operator authorization, perform exactly **one** GPU request. This command needs explicit `--confirm-one-gpu-run`:
+
+   ```powershell
+   python -m vscs.application.caps.qwen_f53_isolated_acceptance --execute --project-root "$project" --bundle "$bundle" --confirm-one-gpu-run
+   ```
+
+   Before submitting it checks the project/source/bundle hashes, workflow identity, exact managed graph, loaded node/model inventory and idle ComfyUI queue. A file `execution_reserved.json` is created **before** the possible ComfyUI POST. No automatic retries, no correction attempt reservation or CAP DB access. If a timeout or unknown result occurs, **do not delete the reservation or re-execute the same bundle**. Inspect ComfyUI logs/history and retain evidence.
+9. Collect `acceptance_result.json`, ComfyUI prompt ID/logs, elapsed seconds, decoded PNG dimensions, file SHA-256, output image, GPU memory before/peak/after (separately sampled with `nvidia-smi`) and whether offloading/OOM occurred. The result record reports `gpu_peak_vram_mib: null` unless external monitoring was used; **never claim an invented peak**.
+10. Verify the output exists **only** in `D:\VSCS_QWEN_F53_ACCEPTANCE\run_001`. Confirm the original project Gallery still lists Candidate 3 unchanged, no new reference ID is registered, the semantic report unchanged, no CAP/MASTER/Canon changes and no correction attempt consumed. Accept GPU hardware inference only after the actual user GPU run succeeds and the image is verified. A mocked passing test proves software boundaries, **not** RTX 5060 Ti hardware success.
+
+**Critical isolation limits:** The acceptance tool operates on a source copy, produces an external test result and does **not** change CAP authority. It intentionally does **not** claim visual-correction quality, approve Candidate 3, or provide spatial mask/inpainting control. A separate later governed decision is needed to handle operator-confirmed visual defects in a genuine Candidate without forging semantic regeneration recommendations.
