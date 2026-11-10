@@ -137,6 +137,7 @@ def test_revise_deferred_field_preserves_accepted_review_and_unrelated_metadata(
     ]
     history = json.loads(new_meta[REVISION_HISTORY_KEY])
     assert history[0]["prior_decision"] == "defer"
+    assert json.loads(history[0]["prior_review_audit"])["reviewer"] == "Original reviewer"
 
 
 def test_cannot_change_already_accepted_field():
