@@ -247,6 +247,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
         )
         if choice != QMessageBox.StandardButton.Yes:
             return
+        self._generation_active = True
         self.f5_release_memory_button.setEnabled(False)
         self.f5_preflight_button.setEnabled(False)
         self._f5_preflight_sha256 = None
@@ -283,6 +284,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 "ComfyUI health, and GPU memory before continuing.",
             )
         finally:
+            self._generation_active = False
             self.f5_release_memory_button.setEnabled(True)
             self.f5_preflight_button.setEnabled(True)
 
