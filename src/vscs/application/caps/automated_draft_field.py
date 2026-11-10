@@ -81,6 +81,19 @@ class DraftCAPFieldProposalCache:
                 raise DraftCAPFieldGenerationError("Invalid cached proposal filename") from exc
         return max(indices, default=0) + 1
 
+    def latest_completed_number(self, request: DraftCAPFieldRequest) -> int | None:
+        """Find the latest complete, reviewable proposal without any provider call."""
+        folder = self._path(request).parent
+        if not folder.is_dir():
+            return None
+        numbers = []
+        for path in folder.glob("*.json"):
+            try:
+                numbers.append(int(path.stem))
+            except ValueError as exc:
+                raise DraftCAPFieldGenerationError("Invalid cached proposal filename") from exc
+        return max(numbers, default=None)
+
     def reserve(self, request: DraftCAPFieldRequest) -> None:
         """Reserve once before any provider call; ambiguous outcomes remain recorded."""
         path = self._path(request).with_suffix(".pending")
