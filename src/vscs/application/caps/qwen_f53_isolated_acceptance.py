@@ -75,7 +75,9 @@ def _json(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        raise IsolatedQwenAcceptanceError(f"Missing or corrupt acceptance evidence: {path}") from exc
+        raise IsolatedQwenAcceptanceError(
+            f"Missing or corrupt acceptance evidence: {path}"
+        ) from exc
     if not isinstance(value, dict):
         raise IsolatedQwenAcceptanceError("Acceptance evidence is not an object")
     return value
@@ -341,7 +343,13 @@ def main() -> int:
             )
             print(json.dumps(result, indent=2, sort_keys=True))
         return 0
-    except (GuidedEditExecutionError, IsolatedQwenAcceptanceError, RuntimeError, OSError, ValueError) as exc:
+    except (
+        GuidedEditExecutionError,
+        IsolatedQwenAcceptanceError,
+        RuntimeError,
+        OSError,
+        ValueError,
+    ) as exc:
         print(json.dumps({"status": "BLOCKED", "error": f"{type(exc).__name__}: {exc}"}))
         return 2
 
