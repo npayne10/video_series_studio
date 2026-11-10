@@ -144,14 +144,12 @@ class OpenAICAPGenerationProvider:
         original_proposal: str,
     ) -> DesignExpansionResponse:
         """Paid, scoped existing-Draft design proposal; never modifies CAP."""
-        from vscs.application.caps.completeness import REQUIRED_FIELDS
         from vscs.application.caps.design_quality import assess_design_grounding
-        from vscs.application.caps.provider_design_expansion import validate_design_expansion
+        from vscs.application.caps.provider_design_expansion import (
+            validate_scoped_field_regeneration,
+        )
 
-        if (
-            field not in REQUIRED_FIELDS.get(spec.category, ("identity",))
-            or field in spec.canonical_attributes
-        ):
+        if not field or field in spec.canonical_attributes:
             raise AIProviderError("Selected Draft field is not eligible for regeneration")
         instructions = (
             "You are the VSCS production designer resolving exactly ONE deferred "
@@ -182,9 +180,7 @@ class OpenAICAPGenerationProvider:
             stage="single-field existing Draft CAP regeneration",
         )
         # Structural/grounding validation prevents a second implicit AI request.
-        checked = validate_design_expansion(spec, result)
-        if set(checked) != {field}:
-            raise AIProviderError("Provider did not return exactly the requested Draft field")
+        validate_scoped_field_regeneration(spec, field, result)
         if assess_design_grounding(story_context, result.fields):
             raise AIProviderError("Generated field conflicts with governed source grounding")
         return result
