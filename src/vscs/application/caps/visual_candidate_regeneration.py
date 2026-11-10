@@ -52,7 +52,7 @@ class CandidateRegenerationPlan:
 
     @property
     def lineage(self) -> dict[str, str | int]:
-        return {
+        evidence: dict[str, str | int] = {
             "original_reference_id": self.original_reference_id,
             "parent_reference_id": self.source.reference_id,
             "attempt": self.attempt,
@@ -62,6 +62,15 @@ class CandidateRegenerationPlan:
             "previous_technical_score": self.previous_technical_score,
             "previous_semantic_score": self.previous_semantic_score,
         }
+        if self.human_disposition_path is not None:
+            if self.human_disposition_sha256 is None or self.human_correction_field is None:
+                raise CandidateRegenerationError("Incomplete human correction provenance")
+            evidence["human_disposition_path"] = str(
+                self.human_disposition_path.relative_to(self.source.project_root)
+            )
+            evidence["human_disposition_sha256"] = self.human_disposition_sha256
+            evidence["human_correction_field"] = self.human_correction_field
+        return evidence
 
 
 class CandidateRegenerationService:
