@@ -75,6 +75,11 @@ class DraftCAPFieldProposalCache:
         for path in folder.iterdir():
             if not path.is_file() or path.suffix not in {".json", ".pending"}:
                 raise DraftCAPFieldGenerationError("Unexpected proposal cache entry")
+            if path.suffix == ".pending":
+                raise DraftCAPFieldGenerationError(
+                    "An earlier paid field request is unresolved; reconcile the "
+                    "provider log and proposal cache before any regeneration"
+                )
             try:
                 indices.append(int(path.stem))
             except ValueError as exc:
