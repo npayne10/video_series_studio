@@ -47,6 +47,9 @@ def test_accepted_fields_are_read_only_and_only_deferred_field_selectable(qtbot)
     assert dialog.field.currentData() == "geometry"
     assert "blue display" in dialog.original_proposal.toPlainText()
     assert dialog.original_proposal.isReadOnly()
+    assert dialog.value.isReadOnly()
+    assert dialog.rationale.isReadOnly()
+    assert dialog.save_button is not None and not dialog.save_button.isEnabled()
 
 
 def test_cancelled_field_confirmation_makes_no_write(qtbot, monkeypatch):
@@ -58,30 +61,30 @@ def test_cancelled_field_confirmation_makes_no_write(qtbot, monkeypatch):
         "question",
         lambda *_args: QMessageBox.StandardButton.No,
     )
-    dialog.value.setPlainText("Rectangular housing")
-    dialog.rationale.setPlainText("Approved as disposable design proposal")
     dialog._save()
     save.assert_not_called()
 
 
-def test_confirmed_revision_passes_one_field_and_rationale(qtbot, monkeypatch):
-    dialog, service = _dialog(qtbot)
+def test_manual_text_cannot_activate_save_without_generated_proposal(qtbot, monkeypatch):
+    dialog, _service = _dialog(qtbot)
     save = Mock()
     monkeypatch.setattr(ui, "save_draft_cap_field_revision", save)
-    monkeypatch.setattr(
-        QMessageBox,
-        "question",
-        lambda *_args: QMessageBox.StandardButton.Yes,
-    )
-    monkeypatch.setattr(QMessageBox, "information", Mock())
-    dialog.value.setPlainText("Rectangular housing")
-    dialog.rationale.setPlainText("Operator-approved Draft design choice")
+    monkeypatch.setattr(QMessageBox, "warning", Mock())
+    dialog.value.setPlainText("Manually written rectangle")
+    dialog.rationale.setPlainText("Manual explanation")
     dialog._save()
-    save.assert_called_once_with(
-        service,
-        dialog.snapshot,
-        field="geometry",
-        reviewed_value="Rectangular housing",
-        rationale="Operator-approved Draft design choice",
-        reviewer="Operator",
-    )
+    save.assert_not_called()
+    assert not dialog.save_button.isEnabled()
+
+
+def test_rejection_clears_generated_proposal_and_blocks_save(qtbot):
+    dialog, _service = _dialog(qtbot)
+    dialog._request = Mock()
+    dialog._proposal = Mock()
+    dialog.value.setPlainText("AI generated rectangle")
+    dialog.save_button.setEnabled(True)
+    dialog.reject_button.click()
+    assert dialog._proposal is None
+    assert dialog._request is None
+    assert not dialog.save_button.isEnabled()
+    assert dialog.value.toPlainText() == ""
