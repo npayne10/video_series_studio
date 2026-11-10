@@ -1,8 +1,6 @@
 """F5.2: local ComfyUI memory release is consented and idle-queue guarded."""
 
 import json
-from types import SimpleNamespace
-from unittest.mock import Mock
 
 import pytest
 
