@@ -600,3 +600,108 @@ def test_spatial_inspection_button_cannot_generate_or_consume_attempt(qtbot, tmp
     service.generator.render.assert_not_called()
     service.generator.persist_candidate.assert_not_called()
     assert dialog.generate_button.isEnabled()
+
+
+def test_f54_human_review_requires_separate_immutable_disposition(tmp_path):
+    from vscs.application.caps.human_review_disposition import (
+        save_human_correction_disposition,
+        verify_human_correction_disposition,
+    )
+
+    service, snap, _prep, report, payload, _manifest = _setup(tmp_path)
+    payload["decision"] = "HUMAN_REVIEW_REQUIRED"
+    payload["semantic"]["decision"] = "pass"
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    original = report.read_bytes()
+    with pytest.raises(CandidateRegenerationError, match="independent human"):
+        service.prepare(snap.asset_id, snap.reference_id, report)
+    decision = save_human_correction_disposition(
+        snap,
+        report,
+        reviewer="Operator Reviewer",
+        accepted_field="layout",
+        observed_discrepancy="A second door is visible despite the reviewed one-door requirement.",
+    )
+    path, digest, field = verify_human_correction_disposition(snap, report)
+    assert path == decision and field == "layout"
+    assert len(digest) == 64
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    assert plan.human_correction_field == "layout"
+    assert plan.human_disposition_sha256 == digest
+    assert plan.human_disposition_path == decision
+    assert plan.attempt == 1
+    assert "SOURCE-CONDITIONED EDIT SCOPE" in plan.request.prompt
+    assert "ONE access door" in plan.request.prompt
+    assert "A second door is visible" not in plan.request.prompt
+    assert original == report.read_bytes()
+
+
+def test_f54_refuses_unaccepted_field_and_duplicate_decision(tmp_path):
+    from vscs.application.caps.human_review_disposition import (
+        HumanCorrectionDispositionError,
+        save_human_correction_disposition,
+    )
+
+    _service, snap, _prep, report, payload, _manifest = _setup(tmp_path)
+    payload["decision"] = "HUMAN_REVIEW_REQUIRED"
+    payload["semantic"]["decision"] = "pass"
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(HumanCorrectionDispositionError, match="accepted CAP field"):
+        save_human_correction_disposition(
+            snap,
+            report,
+            reviewer="Operator Reviewer",
+            accepted_field="unreviewed_geometry",
+            observed_discrepancy="An unaccepted silhouette is visible in the source Candidate.",
+        )
+    kwargs = {
+        "reviewer": "Operator Reviewer",
+        "accepted_field": "layout",
+        "observed_discrepancy": "A second door is visible despite the reviewed one-door requirement.",
+    }
+    save_human_correction_disposition(snap, report, **kwargs)
+    with pytest.raises(HumanCorrectionDispositionError, match="already exists"):
+        save_human_correction_disposition(snap, report, **kwargs)
+
+
+def test_f54_changed_human_decision_invalidates_prepared_plan(tmp_path):
+    from vscs.application.caps.human_review_disposition import (
+        save_human_correction_disposition,
+    )
+
+    service, snap, _prep, report, payload, _manifest = _setup(tmp_path)
+    payload["decision"] = "HUMAN_REVIEW_REQUIRED"
+    payload["semantic"]["decision"] = "pass"
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    disposition = save_human_correction_disposition(
+        snap,
+        report,
+        reviewer="Operator Reviewer",
+        accepted_field="layout",
+        observed_discrepancy="A second door is visible despite the reviewed one-door requirement.",
+    )
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    data = json.loads(disposition.read_text(encoding="utf-8"))
+    data["observed_discrepancy"] = "Altered after reviewer sign off."
+    disposition.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(CandidateRegenerationError, match="changed during generation"):
+        service.verify_current(plan)
+
+
+def test_f54_worker_prompt_is_accepted_field_only():
+    from vscs.application.caps.managed_qwen_correction_job import (
+        ManagedQwenCorrectionError,
+        managed_qwen_positive_prompt,
+    )
+
+    fields = (
+        ("geometry", "One recessed rotary dial on a separate control shelf."),
+        ("materials", "Matte charcoal alloy."),
+    )
+    prompt = managed_qwen_positive_prompt(fields, "geometry")
+    assert "F5.4 SOURCE IMAGE EDIT" in prompt
+    assert "recessed" in prompt
+    assert "MANDATORY reviewed materials" in prompt
+    assert "recessed" not in managed_qwen_positive_prompt(fields)
+    with pytest.raises(ManagedQwenCorrectionError, match="not an accepted"):
+        managed_qwen_positive_prompt(fields, "invented")
