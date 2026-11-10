@@ -160,6 +160,7 @@ def save_draft_cap_field_revision(
             "reviewer": name,
             "rationale": reason,
             "prior_decision": original.decision.value,
+            "prior_review_audit": snapshot.expected_metadata[DESIGN_REVIEW_KEY],
             "prior_specification_fingerprint": snapshot.specification.fingerprint(),
             "new_specification_fingerprint": revised.fingerprint(),
         }
