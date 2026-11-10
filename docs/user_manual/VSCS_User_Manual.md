@@ -503,6 +503,20 @@ In `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, the operator's CAP list shows Engineeri
 
 **Checkpoint required before further actions:** Capture the Diagnostic Console **Prepare Visual Identity…** readiness window and whether its own gallery contains a supplementary Candidate. These results distinguish a usable clean lineage from a false test environment. Do not assume the Unmanned Exploration Vessel is ready; its deferred exterior silhouette has previously blocked visual Candidate preparation.
 
+### F5.3 discovered limitation — existing CAPs cannot be reopened from CAP Batch
+
+**Operator-observed 2026-11-10, source-confirmed:** In **Canonical Profiles → Story → CAP Batch… → Discover Shot Assets**, the three B5_22 acceptance assets are listed as **Already specified**, and the asset dropdown is empty. This is intentional in `src/vscs/presentation/dialogs/story_cap_batch_dialog.py`: `discover()` adds only assets whose `has_specification` flag is false to the selectable dropdown. `review_one()` independently rejects already-specified assets. **This dropdown is for new CAP creation, not revision of existing Draft CAP decisions.**
+
+**Safe steps when this occurs:**
+
+1. Confirm the three assets appear in the discovery summary and each says **Already specified**.
+2. Do not repeatedly discover, regenerate paid proposals, delete CAP specifications, or edit the SQLite project database to force a dropdown entry.
+3. Click **Close**. Preserve the Diagnostic Console Draft geometry decision as **Defer**, and preserve the Engineering Control Room original Candidate 2 attempt **2/2**.
+4. Record a missing-workflow issue: existing reviewed Draft CAP field-level revision is not available from this CAP Batch path. Before asking the operator to edit Geometry, verify and implement a governed existing-CAP revision action with evidence, reviewed change, fingerprint validation and Draft-only persistence.
+5. Do not call the Diagnostic Console ready for visual generation until the legitimate revision workflow has resolved its deferred physical identity.
+
+This finding supersedes any earlier F5.3 instruction suggesting that **Review Cached Proposal** in CAP Batch can reopen an already-specified asset. The F5.3 GPU hardware test remains blocked on a valid disposable source lineage; no provider generation has occurred as a result of the unsuccessful dropdown selection.
+
 ### F5.1 Read-only dual workflow and hardware inspection — step by step
 
 1. Start ComfyUI at the configured local endpoint, normally `http://127.0.0.1:8188`. Confirm its console has finished startup and no prompt is queued.
