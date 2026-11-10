@@ -74,8 +74,7 @@ def prepare_draft_cap_revision(
     ):
         raise DraftCAPRevisionError("Stored Story or governed Shot context is stale")
     if not any(
-        item.decision in {DetailDecision.DEFER, DetailDecision.REJECT}
-        for item in review.fields
+        item.decision in {DetailDecision.DEFER, DetailDecision.REJECT} for item in review.fields
     ):
         raise DraftCAPRevisionError("No deferred or rejected CAP fields are available")
     return DraftCAPRevisionSnapshot(
@@ -147,9 +146,7 @@ def save_draft_cap_field_revision(
     else:
         try:
             loaded = json.loads(existing_history)
-            if not isinstance(loaded, list) or not all(
-                isinstance(item, dict) for item in loaded
-            ):
+            if not isinstance(loaded, list) or not all(isinstance(item, dict) for item in loaded):
                 raise ValueError("Invalid CAP revision history")
             history = loaded
         except (ValueError, TypeError) as exc:
