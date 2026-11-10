@@ -184,9 +184,7 @@ def test_wrong_project_is_rejected_before_provider(tmp_path):
     other = tmp_path / "other_project"
     other.mkdir()
     client = SimpleNamespace(submit=Mock(), healthcheck=Mock())
-    with pytest.raises(
-        isolated.IsolatedQwenAcceptanceError, match="Original source is outside"
-    ):
+    with pytest.raises(isolated.IsolatedQwenAcceptanceError, match="Original source is outside"):
         isolated.execute_isolated_qwen_acceptance(
             bundle_directory=bundle,
             project_root=other,
