@@ -47,3 +47,16 @@ class CAPDesignExpansionProvider(Protocol):
     def expand_cap_design(
         self, spec: CAPStructuredSpecification, story_context: str
     ) -> DesignExpansionResponse: ...
+
+
+@runtime_checkable
+class CAPSingleFieldRegenerationProvider(Protocol):
+    """Provider must return only the explicitly selected missing Draft field."""
+
+    def regenerate_draft_cap_field(
+        self,
+        spec: CAPStructuredSpecification,
+        field: str,
+        story_context: str,
+        original_proposal: str,
+    ) -> DesignExpansionResponse: ...
