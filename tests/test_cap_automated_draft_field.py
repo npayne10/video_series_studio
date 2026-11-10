@@ -135,13 +135,13 @@ def test_refuses_provider_unrelated_field():
         )
     )
     request, provider, _service = _request(provider=provider)
-    with pytest.raises(ValueError, match="already-defined"):
+    with pytest.raises(ValueError, match="only the requested"):
         generate_field_proposal(request, provider)
 
 
 def test_refuses_empty_generation():
     request, _provider, _service = _request()
-    with pytest.raises(DraftCAPFieldGenerationError, match="exactly one"):
+    with pytest.raises(ValueError, match="only the requested"):
         generate_field_proposal(request, _Provider(fields=()))
 
 
