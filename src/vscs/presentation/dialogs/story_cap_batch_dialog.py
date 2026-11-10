@@ -40,7 +40,6 @@ from vscs.application.caps.spatial_acceptance import AcceptanceScenario, run_spa
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.spatial_proposals import load_project_spatial_candidates
 from vscs.application.caps.spatial_report import build_spatial_review_report
-from vscs.domain.caps import CAPStatus
 from vscs.application.caps.story_batch import (
     StoryBatchError,
     StoryBatchProposal,
@@ -53,6 +52,7 @@ from vscs.application.caps.structured_specification import CAPStructuredSpecific
 from vscs.application.shots.service import ShotPlanningService
 from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
 from vscs.application.story.service import StoryService
+from vscs.domain.caps import CAPStatus
 from vscs.presentation.dialogs.cap_detail_review_dialog import CAPDetailReviewDialog
 from vscs.presentation.dialogs.edit_existing_draft_cap_dialog import (
     EditExistingDraftCAPDialog,
