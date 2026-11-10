@@ -573,8 +573,12 @@ def test_spatial_inspection_button_cannot_generate_or_consume_attempt(qtbot, tmp
         SimpleNamespace(load=lambda: SimpleNamespace(text_workflow_path=tmp_path)),
     )
     inspection = Mock()
-    inspection.return_value.describe.return_value = "Guided execution verified: NO"
-    monkeypatch.setattr(ui, "inspect_spatial_guidance", inspection)
+    inspection.return_value.describe.return_value = (
+        "LEGACY XCIC — TEXT-TO-IMAGE\n"
+        "MANAGED QWEN — SOURCE-CONDITIONED\n"
+        "No GPU request or correction attempt was made."
+    )
+    monkeypatch.setattr(ui, "inspect_dual_workflows", inspection)
     results = []
     monkeypatch.setattr(
         ui.QMessageBox,
@@ -590,7 +594,8 @@ def test_spatial_inspection_button_cannot_generate_or_consume_attempt(qtbot, tmp
     button.click()
     inspection.assert_called_once()
     assert len(results) == 1
-    assert "Guided execution verified: NO" in results[0][1]
+    assert "LEGACY XCIC" in results[0][1]
+    assert "MANAGED QWEN" in results[0][1]
     service.verify_current.assert_not_called()
     service.generator.render.assert_not_called()
     service.generator.persist_candidate.assert_not_called()
