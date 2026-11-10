@@ -212,9 +212,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 "READ-ONLY: no image generated, attempt reserved or Canon approved.",
                 "GPU inference performance and 16 GB memory fit remain UNTESTED.",
             ]
-            QMessageBox.information(
-                self, "B.5.26F F5.1 — Hardware Readiness", "\n".join(details)
-            )
+            QMessageBox.information(self, "B.5.26F F5.1 — Hardware Readiness", "\n".join(details))
         except Exception as exc:
             self._f5_preflight_sha256 = None
             self._f5_preflight_endpoint = None
@@ -317,9 +315,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
                 contract,
                 workflow_path=contract.workflow_path,
                 queue_path=runtime / "queues" / f"cap_correction_{job_id}.json",
-                output_path=(
-                    runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"
-                ),
+                output_path=(runtime / "jobs" / job_id / "output" / f"cap_correction_{job_id}.png"),
                 job_id=job_id,
             )
             stage = "one-shot local ComfyUI Qwen Image Edit rendering"
