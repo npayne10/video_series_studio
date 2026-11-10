@@ -12,6 +12,7 @@ import copy
 import hashlib
 import json
 import time
+import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -170,6 +171,32 @@ def prepare_isolated_qwen_acceptance(
     )
 
 
+def _ensure_idle_local_queue(endpoint: str) -> None:
+    """Refuse live execution if ComfyUI has any queued or running work."""
+    from vscs.application.caps.comfyui_memory_release import _NoRedirects
+
+    url = f"{endpoint}/queue"
+    opener = urllib.request.build_opener(_NoRedirects())
+    with opener.open(urllib.request.Request(url, method="GET"), timeout=10) as response:
+        if response.geturl() != url or not 200 <= response.status < 300:
+            raise IsolatedQwenAcceptanceError("ComfyUI queue inspection was rejected")
+        raw = response.read(1024 * 1024 + 1)
+    if len(raw) > 1024 * 1024:
+        raise IsolatedQwenAcceptanceError("ComfyUI queue response is oversized")
+    try:
+        status = json.loads(raw)
+    except ValueError as exc:
+        raise IsolatedQwenAcceptanceError("ComfyUI returned invalid queue JSON") from exc
+    if (
+        not isinstance(status, dict)
+        or not isinstance(status.get("queue_running"), list)
+        or not isinstance(status.get("queue_pending"), list)
+    ):
+        raise IsolatedQwenAcceptanceError("ComfyUI queue status cannot be verified")
+    if status["queue_running"] or status["queue_pending"]:
+        raise IsolatedQwenAcceptanceError("ComfyUI is busy; no GPU acceptance submitted")
+
+
 def execute_isolated_qwen_acceptance(
     *,
     bundle_directory: Path,
@@ -230,6 +257,15 @@ def execute_isolated_qwen_acceptance(
     inspected = inspect_managed_qwen_edit_workflow(default_workflow_path())
     if inspected.workflow_sha256 != manifest.get("workflow_sha256"):
         raise IsolatedQwenAcceptanceError("Managed Qwen source workflow has changed")
+    template = _json(default_workflow_path())
+    template["171"]["inputs"]["queue_file"] = str(bundle / _QUEUE)
+    template["171"]["inputs"]["job_index"] = 0
+    template["171"]["inputs"]["quality_mode"] = "standard"
+    template[inspected.sampler_node_id]["inputs"]["seed"] = manifest["seed"]
+    if graph != template:
+        raise IsolatedQwenAcceptanceError("Qwen graph contains unapproved node changes")
+    if client is None:
+        _ensure_idle_local_queue(endpoint)
     provider = client if client is not None else XCICCoreClient(endpoint)
     provider.healthcheck()
     provider.validate_nodes(graph)
