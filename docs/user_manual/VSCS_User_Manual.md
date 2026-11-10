@@ -584,6 +584,23 @@ The subsequent **Prepare MASTER Candidate (Offline) — Diagnostic console** scr
 **Acceptance boundaries:** Automated field generation, cached proposal recovery and resulting Draft visual-preparation readiness are observed. Local source-image generation, quality review and Qwen GPU execution remain separate and not yet verified by these screenshots.
 
 
+### B.5.26F — Operator evidence: first local Diagnostic Console source Candidate
+
+**Observed on 2026-11-10:** In `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, **Prepare MASTER Candidate (Offline)** was ready for the Diagnostic Console (`STORY-PRO-B00D168E43`), and the operator ran **Generate One Local Image Candidate (ComfyUI)**. VSCS reported **Candidate reference 3 created for review**, and the Canonical Reference Gallery displayed the image with **Role Supplementary, Status Candidate, Version 1.0, Approved by —, Approved at —**. It is **not an approved MASTER, Canon or production reference**. A generated and registered first-source image now exists; **Qwen image-editing, semantic quality assessment and correction-attempt consumption have not been demonstrated** by these screenshots.
+
+**Visual inspection:** the image shows a dark graphite freestanding housing, blue front screen and ribbed side textures. The small control layout and rotary-dial identity need closer inspection, and a protruding element on the right may be incompatible with the reviewed console-only silhouette. These are **observations for independent evaluation**, not a failing semantic report.
+
+**Exact next operator review procedure:**
+
+1. Keep the active disposable project and source Candidate 3 unchanged. Open **Canonical Profiles → Edit Selected** for **Diagnostic console** and identify **Candidate reference 3** in the Canonical Reference Gallery. Record the image file path and Candidate ID. Do **not** click **Approve**, **Set as Primary** or **Generate**.
+2. Open **Review Visual Candidate…** for Candidate 3. A confirmation asks **No** for offline technical checks only, **Yes** for **one billable OpenAI semantic review**, or **Cancel** for no action. Choose **No first** if only testing the offline technical path. Record the results without equating technical success with semantic design adherence.
+3. For an actual governed **Qwen correction eligibility** decision, obtain explicit operator approval for a separate billable **Yes** review. Use the existing Candidate 3 image and reviewed Draft CAP unchanged; do not alter its semantic score or manually create a failure. Save and inspect the genuine report.
+4. If semantic results indicate acceptable quality, **stop**: no genuine failure exists to justify Qwen correction. Do not force `REGENERATE_RECOMMENDED` simply to test GPU inference. If they genuinely indicate regeneration and an eligible fresh lineage, open **Prepare Corrected Local Candidate…** or **Correct From Saved Review…**, and inspect **Attempt 1/2**, source ID, current accepted CAP and F5 hardware readiness without generating yet.
+5. For later Qwen acceptance, preserve the ComfyUI queue, output, provider logs, GPU/VRAM readings and provenance, and stop before any charge or GPU inference unless that test has been separately authorized.
+
+This acceptance checkpoint verifies local **initial Candidate creation and registration**, not image quality, validated geometry compliance or Qwen F5.3 hardware completion.
+
+
 ### B.5.26F F5.3 prerequisite — Edit Existing Draft CAP (new governed revision workflow)
 
 **Status:** Existing Draft-only persistence passed local automated regression (2,695 passed, 1 skipped); automated field generation is a separate later increment, with new regression and operator acceptance pending. This workflow is distinct from CAP Batch's new-CAP proposal dropdown. Do not treat the presence of the button alone as successful revision acceptance.
