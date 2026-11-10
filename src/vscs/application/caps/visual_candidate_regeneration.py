@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vscs.application.caps.human_review_disposition import (
+    HumanCorrectionDispositionError,
     verify_human_correction_disposition,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
@@ -205,9 +206,15 @@ class CandidateRegenerationService:
         human_field: str | None = None
         if decision == "HUMAN_REVIEW_REQUIRED":
             # This is an independent reviewer decision, NOT a rewritten semantic result.
-            human_path, human_sha, human_field = verify_human_correction_disposition(
-                snapshot, path
-            )
+            try:
+                human_path, human_sha, human_field = verify_human_correction_disposition(
+                    snapshot, path
+                )
+            except HumanCorrectionDispositionError as exc:
+                raise CandidateRegenerationError(
+                    "Regeneration requires a recorded review failure or a "
+                    f"valid independent human correction disposition: {exc}"
+                ) from exc
         elif semantic.get("decision") != "regenerate":
             raise CandidateRegenerationError(
                 "Controlled correction requires a failed semantic review, "
