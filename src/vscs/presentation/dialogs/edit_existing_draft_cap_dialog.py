@@ -229,11 +229,11 @@ class EditExistingDraftCAPDialog(QDialog):
             self,
             "Authorize Paid CAP Field Proposal?",
             f"Generate ONE proposed value for {field} on {self.snapshot.asset_id}?\n"
-            "This invokes the configured CAP design-expansion AI provider "
-            "and may incur a charge. The provider may use one additional "
-            "bounded grounding-correction request if its first response fails "
-            "grounding checks. Each explicit regeneration creates a new "
-            "numbered request. No field is approved or saved automatically.",
+            "This invokes the configured CAP field-regeneration AI provider "
+            "and may incur a charge. It submits ONE structured provider request; "
+            "invalid or ungrounded output fails closed without a silent retry. "
+            "Each explicit regeneration creates a new numbered paid request. "
+            "No field is approved or saved automatically.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -336,6 +336,6 @@ class EditExistingDraftCAPDialog(QDialog):
             "Reviewed Draft Revision Saved",
             f"{self.snapshot.asset_id}: {field} saved as reviewed Draft. "
             "Other decisions preserved. Reopen Visual Identity to check readiness. "
-            "Nothing was approved or generated.",
+            "No image was generated or Canon approved.",
         )
         self.accept()
