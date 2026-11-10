@@ -732,3 +732,42 @@ def test_f54_operator_dialog_does_not_generate_or_change_review(qtbot, tmp_path)
     assert dialog.saved_path is not None
     assert dialog.saved_path.is_file()
     assert report.read_bytes() == before
+
+
+def test_f54_original_semantic_report_change_refuses_human_authority(tmp_path):
+    from vscs.application.caps.human_review_disposition import (
+        save_human_correction_disposition,
+    )
+
+    service, snap, _prep, report, payload, _manifest = _setup(tmp_path)
+    payload["decision"] = "HUMAN_REVIEW_REQUIRED"
+    payload["semantic"]["decision"] = "pass"
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    save_human_correction_disposition(
+        snap,
+        report,
+        reviewer="Operator Reviewer",
+        accepted_field="layout",
+        observed_discrepancy="The source shows two doors rather than the reviewed one.",
+    )
+    payload["semantic"]["overall_score"] = 99
+    report.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(CandidateRegenerationError, match="independent human"):
+        service.prepare(snap.asset_id, snap.reference_id, report)
+
+
+def test_f54_saved_human_disposition_cannot_override_regenerate_report(tmp_path):
+    from vscs.application.caps.human_review_disposition import (
+        HumanCorrectionDispositionError,
+        save_human_correction_disposition,
+    )
+
+    _service, snap, _prep, report, _payload, _manifest = _setup(tmp_path)
+    with pytest.raises(HumanCorrectionDispositionError, match="not eligible"):
+        save_human_correction_disposition(
+            snap,
+            report,
+            reviewer="Operator Reviewer",
+            accepted_field="layout",
+            observed_discrepancy="The source shows two doors rather than the reviewed one.",
+        )
