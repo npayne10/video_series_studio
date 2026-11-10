@@ -89,9 +89,7 @@ def test_rejection_clears_generated_proposal_and_blocks_save(qtbot):
 
 def _automatic_test_setup(dialog, service, monkeypatch, tmp_path):
     service.batch.generator.generator.assets.projects.project_directory = tmp_path
-    service.batch.generator.generator.provider = SimpleNamespace(
-        regenerate_draft_cap_field=Mock()
-    )
+    service.batch.generator.generator.provider = SimpleNamespace(regenerate_draft_cap_field=Mock())
     request = SimpleNamespace(field="geometry")
     proposal = SimpleNamespace(
         field="geometry",
@@ -117,16 +115,12 @@ def _automatic_test_setup(dialog, service, monkeypatch, tmp_path):
     return cache, provider_call, request, proposal
 
 
-def test_declined_paid_generation_never_reserves_or_calls_provider(
-    qtbot, monkeypatch, tmp_path
-):
+def test_declined_paid_generation_never_reserves_or_calls_provider(qtbot, monkeypatch, tmp_path):
     dialog, service = _dialog(qtbot)
     cache, provider_call, _request, _proposal = _automatic_test_setup(
         dialog, service, monkeypatch, tmp_path
     )
-    monkeypatch.setattr(
-        QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.No
-    )
+    monkeypatch.setattr(QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.No)
     dialog.generate_button.click()
     cache.reserve.assert_not_called()
     provider_call.assert_not_called()
@@ -138,9 +132,7 @@ def test_ai_generated_proposal_needs_separate_approval(qtbot, monkeypatch, tmp_p
     cache, provider_call, request, proposal = _automatic_test_setup(
         dialog, service, monkeypatch, tmp_path
     )
-    monkeypatch.setattr(
-        QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.Yes
-    )
+    monkeypatch.setattr(QMessageBox, "question", lambda *_args: QMessageBox.StandardButton.Yes)
     monkeypatch.setattr(QMessageBox, "information", Mock())
     save = Mock()
     monkeypatch.setattr(ui, "save_draft_cap_field_revision", save)
