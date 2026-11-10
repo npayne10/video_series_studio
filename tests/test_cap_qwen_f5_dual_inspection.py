@@ -1,7 +1,6 @@
 """F5.1 dual-graph inspection retains distinct, read-only findings."""
 
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 from vscs.application.caps.qwen_f5_dual_inspection import inspect_dual_workflows
