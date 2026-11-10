@@ -58,6 +58,15 @@ The former manual Geometry-entry route is superseded by **Generate / Regenerate 
 **Status:** Committed to GitHub and **not yet operator-accepted**. Ruff/Mypy/full regression and UI checks are required before initiating a paid test. The Diagnostic Console Geometry is still deferred; no automatically generated CAP value has been accepted yet. The Engineering Control Room Candidate 2 attempt **2/2** remains out of scope.
 
 
+## F5.3 — Isolated Qwen GPU acceptance (outside CAP)
+
+**Implemented, not yet locally validated:** `python -m vscs.application.caps.qwen_f53_isolated_acceptance` supports offline **--prepare** (copy disposable source image, write bounded single-job Qwen queue and graph in an external directory) and explicitly confirmed **--execute** (one real source-conditioned ComfyUI GPU request). It does not import or call CAP registration, CAP quality report or guided correction-attempt journal. The actual GPU test has **not yet been run** and no acceptance can be claimed from mocked pytest.
+
+See [F5.3 isolated managed Qwen GPU acceptance — numbered operator instructions](VSCS_User_Manual.md#b526f-f53--isolated-managed-qwen-gpu-acceptance-no-cap-correction).
+
+**Do not change the existing Diagnostic Console Candidate 3 or its genuine `HUMAN_REVIEW_REQUIRED` semantic report; do not spend the Engineering Control Room Candidate 2 attempt 2/2.** The test uses an exact byte-for-byte **copy** of Candidate 3 in a new directory **outside** the VSCS project, with a separate output. GPU inference requires independent operator confirmation and must follow successful Ruff/Mypy/pytest acceptance.
+
+
 ## Required documentation for each UI action
 
 | Item | Requirement |
@@ -93,7 +102,8 @@ When a feature changes, modify the User Manual in the **same GitHub branch** as 
 - [x] F5.1 dual-workflow and F5.2 ComfyUI memory-release operator guidance — documented and UI observed
 - [x] Existing Draft CAP guarded manual-review persistence — 2,695 passed, 1 skipped baseline
 - [ ] Automated existing Draft field generation and cache UI — implementation committed; regression and operator acceptance pending
-- [ ] F5.3 clean disposable Qwen GPU inference and Candidate quality — awaiting actual local test
+- [ ] F5.3 isolated one-shot Qwen GPU acceptance — runner/tests committed, local validation and live GPU test pending
+- [ ] F5.3 governed Qwen Candidate correction — separate, still requires genuinely eligible review
 - [ ] Context-sensitive Help integration in VSCS
 
 **No part of this index lifts the H3 live-execution hold or authorises paid provider work without explicit operator action.**
