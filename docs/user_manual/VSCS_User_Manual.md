@@ -517,6 +517,31 @@ In `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, the operator's CAP list shows Engineeri
 
 This finding supersedes any earlier F5.3 instruction suggesting that **Review Cached Proposal** in CAP Batch can reopen an already-specified asset. The F5.3 GPU hardware test remains blocked on a valid disposable source lineage; no provider generation has occurred as a result of the unsuccessful dropdown selection.
 
+### VSCS automation principle — correction to F5.3 acceptance
+
+**Decision 2026-11-10:** VSCS is automation-first. The operator does **not** manually compose or paste a Geometry description to get a hardware test past a readiness gate. The operator reviews, approves, rejects or requests regeneration of an **AI-generated, traceable Draft proposal**. Manual entry may exist as an exceptional explicit override, but it cannot be the default workflow or evidence of automated-generation acceptance.
+
+**Current implementation limitation:** The existing **Edit Existing Draft CAP…** dialog provides guarded field-by-field persistence, read-only accepted values and auditable operator review, **but no automated proposal regeneration for an existing deferred field**. Consequently the Diagnostic Console Geometry remains **Defer** and the F5.3 hardware path is **blocked pending development**. Instructions later in this manual that tell an operator to type proposed Geometry for this F5.3 test are superseded by this decision. Do not press **Save Reviewed Draft Revision** with assistant-supplied or fabricated geometry.
+
+**Next required development increment — Automated Existing Draft CAP Field Regeneration:**
+
+1. Select an existing Draft CAP and the deferred/rejected target field, while leaving previously accepted fields immutable.
+2. Prepare a deterministic, source-grounded request from the approved Story, asset category, project-governed context, previously accepted decisions and original field proposal. Record input fingerprints and model/provider configuration.
+3. Require explicit cost consent **before** a billable provider call; submit exactly one scoped field-generation request. No manual operator text is a prerequisite.
+4. Receive a structured field proposal **and explanation**; distinguish Story-supported details from optional creative proposed choices. Validate asset identity, required category field semantics, no conflicting dimensions/components, no invented Story Canon, and stale-context conditions.
+5. Cache the generated proposal and its provenance. Show it for human review with **Approve / Reject / Regenerate** options. Regenerate is a new, counted and separately consented proposal; never silently retry.
+6. On operator approval, persist only the chosen field using the existing guarded Draft compare-and-swap and append-only review history, preserving accepted field decisions, MASTER, Canon, old Candidates and all correction attempts.
+7. Recalculate **Prepare Visual Identity…** and verify the new decision resolves the genuine blocker; do not fabricate quality-review reports to unlock Qwen GPU inference.
+8. Add deterministic mock/provider-boundary tests, real UI acceptance evidence, failure/cancel/stale-source cases and a paid-request accounting check before declaring the automatic workflow accepted.
+
+**Operator checkpoint for now:**
+1. Keep `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` active.
+2. In **Edit Existing Draft CAP — STORY-PRO-B00D168E43**, leave **Reviewed design value** and **Operator rationale / evidence** empty.
+3. Click **Cancel**, not **Save Reviewed Draft Revision**.
+4. Confirm Geometry is still **Defer** and Materials, Components and Scale remain accepted.
+5. Await the automated scoped proposal-generation increment before attempting the F5.3 Candidate test.
+
+
 ### B.5.26F F5.3 prerequisite — Edit Existing Draft CAP (new governed revision workflow)
 
 **Status 2026-11-10:** Implemented in the development branch, **awaiting Windows static, regression and desktop operator acceptance**. This workflow is distinct from CAP Batch's new-CAP proposal dropdown. Do not treat the presence of the button alone as successful revision acceptance.
