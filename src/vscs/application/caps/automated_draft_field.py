@@ -73,13 +73,23 @@ class DraftCAPFieldProposalCache:
             return 1
         indices = []
         for path in folder.iterdir():
-            if not path.is_file() or path.suffix != ".json":
+            if not path.is_file() or path.suffix not in {".json", ".pending"}:
                 raise DraftCAPFieldGenerationError("Unexpected proposal cache entry")
             try:
                 indices.append(int(path.stem))
             except ValueError as exc:
                 raise DraftCAPFieldGenerationError("Invalid cached proposal filename") from exc
         return max(indices, default=0) + 1
+
+    def reserve(self, request: DraftCAPFieldRequest) -> None:
+        """Reserve once before any provider call; ambiguous outcomes remain recorded."""
+        path = self._path(request).with_suffix(".pending")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with path.open("x", encoding="utf-8") as file:
+                file.write(request.request_fingerprint)
+        except FileExistsError as exc:
+            raise DraftCAPFieldGenerationError("This provider request was already reserved") from exc
 
     def save(self, request: DraftCAPFieldRequest, proposal: CachedDraftCAPFieldProposal) -> None:
         path = self._path(request)
@@ -90,6 +100,10 @@ class DraftCAPFieldProposalCache:
                 file.write(proposal.model_dump_json())
         except FileExistsError as exc:
             raise DraftCAPFieldGenerationError("Proposal generation number already used") from exc
+        reservation = path.with_suffix(".pending")
+        if reservation.read_text(encoding="utf-8") != request.request_fingerprint:
+            raise DraftCAPFieldGenerationError("Provider reservation identity changed")
+        reservation.unlink()
 
     def load(self, request: DraftCAPFieldRequest) -> CachedDraftCAPFieldProposal:
         try:
