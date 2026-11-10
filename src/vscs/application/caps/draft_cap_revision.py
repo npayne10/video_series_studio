@@ -19,13 +19,13 @@ from vscs.application.caps.design_completion import (
     apply_review,
     build_reviewed_master_prompt,
 )
+from vscs.application.caps.review_snapshot import load_review_snapshot
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
 from vscs.application.caps.structured_specification import (
     SPECIFICATION_METADATA_KEY,
     CAPStructuredSpecification,
 )
 from vscs.domain.caps import CAPStatus
-from vscs.application.caps.review_snapshot import load_review_snapshot
 
 REVISION_HISTORY_KEY = "vscs.cap_design_revision_history.v1"
 
