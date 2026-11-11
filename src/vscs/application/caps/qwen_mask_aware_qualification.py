@@ -184,6 +184,13 @@ def prepare_mask_aware_bundle(
     source_copy.write_bytes(original.read_bytes())
     mask_path = bundle / "mask.png"
     preliminary = create_binary_edit_mask(source_copy, mask_path, bounds)
+    # Human review overlay is evidence only: it never enters the ComfyUI graph.
+    with Image.open(source_copy) as original:
+        preview = original.convert("RGBA")
+    tint = Image.new("RGBA", preview.size, (255, 0, 0, 0))
+    tint.paste((255, 0, 0, 110), bounds)
+    overlay = Image.alpha_composite(preview, tint).convert("RGB")
+    overlay.save(bundle / "roi_preview.png", format="PNG")
     graph_raw = json.dumps(graph, sort_keys=True, indent=2).encode("utf-8")
     graph_path = bundle / "experimental_masked_api.json"
     graph_path.write_bytes(graph_raw)
@@ -201,6 +208,7 @@ def prepare_mask_aware_bundle(
         "kind": "F541B_OFFLINE_EXPERIMENTAL_MASK_NOT_EXECUTABLE",
         **asdict(report),
         "source_sha256": _sha(source_copy.read_bytes()),
+        "roi_preview_sha256": _sha((bundle / "roi_preview.png").read_bytes()),
         "original_source_sha256": _sha(original.read_bytes()),
         "original_source_path": str(original),
         "project_root": str(project),
