@@ -933,3 +933,32 @@ If successful, it writes `masked_qwen_output.png` and `qualification_result.json
 
 **Acceptance criteria for F5.4.1B:** (1) all static/full tests pass, (2) node and model inventory accepted, (3) real one-shot GPU result with an intact PNG, (4) zero changed RGB pixels outside the reviewed mask, (5) operator/semantic evidence of improved recessed-dial geometry without unreviewed details, (6) original Candidate 3/4/semantic reports/correction journal independently verified untouched. Any miss means **qualification incomplete**, and the protected Attempt 2/2 remains closed. The mask graph must not be integrated into the managed production path based on simulated/pytest evidence alone.
 
+
+
+#### F5.4.1B — First real isolated mask-aware GPU qualification evidence (2026-11-11)
+
+**Qualification:** completed in external bundle `D:\VSCS_QWEN_F541B_ACCEPTANCE\run_002` using the visually reviewed dial ROI `(895, 345, 995, 415)` on Diagnostic Console supplementary Candidate **4** (source image 1392×752). The 0.67% ROI was inspected before consent. Read-only ComfyUI node/model preflight returned `MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE`.
+
+The operator ran one explicitly confirmed isolated GPU request. The resulting external output is **not** a CAP Candidate, and the original Candidate 4's governed final Attempt **2/2** stays protected.
+
+| Evidence | Actual |
+| --- | --- |
+| Qualification status | `SPATIAL_PIXEL_PRESERVATION_VERIFIED` |
+| ComfyUI prompt ID | `329001b5-e2b1-4e51-96f7-b8efcb1a08b3` |
+| Elapsed inference time | **344.7 seconds** |
+| Source SHA-256 | `a998bdc13085fe90f57f346d277d1a0b809f147374257ecc55537b83d86f3eac` |
+| Output SHA-256 | `631f9300dd7821c93f6b333302e2e1c38e2e90b7322c09296bbb6cf2a31174f9` |
+| Submitted runtime graph SHA-256 | `9bae45f01cf9e305c95c1095f042d2a3bc1a641d200af16480f0a3d2badf3820` |
+| Mask input filename | `vscs_f541b_2f80012eaf2b20c6914b.png` |
+| Protected changed RGB pixels | **0** |
+| Outside-mask pixels identical | **true** |
+| Peak VRAM | Not measured (`null`) |
+| CAP Candidate registered | `false` |
+| Canon approved | `false` |
+| Governed correction attempt consumed | `false` |
+| Semantic geometry correct | `null` (not assessed by code) |
+
+**Engineering disposition:** **Spatial preservation accepted**, but **dial geometry correction NOT accepted**. A visual review of the generated image still shows an apparently raised dial rather than an unambiguously recessed rotary control. This is not proof of successful geometry correction or general mask-aware fidelity. The exact compositing guarantees preservation outside the approved binary region for this one run; it does **not** establish that the Qwen model produces correct geometry *inside* the mask.
+
+**Further investigation:** Inspect the output against the saved source/mask and determine why the edit continues to generate a raised dial. Consider providing more local context via a differently reviewed disposable ROI or region-conditioned edit technique, but do not alter `run_002`, overwrite its result, reuse its reservation, or spend Candidate 4 Attempt 2/2. Any new inference must use a **new external bundle** and fresh explicit operator consent. Record VRAM independently if needed, since this trial returned no peak measurement. Do not promote the experimental graph into the governed production workflow until geometry fidelity is demonstrated.
+
