@@ -117,7 +117,7 @@ def build_experimental_masked_graph(
     graph: dict[str, Any] = copy.deepcopy(json.loads(template.read_text(encoding="utf-8")))
     if not mask_input_filename or "/" in mask_input_filename or "\\" in mask_input_filename:
         raise MaskAwareQualificationError("Mask input must be a plain ComfyUI input filename")
-    if mask_input_filename not in {_MASK_PLACEHOLDER} and not mask_input_filename.endswith(".png"):
+    if mask_input_filename != _MASK_PLACEHOLDER and not mask_input_filename.endswith(".png"):
         raise MaskAwareQualificationError("Mask input must be PNG")
     graph[_MASK] = {
         "class_type": "LoadImageMask",
@@ -231,7 +231,7 @@ def main() -> int:
             source_png=args.source,
             project_root=args.project_root,
             bundle_directory=args.bundle,
-            bounds=tuple(args.roi),
+            bounds=(args.roi[0], args.roi[1], args.roi[2], args.roi[3]),
         )
     except (OSError, ValueError, RuntimeError) as exc:
         print(json.dumps({"status": "BLOCKED", "error": str(exc)}))
@@ -262,8 +262,12 @@ def confirm_preserved_pixels(
         left = original.convert("RGB")
         right = result.convert("RGB")
         protected = mask.point(lambda p: 255 if p == 0 else 0)
-        diff = ImageChops.difference(left, right).convert("RGB")
-        changed = diff.convert("L").point(lambda p: 255 if p else 0)
+        diff = ImageChops.difference(left, right)
+        any_channel_changed = ImageChops.lighter(
+            ImageChops.lighter(diff.getchannel(0), diff.getchannel(1)),
+            diff.getchannel(2),
+        )
+        changed = any_channel_changed.point(lambda p: 255 if p else 0)
         protected_changes = ImageChops.multiply(changed, protected)
         histogram = protected_changes.histogram()
         changed_count = histogram[255]
