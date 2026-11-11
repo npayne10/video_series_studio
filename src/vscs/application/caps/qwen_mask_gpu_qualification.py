@@ -7,7 +7,6 @@ exclusive reservation, idle local ComfyUI and external test-only output.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 import urllib.request
@@ -95,7 +94,10 @@ def _schema_confirmed(object_info: dict[str, Any]) -> None:
     for node_type, expected in (
         ("LoadImageMask", ("image", "channel")),
         ("SetLatentNoiseMask", ("samples", "mask")),
-        ("ImageCompositeMasked", ("destination", "source", "x", "y", "mask")),
+        (
+            "ImageCompositeMasked",
+            ("destination", "source", "x", "y", "mask", "resize_source"),
+        ),
     ):
         spec = object_info.get(node_type)
         if not isinstance(spec, dict):
@@ -111,7 +113,12 @@ def _schema_confirmed(object_info: dict[str, Any]) -> None:
             raise MaskAwareQualificationError(f"ComfyUI node {node_type} fields incompatible")
     loader = object_info["LoadImageMask"]["input"]["required"]
     choices = loader["channel"]
-    if not isinstance(choices, list) or not choices or "red" not in choices[0]:
+    if (
+        not isinstance(choices, list)
+        or not choices
+        or not isinstance(choices[0], list)
+        or "red" not in choices[0]
+    ):
         raise MaskAwareQualificationError("ComfyUI mask loader does not offer red channel")
 
 
@@ -135,13 +142,18 @@ def execute_isolated_mask_qualification(
     manifest = _json(bundle / "qualification_manifest.json")
     if manifest.get("kind") != "F541B_OFFLINE_EXPERIMENTAL_MASK_NOT_EXECUTABLE":
         raise MaskAwareQualificationError("Wrong qualification bundle")
-    if manifest.get("project_root") != str(project) or manifest.get("bundle_directory") != str(bundle):
+    if (
+        manifest.get("project_root") != str(project)
+        or manifest.get("bundle_directory") != str(bundle)
+    ):
         raise MaskAwareQualificationError("Project or bundle changed since preparation")
     if any((bundle / name).exists() for name in (
         "execution_reserved.json", "qualification_result.json",
         "masked_qwen_output.png", "runtime_graph.json", "runtime_queue.json"
     )):
-        raise MaskAwareQualificationError("An existing or ambiguous GPU attempt cannot be retried")
+        raise MaskAwareQualificationError(
+            "An existing or ambiguous GPU attempt cannot be retried"
+        )
     if any(item.is_symlink() for item in bundle.iterdir()):
         raise MaskAwareQualificationError("Bundle symlinks are prohibited")
     source = bundle / "source.png"
@@ -257,7 +269,9 @@ def execute_isolated_mask_qualification(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="One-shot isolated masked Qwen GPU qualification")
+    parser = argparse.ArgumentParser(
+        description="One-shot isolated masked Qwen GPU qualification"
+    )
     parser.add_argument("--project-root", required=True, type=Path)
     parser.add_argument("--bundle", required=True, type=Path)
     parser.add_argument("--comfyui-url", default="http://127.0.0.1:8188")
