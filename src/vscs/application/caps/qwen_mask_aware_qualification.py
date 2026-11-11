@@ -185,8 +185,8 @@ def prepare_mask_aware_bundle(
     mask_path = bundle / "mask.png"
     preliminary = create_binary_edit_mask(source_copy, mask_path, bounds)
     # Human review overlay is evidence only: it never enters the ComfyUI graph.
-    with Image.open(source_copy) as original:
-        preview = original.convert("RGBA")
+    with Image.open(source_copy) as original_image:
+        preview = original_image.convert("RGBA")
     tint = Image.new("RGBA", preview.size, (255, 0, 0, 0))
     tint.paste((255, 0, 0, 110), bounds)
     overlay = Image.alpha_composite(preview, tint).convert("RGB")
