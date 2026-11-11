@@ -167,6 +167,7 @@ def execute_isolated_mask_qualification(
         or _hash(original_path) != manifest.get("original_source_sha256")
         or _hash(source) != manifest.get("source_sha256")
         or _hash(mask) != manifest.get("mask_sha256")
+        or _hash(bundle / "roi_preview.png") != manifest.get("roi_preview_sha256")
         or _hash(graph_path) != manifest.get("experimental_graph_sha256")
         or _hash(default_workflow_path()) != manifest.get("template_sha256")
     ):
@@ -289,6 +290,7 @@ def inspect_isolated_mask_nodes(
         or manifest.get("project_root") != str(project)
         or _hash(bundle / "mask.png") != manifest.get("mask_sha256")
         or _hash(bundle / "source.png") != manifest.get("source_sha256")
+        or _hash(bundle / "roi_preview.png") != manifest.get("roi_preview_sha256")
         or _hash(bundle / "experimental_masked_api.json")
         != manifest.get("experimental_graph_sha256")
         or _hash(default_workflow_path()) != manifest.get("template_sha256")
