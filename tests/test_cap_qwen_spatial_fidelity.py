@@ -25,7 +25,7 @@ def test_real_managed_qwen_workflow_is_not_mask_qualified():
     report = inspect_qwen_spatial_fidelity()
     assert report.sampler_denoise == 1.0
     assert report.source_conditioned
-    assert not report.spatial_mask_connected
+    assert not report.mask_related_node_present
     assert not report.region_limited_edit_validated
     assert report.full_frame_reinterpretation_risk
     assert not report.execution_authorized
@@ -86,6 +86,6 @@ def test_fake_mask_node_not_treated_as_validated_spatial_edit(tmp_path):
     changed = tmp_path / "derived_api.json"
     changed.write_text(json.dumps(graph), encoding="utf-8")
     report = inspect_qwen_spatial_fidelity(workflow_path=changed)
-    assert report.spatial_mask_connected
+    assert report.mask_related_node_present
     assert not report.region_limited_edit_validated
     assert not report.final_attempt_spatially_qualified
