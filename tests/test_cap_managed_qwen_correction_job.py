@@ -139,9 +139,7 @@ def test_managed_qwen_refuses_reused_runtime_output(tmp_path, monkeypatch):
 def test_f541_degraded_final_attempt_refused_before_compilation(tmp_path, monkeypatch):
     fixture = _fixture(tmp_path)
     fixture[1].max_attempts = 2
-    fixture[1].effectiveness_warnings = (
-        "Previous semantic score declined (-7).",
-    )
+    fixture[1].effectiveness_warnings = ("Previous semantic score declined (-7).",)
     verification = Mock()
     monkeypatch.setattr(correction, "verify_spatial_contract", verification)
     with pytest.raises(correction.ManagedQwenCorrectionError, match="final correction"):
