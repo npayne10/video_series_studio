@@ -688,7 +688,7 @@ def test_f54_changed_human_decision_invalidates_prepared_plan(tmp_path):
     data = json.loads(disposition.read_text(encoding="utf-8"))
     data["observed_discrepancy"] = "Altered after reviewer sign off."
     disposition.write_text(json.dumps(data), encoding="utf-8")
-    with pytest.raises(CandidateRegenerationError, match="independent human"):
+    with pytest.raises(CandidateRegenerationError, match="changed during generation"):
         service.verify_current(plan)
 
 
