@@ -910,7 +910,14 @@ python -m vscs.application.caps.qwen_mask_aware_qualification --project-root "$p
 
 6. The `--prepare`-equivalent CLI above creates only `source.png`, `mask.png`, `experimental_masked_api.json` and `qualification_manifest.json` in a **new, exclusive external** bundle. It does not upload anything to ComfyUI or send GPU work. The graph retains a non-executable `__F541B_REVIEWED_COMFYUI_INPUT_MASK_FILENAME__` placeholder.
 7. Inspect `mask.png` visually: the dial region must be **white**, the rest **black**. If wrong, **do not edit the mask in place**; preserve evidence and prepare a new separately named bundle with reviewed bounds. Record mask SHA, region coordinates, source SHA, graph SHA and screenshot. Confirm no `execution_reserved.json`, `runtime_graph.json`, `masked_qwen_output.png` or `qualification_result.json`.
-8. **STOP after offline preparation and send the manifest, mask screenshot and source dimensions for review.** Software tests and offline preparation are not live capability acceptance.
+8. With ComfyUI running, first run the separate **read-only node/model inventory** check below, which uses only `/system_stats` and `/object_info` plus local graph validation. It **does not upload the mask, reserve a GPU attempt, or generate an image**:
+
+```powershell
+python -m vscs.application.caps.qwen_mask_gpu_qualification --inspect-nodes-only --project-root "$project" --bundle "$bundle"
+```
+
+   Expected: `MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE`. If a node, mask channel or selected Qwen model is not advertised, stop and preserve the evidence. No blind node substitutions are permitted.
+9. **STOP after offline preparation, read-only node inspection and send the manifest, mask screenshot, source dimensions and node report for review.** Software tests and offline preparation do not constitute live GPU or geometry acceptance.
 
 **Stage C — separately authorised experimental GPU execution (NOT during initial preparation):**
 
