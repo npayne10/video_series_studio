@@ -244,7 +244,7 @@ def test_read_only_node_inventory_refuses_existing_execution(tmp_path):
     with pytest.raises(MaskAwareQualificationError, match="no longer read-only"):
         live.inspect_isolated_mask_nodes(
             bundle_directory=bundle,
-        project_root=project,
-        client=provider,
+            project_root=project,
+            client=provider,
         )
     provider.healthcheck.assert_not_called()
