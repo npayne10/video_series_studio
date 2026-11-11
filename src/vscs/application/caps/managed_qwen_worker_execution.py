@@ -51,16 +51,15 @@ def _unchanged(contract: SpatialCorrectionContract, job: ManagedQwenCorrectionJo
             raise GuidedEditExecutionError("Qwen edit evidence changed after operator approval")
     human_path = getattr(contract, "human_disposition_path", None)
     human_sha = getattr(contract, "human_disposition_sha256", None)
-    if human_path is not None:
-        if (
-            not isinstance(human_sha, str)
-            or not human_path.is_file()
-            or human_path.is_symlink()
-            or hashlib.sha256(human_path.read_bytes()).hexdigest() != human_sha
-        ):
-            raise GuidedEditExecutionError(
-                "Reviewer correction disposition changed after preparation"
-            )
+    if human_path is not None and (
+        not isinstance(human_sha, str)
+        or not human_path.is_file()
+        or human_path.is_symlink()
+        or hashlib.sha256(human_path.read_bytes()).hexdigest() != human_sha
+    ):
+        raise GuidedEditExecutionError(
+            "Reviewer correction disposition changed after preparation"
+        )
     jobs = job.queue.get("jobs")
     if not isinstance(jobs, list) or len(jobs) != 1 or not isinstance(jobs[0], dict):
         raise GuidedEditExecutionError("Managed edit must contain exactly one queue job")
@@ -72,9 +71,7 @@ def _unchanged(contract: SpatialCorrectionContract, job: ManagedQwenCorrectionJo
             record = json.loads(human_path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             raise GuidedEditExecutionError("Reviewer decision cannot be read") from exc
-        if not isinstance(record, dict) or not isinstance(
-            record.get("accepted_field"), str
-        ):
+        if not isinstance(record, dict) or not isinstance(record.get("accepted_field"), str):
             raise GuidedEditExecutionError("Reviewer decision field is malformed")
         human_field = record["accepted_field"]
     prompt = managed_qwen_positive_prompt(contract.accepted_fields, human_field)
