@@ -134,3 +134,18 @@ def test_managed_qwen_refuses_reused_runtime_output(tmp_path, monkeypatch):
     output.write_bytes(b"already exists")
     with pytest.raises(correction.ManagedQwenCorrectionError, match="already exists"):
         _prepare(fixture)
+
+
+def test_f541_degraded_final_attempt_refused_before_compilation(tmp_path, monkeypatch):
+    fixture = _fixture(tmp_path)
+    fixture[1].max_attempts = 2
+    fixture[1].effectiveness_warnings = (
+        "Previous semantic score declined (-7).",
+    )
+    verification = Mock()
+    monkeypatch.setattr(correction, "verify_spatial_contract", verification)
+    with pytest.raises(correction.ManagedQwenCorrectionError, match="final correction"):
+        _prepare(fixture)
+    verification.assert_not_called()
+    assert not fixture[4].exists()
+    assert not fixture[5].exists()
