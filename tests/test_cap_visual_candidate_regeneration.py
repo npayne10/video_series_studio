@@ -773,3 +773,74 @@ def test_f54_saved_human_disposition_cannot_override_regenerate_report(tmp_path)
             accepted_field="layout",
             observed_discrepancy="The source shows two doors rather than the reviewed one.",
         )
+
+
+def test_f541_degraded_final_attempt_blocks_both_generation_routes(qtbot, tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _payload, _manifest = _setup(tmp_path)
+    prior = service.prepare(snap.asset_id, snap.reference_id, report)
+    plan = replace(
+        prior,
+        attempt=2,
+        effectiveness_warnings=(
+            "Previous correction did not improve semantic quality (-7); inspect first.",
+            "Previous correction did not improve design consistency (-7); inspect first.",
+        ),
+    )
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock()
+    service.generator.render = Mock()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    messages = []
+    monkeypatch.setattr(
+        ui.QMessageBox,
+        "warning",
+        lambda _parent, _title, message: messages.append(message),
+    )
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    assert dialog._spatial_final_attempt_blocked
+    assert not dialog.generate_button.isEnabled()
+    assert not dialog.guided_edit_button.isEnabled()
+    assert dialog.fidelity_button.isEnabled()
+    assert dialog.findChild(ui.QLabel, "spatialFidelityFinalAttemptBlocker")
+    dialog._generate()
+    dialog._generate_guided_edit()
+    assert len(messages) == 2
+    service.verify_current.assert_not_called()
+    service.generator.render.assert_not_called()
+
+
+def test_f541_readonly_fidelity_ui_does_not_consume_attempt(qtbot, tmp_path, monkeypatch):
+    from vscs.presentation.widgets import cap_visual_candidate_regeneration as ui
+
+    service, snap, _prep, report, _payload, _manifest = _setup(tmp_path)
+    plan = service.prepare(snap.asset_id, snap.reference_id, report)
+    service.prepare = Mock(return_value=plan)
+    service.verify_current = Mock()
+    service.generator.render = Mock()
+    monkeypatch.setattr(ui, "CandidateRegenerationService", lambda _refs: service)
+    inspection = Mock()
+    inspection.return_value.describe.return_value = "F5.4.1 spatial fidelity: no mask validated"
+    monkeypatch.setattr(ui, "inspect_qwen_spatial_fidelity", inspection)
+    messages = []
+    monkeypatch.setattr(
+        ui.QMessageBox,
+        "information",
+        lambda _parent, _title, message: messages.append(message),
+    )
+    dialog = ui.ControlledCandidateRegenerationDialog(
+        SimpleNamespace(), snap.asset_id, snap.reference_id, report
+    )
+    qtbot.addWidget(dialog)
+    dialog.fidelity_button.click()
+    inspection.assert_called_once_with()
+    assert len(messages) == 1
+    assert "no mask validated" in messages[0]
+    service.verify_current.assert_not_called()
+    service.generator.render.assert_not_called()
