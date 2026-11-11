@@ -33,6 +33,7 @@ from vscs.application.caps.managed_qwen_worker_execution import (
 )
 from vscs.application.caps.qwen_f5_dual_inspection import inspect_dual_workflows
 from vscs.application.caps.qwen_f5_preflight import inspect_qwen_f5_hardware
+from vscs.application.caps.qwen_spatial_fidelity import inspect_qwen_spatial_fidelity
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.spatial_correction_contract import prepare_spatial_contract
 from vscs.application.caps.visual_candidate_quality import CandidateQualityReviewService
@@ -120,6 +121,12 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.inspect_spatial_button.setObjectName("inspectSpatialGuidance")
         self.inspect_spatial_button.clicked.connect(self._inspect_spatial_guidance)
         layout.addWidget(self.inspect_spatial_button)
+        self.fidelity_button = QPushButton(
+            "F5.4.1 Inspect Spatial Edit Fidelity (No Generation)"
+        )
+        self.fidelity_button.setObjectName("inspectQwenSpatialFidelity")
+        self.fidelity_button.clicked.connect(self._inspect_edit_fidelity)
+        layout.addWidget(self.fidelity_button)
         self.f5_preflight_button = QPushButton("Check Qwen F5 Hardware Readiness (No Generation)")
         self.f5_preflight_button.setObjectName("checkQwenF5HardwareReadiness")
         self.f5_preflight_button.clicked.connect(self._inspect_f5_hardware)
@@ -154,10 +161,44 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.guided_edit_button.setObjectName("confirmGovernedQwenCandidateCorrection")
         self.guided_edit_button.clicked.connect(self._generate_guided_edit)
         layout.addWidget(self.guided_edit_button)
+        self._spatial_final_attempt_blocked = (
+            self.plan.attempt == self.plan.max_attempts
+            and bool(self.plan.effectiveness_warnings)
+        )
+        if self._spatial_final_attempt_blocked:
+            self.generate_button.setEnabled(False)
+            self.guided_edit_button.setEnabled(False)
+            protected = QLabel(
+                "F5.4.1 PROTECTED FINAL ATTEMPT: Previous correction scores declined. "
+                "The managed Qwen graph has no validated region-limited edit control. "
+                "Both generation routes are disabled; inspection remains available. "
+                "A new validated spatial workflow and separate governance release "
+                "are required before spending attempt 2/2."
+            )
+            protected.setObjectName("spatialFidelityFinalAttemptBlocker")
+            protected.setWordWrap(True)
+            layout.addWidget(protected)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _inspect_edit_fidelity(self) -> None:
+        """Assess the exact managed graph without generation or attempt changes."""
+        try:
+            assessment = inspect_qwen_spatial_fidelity()
+            QMessageBox.information(
+                self,
+                "F5.4.1 - Qwen Spatial Edit Fidelity",
+                assessment.describe(),
+            )
+        except Exception as exc:
+            _LOGGER.exception("F5.4.1 read-only spatial fidelity inspection failed")
+            QMessageBox.warning(
+                self,
+                "Spatial Fidelity Inspection Failed",
+                f"{type(exc).__name__}: {exc}\nNo generation was submitted.",
+            )
 
     def _inspect_spatial_guidance(self) -> None:
         """Compare the legacy XCIC and managed Qwen graphs without generation."""
@@ -285,6 +326,14 @@ class ControlledCandidateRegenerationDialog(QDialog):
     def _generate_guided_edit(self) -> None:
         """Explicit consent for the managed source-conditioned Qwen correction."""
         if self._generation_active:
+            return
+        if self._spatial_final_attempt_blocked:
+            QMessageBox.warning(
+                self,
+                "Final Correction Attempt Protected",
+                "Previous correction quality declined and region-limited Qwen control "
+                "has not been validated. No GPU submission or reservation is permitted.",
+            )
             return
         preflight_sha = self._f5_preflight_sha256
         endpoint = self._f5_preflight_endpoint
@@ -418,6 +467,14 @@ class ControlledCandidateRegenerationDialog(QDialog):
 
     def _generate(self) -> None:
         if self._generation_active:
+            return
+        if self._spatial_final_attempt_blocked:
+            QMessageBox.warning(
+                self,
+                "Final Correction Attempt Protected",
+                "Previous correction quality declined; a text-only regeneration "
+                "does not provide region-limited control. No generation permitted.",
+            )
             return
         plan = self.plan
         reservation = (
