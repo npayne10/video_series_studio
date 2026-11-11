@@ -57,9 +57,7 @@ def managed_qwen_positive_prompt(
     human_correction_field: str | None = None,
 ) -> str:
     """Build model instructions only from accepted CAP fields, never reviewer prose."""
-    original = "\n".join(
-        f"MANDATORY reviewed {key}: {value}" for key, value in accepted_fields
-    )
+    original = "\n".join(f"MANDATORY reviewed {key}: {value}" for key, value in accepted_fields)
     if human_correction_field is None:
         return original
     approved = dict(accepted_fields)
@@ -76,8 +74,7 @@ def managed_qwen_positive_prompt(
         "raised. When the CAP describes distinct adjacent objects, maintain a "
         "clear visible boundary; do not attach or merge them. Preserve the "
         "source camera view and recognizable design. "
-        "No invented attachments, labels or furnishings.\n"
-        + original
+        "No invented attachments, labels or furnishings.\n" + original
     )
 
 
@@ -135,7 +132,7 @@ def prepare_managed_qwen_correction(
     loader["quality_mode"] = "standard"
     editable[inspection.sampler_node_id]["inputs"]["seed"] = plan.request.seed
     positive = managed_qwen_positive_prompt(
-        contract.accepted_fields, plan.human_correction_field
+        contract.accepted_fields, getattr(plan, "human_correction_field", None)
     )
     category = plan.source.asset_id.upper().split("-")
     kinds = {
