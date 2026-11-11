@@ -90,8 +90,8 @@ def prepare_managed_qwen_correction(
 ) -> ManagedQwenCorrectionJob:
     """Create a bounded one-image job from governed CAP image and constraints."""
     if (
-        plan.attempt == plan.max_attempts
-        and plan.effectiveness_warnings
+        plan.attempt == getattr(plan, "max_attempts", 2)
+        and getattr(plan, "effectiveness_warnings", ())
     ):
         raise ManagedQwenCorrectionError(
             "F5.4.1 blocks the final correction after declining semantic or "
