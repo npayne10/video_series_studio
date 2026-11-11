@@ -329,8 +329,7 @@ class CandidateRegenerationService:
             + " Do not introduce extra doors, equipment, markings, fixtures or lighting "
             "beyond the reviewed design; deferred features remain undecided. "
             "Show a complete, coherent reference composition. "
-            "This is a visual proposal only, not Canon or MASTER."
-            + fidelity_instruction
+            "This is a visual proposal only, not Canon or MASTER." + fidelity_instruction
         )
         # Explicitly change seed to avoid silently repeating identical output.
         manifest = json.loads(self._manifest_path(snapshot).read_text(encoding="utf-8"))
