@@ -193,3 +193,35 @@ def test_prepared_graph_must_match_original_offline_evidence(tmp_path):
             client=provider,
         )
     provider.healthcheck.assert_not_called()
+
+
+def test_read_only_node_inventory_does_not_upload_or_reserve(tmp_path, monkeypatch):
+    project, _source, bundle = _bundle(tmp_path)
+    monkeypatch.setattr(live, "validate_managed_qwen_model_choices", Mock())
+    provider = SimpleNamespace(
+        healthcheck=Mock(),
+        object_info=Mock(return_value=_schema()),
+        validate_nodes=Mock(),
+        submit=Mock(),
+    )
+    result = live.inspect_isolated_mask_nodes(
+        bundle_directory=bundle, project_root=project, client=provider,
+    )
+    assert result["status"] == "MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE"
+    assert result["mask_uploaded"] is False
+    assert result["gpu_submitted"] is False
+    assert result["execution_authorized"] is False
+    assert not (bundle / "execution_reserved.json").exists()
+    provider.submit.assert_not_called()
+    provider.validate_nodes.assert_called_once()
+
+
+def test_read_only_node_inventory_refuses_existing_execution(tmp_path):
+    project, _source, bundle = _bundle(tmp_path)
+    (bundle / "execution_reserved.json").write_text("{}")
+    provider = SimpleNamespace(healthcheck=Mock())
+    with pytest.raises(MaskAwareQualificationError, match="no longer read-only"):
+        live.inspect_isolated_mask_nodes(
+            bundle_directory=bundle, project_root=project, client=provider,
+        )
+    provider.healthcheck.assert_not_called()
