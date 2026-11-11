@@ -267,7 +267,8 @@ def confirm_preserved_pixels(
             or original.size != mask.size
             or mask.mode != "L"
             or any(mask.histogram()[1:255])
-            or mask.getextrema() != (0, 255)
+            or mask.histogram()[0] == 0
+            or mask.histogram()[255] == 0
         ):
             raise MaskAwareQualificationError("Images must match and mask be binary")
         left = original.convert("RGB")
