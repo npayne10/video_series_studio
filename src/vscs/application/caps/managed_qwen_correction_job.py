@@ -89,6 +89,14 @@ def prepare_managed_qwen_correction(
     job_id: str,
 ) -> ManagedQwenCorrectionJob:
     """Create a bounded one-image job from governed CAP image and constraints."""
+    if (
+        plan.attempt == plan.max_attempts
+        and plan.effectiveness_warnings
+    ):
+        raise ManagedQwenCorrectionError(
+            "F5.4.1 blocks the final correction after declining semantic or "
+            "design consistency: a region-limited Qwen workflow is not validated"
+        )
     verify_spatial_contract(service, plan, contract)
     inspection: ManagedQwenEditInspection = inspect_managed_qwen_edit_workflow(workflow_path)
     if (
