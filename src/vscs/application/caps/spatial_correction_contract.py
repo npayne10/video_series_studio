@@ -239,9 +239,7 @@ def prepare_spatial_contract(
         "workflow_id": workflow_id,
         "model_identifier": model_identifier,
         "human_disposition_path": (
-            str(plan.human_disposition_path)
-            if plan.human_disposition_path is not None
-            else None
+            str(plan.human_disposition_path) if plan.human_disposition_path is not None else None
         ),
         "human_disposition_sha256": plan.human_disposition_sha256,
     }
@@ -318,13 +316,11 @@ def verify_spatial_contract(
         raise SpatialCorrectionContractError("Semantic review report changed")
     if _read_hashed(contract.workflow_path) != contract.workflow_sha256:
         raise SpatialCorrectionContractError("Editing workflow changed")
-    if contract.human_disposition_path is not None:
-        if (
-            contract.human_disposition_sha256 is None
-            or _read_hashed(contract.human_disposition_path)
-            != contract.human_disposition_sha256
-        ):
-            raise SpatialCorrectionContractError("Human correction disposition changed")
+    if contract.human_disposition_path is not None and (
+        contract.human_disposition_sha256 is None
+        or _read_hashed(contract.human_disposition_path) != contract.human_disposition_sha256
+    ):
+        raise SpatialCorrectionContractError("Human correction disposition changed")
     if contract.mask_path is not None:
         if contract.mask_sha256 is None:
             raise SpatialCorrectionContractError("Mask hash missing")
