@@ -121,9 +121,7 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.inspect_spatial_button.setObjectName("inspectSpatialGuidance")
         self.inspect_spatial_button.clicked.connect(self._inspect_spatial_guidance)
         layout.addWidget(self.inspect_spatial_button)
-        self.fidelity_button = QPushButton(
-            "F5.4.1 Inspect Spatial Edit Fidelity (No Generation)"
-        )
+        self.fidelity_button = QPushButton("F5.4.1 Inspect Spatial Edit Fidelity (No Generation)")
         self.fidelity_button.setObjectName("inspectQwenSpatialFidelity")
         self.fidelity_button.clicked.connect(self._inspect_edit_fidelity)
         layout.addWidget(self.fidelity_button)
@@ -161,9 +159,8 @@ class ControlledCandidateRegenerationDialog(QDialog):
         self.guided_edit_button.setObjectName("confirmGovernedQwenCandidateCorrection")
         self.guided_edit_button.clicked.connect(self._generate_guided_edit)
         layout.addWidget(self.guided_edit_button)
-        self._spatial_final_attempt_blocked = (
-            self.plan.attempt == self.plan.max_attempts
-            and bool(self.plan.effectiveness_warnings)
+        self._spatial_final_attempt_blocked = self.plan.attempt == self.plan.max_attempts and bool(
+            self.plan.effectiveness_warnings
         )
         if self._spatial_final_attempt_blocked:
             self.generate_button.setEnabled(False)
