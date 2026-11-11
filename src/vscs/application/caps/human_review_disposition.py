@@ -30,11 +30,7 @@ def _digest(data: bytes) -> str:
 
 def _location(snapshot: CandidateQualitySnapshot, report_path: Path) -> Path:
     directory = (
-        snapshot.project_root
-        / "Canonical Assets"
-        / snapshot.asset_id
-        / ".metadata"
-        / "evaluation"
+        snapshot.project_root / "Canonical Assets" / snapshot.asset_id / ".metadata" / "evaluation"
     ).resolve(strict=False)
     report = report_path.resolve(strict=True)
     if report.parent != directory or not report.name.endswith(".candidate_quality.json"):
@@ -89,7 +85,7 @@ def _evidence(
         raise HumanCorrectionDispositionError("Reviewer must provide a valid identity")
     if not 15 <= len(reason) <= 2000 or any(ord(char) < 32 for char in reason):
         raise HumanCorrectionDispositionError(
-            "Describe a specific visual discrepancy (15–2000 characters)"
+            "Describe a specific visual discrepancy (15-2000 characters)"
         )
     if not _SAFE_FIELD.fullmatch(field) or field not in dict(snapshot.accepted_fields):
         raise HumanCorrectionDispositionError("Correction scope must be one accepted CAP field")
@@ -165,7 +161,11 @@ def verify_human_correction_disposition(
     reviewer = payload.get("reviewer")
     field = payload.get("accepted_field")
     reason = payload.get("observed_discrepancy")
-    if not all(isinstance(item, str) for item in (reviewer, field, reason)):
+    if (
+        not isinstance(reviewer, str)
+        or not isinstance(field, str)
+        or not isinstance(reason, str)
+    ):
         raise HumanCorrectionDispositionError("Human correction record is incomplete")
     evidence = _evidence(snapshot, report_path, reviewer, field, reason)
     if any(payload.get(key) != value for key, value in evidence.items()):
