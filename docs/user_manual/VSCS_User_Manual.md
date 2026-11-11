@@ -788,3 +788,21 @@ git status --short
 ```
 
 **Acceptance boundaries:** New UI entry point, immutable reviewer provenance, scoped plan eligibility, Qwen edit prompt and worker review-record checks are committed; static validation, local tests and operator walkthrough remain pending. The F5.3 GPU hardware inference result itself has already passed separately.
+
+
+### F5.4 — Real Candidate 4 post-correction quality review (2026-11-11)
+
+**Operator-observed, genuine separately consented semantic assessment:** Diagnostic Console `STORY-PRO-B00D168E43`, corrected supplementary **Candidate reference 4**, **correction attempt 1** sourced from Candidate 3. The saved quality review returns **`REGENERATE_RECOMMENDED`**. It is advisory evidence, not approval and not an instruction to automatically execute the remaining attempt.
+
+| Metric | Original Candidate 3 | Corrected Candidate 4 | Delta |
+| --- | ---: | ---: | ---: |
+| Technical | 81 | 76 | -5 |
+| Semantic | 88 | 81 | -7 |
+| Draft design consistency | 75 | 68 | -7 |
+| Prompt adherence | 78 | 62 | -16 |
+| Engineering plausibility | 87 | 83 | -4 |
+
+Candidate 4 review: technical resolution **78/100**, exposure **79/100**, contrast **100/100**, highlight/shadow clipping **98/100**, local detail **29/100**, aspect ratio **70/100**; semantic category validity **98/100**, text **100/100**, cinematic quality **76/100**. The evaluator reports the **rotary dial still raised rather than recessed**, workstation partially occluded with separation ambiguous, and an unreviewed layered bezel/workstation detailing. The separate Story indicator is not visibly identifiable but has no established placement; **do not invent placement**.
+
+**Disposition:** F5.4 governed human-review eligibility, corrected Qwen Candidate generation and paid semantic assessment were exercised. **Correction fidelity FAILED**: Attempt 1 did not meet the intended geometry correction and quality scores decreased. Candidate 4 must remain unapproved; Candidate 3 and its original `HUMAN_REVIEW_REQUIRED` report remain immutable. **Do not consume attempt 2/2** while inspecting model/workflow capabilities and source-conditioned control. The existing managed graph does **not have a validated region-mask input**; do not claim localized inpainting is already available. Preserve both candidate images, saved reports, correction journal and ComfyUI history, including prompt ID if available. Review whether true masked/region-limited Qwen editing can be supported, and validate any added capability in isolated test-only evidence before authorizing the final governed attempt.
+
