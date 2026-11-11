@@ -53,7 +53,7 @@ class HumanCorrectionDispositionDialog(QDialog):
         self.reviewer = QLineEdit()
         self.reviewer.setObjectName("humanCorrectionReviewer")
         layout.addWidget(self.reviewer)
-        layout.addWidget(QLabel("Observed visual discrepancy (15–2000 characters)"))
+        layout.addWidget(QLabel("Observed visual discrepancy (15-2000 characters)"))
         self.reason = QPlainTextEdit()
         self.reason.setObjectName("humanCorrectionObservedDiscrepancy")
         self.reason.setPlaceholderText(
