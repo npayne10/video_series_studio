@@ -7,10 +7,11 @@ ComfyUI input filename before any future isolated execution.
 
 from __future__ import annotations
 
+import argparse
 import copy
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -162,6 +163,83 @@ def validate_experimental_graph(graph: dict[str, Any]) -> None:
         raise MaskAwareQualificationError("Trusted sampler denoise baseline changed")
 
 
+def prepare_mask_aware_bundle(
+    *, source_png: Path, project_root: Path, bundle_directory: Path,
+    bounds: tuple[int, int, int, int],
+) -> MaskAwareQualification:
+    """Create exclusive external evidence; NO ComfyUI input copy or GPU request."""
+    from vscs.application.caps.qwen_f53_isolated_acceptance import _ensure_external
+
+    bundle, project = _ensure_external(bundle_directory, project_root)
+    original = source_png.resolve(strict=True)
+    if source_png.is_symlink() or project not in original.parents:
+        raise MaskAwareQualificationError("Source Candidate must be inside active project")
+    if bundle.exists():
+        raise MaskAwareQualificationError("Bundle already exists; no overwrite")
+    _source_size(original)
+    graph = build_experimental_masked_graph()
+    validate_experimental_graph(graph)
+    bundle.mkdir(parents=True, exist_ok=False)
+    source_copy = bundle / "source.png"
+    source_copy.write_bytes(original.read_bytes())
+    mask_path = bundle / "mask.png"
+    preliminary = create_binary_edit_mask(source_copy, mask_path, bounds)
+    graph_raw = json.dumps(graph, sort_keys=True, indent=2).encode("utf-8")
+    graph_path = bundle / "experimental_masked_api.json"
+    graph_path.write_bytes(graph_raw)
+    report = MaskAwareQualification(
+        template_sha256=preliminary.template_sha256,
+        experimental_graph_sha256=_sha(graph_raw),
+        source_dimensions=preliminary.source_dimensions,
+        mask_sha256=preliminary.mask_sha256,
+        mask_coverage_percent=preliminary.mask_coverage_percent,
+        mask_bounds=bounds,
+        mask_comfyui_input_bound=False,
+    )
+    manifest = {
+        "schema_version": 1,
+        "kind": "F541B_OFFLINE_EXPERIMENTAL_MASK_NOT_EXECUTABLE",
+        **asdict(report),
+        "source_sha256": _sha(source_copy.read_bytes()),
+        "original_source_sha256": _sha(original.read_bytes()),
+        "original_source_path": str(original),
+        "project_root": str(project),
+        "bundle_directory": str(bundle),
+        "gpu_execution_authorized": False,
+        "correction_attempt_reserved": False,
+        "candidate_registration_allowed": False,
+        "mask_input_filename": _MASK_PLACEHOLDER,
+    }
+    (bundle / "qualification_manifest.json").write_text(
+        json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8"
+    )
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Offline F5.4.1B mask qualification")
+    parser.add_argument("--project-root", type=Path, required=True)
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--bundle", type=Path, required=True)
+    parser.add_argument(
+        "--roi", nargs=4, required=True, type=int,
+        metavar=("LEFT", "TOP", "RIGHT", "BOTTOM")
+    )
+    args = parser.parse_args()
+    try:
+        result = prepare_mask_aware_bundle(
+            source_png=args.source,
+            project_root=args.project_root,
+            bundle_directory=args.bundle,
+            bounds=tuple(args.roi),
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        print(json.dumps({"status": "BLOCKED", "error": str(exc)}))
+        return 2
+    print(json.dumps(asdict(result), indent=2, sort_keys=True))
+    return 0
+
+
 def confirm_preserved_pixels(
     source_png: Path, composite_png: Path, mask_png: Path
 ) -> dict[str, Any]:
@@ -202,3 +280,7 @@ def confirm_preserved_pixels(
         "semantic_geometry_correct": None,
         "execution_authorized": False,
     }
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
