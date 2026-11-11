@@ -378,9 +378,7 @@ def install_visual_candidate_quality_review() -> None:
         self.candidate_human_correction_button = QPushButton(
             "Record Human Correction From Saved Review…"
         )
-        self.candidate_human_correction_button.setObjectName(
-            "recordHumanCorrectionFromSavedReview"
-        )
+        self.candidate_human_correction_button.setObjectName("recordHumanCorrectionFromSavedReview")
         self.candidate_human_correction_button.setToolTip(
             "Use saved semantic evidence, no repeat OpenAI charge; "
             "record a separately attributable correction finding."
