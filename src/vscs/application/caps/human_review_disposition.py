@@ -161,11 +161,7 @@ def verify_human_correction_disposition(
     reviewer = payload.get("reviewer")
     field = payload.get("accepted_field")
     reason = payload.get("observed_discrepancy")
-    if (
-        not isinstance(reviewer, str)
-        or not isinstance(field, str)
-        or not isinstance(reason, str)
-    ):
+    if not isinstance(reviewer, str) or not isinstance(field, str) or not isinstance(reason, str):
         raise HumanCorrectionDispositionError("Human correction record is incomplete")
     evidence = _evidence(snapshot, report_path, reviewer, field, reason)
     if any(payload.get(key) != value for key, value in evidence.items()):
