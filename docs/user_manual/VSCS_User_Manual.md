@@ -908,8 +908,8 @@ Test-Path -LiteralPath $bundle
 python -m vscs.application.caps.qwen_mask_aware_qualification --project-root "$project" --source "$source" --bundle "$bundle" --roi LEFT TOP RIGHT BOTTOM
 ```
 
-6. The `--prepare`-equivalent CLI above creates only `source.png`, `mask.png`, `experimental_masked_api.json` and `qualification_manifest.json` in a **new, exclusive external** bundle. It does not upload anything to ComfyUI or send GPU work. The graph retains a non-executable `__F541B_REVIEWED_COMFYUI_INPUT_MASK_FILENAME__` placeholder.
-7. Inspect `mask.png` visually: the dial region must be **white**, the rest **black**. If wrong, **do not edit the mask in place**; preserve evidence and prepare a new separately named bundle with reviewed bounds. Record mask SHA, region coordinates, source SHA, graph SHA and screenshot. Confirm no `execution_reserved.json`, `runtime_graph.json`, `masked_qwen_output.png` or `qualification_result.json`.
+6. The `--prepare`-equivalent CLI above creates only `source.png`, `mask.png`, `roi_preview.png`, `experimental_masked_api.json` and `qualification_manifest.json` in a **new, exclusive external** bundle. It does not upload anything to ComfyUI or send GPU work. The graph retains a non-executable `__F541B_REVIEWED_COMFYUI_INPUT_MASK_FILENAME__` placeholder.
+7. Inspect both `mask.png` and the automatically generated `roi_preview.png` visually. The dial region must be **white** in the mask and **red-tinted** in the overlay; all other parts of the image must stay protected (black mask). If wrong, **do not edit the mask in place**; preserve evidence and prepare a new separately named bundle with reviewed bounds. Record mask SHA, region coordinates, source SHA, graph SHA and screenshot. Confirm no `execution_reserved.json`, `runtime_graph.json`, `masked_qwen_output.png` or `qualification_result.json`.
 8. With ComfyUI running, first run the separate **read-only node/model inventory** check below, which uses only `/system_stats` and `/object_info` plus local graph validation. It **does not upload the mask, reserve a GPU attempt, or generate an image**:
 
 ```powershell
