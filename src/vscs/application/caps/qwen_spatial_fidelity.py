@@ -127,8 +127,7 @@ def inspect_qwen_spatial_fidelity(
         "SetLatentNoiseMask",
     }
     mask_node_present = any(
-        isinstance(node, dict) and node.get("class_type") in mask_classes
-        for node in nodes.values()
+        isinstance(node, dict) and node.get("class_type") in mask_classes for node in nodes.values()
     )
     # The existing managed graph has no reviewed mask route. Even a new mask
     # node appearing would need explicit graph validation and an acceptance test.
