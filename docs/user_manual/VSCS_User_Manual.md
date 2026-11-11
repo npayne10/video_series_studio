@@ -806,3 +806,55 @@ Candidate 4 review: technical resolution **78/100**, exposure **79/100**, contra
 
 **Disposition:** F5.4 governed human-review eligibility, corrected Qwen Candidate generation and paid semantic assessment were exercised. **Correction fidelity FAILED**: Attempt 1 did not meet the intended geometry correction and quality scores decreased. Candidate 4 must remain unapproved; Candidate 3 and its original `HUMAN_REVIEW_REQUIRED` report remain immutable. **Do not consume attempt 2/2** while inspecting model/workflow capabilities and source-conditioned control. The existing managed graph does **not have a validated region-mask input**; do not claim localized inpainting is already available. Preserve both candidate images, saved reports, correction journal and ComfyUI history, including prompt ID if available. Review whether true masked/region-limited Qwen editing can be supported, and validate any added capability in isolated test-only evidence before authorizing the final governed attempt.
 
+
+
+### F5.4.1 — Qwen Spatial Edit Fidelity: first guarded capability assessment
+
+**Implemented in GitHub, but operator and regression acceptance still required.** F5.4.1 arose after a genuine governed edit of Diagnostic Console source Candidate 3 produced Candidate 4 (attempt **1/2**), whose separately paid semantic review returned `REGENERATE_RECOMMENDED`: technical **81 -> 76**, semantic **88 -> 81**, design consistency **75 -> 68**, prompt adherence **78 -> 62**. The rotary dial remained visibly raised rather than recessed and the workstation separation was still ambiguous. **Do not consume attempt 2/2 merely because Qwen can run on the GPU.**
+
+**Confirmed graph facts:** The trusted managed `VSCS_Qwen_Derived_Reference_Workflow_API_v2.1.json` is source-image-conditioned via `XCICQwenReferenceJobLoader -> FluxKontextImageScale -> VAEEncode -> KSampler`. The sampler is configured with **denoise=1.0**. No validated mask/inpainting control reaches the sampler. The image-conditioning context helps retain the source identity, but neither text-only prompts nor a full-frame VAE latent can guarantee a physically bounded change to the dial. A lower denoise value, even if tested later, would **not by itself provide inpainting**.
+
+**New F5.4.1 assessment module:** `src/vscs/application/caps/qwen_spatial_fidelity.py`. The read-only `inspect_qwen_spatial_fidelity` reports:
+- exact managed workflow SHA-256, sampler denoise and source-conditioning status;
+- whether a mask-related node exists, separately from **whether any mask-based path has actually been validated** (currently **NO**);
+- full-frame reinterpretation risk and explicit warnings;
+- optionally, hashes, original dimensions, mean absolute RGB difference and fraction of pixels with luminance difference greater than 12 when two complete PNGs have *exactly matching dimensions*; mismatched dimensions refuse pixelwise comparison rather than silently resampling;
+- `execution_authorized=False`, `final_attempt_spatially_qualified=False`.
+
+The pixel metrics are **diagnostic only**. Neither high similarity nor low similarity can prove that a recessed dial, separate workstation or dimensional constraint was visually satisfied. This phase does not create a mask, generate a new image, use OpenAI, approve Canon or consume an attempt.
+
+**Operator procedure in VSCS — no GPU request:**
+
+1. Start the original disposable `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` project. In the Diagnostic Console Gallery, keep both Candidate 3 (source) and Candidate 4 (first governed correction) unapproved and preserve both semantic reports.
+2. Select **Candidate 4** and click **Correct From Saved Review…** to open its potential final correction plan. Verify **Source Candidate 4**, **Attempt 2/2**, the genuine `REGENERATE_RECOMMENDED` report and the previous negative score deltas. If the application reports a stale CAP or previous attempt journal, **stop rather than bypassing the block**.
+3. Click **F5.4.1 Inspect Spatial Edit Fidelity (No Generation)**. The report should show **denoise 1**, source-conditioning **True**, region-limited editing validated **False**, and warnings about a full-frame interpretation. Record a screenshot. The inspection must not reserve an attempt or create an output.
+4. When Attempt 2/2 is accompanied by recorded negative correction-effectiveness warnings, **both generation buttons are disabled** by the UI, and direct callback invocation also fails closed. The inspector remains available. Do not attempt to re-enable them by modifying the report, code, lineage or journal.
+5. To inspect exact model behaviour outside the CAP, use the optional read-only Python snippet below against two PNG files **that already exist**. These image comparisons do not change images, create references or judge semantic fidelity:
+
+```powershell
+@'
+from pathlib import Path
+from vscs.application.caps.qwen_spatial_fidelity import inspect_qwen_spatial_fidelity
+source = Path(r"D:\VSCS_QWEN_F53_ACCEPTANCE\run_001\source.png")
+edited = Path(r"D:\VSCS_QWEN_F53_ACCEPTANCE\run_001\qwen_acceptance_output.png")
+print(inspect_qwen_spatial_fidelity(source_image=source, edited_image=edited).describe())
+'@ | python -
+```
+
+**Note:** The F5.3 external input/output images may have different dimensions; in that case the inspector reports hashes/sizes but intentionally leaves pixelwise metrics blank. Do **not** resize them in place to force a numeric comparison.
+
+**Future work, NOT falsely claimed as implemented:** Build, inspect and qualify a real **mask-aware local editing route** in a separate disposable acceptance workflow; obtain a region-of-interest automatically from source visual understanding with operator review; prove which pixels outside the allowed region are held fixed; establish a deterministic mask/graph/seed contract and GPU model fit. Only after this capability is verified should a distinct governance change deliberately release the protected final attempt for a production-compatible Qwen edit. Any new GPU inference must be tested in the external isolated path first, not against Candidate 4's final governed attempt.
+
+**Validation commands after GitHub pull:**
+
+```powershell
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_qwen_spatial_fidelity.py tests/test_cap_visual_candidate_regeneration.py tests/test_cap_managed_qwen_edit_inspection.py tests/test_cap_managed_qwen_correction_job.py tests/test_cap_managed_qwen_worker_execution.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+**Status:** F5.4.1 read-only capability inspection, pixel-difference diagnostics and degraded-final-attempt guard are committed. No actual localized edit, mask/inpaint-enabled Qwen GPU inference or F5.4.1 Windows acceptance has been established. Keep the genuine Candidate 4 semantic review and all original assets unchanged.
