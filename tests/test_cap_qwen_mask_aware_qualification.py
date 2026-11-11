@@ -140,7 +140,7 @@ def test_protected_pixel_audit_detects_single_outside_change(tmp_path):
 
 
 def test_edited_image_dimensions_must_match_mask(tmp_path):
-    project, source = _source(tmp_path)
+    _project, source = _source(tmp_path)
     mask_path = tmp_path / "mask.png"
     create_binary_edit_mask(source, mask_path, (100, 50, 140, 100))
     edited = tmp_path / "edited.png"
