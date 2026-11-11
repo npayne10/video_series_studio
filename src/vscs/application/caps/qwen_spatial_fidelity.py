@@ -30,7 +30,7 @@ class QwenSpatialFidelityAssessment:
     workflow_sha256: str
     sampler_denoise: float
     source_conditioned: bool
-    spatial_mask_connected: bool
+    mask_related_node_present: bool
     region_limited_edit_validated: bool
     full_frame_reinterpretation_risk: bool
     source_sha256: str | None
@@ -55,6 +55,7 @@ class QwenSpatialFidelityAssessment:
             f"Managed workflow SHA-256: {self.workflow_sha256}",
             f"Sampler denoise: {self.sampler_denoise:g}",
             f"Source-image conditioned: {self.source_conditioned}",
+            f"Mask-related node present: {self.mask_related_node_present}",
             f"Validated mask/inpainting: {self.region_limited_edit_validated}",
             f"Full-frame reinterpretation risk: {self.full_frame_reinterpretation_risk}",
         ]
@@ -125,7 +126,7 @@ def inspect_qwen_spatial_fidelity(
         "InpaintModelConditioning",
         "SetLatentNoiseMask",
     }
-    mask_connected = any(
+    mask_node_present = any(
         isinstance(node, dict) and node.get("class_type") in mask_classes
         for node in nodes.values()
     )
@@ -135,7 +136,7 @@ def inspect_qwen_spatial_fidelity(
     warnings: list[str] = []
     if denoise >= 0.95:
         warnings.append("Denoise close to 1 permits major full-image reconstruction")
-    if not mask_connected:
+    if not mask_node_present:
         warnings.append("No mask/inpaint node exists on the checked-in sampler path")
     else:
         warnings.append("Mask-related node detected but its route is NOT validated")
@@ -165,7 +166,7 @@ def inspect_qwen_spatial_fidelity(
         workflow_sha256=validated.workflow_sha256,
         sampler_denoise=float(denoise),
         source_conditioned=True,
-        spatial_mask_connected=mask_connected,
+        mask_related_node_present=mask_node_present,
         region_limited_edit_validated=validated_mask,
         full_frame_reinterpretation_risk=denoise >= 0.95 or not validated_mask,
         source_sha256=sha_a,
