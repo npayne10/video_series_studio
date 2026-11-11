@@ -57,9 +57,7 @@ def _unchanged(contract: SpatialCorrectionContract, job: ManagedQwenCorrectionJo
         or human_path.is_symlink()
         or hashlib.sha256(human_path.read_bytes()).hexdigest() != human_sha
     ):
-        raise GuidedEditExecutionError(
-            "Reviewer correction disposition changed after preparation"
-        )
+        raise GuidedEditExecutionError("Reviewer correction disposition changed after preparation")
     jobs = job.queue.get("jobs")
     if not isinstance(jobs, list) or len(jobs) != 1 or not isinstance(jobs[0], dict):
         raise GuidedEditExecutionError("Managed edit must contain exactly one queue job")
