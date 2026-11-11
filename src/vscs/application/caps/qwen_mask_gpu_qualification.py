@@ -188,6 +188,7 @@ def execute_isolated_mask_qualification(
     objects = provider.object_info()
     _schema_confirmed(objects)
     validate_managed_qwen_model_choices(graph, objects)
+    provider.validate_nodes(graph)
     filename = "vscs_f541b_" + manifest["mask_sha256"][:20] + ".png"
     # A mask upload is a deliberate external-only side effect; reservation
     # is persisted BEFORE it, so uncertain network outcomes never auto-retry.
@@ -268,6 +269,54 @@ def execute_isolated_mask_qualification(
     return result
 
 
+def inspect_isolated_mask_nodes(
+    *, bundle_directory: Path, project_root: Path,
+    comfyui_url: str = "http://127.0.0.1:8188",
+    client: XCICCoreClient | None = None,
+) -> dict[str, Any]:
+    """Read-only node + model compatibility check; no mask upload or GPU reservation."""
+    bundle, project = _ensure_external(bundle_directory, project_root)
+    if not bundle.is_dir() or bundle.is_symlink():
+        raise MaskAwareQualificationError("Offline experimental bundle is missing")
+    if any((bundle / name).exists() for name in (
+        "execution_reserved.json", "qualification_result.json",
+        "masked_qwen_output.png",
+    )):
+        raise MaskAwareQualificationError("An attempted bundle is no longer read-only")
+    manifest = _json(bundle / "qualification_manifest.json")
+    if (
+        manifest.get("kind") != "F541B_OFFLINE_EXPERIMENTAL_MASK_NOT_EXECUTABLE"
+        or manifest.get("project_root") != str(project)
+        or _hash(bundle / "mask.png") != manifest.get("mask_sha256")
+        or _hash(bundle / "source.png") != manifest.get("source_sha256")
+        or _hash(bundle / "experimental_masked_api.json")
+        != manifest.get("experimental_graph_sha256")
+        or _hash(default_workflow_path()) != manifest.get("template_sha256")
+    ):
+        raise MaskAwareQualificationError("Offline evidence or trusted workflow changed")
+    graph = _json(bundle / "experimental_masked_api.json")
+    validate_experimental_graph(graph)
+    endpoint = _loopback_endpoint(comfyui_url)
+    provider = client if client is not None else XCICCoreClient(endpoint)
+    provider.healthcheck()
+    nodes = provider.object_info()
+    _schema_confirmed(nodes)
+    validate_managed_qwen_model_choices(graph, nodes)
+    provider.validate_nodes(graph)
+    return {
+        "status": "MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE",
+        "endpoint": endpoint,
+        "trusted_workflow_sha256": manifest["template_sha256"],
+        "experimental_graph_sha256": manifest["experimental_graph_sha256"],
+        "mask_sha256": manifest["mask_sha256"],
+        "mask_uploaded": False,
+        "gpu_submitted": False,
+        "candidate_registered": False,
+        "correction_attempt_consumed": False,
+        "execution_authorized": False,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="One-shot isolated masked Qwen GPU qualification"
@@ -277,14 +326,26 @@ def main() -> int:
     parser.add_argument("--comfyui-url", default="http://127.0.0.1:8188")
     parser.add_argument("--confirm-reviewed-mask", action="store_true")
     parser.add_argument("--confirm-one-gpu-run", action="store_true")
+    parser.add_argument("--inspect-nodes-only", action="store_true")
     args = parser.parse_args()
     try:
-        result = execute_isolated_mask_qualification(
-            bundle_directory=args.bundle, project_root=args.project_root,
-            operator_confirmed=args.confirm_one_gpu_run,
-            mask_reviewed=args.confirm_reviewed_mask,
-            comfyui_url=args.comfyui_url,
-        )
+        if args.inspect_nodes_only:
+            if args.confirm_reviewed_mask or args.confirm_one_gpu_run:
+                raise MaskAwareQualificationError(
+                    "Read-only inspection cannot be combined with GPU consent"
+                )
+            result = inspect_isolated_mask_nodes(
+                bundle_directory=args.bundle,
+                project_root=args.project_root,
+                comfyui_url=args.comfyui_url,
+            )
+        else:
+            result = execute_isolated_mask_qualification(
+                bundle_directory=args.bundle, project_root=args.project_root,
+                operator_confirmed=args.confirm_one_gpu_run,
+                mask_reviewed=args.confirm_reviewed_mask,
+                comfyui_url=args.comfyui_url,
+            )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     except (OSError, ValueError, RuntimeError) as exc:
