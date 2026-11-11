@@ -20,6 +20,7 @@ from vscs.application.caps.guided_edit_live_transport import (
 from vscs.application.caps.managed_qwen_model_inventory import (
     validate_managed_qwen_model_choices,
 )
+from vscs.application.caps.qwen_f5_preflight import default_workflow_path
 from vscs.application.caps.qwen_f53_isolated_acceptance import (
     _ensure_external,
     _ensure_idle_local_queue,
@@ -29,11 +30,9 @@ from vscs.application.caps.qwen_f53_isolated_acceptance import (
 )
 from vscs.application.caps.qwen_mask_aware_qualification import (
     MaskAwareQualificationError,
-    build_experimental_masked_graph,
     confirm_preserved_pixels,
     validate_experimental_graph,
 )
-from vscs.application.caps.qwen_f5_preflight import default_workflow_path
 from vscs.infrastructure.xcic_core.client import XCICCoreClient
 
 
@@ -123,8 +122,11 @@ def _schema_confirmed(object_info: dict[str, Any]) -> None:
 
 
 def execute_isolated_mask_qualification(
-    *, bundle_directory: Path, project_root: Path,
-    operator_confirmed: bool, mask_reviewed: bool,
+    *,
+    bundle_directory: Path,
+    project_root: Path,
+    operator_confirmed: bool,
+    mask_reviewed: bool,
     comfyui_url: str = "http://127.0.0.1:8188",
     timeout_seconds: float = 3600,
     client: XCICCoreClient | None = None,
@@ -142,18 +144,21 @@ def execute_isolated_mask_qualification(
     manifest = _json(bundle / "qualification_manifest.json")
     if manifest.get("kind") != "F541B_OFFLINE_EXPERIMENTAL_MASK_NOT_EXECUTABLE":
         raise MaskAwareQualificationError("Wrong qualification bundle")
-    if (
-        manifest.get("project_root") != str(project)
-        or manifest.get("bundle_directory") != str(bundle)
+    if manifest.get("project_root") != str(project) or manifest.get("bundle_directory") != str(
+        bundle
     ):
         raise MaskAwareQualificationError("Project or bundle changed since preparation")
-    if any((bundle / name).exists() for name in (
-        "execution_reserved.json", "qualification_result.json",
-        "masked_qwen_output.png", "runtime_graph.json", "runtime_queue.json"
-    )):
-        raise MaskAwareQualificationError(
-            "An existing or ambiguous GPU attempt cannot be retried"
+    if any(
+        (bundle / name).exists()
+        for name in (
+            "execution_reserved.json",
+            "qualification_result.json",
+            "masked_qwen_output.png",
+            "runtime_graph.json",
+            "runtime_queue.json",
         )
+    ):
+        raise MaskAwareQualificationError("An existing or ambiguous GPU attempt cannot be retried")
     if any(item.is_symlink() for item in bundle.iterdir()):
         raise MaskAwareQualificationError("Bundle symlinks are prohibited")
     source = bundle / "source.png"
@@ -193,12 +198,15 @@ def execute_isolated_mask_qualification(
     filename = "vscs_f541b_" + manifest["mask_sha256"][:20] + ".png"
     # A mask upload is a deliberate external-only side effect; reservation
     # is persisted BEFORE it, so uncertain network outcomes never auto-retry.
-    _save_once(bundle / "execution_reserved.json", {
-        "status": "RESERVED_UNKNOWN_UNTIL_RESULT",
-        "mask_sha256": manifest["mask_sha256"],
-        "source_sha256": manifest["source_sha256"],
-        "graph_sha256": manifest["experimental_graph_sha256"],
-    })
+    _save_once(
+        bundle / "execution_reserved.json",
+        {
+            "status": "RESERVED_UNKNOWN_UNTIL_RESULT",
+            "mask_sha256": manifest["mask_sha256"],
+            "source_sha256": manifest["source_sha256"],
+            "graph_sha256": manifest["experimental_graph_sha256"],
+        },
+    )
     loader = upload_mask if upload_mask is not None else _upload_mask
     uploaded_name = loader(endpoint, mask, filename)
     if uploaded_name != filename:
@@ -211,25 +219,27 @@ def execute_isolated_mask_qualification(
     graph["171"]["inputs"]["quality_mode"] = "standard"
     graph["170:169"]["inputs"]["seed"] = 43
     queue = {
-        "jobs": [{
-            "job_id": "isolated-mask-aware-qwen",
-            "asset_id": "F541B_DISPOSABLE_NOT_CAP",
-            "asset_category": "test",
-            "reference_inputs": [str(source)],
-            "positive_prompt": (
-                "Preserve the existing console. Correct the rotary dial to sit "
-                "within a visibly recessed well. Do not change features outside "
-                "the supplied editable region."
-            ),
-            "negative_prompt": "additional objects, changed identity, text overlays",
-            "generation": {"enable_turbo_mode": True},
-            "generation_policy": {"force_standard_mode": True},
-            "seed": 43,
-            "output": {
-                "candidate_directory": str(bundle),
-                "candidate_filename": "masked_qwen_output.png",
-            },
-        }]
+        "jobs": [
+            {
+                "job_id": "isolated-mask-aware-qwen",
+                "asset_id": "F541B_DISPOSABLE_NOT_CAP",
+                "asset_category": "test",
+                "reference_inputs": [str(source)],
+                "positive_prompt": (
+                    "Preserve the existing console. Correct the rotary dial to sit "
+                    "within a visibly recessed well. Do not change features outside "
+                    "the supplied editable region."
+                ),
+                "negative_prompt": "additional objects, changed identity, text overlays",
+                "generation": {"enable_turbo_mode": True},
+                "generation_policy": {"force_standard_mode": True},
+                "seed": 43,
+                "output": {
+                    "candidate_directory": str(bundle),
+                    "candidate_filename": "masked_qwen_output.png",
+                },
+            }
+        ]
     }
     _save_once(bundle / "runtime_graph.json", graph)
     _save_once(bundle / "runtime_queue.json", queue)
@@ -271,7 +281,9 @@ def execute_isolated_mask_qualification(
 
 
 def inspect_isolated_mask_nodes(
-    *, bundle_directory: Path, project_root: Path,
+    *,
+    bundle_directory: Path,
+    project_root: Path,
     comfyui_url: str = "http://127.0.0.1:8188",
     client: XCICCoreClient | None = None,
 ) -> dict[str, Any]:
@@ -279,10 +291,14 @@ def inspect_isolated_mask_nodes(
     bundle, project = _ensure_external(bundle_directory, project_root)
     if not bundle.is_dir() or bundle.is_symlink():
         raise MaskAwareQualificationError("Offline experimental bundle is missing")
-    if any((bundle / name).exists() for name in (
-        "execution_reserved.json", "qualification_result.json",
-        "masked_qwen_output.png",
-    )):
+    if any(
+        (bundle / name).exists()
+        for name in (
+            "execution_reserved.json",
+            "qualification_result.json",
+            "masked_qwen_output.png",
+        )
+    ):
         raise MaskAwareQualificationError("An attempted bundle is no longer read-only")
     manifest = _json(bundle / "qualification_manifest.json")
     if (
@@ -320,9 +336,7 @@ def inspect_isolated_mask_nodes(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="One-shot isolated masked Qwen GPU qualification"
-    )
+    parser = argparse.ArgumentParser(description="One-shot isolated masked Qwen GPU qualification")
     parser.add_argument("--project-root", required=True, type=Path)
     parser.add_argument("--bundle", required=True, type=Path)
     parser.add_argument("--comfyui-url", default="http://127.0.0.1:8188")
@@ -343,7 +357,8 @@ def main() -> int:
             )
         else:
             result = execute_isolated_mask_qualification(
-                bundle_directory=args.bundle, project_root=args.project_root,
+                bundle_directory=args.bundle,
+                project_root=args.project_root,
                 operator_confirmed=args.confirm_one_gpu_run,
                 mask_reviewed=args.confirm_reviewed_mask,
                 comfyui_url=args.comfyui_url,
