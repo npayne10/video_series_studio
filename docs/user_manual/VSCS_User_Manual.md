@@ -858,3 +858,71 @@ git status --short
 ```
 
 **Status:** F5.4.1 read-only capability inspection, pixel-difference diagnostics and degraded-final-attempt guard are committed. No actual localized edit, mask/inpaint-enabled Qwen GPU inference or F5.4.1 Windows acceptance has been established. Keep the genuine Candidate 4 semantic review and all original assets unchanged.
+
+
+### F5.4.1B — Isolated mask-aware Qwen workflow qualification
+
+**Development implementation committed; local Ruff/Mypy/pytest, live node compatibility and real RTX 5060 Ti GPU inference are NOT yet verified.** This phase is **disposable experimental qualification**, not the governed Candidate 4 Attempt 2/2. Do not change Candidate 3/4 images, reviews, CAP decisions, MASTER, Canon, or the existing correction-attempt journal.
+
+**Experimental graph topology (separate derived API graph):**
+
+- Trusted source/reference conditioning is retained, including `XCICQwenReferenceJobLoader`, `FluxKontextImageScale`, the Qwen image-edit checkpoint/LoRA and original prompt conditioning.
+- A **LoadImageMask** node (red channel, white means eligible edit, black means protected) feeds **SetLatentNoiseMask**, which feeds the existing **KSampler** latent_image. This constrains sampler noise *if* supported by the installed ComfyUI runtime, but by itself does not prove exact outside-region preservation.
+- Decoded Qwen output goes to **ImageCompositeMasked**, whose destination is the original scaled source, source is the decoded image, and mask is the same reviewed mask. This is a second preservation boundary: outside the mask, the source pixels should remain unchanged. The output then goes to the experimental `XCICSaveReferenceCandidate` path, **external to CAP**.
+- Original checked-in `VSCS_Qwen_Derived_Reference_Workflow_API_v2.1.json` and the successful F5.3 `run_001` are not modified.
+- **Hard qualification limit:** mask/image dimensions, mask semantics, installed node schemas, VAE/sampler compatibility, real GPU execution, any required resizing, and exact pixel preservation must be demonstrated before considering production integration. An API graph with nodes wired is **not** sufficient evidence of working spatial editing.
+
+**Stage A — local software validation after GitHub pull:**
+
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_qwen_mask_aware_qualification.py tests/test_cap_qwen_mask_gpu_qualification.py tests/test_cap_qwen_spatial_fidelity.py tests/test_cap_managed_qwen_edit_inspection.py tests/test_cap_qwen_f53_isolated_acceptance.py tests/test_cap_managed_qwen_correction_job.py tests/test_cap_visual_candidate_regeneration.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+Stop on *any* failure. Previous validated baseline (before F5.4.1B additions) was **2,737 passed, 1 skipped**. The existing untracked architecture audit and Qwen preflight result are to be preserved.
+
+**Stage B — offline, disposable ROI preparation; absolutely no GPU work:**
+
+1. In VSCS, select the original disposable project `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`, Diagnostic Console **Candidate 4** (not Candidate 3). Confirm status **Supplementary / Candidate / unapproved**. Copy the **exact absolute Candidate 4 image path** from its gallery. Confirm the previous Candidate 4 semantic review remains `REGENERATE_RECOMMENDED`, with semantic **81** and design consistency **68**. Do not save, archive, approve or otherwise change Candidate 4.
+2. Close the correction dialog with **Cancel**. Create a completely new external parent directory `D:\VSCS_QWEN_F541B_ACCEPTANCE`. Avoid overwriting the F5.3 `run_001` archive.
+3. Set `$project` to the **exact** disposable project root and `$source` to Candidate 4's actual PNG file; test both as a directory/file. **Never use New-Item on the source PNG filename.**
+4. Review Candidate 4 visually and define one bounded, rectangular test region around its raised dial. The `--roi` values are **pixel coordinates in the original source image**: `LEFT TOP RIGHT BOTTOM`; the right/bottom edges are exclusive. This is an operator-reviewed *experimental test mask*, not an automatically approved CAP spatial mask. For now, the code refuses regions larger than 25% of the image. Future automated mask proposal and human review are separate requirements.
+5. Example, **replace ALL placeholders with grounded paths/coordinates**:
+
+```powershell
+$project = "D:\VSCS\B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI"
+$source = "ACTUAL_ABSOLUTE_PATH_TO_CANDIDATE_4_PNG"
+$bundle = "D:\VSCS_QWEN_F541B_ACCEPTANCE\run_001"
+New-Item -ItemType Directory -Force "D:\VSCS_QWEN_F541B_ACCEPTANCE"
+Test-Path -LiteralPath $project -PathType Container
+Test-Path -LiteralPath $source -PathType Leaf
+Test-Path -LiteralPath $bundle
+# First two checks TRUE; final check FALSE.
+python -m vscs.application.caps.qwen_mask_aware_qualification --project-root "$project" --source "$source" --bundle "$bundle" --roi LEFT TOP RIGHT BOTTOM
+```
+
+6. The `--prepare`-equivalent CLI above creates only `source.png`, `mask.png`, `experimental_masked_api.json` and `qualification_manifest.json` in a **new, exclusive external** bundle. It does not upload anything to ComfyUI or send GPU work. The graph retains a non-executable `__F541B_REVIEWED_COMFYUI_INPUT_MASK_FILENAME__` placeholder.
+7. Inspect `mask.png` visually: the dial region must be **white**, the rest **black**. If wrong, **do not edit the mask in place**; preserve evidence and prepare a new separately named bundle with reviewed bounds. Record mask SHA, region coordinates, source SHA, graph SHA and screenshot. Confirm no `execution_reserved.json`, `runtime_graph.json`, `masked_qwen_output.png` or `qualification_result.json`.
+8. **STOP after offline preparation and send the manifest, mask screenshot and source dimensions for review.** Software tests and offline preparation are not live capability acceptance.
+
+**Stage C — separately authorised experimental GPU execution (NOT during initial preparation):**
+
+Only after Stage A/B approval, run ComfyUI with the queue empty, record VRAM with `nvidia-smi`, and use `python -m vscs.application.caps.qwen_f5_preflight` as a read-only model check. The dedicated `qwen_mask_gpu_qualification.py` runner requires two explicit flags:
+
+```powershell
+python -m vscs.application.caps.qwen_mask_gpu_qualification --project-root "$project" --bundle "$bundle" --confirm-reviewed-mask --confirm-one-gpu-run
+```
+
+**This command will perform real GPU inference and is NOT a preflight.** It first verifies external source/mask/graph hashes, unchanged project source, local ComfyUI connectivity, empty queue, required node input schemas (`LoadImageMask`, `SetLatentNoiseMask`, `ImageCompositeMasked`), and exact advertised Qwen model choices. It writes a durable `execution_reserved.json` **before uploading the approved disposable mask into ComfyUI's input directory**, binding the returned filename and submitting **one** new derived API graph and external XCIC job. Any uncertainty, upload mismatch, ComfyUI timeout or output failure leaves the reservation intact. **Never reuse or automatically retry the same bundle**.
+
+If successful, it writes `masked_qwen_output.png` and `qualification_result.json` only to the external bundle. The evaluator compares source and output pixel-for-pixel outside the binary mask and records whether the original RGB values were preserved exactly. It does not approve visual-semantic correctness; a separate image inspection must determine whether the dial is actually recessed. Inference time and ComfyUI prompt ID are recorded; **peak VRAM remains unknown** unless separately monitored. It never registers a CAP Candidate or consumes the Candidate 4 correction attempt.
+
+**Acceptance criteria for F5.4.1B:** (1) all static/full tests pass, (2) node and model inventory accepted, (3) real one-shot GPU result with an intact PNG, (4) zero changed RGB pixels outside the reviewed mask, (5) operator/semantic evidence of improved recessed-dial geometry without unreviewed details, (6) original Candidate 3/4/semantic reports/correction journal independently verified untouched. Any miss means **qualification incomplete**, and the protected Attempt 2/2 remains closed. The mask graph must not be integrated into the managed production path based on simulated/pytest evidence alone.
+
