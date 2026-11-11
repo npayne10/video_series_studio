@@ -90,10 +90,15 @@ def test_offline_qualification_creates_only_external_evidence(tmp_path):
         "experimental_masked_api.json",
         "mask.png",
         "qualification_manifest.json",
+        "roi_preview.png",
         "source.png",
     ]
     manifest = json.loads((bundle / "qualification_manifest.json").read_text())
     assert manifest["gpu_execution_authorized"] is False
+    assert manifest["roi_preview_sha256"]
+    with Image.open(bundle / "roi_preview.png") as preview:
+        assert preview.getpixel((120, 75)) != (40, 60, 80)
+        assert preview.getpixel((0, 0)) == (40, 60, 80)
     assert manifest["candidate_registration_allowed"] is False
     assert manifest["correction_attempt_reserved"] is False
     assert source.is_file()
