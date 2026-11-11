@@ -164,7 +164,10 @@ def validate_experimental_graph(graph: dict[str, Any]) -> None:
 
 
 def prepare_mask_aware_bundle(
-    *, source_png: Path, project_root: Path, bundle_directory: Path,
+    *,
+    source_png: Path,
+    project_root: Path,
+    bundle_directory: Path,
     bounds: tuple[int, int, int, int],
 ) -> MaskAwareQualification:
     """Create exclusive external evidence; NO ComfyUI input copy or GPU request."""
@@ -230,8 +233,7 @@ def main() -> int:
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--bundle", type=Path, required=True)
     parser.add_argument(
-        "--roi", nargs=4, required=True, type=int,
-        metavar=("LEFT", "TOP", "RIGHT", "BOTTOM")
+        "--roi", nargs=4, required=True, type=int, metavar=("LEFT", "TOP", "RIGHT", "BOTTOM")
     )
     args = parser.parse_args()
     try:
@@ -264,7 +266,8 @@ def confirm_preserved_pixels(
             original.size != result.size
             or original.size != mask.size
             or mask.mode != "L"
-            or set(mask.getdata()) != {0, 255}
+            or any(mask.histogram()[1:255])
+            or mask.getextrema() != (0, 255)
         ):
             raise MaskAwareQualificationError("Images must match and mask be binary")
         left = original.convert("RGB")
