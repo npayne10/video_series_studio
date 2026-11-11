@@ -52,7 +52,7 @@ def test_disconnected_mask_or_composite_refused():
         validate_experimental_graph(bad)
 
 
-def test_mask_is_binary_bounded_and_not_a_CAP_mask(tmp_path):
+def test_mask_is_binary_bounded_and_not_a_cap_mask(tmp_path):
     _project, source = _source(tmp_path)
     target = tmp_path / "mask.png"
     report = create_binary_edit_mask(source, target, (100, 50, 140, 100))
@@ -81,7 +81,9 @@ def test_offline_qualification_creates_only_external_evidence(tmp_path):
     bundle = tmp_path / "outside" / "run_001"
     bundle.parent.mkdir()
     report = prepare_mask_aware_bundle(
-        source_png=source, project_root=project, bundle_directory=bundle,
+        source_png=source,
+        project_root=project,
+        bundle_directory=bundle,
         bounds=(100, 50, 140, 100),
     )
     assert not report.execution_authorized
@@ -104,7 +106,9 @@ def test_offline_qualification_creates_only_external_evidence(tmp_path):
     assert source.is_file()
     with pytest.raises(MaskAwareQualificationError, match="already exists"):
         prepare_mask_aware_bundle(
-            source_png=source, project_root=project, bundle_directory=bundle,
+            source_png=source,
+            project_root=project,
+            bundle_directory=bundle,
             bounds=(100, 50, 140, 100),
         )
 
@@ -113,7 +117,8 @@ def test_never_allow_bundle_inside_active_project(tmp_path):
     project, source = _source(tmp_path)
     with pytest.raises(RuntimeError, match="outside"):
         prepare_mask_aware_bundle(
-            source_png=source, project_root=project,
+            source_png=source,
+            project_root=project,
             bundle_directory=project / "bad_bundle",
             bounds=(100, 50, 140, 100),
         )
