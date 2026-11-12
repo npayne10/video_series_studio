@@ -414,3 +414,57 @@ def test_corrected_quality_report_fails_when_source_audit_was_modified(tmp_path,
     audit.write_text("{}", encoding="utf-8")
     with pytest.raises(CandidateQualityError, match="source evidence mismatch"):
         service.snapshot(prep.asset_id, 8)
+
+
+def test_f542_candidate_review_triage_is_read_only_and_never_generates(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtWidgets import QComboBox, QDialog, QPlainTextEdit, QPushButton
+
+    service, refs, prep, _image, _manifest = _scenario(tmp_path)
+    snapshot = _snapshot(service, prep, monkeypatch)
+    technical = service.evaluate(snapshot)
+    semantic = SimpleNamespace(
+        decision=SimpleNamespace(value="regenerate"),
+        overall_score=65,
+        provider="Fake vision",
+        model="fake-model",
+        metrics=(),
+        detected_features=(),
+        violations=("The required door is absent from the room.",),
+    )
+    review = replace(technical, semantic=semantic)
+    dialog = CandidateQualityReportDialog(
+        review, "local.report.json", references=refs
+    )
+    qtbot.addWidget(dialog)
+    button = dialog.findChild(QPushButton, "generalVisualCorrectionTriage")
+    assert button is not None and button.isEnabled()
+    child_dialogs = []
+
+    def examine_triage_window(window):
+        child_dialogs.append(window)
+        fields = window.findChild(QComboBox, "generalTriageReviewedField")
+        defect = window.findChild(QComboBox, "generalTriageDefectType")
+        reason = window.findChild(QPlainTextEdit, "generalTriageObservedFailure")
+        output = window.findChild(QPlainTextEdit, "generalTriageAssessment")
+        classify = window.findChild(QPushButton, "generalTriageClassify")
+        assert fields is not None and fields.currentData() == "layout"
+        assert defect is not None
+        assert reason is not None
+        assert output is not None and output.isReadOnly()
+        assert classify is not None
+        assert "REQUIRES_HUMAN_VERIFICATION" in output.toPlainText()
+        defect.setCurrentIndex(defect.findData("missing_component"))
+        reason.setPlainText("The required reviewed doorway is missing.")
+        classify.click()
+        assert "reconstruct_component -> verify_design" in output.toPlainText()
+        assert "No API call" in output.toPlainText()
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(QDialog, "exec", examine_triage_window)
+    button.click()
+    assert len(child_dialogs) == 1
+    refs.approve.assert_not_called()
+    refs.set_primary.assert_not_called()
+    refs.archive.assert_not_called()
