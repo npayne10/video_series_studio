@@ -434,9 +434,7 @@ def test_f542_candidate_review_triage_is_read_only_and_never_generates(
         violations=("The required door is absent from the room.",),
     )
     review = replace(technical, semantic=semantic)
-    dialog = CandidateQualityReportDialog(
-        review, "local.report.json", references=refs
-    )
+    dialog = CandidateQualityReportDialog(review, "local.report.json", references=refs)
     qtbot.addWidget(dialog)
     button = dialog.findChild(QPushButton, "generalVisualCorrectionTriage")
     assert button is not None and button.isEnabled()
