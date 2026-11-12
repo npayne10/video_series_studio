@@ -1177,3 +1177,45 @@ Expected: `MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE` with no reservation, 
 **Engineering disposition / stop rule:** F5.4.1D successfully exercises immutable external parent-image lineage, a reduced reviewed mask, source-conditioned GPU reconstruction and exact outside-mask pixel preservation. It does **not** conclusively meet all accepted geometry constraints. Per operator agreement, **end dial-specific GPU experimentation now** regardless of geometry outcome. Do not rerun or overwrite `run_004` (or earlier runs), do not create `run_005` for this dial, do not approve or register the experimental image, and do not consume or unlock Candidate 4 governed Attempt 2/2.
 
 **What is reusable:** canonical defect categories (`missing_component`, `merged_objects`, `wrong_relative_position`, etc.), defect-to-correction-stage policy, non-destructive source lineage, mask review and preservation, one-shot reservations, limited GPU budgets, and semantic quality gates that check mandatory features individually. **These are verified as discrete experiments and policy code, not yet as a fully integrated automatic production workflow.** Generalization of these components to the VSCS Candidate production lifecycle is the next development objective. Repeating geometry-specific prompting on this dial is not.
+
+
+### F5.4.2 — Generalized Visual Correction Integration: Stage A, Candidate review-first triage
+
+**Operator disposition (2026-11-12):** The completed isolated F5.4.1D `run_004` output was **visually approved by the operator** as an acceptable representation for the *experimental demonstration*. This approval is recorded as a **human visual finding only**; it is not a retroactive model-semantic PASS, a CAP image registration, Canon approval, MASTER designation, or permission to consume Candidate 4 governed Attempt **2/2**. The source run_001 through run_004 bundles and their provenance remain immutable, and the dial-specific GPU trial series is closed.
+
+**Purpose:** Transfer the reusable lessons to all newly produced VSCS visual Candidates. A single overall semantic score or technical success is not sufficient: every accepted reviewed Draft field must remain an explicit verification obligation, distinct from deferred fields and advisory observations. In F5.4.2 **Stage A**, the Candidate review workflow now exposes this requirement structure and an operator-controlled routing step without an API call, GPU generation or CAP mutation.
+
+**New application service:** `src/vscs/application/caps/general_visual_correction_triage.py`. Given an already evaluated `CandidateQualityResult`, it builds:
+- `MandatoryVisualCheck` for **each** accepted `snapshot.accepted_fields`, all initially `REQUIRES_HUMAN_VERIFICATION` irrespective of semantic score, evaluator disposition or absence of a reported violation;
+- a separate list of evaluator-identified semantic violations, marked advisory, with no automatic promotion into reviewed requirements;
+- an optional **operator-selected** reviewed field, observed failure (12–2000 characters), and a typed defect from the F5.4.1D `GeometryDefect` taxonomy, yielding ordered repair stages from the validated defect policy;
+- explicit false values for GPU submission, CAP registration, Canon approval and governed attempt permission. No masks, source edits, model calls, approvals or attempt reservations occur.
+
+**Candidate UI entry:** In the existing **Visual Candidate Quality Review — Advisory** dialog after an actual semantic evaluation, select **F5.4.2 Review General Visual Correction (No Generation)…**. A new read-only/interactive dialog displays the accepted-field verification list and advisory violations, then allows the operator to select one approved field, defect class and textual observed discrepancy. Clicking **Classify and Inspect (No Generation)** produces a **review-first plan**, not a generated Candidate or a saved authoritative correction. The control is disabled if no semantic evaluation is available or no reviewed field exists. If the entered evidence is incomplete, validation warns and refuses the classification.
+
+**Stage A boundary:** This is the first integration slice into the real Candidate review lifecycle. It does **not** yet auto-detect and prove each individual requirement from pixels, infer an accurate object ROI, merge multiple simultaneous defects, persist a governed repair journal, or integrate corrected image output into a controlled Candidate registration. The existing F5.4 final-attempt safeguard remains unchanged. These tasks belong to separately reviewed F5.4.2 Stage B/C work; they must not be claimed complete merely because a human can inspect a typed plan.
+
+**Operator smoke test (after GitHub pull and clean regression):**
+1. Open a disposable project with an eligible supplementary Image Candidate and an existing completed semantic evaluation. Use **Review Visual Candidate…** with explicit consent only if no saved result can be opened; no new paid request is needed to inspect an already open saved review.
+2. In **Visual Candidate Quality Review — Advisory**, click **F5.4.2 Review General Visual Correction (No Generation)…**.
+3. Confirm all accepted Draft fields are listed `REQUIRES_HUMAN_VERIFICATION`. Deferred/unreviewed fields must not appear as mandatory approved design.
+4. Select the relevant reviewed field, choose a defect classification (e.g., `missing_component`), enter a specific observed failure, and click **Classify and Inspect (No Generation)**.
+5. Verify the resulting stages (e.g., `reconstruct_component → verify_design`) and the message saying no API, generation or approvals are performed. Close the dialog.
+6. Verify the Candidate image, report, attempts and CAP state are unchanged. Do not open, reactivate or override Candidate 4's governed final Attempt 2/2.
+
+**Validation:**
+
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_general_visual_correction_triage.py tests/test_cap_visual_candidate_quality.py tests/test_cap_geometry_correction_policy.py tests/test_cap_visual_candidate_regeneration.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+**Status:** New Stage A service, read-only Candidate UI and focused regression cases are committed; Windows static/regression and UI acceptance **pending**. Last operator-verified baseline before F5.4.2 was **2,785 passed, 1 skipped**, Ruff/mypy clean. Keep existing untracked `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` and `qwen_f5_preflight_result.json` untouched. Progress to Stage B should focus on structured per-field semantic evidence with explicit unknown/failed statuses and reviewed ROI proposal, before any automated correction queue.
+
