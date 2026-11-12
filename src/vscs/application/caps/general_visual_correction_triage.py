@@ -9,9 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from vscs.application.caps.geometry_correction_policy import (
-    GeometryDefect,
-    GeometryCorrectionError,
     _ALLOWED_STAGES,
+    GeometryCorrectionError,
+    GeometryDefect,
 )
 from vscs.application.caps.visual_candidate_quality import CandidateQualityResult
 
@@ -112,7 +112,7 @@ def candidate_visual_triage(
         if selected_field not in dict(snapshot.accepted_fields):
             raise GeometryCorrectionError("Correction must select one reviewed CAP field")
         if not 12 <= len(observed_failure.strip()) <= 2000:
-            raise GeometryCorrectionError("Provide a specific observed failure (12–2000 chars)")
+            raise GeometryCorrectionError("Provide a specific observed failure (12-2000 chars)")
         stages = tuple(stage.value for stage in _ALLOWED_STAGES[selected_defect])
     violations = tuple(report.semantic.violations) if report.semantic is not None else ()
     return VisualCorrectionTriage(
