@@ -1148,3 +1148,32 @@ Expected: `MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE` with no reservation, 
 
 **Generalization boundary:** the validated defect taxonomy and review/attempt guards can inform future automated Candidate correction, but are not yet wired into the full production Candidate pipeline. The next development priority after this trial is a generic failure-to-strategy router, automatic proposed masks with explicit review, measurable protected-region fidelity, and semantic review specific to accepted design requirements—not more rotary-dial prompting.
 
+
+
+#### F5.4.1D — Final isolated source-linked inset dial GPU result (2026-11-12)
+
+**Operator-reported evidence from external `D:\VSCS_QWEN_F541B_ACCEPTANCE\run_004`:** one masked Qwen GPU submission from the sealed F5.4.1C `run_003` cavity image, with new experimental mask `(915,365,974,398)` and immutable `inset_dial_intent.json`. The saved GPU result was posted and visually inspected.
+
+| Field | Actual |
+| --- | --- |
+| Qualification status | `SPATIAL_PIXEL_PRESERVATION_VERIFIED` |
+| ComfyUI prompt ID | `a37e8035-b2e5-4e74-9858-2384a7bb8b88` |
+| Elapsed inference | **353.14 seconds** |
+| Source SHA-256 (run_003 cavity output) | `484c293b41f5e099135c40918df18f9b5bda68fc7a7642a84e0a676697e683ac` |
+| Output SHA-256 | `1fabe61d5d7c2a010021332dad02b6134833614961a64239b46eebb351e631d4` |
+| Runtime graph SHA-256 | `3b5e5da61ae655ce8fdd86f18c5061f13b0592046d1601d44c473382132cba27` |
+| Mask input | `vscs_f541b_1be5543e7cccac4a8a9d.png` |
+| Pixels changed outside mask | **0** |
+| Outside-mask pixels identical | `true` |
+| Inset dial accepted by machine | `null` |
+| Semantic geometry verified | `null` |
+| Peak VRAM | Not measured (`null`) |
+| CAP Candidate registered | `false` |
+| Canon approved | `false` |
+| Governed correction attempt consumed | `false` |
+
+**Visual review:** a small circular control is now visibly reconstructed inside the location of the cavity and the three other buttons, display, housing and separate workstation appear preserved. However, close inspection shows a raised-looking grooved sidewall/rim and does **not** establish unambiguously that the control top is beneath the sloping shelf plane with a visible recess wall. This is a **partial component-reconstruction improvement**, **not full geometry acceptance**. The output result correctly leaves `inset_dial_human_geometry_accepted: null`; do not misrepresent the machine's null outcome as approved.
+
+**Engineering disposition / stop rule:** F5.4.1D successfully exercises immutable external parent-image lineage, a reduced reviewed mask, source-conditioned GPU reconstruction and exact outside-mask pixel preservation. It does **not** conclusively meet all accepted geometry constraints. Per operator agreement, **end dial-specific GPU experimentation now** regardless of geometry outcome. Do not rerun or overwrite `run_004` (or earlier runs), do not create `run_005` for this dial, do not approve or register the experimental image, and do not consume or unlock Candidate 4 governed Attempt 2/2.
+
+**What is reusable:** canonical defect categories (`missing_component`, `merged_objects`, `wrong_relative_position`, etc.), defect-to-correction-stage policy, non-destructive source lineage, mask review and preservation, one-shot reservations, limited GPU budgets, and semantic quality gates that check mandatory features individually. **These are verified as discrete experiments and policy code, not yet as a fully integrated automatic production workflow.** Generalization of these components to the VSCS Candidate production lifecycle is the next development objective. Repeating geometry-specific prompting on this dial is not.
