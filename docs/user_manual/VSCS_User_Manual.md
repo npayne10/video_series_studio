@@ -962,3 +962,72 @@ The operator ran one explicitly confirmed isolated GPU request. The resulting ex
 
 **Further investigation:** Inspect the output against the saved source/mask and determine why the edit continues to generate a raised dial. Consider providing more local context via a differently reviewed disposable ROI or region-conditioned edit technique, but do not alter `run_002`, overwrite its result, reuse its reservation, or spend Candidate 4 Attempt 2/2. Any new inference must use a **new external bundle** and fresh explicit operator consent. Record VRAM independently if needed, since this trial returned no peak measurement. Do not promote the experimental graph into the governed production workflow until geometry fidelity is demonstrated.
 
+
+
+### F5.4.1C — Geometry-aware masked Qwen correction: isolated qualification
+
+**Implementation-only stage; local Ruff, Mypy, pytest and any new real GPU inference are pending.** F5.4.1B's real isolated `run_002` proved zero changed pixels outside the reviewed mask, but the rotary dial remained visibly **raised**, failing the accepted recessed geometry. That earlier bundle, its `execution_reserved.json`, `qualification_result.json` and output must remain untouched.
+
+**New experimental capability:** `src/vscs/application/caps/qwen_geometry_aware_qualification.py` creates a **new external bundle only**, using the existing F5.4.1B graph/mask preparation. It adds `geometry_intent.json` with a deterministic, SHA-256-sealed positive and negative prompt derived from the already accepted Diagnostic Console design: an inset rotary control to the right of three buttons. The positive prompt specifies a **visible recessed well, lower vertical wall, flush rim and dial top at or below the sloping shelf**, explicitly rejecting a raised pedestal or protruding dial. It protects the screen, button count, side ribs, shelf silhouette, camera and separate workstation. The output is always unapproved.
+
+The experiment also creates `geometry_context_preview.png`, a cropped source-image close-up for **operator review only**. It is **not supplied as a second image reference to ComfyUI**; source conditioning remains the full source image. This distinction is important: F5.4.1C improves edit instructions and spatial review evidence but does not claim that adding an actual crop-conditioned Qwen reference has been qualified.
+
+**Execution integration:** the existing isolated one-shot `qwen_mask_gpu_qualification.py` detects a `geometry_profile_sha256` in the external bundle, verifies the profile against the exact reviewed field contract, checks its SHA and context-preview SHA, and substitutes the sealed F5.4.1C positive and negative prompts into the **isolated** queue. A profile mismatch blocks the run before any mask upload or GPU submission. The existing F5.4.1B disposable workflow without a geometry profile remains compatible. The managed production graph and governed Candidate 4 correction service are unchanged.
+
+**Independent post-run audit:** the optional `--audit` command validates the original source/mask/context hashes, compares each RGB pixel, records `changed_pixels_inside_mask`, `inside_change_percentage`, and `outside_mask_pixels_identical`; it explicitly reports `recessed_dial_verified: null`. **Any in-mask pixel change is not proof that the dial is recessed.** Human review of shadows, cavity, flush rim, dial top height and shelf continuity remains mandatory. Do not fabricate a semantic acceptance score.
+
+#### Stage A — GitHub pull and static/full regression (no GPU)
+
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_qwen_geometry_aware_qualification.py tests/test_cap_qwen_mask_aware_qualification.py tests/test_cap_qwen_mask_gpu_qualification.py tests/test_cap_managed_qwen_correction_job.py tests/test_cap_visual_candidate_regeneration.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+The most recently **operator-verified** full regression before F5.4.1C was **2,754 passed, 1 skipped**, with Ruff and Mypy clean. New F5.4.1C tests are subject to local verification. Preserve the existing two untracked local files.
+
+#### Stage B — prepare only, using a NEW external run_003
+
+Use the original verified Candidate 4 source. The previous visually reviewed mask rectangle was `895 345 995 415` on the 1392×752 image. It encloses the rotary dial and excludes the three round pushbuttons. Reuse it here to isolate the **prompt/geometry strategy** variable rather than changing geometry and mask simultaneously. **Only prepare if the candidate and accepted geometry have not changed.**
+
+```powershell
+$project = "D:\VSCS\B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI"
+$source = "D:\VSCS\B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI\Canonical Assets\STORY-PRO-B00D168E43\Images\Visual Candidates\STORY-PRO-B00D168E43_visual_5b25eb7470bc4e09bdbed6558d145831.png"
+$bundle = "D:\VSCS_QWEN_F541B_ACCEPTANCE\run_003"
+if (Test-Path -LiteralPath $bundle) { throw "run_003 must never be reused or overwritten." }
+python -m vscs.application.caps.qwen_geometry_aware_qualification --prepare --project-root "$project" --source "$source" --bundle "$bundle" --roi 895 345 995 415
+Get-Content -LiteralPath "$bundle\geometry_intent.json"
+Get-Content -LiteralPath "$bundle\qualification_manifest.json"
+Start-Process "$bundle\roi_preview.png"
+Start-Process "$bundle\geometry_context_preview.png"
+```
+
+Expected result: `F541C_GEOMETRY_PREPARED_NO_GPU`. Five standard mask evidence files plus **`geometry_intent.json`** and **`geometry_context_preview.png`** appear in the exclusive external bundle, with hashes. No `execution_reserved.json` or `masked_qwen_output.png` exists. Inspect that the red ROI and close-up include the **dial and local recess mounting area**; do not edit any prepared evidence. If the bundle is wrong, abandon it and use a fresh name.
+
+Run a read-only node/model preflight (requires local ComfyUI running):
+
+```powershell
+python -m vscs.application.caps.qwen_mask_gpu_qualification --inspect-nodes-only --project-root "$project" --bundle "$bundle"
+```
+
+Expected status: `MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE`. It uploads nothing, reserves nothing and performs no GPU inference. **STOP for operator review and report Stage A/B outcomes; do not yet pass `--confirm-one-gpu-run`.**
+
+#### Stage C — separately consented new GPU test (only after Stage A/B review)
+
+The existing isolated one-shot Qwen runner is reused with `--project-root`, `--bundle`, `--confirm-reviewed-mask`, and `--confirm-one-gpu-run`; unlike Stage B, **this initiates real GPU work**. It must execute only once per new bundle after confirming idle queue and available GPU memory. It binds the SHA-validated geometry intent automatically, saves an exclusive reservation before possibly ambiguous submission, and never registers a CAP Candidate or consumes the governed correction attempt.
+
+After a successful run, `qualification_result.json` contains spatial preservation and a `geometry_audit` with exact changed-pixel count **inside** the mask; a separate manual read-only audit is also supported:
+
+```powershell
+python -m vscs.application.caps.qwen_geometry_aware_qualification --audit --bundle "$bundle" --output "$bundle\masked_qwen_output.png"
+```
+
+Review the output and original side by side: dial top below the sloping shelf plane, visible inset cavity/flush lip and no protruding pedestal. Inspect the seam at the masked border and three buttons, screen, workstation and ribs. A correct *pixel* audit alone does not meet geometry acceptance.
+
+**Release condition:** Only after separate isolated GPU execution, verified zero changed pixels outside the ROI and visual/semantic success on recessed dial may an engineering proposal for the governed final Attempt 2/2 be considered. F5.4.1C does **not** release it. Do not rerun `run_002`, mutate its evidence or touch Candidate 4's saved review.
