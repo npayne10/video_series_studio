@@ -186,10 +186,7 @@ def execute_isolated_mask_qualification(
     if (
         original_path.is_symlink()
         or not original_path.is_file()
-        or (
-            not reconstruction
-            and project not in original_path.resolve(strict=True).parents
-        )
+        or (not reconstruction and project not in original_path.resolve(strict=True).parents)
         or _hash(original_path) != manifest.get("original_source_sha256")
         or _hash(source) != manifest.get("source_sha256")
         or _hash(mask) != manifest.get("mask_sha256")
