@@ -197,8 +197,6 @@ def test_geometry_audit_rejects_changed_source_evidence(tmp_path):
 
 
 def test_isolated_preflight_rejects_unbound_geometry_profile(tmp_path):
-    import hashlib
-
     project, _source, bundle, _report = _experiment(tmp_path)
     manifest_path = bundle / "qualification_manifest.json"
     manifest = json.loads(manifest_path.read_text())
@@ -210,4 +208,4 @@ def test_isolated_preflight_rejects_unbound_geometry_profile(tmp_path):
             bundle_directory=bundle, project_root=project, client=provider
         )
     provider.healthcheck.assert_not_called()
-    assert hashlib.sha256((bundle / "geometry_intent.json").read_bytes()).hexdigest()
+    assert (bundle / "geometry_intent.json").is_file()
