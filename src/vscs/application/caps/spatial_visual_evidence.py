@@ -165,12 +165,9 @@ def propose_spatial_evidence(
                     "Verified field requires operator evidence, not a defect or ROI"
                 )
         elif status is VisualEvidenceStatus.FAILED and (
-            not 12 <= len(observation.strip()) <= 2000
-            or not isinstance(defect, GeometryDefect)
+            not 12 <= len(observation.strip()) <= 2000 or not isinstance(defect, GeometryDefect)
         ):
-            raise GeometryCorrectionError(
-                "Failed field requires observed defect and evidence"
-            )
+            raise GeometryCorrectionError("Failed field requires observed defect and evidence")
     checks = []
     prior_fields = (
         {item.field: item for item in previous.reviewed_fields} if previous is not None else {}
