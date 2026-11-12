@@ -6,6 +6,7 @@ records the exact proposed geometry correction and its review requirements.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -185,3 +186,46 @@ def audit_geometry_experiment(
         "correction_attempt_consumed": False,
         "canon_approved": False,
     }
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="F5.4.1C offline recessed-dial geometry experiment"
+    )
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--prepare", action="store_true")
+    mode.add_argument("--audit", action="store_true")
+    parser.add_argument("--project-root", type=Path)
+    parser.add_argument("--source", type=Path)
+    parser.add_argument("--bundle", required=True, type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--roi", type=int, nargs=4, metavar=("LEFT", "TOP", "RIGHT", "BOTTOM")
+    )
+    args = parser.parse_args()
+    try:
+        if args.prepare:
+            if args.project_root is None or args.source is None or args.roi is None:
+                raise MaskAwareQualificationError(
+                    "Offline preparation requires project, source and four ROI coordinates"
+                )
+            result = prepare_geometry_experiment(
+                project_root=args.project_root,
+                source_png=args.source,
+                bundle_directory=args.bundle,
+                bounds=(args.roi[0], args.roi[1], args.roi[2], args.roi[3]),
+            )
+        else:
+            if args.output is None:
+                raise MaskAwareQualificationError("Audit requires a generated output PNG")
+            result = audit_geometry_experiment(
+                bundle_directory=args.bundle, output_png=args.output
+            )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    except (OSError, ValueError, RuntimeError) as exc:
+        print(json.dumps({"status": "BLOCKED", "error": str(exc)}))
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
