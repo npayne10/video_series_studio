@@ -14,9 +14,9 @@ from vscs.application.caps.general_visual_correction_triage import (
     VisualCorrectionTriage,
 )
 from vscs.application.caps.geometry_correction_policy import (
+    _ALLOWED_STAGES,
     GeometryCorrectionError,
     GeometryDefect,
-    _ALLOWED_STAGES,
 )
 
 
@@ -132,15 +132,14 @@ def propose_spatial_evidence(
     """
     if expected_source_sha256 is not None and expected_source_sha256 != triage.image_sha256:
         raise GeometryCorrectionError("Spatial evidence source hash mismatch")
-    if previous is not None:
-        if (
-            previous.asset_id != triage.asset_id
-            or previous.reference_id != triage.reference_id
-            or previous.source_sha256 != triage.image_sha256
-            or tuple((item.field, item.requirement) for item in previous.reviewed_fields)
-            != tuple((check.field, check.requirement) for check in triage.mandatory_checks)
-        ):
-            raise GeometryCorrectionError("Prior spatial review is stale or unbound")
+    if previous is not None and (
+        previous.asset_id != triage.asset_id
+        or previous.reference_id != triage.reference_id
+        or previous.source_sha256 != triage.image_sha256
+        or tuple((item.field, item.requirement) for item in previous.reviewed_fields)
+        != tuple((check.field, check.requirement) for check in triage.mandatory_checks)
+    ):
+        raise GeometryCorrectionError("Prior spatial review is stale or unbound")
     if not isinstance(status, VisualEvidenceStatus):
         raise GeometryCorrectionError("Unsupported field verification status")
     if field is None:
@@ -157,19 +156,24 @@ def propose_spatial_evidence(
             if observation.strip() or defect is not None or region is not None:
                 raise GeometryCorrectionError("Unknown field cannot contain asserted evidence")
         elif status is VisualEvidenceStatus.VERIFIED_BY_OPERATOR:
-            if not 12 <= len(observation.strip()) <= 2000 or defect is not None or region is not None:
-                raise GeometryCorrectionError("Verified field requires operator evidence, not a defect or ROI")
-        elif status is VisualEvidenceStatus.FAILED:
             if (
                 not 12 <= len(observation.strip()) <= 2000
-                or not isinstance(defect, GeometryDefect)
+                or defect is not None
+                or region is not None
             ):
-                raise GeometryCorrectionError("Failed field requires observed defect and evidence")
+                raise GeometryCorrectionError(
+                    "Verified field requires operator evidence, not a defect or ROI"
+                )
+        elif status is VisualEvidenceStatus.FAILED and (
+            not 12 <= len(observation.strip()) <= 2000
+            or not isinstance(defect, GeometryDefect)
+        ):
+            raise GeometryCorrectionError(
+                "Failed field requires observed defect and evidence"
+            )
     checks = []
     prior_fields = (
-        {item.field: item for item in previous.reviewed_fields}
-        if previous is not None
-        else {}
+        {item.field: item for item in previous.reviewed_fields} if previous is not None else {}
     )
     for check in triage.mandatory_checks:
         if field != check.field and check.field in prior_fields:
