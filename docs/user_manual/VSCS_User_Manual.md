@@ -1094,3 +1094,57 @@ git status --short
 ```
 
 **Current status:** reusable policy and tests committed. Local acceptance, actual source-bound derived reconstruction, automated model adaptation, interface work, provider inference and generalized production enablement **remain pending**. Preserve `run_001`, `run_002`, `run_003`, both existing local untracked files and Candidate 4 governance.
+
+
+#### F5.4.1D — Single source-linked inset-dial reconstruction experiment (implementation, validation pending)
+
+The offline `geometry_correction_policy.py` taxonomy and stage guards passed local validation: **2,777 passed, 1 skipped** in full regression, Ruff lint/format clean, mypy **702** files. As directed by the operator, **no more open-ended dial investigation** is allowed. The current state is `missing_component`: the `run_003` Qwen output has the recessed well but no rotary dial. The final isolated trial should *reconstruct the component inside that existing well*, rather than re-cut the cavity.
+
+New `src/vscs/application/caps/qwen_inset_dial_reconstruction.py` prepares a **new external** `run_004` source from the exact `run_003\masked_qwen_output.png`. It **never** copies the source into Canonical Assets. It checks the previous `run_003` manifest, `execution_reserved.json`, completed qualification result, output/source/mask and graph SHA-256s, zero outside-mask changes, no CAP registration and no governed attempt consumption. It rejects external files that are not a completed `run_003`. It then creates a **new binary mask wholly within the previously reviewed 100×70 cavity ROI** and not larger than half its area.
+
+The new external bundle contains original F5.4.1B-compatible evidence (`source.png`, `mask.png`, `roi_preview.png`, `experimental_masked_api.json`, `qualification_manifest.json`) plus immutable `inset_dial_intent.json` and `geometry_repair_plan.json`. The new prompt describes **one low-profile, matte-graphite rotary control inside the already formed cavity**, with the dial top beneath shelf height and the cavity's rim and inner wall left intact. It specifically excludes empty holes, raised knobs, pedestals and duplicating the other three buttons. Only this sealed geometry intent may be bound into the isolated Qwen queue. Existing F5.4.1B/C runs and production flows remain supported without bypassing their existing provenance checks.
+
+The isolated GPU qualification runner `qwen_mask_gpu_qualification.py` has a **narrow, hash-bound exception** to its normal “source must be in active project” rule, solely for this verified `run_003` external result. The `run_004` source and new geometry intent must match the recorded hashes, parent result and immutable repair plan; otherwise both read-only preflight and/or GPU qualification fail closed. The runner still requires explicit **reviewed-mask consent** and **one-GPU-run consent**, records a durable reservation and refuses reexecution. It still does **not** register a CAP Candidate, approve Canon or consume Candidate 4's final Attempt 2/2. The new plan is offline-only and does not itself authorize GPU work.
+
+**Operator sequence (stage A: static and full regression, NO GPU):**
+
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_qwen_inset_dial_reconstruction.py tests/test_cap_geometry_correction_policy.py tests/test_cap_qwen_geometry_aware_qualification.py tests/test_cap_qwen_mask_aware_qualification.py tests/test_cap_qwen_mask_gpu_qualification.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+**Stage B: prepare source-linked external bundle (NO GPU). Only after stage A passes.**
+
+```powershell
+$project = "D:\VSCS\B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI"
+$previous = "D:\VSCS_QWEN_F541B_ACCEPTANCE\run_003"
+$bundle = "D:\VSCS_QWEN_F541B_ACCEPTANCE\run_004"
+if (Test-Path -LiteralPath $bundle) { throw "Never overwrite run_004" }
+python -m vscs.application.caps.qwen_inset_dial_reconstruction --project-root "$project" --previous-bundle "$previous" --bundle "$bundle" --roi 915 365 974 398
+Get-Content -LiteralPath "$bundle\qualification_manifest.json"
+Get-Content -LiteralPath "$bundle\inset_dial_intent.json"
+Get-Content -LiteralPath "$bundle\geometry_repair_plan.json"
+Start-Process "$bundle\roi_preview.png"
+```
+
+The example ROI is **provisional**: `(915,365)-(974,398)` is a 59×33 rectangle within the previously approved ROI, estimated to cover the cavity interior. **Do not automatically approve it.** Inspect the full-sized `run_004\roi_preview.png` and revise only by preparing a *different new external bundle* (never editing an existing one). If source/ROI is doubtful or `run_004` is partially created, stop and report. The strict `run_004` filename is a one-shot budget control: this stage intentionally does not offer multiple alternative GPU runs.
+
+**Stage C: read-only ComfyUI compatibility and mask evidence check.**
+
+```powershell
+python -m vscs.application.caps.qwen_mask_gpu_qualification --inspect-nodes-only --project-root "$project" --bundle "$bundle"
+```
+
+Expected: `MASKED_NODES_AND_MODELS_READY_NO_GPU_INFERENCE` with no reservation, mask upload or GPU run. **Stop here for a reviewed ROI and proof of new source lineage.**
+
+**Stage D: one separately authorised disposable GPU execution (NOT authorized merely by this guide).** Requires idle local ComfyUI, adequate VRAM, validated stages A–C, preserved bundle and explicit operator confirmation. The existing `qwen_mask_gpu_qualification` runner uses `--confirm-reviewed-mask --confirm-one-gpu-run` once. It must never be repeated on `run_004`. On completion, inspect source vs output and its zero outside-mask changed pixels, plus whether an actual smaller dial sits inside the existing recess with no above-surface protrusion. **Stop dial-specific GPU trials after this single attempt even if the control remains incorrect.** Failure becomes a reusable model/correction-limit datum for VSCS.
+
+**Generalization boundary:** the validated defect taxonomy and review/attempt guards can inform future automated Candidate correction, but are not yet wired into the full production Candidate pipeline. The next development priority after this trial is a generic failure-to-strategy router, automatic proposed masks with explicit review, measurable protected-region fidelity, and semantic review specific to accepted design requirements—not more rotary-dial prompting.
+
