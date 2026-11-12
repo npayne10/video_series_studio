@@ -66,9 +66,7 @@ _ALLOWED_STAGES: dict[GeometryDefect, tuple[CorrectionStage, ...]] = {
         CorrectionStage.RECONSTRUCT_COMPONENT,
         CorrectionStage.VERIFY_DESIGN,
     ),
-    GeometryDefect.UNREVIEWED_DETAIL: (
-        CorrectionStage.VERIFY_DESIGN,
-    ),
+    GeometryDefect.UNREVIEWED_DETAIL: (CorrectionStage.VERIFY_DESIGN,),
 }
 
 
@@ -219,9 +217,11 @@ def write_repair_plan_once(path: Path, plan: GeometryRepairPlan) -> str:
 
 def inspect_repair_plan(path: Path, expected_sha256: str) -> GeometryRepairPlan:
     """Verify sealed plan and enum-derived stage path before trusting evidence."""
-    if not path.is_file() or path.is_symlink() or hashlib.sha256(
-        path.read_bytes()
-    ).hexdigest() != _checked_sha(expected_sha256):
+    if (
+        not path.is_file()
+        or path.is_symlink()
+        or hashlib.sha256(path.read_bytes()).hexdigest() != _checked_sha(expected_sha256)
+    ):
         raise GeometryCorrectionError("Repair plan missing or checksum mismatch")
     try:
         value: Any = json.loads(path.read_text(encoding="utf-8"))
