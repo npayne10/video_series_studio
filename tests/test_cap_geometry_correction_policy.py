@@ -143,7 +143,7 @@ def test_sealed_plan_read_write_once_no_overwrite(tmp_path):
 def test_bad_defect_invalid_hash_and_budget_fail_closed():
     with pytest.raises(GeometryCorrectionError, match="Unknown"):
         _plan("arbitrary defect")
-    with pytest.raises(GeometryCorrectionError, match="only one"):
+    with pytest.raises(GeometryCorrectionError, match="Only one"):
         prepare_repair_plan(
             defect=GeometryDefect.MISSING_COMPONENT,
             asset_kind="console",
