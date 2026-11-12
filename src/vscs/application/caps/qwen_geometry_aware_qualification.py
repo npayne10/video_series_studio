@@ -84,6 +84,8 @@ def verified_geometry_profile(bundle: Path, manifest: dict[str, Any]) -> dict[st
         str(manifest.get("source_sha256")), str(manifest.get("mask_sha256"))
     ):
         raise MaskAwareQualificationError("Geometry intent differs from reviewed contract")
+    if manifest.get("geometry_profile_kind") != value["kind"]:
+        raise MaskAwareQualificationError("Geometry intent kind changed")
     return value
 
 
