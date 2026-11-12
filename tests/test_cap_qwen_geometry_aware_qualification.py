@@ -122,9 +122,7 @@ def test_isolated_live_queue_uses_sealed_geometry_prompt_not_old_generic(tmp_pat
     objects = {
         "LoadImageMask": spec("image", "channel"),
         "SetLatentNoiseMask": spec("samples", "mask"),
-        "ImageCompositeMasked": spec(
-            "destination", "source", "x", "y", "mask", "resize_source"
-        ),
+        "ImageCompositeMasked": spec("destination", "source", "x", "y", "mask", "resize_source"),
     }
     objects["LoadImageMask"]["input"]["required"]["channel"] = [["red", "alpha"]]
 
@@ -203,7 +201,7 @@ def test_isolated_preflight_rejects_unbound_geometry_profile(tmp_path):
     manifest.pop("geometry_profile_sha256")
     manifest_path.write_text(json.dumps(manifest))
     provider = SimpleNamespace(healthcheck=Mock(), object_info=Mock())
-    with pytest.raises(MaskAwareQualificationError, match="Incomplete F5.4.1C"):
+    with pytest.raises(MaskAwareQualificationError, match=r"Incomplete F5\.4\.1C"):
         gpu.inspect_isolated_mask_nodes(
             bundle_directory=bundle, project_root=project, client=provider
         )
