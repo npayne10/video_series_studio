@@ -184,6 +184,10 @@ def execute_isolated_mask_qualification(
     graph = _json(graph_path)
     validate_experimental_graph(graph)
     geometry = None
+    if (bundle / "geometry_intent.json").exists() != (
+        "geometry_profile_sha256" in manifest
+    ):
+        raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
     if "geometry_profile_sha256" in manifest:
         geometry = verified_geometry_profile(bundle, manifest)
         if (
@@ -338,6 +342,10 @@ def inspect_isolated_mask_nodes(
         raise MaskAwareQualificationError("Offline evidence or trusted workflow changed")
     graph = _json(bundle / "experimental_masked_api.json")
     validate_experimental_graph(graph)
+    if (bundle / "geometry_intent.json").exists() != (
+        "geometry_profile_sha256" in manifest
+    ):
+        raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
     if "geometry_profile_sha256" in manifest:
         verified_geometry_profile(bundle, manifest)
         if (
