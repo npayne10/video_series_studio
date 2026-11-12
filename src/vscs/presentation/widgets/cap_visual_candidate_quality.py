@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QLabel,
@@ -15,6 +16,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.general_visual_correction_triage import (
+    candidate_visual_triage,
+)
+from vscs.application.caps.geometry_correction_policy import (
+    GeometryCorrectionError,
+    GeometryDefect,
+)
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_candidate_quality import (
     CandidateQualityResult,
@@ -170,9 +178,87 @@ class CandidateQualityReportDialog(QDialog):
             lambda: self._record_human_disposition(report, relative_report_path)
         )
         layout.addWidget(self.human_disposition_button)
+        self.general_triage_button = QPushButton(
+            "F5.4.2 Review General Visual Correction (No Generation)…"
+        )
+        self.general_triage_button.setObjectName("generalVisualCorrectionTriage")
+        self.general_triage_button.setEnabled(
+            report.semantic is not None and bool(report.snapshot.accepted_fields)
+        )
+        self.general_triage_button.clicked.connect(
+            lambda: self._open_general_correction_triage(report)
+        )
+        layout.addWidget(self.general_triage_button)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _open_general_correction_triage(self, report: CandidateQualityResult) -> None:
+        """Review a typed defect in the current saved result; do not persist or generate."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("F5.4.2 — General Visual Correction Review (Advisory)")
+        dialog.setObjectName("generalVisualCorrectionTriageDialog")
+        dialog.resize(800, 610)
+        layout = QVBoxLayout(dialog)
+
+        try:
+            baseline = candidate_visual_triage(report)
+        except GeometryCorrectionError as exc:
+            QMessageBox.warning(self, "General Correction Triage Blocked", str(exc))
+            return
+
+        fields = QComboBox(dialog)
+        fields.setObjectName("generalTriageReviewedField")
+        for check in baseline.mandatory_checks:
+            fields.addItem(check.field, check.field)
+        layout.addWidget(QLabel("Reviewed Draft CAP field (operator selection):"))
+        layout.addWidget(fields)
+
+        defect = QComboBox(dialog)
+        defect.setObjectName("generalTriageDefectType")
+        for kind in GeometryDefect:
+            defect.addItem(kind.value.replace("_", " "), kind.value)
+        layout.addWidget(QLabel("Observed defect type (operator selection):"))
+        layout.addWidget(defect)
+
+        reason = QPlainTextEdit(dialog)
+        reason.setObjectName("generalTriageObservedFailure")
+        reason.setPlaceholderText(
+            "Describe what is visibly wrong with the chosen reviewed field. "
+            "Do not invent or change accepted CAP requirements."
+        )
+        reason.setMaximumBlockCount(40)
+        layout.addWidget(QLabel("Observed discrepancy (required for classification):"))
+        layout.addWidget(reason)
+
+        details = QPlainTextEdit(dialog)
+        details.setObjectName("generalTriageAssessment")
+        details.setReadOnly(True)
+        details.setPlainText(baseline.describe())
+        layout.addWidget(details, 1)
+
+        classify = QPushButton("Classify and Inspect (No Generation)", dialog)
+        classify.setObjectName("generalTriageClassify")
+        layout.addWidget(classify)
+
+        def inspect() -> None:
+            try:
+                assessment = candidate_visual_triage(
+                    report,
+                    selected_field=str(fields.currentData()),
+                    selected_defect=GeometryDefect(str(defect.currentData())),
+                    observed_failure=reason.toPlainText(),
+                )
+            except (GeometryCorrectionError, ValueError) as exc:
+                QMessageBox.warning(dialog, "Correction Assessment Blocked", str(exc))
+                return
+            details.setPlainText(assessment.describe())
+
+        classify.clicked.connect(inspect)
+        close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
+        close.rejected.connect(dialog.reject)
+        layout.addWidget(close)
+        dialog.exec()
 
     def _record_human_disposition(
         self, report: CandidateQualityResult, relative_report_path: str
