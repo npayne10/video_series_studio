@@ -276,7 +276,10 @@ class CandidateQualityReportDialog(QDialog):
         propose.setObjectName("spatialEvidenceInspect")
         layout.addWidget(propose)
 
+        current_evidence = None
+
         def inspect_spatial_evidence() -> None:
+            nonlocal current_evidence
             try:
                 state = VisualEvidenceStatus(str(evidence_status.currentData()))
                 values = roi.text().strip()
@@ -300,10 +303,12 @@ class CandidateQualityReportDialog(QDialog):
                     ),
                     region=region,
                     expected_source_sha256=report.snapshot.image_sha256,
+                    previous=current_evidence,
                 )
             except (GeometryCorrectionError, ValueError) as exc:
                 QMessageBox.warning(dialog, "Stage B Evidence Blocked", str(exc))
                 return
+            current_evidence = evidence
             details.setPlainText(evidence.describe())
 
         propose.clicked.connect(inspect_spatial_evidence)
