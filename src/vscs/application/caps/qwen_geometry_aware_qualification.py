@@ -90,7 +90,10 @@ def verified_geometry_profile(bundle: Path, manifest: dict[str, Any]) -> dict[st
 
 
 def prepare_geometry_experiment(
-    *, project_root: Path, source_png: Path, bundle_directory: Path,
+    *,
+    project_root: Path,
+    source_png: Path,
+    bundle_directory: Path,
     bounds: tuple[int, int, int, int],
 ) -> dict[str, Any]:
     """Create new external B-qualified bundle + sealed geometry intent; no GPU."""
@@ -126,8 +129,12 @@ def prepare_geometry_experiment(
     with Image.open(bundle / "source.png") as image:
         x0, y0, x1, y1 = bounds
         context = image.convert("RGB").crop(
-            (max(0, x0 - 90), max(0, y0 - 75), min(image.width, x1 + 90),
-             min(image.height, y1 + 75))
+            (
+                max(0, x0 - 90),
+                max(0, y0 - 75),
+                min(image.width, x1 + 90),
+                min(image.height, y1 + 75),
+            )
         )
     context.save(bundle / "geometry_context_preview.png")
     manifest["geometry_context_preview_sha256"] = _sha(
@@ -152,11 +159,13 @@ def prepare_geometry_experiment(
 
 
 def audit_geometry_experiment(
-    *, bundle_directory: Path, output_png: Path,
+    *, bundle_directory: Path, output_png: Path
 ) -> dict[str, Any]:
     """Quantify inside/outside changes. Human judgment required for actual recess."""
     bundle = bundle_directory.resolve(strict=True)
-    manifest = json.loads((bundle / "qualification_manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(
+        (bundle / "qualification_manifest.json").read_text(encoding="utf-8")
+    )
     profile = verified_geometry_profile(bundle, manifest)
     source = bundle / "source.png"
     mask_path = bundle / "mask.png"
@@ -197,6 +206,7 @@ def audit_geometry_experiment(
         "correction_attempt_consumed": False,
         "canon_approved": False,
     }
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
