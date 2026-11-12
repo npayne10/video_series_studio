@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -96,10 +95,19 @@ def verified_previous_cavity(previous: Path, project_root: Path) -> dict[str, An
         != manifest.get("experimental_graph_sha256")
     ):
         raise MaskAwareQualificationError("Previous cavity result is incomplete or changed")
-    if result.get("geometry_audit", {}).get("outside_mask_pixels_identical") is not True:
+    audit = result.get("geometry_audit")
+    if not isinstance(audit, dict) or audit.get("outside_mask_pixels_identical") is not True:
         raise MaskAwareQualificationError("Previous geometry audit not verified")
+    previous_bounds = manifest.get("mask_bounds")
+    if (
+        not isinstance(previous_bounds, list)
+        or len(previous_bounds) != 4
+        or any(type(x) is not int for x in previous_bounds)
+    ):
+        raise MaskAwareQualificationError("Previous cavity ROI evidence invalid")
     return {
         "parent_bundle": str(parent),
+        "previous_bounds": previous_bounds,
         "parent_result_sha256": _digest(parent / "qualification_result.json"),
         "parent_source_sha256": manifest["source_sha256"],
         "source_path": str(source),
@@ -152,6 +160,17 @@ def prepare_reconstruction(
     ):
         raise MaskAwareQualificationError("New run_004 must be absent beside run_003")
     source_path = Path(previous["source_path"])
+    x0, y0, x1, y1 = bounds
+    px0, py0, px1, py1 = previous["previous_bounds"]
+    if (
+        any(type(v) is not int for v in bounds)
+        or not px0 <= x0 < x1 <= px1
+        or not py0 <= y0 < y1 <= py1
+        or (x1 - x0) * (y1 - y0) > (px1 - px0) * (py1 - py0) // 2
+    ):
+        raise MaskAwareQualificationError(
+            "New reconstruction ROI must stay within half of the previously approved cavity ROI"
+        )
     graph = build_experimental_masked_graph()
     validate_experimental_graph(graph)
     target.mkdir(parents=True, exist_ok=False)
