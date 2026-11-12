@@ -227,6 +227,9 @@ def inspect_repair_plan(path: Path, expected_sha256: str) -> GeometryRepairPlan:
         value: Any = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict):
             raise ValueError("not object")
+        if not isinstance(value.get("stages"), list):
+            raise ValueError("invalid stages")
+        value["stages"] = tuple(value["stages"])
         plan = GeometryRepairPlan(**value)
         defect = GeometryDefect(plan.defect)
     except (ValueError, TypeError, KeyError) as exc:
@@ -234,7 +237,6 @@ def inspect_repair_plan(path: Path, expected_sha256: str) -> GeometryRepairPlan:
     if (
         plan.schema_version != 1
         or plan.stages != tuple(stage.value for stage in _ALLOWED_STAGES[defect])
-        and plan.stages != [stage.value for stage in _ALLOWED_STAGES[defect]]
         or not 0 <= plan.current_stage < len(plan.stages)
         or plan.max_new_gpu_attempts != 1
         or not 0 <= plan.generated_gpu_attempts <= 1
@@ -242,6 +244,19 @@ def inspect_repair_plan(path: Path, expected_sha256: str) -> GeometryRepairPlan:
         or plan.cap_registration_allowed
         or plan.canon_approval_allowed
         or plan.governed_attempt_consumption_allowed
+        or type(plan.reviewer_confirmed) is not bool
+        or type(plan.stage_result_accepted) is not bool
+        or plan.generated_gpu_attempts < 0
+        or not all(
+            isinstance(field, str) and bool(field.strip())
+            for field in (
+                plan.asset_kind,
+                plan.asset_id,
+                plan.reviewed_requirement,
+                plan.observed_failure,
+                plan.source_lineage,
+            )
+        )
     ):
         raise GeometryCorrectionError("Repair plan governance or stage contract invalid")
     return plan
