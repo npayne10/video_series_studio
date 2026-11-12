@@ -19,6 +19,7 @@ from vscs.application.caps.geometry_correction_policy import (
     prepare_repair_plan,
     write_repair_plan_once,
 )
+from vscs.application.caps.qwen_f5_preflight import default_workflow_path
 from vscs.application.caps.qwen_f53_isolated_acceptance import _ensure_external
 from vscs.application.caps.qwen_mask_aware_qualification import (
     MaskAwareQualificationError,
@@ -26,7 +27,6 @@ from vscs.application.caps.qwen_mask_aware_qualification import (
     create_binary_edit_mask,
     validate_experimental_graph,
 )
-from vscs.application.caps.qwen_f5_preflight import default_workflow_path
 
 _PROMPT = (
     "EDIT THE MASKED CIRCULAR CAVITY ONLY. INSERT ONE LOW-PROFILE ROTARY "
@@ -78,8 +78,7 @@ def verified_previous_cavity(previous: Path, project_root: Path) -> dict[str, An
     if (
         manifest.get("bundle_directory") != str(parent)
         or manifest.get("project_root") != str(project)
-        or manifest.get("geometry_profile_kind")
-        != "F541C_RECESSED_ROTARY_DIAL_EXPERIMENT_ONLY"
+        or manifest.get("geometry_profile_kind") != "F541C_RECESSED_ROTARY_DIAL_EXPERIMENT_ONLY"
         or result.get("status") != "SPATIAL_PIXEL_PRESERVATION_VERIFIED"
         or result.get("outside_mask_pixels_identical") is not True
         or result.get("protected_changed_pixels") != 0
