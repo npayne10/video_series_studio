@@ -1,6 +1,5 @@
 """F5.4.2: generalized Candidate correction triage remains non-authoritative."""
 
-from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -111,12 +110,10 @@ def test_unbound_freeform_reason_is_refused():
 
 def test_non_candidate_or_empty_review_fails_closed():
     bad = _report()
+    bad.snapshot.reference_status = "approved"
     with pytest.raises(GeometryCorrectionError, match="identity"):
-        candidate_visual_triage(replace(bad, snapshot=SimpleNamespace(
-            **{**vars(bad.snapshot), "reference_status": "approved"}
-        )))
+        candidate_visual_triage(bad)
     bad = _report()
+    bad.snapshot.accepted_fields = ()
     with pytest.raises(GeometryCorrectionError, match="no reviewed"):
-        candidate_visual_triage(replace(bad, snapshot=SimpleNamespace(
-            **{**vars(bad.snapshot), "accepted_fields": ()}
-        )))
+        candidate_visual_triage(bad)
