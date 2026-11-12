@@ -144,3 +144,8 @@ Following the first isolated masked Qwen GPU test, pixel preservation **passed**
 ### F5.4.1C first isolated geometry-aware output — 2026-11-12
 
 The `run_003` geometry-aware masked Qwen output **preserved all 1,039,784 outside-mask pixels** (0 changes) and changed **6,581/7,000 pixels inside** the mask (94.0143%). Visual review shows a recessed circular **well but no visible rotary dial within it**, so **complete geometry fidelity remains unaccepted**. Preserve `run_003`, its history and all CAP records; do not consume Candidate 4 final Attempt 2/2. See [F5.4.1C evidence and disposition](VSCS_User_Manual.md#f541c--first-real-geometry-aware-masked-gpu-output-2026-11-12).
+
+
+### F5.4.1D reusable geometry correction (foundation)
+
+The next stage is intentionally **generalised**, not another unlimited rotary-dial experiment. Following the F5.4.1C result (recess present, dial absent), the new offline `geometry_correction_policy.py` classifies that state as a `missing_component` defect and plans `reconstruct_component → verify_design`. It also defines reusable failure categories for merged objects, wrong count/placement/proportions/materials and unreviewed features; hashes reviewed source/mask evidence; requires outside-mask preservation and explicit review; and enforces **one** new disposable GPU trial in the plan. The planning module cannot authorize GPU execution, approve Canon, register a CAP Candidate or consume Attempt 2/2. **The generic policy is not yet connected to automated production or source-bound reconstructive inference.** See [F5.4.1D operator and engineering policy](VSCS_User_Manual.md#f541d--reusable-staged-visual-geometry-correction-policy-implementation-foundation).
