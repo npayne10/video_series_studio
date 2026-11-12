@@ -182,3 +182,32 @@ def test_legacy_b_bundle_does_not_require_geometry_intent(tmp_path):
     manifest = json.loads((bundle / "qualification_manifest.json").read_text())
     assert "geometry_profile_sha256" not in manifest
     assert expected_geometry_profile("a", "b")["gpu_execution_authorized"] is False
+
+
+def test_geometry_audit_rejects_changed_source_evidence(tmp_path):
+    _project, _source, bundle, _report = _experiment(tmp_path)
+    output = bundle / "fake_test_output.png"
+    output.write_bytes((bundle / "source.png").read_bytes())
+    with Image.open(bundle / "source.png") as image:
+        modified = image.copy()
+    modified.putpixel((0, 0), (255, 255, 255))
+    modified.save(bundle / "source.png")
+    with pytest.raises(MaskAwareQualificationError, match="evidence changed"):
+        audit_geometry_experiment(bundle_directory=bundle, output_png=output)
+
+
+def test_isolated_preflight_rejects_unbound_geometry_profile(tmp_path):
+    import hashlib
+
+    project, _source, bundle, _report = _experiment(tmp_path)
+    manifest_path = bundle / "qualification_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest.pop("geometry_profile_sha256")
+    manifest_path.write_text(json.dumps(manifest))
+    provider = SimpleNamespace(healthcheck=Mock(), object_info=Mock())
+    with pytest.raises(MaskAwareQualificationError, match="Incomplete F5.4.1C"):
+        gpu.inspect_isolated_mask_nodes(
+            bundle_directory=bundle, project_root=project, client=provider
+        )
+    provider.healthcheck.assert_not_called()
+    assert hashlib.sha256((bundle / "geometry_intent.json").read_bytes()).hexdigest()
