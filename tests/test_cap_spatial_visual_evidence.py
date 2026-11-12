@@ -21,8 +21,11 @@ from vscs.application.caps.visual_candidate_quality import CandidateQualityResul
 
 def _report():
     snapshot = SimpleNamespace(
-        asset_id="STORY-PRO-TEST", reference_id=4, image_sha256="a" * 64,
-        reference_role="supplementary", reference_status="candidate",
+        asset_id="STORY-PRO-TEST",
+        reference_id=4,
+        image_sha256="a" * 64,
+        reference_role="supplementary",
+        reference_status="candidate",
         accepted_fields=(
             ("components", "Three round buttons and one recessed rotary dial"),
             ("geometry", "Console stands beside a separate workstation"),
@@ -46,9 +49,7 @@ def _triage():
 def test_baseline_keeps_all_accepted_fields_unknown():
     result = propose_spatial_evidence(_triage())
     assert result.outstanding_fields == 2
-    assert all(
-        c.status is VisualEvidenceStatus.UNKNOWN for c in result.reviewed_fields
-    )
+    assert all(c.status is VisualEvidenceStatus.UNKNOWN for c in result.reviewed_fields)
     assert not result.gpu_execution_authorized
     assert not result.cap_registration_allowed
     assert not result.canon_approval_allowed
@@ -111,7 +112,9 @@ def test_source_mismatch_unreviewed_field_and_invalid_states_fail_closed():
         propose_spatial_evidence(_triage(), field="unreviewed")
     with pytest.raises(GeometryCorrectionError, match="status"):
         propose_spatial_evidence(
-            _triage(), field="components", status="FAILED"  # type: ignore[arg-type]
+            _triage(),
+            field="components",
+            status="FAILED",  # type: ignore[arg-type]
         )
 
 
@@ -136,6 +139,7 @@ def test_no_implicit_pass_from_semantic_prose_and_no_unknown_evidence():
             status=VisualEvidenceStatus.VERIFIED_BY_OPERATOR,
             observation="not enough",
         )
+
 
 def test_independent_fields_accumulate_without_semantic_promotion():
     first = propose_spatial_evidence(
