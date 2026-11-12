@@ -60,9 +60,9 @@ def _json(path: Path) -> dict[str, Any]:
         data: Any = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise MaskAwareQualificationError("Invalid lineage JSON evidence") from exc
-    if not isinstance(data, dict):
+    if not isinstance(data, dict) or not all(isinstance(key, str) for key in data):
         raise MaskAwareQualificationError("Lineage evidence must be a JSON object")
-    return data
+    return dict(data)
 
 
 def verified_previous_cavity(previous: Path, project_root: Path) -> dict[str, Any]:
