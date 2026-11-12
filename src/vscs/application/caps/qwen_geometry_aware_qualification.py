@@ -80,9 +80,7 @@ def verified_geometry_profile(bundle: Path, manifest: dict[str, Any]) -> dict[st
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise MaskAwareQualificationError("Geometry intent JSON invalid") from exc
-    if not isinstance(value, dict) or not all(
-        isinstance(key, str) for key in value
-    ):
+    if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
         raise MaskAwareQualificationError("Geometry intent must be a JSON object")
     if value != expected_geometry_profile(
         str(manifest.get("source_sha256")), str(manifest.get("mask_sha256"))
