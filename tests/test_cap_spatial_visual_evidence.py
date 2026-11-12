@@ -14,7 +14,29 @@ from vscs.application.caps.spatial_visual_evidence import (
     VisualEvidenceStatus,
     propose_spatial_evidence,
 )
-from tests.test_cap_general_visual_correction_triage import _report
+from types import SimpleNamespace
+
+from vscs.application.caps.visual_candidate_quality import CandidateQualityResult
+
+
+def _report():
+    snapshot = SimpleNamespace(
+        asset_id="STORY-PRO-TEST", reference_id=4, image_sha256="a" * 64,
+        reference_role="supplementary", reference_status="candidate",
+        accepted_fields=(
+            ("components", "Three round buttons and one recessed rotary dial"),
+            ("geometry", "Console stands beside a separate workstation"),
+        ),
+    )
+    return CandidateQualityResult(
+        snapshot=snapshot,
+        technical=SimpleNamespace(decision=SimpleNamespace(value="review")),
+        semantic=SimpleNamespace(
+            decision=SimpleNamespace(value="regenerate"),
+            violations=("The rotary dial is raised above the shelf.",),
+        ),
+        recommendations=(),
+    )
 
 
 def _triage():
