@@ -80,6 +80,10 @@ def verified_geometry_profile(bundle: Path, manifest: dict[str, Any]) -> dict[st
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise MaskAwareQualificationError("Geometry intent JSON invalid") from exc
+    if not isinstance(value, dict) or not all(
+        isinstance(key, str) for key in value
+    ):
+        raise MaskAwareQualificationError("Geometry intent must be a JSON object")
     if value != expected_geometry_profile(
         str(manifest.get("source_sha256")), str(manifest.get("mask_sha256"))
     ):
@@ -117,14 +121,10 @@ def prepare_geometry_experiment(
     profile_path = bundle / _PROFILE
     if profile_path.exists():
         raise MaskAwareQualificationError("Geometry profile already exists")
-    profile_path.write_text(
-        json.dumps(profile, sort_keys=True, indent=2), encoding="utf-8"
-    )
+    profile_path.write_text(json.dumps(profile, sort_keys=True, indent=2), encoding="utf-8")
     manifest["geometry_profile_sha256"] = _sha(profile_path)
     manifest["geometry_profile_kind"] = profile["kind"]
-    manifest_path.write_text(
-        json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8"
-    )
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8")
     # Close-up is operator review evidence; it is never sent to Qwen.
     with Image.open(bundle / "source.png") as image:
         x0, y0, x1, y1 = bounds
@@ -137,12 +137,8 @@ def prepare_geometry_experiment(
             )
         )
     context.save(bundle / "geometry_context_preview.png")
-    manifest["geometry_context_preview_sha256"] = _sha(
-        bundle / "geometry_context_preview.png"
-    )
-    manifest_path.write_text(
-        json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8"
-    )
+    manifest["geometry_context_preview_sha256"] = _sha(bundle / "geometry_context_preview.png")
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8")
     verified_geometry_profile(bundle, manifest)
     return {
         "status": "F541C_GEOMETRY_PREPARED_NO_GPU",
@@ -158,14 +154,10 @@ def prepare_geometry_experiment(
     }
 
 
-def audit_geometry_experiment(
-    *, bundle_directory: Path, output_png: Path
-) -> dict[str, Any]:
+def audit_geometry_experiment(*, bundle_directory: Path, output_png: Path) -> dict[str, Any]:
     """Quantify inside/outside changes. Human judgment required for actual recess."""
     bundle = bundle_directory.resolve(strict=True)
-    manifest = json.loads(
-        (bundle / "qualification_manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((bundle / "qualification_manifest.json").read_text(encoding="utf-8"))
     profile = verified_geometry_profile(bundle, manifest)
     source = bundle / "source.png"
     mask_path = bundle / "mask.png"
@@ -219,9 +211,7 @@ def main() -> int:
     parser.add_argument("--source", type=Path)
     parser.add_argument("--bundle", required=True, type=Path)
     parser.add_argument("--output", type=Path)
-    parser.add_argument(
-        "--roi", type=int, nargs=4, metavar=("LEFT", "TOP", "RIGHT", "BOTTOM")
-    )
+    parser.add_argument("--roi", type=int, nargs=4, metavar=("LEFT", "TOP", "RIGHT", "BOTTOM"))
     args = parser.parse_args()
     try:
         if args.prepare:
@@ -238,9 +228,7 @@ def main() -> int:
         else:
             if args.output is None:
                 raise MaskAwareQualificationError("Audit requires a generated output PNG")
-            result = audit_geometry_experiment(
-                bundle_directory=args.bundle, output_png=args.output
-            )
+            result = audit_geometry_experiment(bundle_directory=args.bundle, output_png=args.output)
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     except (OSError, ValueError, RuntimeError) as exc:
