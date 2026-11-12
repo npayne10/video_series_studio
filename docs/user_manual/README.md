@@ -139,3 +139,8 @@ The first **isolated** masked Qwen GPU run completed in external `run_002` (344.
 ## F5.4.1C — Geometry-aware masked Qwen qualification
 
 Following the first isolated masked Qwen GPU test, pixel preservation **passed** (zero outside-mask changed pixels), but the rotary dial remained visibly **raised**. F5.4.1C introduces a separately SHA-bound **recessed-dial geometry intent**, an external-only `run_003` preparation workflow, an operator-only dial context crop and independent measurements of changes **inside** the mask. The isolated Qwen GPU runner uses the new intent only after verifying its reviewed prompt, source/mask hashes and context provenance. Any in-mask change is **not** proof of a recessed dial; geometry acceptance still requires visual review. **Code committed; local static/pytest and new GPU tests pending.** The trusted graph, `run_002`, Candidate 4 and final governed Attempt 2/2 stay unchanged. See [F5.4.1C operator stages](VSCS_User_Manual.md#f541c--geometry-aware-masked-qwen-correction-isolated-qualification).
+
+
+### F5.4.1C first isolated geometry-aware output — 2026-11-12
+
+The `run_003` geometry-aware masked Qwen output **preserved all 1,039,784 outside-mask pixels** (0 changes) and changed **6,581/7,000 pixels inside** the mask (94.0143%). Visual review shows a recessed circular **well but no visible rotary dial within it**, so **complete geometry fidelity remains unaccepted**. Preserve `run_003`, its history and all CAP records; do not consume Candidate 4 final Attempt 2/2. See [F5.4.1C evidence and disposition](VSCS_User_Manual.md#f541c--first-real-geometry-aware-masked-gpu-output-2026-11-12).
