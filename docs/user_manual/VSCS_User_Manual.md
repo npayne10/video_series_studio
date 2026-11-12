@@ -1031,3 +1031,28 @@ python -m vscs.application.caps.qwen_geometry_aware_qualification --audit --bund
 Review the output and original side by side: dial top below the sloping shelf plane, visible inset cavity/flush lip and no protruding pedestal. Inspect the seam at the masked border and three buttons, screen, workstation and ribs. A correct *pixel* audit alone does not meet geometry acceptance.
 
 **Release condition:** Only after separate isolated GPU execution, verified zero changed pixels outside the ROI and visual/semantic success on recessed dial may an engineering proposal for the governed final Attempt 2/2 be considered. F5.4.1C does **not** release it. Do not rerun `run_002`, mutate its evidence or touch Candidate 4's saved review.
+
+
+#### F5.4.1C — First real geometry-aware masked GPU output (2026-11-12)
+
+The operator submitted one isolated F5.4.1C GPU inference using external `D:\VSCS_QWEN_F541B_ACCEPTANCE\run_003`, the unmodified Candidate 4 source, the **same** 100×70 ROI `(895,345,995,415)` as F5.4.1B, and the sealed geometry-aware intent. The output was inspected visually and separately audited without CAP mutation.
+
+| Evidence | Actual |
+| --- | --- |
+| Audit status | `PIXEL_PRESERVED_GEOMETRY_REVIEW_REQUIRED` |
+| Source SHA-256 | `a998bdc13085fe90f57f346d277d1a0b809f147374257ecc55537b83d86f3eac` |
+| Mask SHA-256 | `2f80012eaf2b20c6914b6d53a92b3d884683db91f94ff2a037f79d6ddc11ac13` |
+| Composite output SHA-256 | `484c293b41f5e099135c40918df18f9b5bda68fc7a7642a84e0a676697e683ac` |
+| Protected pixels outside mask | **1,039,784** |
+| Protected pixels changed | **0** |
+| Editable pixels | **7,000** |
+| Changed pixels inside mask | **6,581 (94.0143%)** |
+| Recessed dial automatically verified | `null` |
+| Semantic geometry automatically verified | `null` |
+| Canon approved | `false` |
+| Governed correction attempt consumed | `false` |
+
+**Visual finding:** Compared with the preceding masked result, the original raised knob has been replaced with a dark circular **recess/opening** in the shelf. The three buttons, blue screen, ribbed console and adjacent workstation appear preserved. **However, the rotary dial itself is no longer visibly present inside the well.** The accepted design is a *recessed rotary dial*, not an empty circular aperture. Therefore spatial preservation and cavity formation are evidenced, but full geometry correction **fails**.
+
+**Disposition:** F5.4.1C demonstrated a more substantial and localized geometric change with exact outside-mask preservation. It did **not** satisfy all reviewed design constraints. Preserve the `run_003` reservation, output, graph, source/mask and audit without re-execution or overwrite. The next isolated research question is whether an inset control can be formed **inside the now-present cavity** while keeping its top below the adjacent sloping shelf plane. Do not label the current result as a valid CAP Candidate, modify the existing Candidate 4 record, or unlock its governed final Attempt 2/2. Any subsequent trial requires a **new external disposable bundle**, verified source lineage/ROI and separate GPU consent.
+
