@@ -17,6 +17,10 @@ from vscs.application.caps.guided_edit_live_transport import (
     _checked_png,
     _loopback_endpoint,
 )
+from vscs.application.caps.qwen_geometry_aware_qualification import (
+    audit_geometry_experiment,
+    verified_geometry_profile,
+)
 from vscs.application.caps.managed_qwen_model_inventory import (
     validate_managed_qwen_model_choices,
 )
@@ -179,6 +183,14 @@ def execute_isolated_mask_qualification(
         raise MaskAwareQualificationError("Source, mask, graph or trusted template changed")
     graph = _json(graph_path)
     validate_experimental_graph(graph)
+    geometry = None
+    if "geometry_profile_sha256" in manifest:
+        geometry = verified_geometry_profile(bundle, manifest)
+        if (
+            _hash(bundle / "geometry_context_preview.png")
+            != manifest.get("geometry_context_preview_sha256")
+        ):
+            raise MaskAwareQualificationError("F5.4.1C context preview hash changed")
     if manifest.get("mask_input_filename") != graph["F541B_MASK"]["inputs"]["image"]:
         raise MaskAwareQualificationError("Expected experimental placeholder not present")
     if (
@@ -226,11 +238,19 @@ def execute_isolated_mask_qualification(
                 "asset_category": "test",
                 "reference_inputs": [str(source)],
                 "positive_prompt": (
-                    "Preserve the existing console. Correct the rotary dial to sit "
-                    "within a visibly recessed well. Do not change features outside "
-                    "the supplied editable region."
+                    geometry["positive_prompt"]
+                    if geometry is not None
+                    else (
+                        "Preserve the existing console. Correct the rotary dial to sit "
+                        "within a visibly recessed well. Do not change features outside "
+                        "the supplied editable region."
+                    )
                 ),
-                "negative_prompt": "additional objects, changed identity, text overlays",
+                "negative_prompt": (
+                    geometry["negative_prompt"]
+                    if geometry is not None
+                    else "additional objects, changed identity, text overlays"
+                ),
                 "generation": {"enable_turbo_mode": True},
                 "generation_policy": {"force_standard_mode": True},
                 "seed": 43,
@@ -276,6 +296,10 @@ def execute_isolated_mask_qualification(
         "canon_approved": False,
         "correction_attempt_consumed": False,
     }
+    if geometry is not None:
+        result["geometry_audit"] = audit_geometry_experiment(
+            bundle_directory=bundle, output_png=output
+        )
     _save_once(bundle / "qualification_result.json", result)
     return result
 
@@ -314,6 +338,13 @@ def inspect_isolated_mask_nodes(
         raise MaskAwareQualificationError("Offline evidence or trusted workflow changed")
     graph = _json(bundle / "experimental_masked_api.json")
     validate_experimental_graph(graph)
+    if "geometry_profile_sha256" in manifest:
+        verified_geometry_profile(bundle, manifest)
+        if (
+            _hash(bundle / "geometry_context_preview.png")
+            != manifest.get("geometry_context_preview_sha256")
+        ):
+            raise MaskAwareQualificationError("F5.4.1C context preview hash changed")
     endpoint = _loopback_endpoint(comfyui_url)
     provider = client if client is not None else XCICCoreClient(endpoint)
     provider.healthcheck()
