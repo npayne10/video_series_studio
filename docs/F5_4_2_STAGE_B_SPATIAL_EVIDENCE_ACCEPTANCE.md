@@ -19,8 +19,10 @@ the **accepted** Draft CAP fields from the saved quality-result snapshot.
 - A human may label a reviewed field `VERIFIED_BY_OPERATOR`, with at least
   12 characters of observation. This is a transient, non-authoritative reviewer
   assertion — not semantic auto-pass, Canon approval, or CAP promotion.
-- All unselected fields remain `UNKNOWN`. There is no aggregation of decisions
-  across clicks or persisted review journal at this stage.
+- Independent field decisions accumulate **within the currently open dialog**.
+  Unreviewed fields remain `UNKNOWN`; closing the dialog discards the session.
+  Reuse of a prior session with changed source identity or accepted requirements
+  fails closed. There is no persisted review journal at this stage.
 - The source-image SHA-256 from the saved review is echoed in the proposal.
   The caller supplies the expected image SHA to reject stale/mismatched evidence.
 - A proposed ROI is **not a verified mask** and does not permit pixel editing.
