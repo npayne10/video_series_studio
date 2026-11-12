@@ -123,6 +123,7 @@ def propose_spatial_evidence(
     defect: GeometryDefect | None = None,
     region: NormalizedRegion | None = None,
     expected_source_sha256: str | None = None,
+    previous: SpatialEvidenceReview | None = None,
 ) -> SpatialEvidenceReview:
     """Build an immutable in-memory proposal against one accepted field.
 
@@ -131,6 +132,15 @@ def propose_spatial_evidence(
     """
     if expected_source_sha256 is not None and expected_source_sha256 != triage.image_sha256:
         raise GeometryCorrectionError("Spatial evidence source hash mismatch")
+    if previous is not None:
+        if (
+            previous.asset_id != triage.asset_id
+            or previous.reference_id != triage.reference_id
+            or previous.source_sha256 != triage.image_sha256
+            or tuple((item.field, item.requirement) for item in previous.reviewed_fields)
+            != tuple((check.field, check.requirement) for check in triage.mandatory_checks)
+        ):
+            raise GeometryCorrectionError("Prior spatial review is stale or unbound")
     if not isinstance(status, VisualEvidenceStatus):
         raise GeometryCorrectionError("Unsupported field verification status")
     if field is None:
@@ -156,7 +166,15 @@ def propose_spatial_evidence(
             ):
                 raise GeometryCorrectionError("Failed field requires observed defect and evidence")
     checks = []
+    prior_fields = (
+        {item.field: item for item in previous.reviewed_fields}
+        if previous is not None
+        else {}
+    )
     for check in triage.mandatory_checks:
+        if field != check.field and check.field in prior_fields:
+            checks.append(prior_fields[check.field])
+            continue
         selected = check.field == field
         selected_status = status if selected else VisualEvidenceStatus.UNKNOWN
         selected_defect = defect if selected else None
