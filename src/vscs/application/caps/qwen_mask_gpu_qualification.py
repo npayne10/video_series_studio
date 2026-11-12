@@ -17,10 +17,6 @@ from vscs.application.caps.guided_edit_live_transport import (
     _checked_png,
     _loopback_endpoint,
 )
-from vscs.application.caps.qwen_geometry_aware_qualification import (
-    audit_geometry_experiment,
-    verified_geometry_profile,
-)
 from vscs.application.caps.managed_qwen_model_inventory import (
     validate_managed_qwen_model_choices,
 )
@@ -31,6 +27,10 @@ from vscs.application.caps.qwen_f53_isolated_acceptance import (
     _hash,
     _json,
     _save_once,
+)
+from vscs.application.caps.qwen_geometry_aware_qualification import (
+    audit_geometry_experiment,
+    verified_geometry_profile,
 )
 from vscs.application.caps.qwen_mask_aware_qualification import (
     MaskAwareQualificationError,
@@ -184,15 +184,12 @@ def execute_isolated_mask_qualification(
     graph = _json(graph_path)
     validate_experimental_graph(graph)
     geometry = None
-    if (bundle / "geometry_intent.json").exists() != (
-        "geometry_profile_sha256" in manifest
-    ):
+    if (bundle / "geometry_intent.json").exists() != ("geometry_profile_sha256" in manifest):
         raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
     if "geometry_profile_sha256" in manifest:
         geometry = verified_geometry_profile(bundle, manifest)
-        if (
-            _hash(bundle / "geometry_context_preview.png")
-            != manifest.get("geometry_context_preview_sha256")
+        if _hash(bundle / "geometry_context_preview.png") != manifest.get(
+            "geometry_context_preview_sha256"
         ):
             raise MaskAwareQualificationError("F5.4.1C context preview hash changed")
     if manifest.get("mask_input_filename") != graph["F541B_MASK"]["inputs"]["image"]:
@@ -342,15 +339,12 @@ def inspect_isolated_mask_nodes(
         raise MaskAwareQualificationError("Offline evidence or trusted workflow changed")
     graph = _json(bundle / "experimental_masked_api.json")
     validate_experimental_graph(graph)
-    if (bundle / "geometry_intent.json").exists() != (
-        "geometry_profile_sha256" in manifest
-    ):
+    if (bundle / "geometry_intent.json").exists() != ("geometry_profile_sha256" in manifest):
         raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
     if "geometry_profile_sha256" in manifest:
         verified_geometry_profile(bundle, manifest)
-        if (
-            _hash(bundle / "geometry_context_preview.png")
-            != manifest.get("geometry_context_preview_sha256")
+        if _hash(bundle / "geometry_context_preview.png") != manifest.get(
+            "geometry_context_preview_sha256"
         ):
             raise MaskAwareQualificationError("F5.4.1C context preview hash changed")
     endpoint = _loopback_endpoint(comfyui_url)
