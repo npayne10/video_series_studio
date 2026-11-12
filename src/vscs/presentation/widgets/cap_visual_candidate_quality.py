@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
@@ -22,6 +23,11 @@ from vscs.application.caps.general_visual_correction_triage import (
 from vscs.application.caps.geometry_correction_policy import (
     GeometryCorrectionError,
     GeometryDefect,
+)
+from vscs.application.caps.spatial_visual_evidence import (
+    NormalizedRegion,
+    VisualEvidenceStatus,
+    propose_spatial_evidence,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_candidate_quality import (
@@ -255,6 +261,52 @@ class CandidateQualityReportDialog(QDialog):
             details.setPlainText(assessment.describe())
 
         classify.clicked.connect(inspect)
+
+        layout.addWidget(QLabel("Stage B: operator field status and optional spatial proposal:"))
+        evidence_status = QComboBox(dialog)
+        evidence_status.setObjectName("spatialEvidenceStatus")
+        for state in VisualEvidenceStatus:
+            evidence_status.addItem(state.value.replace("_", " "), state.value)
+        layout.addWidget(evidence_status)
+        roi = QLineEdit(dialog)
+        roi.setObjectName("spatialEvidenceROI")
+        roi.setPlaceholderText("Optional normalized ROI: x,y,width,height (e.g. 0.1,0.2,0.3,0.4)")
+        layout.addWidget(roi)
+        propose = QPushButton("Inspect Stage B Evidence / ROI (No Generation)", dialog)
+        propose.setObjectName("spatialEvidenceInspect")
+        layout.addWidget(propose)
+
+        def inspect_spatial_evidence() -> None:
+            try:
+                state = VisualEvidenceStatus(str(evidence_status.currentData()))
+                values = roi.text().strip()
+                region = None
+                if values:
+                    components = values.split(",")
+                    if len(components) != 4:
+                        raise GeometryCorrectionError("ROI requires four normalized coordinates")
+                    try:
+                        region = NormalizedRegion(*(float(v.strip()) for v in components))
+                    except ValueError as exc:
+                        raise GeometryCorrectionError("ROI coordinates must be numeric") from exc
+                evidence = propose_spatial_evidence(
+                    baseline,
+                    field=str(fields.currentData()),
+                    status=state,
+                    observation=reason.toPlainText(),
+                    defect=(
+                        GeometryDefect(str(defect.currentData()))
+                        if state is VisualEvidenceStatus.FAILED else None
+                    ),
+                    region=region,
+                    expected_source_sha256=report.snapshot.image_sha256,
+                )
+            except (GeometryCorrectionError, ValueError) as exc:
+                QMessageBox.warning(dialog, "Stage B Evidence Blocked", str(exc))
+                return
+            details.setPlainText(evidence.describe())
+
+        propose.clicked.connect(inspect_spatial_evidence)
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
         close.rejected.connect(dialog.reject)
         layout.addWidget(close)
