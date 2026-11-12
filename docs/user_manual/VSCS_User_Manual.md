@@ -1056,3 +1056,41 @@ The operator submitted one isolated F5.4.1C GPU inference using external `D:\VSC
 
 **Disposition:** F5.4.1C demonstrated a more substantial and localized geometric change with exact outside-mask preservation. It did **not** satisfy all reviewed design constraints. Preserve the `run_003` reservation, output, graph, source/mask and audit without re-execution or overwrite. The next isolated research question is whether an inset control can be formed **inside the now-present cavity** while keeping its top below the adjacent sloping shelf plane. Do not label the current result as a valid CAP Candidate, modify the existing Candidate 4 record, or unlock its governed final Attempt 2/2. Any subsequent trial requires a **new external disposable bundle**, verified source lineage/ROI and separate GPU consent.
 
+
+
+### F5.4.1D — Reusable staged visual geometry correction policy (implementation foundation)
+
+**Product objective:** Do not turn each future image defect into an open-ended model-prompt experiment. Translate the Diagnostic Console evidence into a **general correction engine** with explicit defect types, reusable stage planning, reference/mask provenance, immutable outcomes and per-lineage GPU budget. This phase's first implementation is a **read-only/offline planning policy**; it does not yet automate mask derivation, image generation, semantic verification or CAP integration, and none should be implied as accepted.
+
+**What previous experiments proved:**
+
+- F5.4 governed source-conditioned editing was insufficient: technical, semantic and design consistency scores declined; raised dial persisted.
+- F5.4.1B externally isolated masked generation exactly preserved outside-mask pixels (zero modified); dial still raised.
+- F5.4.1C externally isolated masked generation also exactly preserved outside-mask pixels while creating a recessed **cavity**; the rotary knob itself disappeared. A black cavity is not a recessed rotary control. **Do not replay a cavity-creation instruction**.
+
+**New reusable implementation:** `src/vscs/application/caps/geometry_correction_policy.py`, exercised by `tests/test_cap_geometry_correction_policy.py`. The defect taxonomy explicitly identifies:
+`protruding_instead_of_recessed`, `missing_component`, `incorrect_component_count`, `merged_objects`, `wrong_relative_position`, `incorrect_proportions`, `material_mismatch`, and `unreviewed_detail`.
+
+Each defect has a bounded, deterministic stage order using `establish_geometry`, `reconstruct_component` and `verify_design`. **The observed F5.4.1C output is now a `missing_component` defect**, because the recess exists but the dial is absent. Its next proposed first stage is `reconstruct_component`, *not* another `establish_geometry` pass. This framework can later be used for a missing aircraft antenna, merged vehicle wheels, incorrect control-panel button count or absent interface detail, but no such live capability is claimed yet.
+
+`GeometryRepairPlan` records design requirement, actual discrepancy, source and mask SHA-256s, experiment lineage, bounded stages, explicit review and spatial-preservation decisions, and a **maximum of one new disposable GPU trial** for this investigation. A plan alone always reports `can_request_gpu=False`; it is **not GPU consent**. After an experiment, no stage can advance unless the source/mask hashes match and a human reviewer confirms the stage outcome with zero changed pixels outside the approved mask. Failed review consumes the disposable budget without silently retrying. `write_repair_plan_once` writes exclusive immutable JSON evidence; `inspect_repair_plan` checks the SHA and stage/governance contract. None of this can register a CAP Candidate, approve Canon or spend governed Candidate 4 Attempt 2/2.
+
+**F5.4.1D acceptance gate:** first run all local static checks and full regression; then qualify this general planner with an offline evidence trail from the completed F5.4.1C output, without changing the original source, mask, or `run_003` records. A separate future implementation must bind the vetted run_003 image as a **new experimental source**, construct and review a smaller mask only within the cavity and prepare a source-conditioned inset-dial reconstruction graph. The single proposed fresh disposable GPU trial must preserve the existing well and surrounding console and produce a smaller dial **within** that well, with its top below the surrounding shelf. Record the outcome as a reusable geometry failure/repair case regardless of success; *zero changed outside-mask pixels alone is insufficient*.
+
+**Stop / time-budget rule:** after at most one new disposable reconstruction inference, stop further experiments on this single dial and prioritise using the captured taxonomy, provenance guards and semantic rejection logic elsewhere in VSCS. A failed trial is evidence for model limitations and routing, not permission to spend unlimited inference attempts. Never automatically unlock Candidate 4 final Attempt 2/2.
+
+**Local validation after GitHub pull:**
+
+```powershell
+cd D:\VSCS\video_series_studio
+git pull --ff-only origin phase-20.18.2.3.6.3-local-r2v-provider-evaluation
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+python -m pytest -q tests/test_cap_geometry_correction_policy.py tests/test_cap_qwen_geometry_aware_qualification.py tests/test_cap_qwen_mask_aware_qualification.py tests/test_cap_qwen_mask_gpu_qualification.py
+python -m pytest -q
+git diff --check
+git status --short
+```
+
+**Current status:** reusable policy and tests committed. Local acceptance, actual source-bound derived reconstruction, automated model adaptation, interface work, provider inference and generalized production enablement **remain pending**. Preserve `run_001`, `run_002`, `run_003`, both existing local untracked files and Candidate 4 governance.
