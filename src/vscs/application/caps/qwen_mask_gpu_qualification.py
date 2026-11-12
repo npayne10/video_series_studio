@@ -13,6 +13,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from vscs.application.caps.geometry_correction_policy import inspect_repair_plan
 from vscs.application.caps.guided_edit_live_transport import (
     _checked_png,
     _loopback_endpoint,
@@ -204,8 +205,19 @@ def execute_isolated_mask_qualification(
         raise MaskAwareQualificationError("Incomplete inset-dial intent provenance")
     if reconstruction:
         inset_intent = verified_reconstruction_intent(bundle, manifest)
-        if _hash(bundle / "geometry_repair_plan.json") != manifest.get("repair_plan_sha256"):
-            raise MaskAwareQualificationError("Inset-dial repair plan hash changed")
+        repair_hash = manifest.get("repair_plan_sha256")
+        if not isinstance(repair_hash, str):
+            raise MaskAwareQualificationError("Inset-dial repair plan hash missing")
+        plan = inspect_repair_plan(bundle / "geometry_repair_plan.json", repair_hash)
+        if (
+            plan.defect != "missing_component"
+            or plan.source_sha256 != manifest.get("source_sha256")
+            or plan.mask_sha256 != manifest.get("mask_sha256")
+            or plan.source_lineage != manifest.get("parent_bundle")
+            or plan.max_new_gpu_attempts != 1
+            or plan.generated_gpu_attempts != 0
+        ):
+            raise MaskAwareQualificationError("Inset-dial repair plan contract changed")
     geometry = None
     if (bundle / "geometry_intent.json").exists() != ("geometry_profile_sha256" in manifest):
         raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
@@ -378,9 +390,20 @@ def inspect_isolated_mask_nodes(
             previous["source_path"] != manifest.get("original_source_path")
             or previous["parent_result_sha256"] != manifest.get("parent_result_sha256")
             or _hash(bundle / "source.png") != previous["source_sha256"]
-            or _hash(bundle / "geometry_repair_plan.json") != manifest.get("repair_plan_sha256")
         ):
             raise MaskAwareQualificationError("Inset-dial parent lineage changed")
+        plan_hash = manifest.get("repair_plan_sha256")
+        if not isinstance(plan_hash, str):
+            raise MaskAwareQualificationError("Inset-dial repair plan hash missing")
+        plan = inspect_repair_plan(bundle / "geometry_repair_plan.json", plan_hash)
+        if (
+            plan.defect != "missing_component"
+            or plan.source_sha256 != manifest.get("source_sha256")
+            or plan.mask_sha256 != manifest.get("mask_sha256")
+            or plan.source_lineage != manifest.get("parent_bundle")
+            or plan.generated_gpu_attempts != 0
+        ):
+            raise MaskAwareQualificationError("Inset-dial repair plan contract changed")
         verified_reconstruction_intent(bundle, manifest)
     if (bundle / "geometry_intent.json").exists() != ("geometry_profile_sha256" in manifest):
         raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
