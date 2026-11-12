@@ -24,13 +24,13 @@ from vscs.application.caps.geometry_correction_policy import (
     GeometryCorrectionError,
     GeometryDefect,
 )
+from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.spatial_visual_evidence import (
     NormalizedRegion,
     SpatialEvidenceReview,
     VisualEvidenceStatus,
     propose_spatial_evidence,
 )
-from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.visual_candidate_quality import (
     CandidateQualityResult,
     CandidateQualityReviewService,
@@ -300,7 +300,8 @@ class CandidateQualityReportDialog(QDialog):
                     observation=reason.toPlainText(),
                     defect=(
                         GeometryDefect(str(defect.currentData()))
-                        if state is VisualEvidenceStatus.FAILED else None
+                        if state is VisualEvidenceStatus.FAILED
+                        else None
                     ),
                     region=region,
                     expected_source_sha256=report.snapshot.image_sha256,
