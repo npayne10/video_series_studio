@@ -136,3 +136,35 @@ def test_no_implicit_pass_from_semantic_prose_and_no_unknown_evidence():
             status=VisualEvidenceStatus.VERIFIED_BY_OPERATOR,
             observation="not enough",
         )
+
+def test_independent_fields_accumulate_without_semantic_promotion():
+    first = propose_spatial_evidence(
+        _triage(),
+        field="components",
+        status=VisualEvidenceStatus.FAILED,
+        defect=GeometryDefect.MISSING_COMPONENT,
+        observation="The recessed rotary dial is absent from the image.",
+    )
+    second = propose_spatial_evidence(
+        _triage(),
+        previous=first,
+        field="geometry",
+        status=VisualEvidenceStatus.VERIFIED_BY_OPERATOR,
+        observation="The workstation appears clearly separated from the console.",
+    )
+    assert second.outstanding_fields == 0
+    assert second.reviewed_fields[0] == first.reviewed_fields[0]
+    assert second.reviewed_fields[1].status is VisualEvidenceStatus.VERIFIED_BY_OPERATOR
+    assert not second.cap_registration_allowed
+
+
+def test_previous_review_cannot_cross_source_or_design_revision():
+    first = propose_spatial_evidence(_triage())
+    altered = _report()
+    altered.snapshot.accepted_fields = (("geometry", "Different requirement"),)
+    with pytest.raises(GeometryCorrectionError, match="stale or unbound"):
+        propose_spatial_evidence(candidate_visual_triage(altered), previous=first)
+    altered = _report()
+    altered.snapshot.image_sha256 = "b" * 64
+    with pytest.raises(GeometryCorrectionError, match="stale or unbound"):
+        propose_spatial_evidence(candidate_visual_triage(altered), previous=first)
