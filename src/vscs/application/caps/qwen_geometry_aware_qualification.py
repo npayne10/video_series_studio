@@ -158,6 +158,15 @@ def audit_geometry_experiment(
     profile = verified_geometry_profile(bundle, manifest)
     source = bundle / "source.png"
     mask_path = bundle / "mask.png"
+    if (
+        source.is_symlink()
+        or mask_path.is_symlink()
+        or _sha(source) != manifest.get("source_sha256")
+        or _sha(mask_path) != manifest.get("mask_sha256")
+        or _sha(bundle / "geometry_context_preview.png")
+        != manifest.get("geometry_context_preview_sha256")
+    ):
+        raise MaskAwareQualificationError("Geometry source, mask or context evidence changed")
     evidence = confirm_preserved_pixels(source, output_png, mask_path)
     with (
         Image.open(source) as a,
