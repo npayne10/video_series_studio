@@ -32,6 +32,10 @@ from vscs.application.caps.qwen_geometry_aware_qualification import (
     audit_geometry_experiment,
     verified_geometry_profile,
 )
+from vscs.application.caps.qwen_inset_dial_reconstruction import (
+    verified_previous_cavity,
+    verified_reconstruction_intent,
+)
 from vscs.application.caps.qwen_mask_aware_qualification import (
     MaskAwareQualificationError,
     confirm_preserved_pixels,
@@ -169,10 +173,22 @@ def execute_isolated_mask_qualification(
     mask = bundle / "mask.png"
     graph_path = bundle / "experimental_masked_api.json"
     original_path = Path(str(manifest.get("original_source_path", "")))
+    reconstruction = "reconstruction_intent_sha256" in manifest
+    if reconstruction:
+        previous = verified_previous_cavity(Path(str(manifest.get("parent_bundle", ""))), project)
+        if (
+            previous["source_path"] != str(original_path)
+            or previous["parent_result_sha256"] != manifest.get("parent_result_sha256")
+            or previous["parent_source_sha256"] != manifest.get("parent_source_sha256")
+        ):
+            raise MaskAwareQualificationError("Inset-dial parent lineage changed")
     if (
         original_path.is_symlink()
         or not original_path.is_file()
-        or project not in original_path.resolve(strict=True).parents
+        or (
+            not reconstruction
+            and project not in original_path.resolve(strict=True).parents
+        )
         or _hash(original_path) != manifest.get("original_source_sha256")
         or _hash(source) != manifest.get("source_sha256")
         or _hash(mask) != manifest.get("mask_sha256")
@@ -183,6 +199,13 @@ def execute_isolated_mask_qualification(
         raise MaskAwareQualificationError("Source, mask, graph or trusted template changed")
     graph = _json(graph_path)
     validate_experimental_graph(graph)
+    inset_intent = None
+    if (bundle / "inset_dial_intent.json").exists() != reconstruction:
+        raise MaskAwareQualificationError("Incomplete inset-dial intent provenance")
+    if reconstruction:
+        inset_intent = verified_reconstruction_intent(bundle, manifest)
+        if _hash(bundle / "geometry_repair_plan.json") != manifest.get("repair_plan_sha256"):
+            raise MaskAwareQualificationError("Inset-dial repair plan hash changed")
     geometry = None
     if (bundle / "geometry_intent.json").exists() != ("geometry_profile_sha256" in manifest):
         raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
@@ -239,7 +262,9 @@ def execute_isolated_mask_qualification(
                 "asset_category": "test",
                 "reference_inputs": [str(source)],
                 "positive_prompt": (
-                    geometry["positive_prompt"]
+                    inset_intent["positive_prompt"]
+                    if inset_intent is not None
+                    else geometry["positive_prompt"]
                     if geometry is not None
                     else (
                         "Preserve the existing console. Correct the rotary dial to sit "
@@ -248,7 +273,9 @@ def execute_isolated_mask_qualification(
                     )
                 ),
                 "negative_prompt": (
-                    geometry["negative_prompt"]
+                    inset_intent["negative_prompt"]
+                    if inset_intent is not None
+                    else geometry["negative_prompt"]
                     if geometry is not None
                     else "additional objects, changed identity, text overlays"
                 ),
@@ -297,6 +324,9 @@ def execute_isolated_mask_qualification(
         "canon_approved": False,
         "correction_attempt_consumed": False,
     }
+    if inset_intent is not None:
+        result["inset_dial_human_geometry_accepted"] = None
+        result["reconstruction_stage"] = "reconstruct_component"
     if geometry is not None:
         result["geometry_audit"] = audit_geometry_experiment(
             bundle_directory=bundle, output_png=output
@@ -339,6 +369,19 @@ def inspect_isolated_mask_nodes(
         raise MaskAwareQualificationError("Offline evidence or trusted workflow changed")
     graph = _json(bundle / "experimental_masked_api.json")
     validate_experimental_graph(graph)
+    reconstruction = "reconstruction_intent_sha256" in manifest
+    if (bundle / "inset_dial_intent.json").exists() != reconstruction:
+        raise MaskAwareQualificationError("Incomplete inset-dial intent provenance")
+    if reconstruction:
+        previous = verified_previous_cavity(Path(str(manifest.get("parent_bundle", ""))), project)
+        if (
+            previous["source_path"] != manifest.get("original_source_path")
+            or previous["parent_result_sha256"] != manifest.get("parent_result_sha256")
+            or _hash(bundle / "source.png") != previous["source_sha256"]
+            or _hash(bundle / "geometry_repair_plan.json") != manifest.get("repair_plan_sha256")
+        ):
+            raise MaskAwareQualificationError("Inset-dial parent lineage changed")
+        verified_reconstruction_intent(bundle, manifest)
     if (bundle / "geometry_intent.json").exists() != ("geometry_profile_sha256" in manifest):
         raise MaskAwareQualificationError("Incomplete F5.4.1C geometry provenance")
     if "geometry_profile_sha256" in manifest:
