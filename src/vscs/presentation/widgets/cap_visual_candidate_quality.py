@@ -26,6 +26,7 @@ from vscs.application.caps.geometry_correction_policy import (
 )
 from vscs.application.caps.spatial_visual_evidence import (
     NormalizedRegion,
+    SpatialEvidenceReview,
     VisualEvidenceStatus,
     propose_spatial_evidence,
 )
@@ -276,7 +277,7 @@ class CandidateQualityReportDialog(QDialog):
         propose.setObjectName("spatialEvidenceInspect")
         layout.addWidget(propose)
 
-        current_evidence = None
+        current_evidence: SpatialEvidenceReview | None = None
 
         def inspect_spatial_evidence() -> None:
             nonlocal current_evidence
