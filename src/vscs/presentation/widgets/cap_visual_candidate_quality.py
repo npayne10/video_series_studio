@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -219,8 +220,15 @@ class CandidateQualityReportDialog(QDialog):
         dialog = QDialog(self)
         dialog.setWindowTitle("F5.4.2 — General Visual Correction Review (Advisory)")
         dialog.setObjectName("generalVisualCorrectionTriageDialog")
-        dialog.resize(800, 610)
-        layout = QVBoxLayout(dialog)
+        dialog.resize(900, 760)
+        outer = QVBoxLayout(dialog)
+        scroll = QScrollArea(dialog)
+        scroll.setWidgetResizable(True)
+        scroll.setObjectName("generalVisualCorrectionScrollableForm")
+        outer.addWidget(scroll)
+        content = QWidget(scroll)
+        layout = QVBoxLayout(content)
+        scroll.setWidget(content)
 
         try:
             baseline = candidate_visual_triage(report)
@@ -255,6 +263,7 @@ class CandidateQualityReportDialog(QDialog):
         details = QPlainTextEdit(dialog)
         details.setObjectName("generalTriageAssessment")
         details.setReadOnly(True)
+        details.setMinimumHeight(230)
         details.setPlainText(baseline.describe())
         layout.addWidget(details, 1)
 
