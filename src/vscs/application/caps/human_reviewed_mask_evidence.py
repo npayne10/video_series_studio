@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -63,19 +62,8 @@ def _source_image(path: Path, proposal: GovernedCorrectionProposal) -> tuple[int
     proposal.verify_seal()
     if path.is_symlink() or not path.is_file() or path.suffix.lower() != ".png":
         raise GeometryCorrectionError("Source must be an existing non-symlink PNG Candidate")
-    parts = path.parts
-    if (
-        len(parts) < 4
-        or parts[-4:-1] != ("Images", "Visual Candidates", "INVALID")
-    ):
-        # Actual expected hierarchy is checked against full resolved relative path below.
-        pass
     resolved = path.resolve(strict=True)
-    expected = (
-        resolved.parent.parent.parent.parent / "Canonical Assets" / proposal.asset_id
-        / "Images" / "Visual Candidates"
-    )
-    # Support arbitrary project path while requiring the exact canonical asset hierarchy.
+    # Only the canonical asset Candidate directory is eligible.
     if (
         resolved.parent.name != "Visual Candidates"
         or resolved.parent.parent.name != "Images"
@@ -84,7 +72,6 @@ def _source_image(path: Path, proposal: GovernedCorrectionProposal) -> tuple[int
         or path != resolved
     ):
         raise GeometryCorrectionError("Source path is not a canonical Candidate image")
-    del expected
     try:
         raw = path.read_bytes()
     except OSError as exc:
@@ -185,11 +172,13 @@ def inspect_reviewed_mask(
     width, height = size
     if evidence.selected_pixels != (right - left) * (bottom - top):
         raise GeometryCorrectionError("Mask area differs from reviewed ROI")
+    protected = bytes(width)
+    active = bytes([255]) * (right - left)
+    review_row = bytes(left) + active + bytes(width - right)
     for y in range(height):
-        for x in range(width):
-            expected = 255 if left <= x < right and top <= y < bottom else 0
-            if pixels[y * width + x] != expected:
-                raise GeometryCorrectionError("Mask pixels differ from reviewed ROI")
+        expected = review_row if top <= y < bottom else protected
+        if pixels[y * width : (y + 1) * width] != expected:
+            raise GeometryCorrectionError("Mask pixels differ from reviewed ROI")
 
 
 def save_reviewed_mask_once(
