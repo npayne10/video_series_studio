@@ -18,6 +18,7 @@ from vscs.application.caps.governed_visual_correction_handoff import (
 from vscs.application.caps.human_reviewed_mask_evidence import (
     inspect_reviewed_mask,
     prepare_reviewed_mask,
+    preview_mask_bounds,
     save_reviewed_mask_once,
 )
 from vscs.application.caps.spatial_visual_evidence import (
@@ -106,6 +107,17 @@ def test_deterministic_mask_exact_bounds_and_immutable_source(tmp_path):
     assert not first.gpu_execution_authorized
     assert not first.governed_attempt_allowed
     assert not first.candidate_registration_allowed
+
+
+def test_preview_only_returns_pixel_bounds_without_artifacts(tmp_path):
+    source = _source(tmp_path)
+    proposal = _proposal(source)
+    before = source.read_bytes()
+    size, bounds = preview_mask_bounds(proposal, source_path=source)
+    assert size == (40, 30)
+    assert bounds == (4, 6, 16, 18)
+    assert source.read_bytes() == before
+    assert not (source.parent.parent.parent / ".metadata").exists()
 
 
 def test_explicit_mask_confirmation_required(tmp_path):
