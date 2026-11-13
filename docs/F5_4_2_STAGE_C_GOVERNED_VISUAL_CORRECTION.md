@@ -1,8 +1,43 @@
 # Phase F5.4.2 Stage C — Governed Visual Correction Integration
 
-**Status: C1 implementation candidate; not operator-accepted.** Stage C is
-split into gated milestones rather than immediately enabling the live
-ComfyUI/managed Qwen generator. Stage B was operator-accepted on 2026-11-13.
+**Status: Stage C1 OPERATOR ACCEPTED — 2026-11-13.** Stages C2–C4 remain
+unimplemented and unauthorized. Stage C is split into gated milestones rather
+than immediately enabling the live ComfyUI/managed Qwen generator. Stage B was
+operator-accepted on 2026-11-13.
+
+## Stage C1 acceptance record — 2026-11-13
+
+**Decision:** Stage C1 accepted based on completed Windows static checks,
+previously reported focused/full regression, visible non-executable handoff,
+and the operator's explicit confirmation of Candidate 4 non-mutation.
+
+- Ruff lint: all checks passed. Ruff formatting: 1,683 files formatted.
+  Mypy: no issues found in 706 source files.
+- Regression: 83 focused tests passed; 2,820 full-suite tests passed,
+  1 skipped because directory symlinks are unavailable. These test counts
+  precede the final formatting-only commits; no newer full regression
+  was separately supplied.
+- UI: the operator inspected all four accepted fields and generated an
+  F5.4.2 Stage C1 governed correction proposal for Candidate 3, asset
+  `STORY-PRO-B00D16E843`, targeting `components` / `missing_component`
+  with an operator-acknowledged normalized ROI `0.1,0.2,0.3,0.4`.
+  The display showed source SHA-256, accepted CAP requirement, observed
+  failure, `reconstruct_component -> verify_design`, proposal digest,
+  and explicit no-mask/no-provider-execution notices.
+- The operator separately confirmed that the C1 inspection did **not**
+  modify Candidate 4, its saved evaluation, CAP authority or governed
+  attempt counter. This is operator-confirmed non-mutation, not an
+  independent filesystem diff.
+- The C1 UI currently does not restore field-specific form values when
+  the selected CAP field changes. The underlying session review was
+  correct, but the visible status/observation controls may display
+  values entered for the previously selected field. Track this as a
+  C2-era UI consistency improvement, without changing C1 acceptance.
+- **Governance:** C1 acceptance grants no authority to generate, derive
+  an approved mask, consume an attempt, register a Candidate, or promote
+  CAP/Canon/MASTER. Candidate 4's final governed Attempt 2/2 stays
+  protected. Next: Stage C2 — human-reviewed mask evidence, subject to
+  its own tests and explicit approval.
 
 ## Governing implementation decision
 
@@ -93,7 +128,6 @@ git diff --check
 git status --short
 ```
 
-**Acceptance gates:** lint/format/type checks, targeted tests, full regression,
-Windows UI smoke test, source/attempt/CAP non-mutation evidence and explicit
-operator acceptance. None of these was independently executed for C1 by the
-GitHub source-edit connector.
+**Acceptance gates:** fulfilled for C1 as documented above using Windows
+operator results and confirmation. C2–C4 require separate evidence and
+acceptance. Source-edit connectivity alone does not run the Windows tests.
