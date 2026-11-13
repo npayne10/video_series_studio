@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import io
 from dataclasses import dataclass, field
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from pathlib import Path
 
 from PIL import Image, ImageDraw, UnidentifiedImageError
@@ -92,15 +93,21 @@ def _source_image(path: Path, proposal: GovernedCorrectionProposal) -> tuple[int
 
 
 def _bounds(proposal: GovernedCorrectionProposal, size: tuple[int, int]) -> tuple[int, int, int, int]:
-    # Normalized bounding boxes are rasterized with floor(left/top), ceil(right/bottom).
-    import math
-
+    # Decimal conversion avoids binary float error at exact pixel boundaries.
     roi = proposal.reviewed_roi
     width, height = size
-    left = math.floor(roi.x * width)
-    top = math.floor(roi.y * height)
-    right = math.ceil((roi.x + roi.width) * width)
-    bottom = math.ceil((roi.y + roi.height) * height)
+    left = int((Decimal(str(roi.x)) * width).to_integral_value(rounding=ROUND_FLOOR))
+    top = int((Decimal(str(roi.y)) * height).to_integral_value(rounding=ROUND_FLOOR))
+    right = int(
+        ((Decimal(str(roi.x)) + Decimal(str(roi.width))) * width).to_integral_value(
+            rounding=ROUND_CEILING
+        )
+    )
+    bottom = int(
+        ((Decimal(str(roi.y)) + Decimal(str(roi.height))) * height).to_integral_value(
+            rounding=ROUND_CEILING
+        )
+    )
     if not (0 <= left < right <= width and 0 <= top < bottom <= height):
         raise GeometryCorrectionError("Review ROI collapses or exceeds source-image pixels")
     return left, top, right, bottom
