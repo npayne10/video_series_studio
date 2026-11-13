@@ -169,3 +169,10 @@ def test_post_handoff_seal_and_authority_tampering_blocked():
         replace(proposal, governed_attempt_allowed=True).verify_seal()
     with pytest.raises(GeometryCorrectionError, match="stages"):
         replace(proposal, stages=("verify_design",)).verify_seal()
+
+
+def test_upstream_review_cannot_grant_execution_authority():
+    with pytest.raises(GeometryCorrectionError, match="production authority"):
+        _propose(replace(_review(), gpu_execution_authorized=True))
+    with pytest.raises(GeometryCorrectionError, match="production authority"):
+        _propose(replace(_review(), governed_attempt_allowed=True))
