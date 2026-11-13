@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -23,6 +24,9 @@ from vscs.application.caps.general_visual_correction_triage import (
 from vscs.application.caps.geometry_correction_policy import (
     GeometryCorrectionError,
     GeometryDefect,
+)
+from vscs.application.caps.governed_visual_correction_handoff import (
+    prepare_governed_correction_proposal,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.spatial_visual_evidence import (
@@ -314,6 +318,36 @@ class CandidateQualityReportDialog(QDialog):
             details.setPlainText(evidence.describe())
 
         propose.clicked.connect(inspect_spatial_evidence)
+
+        roi_confirmation = QCheckBox(
+            "I inspected the ROI against the source image (not a mask or execution consent).",
+            dialog,
+        )
+        roi_confirmation.setObjectName("stageCReviewedROIConfirmation")
+        layout.addWidget(roi_confirmation)
+        stage_c = QPushButton("Inspect Stage C Governed Handoff (No Generation)", dialog)
+        stage_c.setObjectName("stageCGovernedCorrectionInspect")
+        layout.addWidget(stage_c)
+
+        def inspect_governed_handoff() -> None:
+            if current_evidence is None:
+                QMessageBox.warning(
+                    dialog, "Stage C Handoff Blocked", "Complete Stage B field review first."
+                )
+                return
+            try:
+                proposal = prepare_governed_correction_proposal(
+                    current_evidence,
+                    target_field=str(fields.currentData()),
+                    expected_source_sha256=report.snapshot.image_sha256,
+                    reviewer_confirmed_roi=roi_confirmation.isChecked(),
+                )
+            except GeometryCorrectionError as exc:
+                QMessageBox.warning(dialog, "Stage C Handoff Blocked", str(exc))
+                return
+            details.setPlainText(proposal.describe())
+
+        stage_c.clicked.connect(inspect_governed_handoff)
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
         close.rejected.connect(dialog.reject)
         layout.addWidget(close)
