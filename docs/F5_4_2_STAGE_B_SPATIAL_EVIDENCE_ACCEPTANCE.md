@@ -1,8 +1,31 @@
 # F5.4.2 Stage B — Structured Visual Evidence and Spatial Correction Proposals
 
-**Status:** GitHub implementation candidate. Local Windows Ruff, Mypy, full regression,
-CAP non-mutation audit and operator UI acceptance **not yet verified**. Do not mark
-Stage B accepted until those gates are completed.
+**Status: OPERATOR ACCEPTED — 2026-11-13.** The operator explicitly confirmed
+non-mutation of Candidate 4 and accepted Stage B following the visible UI
+acceptance test. Windows validation recorded **93 focused tests passed**,
+**2,814 full-suite tests passed, 1 skipped** (directory symlink unavailable),
+Ruff lint passed and Mypy clean across 705 source files. One final Ruff formatter
+difference was corrected in GitHub commit `18041be`; a separate post-commit
+Windows formatting run was not supplied in the acceptance evidence. This is a
+verification record, not a claim that the latest commit was re-tested.
+
+## Acceptance decision — 2026-11-13
+
+- **Operator approval:** Stage B accepted after a direct declaration that
+  Candidate 4 was not mutated by the Stage B review.
+- **Visible UI evidence:** Candidate 4; reviewed field `components`; defect
+  `missing_component`; operator-described missing recessed rotary control;
+  `FAILED` field state; normalized example ROI `0.1,0.2,0.3,0.4`;
+  route `reconstruct_component -> verify_design`; other accepted fields
+  remained `UNKNOWN`; ROI labelled as proposal, not a verified mask.
+- **Non-mutation:** operator confirmed Candidate 4 unchanged. This is an
+  operator acceptance assertion, not an independent filesystem audit.
+- **Guardrails:** no generation/approval or CAP promotion granted. The
+  Candidate 4 governed final Attempt 2/2 remains protected; do not rerun
+  the closed F5.4.1D dial experiment.
+- **Next phase:** Stage C planning and a separate approval of its governed
+  correction contract. Stage B acceptance does not authorize Stage C
+  implementation, ROI-to-mask promotion or GPU execution.
 
 ## Scope and decision
 
@@ -44,7 +67,7 @@ the **accepted** Draft CAP fields from the saved quality-result snapshot.
    mask, authority change, attempt use or CAP write. Closing loses this advisory
    inspection; nothing is saved.
 
-## Gates before approval
+## Validation commands (recorded baseline; repeat after changes)
 
 Run on Windows after fetching the Stage B branch:
 
