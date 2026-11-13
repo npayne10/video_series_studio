@@ -35,6 +35,7 @@ from vscs.application.caps.human_reviewed_mask_evidence import (
     ReviewedMaskEvidence,
     inspect_reviewed_mask,
     prepare_reviewed_mask,
+    preview_mask_bounds,
     save_reviewed_mask_once,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
@@ -421,15 +422,8 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Stage C2 Blocked", "Inspect Stage C1 handoff first.")
                 return
             try:
-                evidence = prepare_reviewed_mask(
-                    current_proposal,
-                    source_path=report.snapshot.image_path,
-                    reviewer_confirmed_mask=True,
-                )
-                inspect_reviewed_mask(
-                    evidence,
-                    proposal=current_proposal,
-                    source_path=report.snapshot.image_path,
+                _size, bounds = preview_mask_bounds(
+                    current_proposal, source_path=report.snapshot.image_path
                 )
                 preview = QPixmap(str(report.snapshot.image_path))
                 if preview.isNull():
@@ -437,7 +431,7 @@ class CandidateQualityReportDialog(QDialog):
             except (GeometryCorrectionError, OSError) as exc:
                 QMessageBox.warning(dialog, "Stage C2 Preview Blocked", str(exc))
                 return
-            left, top, right, bottom = evidence.pixel_bounds
+            left, top, right, bottom = bounds
             painter = QPainter(preview)
             try:
                 painter.fillRect(left, top, right - left, bottom - top, QColor(255, 0, 0, 75))
