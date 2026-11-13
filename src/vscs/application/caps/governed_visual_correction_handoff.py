@@ -146,6 +146,13 @@ def prepare_governed_correction_proposal(
         raise GeometryCorrectionError("Stage C Candidate identity invalid")
     if not review.asset_id.strip() or not review.reviewed_fields:
         raise GeometryCorrectionError("Stage C requires reviewed Candidate fields")
+    if (
+        review.gpu_execution_authorized
+        or review.cap_registration_allowed
+        or review.canon_approval_allowed
+        or review.governed_attempt_allowed
+    ):
+        raise GeometryCorrectionError("Stage B review cannot grant production authority")
     if type(reviewer_confirmed_roi) is not bool or not reviewer_confirmed_roi:
         raise GeometryCorrectionError("Stage C requires explicit operator ROI review")
     if review.outstanding_fields:
