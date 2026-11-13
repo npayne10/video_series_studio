@@ -87,8 +87,7 @@ class GovernedCorrectionProposal:
                 f"Accepted requirement: {self.reviewed_requirement}",
                 f"Observed failure: {self.observed_failure}",
                 f"Defect: {self.defect.value}",
-                f"Operator-reviewed ROI: {roi.x:.3f},{roi.y:.3f},"
-                f"{roi.width:.3f},{roi.height:.3f}",
+                f"Operator-reviewed ROI: {roi.x:.3f},{roi.y:.3f},{roi.width:.3f},{roi.height:.3f}",
                 f"Proposed stages: {' -> '.join(self.stages)}",
                 f"Proposal SHA-256: {self.proposal_sha256}",
                 "ROI is NOT a mask. No mask pixels or protected-pixel proof exist.",
