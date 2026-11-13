@@ -118,9 +118,7 @@ def test_unknown_or_second_failed_field_blocks_handoff():
                     image_sha256=review.source_sha256,
                     reference_role="supplementary",
                     reference_status="candidate",
-                    accepted_fields=tuple(
-                        (f.field, f.requirement) for f in review.reviewed_fields
-                    ),
+                    accepted_fields=tuple((f.field, f.requirement) for f in review.reviewed_fields),
                 ),
                 technical=SimpleNamespace(decision=SimpleNamespace(value="review")),
                 semantic=None,
@@ -152,9 +150,7 @@ def test_region_absence_or_tampered_stages_blocks():
     fields[0] = replace(fields[0], proposed_region=None)
     with pytest.raises(GeometryCorrectionError, match="target evidence"):
         _propose(replace(review, reviewed_fields=tuple(fields)))
-    fields[0] = replace(
-        review.reviewed_fields[0], correction_stages=("verify_design",)
-    )
+    fields[0] = replace(review.reviewed_fields[0], correction_stages=("verify_design",))
     with pytest.raises(GeometryCorrectionError, match="target evidence"):
         _propose(replace(review, reviewed_fields=tuple(fields)))
 
