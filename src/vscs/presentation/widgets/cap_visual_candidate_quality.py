@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -26,7 +28,14 @@ from vscs.application.caps.geometry_correction_policy import (
     GeometryDefect,
 )
 from vscs.application.caps.governed_visual_correction_handoff import (
+    GovernedCorrectionProposal,
     prepare_governed_correction_proposal,
+)
+from vscs.application.caps.human_reviewed_mask_evidence import (
+    ReviewedMaskEvidence,
+    inspect_reviewed_mask,
+    prepare_reviewed_mask,
+    save_reviewed_mask_once,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.spatial_visual_evidence import (
@@ -282,9 +291,37 @@ class CandidateQualityReportDialog(QDialog):
         layout.addWidget(propose)
 
         current_evidence: SpatialEvidenceReview | None = None
+        current_proposal: GovernedCorrectionProposal | None = None
+        current_mask: ReviewedMaskEvidence | None = None
+        mask_previewed = False
+        review_progress = QLabel("0 of " + str(len(baseline.mandatory_checks)) + " fields reviewed")
+        review_progress.setObjectName("spatialEvidenceReviewProgress")
+        layout.addWidget(review_progress)
+
+        def restore_selected_field() -> None:
+            roi_confirmation.setChecked(False)
+            if current_evidence is None:
+                return
+            name = str(fields.currentData())
+            item = next((i for i in current_evidence.reviewed_fields if i.field == name), None)
+            if item is None:
+                return
+            evidence_status.setCurrentIndex(
+                evidence_status.findData(item.status.value)
+            )
+            reason.setPlainText(item.observation)
+            if item.defect is not None:
+                defect.setCurrentIndex(defect.findData(item.defect.value))
+            if item.proposed_region is not None:
+                area = item.proposed_region
+                roi.setText(f"{area.x},{area.y},{area.width},{area.height}")
+            else:
+                roi.clear()
+
+        fields.currentIndexChanged.connect(lambda _index: restore_selected_field())
 
         def inspect_spatial_evidence() -> None:
-            nonlocal current_evidence
+            nonlocal current_evidence, current_proposal, current_mask, mask_previewed
             try:
                 state = VisualEvidenceStatus(str(evidence_status.currentData()))
                 values = roi.text().strip()
@@ -315,6 +352,14 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Stage B Evidence Blocked", str(exc))
                 return
             current_evidence = evidence
+            current_proposal = None
+            current_mask = None
+            mask_previewed = False
+            roi_confirmation.setChecked(False)
+            reviewed = len(evidence.reviewed_fields) - evidence.outstanding_fields
+            review_progress.setText(
+                f"{reviewed} of {len(evidence.reviewed_fields)} fields reviewed"
+            )
             details.setPlainText(evidence.describe())
 
         propose.clicked.connect(inspect_spatial_evidence)
@@ -330,6 +375,7 @@ class CandidateQualityReportDialog(QDialog):
         layout.addWidget(stage_c)
 
         def inspect_governed_handoff() -> None:
+            nonlocal current_proposal, current_mask, mask_previewed
             if current_evidence is None:
                 QMessageBox.warning(
                     dialog, "Stage C Handoff Blocked", "Complete Stage B field review first."
@@ -345,9 +391,135 @@ class CandidateQualityReportDialog(QDialog):
             except GeometryCorrectionError as exc:
                 QMessageBox.warning(dialog, "Stage C Handoff Blocked", str(exc))
                 return
+            current_proposal = proposal
+            current_mask = None
+            mask_previewed = False
             details.setPlainText(proposal.describe())
 
         stage_c.clicked.connect(inspect_governed_handoff)
+
+        preview_button = QPushButton("Preview Stage C2 Editable Region (No Generation)", dialog)
+        preview_button.setObjectName("stageC2PreviewMask")
+        layout.addWidget(preview_button)
+
+        mask_confirmation = QCheckBox(
+            "I reviewed the mask preview against the source image; the white area is editable.",
+            dialog,
+        )
+        mask_confirmation.setObjectName("stageC2MaskReviewConfirmation")
+        layout.addWidget(mask_confirmation)
+        inspect_mask_button = QPushButton("Inspect C2 Mask Evidence (No Generation)", dialog)
+        inspect_mask_button.setObjectName("stageC2InspectMaskEvidence")
+        layout.addWidget(inspect_mask_button)
+        save_mask_button = QPushButton("Save C2 Mask Evidence (No Generation)", dialog)
+        save_mask_button.setObjectName("stageC2SaveMaskEvidence")
+        layout.addWidget(save_mask_button)
+
+        def preview_mask() -> None:
+            nonlocal mask_previewed, current_mask
+            if current_proposal is None:
+                QMessageBox.warning(dialog, "Stage C2 Blocked", "Inspect Stage C1 handoff first.")
+                return
+            try:
+                evidence = prepare_reviewed_mask(
+                    current_proposal,
+                    source_path=report.snapshot.image_path,
+                    reviewer_confirmed_mask=True,
+                )
+                inspect_reviewed_mask(
+                    evidence,
+                    proposal=current_proposal,
+                    source_path=report.snapshot.image_path,
+                )
+                preview = QPixmap(str(report.snapshot.image_path))
+                if preview.isNull():
+                    raise GeometryCorrectionError("Source preview could not be loaded")
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Stage C2 Preview Blocked", str(exc))
+                return
+            left, top, right, bottom = evidence.pixel_bounds
+            painter = QPainter(preview)
+            try:
+                painter.fillRect(left, top, right - left, bottom - top, QColor(255, 0, 0, 75))
+                painter.setPen(QPen(QColor(255, 40, 40), 3))
+                painter.drawRect(left, top, right - left - 1, bottom - top - 1)
+            finally:
+                painter.end()
+            window = QDialog(dialog)
+            window.setWindowTitle("C2 Source-bound editable area preview (red overlay)")
+            window.setObjectName("stageC2MaskPreviewDialog")
+            window_layout = QVBoxLayout(window)
+            label = QLabel(window)
+            label.setPixmap(
+                preview.scaled(760, 520, Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.SmoothTransformation)
+            )
+            window_layout.addWidget(label)
+            window_layout.addWidget(
+                QLabel("Red overlay = proposed editable pixels; all other pixels protected.")
+            )
+            mask_previewed = True
+            current_mask = None
+            mask_confirmation.setChecked(False)
+            window.exec()
+
+        preview_button.clicked.connect(preview_mask)
+
+        def inspect_mask() -> None:
+            nonlocal current_mask
+            if current_proposal is None or not mask_previewed:
+                QMessageBox.warning(dialog, "Stage C2 Blocked", "Preview the source-bound mask first.")
+                return
+            try:
+                evidence = prepare_reviewed_mask(
+                    current_proposal,
+                    source_path=report.snapshot.image_path,
+                    reviewer_confirmed_mask=mask_confirmation.isChecked(),
+                )
+                inspect_reviewed_mask(
+                    evidence,
+                    proposal=current_proposal,
+                    source_path=report.snapshot.image_path,
+                )
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Stage C2 Evidence Blocked", str(exc))
+                return
+            current_mask = evidence
+            details.setPlainText(evidence.describe())
+
+        inspect_mask_button.clicked.connect(inspect_mask)
+
+        def save_mask() -> None:
+            if current_mask is None or current_proposal is None:
+                QMessageBox.warning(dialog, "Stage C2 Save Blocked", "Inspect reviewed mask evidence first.")
+                return
+            if not mask_confirmation.isChecked():
+                QMessageBox.warning(dialog, "Stage C2 Save Blocked", "Mask review confirmation is required.")
+                return
+            directory = (
+                report.snapshot.project_root / "Canonical Assets"
+                / report.snapshot.asset_id / ".metadata" / "spatial_masks"
+            )
+            try:
+                if not directory.exists():
+                    if not directory.parent.is_dir() or directory.parent.is_symlink():
+                        raise GeometryCorrectionError("Canonical metadata directory unavailable")
+                    directory.mkdir()
+                path = save_reviewed_mask_once(
+                    current_mask,
+                    proposal=current_proposal,
+                    source_path=report.snapshot.image_path,
+                    destination_directory=directory,
+                )
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Stage C2 Save Blocked", str(exc))
+                return
+            details.setPlainText(
+                current_mask.describe()
+                + f"\\nSaved exclusive non-authoritative mask evidence: {path}"
+            )
+
+        save_mask_button.clicked.connect(save_mask)
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
         close.rejected.connect(dialog.reject)
         layout.addWidget(close)
