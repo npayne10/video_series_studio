@@ -106,6 +106,14 @@ def _bounds(proposal: GovernedCorrectionProposal, size: tuple[int, int]) -> tupl
     return left, top, right, bottom
 
 
+def preview_mask_bounds(
+    proposal: GovernedCorrectionProposal, *, source_path: Path
+) -> tuple[tuple[int, int], tuple[int, int, int, int]]:
+    """Validate source and raster bounds without making an approval claim."""
+    size = _source_image(source_path, proposal)
+    return size, _bounds(proposal, size)
+
+
 def prepare_reviewed_mask(
     proposal: GovernedCorrectionProposal,
     *,
