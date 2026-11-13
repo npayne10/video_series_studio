@@ -145,6 +145,33 @@ def test_modified_mask_bytes_or_authority_rejected(tmp_path):
         )
 
 
+def test_pixel_tampering_rejected_even_with_recomputed_digest(tmp_path):
+    import hashlib
+    import io
+
+    source = _source(tmp_path)
+    proposal = _proposal(source)
+    evidence = prepare_reviewed_mask(
+        proposal, source_path=source, reviewer_confirmed_mask=True
+    )
+    with Image.open(io.BytesIO(evidence.mask_png)) as mask:
+        altered = mask.copy()
+    altered.putpixel((0, 0), 255)
+    buffer = io.BytesIO()
+    altered.save(buffer, format="PNG")
+    payload = buffer.getvalue()
+    with pytest.raises(GeometryCorrectionError, match="Mask pixels"):
+        inspect_reviewed_mask(
+            replace(
+                evidence,
+                mask_png=payload,
+                mask_sha256=hashlib.sha256(payload).hexdigest(),
+            ),
+            proposal=proposal,
+            source_path=source,
+        )
+
+
 def test_mask_evidence_exclusive_storage_and_no_candidate_mutation(tmp_path):
     source = _source(tmp_path)
     proposal = _proposal(source)
