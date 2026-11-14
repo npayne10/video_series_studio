@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QLabel,
+    QMessageBox,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -225,8 +226,9 @@ class SourceImageRoiDialog(QDialog):
                 source_width=self.canvas.width(),
                 source_height=self.canvas.height(),
             )
-        except OSError as exc:
-            raise GeometryCorrectionError("Source Candidate cannot be rechecked") from exc
+        except (OSError, GeometryCorrectionError) as exc:
+            QMessageBox.warning(self, "ROI Selection Blocked", str(exc))
+            return
         self.selected_region = region
         self.selected_pixel_bounds = bounds
         self.accept()
