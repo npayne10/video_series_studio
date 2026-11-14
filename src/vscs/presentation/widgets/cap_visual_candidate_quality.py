@@ -367,13 +367,22 @@ class CandidateQualityReportDialog(QDialog):
                 if selector.selected_region is None:
                     raise GeometryCorrectionError("Source-image ROI was not selected")
             except Exception as exc:
-                # Qt signal callbacks can otherwise fail silently without console output.
-                logging.getLogger(__name__).exception("F5.4.2 source ROI selector failed")
+                # Never interpolate arbitrary Qt exception text: PySide may embed
+                # megabytes of PNG bytes when reporting a failed image overload.
+                error_type = type(exc).__name__
+                logging.getLogger(__name__).error(
+                    "F5.4.2 source ROI selector failed (%s)", error_type
+                )
+                message = (
+                    str(exc)[:240]
+                    if isinstance(exc, GeometryCorrectionError)
+                    else "Unexpected ROI image/viewer error (details suppressed)."
+                )
                 QMessageBox.warning(
                     dialog,
                     "ROI Selection Failed",
                     "Could not open or apply the source ROI selector.\n"
-                    f"{type(exc).__name__}: {exc}\n"
+                    f"{error_type}: {message}\n"
                     "No Stage B evidence, mask or Candidate was modified.",
                 )
                 return
