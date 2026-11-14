@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-04  
+**Last verified:** 2026-11-14 (F5.4.2 C2 code and automated test results; C2 UI acceptance pending)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1225,3 +1225,78 @@ git status --short
 The operator opened **F5.4.2 — General Visual Correction Review (Advisory)** from the Diagnostic Console's existing Candidate review. The submitted screenshot shows Candidate **4**, four reviewed Draft fields (`components`, `geometry`, `materials`, `scale`) individually marked `REQUIRES_HUMAN_VERIFICATION`, and preserved advisory semantic findings (raised dial, unclear workstation separation, unreviewed details). The operator chose reviewed field `components`, defect `missing_component`, and observation “The visual candidate does not contain the required recessed rotary control.” Selecting **Classify and Inspect (No Generation)** yielded `reconstruct_component -> verify_design` and explicitly displayed no API call, Candidate registration, Canon approval or attempt reservation.
 
 **Disposition:** F5.4.2 **Stage A software and visible UI workflow accepted**: latest verified baseline **2,800 passed, 1 skipped**, Ruff and Mypy clean. UI screenshot establishes successful field display, classification and stage selection; it is not an independent filesystem audit of non-mutation. The review still refers to Candidate 4's saved report, **not** the later visually approved external `run_004` illustration. No retrospective semantic-pass claim, CAP promotion or Candidate 4 Attempt 2/2 release. Stage B should add structured per-requirement visual evidence and review-only spatial proposals, with no generation by default.
+
+
+## F5.4.2 Stage B, C1 and C2 — controlled visual correction operator guide (2026-11-14)
+
+**Status and authority:** Stage B was accepted on 2026-11-13 following the operator's Candidate 4 non-mutation confirmation. Stage C1 was accepted on 2026-11-13 after the operator inspected the sealed non-executable handoff and confirmed that Candidate 4, the saved report, CAP authority and attempt count were unchanged. **Stage C2 is implementation-complete but awaiting an actual UI mask-preview and non-mutation acceptance test.** The latest Windows regression reported 92 focused tests and 2,829 full-suite tests passing, with one Windows symlink skip. Ruff lint and Mypy (707 source files) passed; final formatting fixes need a post-commit recheck.
+
+### Mandatory development documentation and controlled UI test protocol
+
+For **every new feature or material workflow change**, update this main User Manual **and** `docs/user_manual/README.md` in the same development branch, before requesting operator acceptance. Document the feature's purpose, menu path, prerequisites, exact button labels, inputs, expected UI response, persistent changes, limitations, permissions, stop conditions and verification status. Code-implemented does not mean UI-accepted.
+
+Every UI acceptance response must start **at VSCS launch**, not halfway through a dialog. Supply a reproducible numbered journey containing: current Git branch/commit; working-tree safety; exact startup command; project selection and identity; sidebar/menu navigation; source Candidate and reviewed CAP preflight; permitted/no-cost or explicit-consent API choices; exact controls and representative non-authoritative inputs; expected results after **each** click; screenshots or file hashes to capture; stop/retry criteria; non-mutation audit; exit/cleanup and final operator acceptance. Distinguish UI observations from independently tested side effects. Stop if an expected control is absent, the wrong project/Candidate is active, or a confirmation is misleading.
+
+### C2 preconditions and start-to-finish acceptance — controlled, no generation
+
+**Test identity:** `F5.4.2-C2-UI-01`. Use the existing VSCS project that contains the already reviewed Diagnostic Console CAP (`STORY-PRO-B00D168E43`) and the eligible existing saved Candidate review. The *source Candidate reference ID, image path and SHA-256 must be read from the active application*; never assume the source is Candidate 4 because of earlier screenshots. Candidate 4's final governed Attempt **2/2** stays protected. The closed dial-specific GPU experiments must not be restarted.
+
+1. **Prepare the local software.** Close VSCS before updating. In PowerShell execute:
+
+   ```powershell
+   cd D:\VSCS\video_series_studio
+   git status --short
+   git fetch origin
+   git switch phase-f5.4.2-stage-c2-human-reviewed-mask-evidence
+   git pull --ff-only origin phase-f5.4.2-stage-c2-human-reviewed-mask-evidence
+   git rev-parse --short HEAD
+   python -m ruff check .
+   python -m ruff format --check --no-cache .
+   python -m mypy src
+   ```
+
+   Stop for any failed static check or unexpected tracked modifications. Preserve the existing untracked architecture audit and Qwen preflight files. Use the Python virtual environment installed for this repository.
+
+2. **Start VSCS from the repository root.** With `(.venv)` active, run `python -m vscs.main` only if it launches the GUI in your environment; the project's declared installed command is **`vscs`**, from `pyproject.toml`. Preferred command for the installed editable environment:
+
+   ```powershell
+   vscs
+   ```
+
+   Confirm the main VSCS window appears. If the command is unavailable, **stop and report the error**; do not invent a second executable or change environments during this controlled test.
+
+3. **Verify project before any action.** On VSCS's main window inspect **Dashboard → Active Project** and confirm the expected existing project's path and title. If another project is open, use the application's project-opening control to select the correct existing project and recheck the Dashboard. Do **not** create a new project or modify production Story/CAP records to make this test work. Record the project name and active directory.
+
+4. **Navigate to the Candidate.** Open **Canonical Profiles** in the left navigation, select the Diagnostic Console CAP (`STORY-PRO-B00D168E43`), choose **Edit Selected**, then open the **Canonical Reference Gallery**. Select the eligible **Supplementary Image Candidate** with the previously saved semantic quality review. Record the displayed Candidate ID, role, status and source image path. Do not click Approve, Set as Primary, Generate or any corrective-generation control.
+
+5. **Open an eligible Quality Review dialog without new billing.** The tested F5.4.2 entry is inside **Visual Candidate Quality Review — Advisory**. If it is **already open** from a prior completed report, use that dialog. The existing **Review Visual Candidate…** control starts a *new* evaluation with offline/paid options; it is **not a guaranteed saved-report viewer**. Do not approve a new semantic API request merely to reach C2. If no eligible report dialog is open and there is no verified no-cost way to reopen the saved report, **STOP at this checkpoint**, record the visible navigation/buttons and request a dedicated saved-report reopening control. Do not use **Correct From Saved Review…** to launch correction or consume an attempt.
+
+6. **Enter Stage B.** From **Visual Candidate Quality Review — Advisory**, choose **F5.4.2 Review General Visual Correction (No Generation)…**. Confirm the dialog title, all accepted Draft CAP fields, advisory semantic findings and zero generation authority. If the field list differs from the saved CAP review, stop.
+
+7. **Review each accepted field independently.** For every field choose its name at **Reviewed Draft CAP field**, inspect the source image, and enter the correct **Stage B** status and a specific observation. For one genuinely failed target use `FAILED`, a corresponding defect type and a normalized proposed ROI `x,y,width,height`; press **Inspect Stage B Evidence / ROI (No Generation)**. Only mark other fields `VERIFIED BY OPERATOR` when genuinely satisfied. The progress label should increase to `N of N fields reviewed`. Switch back to a previously reviewed field: its own status, observation, defect and ROI should reappear. If field values are crossed, stop and capture a screenshot. If more than one field fails or any remains unknown, the single-target C1 handoff must block; **never fabricate a pass**.
+
+8. **Inspect C1 handoff.** Re-select the failed target; compare the ROI with the real image, tick **I inspected the ROI against the source image** only when true, then press **Inspect Stage C Governed Handoff (No Generation)**. Confirm the proposal SHA-256, target field, source SHA-256, defect, bounds, correction stages and explicit no-generation statement. This is an in-memory handoff, not saved mask evidence.
+
+9. **Preview C2 editable region.** Press **Preview Stage C2 Editable Region (No Generation)**. A separate dialog titled **C2 Source-bound editable area preview (red overlay)** should show the source image with a red rectangle over only the proposed editable area. The rectangle must cover the actual defect and avoid unnecessary background/canonical detail. **Do not reuse `0.1,0.2,0.3,0.4` simply because it was an example**. If incorrect, close the preview, return to Stage B, enter corrected coordinates, re-inspect Stage B and regenerate the non-executable C1 proposal. Do not confirm or save a wrong region.
+
+10. **Explicitly inspect the mask.** Close the preview. Tick **I reviewed the mask preview against the source image; the white area is editable** only after examining it. Press **Inspect C2 Mask Evidence (No Generation)**. Expect the source-image dimensions, integer pixel bounds, count of proposed editable pixels, mask PNG SHA-256 and explicit statement that this is **not** provider mask capability or protected-pixel proof. Preserve a screenshot and transcribe the displayed mask SHA-256. White means editable and black protected in the stored 8-bit grayscale mask.
+
+11. **Test controlled saving only with an acceptable preview.** Press **Save C2 Mask Evidence (No Generation)**. Expect exactly one new PNG under `Canonical Assets/<asset_id>/.metadata/spatial_masks`, named `c2-...`. The save is an intentional new **evidence artifact**, not modification of Candidate images, quality report, CAP data, Canon/MASTER or attempt counters. Check the output path, file existence, image dimensions and SHA-256 against the displayed values. Repeating **Save** for the same proposal/mask must refuse overwrite. If the preview is not acceptable, do **not** save.
+
+12. **Non-mutation audit.** Compare the original source image SHA-256, saved semantic report, Candidate gallery identity/status, governed attempts and CAP/Canon status before and after the review. Candidate 4's final Attempt 2/2 must remain unchanged. Inspect that there is no ComfyUI submission, API call, image regeneration or Candidate registration. The new mask PNG is the **only permitted intentional write**, plus creating its empty `spatial_masks` directory if absent.
+
+13. **Exit and record evidence.** Close the advisory dialogs and VSCS normally; do not approve or register a Candidate. Record: project/Candidate ID, source SHA-256, chosen field/defect, accepted ROI, C1 proposal hash, mask dimensions/bounds/count/hash, new evidence path, duplicate-save rejection, any warnings, screenshots, and non-mutation confirmation. C2 remains **pending acceptance** until the operator explicitly approves these results.
+
+**Stop immediately** on absent controls, unexpected new billing/generation prompts, stale source hashes, an ROI covering the wrong physical area, a second failed mandatory field, mask dimensions differing from the source, changed CAP authority, modified source Candidate, or a consumed attempt. Do not bypass safeguards using direct file/database edits.
+
+### Current F5.4.2 stage status
+
+| Stage | Status | What is accepted |
+|---|---|---|
+| A | Operator accepted, 2026-11-12 | Typed, non-executable defect triage |
+| B | Operator accepted, 2026-11-13 | Source-bound field evidence and advisory ROI |
+| C1 | Operator accepted, 2026-11-13 | Sealed non-executable correction handoff |
+| C2 | Code implemented; UI acceptance pending | Proposed mask preview, explicit review, exclusive evidence PNG |
+| C3/C4 | Not accepted | Provider mask binding, corrected-Candidate generation |
+
+See also [C2 engineering acceptance contract](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md). This section is an operator procedure and must be revised if actual UI behavior differs from its tested controls.
