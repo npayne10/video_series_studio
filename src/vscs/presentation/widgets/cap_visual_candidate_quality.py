@@ -316,8 +316,12 @@ class CandidateQualityReportDialog(QDialog):
         layout.addWidget(review_progress)
 
         def restore_selected_field() -> None:
-            nonlocal selected_region
+            nonlocal selected_region, current_proposal, current_mask, mask_previewed
             roi_confirmation.setChecked(False)
+            mask_confirmation.setChecked(False)
+            current_proposal = None
+            current_mask = None
+            mask_previewed = False
             selected_region = None
             roi.clear()
             if current_evidence is None:
@@ -379,6 +383,7 @@ class CandidateQualityReportDialog(QDialog):
 
         def inspect_spatial_evidence() -> None:
             nonlocal current_evidence, current_proposal, current_mask, mask_previewed
+            nonlocal selected_region
             try:
                 state = VisualEvidenceStatus(str(evidence_status.currentData()))
                 region = selected_region if state is VisualEvidenceStatus.FAILED else None
@@ -400,6 +405,9 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Stage B Evidence Blocked", str(exc))
                 return
             current_evidence = evidence
+            if state is not VisualEvidenceStatus.FAILED:
+                selected_region = None
+                roi.clear()
             current_proposal = None
             current_mask = None
             mask_previewed = False
