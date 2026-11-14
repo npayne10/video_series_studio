@@ -6,7 +6,10 @@ import pytest
 from PIL import Image
 from PySide6.QtCore import QPoint, QRect, Qt
 
+from decimal import Decimal
+
 from vscs.application.caps.geometry_correction_policy import GeometryCorrectionError
+from vscs.application.caps.human_reviewed_mask_evidence import _pixel_edge
 from vscs.presentation.dialogs.source_image_roi_dialog import (
     SourceImageRoiDialog,
     pixel_rect_to_region,
@@ -107,3 +110,19 @@ def test_selector_rejects_changed_source_on_apply(qtbot, tmp_path, monkeypatch):
     dialog.apply_button.click()
     assert warnings
     assert dialog.selected_region is None
+
+
+def test_normalized_drag_edges_roundtrip_to_original_integer_pixels():
+    region = pixel_rect_to_region(
+        QRect(575, 240, 84, 48), source_width=1392, source_height=752
+    )
+    assert _pixel_edge(Decimal(str(region.x)) * 1392, upper=False) == 575
+    assert _pixel_edge(
+        (Decimal(str(region.x)) + Decimal(str(region.width))) * 1392,
+        upper=True,
+    ) == 659
+    assert _pixel_edge(Decimal(str(region.y)) * 752, upper=False) == 240
+    assert _pixel_edge(
+        (Decimal(str(region.y)) + Decimal(str(region.height))) * 752,
+        upper=True,
+    ) == 288
