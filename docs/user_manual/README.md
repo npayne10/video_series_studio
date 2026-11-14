@@ -10,6 +10,24 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
+## Saved Candidate AI review reuse — no repeat charge (2026-11-14)
+
+**Implementation added; Windows/UI validation pending.** In **Canonical Profiles
+→ Edit Selected → Canonical Reference Gallery**, select the existing reviewed
+supplementary image Candidate and choose **Open Saved Candidate Review…**.
+This new control opens the previously saved AI semantic-quality report and
+F5.4.2 Stage B/C1/C2 review UI **without running OpenAI, rerunning CIEE,
+consuming attempts or generating**. It checks the current source-image SHA,
+CAP fingerprints, reviewed requirements and report metadata; stale or missing
+reports fail closed. The AI result persists, while Stage B field findings and
+C1 proposals remain in-memory per dialog session.
+
+For complete preflight, **VSCS startup**, exact navigation, expected output,
+negative tests, and non-mutation acceptance use
+[Controlled UI test F5.4.2-SAVED-01](VSCS_User_Manual.md#f542--reopen-saved-candidate-review-without-repeating-paid-ai-analysis-new-workflow).
+Never click **Review Visual Candidate… → Yes** merely to access the saved
+review; that invokes an additional billable vision evaluation.
+
 ## Mandatory feature documentation and controlled UI acceptance (2026-11-14)
 
 Every implemented functionality change must update **this index** and the
