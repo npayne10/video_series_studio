@@ -9,8 +9,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, QRect, Qt
-from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen, QPixmap
+from PySide6.QtCore import QPoint, QRect, Qt, Signal
+from PySide6.QtGui import QColor, QMouseEvent, QPaintEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -51,6 +51,8 @@ def pixel_rect_to_region(
 
 class SourceImageRoiCanvas(QWidget):
     """Actual-size image canvas. Drag selects half-open source pixel boundaries."""
+
+    selection_changed = Signal()
 
     def __init__(self, pixmap: QPixmap, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -106,11 +108,12 @@ class SourceImageRoiCanvas(QWidget):
             self._anchor = None
             self._drag_end = None
             self.update()
+            self.selection_changed.emit()
             event.accept()
         else:
             super().mouseReleaseEvent(event)
 
-    def paintEvent(self, _event: object) -> None:
+    def paintEvent(self, _event: QPaintEvent) -> None:
         painter = QPainter(self)
         try:
             painter.drawPixmap(0, 0, self._image)
@@ -190,10 +193,7 @@ class SourceImageRoiDialog(QDialog):
         controls.rejected.connect(self.reject)
         layout.addWidget(controls)
         # Readout is updated on mouse release, never on tentative drag.
-        original_release = self.canvas.mouseReleaseEvent
-
-        def update_release(event: QMouseEvent) -> None:
-            original_release(event)
+        def update_selection() -> None:
             bounds = self.canvas.selected_bounds
             self.apply_button.setEnabled(bounds is not None)
             if bounds is not None:
@@ -211,7 +211,7 @@ class SourceImageRoiDialog(QDialog):
             else:
                 self.readout.setText("Selection too small. Drag a rectangle (at least 2×2 pixels).")
 
-        self.canvas.mouseReleaseEvent = update_release  # type: ignore[method-assign]
+        self.canvas.selection_changed.connect(update_selection)
 
     def _apply(self) -> None:
         bounds = self.canvas.selected_bounds
