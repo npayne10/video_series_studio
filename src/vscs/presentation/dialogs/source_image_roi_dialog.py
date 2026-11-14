@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from typing import override
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QMouseEvent, QPaintEvent, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -25,9 +26,7 @@ from vscs.application.caps.geometry_correction_policy import GeometryCorrectionE
 from vscs.application.caps.spatial_visual_evidence import NormalizedRegion
 
 
-def pixel_rect_to_region(
-    rect: QRect, *, source_width: int, source_height: int
-) -> NormalizedRegion:
+def pixel_rect_to_region(rect: QRect, *, source_width: int, source_height: int) -> NormalizedRegion:
     """Convert a half-open pixel rectangle into a normalized source-image ROI."""
     if (
         type(source_width) is not int
@@ -81,6 +80,7 @@ class SourceImageRoiCanvas(QWidget):
             abs(a.y() - b.y()),
         )
 
+    @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._anchor = self._point(event)
@@ -91,6 +91,7 @@ class SourceImageRoiCanvas(QWidget):
         else:
             super().mousePressEvent(event)
 
+    @override
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self._anchor is not None:
             self._drag_end = self._point(event)
@@ -99,6 +100,7 @@ class SourceImageRoiCanvas(QWidget):
         else:
             super().mouseMoveEvent(event)
 
+    @override
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self._anchor is not None:
             self._drag_end = self._point(event)
@@ -114,6 +116,7 @@ class SourceImageRoiCanvas(QWidget):
         else:
             super().mouseReleaseEvent(event)
 
+    @override
     def paintEvent(self, _event: QPaintEvent) -> None:
         painter = QPainter(self)
         try:
@@ -153,7 +156,7 @@ class SourceImageRoiDialog(QDialog):
         if hashlib.sha256(raw).hexdigest() != expected_source_sha256:
             raise GeometryCorrectionError("Source Candidate changed; ROI selection blocked")
         pixmap = QPixmap()
-        if not pixmap.loadFromData(raw, "PNG") or pixmap.isNull():
+        if not pixmap.loadFromData(raw, b"PNG") or pixmap.isNull():
             raise GeometryCorrectionError("Candidate PNG could not be decoded")
         if not 0 < pixmap.width() * pixmap.height() <= 40_000_000:
             raise GeometryCorrectionError("Source image dimensions exceed safe limit")
@@ -164,7 +167,7 @@ class SourceImageRoiDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(
             QLabel(
-                f"Source: {pixmap.width()} × {pixmap.height()} px — 100% resolution. "
+                f"Source: {pixmap.width()} x {pixmap.height()} px — 100% resolution. "
                 "Scroll to the target and drag a tight rectangle around the editable area."
             )
         )
@@ -193,6 +196,7 @@ class SourceImageRoiDialog(QDialog):
         controls.accepted.connect(self._apply)
         controls.rejected.connect(self.reject)
         layout.addWidget(controls)
+
         # Readout is updated on mouse release, never on tentative drag.
         def update_selection() -> None:
             bounds = self.canvas.selected_bounds
@@ -210,7 +214,7 @@ class SourceImageRoiDialog(QDialog):
                     f"{region.width:.8f},{region.height:.8f}"
                 )
             else:
-                self.readout.setText("Selection too small. Drag a rectangle (at least 2×2 pixels).")
+                self.readout.setText("Selection too small. Drag a rectangle (at least 2x2 pixels).")
 
         self.canvas.selection_changed.connect(update_selection)
 
