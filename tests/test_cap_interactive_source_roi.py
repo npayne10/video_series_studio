@@ -123,12 +123,11 @@ def test_normalized_drag_edges_roundtrip_to_original_integer_pixels():
     )
 
 
-def test_selector_does_not_call_pyside_in_memory_image_overload(
-    qtbot, tmp_path, monkeypatch
-):
+def test_selector_does_not_call_pyside_in_memory_image_overload(qtbot, tmp_path, monkeypatch):
     from PySide6.QtGui import QPixmap
 
     source, digest = _candidate(tmp_path)
+
     def broken_in_memory_loader(*_args, **_kwargs):
         raise AssertionError("In-memory PySide6 image overload must never be used")
 
