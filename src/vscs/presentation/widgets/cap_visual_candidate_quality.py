@@ -316,9 +316,7 @@ class CandidateQualityReportDialog(QDialog):
             item = next((i for i in current_evidence.reviewed_fields if i.field == name), None)
             if item is None:
                 return
-            evidence_status.setCurrentIndex(
-                evidence_status.findData(item.status.value)
-            )
+            evidence_status.setCurrentIndex(evidence_status.findData(item.status.value))
             reason.setPlainText(item.observation)
             if item.defect is not None:
                 defect.setCurrentIndex(defect.findData(item.defect.value))
@@ -454,8 +452,12 @@ class CandidateQualityReportDialog(QDialog):
             window_layout = QVBoxLayout(window)
             label = QLabel(window)
             label.setPixmap(
-                preview.scaled(760, 520, Qt.AspectRatioMode.KeepAspectRatio,
-                               Qt.TransformationMode.SmoothTransformation)
+                preview.scaled(
+                    760,
+                    520,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
             )
             window_layout.addWidget(label)
             window_layout.addWidget(
@@ -471,7 +473,9 @@ class CandidateQualityReportDialog(QDialog):
         def inspect_mask() -> None:
             nonlocal current_mask
             if current_proposal is None or not mask_previewed:
-                QMessageBox.warning(dialog, "Stage C2 Blocked", "Preview the source-bound mask first.")
+                QMessageBox.warning(
+                    dialog, "Stage C2 Blocked", "Preview the source-bound mask first."
+                )
                 return
             try:
                 evidence = prepare_reviewed_mask(
@@ -494,14 +498,21 @@ class CandidateQualityReportDialog(QDialog):
 
         def save_mask() -> None:
             if current_mask is None or current_proposal is None:
-                QMessageBox.warning(dialog, "Stage C2 Save Blocked", "Inspect reviewed mask evidence first.")
+                QMessageBox.warning(
+                    dialog, "Stage C2 Save Blocked", "Inspect reviewed mask evidence first."
+                )
                 return
             if not mask_confirmation.isChecked():
-                QMessageBox.warning(dialog, "Stage C2 Save Blocked", "Mask review confirmation is required.")
+                QMessageBox.warning(
+                    dialog, "Stage C2 Save Blocked", "Mask review confirmation is required."
+                )
                 return
             directory = (
-                report.snapshot.project_root / "Canonical Assets"
-                / report.snapshot.asset_id / ".metadata" / "spatial_masks"
+                report.snapshot.project_root
+                / "Canonical Assets"
+                / report.snapshot.asset_id
+                / ".metadata"
+                / "spatial_masks"
             )
             try:
                 if not directory.exists():
