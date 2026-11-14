@@ -567,3 +567,43 @@ def test_technical_only_report_cannot_be_opened_as_saved_semantic(tmp_path, monk
     service.save(service.evaluate(snapshot))
     with pytest.raises(CandidateQualityError, match="semantic"):
         reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
+
+
+def test_open_saved_review_ui_does_not_run_new_evaluation(qtbot, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QDialog, QWidget
+
+    from vscs.presentation.widgets import cap_visual_candidate_quality as ui
+
+    service, refs, prep, _image, original, path, provider = _saved_semantic_scenario(
+        tmp_path, monkeypatch
+    )
+    service.evaluate = Mock(side_effect=AssertionError("No new evaluation allowed"))
+    service.save = Mock(side_effect=AssertionError("No new report allowed"))
+    monkeypatch.setattr(ui, "CandidateQualityReviewService", lambda _refs: service)
+    recorded = []
+
+    class SavedDialog:
+        def __init__(self, result, relative_path, *_args):
+            recorded.append((result, relative_path))
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(ui, "CandidateQualityReportDialog", SavedDialog)
+    host = QWidget()
+    qtbot.addWidget(host)
+    host.reference_gallery = SimpleNamespace(
+        selected_reference=lambda: refs.get.return_value
+    )
+    host.profile = SimpleNamespace(asset_id=prep.asset_id)
+    host.reference_service = refs
+    ui._reopen_saved_candidate_review(host)
+    assert len(recorded) == 1
+    assert recorded[0][0].as_dict() == original.as_dict()
+    assert recorded[0][1] == str(path.relative_to(tmp_path))
+    assert provider.evaluate.call_count == 1
+    service.evaluate.assert_not_called()
+    service.save.assert_not_called()
+    refs.approve.assert_not_called()
+    refs.archive.assert_not_called()
+    refs.set_primary.assert_not_called()
