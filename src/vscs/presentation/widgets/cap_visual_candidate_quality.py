@@ -40,6 +40,7 @@ from vscs.application.caps.human_reviewed_mask_evidence import (
     save_reviewed_mask_once,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.application.caps.saved_candidate_review import reopen_saved_candidate_review
 from vscs.application.caps.spatial_visual_evidence import (
     NormalizedRegion,
     SpatialEvidenceReview,
@@ -640,6 +641,27 @@ def _review_selected(dialog: Any) -> None:
         dialog._refresh_references()
 
 
+def _reopen_saved_candidate_review(dialog: Any) -> None:
+    """Open saved semantic evidence directly without any provider request."""
+    gallery = getattr(dialog, "reference_gallery", None)
+    selected = None if gallery is None else gallery.selected_reference()
+    profile = getattr(dialog, "profile", None)
+    refs = getattr(dialog, "reference_service", None)
+    if selected is None or profile is None or refs is None:
+        QMessageBox.information(dialog, "Saved Candidate Review", "Select a Candidate first.")
+        return
+    try:
+        service = CandidateQualityReviewService(refs)
+        result, path = reopen_saved_candidate_review(service, profile.asset_id, selected.id)
+        relative = str(path.relative_to(result.snapshot.project_root))
+    except (OSError, RuntimeError, ValueError) as exc:
+        QMessageBox.warning(dialog, "Saved Candidate Review Unavailable", str(exc))
+        return
+    window = CandidateQualityReportDialog(result, relative, dialog, refs)
+    if window.exec() == QDialog.DialogCode.Accepted:
+        dialog._refresh_references()
+
+
 def _correct_from_saved_report(dialog: Any) -> None:
     gallery = getattr(dialog, "reference_gallery", None)
     selected = None if gallery is None else gallery.selected_reference()
@@ -691,6 +713,7 @@ def _record_human_from_saved_report(dialog: Any) -> None:
 
 def _update_button(dialog: Any) -> None:
     button = getattr(dialog, "candidate_quality_button", None)
+    saved_button = getattr(dialog, "candidate_saved_review_button", None)
     correction_button = getattr(dialog, "candidate_correction_button", None)
     human_button = getattr(dialog, "candidate_human_correction_button", None)
     gallery = getattr(dialog, "reference_gallery", None)
@@ -710,6 +733,8 @@ def _update_button(dialog: Any) -> None:
     )
     if button is not None:
         button.setEnabled(enabled)
+    if saved_button is not None:
+        saved_button.setEnabled(enabled)
     if correction_button is not None:
         correction_button.setEnabled(enabled)
     if human_button is not None:
@@ -733,13 +758,23 @@ def install_visual_candidate_quality_review() -> None:
         )
         self.candidate_quality_button.clicked.connect(lambda: _review_selected(self))
         self.layout().insertWidget(2, self.candidate_quality_button)
+        self.candidate_saved_review_button = QPushButton("Open Saved Candidate Review…")
+        self.candidate_saved_review_button.setObjectName("openSavedCandidateQualityReview")
+        self.candidate_saved_review_button.setToolTip(
+            "Reopen the latest saved semantic quality report for Stage B/C1/C2; "
+            "never runs a new API evaluation, correction or generation."
+        )
+        self.candidate_saved_review_button.clicked.connect(
+            lambda: _reopen_saved_candidate_review(self)
+        )
+        self.layout().insertWidget(3, self.candidate_saved_review_button)
         self.candidate_correction_button = QPushButton("Correct From Saved Review…")
         self.candidate_correction_button.setObjectName("correctFromSavedCandidateReview")
         self.candidate_correction_button.setToolTip(
             "Reopen the latest persisted semantic review; no new Terra request"
         )
         self.candidate_correction_button.clicked.connect(lambda: _correct_from_saved_report(self))
-        self.layout().insertWidget(3, self.candidate_correction_button)
+        self.layout().insertWidget(4, self.candidate_correction_button)
         self.candidate_human_correction_button = QPushButton(
             "Record Human Correction From Saved Review…"
         )
@@ -751,7 +786,7 @@ def install_visual_candidate_quality_review() -> None:
         self.candidate_human_correction_button.clicked.connect(
             lambda: _record_human_from_saved_report(self)
         )
-        self.layout().insertWidget(4, self.candidate_human_correction_button)
+        self.layout().insertWidget(5, self.candidate_human_correction_button)
         if hasattr(self, "reference_gallery"):
             self.reference_gallery.gallery.currentItemChanged.connect(
                 lambda *_: _update_button(self)
