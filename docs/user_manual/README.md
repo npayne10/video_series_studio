@@ -10,6 +10,24 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
+## Interactive source-image ROI selection — F5.4.2 C2 (2026-11-14)
+
+**Code implemented; Windows and UI acceptance pending.** The Stage B
+normalized ROI field is now **read-only**. Press **Select ROI on Source Image
+(No Generation)** to open a 100%-pixel-resolution, scrollable Candidate preview.
+Drag the red rectangle around the actual defect, check the pixel and normalized
+coordinates, then press **Apply Selected ROI (No Generation)**. This is an
+uncommitted proposal until **Inspect Stage B Evidence / ROI (No Generation)**.
+Cancel does nothing. The Candidate source hash is revalidated before display
+and application. Pixel-edge conversion is made stable against floating point
+rounding, avoiding an extra row or column in a later mask.
+
+Use the [fully controlled VSCS-launch-to-ROI test](VSCS_User_Manual.md#f542-c2--interactive-source-image-roi-selection-implementation-candidate)
+before accepting this change. The procedure includes the saved (non-billable)
+AI review, exact sidebar and CAP gallery route, a cancellation negative test,
+field isolation, screenshots and source/CAP/attempt non-mutation confirmation.
+**The ROI selector cannot approve a mask or generate an image.**
+
 ## Saved Candidate AI review reuse — no repeat charge (2026-11-14)
 
 **Implementation added; Windows/UI validation pending.** In **Canonical Profiles
