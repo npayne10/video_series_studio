@@ -1,12 +1,11 @@
 """F5.4.2 C2: source-resolution ROI selection has no generation authority."""
 
 import hashlib
+from decimal import Decimal
 
 import pytest
 from PIL import Image
 from PySide6.QtCore import QPoint, QRect, Qt
-
-from decimal import Decimal
 
 from vscs.application.caps.geometry_correction_policy import GeometryCorrectionError
 from vscs.application.caps.human_reviewed_mask_evidence import _pixel_edge
@@ -17,13 +16,7 @@ from vscs.presentation.dialogs.source_image_roi_dialog import (
 
 
 def _candidate(tmp_path):
-    directory = (
-        tmp_path
-        / "Canonical Assets"
-        / "STORY-ROI"
-        / "Images"
-        / "Visual Candidates"
-    )
+    directory = tmp_path / "Canonical Assets" / "STORY-ROI" / "Images" / "Visual Candidates"
     directory.mkdir(parents=True)
     source = directory / "test.png"
     Image.new("RGB", (1392, 752), (40, 50, 60)).save(source)
@@ -32,9 +25,7 @@ def _candidate(tmp_path):
 
 
 def test_pixel_rectangle_converts_to_normalized_source_coordinates():
-    region = pixel_rect_to_region(
-        QRect(575, 240, 84, 48), source_width=1392, source_height=752
-    )
+    region = pixel_rect_to_region(QRect(575, 240, 84, 48), source_width=1392, source_height=752)
     assert region.x == 575 / 1392
     assert region.y == 240 / 752
     assert region.width == 84 / 1392
@@ -113,16 +104,20 @@ def test_selector_rejects_changed_source_on_apply(qtbot, tmp_path, monkeypatch):
 
 
 def test_normalized_drag_edges_roundtrip_to_original_integer_pixels():
-    region = pixel_rect_to_region(
-        QRect(575, 240, 84, 48), source_width=1392, source_height=752
-    )
+    region = pixel_rect_to_region(QRect(575, 240, 84, 48), source_width=1392, source_height=752)
     assert _pixel_edge(Decimal(str(region.x)) * 1392, upper=False) == 575
-    assert _pixel_edge(
-        (Decimal(str(region.x)) + Decimal(str(region.width))) * 1392,
-        upper=True,
-    ) == 659
+    assert (
+        _pixel_edge(
+            (Decimal(str(region.x)) + Decimal(str(region.width))) * 1392,
+            upper=True,
+        )
+        == 659
+    )
     assert _pixel_edge(Decimal(str(region.y)) * 752, upper=False) == 240
-    assert _pixel_edge(
-        (Decimal(str(region.y)) + Decimal(str(region.height))) * 752,
-        upper=True,
-    ) == 288
+    assert (
+        _pixel_edge(
+            (Decimal(str(region.y)) + Decimal(str(region.height))) * 752,
+            upper=True,
+        )
+        == 288
+    )
