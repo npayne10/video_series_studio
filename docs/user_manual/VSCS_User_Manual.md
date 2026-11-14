@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-14 (F5.4.2 C2 code and automated test results; C2 UI acceptance pending)  
+**Last verified:** 2026-11-14 (saved-review reopen code added; Windows and UI acceptance pending)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1300,3 +1300,43 @@ Every UI acceptance response must start **at VSCS launch**, not halfway through 
 | C3/C4 | Not accepted | Provider mask binding, corrected-Candidate generation |
 
 See also [C2 engineering acceptance contract](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md). This section is an operator procedure and must be revised if actual UI behavior differs from its tested controls.
+
+
+### F5.4.2 — Reopen Saved Candidate Review without repeating paid AI analysis (new workflow)
+
+**Feature status: CODE IMPLEMENTED / WINDOWS AND OPERATOR UI ACCEPTANCE PENDING.** This is a separate read-only action, not the existing **Review Visual Candidate…** (which starts a fresh evaluation) and not **Correct From Saved Review…** (which opens the governed regeneration workflow).
+
+**Purpose:** VSCS already saves each technical + consented semantic review as a `*.candidate_quality.json` record under `Canonical Assets/<asset_id>/.metadata/evaluation/`. The new **Open Saved Candidate Review…** control reopens the latest eligible saved semantic report and reconstructs the same **Visual Candidate Quality Review — Advisory** dialog and its **F5.4.2 Review General Visual Correction (No Generation)…** entry. Stage B/C1/C2 can then run **without requesting another OpenAI vision call**, repeating offline scoring, reserving correction attempts or generating an image.
+
+**Provenance gates:** reopening independently reads the current supplementary Candidate via `CandidateQualityReviewService.snapshot()` and requires the saved image SHA-256, source reference ID, role/status, CAP specification and review fingerprints, accepted/deferred fields, continuity and dependency context, image path, quality decision, correction-comparison lineage and technical/semantic report structure to agree. A missing, stale, malformed or technical-only newest review is **blocked**, rather than silently using an older report or automatically incurring a fresh charge. A saved semantic JSON record is not independently cryptographically authenticated against a trusted external signature; this feature checks structural and current-source consistency, not proof against deliberate modification of an otherwise internally consistent report.
+
+**Important distinction:** The **AI semantic analysis is saved and reusable**. Stage B's per-field operator verification states and Stage C1's sealed proposals are still session-local and must be reviewed afresh when reopening the dialog. Future persisted operator finding journals require a separate governed design.
+
+#### Controlled UI test F5.4.2-SAVED-01 — start at VSCS launch
+
+1. **Close VSCS**, confirm the test project's baseline image/report SHA values and current Candidate/attempt state, and use PowerShell to retrieve the feature branch:
+   ```powershell
+   cd D:\VSCS\video_series_studio
+   git status --short
+   git fetch origin
+   git switch phase-f5.4.2-c2-saved-review-reopen
+   git pull --ff-only origin phase-f5.4.2-c2-saved-review-reopen
+   git rev-parse --short HEAD
+   python -m ruff check .
+   python -m ruff format --check --no-cache .
+   python -m mypy src
+   python -m pytest -q tests/test_cap_visual_candidate_quality.py tests/test_cap_spatial_visual_evidence.py tests/test_cap_governed_visual_correction_handoff.py tests/test_cap_human_reviewed_mask_evidence.py
+   python -m pytest -q
+   git diff --check
+   git status --short
+   ```
+   Stop if the code or environment fails validation; preserve unrelated untracked files.
+2. **Launch VSCS** from the activated `(.venv)` by executing `vscs` in the same PowerShell console. Confirm the desktop window appears; if the command is not installed, stop and report the launch error rather than changing environments mid-test.
+3. **Confirm the active project** on **Dashboard → Active Project**. Open the existing appropriate project through the app's project selection controls if necessary and verify its actual absolute project path before continuing. Do not create or modify a CAP to manufacture test eligibility.
+4. From the main navigation choose **Canonical Profiles**. Select the already reviewed Diagnostic Console asset (`STORY-PRO-B00D168E43`, if this is still the active test CAP), and click **Edit Selected** to open its CAP editor. Locate the **Canonical Reference Gallery**, select the saved-review supplementary Image Candidate and record its ID, role and file name. Do not assume Candidate 3 or 4 until the live application identifies it.
+5. Click **Open Saved Candidate Review…** — **NOT** **Review Visual Candidate…**, **Correct From Saved Review…** or **Record Human Correction…**. **Expected:** The existing **Visual Candidate Quality Review — Advisory** dialog opens without any Yes/No billable-evaluation prompt. It displays the original AI provider/model, semantic score, features, violations, accepted CAP design fields and source SHA-256. Capture a screenshot.
+6. In that report select **F5.4.2 Review General Visual Correction (No Generation)…**. **Expected:** Stage B displays all mandatory reviewed Draft CAP fields, and advisory AI findings; controls remain non-executable. Follow the [Stage B/C1/C2 detailed operator procedure](#f542-stage-b-c1-and-c2--controlled-visual-correction-operator-guide-2026-11-14) for review and mask work, recording any warnings. A repeated AI evaluation is **not required**.
+7. **Negative test:** if the newest saved review is missing, technical-only or stale, VSCS must show a **Saved Candidate Review Unavailable** warning. It must not offer to charge, generate, approve or silently use an older report. Do not modify any real saved report or source image for this test; use isolated test fixtures for tampering scenarios.
+8. **Non-mutation acceptance:** close the report and VSCS normally, then confirm the Candidate source SHA, the saved evaluation bytes, CAP and Canon authority, generation attempt counters and existing file list are unchanged. No OpenAI call, ComfyUI call or new quality-report file should have been created by reopening. Capture any visible issues and give explicit acceptance only after confirming these boundaries.
+
+**Stop conditions:** incorrect project/Candidate, absent button, unexpected new billing prompt, stale-metadata warning, report source hash mismatch, changed CAP status, modified source bytes, new attempt reservation or any generation request. No operator should use paid `Yes` merely to restore C2 context.
