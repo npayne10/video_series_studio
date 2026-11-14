@@ -1468,6 +1468,35 @@ If the dialog instead opens, verify the actual source image and selection.
 Do **not** progress to C1/C2 while the ROI selector fails. This fix does not
 claim resolution of an as-yet-unreproduced PySide6 runtime cause.
 
+**PySide6 loader failure and correction (2026-11-14):** The first ROI
+operator test did **not** open the selector. The diagnostic update exposed
+`ValueError: PySide6.QtGui.QPixmap.loadFromData called with wrong argument
+values`, with a huge printed binary PNG argument. The selector has now
+been changed to construct a `QPixmap` from the already-hash-verified
+source PNG path, then recheck the file's SHA-256 before presenting its pixels;
+the source hash is also rechecked when clicking Apply. This avoids the
+problematic `loadFromData(raw, b"PNG")` binding. Qt callback diagnostics
+no longer print arbitrary exception text, because it may contain image bytes.
+Focused regression now includes a guard against use of the in-memory
+`loadFromData` overload and rejects invalid PNG content even when its
+digest matches. **Code fix committed; Windows static validation and
+actual ROI UI success still pending.**
+
+**Controlled retest after code pull:** Close VSCS, pull
+`phase-f5.4.2-c2-interactive-roi-selection`, run
+`python -m ruff check .`,
+`python -m ruff format --check --no-cache .`,
+`python -m mypy src`,
+`python -m pytest -q tests/test_cap_interactive_source_roi.py`,
+and then `python -m pytest -q`. Launch `vscs` from the active virtual
+environment; verify Dashboard active project, Canonical Profiles asset,
+supplementary Candidate ID, and reopen via **Open Saved Candidate Review…**
+without a new billable request. Enter F5.4.2, select `components` with
+`FAILED`, then click **Select ROI on Source Image (No Generation)**.
+Expect the full-resolution scrollable PNG ROI selector. Capture the dialog
+screenshot. If it still fails, capture the **short** error message and
+stop; do not continue to C1/C2 or save masks.
+
 **Required evidence:** source-image selector screenshot with exact pixel
 bounds and red rectangle; Stage B screenshot after selecting the ROI; results
 of Ruff/Mypy/focused and full regression; explicit source/CAP/attempt
