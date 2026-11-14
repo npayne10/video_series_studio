@@ -92,7 +92,9 @@ def _source_image(path: Path, proposal: GovernedCorrectionProposal) -> tuple[int
     return size
 
 
-def _bounds(proposal: GovernedCorrectionProposal, size: tuple[int, int]) -> tuple[int, int, int, int]:
+def _bounds(
+    proposal: GovernedCorrectionProposal, size: tuple[int, int]
+) -> tuple[int, int, int, int]:
     # Decimal conversion avoids binary float error at exact pixel boundaries.
     roi = proposal.reviewed_roi
     width, height = size
@@ -133,9 +135,7 @@ def prepare_reviewed_mask(
     size = _source_image(source_path, proposal)
     bounds = _bounds(proposal, size)
     mask = Image.new("L", size, color=0)
-    ImageDraw.Draw(mask).rectangle(
-        (bounds[0], bounds[1], bounds[2] - 1, bounds[3] - 1), fill=255
-    )
+    ImageDraw.Draw(mask).rectangle((bounds[0], bounds[1], bounds[2] - 1, bounds[3] - 1), fill=255)
     buffer = io.BytesIO()
     mask.save(buffer, format="PNG")
     png = buffer.getvalue()
@@ -217,7 +217,9 @@ def save_reviewed_mask_once(
         or not destination_directory.is_dir()
         or destination_directory.resolve(strict=True) != destination_directory
     ):
-        raise GeometryCorrectionError("Mask destination must be existing canonical evidence directory")
+        raise GeometryCorrectionError(
+            "Mask destination must be existing canonical evidence directory"
+        )
     name = f"c2-{proposal.source_reference_id}-{proposal.proposal_sha256[:16]}-{evidence.mask_sha256[:16]}.png"
     path = destination_directory / name
     if path.exists() or path.is_symlink():
