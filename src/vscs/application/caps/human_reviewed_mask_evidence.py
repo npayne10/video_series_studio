@@ -108,12 +108,8 @@ def _bounds(
     width, height = size
     left = _pixel_edge(Decimal(str(roi.x)) * width, upper=False)
     top = _pixel_edge(Decimal(str(roi.y)) * height, upper=False)
-    right = _pixel_edge(
-        (Decimal(str(roi.x)) + Decimal(str(roi.width))) * width, upper=True
-    )
-    bottom = _pixel_edge(
-        (Decimal(str(roi.y)) + Decimal(str(roi.height))) * height, upper=True
-    )
+    right = _pixel_edge((Decimal(str(roi.x)) + Decimal(str(roi.width))) * width, upper=True)
+    bottom = _pixel_edge((Decimal(str(roi.y)) + Decimal(str(roi.height))) * height, upper=True)
     if not (0 <= left < right <= width and 0 <= top < bottom <= height):
         raise GeometryCorrectionError("Review ROI collapses or exceeds source-image pixels")
     return left, top, right, bottom
