@@ -36,13 +36,7 @@ def reopen_saved_candidate_review(
 ) -> tuple[CandidateQualityResult, Path]:
     """Load most recent *current* saved semantic review, never create a new one."""
     snapshot = quality.snapshot(asset_id, reference_id)
-    root = (
-        snapshot.project_root
-        / "Canonical Assets"
-        / asset_id
-        / ".metadata"
-        / "evaluation"
-    )
+    root = snapshot.project_root / "Canonical Assets" / asset_id / ".metadata" / "evaluation"
     if root.is_symlink() or not root.is_dir():
         raise CandidateQualityError("Saved Candidate review directory unavailable")
     pattern = f"{snapshot.image_path.stem}.*.candidate_quality.json"
@@ -89,7 +83,9 @@ def reopen_saved_candidate_review(
     technical = data.get("technical")
     semantic = data.get("semantic")
     if not isinstance(technical, dict) or not isinstance(semantic, dict):
-        raise CandidateQualityError("Saved review requires existing technical and semantic evidence")
+        raise CandidateQualityError(
+            "Saved review requires existing technical and semantic evidence"
+        )
     if (
         not _same_path(technical.get("image_path"), snapshot.image_path)
         or technical.get("asset_id") != asset_id
@@ -134,8 +130,7 @@ def reopen_saved_candidate_review(
             or type(reconstructed.overall_score) is not int
             or not 0 <= reconstructed.overall_score <= 100
             or not all(
-                type(item.score) is int and 0 <= item.score <= 100
-                for item in reconstructed.metrics
+                type(item.score) is int and 0 <= item.score <= 100 for item in reconstructed.metrics
             )
             or not isinstance(recommendations, list)
             or not all(isinstance(item, str) for item in recommendations)
