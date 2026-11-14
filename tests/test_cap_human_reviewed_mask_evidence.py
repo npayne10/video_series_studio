@@ -30,10 +30,7 @@ from vscs.application.caps.visual_candidate_quality import CandidateQualityResul
 
 
 def _source(tmp_path: Path) -> Path:
-    directory = (
-        tmp_path / "Canonical Assets" / "STORY-TEST"
-        / "Images" / "Visual Candidates"
-    )
+    directory = tmp_path / "Canonical Assets" / "STORY-TEST" / "Images" / "Visual Candidates"
     directory.mkdir(parents=True)
     source = directory / "candidate.png"
     Image.new("RGB", (40, 30), (70, 80, 90)).save(source)
@@ -89,12 +86,8 @@ def test_deterministic_mask_exact_bounds_and_immutable_source(tmp_path):
     source = _source(tmp_path)
     proposal = _proposal(source)
     original = source.read_bytes()
-    first = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
-    second = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    first = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
+    second = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     inspect_reviewed_mask(first, proposal=proposal, source_path=source)
     assert first.mask_png == second.mask_png
     assert first.mask_sha256 == second.mask_sha256
@@ -123,17 +116,13 @@ def test_preview_only_returns_pixel_bounds_without_artifacts(tmp_path):
 def test_explicit_mask_confirmation_required(tmp_path):
     source = _source(tmp_path)
     with pytest.raises(GeometryCorrectionError, match="explicit operator"):
-        prepare_reviewed_mask(
-            _proposal(source), source_path=source, reviewer_confirmed_mask=False
-        )
+        prepare_reviewed_mask(_proposal(source), source_path=source, reviewer_confirmed_mask=False)
 
 
 def test_source_changed_after_seal_refuses_mask(tmp_path):
     source = _source(tmp_path)
     proposal = _proposal(source)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     Image.new("RGB", (40, 30), (50, 30, 20)).save(source)
     with pytest.raises(GeometryCorrectionError, match="SHA-256 mismatch"):
         inspect_reviewed_mask(evidence, proposal=proposal, source_path=source)
@@ -142,18 +131,18 @@ def test_source_changed_after_seal_refuses_mask(tmp_path):
 def test_modified_mask_bytes_or_authority_rejected(tmp_path):
     source = _source(tmp_path)
     proposal = _proposal(source)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     with pytest.raises(GeometryCorrectionError, match="Mask evidence"):
         inspect_reviewed_mask(
             replace(evidence, mask_png=evidence.mask_png + b"extra"),
-            proposal=proposal, source_path=source,
+            proposal=proposal,
+            source_path=source,
         )
     with pytest.raises(GeometryCorrectionError, match="Mask evidence"):
         inspect_reviewed_mask(
             replace(evidence, governed_attempt_allowed=True),
-            proposal=proposal, source_path=source,
+            proposal=proposal,
+            source_path=source,
         )
 
 
@@ -163,9 +152,7 @@ def test_pixel_tampering_rejected_even_with_recomputed_digest(tmp_path):
 
     source = _source(tmp_path)
     proposal = _proposal(source)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     with Image.open(io.BytesIO(evidence.mask_png)) as mask:
         altered = mask.copy()
     altered.putpixel((0, 0), 255)
@@ -187,22 +174,24 @@ def test_pixel_tampering_rejected_even_with_recomputed_digest(tmp_path):
 def test_mask_evidence_exclusive_storage_and_no_candidate_mutation(tmp_path):
     source = _source(tmp_path)
     proposal = _proposal(source)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     metadata = source.parent.parent.parent / ".metadata"
     destination = metadata / "spatial_masks"
     destination.mkdir(parents=True)
     before = source.read_bytes()
     path = save_reviewed_mask_once(
-        evidence, proposal=proposal, source_path=source,
+        evidence,
+        proposal=proposal,
+        source_path=source,
         destination_directory=destination,
     )
     assert path.read_bytes() == evidence.mask_png
     assert source.read_bytes() == before
     with pytest.raises(GeometryCorrectionError, match="already exists"):
         save_reviewed_mask_once(
-            evidence, proposal=proposal, source_path=source,
+            evidence,
+            proposal=proposal,
+            source_path=source,
             destination_directory=destination,
         )
 
@@ -210,12 +199,12 @@ def test_mask_evidence_exclusive_storage_and_no_candidate_mutation(tmp_path):
 def test_unsafe_destination_blocked(tmp_path):
     source = _source(tmp_path)
     proposal = _proposal(source)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     with pytest.raises(GeometryCorrectionError, match="canonical evidence"):
         save_reviewed_mask_once(
-            evidence, proposal=proposal, source_path=source,
+            evidence,
+            proposal=proposal,
+            source_path=source,
             destination_directory=tmp_path,
         )
 
@@ -226,6 +215,4 @@ def test_invalid_candidate_directory_blocked(tmp_path):
     copied = tmp_path / "detached.png"
     copied.write_bytes(source.read_bytes())
     with pytest.raises(GeometryCorrectionError, match="canonical Candidate"):
-        prepare_reviewed_mask(
-            proposal, source_path=copied, reviewer_confirmed_mask=True
-        )
+        prepare_reviewed_mask(proposal, source_path=copied, reviewer_confirmed_mask=True)
