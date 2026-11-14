@@ -1456,6 +1456,18 @@ The real Candidate 4 protected final Attempt 2/2 remains out of scope.
     report, CAP authority, Canon/MASTER state, attempt counter or new mask
     artifact was modified. **No OpenAI or ComfyUI request** must occur.
 
+**Troubleshooting revision (2026-11-14):** If **Select ROI on Source Image**
+appears to do nothing, do not attempt to bypass the selector by changing source
+files or hand-editing coordinates. The click handler now reports unexpected
+Python/Qt exceptions via an **ROI Selection Failed** warning and logs the
+traceback. Close VSCS, pull the latest commit, validate Ruff/Mypy, relaunch
+VSCS using `vscs` from the activated PowerShell, reopen the existing saved
+semantic review without a provider charge, and repeat the click. Capture the
+warning's **exception class and full message** plus any PowerShell traceback.
+If the dialog instead opens, verify the actual source image and selection.
+Do **not** progress to C1/C2 while the ROI selector fails. This fix does not
+claim resolution of an as-yet-unreproduced PySide6 runtime cause.
+
 **Required evidence:** source-image selector screenshot with exact pixel
 bounds and red rectangle; Stage B screenshot after selecting the ROI; results
 of Ruff/Mypy/focused and full regression; explicit source/CAP/attempt
