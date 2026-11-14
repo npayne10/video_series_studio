@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from PySide6.QtCore import Qt
@@ -353,8 +354,11 @@ class CandidateQualityReportDialog(QDialog):
                 )
                 return
             try:
+                source_path = report.snapshot.image_path
+                if not source_path.is_file():
+                    raise GeometryCorrectionError("The saved Candidate image is missing")
                 selector = SourceImageRoiDialog(
-                    source_path=report.snapshot.image_path,
+                    source_path=source_path,
                     expected_source_sha256=report.snapshot.image_sha256,
                     parent=dialog,
                 )
@@ -362,8 +366,16 @@ class CandidateQualityReportDialog(QDialog):
                     return
                 if selector.selected_region is None:
                     raise GeometryCorrectionError("Source-image ROI was not selected")
-            except (OSError, GeometryCorrectionError) as exc:
-                QMessageBox.warning(dialog, "ROI Selection Blocked", str(exc))
+            except Exception as exc:
+                # Qt signal callbacks can otherwise fail silently without console output.
+                logging.getLogger(__name__).exception("F5.4.2 source ROI selector failed")
+                QMessageBox.warning(
+                    dialog,
+                    "ROI Selection Failed",
+                    f"Could not open or apply the source ROI selector.\\n"
+                    f"{type(exc).__name__}: {exc}\\n"
+                    "No Stage B evidence, mask or Candidate was modified.",
+                )
                 return
             selected_region = selector.selected_region
             area = selected_region
