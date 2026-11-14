@@ -92,23 +92,27 @@ def _source_image(path: Path, proposal: GovernedCorrectionProposal) -> tuple[int
     return size
 
 
+def _pixel_edge(value: Decimal, *, upper: bool) -> int:
+    """Snap float serialization noise near integer pixels, then use safe outer edges."""
+    nearest = value.to_integral_value()
+    if abs(value - nearest) < Decimal("0.000000001"):
+        return int(nearest)
+    return int(value.to_integral_value(rounding=ROUND_CEILING if upper else ROUND_FLOOR))
+
+
 def _bounds(
     proposal: GovernedCorrectionProposal, size: tuple[int, int]
 ) -> tuple[int, int, int, int]:
-    # Decimal conversion avoids binary float error at exact pixel boundaries.
+    # Decimal conversion plus near-integer snapping preserves drawn pixel bounds.
     roi = proposal.reviewed_roi
     width, height = size
-    left = int((Decimal(str(roi.x)) * width).to_integral_value(rounding=ROUND_FLOOR))
-    top = int((Decimal(str(roi.y)) * height).to_integral_value(rounding=ROUND_FLOOR))
-    right = int(
-        ((Decimal(str(roi.x)) + Decimal(str(roi.width))) * width).to_integral_value(
-            rounding=ROUND_CEILING
-        )
+    left = _pixel_edge(Decimal(str(roi.x)) * width, upper=False)
+    top = _pixel_edge(Decimal(str(roi.y)) * height, upper=False)
+    right = _pixel_edge(
+        (Decimal(str(roi.x)) + Decimal(str(roi.width))) * width, upper=True
     )
-    bottom = int(
-        ((Decimal(str(roi.y)) + Decimal(str(roi.height))) * height).to_integral_value(
-            rounding=ROUND_CEILING
-        )
+    bottom = _pixel_edge(
+        (Decimal(str(roi.y)) + Decimal(str(roi.height))) * height, upper=True
     )
     if not (0 <= left < right <= width and 0 <= top < bottom <= height):
         raise GeometryCorrectionError("Review ROI collapses or exceeds source-image pixels")
