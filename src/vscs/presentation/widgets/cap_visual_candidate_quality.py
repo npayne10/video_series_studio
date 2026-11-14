@@ -372,7 +372,7 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(
                     dialog,
                     "ROI Selection Failed",
-                    f"Could not open or apply the source ROI selector.\n"
+                    "Could not open or apply the source ROI selector.\n"
                     f"{type(exc).__name__}: {exc}\n"
                     "No Stage B evidence, mask or Candidate was modified.",
                 )
