@@ -151,7 +151,14 @@ def reopen_saved_candidate_review(
             raise ValueError("saved quality decision mismatch")
         # Full round-trip equality detects missing/changed model fields rather
         # than silently repairing an incomplete saved report.
-        for key in ("technical", "semantic", "decision", "recommendations"):
+        for key in (
+            "technical",
+            "semantic",
+            "decision",
+            "recommendations",
+            "correction_comparison",
+            "approved_primary_reference",
+        ):
             if result.as_dict()[key] != data.get(key):
                 raise ValueError(f"saved report {key} differs from reconstructed evidence")
     except (KeyError, TypeError, ValueError, ValidationError) as exc:
