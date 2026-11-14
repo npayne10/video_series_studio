@@ -318,7 +318,11 @@ class CandidateQualityReportDialog(QDialog):
         def restore_selected_field() -> None:
             nonlocal selected_region
             roi_confirmation.setChecked(False)
+            selected_region = None
+            roi.clear()
             if current_evidence is None:
+                evidence_status.setCurrentIndex(0)
+                reason.clear()
                 return
             name = str(fields.currentData())
             item = next((i for i in current_evidence.reviewed_fields if i.field == name), None)
