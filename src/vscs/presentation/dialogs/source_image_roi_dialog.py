@@ -155,9 +155,17 @@ class SourceImageRoiDialog(QDialog):
             raise GeometryCorrectionError("Cannot open source Candidate image") from exc
         if hashlib.sha256(raw).hexdigest() != expected_source_sha256:
             raise GeometryCorrectionError("Source Candidate changed; ROI selection blocked")
-        pixmap = QPixmap()
-        if not pixmap.loadFromData(raw, b"PNG") or pixmap.isNull():
+        # Qt/PySide6 can reject loadFromData(bytes, format) at runtime on
+        # some installations; load the already-hash-verified PNG by path instead.
+        # The second digest check prevents silently using changed source bytes.
+        pixmap = QPixmap(str(source_path))
+        if pixmap.isNull():
             raise GeometryCorrectionError("Candidate PNG could not be decoded")
+        try:
+            if hashlib.sha256(source_path.read_bytes()).hexdigest() != expected_source_sha256:
+                raise GeometryCorrectionError("Source Candidate changed during image loading")
+        except OSError as exc:
+            raise GeometryCorrectionError("Cannot recheck source Candidate image") from exc
         if not 0 < pixmap.width() * pixmap.height() <= 40_000_000:
             raise GeometryCorrectionError("Source image dimensions exceed safe limit")
 
