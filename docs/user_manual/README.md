@@ -10,6 +10,17 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
+## ROI selector silent-click diagnostic — 2026-11-14
+
+The initial Windows UI test reported no visible action from **Select ROI on
+Source Image (No Generation)**. The handler now catches unexpected Qt/Python
+exceptions, displays an **ROI Selection Failed** message, and writes a traceback
+to the application logger. This is a diagnostic fix, **not yet confirmed to
+resolve the underlying runtime problem**. Pull the latest branch, restart VSCS,
+reopen the existing saved review without a paid request, repeat the click and
+capture the dialog or error. See [controlled troubleshooting](VSCS_User_Manual.md#f542-c2--interactive-source-image-roi-selection-implementation-candidate).
+Stage C1/C2 acceptance must remain paused until the selector operates correctly.
+
 ## Interactive source-image ROI selection — F5.4.2 C2 (2026-11-14)
 
 **Code implemented; Windows and UI acceptance pending.** The Stage B
