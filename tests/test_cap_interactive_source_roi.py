@@ -121,3 +121,28 @@ def test_normalized_drag_edges_roundtrip_to_original_integer_pixels():
         )
         == 288
     )
+
+
+def test_selector_does_not_call_pyside_in_memory_image_overload(
+    qtbot, tmp_path, monkeypatch
+):
+    from PySide6.QtGui import QPixmap
+
+    source, digest = _candidate(tmp_path)
+    def broken_in_memory_loader(*_args, **_kwargs):
+        raise AssertionError("In-memory PySide6 image overload must never be used")
+
+    monkeypatch.setattr(QPixmap, "loadFromData", broken_in_memory_loader)
+    dialog = SourceImageRoiDialog(source_path=source, expected_source_sha256=digest)
+    qtbot.addWidget(dialog)
+    assert dialog.canvas.size().width() == 1392
+    assert dialog.canvas.size().height() == 752
+    assert dialog.selected_region is None
+
+
+def test_selector_refuses_invalid_png_even_with_matching_digest(qtbot, tmp_path):
+    source, _digest = _candidate(tmp_path)
+    source.write_bytes(b"not a real PNG")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    with pytest.raises(GeometryCorrectionError, match="could not be decoded"):
+        SourceImageRoiDialog(source_path=source, expected_source_sha256=digest)
