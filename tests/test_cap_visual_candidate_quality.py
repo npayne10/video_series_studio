@@ -515,8 +515,8 @@ def test_saved_semantic_review_reopens_without_new_provider_call(tmp_path, monke
 
 
 def test_saved_review_refuses_tampered_cap_fingerprint(tmp_path, monkeypatch):
-    service, _refs, prep, _image, _original, _path, _provider = (
-        _saved_semantic_scenario(tmp_path, monkeypatch)
+    service, _refs, prep, _image, _original, _path, _provider = _saved_semantic_scenario(
+        tmp_path, monkeypatch
     )
     monkeypatch.setattr(
         "vscs.application.caps.visual_candidate_quality.prepare_visual_identity",
@@ -527,8 +527,8 @@ def test_saved_review_refuses_tampered_cap_fingerprint(tmp_path, monkeypatch):
 
 
 def test_saved_review_refuses_tampered_source_image(tmp_path, monkeypatch):
-    service, _refs, _prep, image, _original, _path, _provider = (
-        _saved_semantic_scenario(tmp_path, monkeypatch)
+    service, _refs, _prep, image, _original, _path, _provider = _saved_semantic_scenario(
+        tmp_path, monkeypatch
     )
     image.write_bytes(b"tampered image bytes")
     with pytest.raises(CandidateQualityError):
@@ -536,8 +536,8 @@ def test_saved_review_refuses_tampered_source_image(tmp_path, monkeypatch):
 
 
 def test_saved_review_refuses_newest_stale_report_without_fallback(tmp_path, monkeypatch):
-    service, _refs, _prep, _image, _original, path, _provider = (
-        _saved_semantic_scenario(tmp_path, monkeypatch)
+    service, _refs, _prep, _image, _original, path, _provider = _saved_semantic_scenario(
+        tmp_path, monkeypatch
     )
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["review_fingerprint"] = "stale"
@@ -548,8 +548,8 @@ def test_saved_review_refuses_newest_stale_report_without_fallback(tmp_path, mon
 
 
 def test_saved_review_refuses_partial_or_modified_evaluation(tmp_path, monkeypatch):
-    service, _refs, _prep, _image, _original, path, _provider = (
-        _saved_semantic_scenario(tmp_path, monkeypatch)
+    service, _refs, _prep, _image, _original, path, _provider = _saved_semantic_scenario(
+        tmp_path, monkeypatch
     )
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["semantic"]["violations"] = ["unverified replacement evidence"]
@@ -592,9 +592,7 @@ def test_open_saved_review_ui_does_not_run_new_evaluation(qtbot, tmp_path, monke
     monkeypatch.setattr(ui, "CandidateQualityReportDialog", SavedDialog)
     host = QWidget()
     qtbot.addWidget(host)
-    host.reference_gallery = SimpleNamespace(
-        selected_reference=lambda: refs.get.return_value
-    )
+    host.reference_gallery = SimpleNamespace(selected_reference=lambda: refs.get.return_value)
     host.profile = SimpleNamespace(asset_id=prep.asset_id)
     host.reference_service = refs
     ui._reopen_saved_candidate_review(host)
