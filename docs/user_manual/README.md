@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.2 (living documentation, updated 2026-11-10)  
+**Version:** v0.3 (living documentation, updated 2026-11-14)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,29 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Mandatory feature documentation and controlled UI acceptance (2026-11-14)
+
+Every implemented functionality change must update **this index** and the
+[VSCS User Manual](VSCS_User_Manual.md) on the same GitHub development
+branch. In particular, C2 now has a complete numbered procedure starting
+from the installed `vscs` startup command, through active project verification,
+Canonical Profiles and the Candidate Quality dialog, Stage B/C1 review, mask
+overlay, explicit operator confirmation, mask evidence save, duplicate-write
+rejection and source/CAP/attempt non-mutation checks.
+
+**Current phase:** F5.4.2 Stage A, B and C1 are accepted; **C2 is code
+implemented but awaits operator UI acceptance**, with C3/C4 still gated.
+Read the [F5.4.2 controlled launch-to-C2 procedure](VSCS_User_Manual.md#f542-stage-b-c1-and-c2--controlled-visual-correction-operator-guide-2026-11-14).
+The C2 code is governed by [its detailed engineering contract](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md).
+
+**Required shape of every future UI test:** branch and preflight → application
+launch → confirm active project and Candidate identity → exact sidebar/menu
+navigation → named controls and values → expected result after each action →
+evidence capture → stop/abort rules → non-mutation audit → explicit operator
+acceptance. Never infer a saved-report viewer from the existing button to start
+a fresh potentially billable evaluation. If no safe path exists, stop and
+document the missing control rather than asking for an unauthorized API call.
 
 ## Known verified current path for B.5.22
 
