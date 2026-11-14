@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-14 (saved-review reopen code added; Windows and UI acceptance pending)  
+**Last verified:** 2026-11-14 (interactive C2 ROI selection implemented; Windows/UI acceptance pending)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1340,3 +1340,128 @@ See also [C2 engineering acceptance contract](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_
 8. **Non-mutation acceptance:** close the report and VSCS normally, then confirm the Candidate source SHA, the saved evaluation bytes, CAP and Canon authority, generation attempt counters and existing file list are unchanged. No OpenAI call, ComfyUI call or new quality-report file should have been created by reopening. Capture any visible issues and give explicit acceptance only after confirming these boundaries.
 
 **Stop conditions:** incorrect project/Candidate, absent button, unexpected new billing prompt, stale-metadata warning, report source hash mismatch, changed CAP status, modified source bytes, new attempt reservation or any generation request. No operator should use paid `Yes` merely to restore C2 context.
+
+
+### F5.4.2 C2 — Interactive source-image ROI selection (implementation candidate)
+
+**Status: CODE IMPLEMENTED; WINDOWS AND OPERATOR UI ACCEPTANCE PENDING.**
+
+**Purpose:** Replace hand-typed `x,y,width,height` guesses with a direct, visible
+rectangle selection on the original Candidate PNG. The Stage B ROI field is now
+**read-only**. Press **Select ROI on Source Image (No Generation)** to open a
+dedicated full-resolution (100% pixel-space) scrollable view of the saved source
+Candidate. Drag from one corner of the desired editable region to the opposite
+corner, in either direction. The current pixel bounds and automatically
+calculated normalized coordinates appear under the image. Press
+**Apply Selected ROI (No Generation)** only after visual inspection, or Cancel
+to discard. The selection is a *proposal only*, not a mask or execution consent.
+
+**Safety and precision:**
+- The selector verifies the full Candidate PNG bytes against the saved report's
+  SHA-256 before displaying the image, and checks the same source bytes again
+  immediately before applying the rectangle. A stale or unreadable source
+  blocks without applying an ROI.
+- Pixels are selected directly on the **original source dimensions**, not
+  mapped from the gallery thumbnail or scaled preview. The view scrolls rather
+  than resizing the image. Dragging backwards and clamping at image boundaries
+  is supported; selections smaller than 2×2 pixels cannot be applied.
+- The Stage B ROI field is read-only; normalized values derive from the accepted
+  pixel rectangle. Each reviewed CAP field keeps its own prior Stage B evidence.
+  Switching fields discards any unapplied selection and invalidates prior C1/C2
+  session approvals; it never silently moves one field's ROI into another.
+- Clicking **Apply Selected ROI** fills the Stage B ROI display but does **not**
+  record a new Stage B review. You must still click
+  **Inspect Stage B Evidence / ROI (No Generation)**. That action preserves all
+  previously reviewed non-target fields. It invalidates older C1 proposals
+  and C2 mask evidence.
+- C2 uses integer source pixel edges: the normalization/rasterization path
+  snaps tiny floating-point differences near whole-pixel boundaries to prevent
+  one-pixel expansion when reconstructing an editable mask.
+- There are **no provider calls, inference, new Candidate images, mask file
+  writes, CAP changes or attempt reservations** in the selector.
+
+#### Controlled operator acceptance test — F5.4.2-C2-ROI-01
+
+**Preconditions:** Close VSCS before fetching the branch. Existing approved
+Stage B/C1 source records are preserved, but **in-memory** field assessments
+from the previous running dialog will not persist across a restart.
+The real Candidate 4 protected final Attempt 2/2 remains out of scope.
+
+1. Open Windows PowerShell and activate the existing VSCS virtual environment:
+   ```powershell
+   cd D:\VSCS\video_series_studio
+   .\.venv\Scripts\Activate.ps1
+   git status --short
+   git fetch origin
+   git switch phase-f5.4.2-c2-interactive-roi-selection
+   git pull --ff-only origin phase-f5.4.2-c2-interactive-roi-selection
+   git rev-parse --short HEAD
+   python -m ruff check .
+   python -m ruff format --check --no-cache .
+   python -m mypy src
+   python -m pytest -q tests/test_cap_interactive_source_roi.py tests/test_cap_human_reviewed_mask_evidence.py tests/test_cap_spatial_visual_evidence.py tests/test_cap_governed_visual_correction_handoff.py tests/test_cap_visual_candidate_quality.py
+   python -m pytest -q
+   git diff --check
+   git status --short
+   ```
+   **Stop** on unexpected tracked edits or failed validation; preserve the
+   existing unrelated untracked architecture-audit and Qwen-preflight artifacts.
+
+2. From the same activated PowerShell, run **`vscs`** to launch the desktop UI.
+   Expected: the main VSCS window appears. Stop if the executable or GUI fails.
+3. Navigate to **Dashboard → Active Project** and confirm the original
+   disposable test project and actual project path. Do not create a new project
+   or invent accepted Draft fields.
+4. In the left sidebar select **Canonical Profiles**; select Diagnostic Console
+   (asset `STORY-PRO-B00D168E43`) and press **Edit Selected**. In the
+   **Canonical Reference Gallery**, select the existing supplementary Candidate
+   with a saved semantic review (record ID, status and image filename).
+5. Press **Open Saved Candidate Review…**. Expected: the existing
+   **Visual Candidate Quality Review — Advisory** appears with the saved AI
+   findings, without a billable Yes/No prompt or provider request. **Do not**
+   use **Review Visual Candidate… → Yes**.
+6. Press **F5.4.2 Review General Visual Correction (No Generation)…**.
+   Select the actual failed field, e.g. `components`. Set Stage B status
+   `FAILED`, choose the appropriate defect
+   `protruding instead of recessed`, and enter specific source-grounded
+   evidence. No example ROI should be used.
+7. Confirm the normalized ROI entry is **read-only**. Click
+   **Select ROI on Source Image (No Generation)**. Expected: a separate
+   scrollable source-image window, labelled with the full original dimensions
+   (the previously observed PNG is **1392 × 752**, but verify actual dimensions).
+8. Scroll to the right-hand rotary dial in the source image; drag a **tight**
+   rectangle around the dial and necessary mounting surface. Confirm a red
+   region overlay appears and the readout displays source pixel bounds and
+   normalized `x,y,width,height`. **Do not encompass the entire console or
+   adjacent three buttons unnecessarily.**
+9. **Negative test:** press **Cancel** first. Expected: the selector closes and
+   Stage B's ROI display is **unchanged**; no Stage B assessment changes.
+   Open the selector again, redraw the actual target and press
+   **Apply Selected ROI (No Generation)**. Expected: the ROI display shows
+   computed normalized values and the assessment remains unchanged until
+   the next step.
+10. Press **Inspect Stage B Evidence / ROI (No Generation)**. Expected:
+    `components: FAILED`, matching observation/defect and new coordinates
+    in the advisory Stage B panel. Verify other field states were not modified.
+    A selector result is **not a verified mask** and does not complete C1 or C2.
+11. To demonstrate field isolation, select `geometry`, verify the previous
+    status/observation if reviewed in this session, then return to
+    `components`. The component-specific ROI should restore. If the value
+    appears on the wrong field, **stop and send a screenshot**.
+12. **Stop before clicking Stage C1 and C2 approvals, mask generation, or mask
+    save** for this ROI-tool acceptance test. Record source image SHA-256,
+    source pixel dimensions, displayed selection bounds and normalized
+    coordinates, screenshot of the red selection, and Stage B advisory result.
+13. Close dialogs normally and confirm no Candidate file, saved semantic
+    report, CAP authority, Canon/MASTER state, attempt counter or new mask
+    artifact was modified. **No OpenAI or ComfyUI request** must occur.
+
+**Required evidence:** source-image selector screenshot with exact pixel
+bounds and red rectangle; Stage B screenshot after selecting the ROI; results
+of Ruff/Mypy/focused and full regression; explicit source/CAP/attempt
+non-mutation confirmation.
+
+**Disposition:** Interactive ROI selection remains unaccepted until the
+above operator test is completed. After acceptance, resume controlled
+Stage C1 and Stage C2 mask inspection with a genuinely reviewed ROI. C2
+mask saving and all later C3/C4 generation permissions remain separate gates.
