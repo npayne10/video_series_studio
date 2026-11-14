@@ -10,6 +10,18 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
+## Interactive ROI PNG loading correction — 2026-11-14
+
+The surfaced Windows error identified a PySide6 `QPixmap.loadFromData`
+overload failure with binary source bytes in the exception message.
+The source selector now opens the SHA-bound PNG by verified file path,
+checks its digest again after loading, and blocks stale/invalid images.
+Future unexpected Qt exception messages are sanitized to avoid dumping
+image bytes. Regression cases were added; **Windows lint/tests and real
+UI acceptance remain pending**. Follow the
+[controlled operator retest](VSCS_User_Manual.md#f542-c2--interactive-source-image-roi-selection-implementation-candidate)
+without another paid semantic evaluation or mask save.
+
 ## ROI selector silent-click diagnostic — 2026-11-14
 
 The initial Windows UI test reported no visible action from **Select ROI on
