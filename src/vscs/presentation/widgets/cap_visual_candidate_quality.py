@@ -58,6 +58,7 @@ from vscs.infrastructure.configuration import ConfigurationService
 from vscs.presentation.dialogs.human_correction_disposition_dialog import (
     HumanCorrectionDispositionDialog,
 )
+from vscs.presentation.dialogs.source_image_roi_dialog import SourceImageRoiDialog
 from vscs.presentation.widgets import cap_manager
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
 from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
@@ -295,8 +296,12 @@ class CandidateQualityReportDialog(QDialog):
         layout.addWidget(evidence_status)
         roi = QLineEdit(dialog)
         roi.setObjectName("spatialEvidenceROI")
-        roi.setPlaceholderText("Optional normalized ROI: x,y,width,height (e.g. 0.1,0.2,0.3,0.4)")
+        roi.setReadOnly(True)
+        roi.setPlaceholderText("No ROI selected — use the source-image rectangle selector")
         layout.addWidget(roi)
+        select_roi = QPushButton("Select ROI on Source Image (No Generation)", dialog)
+        select_roi.setObjectName("stageC2SelectSourceROI")
+        layout.addWidget(select_roi)
         propose = QPushButton("Inspect Stage B Evidence / ROI (No Generation)", dialog)
         propose.setObjectName("spatialEvidenceInspect")
         layout.addWidget(propose)
@@ -305,11 +310,13 @@ class CandidateQualityReportDialog(QDialog):
         current_proposal: GovernedCorrectionProposal | None = None
         current_mask: ReviewedMaskEvidence | None = None
         mask_previewed = False
+        selected_region: NormalizedRegion | None = None
         review_progress = QLabel("0 of " + str(len(baseline.mandatory_checks)) + " fields reviewed")
         review_progress.setObjectName("spatialEvidenceReviewProgress")
         layout.addWidget(review_progress)
 
         def restore_selected_field() -> None:
+            nonlocal selected_region
             roi_confirmation.setChecked(False)
             if current_evidence is None:
                 return
@@ -321,28 +328,56 @@ class CandidateQualityReportDialog(QDialog):
             reason.setPlainText(item.observation)
             if item.defect is not None:
                 defect.setCurrentIndex(defect.findData(item.defect.value))
-            if item.proposed_region is not None:
-                area = item.proposed_region
-                roi.setText(f"{area.x},{area.y},{area.width},{area.height}")
+            selected_region = item.proposed_region
+            if selected_region is not None:
+                area = selected_region
+                roi.setText(f"{area.x:.8f},{area.y:.8f},{area.width:.8f},{area.height:.8f}")
             else:
                 roi.clear()
 
         fields.currentIndexChanged.connect(lambda _index: restore_selected_field())
 
+        def open_source_roi_selector() -> None:
+            nonlocal selected_region, current_proposal, current_mask, mask_previewed
+            if str(evidence_status.currentData()) != VisualEvidenceStatus.FAILED.value:
+                QMessageBox.warning(
+                    dialog, "ROI Selection Blocked", "Select FAILED for the reviewed field first."
+                )
+                return
+            try:
+                selector = SourceImageRoiDialog(
+                    source_path=report.snapshot.image_path,
+                    expected_source_sha256=report.snapshot.image_sha256,
+                    parent=dialog,
+                )
+                if selector.exec() != QDialog.DialogCode.Accepted:
+                    return
+                if selector.selected_region is None:
+                    raise GeometryCorrectionError("Source-image ROI was not selected")
+            except (OSError, GeometryCorrectionError) as exc:
+                QMessageBox.warning(dialog, "ROI Selection Blocked", str(exc))
+                return
+            selected_region = selector.selected_region
+            area = selected_region
+            roi.setText(f"{area.x:.8f},{area.y:.8f},{area.width:.8f},{area.height:.8f}")
+            current_proposal = None
+            current_mask = None
+            mask_previewed = False
+            roi_confirmation.setChecked(False)
+            mask_confirmation.setChecked(False)
+            details.setPlainText(
+                "New ROI selected from the original Candidate image. "
+                "Press Inspect Stage B Evidence / ROI to record it. "
+                "This does not create a mask or authorize generation."
+            )
+
+        select_roi.clicked.connect(open_source_roi_selector)
+
         def inspect_spatial_evidence() -> None:
             nonlocal current_evidence, current_proposal, current_mask, mask_previewed
             try:
                 state = VisualEvidenceStatus(str(evidence_status.currentData()))
-                values = roi.text().strip()
-                region = None
-                if values:
-                    components = values.split(",")
-                    if len(components) != 4:
-                        raise GeometryCorrectionError("ROI requires four normalized coordinates")
-                    try:
-                        region = NormalizedRegion(*(float(v.strip()) for v in components))
-                    except ValueError as exc:
-                        raise GeometryCorrectionError("ROI coordinates must be numeric") from exc
+                region = selected_region if state is VisualEvidenceStatus.FAILED else None
                 evidence = propose_spatial_evidence(
                     baseline,
                     field=str(fields.currentData()),
@@ -365,6 +400,7 @@ class CandidateQualityReportDialog(QDialog):
             current_mask = None
             mask_previewed = False
             roi_confirmation.setChecked(False)
+            mask_confirmation.setChecked(False)
             reviewed = len(evidence.reviewed_fields) - evidence.outstanding_fields
             review_progress.setText(
                 f"{reviewed} of {len(evidence.reviewed_fields)} fields reviewed"
