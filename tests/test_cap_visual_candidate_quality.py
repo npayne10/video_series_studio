@@ -11,6 +11,7 @@ import pytest
 from PySide6.QtGui import QColor, QImage
 from PySide6.QtWidgets import QMessageBox
 
+from vscs.application.caps.saved_candidate_review import reopen_saved_candidate_review
 from vscs.application.caps.visual_candidate_quality import (
     CandidateQualityError,
     CandidateQualityReviewService,
@@ -466,3 +467,103 @@ def test_f542_candidate_review_triage_is_read_only_and_never_generates(
     refs.approve.assert_not_called()
     refs.set_primary.assert_not_called()
     refs.archive.assert_not_called()
+
+
+def _saved_semantic_scenario(tmp_path, monkeypatch):
+    service, refs, prep, image, _manifest = _scenario(tmp_path)
+    snap = _snapshot(service, prep, monkeypatch)
+    metric = SemanticMetric(name="Continuity", score=72, summary="Needs review.")
+    model = SemanticModelResult(
+        prompt_adherence=metric,
+        category_validity=metric,
+        visible_text=metric,
+        canon_consistency=metric,
+        engineering_plausibility=metric,
+        cinematic_quality=metric,
+        violations=("Door count not established.",),
+        summary="Saved semantic report for repeatable operator review.",
+    )
+    provider = SimpleNamespace(
+        provider_name="Fake saved vision",
+        model_name="mock-only",
+        evaluate=Mock(return_value=model),
+    )
+    result = service.evaluate(snap, semantic_provider=provider)
+    path = service.save(result)
+    return service, refs, prep, image, result, path, provider
+
+
+def test_saved_semantic_review_reopens_without_new_provider_call(tmp_path, monkeypatch):
+    service, refs, _prep, image, original, path, provider = _saved_semantic_scenario(
+        tmp_path, monkeypatch
+    )
+    before_image = image.read_bytes()
+    before_report = path.read_bytes()
+    before_names = set(path.parent.iterdir())
+    calls = provider.evaluate.call_count
+    restored, reopened_path = reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
+    assert reopened_path == path
+    assert restored.as_dict() == original.as_dict()
+    assert restored.semantic is not None
+    assert provider.evaluate.call_count == calls
+    assert path.read_bytes() == before_report
+    assert image.read_bytes() == before_image
+    assert set(path.parent.iterdir()) == before_names
+    refs.approve.assert_not_called()
+    refs.archive.assert_not_called()
+    refs.set_primary.assert_not_called()
+
+
+def test_saved_review_refuses_tampered_cap_fingerprint(tmp_path, monkeypatch):
+    service, _refs, prep, _image, _original, _path, _provider = (
+        _saved_semantic_scenario(tmp_path, monkeypatch)
+    )
+    monkeypatch.setattr(
+        "vscs.application.caps.visual_candidate_quality.prepare_visual_identity",
+        lambda *_args, **_kwargs: replace(prep, review_fingerprint="changed-cap"),
+    )
+    with pytest.raises(CandidateQualityError):
+        reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
+
+
+def test_saved_review_refuses_tampered_source_image(tmp_path, monkeypatch):
+    service, _refs, _prep, image, _original, _path, _provider = (
+        _saved_semantic_scenario(tmp_path, monkeypatch)
+    )
+    image.write_bytes(b"tampered image bytes")
+    with pytest.raises(CandidateQualityError):
+        reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
+
+
+def test_saved_review_refuses_newest_stale_report_without_fallback(tmp_path, monkeypatch):
+    service, _refs, _prep, _image, _original, path, _provider = (
+        _saved_semantic_scenario(tmp_path, monkeypatch)
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["review_fingerprint"] = "stale"
+    newer = path.parent / "room.zzzzzzzzzzzz.candidate_quality.json"
+    newer.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(CandidateQualityError, match="stale"):
+        reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
+
+
+def test_saved_review_refuses_partial_or_modified_evaluation(tmp_path, monkeypatch):
+    service, _refs, _prep, _image, _original, path, _provider = (
+        _saved_semantic_scenario(tmp_path, monkeypatch)
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["semantic"]["violations"] = ["unverified replacement evidence"]
+    payload["semantic"]["overall_score"] = 88
+    # Tampering should not be trusted if the decision or reconstruction conflicts.
+    payload["decision"] = "APPROVED"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(CandidateQualityError, match="invalid"):
+        reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
+
+
+def test_technical_only_report_cannot_be_opened_as_saved_semantic(tmp_path, monkeypatch):
+    service, _refs, prep, _image, _manifest = _scenario(tmp_path)
+    snapshot = _snapshot(service, prep, monkeypatch)
+    service.save(service.evaluate(snapshot))
+    with pytest.raises(CandidateQualityError, match="semantic"):
+        reopen_saved_candidate_review(service, "STORY-LOC-001", 7)
