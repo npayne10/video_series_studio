@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-14 (interactive C2 ROI selection implemented; Windows/UI acceptance pending)  
+**Last verified:** 2026-11-15 (interactive ROI selector and Stage C2 mask evidence operator accepted; C3/C4 still gated)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1506,3 +1506,65 @@ non-mutation confirmation.
 above operator test is completed. After acceptance, resume controlled
 Stage C1 and Stage C2 mask inspection with a genuinely reviewed ROI. C2
 mask saving and all later C3/C4 generation permissions remain separate gates.
+
+
+### Formal F5.4.2 Stage C2 and interactive ROI acceptance — 2026-11-15
+
+**Accepted scope:** source-hash-bound, full-resolution rectangle selection;
+Stage B field-specific evidence; sealed Stage C1 advisory handoff; Stage C2
+red-overlay mask preview; explicit operator review; 8-bit grayscale mask
+construction; exclusive evidence storage; and duplicate-save refusal.
+
+**Evidence from the controlled UI test:** the operator reopened the
+existing saved Candidate 4 AI assessment without rerunning a paid review.
+The accepted Draft CAP fields were reviewed independently. The `components`
+field was `FAILED` for a rotary dial `protruding_instead_of_recessed`;
+other fields were marked verified by the operator, subject to the actual
+visual inspection and ongoing semantic caveats. The interactive ROI
+selector opened on the original 1392 x 752 source PNG; its selection
+was passed to Stage B, C1 and C2. The C1 sealed plan and C2 red-overlay
+preview were observed in the GUI. The reviewer explicitly checked the
+C2 mask preview before inspecting and saving evidence.
+
+Two **distinct**, individually traceable masks were saved:
+- First rectangle `(900,342)` to `(993,402)`; 5,580 pixels; saved PNG
+  SHA-256 `19564b7fe1531d9e803f3ac34d3c239cdb80b24c909da22c6bba9ddcc2af986f`.
+- Second rectangle `(898,345)` to `(993,400)`; 5,225 pixels; saved PNG
+  SHA-256 `1aa336f61f107ffe58d8331ea89caa6b60ee48ef11c15ea1bbe7d7dfa4dedd15`.
+
+Both saved hashes were compared with PowerShell `Get-FileHash` and matched
+their C2 display values. The second save was followed by a duplicate
+attempt; VSCS displayed `Stage C2 Save Blocked: Mask evidence already exists;
+never overwrite` and refused to overwrite the file. This tests exact
+artifact overwrite prevention, **not** cross-ROI deduplication.
+
+On **2026-11-15**, the operator explicitly confirmed that Candidate 4,
+its saved AI evaluation, the CAP requirements and authority, Canon/MASTER,
+governed attempt counters and production images/registration were not
+modified by either C2 review. The two deliberately saved mask evidence
+files are the allowed new artifacts. This confirmation is operator-supplied,
+not a separately executed filesystem audit.
+
+**Functional regression:** the reported Windows ROI-focused tests passed
+(12 tests); full suite `2848 passed, 1 skipped` (symlinks unavailable);
+Ruff lint and Mypy on 709 source files passed. A final Ruff
+formatting-only fix was committed afterward; no separate Windows
+post-formatting validation was supplied.
+
+**Accepted does not mean executable:** C2 masks are not verified as
+provider-compatible, and exact outside-mask preservation after actual
+inpainting has not been established. Do not run ComfyUI or a paid
+provider, consume Candidate 4's protected Attempt 2/2, register
+corrected Candidates, or promote CAP/Canon/MASTER under C2 authority.
+
+**Resume-workflow gap to address before C3:** AI semantic reports persist,
+but Stage B operator decisions, ROI and C1 proposal remain session-local.
+Closing VSCS caused a repeated manual review and a slightly different
+second mask. Implement source-hash and CAP-fingerprint-bound human
+review-session persistence, governed resumption and explicit mask-version
+selection before integrating a live provider. Never select or overwrite
+an older mask implicitly. Both existing C2 mask versions must be preserved.
+
+**Formal engineering acceptance evidence:**
+[F5.4.2 Stage C2 accepted record](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
+
