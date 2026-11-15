@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-15 (interactive ROI selector and Stage C2 mask evidence operator accepted; C3/C4 still gated)  
+**Last verified:** 2026-11-15 (Stage C2 operator accepted; C2.1 persistence implementation pending Windows/UI validation)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1568,3 +1568,137 @@ an older mask implicitly. Both existing C2 mask versions must be preserved.
 **Formal engineering acceptance evidence:**
 [F5.4.2 Stage C2 accepted record](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
+
+
+### F5.4.2 Stage C2.1 — Save and resume human correction reviews
+
+**Status: CODE IMPLEMENTED; WINDOWS AND UI ACCEPTANCE PENDING.**
+
+Previous stages established that the AI semantic report and C2 mask PNG are
+saved, but Stage B operator assessments and the C1 correction proposal were
+lost when VSCS closed. C2.1 adds controlled, **explicit** saving and
+resumption of the full operator review without rerunning a paid semantic
+analysis, rediscovering the defect or redrawing the verified ROI.
+
+**New controls in F5.4.2 General Visual Correction Review (Advisory):**
+
+- **Refresh Saved Human Reviews (No Generation)** — list immutable
+  review-session JSON versions for the current Candidate.
+- **Save Human Review Session (No Generation)** — after clicking
+  **Inspect Stage B Evidence / ROI** for the fields, create one new
+  `c21-<Candidate ID>-<unique ID>.json` under the Candidate asset's
+  `.metadata/human_visual_reviews`. This is intentional persistence,
+  not a save of the AI semantic report or change in CAP authority.
+  To record the C1 proposal SHA as provenance, inspect the Stage C1
+  handoff **before clicking Save**. Each Save creates a new version.
+- **Resume Selected Human Review (No Generation)** — choose a saved
+  session explicitly. Recheck the current Candidate SHA-256, CAP review
+  fingerprints, saved requirements, record digest and Stage B validation
+  for every field. Restore reviewed statuses, observations, defects,
+  ROI and review progress. Never auto-resume without an operator choice.
+- **Find Masks for Current C1 Proposal (No Generation)** — after
+  re-inspecting C1, list existing C2 PNG masks. A `CURRENT` mask is
+  byte-identical to the current source-bound proposed ROI. A
+  `HISTORICAL` mask belongs to an earlier evidence version, and
+  its source/ROI compatibility with the current proposal is *not*
+  established. No mask is selected or adopted automatically.
+- **Inspect Selected Existing Mask (No Generation)** — display its
+  filename, digest and match status, without any GPU job, provider
+  API, registration, approval, or attempt reservation.
+
+**Safety:** Saved JSON is immutable, source-bound and digested. The
+content SHA detects accidental alteration, but is *not* a signature from
+an independent trusted signer. The present report's source PNG is
+rehashed before save/resume and the CAP review fingerprints are
+required to match. The review is replayed through the established
+Stage B contract. A restored C1 digest is **evidence only**: the
+operator must reinspect the ROI and explicitly issue a fresh C1
+handoff. C2 preview/confirmation remains a separate required action.
+The Close button warns when an inspected Stage B/C1 session has
+changes not saved as a C2.1 record. To reliably resume, use
+**Save Human Review Session** and confirm its receipt before closing.
+
+**Limitations:** Saving is manual, not automatic. Changing a field
+without pressing **Inspect Stage B Evidence / ROI** does not record
+the edited value. A crash, forced termination or closing via an
+unhandled window control before saving may discard unsaved entries.
+C2.1 does **not** automatically turn an old C2 mask into a provider
+input; C3/C4 permissions remain closed. Preserve both C2 masks
+saved during the 2026-11-15 acceptance test.
+
+#### Controlled restart/resume acceptance — F5.4.2-C2.1-UI-01
+
+1. **Close VSCS first.** In Windows PowerShell, activate the existing
+   VSCS `.venv` and switch to the feature branch using the exact
+   validation commands in the
+   [C2.1 engineering test plan](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md#windows-validation-commands).
+   Run Ruff, Ruff format, Mypy, focused pytest, full pytest, and
+   repository status checks. Stop if they fail or show unexpected
+   tracked changes. Preserve unrelated untracked audit/preflight files.
+2. **Launch VSCS** from `D:\VSCS\video_series_studio` using
+   `vscs` in the activated PowerShell window.
+   On **Dashboard → Active Project**, confirm the existing
+   `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` project and directory.
+3. Navigate to **Canonical Profiles**, select the Diagnostic Console
+   CAP `STORY-PRO-B00D168E43`, and press **Edit Selected**.
+   In the Canonical Reference Gallery select the existing
+   supplementary **Candidate 4**. Confirm the source image identity
+   before acting.
+4. Press **Open Saved Candidate Review…**, not **Review Visual
+   Candidate… → Yes**. Verify the original saved technical/AI
+   analysis displays with no new paid provider consent.
+5. Press **F5.4.2 Review General Visual Correction (No Generation)…**.
+   Inspect the C2.1 control group. Review each accepted field against
+   the source, enter appropriate evidence and click
+   **Inspect Stage B Evidence / ROI** to commit each field. Use
+   **Select ROI on Source Image** to check any correction region;
+   never assume the previous coordinates are still correct.
+6. Once the fields are recorded, select the failed target. Reinspect
+   its ROI, check the C1 source-ROI acknowledgement and click
+   **Inspect Stage C Governed Handoff (No Generation)**. Confirm
+   the expected seal and no-generation restrictions.
+7. Click **Save Human Review Session (No Generation)**. Record the
+   JSON filename and full path in the assessment panel. Confirm a
+   session receipt, not a Candidate-generation message. There must
+   be no mask save, CAP authority change or attempt increment.
+8. **Close all dialogs, then exit VSCS normally. Relaunch** with
+   `vscs`, confirm active project, and repeat steps 3–5 only to
+   open the saved AI report and F5.4.2 dialog. Do not repeat the
+   manual Stage B assessments.
+9. Press **Refresh Saved Human Reviews**, select the exact
+   `c21-4-....json` saved in step 7, and click
+   **Resume Selected Human Review (No Generation)**.
+   Expected: statuses, notes, defect, ROI and progress restore,
+   with the previously recorded C1 digest displayed. All C1/C2
+   review acknowledgement checkboxes must be **unchecked**.
+10. Switch between two fields and back. Confirm each independently
+    restores its own recorded values. Reinspect the source ROI,
+    check the C1 acknowledgement and click the governed C1
+    inspection again. Confirm its newly computed digest agrees
+    with the saved C1 provenance. Do **not** generate an image.
+11. Press **Find Masks for Current C1 Proposal (No Generation)**.
+    The existing two saved C2 masks should be displayed with clear
+    `CURRENT`/`HISTORICAL` distinction where appropriate.
+    No mask should be implicitly selected. Explicitly choose one
+    and click **Inspect Selected Existing Mask**; confirm hash
+    and match status without writing or running ComfyUI.
+12. **Non-mutation acceptance:** compare the original source-image
+    SHA, saved AI evaluation, CAP/Canon/MASTER, Candidate gallery and
+    governed attempt count. They must remain unchanged. The only
+    new artifact is the deliberately saved C2.1 JSON record.
+    Preserve previous C2 mask PNG files. Screenshot the saved
+    receipt, restored field evidence and mask-version list.
+13. Close VSCS and explicitly confirm acceptance only if the
+    controlled restart, resume and non-mutation checks pass.
+
+**Negative tests:** Stale Candidate SHA, changed CAP review
+fingerprint, truncated/tampered saved JSON, unsupported evidence
+status, forged production-authority switch, missing ROI and invalid
+mask should block. Use isolated regression fixtures only; never edit
+the real Candidate 4 image or accepted semantic report to perform
+negative testing.
+
+The separate [C2.1 acceptance contract](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md)
+is the governing engineering procedure. This UI feature must not
+be recorded as accepted before Windows results and operator screenshots
+are supplied.
