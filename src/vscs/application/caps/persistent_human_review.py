@@ -111,7 +111,9 @@ def _identity(snapshot: CandidateQualitySnapshot) -> dict[str, object]:
         "source_sha256": snapshot.image_sha256,
         "specification_fingerprint": snapshot.specification_fingerprint,
         "review_fingerprint": snapshot.review_fingerprint,
-        "accepted_fields": [[field, requirement] for field, requirement in snapshot.accepted_fields],
+        "accepted_fields": [
+            [field, requirement] for field, requirement in snapshot.accepted_fields
+        ],
         "reference_role": snapshot.reference_role,
         "reference_status": snapshot.reference_status,
     }
