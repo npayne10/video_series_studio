@@ -149,9 +149,7 @@ def test_tampered_evidence_or_permissions_blocked(tmp_path):
     with pytest.raises(GeometryCorrectionError, match="seal"):
         load_human_review_session(snapshot, triage, path=path)
     with pytest.raises(GeometryCorrectionError, match="authoritative"):
-        save_human_review_session(
-            snapshot, replace(review, governed_attempt_allowed=True)
-        )
+        save_human_review_session(snapshot, replace(review, governed_attempt_allowed=True))
 
 
 def test_stage_b_roi_approval_flags_cannot_be_persisted(tmp_path):
@@ -255,7 +253,9 @@ def test_saved_mask_file_tampering_detected(tmp_path):
     )
     destination.mkdir()
     mask = save_reviewed_mask_once(
-        evidence, proposal=proposal, source_path=snapshot.image_path,
+        evidence,
+        proposal=proposal,
+        source_path=snapshot.image_path,
         destination_directory=destination,
     )
     mask.write_bytes(b"invalid changed bytes")
