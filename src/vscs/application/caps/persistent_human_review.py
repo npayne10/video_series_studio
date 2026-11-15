@@ -111,7 +111,7 @@ def _identity(snapshot: CandidateQualitySnapshot) -> dict[str, object]:
         "source_sha256": snapshot.image_sha256,
         "specification_fingerprint": snapshot.specification_fingerprint,
         "review_fingerprint": snapshot.review_fingerprint,
-        "accepted_fields": list(snapshot.accepted_fields),
+        "accepted_fields": [[field, requirement] for field, requirement in snapshot.accepted_fields],
         "reference_role": snapshot.reference_role,
         "reference_status": snapshot.reference_status,
     }
@@ -327,7 +327,7 @@ def list_existing_mask_versions(
         if p.is_symlink() or not p.is_file():
             raise GeometryCorrectionError("Unsafe stored mask path")
         match = re.fullmatch(
-            rf"c2-{snapshot.reference_id}-([0-9a-f]{{16}})-([0-9a-f]{{16}})\\.png",
+            rf"c2-{snapshot.reference_id}-([0-9a-f]{{16}})-([0-9a-f]{{16}})\.png",
             p.name,
         )
         if match is None:
