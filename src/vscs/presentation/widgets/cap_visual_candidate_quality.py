@@ -658,8 +658,10 @@ class CandidateQualityReportDialog(QDialog):
                 return
             for path in paths:
                 session_choices.addItem(path.name, str(path))
-            details.setPlainText(f"{len(paths)} saved human-review session(s) available. "
-                                 "Choose one explicitly; nothing was restored or approved.")
+            details.setPlainText(
+                f"{len(paths)} saved human-review session(s) available. "
+                "Choose one explicitly; nothing was restored or approved."
+            )
 
         def save_session() -> None:
             nonlocal session_dirty, loaded_c1_digest
@@ -680,8 +682,8 @@ class CandidateQualityReportDialog(QDialog):
             refresh_sessions()
             session_choices.setCurrentIndex(session_choices.findData(str(path)))
             details.setPlainText(
-                "C2.1 HUMAN REVIEW SESSION SAVED (NO GENERATION)\\n"
-                f"Immutable session: {path}\\n"
+                "C2.1 HUMAN REVIEW SESSION SAVED (NO GENERATION)\n"
+                f"Immutable session: {path}\n"
                 "Stage B evidence retained for explicit resumption. "
                 "No C1/C2 operator confirmation is persisted as authority."
             )
@@ -716,10 +718,10 @@ class CandidateQualityReportDialog(QDialog):
             restore_selected_field()
             details.setPlainText(
                 saved.review.describe()
-                + "\\nC2.1 RESTORED SAVED REVIEW (NO GENERATION)"
-                + f"\\nSaved: {saved.saved_utc}"
-                + f"\\nPreviously recorded C1 digest: {saved.proposal_sha256 or 'none'}"
-                + "\\nC1 and C2 acknowledgements reset; re-inspect and confirm explicitly."
+                + "\nC2.1 RESTORED SAVED REVIEW (NO GENERATION)"
+                + f"\nSaved: {saved.saved_utc}"
+                + f"\nPreviously recorded C1 digest: {saved.proposal_sha256 or 'none'}"
+                + "\nC1 and C2 acknowledgements reset; re-inspect and confirm explicitly."
             )
 
         def refresh_masks() -> None:
@@ -766,9 +768,9 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Existing Mask Blocked", str(exc))
                 return
             details.setPlainText(
-                "C2.1 SELECTED EXISTING MASK EVIDENCE (NO GENERATION)\\n"
+                "C2.1 SELECTED EXISTING MASK EVIDENCE (NO GENERATION)\n"
                 + matched.describe()
-                + "\\nThis selects evidence for inspection only. "
+                + "\nThis selects evidence for inspection only. "
                 "No GPU/provider compatibility, generation or approval is authorized."
             )
 
