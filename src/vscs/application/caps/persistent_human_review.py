@@ -205,7 +205,7 @@ def list_human_review_sessions(snapshot: CandidateQualitySnapshot) -> tuple[Path
         if p.is_symlink() or not p.is_file():
             raise GeometryCorrectionError("Unsafe saved review session path")
         candidates.append(p)
-    return tuple(sorted(candidates, key=lambda p: p.name, reverse=True))
+    return tuple(sorted(candidates, key=lambda p: (p.stat().st_mtime_ns, p.name), reverse=True))
 
 
 def load_human_review_session(
