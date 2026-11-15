@@ -253,3 +253,25 @@ def test_saved_mask_file_tampering_detected(tmp_path):
     mask.write_bytes(b"invalid changed bytes")
     with pytest.raises(GeometryCorrectionError, match="digest"):
         list_existing_mask_versions(snapshot, proposal=proposal)
+
+
+def test_unsaved_review_guard_blocks_window_close_and_escape(qtbot):
+    from PySide6.QtWidgets import QWidget
+
+    from vscs.presentation.widgets.cap_visual_candidate_quality import (
+        _GuardedHumanReviewDialog,
+    )
+
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    dialog = _GuardedHumanReviewDialog(parent)
+    qtbot.addWidget(dialog)
+    dialog.can_close = lambda: False
+    dialog.show()
+    dialog.reject()
+    assert dialog.isVisible()
+    assert not dialog.close()
+    assert dialog.isVisible()
+    dialog.can_close = lambda: True
+    assert dialog.close()
+    assert not dialog.isVisible()
