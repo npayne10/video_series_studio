@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.4 (living documentation, updated 2026-11-15)  
+**Version:** v0.5 (living documentation, updated 2026-11-15)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,34 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Stage C2.1 — Persistent Human-Review Sessions (implementation candidate)
+
+**Code implemented; Windows and operator acceptance pending.** In the existing
+F5.4.2 advisory review dialog, new C2.1 controls support
+**Save Human Review Session**, **Refresh Saved Human Reviews** and
+**Resume Selected Human Review**. Save creates a new immutable,
+source-SHA/CAP-fingerprint-bound JSON review record under
+`.metadata/human_visual_reviews` after the operator has committed
+Stage B evidence. Resume replays fields through the Stage B contract,
+restoring review status, observations, typed defect and normalized ROI.
+Saved C1 SHA-256 is provenance only; ROI and mask confirmations reset.
+An unsaved-session warning is shown on the dialog Close button.
+
+**Find Masks for Current C1 Proposal** lists existing C2 mask evidence
+with `CURRENT` or `HISTORICAL` labels and verifies file digests,
+format, dimensions and binary pixels. Historical masks are not
+automatically adopted. **Inspect Selected Existing Mask** never enables
+ComfyUI, GPU, attempt reservations, Candidate registration or CAP/Canon
+approval.
+
+For exact activation commands, GUI navigation starting at `vscs`,
+restart/resume evidence and negative tests, see
+[Stage C2.1 User Manual](VSCS_User_Manual.md#f542-stage-c21--save-and-resume-human-correction-reviews)
+and [engineering acceptance plan](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md).
+
+**Stage C2 remains accepted. Stage C2.1 is not yet accepted.
+Stages C3/C4 remain unauthorized.**
 
 ## Stage C2 formally accepted — 2026-11-15
 
