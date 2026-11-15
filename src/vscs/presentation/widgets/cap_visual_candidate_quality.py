@@ -372,7 +372,9 @@ class CandidateQualityReportDialog(QDialog):
         mask_choices = QComboBox(dialog)
         mask_choices.setObjectName("c21SavedMaskChoices")
         layout.addWidget(mask_choices)
-        refresh_masks_button = QPushButton("Find Masks for Current C1 Proposal (No Generation)", dialog)
+        refresh_masks_button = QPushButton(
+            "Find Masks for Current C1 Proposal (No Generation)", dialog
+        )
         refresh_masks_button.setObjectName("c21RefreshMasks")
         layout.addWidget(refresh_masks_button)
         select_mask_button = QPushButton("Inspect Selected Existing Mask (No Generation)", dialog)
@@ -692,10 +694,41 @@ class CandidateQualityReportDialog(QDialog):
                 "Choose one explicitly; nothing was restored or approved."
             )
 
+        def has_unrecorded_editor_changes() -> bool:
+            """Detect edits not yet committed with Inspect Stage B."""
+            if current_evidence is None:
+                return bool(reason.toPlainText().strip() or selected_region is not None)
+            name = str(fields.currentData())
+            item = next(
+                (field for field in current_evidence.reviewed_fields if field.field == name),
+                None,
+            )
+            if item is None:
+                return False
+            return (
+                str(evidence_status.currentData()) != item.status.value
+                or reason.toPlainText().strip() != item.observation
+                or selected_region != item.proposed_region
+                or (
+                    item.status is VisualEvidenceStatus.FAILED
+                    and (item.defect is None or str(defect.currentData()) != item.defect.value)
+                )
+            )
+
         def save_session() -> None:
             nonlocal session_dirty, loaded_c1_digest
             if current_evidence is None:
-                QMessageBox.warning(dialog, "Human Review Save Blocked", "Review a Stage B field first.")
+                QMessageBox.warning(
+                    dialog, "Human Review Save Blocked", "Review a Stage B field first."
+                )
+                return
+            if has_unrecorded_editor_changes():
+                QMessageBox.warning(
+                    dialog,
+                    "Human Review Save Blocked",
+                    "The selected field has unrecorded edits. "
+                    "Click Inspect Stage B Evidence / ROI before saving.",
+                )
                 return
             try:
                 path = save_human_review_session(
@@ -813,7 +846,7 @@ class CandidateQualityReportDialog(QDialog):
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
 
         def can_close_review() -> bool:
-            if not session_dirty:
+            if not session_dirty and not has_unrecorded_editor_changes():
                 return True
             outcome = QMessageBox.question(
                 dialog,
