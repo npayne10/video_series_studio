@@ -130,6 +130,33 @@ unverified fields, changing source/requirements, mismatched C1 digest,
 unreviewed ROI, unsafe/tampered session, mask mismatch, unexpected
 ComfyUI call, CAP modification or a consumed attempt.
 
+## First Windows validation and corrective commit — 2026-11-15
+
+The operator ran Ruff, Mypy, focused and full pytest after the initial
+C2.1 implementation. Mypy passed across 710 source files. The initial
+focused run reported **4 failed, 69 passed**; the full suite reported
+**4 failed, 2,853 passed, 1 skipped** (Windows directory-symlink
+limitation). Ruff flagged two import rules and formatting in the
+widget/test files.
+
+The failures traced to two errors in the new C2.1 persistence layer:
+
+1. CAP fingerprint identity stored `accepted_fields` as a list of
+   Python tuples, but a JSON roundtrip converts nested tuples to lists;
+   comparison therefore incorrectly rejected a legitimate saved review.
+   Identity now emits list-of-lists both at write and read.
+2. The mask filename regular expression mistakenly contained a doubled
+   backslash before `.png` in a raw string; this rejected authentic
+   `c2-<candidate>-<proposal>-<mask>.png` filenames before their
+   SHA-256 could be verified. The expression now matches the literal
+   filename period correctly.
+
+The two Ruff import warnings and requested formatting changes were also
+fixed directly in GitHub. **These corrections require fresh Windows
+validation; the implementation remains unaccepted until regression and
+controlled UI tests pass.** The two unrelated untracked user files
+must remain untouched.
+
 ## Windows validation commands
 
 ```powershell
