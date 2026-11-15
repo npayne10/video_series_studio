@@ -63,6 +63,22 @@ class ExistingMaskVersion:
         )
 
 
+def _check_current_source(snapshot: CandidateQualitySnapshot) -> None:
+    """Reject stale in-dialog snapshots before any read or persistence."""
+    if (
+        snapshot.image_path.is_symlink()
+        or not snapshot.image_path.is_file()
+        or not _HEX.fullmatch(snapshot.image_sha256)
+    ):
+        raise GeometryCorrectionError("Candidate source is missing or unsafe")
+    try:
+        digest = hashlib.sha256(snapshot.image_path.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise GeometryCorrectionError("Cannot recheck Candidate source") from exc
+    if digest != snapshot.image_sha256:
+        raise GeometryCorrectionError("Candidate source changed since quality review")
+
+
 def _session_directory(snapshot: CandidateQualitySnapshot) -> Path:
     return (
         snapshot.project_root
@@ -162,6 +178,7 @@ def save_human_review_session(
     proposal: GovernedCorrectionProposal | None = None,
 ) -> Path:
     """Create a new immutable JSON record; never replace previous review evidence."""
+    _check_current_source(snapshot)
     data = _payload(snapshot, review, proposal)
     sealed = {"payload": data, "sha256": _hash(data)}
     raw = (json.dumps(sealed, indent=2, sort_keys=True) + "\n").encode("utf-8")
@@ -197,6 +214,7 @@ def load_human_review_session(
     *,
     path: Path,
 ) -> SavedHumanReview:
+    _check_current_source(snapshot)
     directory = _safe_directory(_session_directory(snapshot), create=False)
     if (
         path.parent != directory
@@ -274,6 +292,7 @@ def list_existing_mask_versions(
     Historical masks have unknown source/ROI provenance and remain inspection-only.
     No mask is ever automatically selected or authorized for a provider.
     """
+    _check_current_source(snapshot)
     proposal.verify_seal()
     if (
         proposal.asset_id != snapshot.asset_id
