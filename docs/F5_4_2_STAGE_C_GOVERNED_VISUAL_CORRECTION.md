@@ -1,9 +1,10 @@
 # Phase F5.4.2 Stage C — Governed Visual Correction Integration
 
-**Status: Stage C1 OPERATOR ACCEPTED — 2026-11-13.** Stages C2–C4 remain
-unimplemented and unauthorized. Stage C is split into gated milestones rather
-than immediately enabling the live ComfyUI/managed Qwen generator. Stage B was
-operator-accepted on 2026-11-13.
+**Status: Stage C1 accepted 2026-11-13; Stage C2 accepted 2026-11-15.**
+Stages C3–C4 remain unimplemented and unauthorized. Stage C is split into
+gated milestones rather than immediately enabling the live ComfyUI/managed
+Qwen generator. Stage B was operator-accepted on 2026-11-13.
+See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
 ## Stage C1 acceptance record — 2026-11-13
 
@@ -97,10 +98,12 @@ Candidate report only for advisory review; do not initiate new inference.
 
 ## Follow-on stages (require separate review and approval)
 
-- **C2 — Human-reviewed mask evidence:** from source dimensions and
-  operator-reviewed ROI to an actual bounded mask with independent inspection,
-  sealed mask digest, source hash, exact outside-mask preservation policy,
-  and safe storage. No provider inference yet.
+- **C2 — Human-reviewed mask evidence (accepted 2026-11-15):** native-resolution
+  interactive ROI, source SHA-256 binding, inspected grayscale PNG,
+  verified saved mask hashes, exclusive no-overwrite storage and explicit
+  operator-confirmed Candidate/CAP/attempt non-mutation. This is **not**
+  an actual post-edit outside-mask pixel preservation proof. No provider
+  inference is authorized.
 - **C3 — Provider capability and dry-run:** verify a real local ComfyUI
   workflow's mask inputs and model/VRAM fit; compare the Qwen edit graph and
   alternatives without asserting mask support that has not been observed.
@@ -128,6 +131,6 @@ git diff --check
 git status --short
 ```
 
-**Acceptance gates:** fulfilled for C1 as documented above using Windows
-operator results and confirmation. C2–C4 require separate evidence and
-acceptance. Source-edit connectivity alone does not run the Windows tests.
+**Acceptance gates:** fulfilled for C1 and C2 as documented in their
+operator evidence records. C3/C4 still require separate tests and
+approvals. Source-edit connectivity does not run the Windows tests.
