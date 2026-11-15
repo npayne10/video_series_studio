@@ -130,7 +130,7 @@ def test_partial_review_resume_does_not_invent_passes(tmp_path):
 def test_stale_source_or_changed_cap_fails_closed(tmp_path):
     snapshot, triage, review, proposal = _scenario(tmp_path)
     path = save_human_review_session(snapshot, review, proposal=proposal)
-    changed = replace(snapshot, review_fingerprint="modified")
+    changed = SimpleNamespace(**{**vars(snapshot), "review_fingerprint": "modified"})
     with pytest.raises(GeometryCorrectionError, match="stale"):
         load_human_review_session(changed, triage, path=path)
     snapshot.image_path.write_bytes(b"changed")
