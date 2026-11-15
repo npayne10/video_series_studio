@@ -1614,14 +1614,18 @@ required to match. The review is replayed through the established
 Stage B contract. A restored C1 digest is **evidence only**: the
 operator must reinspect the ROI and explicitly issue a fresh C1
 handoff. C2 preview/confirmation remains a separate required action.
-The Close button warns when an inspected Stage B/C1 session has
-changes not saved as a C2.1 record. To reliably resume, use
-**Save Human Review Session** and confirm its receipt before closing.
+The Close button, window X and Escape key refuse to close without
+a confirmation when inspected Stage B/C1 evidence or current uninspected
+form edits are not saved. **Save Human Review Session** refuses to
+persist an uninspected edit: press **Inspect Stage B Evidence / ROI**
+first. To reliably resume, save and confirm the immutable session
+receipt before closing.
 
 **Limitations:** Saving is manual, not automatic. Changing a field
 without pressing **Inspect Stage B Evidence / ROI** does not record
-the edited value. A crash, forced termination or closing via an
-unhandled window control before saving may discard unsaved entries.
+the edited value. A crash or forced termination before saving may
+discard unsaved entries; normal Close, window X and Escape now display
+the unsaved-review confirmation.
 C2.1 does **not** automatically turn an old C2 mask into a provider
 input; C3/C4 permissions remain closed. Preserve both C2 masks
 saved during the 2026-11-15 acceptance test.
