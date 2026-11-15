@@ -317,6 +317,8 @@ class CandidateQualityReportDialog(QDialog):
         current_evidence: SpatialEvidenceReview | None = None
         current_proposal: GovernedCorrectionProposal | None = None
         current_mask: ReviewedMaskEvidence | None = None
+        loaded_c1_digest: str | None = None
+        session_dirty = False
         mask_previewed = False
         selected_region: NormalizedRegion | None = None
         review_progress = QLabel("0 of " + str(len(baseline.mandatory_checks)) + " fields reviewed")
@@ -436,7 +438,7 @@ class CandidateQualityReportDialog(QDialog):
 
         def inspect_spatial_evidence() -> None:
             nonlocal current_evidence, current_proposal, current_mask, mask_previewed
-            nonlocal selected_region
+            nonlocal selected_region, loaded_c1_digest, session_dirty
             try:
                 state = VisualEvidenceStatus(str(evidence_status.currentData()))
                 region = selected_region if state is VisualEvidenceStatus.FAILED else None
@@ -458,6 +460,8 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Stage B Evidence Blocked", str(exc))
                 return
             current_evidence = evidence
+            session_dirty = True
+            loaded_c1_digest = None
             if state is not VisualEvidenceStatus.FAILED:
                 selected_region = None
                 roi.clear()
@@ -485,7 +489,7 @@ class CandidateQualityReportDialog(QDialog):
         layout.addWidget(stage_c)
 
         def inspect_governed_handoff() -> None:
-            nonlocal current_proposal, current_mask, mask_previewed
+            nonlocal current_proposal, current_mask, mask_previewed, session_dirty
             if current_evidence is None:
                 QMessageBox.warning(
                     dialog, "Stage C Handoff Blocked", "Complete Stage B field review first."
@@ -501,7 +505,15 @@ class CandidateQualityReportDialog(QDialog):
             except GeometryCorrectionError as exc:
                 QMessageBox.warning(dialog, "Stage C Handoff Blocked", str(exc))
                 return
+            if loaded_c1_digest is not None and proposal.proposal_sha256 != loaded_c1_digest:
+                QMessageBox.warning(
+                    dialog, "Stage C1 Resume Blocked",
+                    "Restored C1 provenance digest no longer matches. "
+                    "Review Stage B again before issuing a new C1 proposal.",
+                )
+                return
             current_proposal = proposal
+            session_dirty = True
             current_mask = None
             mask_previewed = False
             details.setPlainText(proposal.describe())
@@ -650,6 +662,7 @@ class CandidateQualityReportDialog(QDialog):
                                  "Choose one explicitly; nothing was restored or approved.")
 
         def save_session() -> None:
+            nonlocal session_dirty, loaded_c1_digest
             if current_evidence is None:
                 QMessageBox.warning(dialog, "Human Review Save Blocked", "Review a Stage B field first.")
                 return
@@ -660,6 +673,10 @@ class CandidateQualityReportDialog(QDialog):
             except (GeometryCorrectionError, OSError) as exc:
                 QMessageBox.warning(dialog, "Human Review Save Blocked", str(exc))
                 return
+            session_dirty = False
+            loaded_c1_digest = (
+                current_proposal.proposal_sha256 if current_proposal is not None else None
+            )
             refresh_sessions()
             session_choices.setCurrentIndex(session_choices.findData(str(path)))
             details.setPlainText(
@@ -671,7 +688,7 @@ class CandidateQualityReportDialog(QDialog):
 
         def resume_session() -> None:
             nonlocal current_evidence, current_proposal, current_mask, mask_previewed
-            nonlocal selected_region
+            nonlocal selected_region, loaded_c1_digest, session_dirty
             selected = session_choices.currentData()
             if not isinstance(selected, str) or not selected:
                 QMessageBox.warning(dialog, "Resume Blocked", "Choose a saved session first.")
@@ -684,6 +701,8 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Resume Blocked", str(exc))
                 return
             current_evidence = saved.review
+            loaded_c1_digest = saved.proposal_sha256
+            session_dirty = False
             current_proposal = None
             current_mask = None
             mask_previewed = False
@@ -718,10 +737,13 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Mask List Blocked", str(exc))
                 return
             for item in versions:
-                mask_choices.addItem(item.path.name, str(item.path))
+                state = "CURRENT" if item.matches_current_proposal else "HISTORICAL"
+                mask_choices.addItem(f"[{state}] {item.path.name}", str(item.path))
             details.setPlainText(
-                f"{len(versions)} mask version(s) match the current C1 proposal. "
-                "Choose one explicitly. No version was auto-selected for execution."
+                f"{len(versions)} saved mask version(s) inspected. "
+                "Only an exact current-proposal match is source-bound; "
+                "historical masks are not authorized for this proposal. "
+                "No version is selected for execution."
             )
             mask_choices.setCurrentIndex(-1)
 
@@ -756,8 +778,24 @@ class CandidateQualityReportDialog(QDialog):
         refresh_masks_button.clicked.connect(refresh_masks)
         select_mask_button.clicked.connect(inspect_existing_mask)
         refresh_sessions()
+        details.setPlainText(baseline.describe())
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
-        close.rejected.connect(dialog.reject)
+
+        def close_review() -> None:
+            if session_dirty:
+                outcome = QMessageBox.question(
+                    dialog,
+                    "Unsaved C2.1 Human Review",
+                    "Human review changes have not been saved as a C2.1 session. "
+                    "Closing will discard the current Stage B/C1 session. Continue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if outcome != QMessageBox.StandardButton.Yes:
+                    return
+            dialog.reject()
+
+        close.rejected.connect(close_review)
         layout.addWidget(close)
         dialog.exec()
 
