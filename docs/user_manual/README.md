@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.3 (living documentation, updated 2026-11-14)  
+**Version:** v0.4 (living documentation, updated 2026-11-15)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,26 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Stage C2 formally accepted — 2026-11-15
+
+**Operator accepted:** native-resolution interactive ROI selection, Stage B
+evidence, sealed C1 advisory handoff, C2 red overlay and reviewed mask
+construction; both evidence PNGs have matching stored/source SHA-256 checks.
+The second mask's exact repeat save correctly displayed **Mask evidence
+already exists; never overwrite**. The operator explicitly confirmed
+Candidate 4, its evaluation, accepted CAP/Canon authority and governed
+attempt counters remained unchanged. Two geometrically distinct mask
+evidence versions exist and must both be preserved.
+
+Read the [full operator acceptance and repeatable workflow](VSCS_User_Manual.md#formal-f542-stage-c2-and-interactive-roi-acceptance--2026-11-15)
+and [engineering acceptance record](../F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
+
+**Next engineering gate:** govern persistence/resumption of Stage B/C1
+human review sessions and explicit selection between existing masks.
+**C3/C4 are not accepted or authorized**; no ComfyUI GPU corrections,
+new Candidate registration, protected attempt reservation or CAP/Canon
+promotion follows from Stage C2 acceptance.
 
 ## Interactive ROI PNG loading correction — 2026-11-14
 
