@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, override
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QCloseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -72,6 +72,35 @@ from vscs.presentation.widgets.automation_progress import AutomationProgressRunn
 from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
     ControlledCandidateRegenerationDialog,
 )
+
+
+class _GuardedHumanReviewDialog(QDialog):
+    """Ask before discarding unsaved review via Close, X, or Escape."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.can_close: Callable[[], bool] | None = None
+        self._approved_close = False
+
+    def _may_close(self) -> bool:
+        if self._approved_close:
+            return True
+        if self.can_close is not None and not self.can_close():
+            return False
+        self._approved_close = True
+        return True
+
+    @override
+    def reject(self) -> None:
+        if self._may_close():
+            super().reject()
+
+    @override
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if not self._may_close():
+            event.ignore()
+            return
+        super().closeEvent(event)
 
 
 class CandidateQualityReportDialog(QDialog):
@@ -227,7 +256,7 @@ class CandidateQualityReportDialog(QDialog):
 
     def _open_general_correction_triage(self, report: CandidateQualityResult) -> None:
         """Review a typed defect in the current saved result; do not persist or generate."""
-        dialog = QDialog(self)
+        dialog = _GuardedHumanReviewDialog(self)
         dialog.setWindowTitle("F5.4.2 — General Visual Correction Review (Advisory)")
         dialog.setObjectName("generalVisualCorrectionTriageDialog")
         dialog.resize(900, 760)
@@ -783,21 +812,21 @@ class CandidateQualityReportDialog(QDialog):
         details.setPlainText(baseline.describe())
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
 
-        def close_review() -> None:
-            if session_dirty:
-                outcome = QMessageBox.question(
-                    dialog,
-                    "Unsaved C2.1 Human Review",
-                    "Human review changes have not been saved as a C2.1 session. "
-                    "Closing will discard the current Stage B/C1 session. Continue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No,
-                )
-                if outcome != QMessageBox.StandardButton.Yes:
-                    return
-            dialog.reject()
+        def can_close_review() -> bool:
+            if not session_dirty:
+                return True
+            outcome = QMessageBox.question(
+                dialog,
+                "Unsaved C2.1 Human Review",
+                "Human review changes have not been saved as a C2.1 session. "
+                "Closing will discard the current Stage B/C1 session. Continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            return outcome == QMessageBox.StandardButton.Yes
 
-        close.rejected.connect(close_review)
+        dialog.can_close = can_close_review
+        close.rejected.connect(dialog.reject)
         layout.addWidget(close)
         dialog.exec()
 
