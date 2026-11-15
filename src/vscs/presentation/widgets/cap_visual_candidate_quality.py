@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, override
+from typing import Any, override
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QCloseEvent, QPainter, QPen, QPixmap
+from PySide6.QtGui import QCloseEvent, QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -538,7 +539,8 @@ class CandidateQualityReportDialog(QDialog):
                 return
             if loaded_c1_digest is not None and proposal.proposal_sha256 != loaded_c1_digest:
                 QMessageBox.warning(
-                    dialog, "Stage C1 Resume Blocked",
+                    dialog,
+                    "Stage C1 Resume Blocked",
                     "Restored C1 provenance digest no longer matches. "
                     "Review Stage B again before issuing a new C1 proposal.",
                 )
@@ -758,9 +760,7 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Resume Blocked", "Choose a saved session first.")
                 return
             try:
-                saved = load_human_review_session(
-                    report.snapshot, baseline, path=Path(selected)
-                )
+                saved = load_human_review_session(report.snapshot, baseline, path=Path(selected))
             except (GeometryCorrectionError, OSError) as exc:
                 QMessageBox.warning(dialog, "Resume Blocked", str(exc))
                 return
@@ -794,9 +794,7 @@ class CandidateQualityReportDialog(QDialog):
                 )
                 return
             try:
-                versions = list_existing_mask_versions(
-                    report.snapshot, proposal=current_proposal
-                )
+                versions = list_existing_mask_versions(report.snapshot, proposal=current_proposal)
             except (GeometryCorrectionError, OSError) as exc:
                 QMessageBox.warning(dialog, "Mask List Blocked", str(exc))
                 return
@@ -820,9 +818,7 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Existing Mask Blocked", "Select a mask version first.")
                 return
             try:
-                versions = list_existing_mask_versions(
-                    report.snapshot, proposal=current_proposal
-                )
+                versions = list_existing_mask_versions(report.snapshot, proposal=current_proposal)
                 matched = next((v for v in versions if str(v.path) == chosen), None)
                 if matched is None:
                     raise GeometryCorrectionError("Selected mask is stale or invalid")
