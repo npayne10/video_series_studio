@@ -150,6 +150,8 @@ def _payload(
             raise GeometryCorrectionError("C1 provenance is not bound to these reviewed fields")
     fields: list[dict[str, object]] = []
     for item in review.reviewed_fields:
+        if item.region_reviewer_confirmed:
+            raise GeometryCorrectionError("Stage B review must not persist ROI approval")
         roi = item.proposed_region
         fields.append(
             {
