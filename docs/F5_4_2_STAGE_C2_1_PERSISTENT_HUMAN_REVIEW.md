@@ -37,11 +37,13 @@ promote Canon/MASTER.
   To issue a new C1 proposal the operator must re-confirm the ROI;
   if the saved C1 digest no longer matches, the C1 handoff blocks
   until a new Stage B review has been explicitly made.
-- **Save is manual.** Closing after recording unsaved Stage B/C1
-  evidence using the dialog Close button gives a confirmation
-  warning. To preserve a review, press Save and ensure the immutable
-  session receipt appears before exiting. Avoid closing VSCS via
-  task kill, crash, power loss or window X with unsaved changes.
+- **Save is manual.** The Save action blocks if current editor values
+  differ from last inspected Stage B evidence. Use **Inspect Stage B
+  Evidence / ROI** before saving. Normal Close, window X and Escape
+  display an unsaved-changes confirmation and allow the operator to
+  cancel closing. To preserve work, save and confirm the immutable
+  session receipt first. Forced termination, crash or power loss can
+  still discard unsaved work.
 - **Existing C2 mask version discovery** is available after inspecting
   a fresh C1 proposal. Every version is hash-checked, verified as a
   same-size binary grayscale PNG and shown with either `CURRENT`
