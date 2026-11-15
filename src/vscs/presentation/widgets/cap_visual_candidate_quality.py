@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Qt
@@ -39,6 +40,12 @@ from vscs.application.caps.human_reviewed_mask_evidence import (
     prepare_reviewed_mask,
     preview_mask_bounds,
     save_reviewed_mask_once,
+)
+from vscs.application.caps.persistent_human_review import (
+    list_existing_mask_versions,
+    list_human_review_sessions,
+    load_human_review_session,
+    save_human_review_session,
 )
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.saved_candidate_review import reopen_saved_candidate_review
@@ -315,6 +322,31 @@ class CandidateQualityReportDialog(QDialog):
         review_progress = QLabel("0 of " + str(len(baseline.mandatory_checks)) + " fields reviewed")
         review_progress.setObjectName("spatialEvidenceReviewProgress")
         layout.addWidget(review_progress)
+
+        layout.addWidget(QLabel("C2.1 — Persisted review session (explicit save / resume):"))
+        session_choices = QComboBox(dialog)
+        session_choices.setObjectName("c21SavedHumanReviewChoices")
+        layout.addWidget(session_choices)
+        refresh_sessions_button = QPushButton("Refresh Saved Human Reviews (No Generation)", dialog)
+        refresh_sessions_button.setObjectName("c21RefreshHumanReviews")
+        layout.addWidget(refresh_sessions_button)
+        save_session_button = QPushButton("Save Human Review Session (No Generation)", dialog)
+        save_session_button.setObjectName("c21SaveHumanReview")
+        layout.addWidget(save_session_button)
+        resume_button = QPushButton("Resume Selected Human Review (No Generation)", dialog)
+        resume_button.setObjectName("c21ResumeHumanReview")
+        layout.addWidget(resume_button)
+
+        layout.addWidget(QLabel("C2.1 — Existing C2 masks (explicit evidence selection only):"))
+        mask_choices = QComboBox(dialog)
+        mask_choices.setObjectName("c21SavedMaskChoices")
+        layout.addWidget(mask_choices)
+        refresh_masks_button = QPushButton("Find Masks for Current C1 Proposal (No Generation)", dialog)
+        refresh_masks_button.setObjectName("c21RefreshMasks")
+        layout.addWidget(refresh_masks_button)
+        select_mask_button = QPushButton("Inspect Selected Existing Mask (No Generation)", dialog)
+        select_mask_button.setObjectName("c21SelectExistingMask")
+        layout.addWidget(select_mask_button)
 
         def restore_selected_field() -> None:
             nonlocal selected_region, current_proposal, current_mask, mask_previewed
@@ -604,6 +636,126 @@ class CandidateQualityReportDialog(QDialog):
             )
 
         save_mask_button.clicked.connect(save_mask)
+
+        def refresh_sessions() -> None:
+            session_choices.clear()
+            try:
+                paths = list_human_review_sessions(report.snapshot)
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Saved Review List Blocked", str(exc))
+                return
+            for path in paths:
+                session_choices.addItem(path.name, str(path))
+            details.setPlainText(f"{len(paths)} saved human-review session(s) available. "
+                                 "Choose one explicitly; nothing was restored or approved.")
+
+        def save_session() -> None:
+            if current_evidence is None:
+                QMessageBox.warning(dialog, "Human Review Save Blocked", "Review a Stage B field first.")
+                return
+            try:
+                path = save_human_review_session(
+                    report.snapshot, current_evidence, proposal=current_proposal
+                )
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Human Review Save Blocked", str(exc))
+                return
+            refresh_sessions()
+            session_choices.setCurrentIndex(session_choices.findData(str(path)))
+            details.setPlainText(
+                "C2.1 HUMAN REVIEW SESSION SAVED (NO GENERATION)\\n"
+                f"Immutable session: {path}\\n"
+                "Stage B evidence retained for explicit resumption. "
+                "No C1/C2 operator confirmation is persisted as authority."
+            )
+
+        def resume_session() -> None:
+            nonlocal current_evidence, current_proposal, current_mask, mask_previewed
+            nonlocal selected_region
+            selected = session_choices.currentData()
+            if not isinstance(selected, str) or not selected:
+                QMessageBox.warning(dialog, "Resume Blocked", "Choose a saved session first.")
+                return
+            try:
+                saved = load_human_review_session(
+                    report.snapshot, baseline, path=Path(selected)
+                )
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Resume Blocked", str(exc))
+                return
+            current_evidence = saved.review
+            current_proposal = None
+            current_mask = None
+            mask_previewed = False
+            selected_region = None
+            roi_confirmation.setChecked(False)
+            mask_confirmation.setChecked(False)
+            reviewed = len(saved.review.reviewed_fields) - saved.review.outstanding_fields
+            review_progress.setText(
+                f"{reviewed} of {len(saved.review.reviewed_fields)} fields reviewed"
+            )
+            restore_selected_field()
+            details.setPlainText(
+                saved.review.describe()
+                + "\\nC2.1 RESTORED SAVED REVIEW (NO GENERATION)"
+                + f"\\nSaved: {saved.saved_utc}"
+                + f"\\nPreviously recorded C1 digest: {saved.proposal_sha256 or 'none'}"
+                + "\\nC1 and C2 acknowledgements reset; re-inspect and confirm explicitly."
+            )
+
+        def refresh_masks() -> None:
+            mask_choices.clear()
+            if current_proposal is None:
+                QMessageBox.warning(
+                    dialog, "Mask List Blocked", "Inspect the current C1 handoff first."
+                )
+                return
+            try:
+                versions = list_existing_mask_versions(
+                    report.snapshot, proposal=current_proposal
+                )
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Mask List Blocked", str(exc))
+                return
+            for item in versions:
+                mask_choices.addItem(item.path.name, str(item.path))
+            details.setPlainText(
+                f"{len(versions)} mask version(s) match the current C1 proposal. "
+                "Choose one explicitly. No version was auto-selected for execution."
+            )
+            mask_choices.setCurrentIndex(-1)
+
+        def inspect_existing_mask() -> None:
+            if current_proposal is None:
+                QMessageBox.warning(dialog, "Existing Mask Blocked", "Inspect C1 first.")
+                return
+            chosen = mask_choices.currentData()
+            if not isinstance(chosen, str) or not chosen:
+                QMessageBox.warning(dialog, "Existing Mask Blocked", "Select a mask version first.")
+                return
+            try:
+                versions = list_existing_mask_versions(
+                    report.snapshot, proposal=current_proposal
+                )
+                matched = next((v for v in versions if str(v.path) == chosen), None)
+                if matched is None:
+                    raise GeometryCorrectionError("Selected mask is stale or invalid")
+            except (GeometryCorrectionError, OSError) as exc:
+                QMessageBox.warning(dialog, "Existing Mask Blocked", str(exc))
+                return
+            details.setPlainText(
+                "C2.1 SELECTED EXISTING MASK EVIDENCE (NO GENERATION)\\n"
+                + matched.describe()
+                + "\\nThis selects evidence for inspection only. "
+                "No GPU/provider compatibility, generation or approval is authorized."
+            )
+
+        refresh_sessions_button.clicked.connect(refresh_sessions)
+        save_session_button.clicked.connect(save_session)
+        resume_button.clicked.connect(resume_session)
+        refresh_masks_button.clicked.connect(refresh_masks)
+        select_mask_button.clicked.connect(inspect_existing_mask)
+        refresh_sessions()
         close = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
         close.rejected.connect(dialog.reject)
         layout.addWidget(close)
