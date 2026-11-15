@@ -154,6 +154,14 @@ def test_tampered_evidence_or_permissions_blocked(tmp_path):
         )
 
 
+def test_stage_b_roi_approval_flags_cannot_be_persisted(tmp_path):
+    snapshot, _triage, review, _proposal = _scenario(tmp_path)
+    fields = list(review.reviewed_fields)
+    fields[0] = replace(fields[0], region_reviewer_confirmed=True)
+    with pytest.raises(GeometryCorrectionError, match="ROI approval"):
+        save_human_review_session(snapshot, replace(review, reviewed_fields=tuple(fields)))
+
+
 def test_c1_digest_must_be_derived_from_same_review(tmp_path):
     snapshot, _triage, review, proposal = _scenario(tmp_path)
     fields = list(review.reviewed_fields)
