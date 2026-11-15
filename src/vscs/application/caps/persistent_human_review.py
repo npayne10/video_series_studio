@@ -20,6 +20,7 @@ from vscs.application.caps.general_visual_correction_triage import VisualCorrect
 from vscs.application.caps.geometry_correction_policy import GeometryCorrectionError, GeometryDefect
 from vscs.application.caps.governed_visual_correction_handoff import (
     GovernedCorrectionProposal,
+    prepare_governed_correction_proposal,
 )
 from vscs.application.caps.spatial_visual_evidence import (
     NormalizedRegion,
@@ -48,11 +49,17 @@ class ExistingMaskVersion:
     source_size: tuple[int, int]
     white_pixel_count: int
     proposal_prefix: str
+    matches_current_proposal: bool
 
     def describe(self) -> str:
+        status = (
+            "Matches current C1 proposal"
+            if self.matches_current_proposal
+            else "Historical mask only; NOT bound to current C1 proposal"
+        )
         return (
             f"{self.path.name}: {self.white_pixel_count} proposed editable pixels; "
-            f"SHA-256 {self.sha256}"
+            f"SHA-256 {self.sha256}; {status}"
         )
 
 
@@ -117,12 +124,14 @@ def _payload(
         raise GeometryCorrectionError("Cannot save a stale or authoritative human review")
     if proposal is not None:
         proposal.verify_seal()
-        if (
-            proposal.source_sha256 != snapshot.image_sha256
-            or proposal.source_reference_id != snapshot.reference_id
-            or proposal.asset_id != snapshot.asset_id
-        ):
-            raise GeometryCorrectionError("C1 provenance is not bound to this review")
+        expected = prepare_governed_correction_proposal(
+            review,
+            target_field=proposal.target_field,
+            expected_source_sha256=snapshot.image_sha256,
+            reviewer_confirmed_roi=True,
+        )
+        if proposal != expected:
+            raise GeometryCorrectionError("C1 provenance is not bound to these reviewed fields")
     fields: list[dict[str, object]] = []
     for item in review.reviewed_fields:
         roi = item.proposed_region
@@ -260,9 +269,10 @@ def list_existing_mask_versions(
     *,
     proposal: GovernedCorrectionProposal,
 ) -> tuple[ExistingMaskVersion, ...]:
-    """Only masks whose bytes match the current proposal are eligible to use.
+    """List all inspected versions, marking exact current-proposal matches.
 
-    Other mask versions are deliberately not automatically selected or adopted.
+    Historical masks have unknown source/ROI provenance and remain inspection-only.
+    No mask is ever automatically selected or authorized for a provider.
     """
     proposal.verify_seal()
     if (
@@ -295,30 +305,42 @@ def list_existing_mask_versions(
     for p in directory.glob(f"c2-{snapshot.reference_id}-*.png"):
         if p.is_symlink() or not p.is_file():
             raise GeometryCorrectionError("Unsafe stored mask path")
-        # A different ROI/proposal is not compatible; never silently adopt it.
-        if not p.name.startswith(prefix):
-            continue
+        match = re.fullmatch(
+            rf"c2-{snapshot.reference_id}-([0-9a-f]{{16}})-([0-9a-f]{{16}})\\.png",
+            p.name,
+        )
+        if match is None:
+            raise GeometryCorrectionError("Stored mask filename is invalid")
+        if p.stat().st_size > 32_000_000:
+            raise GeometryCorrectionError("Stored mask exceeds safe size")
         raw = p.read_bytes()
         digest = hashlib.sha256(raw).hexdigest()
-        if (
-            digest != expected.mask_sha256
-            or not p.name.endswith(f"{digest[:16]}.png")
-            or raw != expected.mask_png
-        ):
-            raise GeometryCorrectionError("Stored mask bytes do not match reviewed ROI")
+        if match.group(2) != digest[:16]:
+            raise GeometryCorrectionError("Stored mask evidence digest mismatch")
         try:
             with Image.open(p) as png:
                 if png.mode != "L" or png.format != "PNG" or png.size != expected.source_size:
                     raise GeometryCorrectionError("Saved mask geometry is invalid")
-        except (OSError, UnidentifiedImageError) as exc:
+                pixels = png.tobytes()
+        except (OSError, UnidentifiedImageError, ValueError) as exc:
             raise GeometryCorrectionError("Cannot decode saved mask evidence") from exc
+        if any(pixel not in (0, 255) for pixel in pixels):
+            raise GeometryCorrectionError("Mask pixels must be binary")
+        compatible = (
+            p.name.startswith(prefix)
+            and digest == expected.mask_sha256
+            and raw == expected.mask_png
+        )
+        if p.name.startswith(prefix) and not compatible:
+            raise GeometryCorrectionError("Current proposal mask evidence was modified")
         versions.append(
             ExistingMaskVersion(
                 path=p,
                 sha256=digest,
                 source_size=expected.source_size,
-                white_pixel_count=expected.selected_pixels,
-                proposal_prefix=proposal.proposal_sha256[:16],
+                white_pixel_count=pixels.count(255),
+                proposal_prefix=match.group(1),
+                matches_current_proposal=compatible,
             )
         )
     return tuple(sorted(versions, key=lambda item: item.path.name))
