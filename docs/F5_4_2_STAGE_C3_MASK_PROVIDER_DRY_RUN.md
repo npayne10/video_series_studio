@@ -124,6 +124,25 @@ no automatic creation of new mask; no ComfyUI POST,
 no paid API, no input staging, no model load, no GPU inference,
 no Candidate/Canon promotion and no attempt reservation.
 
+## First Windows validation and formatting corrections — 2026-11-16
+
+The operator's initial C3 Windows run confirmed **43 focused tests passed**,
+**2,862 full-suite tests passed and 1 skipped**, and **Mypy succeeded on
+711 source files**. The skip is the existing Windows symlink-availability
+constraint. `git diff --check` was clean; the only untracked paths were
+the pre-existing unrelated architecture audit and Qwen preflight output.
+
+Initial static checks identified two Ruff lint warnings (`RUF001`
+for an en dash in a timeout message, `SIM102` for nested conditions)
+and formatting differences in three C3-touched files. These were
+corrected directly on the C3 GitHub branch without changing the
+read-only diagnostic intent.
+
+**Post-correction Windows Ruff/format validation remains required.**
+The initial regression results demonstrate the functional baseline
+but do not substitute for a fresh static check on the new commit.
+Operator UI acceptance is still outstanding.
+
 ## Windows verification commands
 
 ```powershell
