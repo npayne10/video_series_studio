@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-15 (Stage C2 operator accepted; C2.1 persistence implementation pending Windows/UI validation)  
+**Last verified:** 2026-11-16 (Stage C2.1 persistent human-review sessions operator accepted; Stage C3/C4 still gated)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1572,7 +1572,7 @@ an older mask implicitly. Both existing C2 mask versions must be preserved.
 
 ### F5.4.2 Stage C2.1 — Save and resume human correction reviews
 
-**Status: CODE IMPLEMENTED; WINDOWS AND UI ACCEPTANCE PENDING.**
+**Status: OPERATOR ACCEPTED — 2026-11-16.**
 
 Previous stages established that the AI semantic report and C2 mask PNG are
 saved, but Stage B operator assessments and the C1 correction proposal were
@@ -1702,7 +1702,58 @@ mask should block. Use isolated regression fixtures only; never edit
 the real Candidate 4 image or accepted semantic report to perform
 negative testing.
 
-The separate [C2.1 acceptance contract](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md)
-is the governing engineering procedure. This UI feature must not
-be recorded as accepted before Windows results and operator screenshots
-are supplied.
+The separate [C2.1 acceptance record](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md#formal-operator-acceptance-record--2026-11-16)
+documents the verified Windows regressions, restart/resume screenshots,
+matching C1 SHA-256 and operator-confirmed non-mutation. C2.1 is
+formally accepted for evidence persistence and inspection only.
+Provider execution, Candidate registration and CAP/Canon/MASTER
+promotion remain blocked until independent C3/C4 acceptance.
+
+
+#### C2.1 accepted UI result — 2026-11-16
+
+**Windows code-quality and regression:** Ruff lint passed, Ruff
+formatting passed (1,692 files already formatted), Mypy passed
+(710 source files), focused regression 73 passed, full regression
+2,857 passed and 1 skipped (Windows symlink limitation). No tracked
+changes were left locally; two unrelated untracked files remained
+untouched.
+
+**Human evidence:** The Diagnostic Console Candidate 4 saved AI review
+was reopened with no new paid assessment. Four accepted fields were
+independently assessed and recorded. The failed `components` field
+identified the rotary dial protruding instead of recessed and bound
+its normalized source ROI to
+`0.64798851,0.45478723,0.06178161,0.07446809`.
+The inspected sealed C1 proposal digest was
+`76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+
+The operator saved the immutable review file
+`c21-4-d1aafcc27b2d4e098d835702542261c8.json`,
+closed VSCS normally, restarted VSCS, reopened the **saved**
+Candidate quality review and explicitly resumed the same C2.1
+session. The screenshot confirmed `4 of 4 fields reviewed`,
+original observations/statuses and exact source ROI restored.
+Both C1/C2 acknowledgements were unchecked after resumption.
+
+After fresh operator ROI confirmation, C1 inspection regenerated
+the **same** digest, as explicitly confirmed by the operator.
+The existing C2 mask chooser listed two `HISTORICAL` versions,
+without selecting either for execution. The operator explicitly
+inspected the historical mask SHA-256
+`1aa336f61f107ffe58d8331ea89caa6b60ee48ef11c15ea1bbe7d7dfa4dedd15`,
+with 5,225 proposed editable pixels and an advisory-only
+non-compatible status.
+
+The operator explicitly confirmed Candidate 4 image and metadata,
+saved AI review, accepted CAP authority, Canon/MASTER, gallery
+registration and governed attempt counter were unchanged.
+The saved human-review JSON was the only intended new artifact.
+This is operator confirmation, not an independent filesystem audit.
+
+**Disposition:** C2.1 accepted and closed for the implemented
+review-session persistence workflow. Neither a saved C1 digest
+nor a historical mask grants generation rights. C3 mask-provider
+capability validation and C4 controlled corrected-Candidate
+production are independent gated phases. Candidate 4 governed
+final Attempt 2/2 remains protected.
