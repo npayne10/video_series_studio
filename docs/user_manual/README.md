@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.6 (living documentation, updated 2026-11-16)  
+**Version:** v0.7 (living documentation, updated 2026-11-16)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,27 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Stage C3 — Provider Mask Compatibility & Controlled Dry-Run
+
+**Implementation candidate; Windows and operator validation pending.**
+New F5.4.2 review controls **Inspect C3 Offline Provider Mask Dry-Run
+(No Generation)** and **Probe Local ComfyUI C3 Node Schemas (GET Only)**
+check source/C1/mask identity, managed Qwen graph limitations and
+experimental F5.4.1B mask topology without writing or generating.
+The optional probe is explicitly consented and limited to localhost
+GET `/object_info` and `/system_stats`. Node presence does not
+prove working inpainting, protected-pixel preservation or GPU fit.
+
+The two currently saved C2 masks are `HISTORICAL` relative to
+the resumed C2.1 ROI, and must remain ineligible for the current
+C1 proposal. The managed Qwen correction builder does not support
+a non-null mask path. **C3 grants no execution or registration
+permissions; C4 is still locked.**
+
+Full Windows instructions starting with `vscs`:
+[C3 operator workflow](VSCS_User_Manual.md#f542-stage-c3--local-provider-mask-compatibility-and-controlled-dry-run)
+and [C3 engineering acceptance](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md).
 
 ## Stage C2.1 — Persistent Human-Review Sessions (operator accepted 2026-11-16)
 
