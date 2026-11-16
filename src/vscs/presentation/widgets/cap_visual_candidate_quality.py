@@ -373,6 +373,13 @@ class CandidateQualityReportDialog(QDialog):
         propose.setObjectName("spatialEvidenceInspect")
         stage_b_grid.addWidget(propose, 2, 1, 1, 2)
 
+        c1_grid = matrix_section(
+            "Stage C1 - reviewed correction handoff (no generation)", "reviewC1Matrix"
+        )
+        c2_grid = matrix_section(
+            "Stage C2 - reviewed mask evidence (no generation)", "reviewC2Matrix"
+        )
+
         current_evidence: SpatialEvidenceReview | None = None
         current_proposal: GovernedCorrectionProposal | None = None
         current_mask: ReviewedMaskEvidence | None = None
@@ -571,9 +578,6 @@ class CandidateQualityReportDialog(QDialog):
             dialog,
         )
         roi_confirmation.setObjectName("stageCReviewedROIConfirmation")
-        c1_grid = matrix_section(
-            "Stage C1 - reviewed correction handoff (no generation)", "reviewC1Matrix"
-        )
         c1_grid.addWidget(roi_confirmation, 0, 0, 1, 2)
         stage_c = QPushButton("Inspect Stage C Governed Handoff (No Generation)", dialog)
         stage_c.setObjectName("stageCGovernedCorrectionInspect")
@@ -614,9 +618,6 @@ class CandidateQualityReportDialog(QDialog):
 
         preview_button = QPushButton("Preview Stage C2 Editable Region (No Generation)", dialog)
         preview_button.setObjectName("stageC2PreviewMask")
-        c2_grid = matrix_section(
-            "Stage C2 - reviewed mask evidence (no generation)", "reviewC2Matrix"
-        )
         c2_grid.addWidget(preview_button, 0, 0, 1, 2)
 
         mask_confirmation = QCheckBox(
