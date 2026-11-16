@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-16 (Stage C2.1 persistent human-review sessions operator accepted; Stage C3/C4 still gated)  
+**Last verified:** 2026-11-16 (Stage C2.1 operator accepted; Stage C3 diagnostic implementation pending Windows/UI acceptance)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1757,3 +1757,100 @@ nor a historical mask grants generation rights. C3 mask-provider
 capability validation and C4 controlled corrected-Candidate
 production are independent gated phases. Candidate 4 governed
 final Attempt 2/2 remains protected.
+
+
+### F5.4.2 Stage C3 — Local provider-mask compatibility and controlled dry-run
+
+**Status: IMPLEMENTATION CANDIDATE; NO GPU / IMAGE GENERATION / PAID API.**
+
+Stage C3 builds on the accepted C2.1 persisted Stage B/C1 sessions
+and preserved C2 mask files. It introduces two separate controls within
+**F5.4.2 — General Visual Correction Review (Advisory)**:
+
+- **Inspect C3 Offline Provider Mask Dry-Run (No Generation)**:
+  reads the current C1 proposal, selected C2 mask and unchanged
+  managed Qwen graph. It checks source SHA-256 and mask provenance,
+  then inspects the separate experimental F5.4.1B
+  `LoadImageMask -> SetLatentNoiseMask -> ImageCompositeMasked`
+  graph topology **in memory**. No ComfyUI contact or filesystem
+  write is performed.
+- **Probe Local ComfyUI C3 Node Schemas (GET Only)**:
+  requires a Yes/No operator confirmation, then optionally
+  calls loopback `GET /object_info` and `GET /system_stats`
+  on `http://127.0.0.1:8188`. This checks only whether the
+  three required mask node classes and declared inputs exist,
+  and reads reported total GPU VRAM. It never calls
+  `POST /prompt` or starts GPU inference.
+
+**Important compatibility finding:** The current managed XCIC
+Qwen derived-reference workflow is **not** a governed C2
+mask-capable provider. Its correction-job builder rejects a
+non-null mask path. The F5.4.1B derived graph demonstrates only
+the intended wiring, not working real-world mask semantics.
+Neither this phase nor the optional GET-only node report can
+establish exact protected-pixel preservation, runtime node
+behavior, Qwen model GPU fit, or approval readiness.
+**No C3 report authorizes execution.**
+
+**Existing Diagnostic Console masks:** The C2 masks with SHA-256
+prefixes `19564b7f` (5,580 pixels) and `1aa336f6`
+(5,225 pixels) are historically saved evidence. Relative to
+the accepted C2.1 ROI `0.64798851,0.45478723,0.06178161,0.07446809`,
+both are `HISTORICAL`, **not eligible as current C1 masks**.
+Inspecting either must show a compatibility blocker. Do not
+create or save a replacement merely for this diagnostic test.
+
+#### F5.4.2-C3-UI-01 — exact operator test steps
+
+1. Close VSCS and activate the existing `.venv` in PowerShell
+   from `D:\VSCS\video_series_studio`. Fetch and switch to
+   `phase-f5.4.2-c3-provider-mask-dry-run`, pull, then run
+   Ruff, Ruff formatting, Mypy, focused/full pytest and git
+   integrity checks in the
+   [C3 engineering acceptance plan](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md#windows-verification-commands).
+2. Start VSCS with `vscs`. On **Dashboard → Active Project**
+   confirm `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`.
+3. Navigate to **Canonical Profiles → Diagnostic Console →
+   Edit Selected → Canonical Reference Gallery**. Select
+   **Candidate 4** and click **Open Saved Candidate Review…**
+   (do not use **Review Visual Candidate… → Yes**, which may
+   perform another paid AI review).
+4. Click **F5.4.2 Review General Visual Correction (No
+   Generation)…**. Choose saved C2.1 session
+   `c21-4-d1aafcc27b2d4e098d835702542261c8.json`,
+   then click **Resume Selected Human Review (No Generation)**.
+   Confirm all four fields are restored and C1/C2 operator
+   acknowledgements are unchecked.
+5. Select `components`, visually verify its source-image ROI,
+   check the C1 ROI acknowledgment and press
+   **Inspect Stage C Governed Handoff (No Generation)**.
+   Ensure its digest is
+   `76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+6. Click **Find Masks for Current C1 Proposal (No Generation)**;
+   both previously saved C2 masks should be `HISTORICAL`.
+   Explicitly select one. Click **Inspect C3 Offline Provider
+   Mask Dry-Run (No Generation)** and screenshot the
+   diagnostic. Expected: no HTTP requests, no writes,
+   selected mask not current, managed Qwen contract blocked,
+   derived mask topology inspected when available,
+   all execution permissions false.
+7. Click **Probe Local ComfyUI C3 Node Schemas (GET Only)**.
+   Confirm the notice explains local GET-only requests.
+   Test **No** first (cancels); optionally test **Yes**
+   with ComfyUI running to inspect node names, input
+   contracts and GPU inventory. A successful GET does
+   **not** imply provider mask support or GPU readiness.
+8. Verify no Candidate 4 image/metadata change, no alteration
+   to saved AI review, CAP/Canon/MASTER, C2 mask files,
+   C2.1 saved JSON, gallery registration, attempt counters
+   or ComfyUI queue. **Do not** create a new C2 mask,
+   stage an image, launch generation or perform C4 actions.
+9. Capture screenshots, command outputs and explicit
+   non-mutation confirmation. C3 remains unaccepted until
+   these tests pass and the operator approves the
+   diagnostic-only gate.
+
+See [C3 engineering contract](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md).
+C4 controlled production, mask use in GPU inference,
+protected-pixel proof and Candidate/Canon promotion are
+separate unimplemented, unauthorized steps.
