@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-16 (Stage C3 diagnostic-only provider-mask and local GET-only probe operator accepted; C4 remains unauthorized)  
+**Last verified:** 2026-11-16 (Stage C3 diagnostic accepted; C4A contract preparation implemented, Windows/UI acceptance pending)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1907,3 +1907,121 @@ registration, protected Attempt 2/2 and CAP/Canon promotion
 remain locked.
 
 See the [full C3 engineering acceptance record](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md#formal-operator-acceptance-record--2026-11-16).
+
+
+### F5.4.2 Stage C4A — Mask-capable provider preparation and protected-pixel audit
+
+**Status: CODE IMPLEMENTED, WINDOWS/OPERATOR ACCEPTANCE PENDING.
+NO GENERATED IMAGE OR GOVERNED ATTEMPT ALLOWED.**
+
+Stage C4A is an engineering preparation gate, **not** a live C4
+masked-edit provider. It uses the existing accepted C1 proposal and
+C2/C2.1 mask provenance, explicitly preserves the Stage C3
+finding that managed XCIC Qwen cannot yet consume a governed C2
+mask, and inspects the separate experimental F5.4.1B mask graph
+*without running it*.
+
+**New F5.4.2 dialog controls:**
+
+- **Inspect C4A Mask Provider Contract (No Generation)**:
+  verify the unchanged source PNG SHA-256, accepted CAP fields,
+  sealed C1 SHA-256, explicitly chosen existing C2 mask, and
+  trusted managed/derived graph evidence. Display a SHA-sealed,
+  non-executable report; a HISTORICAL mask remains a blocker.
+  Never stage source/mask files or use ComfyUI.
+- **Acknowledge C4A Preparation Review (Not Execution Consent)**:
+  explicitly warns that it cannot authorize generation. Requires
+  entering exactly `REVIEW ONLY`, produces only an in-memory
+  review receipt after revalidating the contract. It creates
+  **no provider job, saved consent, attempt reservation or
+  corrected Candidate**. The phrase is **not** an execution
+  or paid API approval.
+
+**Pixel audit design:** `audit_external_masked_result` is an
+offline inspection tool for an *already existing* disposable
+PNG outside the active VSCS project. It accepts only an
+exact current-C1-bound C2 mask and equal-sized RGB source/output
+images and binary L mask. It counts changed RGB pixels in the
+black protected region, where even one change fails the
+protected-pixel comparison. A zero count is an exact-pixel
+equality check, **not** proof that a model generated a correct
+edit, semantic field requirements were satisfied, or any
+governed attempt can be booked. The feature does not
+write files or run GPU inference.
+
+**Known Diagnostic Console baseline:** The stored human review
+`c21-4-d1aafcc27b2d4e098d835702542261c8.json` has
+`components` FAILED with the operator-reviewed ROI
+`0.64798851,0.45478723,0.06178161,0.07446809`
+and original sealed C1 digest
+`76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+Both original C2 masks are **HISTORICAL** for this ROI.
+C4A may inspect either mask but must not call it current
+or silently save a replacement. The user must not consume
+Candidate 4's protected final Attempt 2/2.
+
+#### C4A-UI-01 — complete controlled operator procedure
+
+1. Exit VSCS. In `D:\VSCS\video_series_studio` with the
+   existing `(.venv)` active, fetch and switch to
+   `phase-f5.4.2-c4a-mask-provider-contract-preparation`.
+   Pull and run the static, focused and full regressions
+   given in the
+   [C4A engineering contract](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md#windows-regression-commands).
+   Stop for any Ruff, Mypy, pytest or unexpected tracked
+   Git changes. Preserve the two unrelated untracked
+   audit/preflight files.
+2. Start VSCS using `vscs` from the activated environment.
+   Under **Dashboard → Active Project**, confirm the existing
+   `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` project.
+3. Open **Canonical Profiles**, select Diagnostic Console
+   `STORY-PRO-B00D168E43`, choose **Edit Selected**,
+   open **Canonical Reference Gallery**, and select
+   **Candidate 4**.
+4. Click **Open Saved Candidate Review…**, **not** the
+   paid re-evaluation button. From the saved report
+   click **F5.4.2 Review General Visual Correction
+   (No Generation)…**.
+5. Select the saved C2.1 human-review JSON above, click
+   **Resume Selected Human Review (No Generation)**,
+   and confirm all four fields, the existing defect/ROI
+   and unchecked C1/C2 confirmations.
+6. With the `components` field selected, visually
+   reinspect the source-image ROI, check the C1
+   ROI acknowledgement and click **Inspect Stage C
+   Governed Handoff (No Generation)**. Compare the
+   displayed C1 digest with the original.
+7. Click **Find Masks for Current C1 Proposal**;
+   both C2 PNGs must show HISTORICAL status.
+   Explicitly select one of these historical masks.
+   Click **Inspect C4A Mask Provider Contract
+   (No Generation)**. Verify that provider execution,
+   mask compatibility and Candidate registration
+   remain unauthorized, with a historical-mask blocker.
+8. Click **Acknowledge C4A Preparation Review (Not
+   Execution Consent)**. Test an incorrect phrase
+   to confirm it blocks. Repeat and type exactly
+   `REVIEW ONLY`. Verify only an in-memory
+   review acknowledgement appears; there is no
+   ComfyUI, GPU, paid provider, output or attempt.
+9. Use **isolated Python tests**, not Candidate 4,
+   to verify an external synthetic PNG comparison:
+   one changed editable pixel leaves the protected
+   region intact; a single changed protected pixel
+   is correctly detected. Do not write a test image
+   into the accepted CAP project.
+10. Verify Candidate 4 image/metadata, saved AI
+    evaluation, original C2 PNG SHA-256s, C2.1 JSON,
+    CAP/Canon/MASTER authority, Candidate gallery
+    and governed attempt counter remained unchanged.
+    Capture the report and operator confirmation
+    before formally accepting **C4A preparation only**.
+
+The full [C4A engineering specification](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md)
+lists the **separate future requirements** for real
+mask-capable provider runtime, GPU/VRAM tests,
+one-use production consent, safe attempt reservation,
+protected-pixel verification after live output and
+operator-reviewed Candidate registration. **C4 generation
+is still prohibited until those gates are independently
+accepted.**
