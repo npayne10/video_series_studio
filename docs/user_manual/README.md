@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.7 (living documentation, updated 2026-11-16)  
+**Version:** v0.8 (living documentation, updated 2026-11-16)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -10,9 +10,9 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
-## Stage C3 — Provider Mask Compatibility & Controlled Dry-Run
+## Stage C3 — Provider Mask Compatibility & Controlled Dry-Run (operator accepted 2026-11-16)
 
-**Implementation candidate; Windows and operator validation pending.**
+**Accepted as read-only, diagnostic-only capability on 2026-11-16.**
 New F5.4.2 review controls **Inspect C3 Offline Provider Mask Dry-Run
 (No Generation)** and **Probe Local ComfyUI C3 Node Schemas (GET Only)**
 check source/C1/mask identity, managed Qwen graph limitations and
@@ -26,6 +26,20 @@ the resumed C2.1 ROI, and must remain ineligible for the current
 C1 proposal. The managed Qwen correction builder does not support
 a non-null mask path. **C3 grants no execution or registration
 permissions; C4 is still locked.**
+
+**Accepted evidence:** Ruff lint/format clean (1,695 files),
+Mypy clean on 711 source files, focused tests `43 passed`,
+full tests `2,862 passed, 1 skipped`. The operator verified an
+offline in-memory graph diagnostic, then a consented GET-only
+ComfyUI inventory that reported all three relevant mask node
+classes and RTX 5060 Ti total VRAM ~15.9 GiB. The chosen
+`1aa336f6...` mask remained `HISTORICAL` and not bound to
+the current C1. The operator explicitly confirmed no Candidate,
+CAP/Canon, saved report, C2 mask, C2.1 record, gallery or
+attempt mutation, nor any correction job/output.
+
+**Formal acceptance:** [C3 operator evidence](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md#formal-operator-acceptance-record--2026-11-16).
+**C4 and all GPU mask generation remain blocked.**
 
 Full Windows instructions starting with `vscs`:
 [C3 operator workflow](VSCS_User_Manual.md#f542-stage-c3--local-provider-mask-compatibility-and-controlled-dry-run)
