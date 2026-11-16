@@ -1,10 +1,32 @@
 # Phase F5.4.2 Stage C — Governed Visual Correction Integration
 
-**Status: Stage C1 accepted 2026-11-13; Stage C2 accepted 2026-11-15.**
+**Status: Stage C1 accepted 2026-11-13; Stage C2 accepted 2026-11-15;
+Stage C2.1 accepted 2026-11-16.**
 Stages C3–C4 remain unimplemented and unauthorized. Stage C is split into
 gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
+
+## Stage C2.1 acceptance — 2026-11-16
+
+The Stage C2.1 persistent human-review session feature has been
+operator-accepted. The controlled workflow saved a sealed
+source/CAP-bound JSON record, closed and restarted VSCS, and restored
+all four operator-reviewed fields and ROI without a new paid AI
+review. The original sealed C1 proposal SHA-256 reproduced after
+fresh ROI acknowledgement. Both existing C2 masks were correctly
+listed as historical, inspected only, and not adopted for execution.
+
+Windows validation: Ruff lint/format clean, Mypy on 710 source files,
+73 focused tests passed, and 2,857 full-suite tests passed with
+one Windows symlink skip. The operator expressly confirmed no
+Candidate 4 / saved AI review / CAP authority / Canon/MASTER /
+gallery / governed-attempt mutation.
+
+See [C2.1 formal acceptance record](F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md#formal-operator-acceptance-record--2026-11-16).
+Persisted review evidence grants **no** producer execution authority;
+C3/C4 and the protected final Candidate 4 governed Attempt 2/2
+remain locked.
 
 ## Stage C1 acceptance record — 2026-11-13
 
@@ -131,6 +153,7 @@ git diff --check
 git status --short
 ```
 
-**Acceptance gates:** fulfilled for C1 and C2 as documented in their
-operator evidence records. C3/C4 still require separate tests and
-approvals. Source-edit connectivity does not run the Windows tests.
+**Acceptance gates:** fulfilled for C1, C2 and C2.1 as documented
+in their operator evidence records. C3/C4 still require separate
+tests and approvals. Source-edit connectivity does not run the
+Windows tests.
