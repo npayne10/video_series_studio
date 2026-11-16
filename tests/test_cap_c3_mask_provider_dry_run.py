@@ -126,7 +126,8 @@ def test_unselected_or_historical_mask_stays_blocked(tmp_path):
     report = inspect_c3_mask_dry_run(snapshot, proposal, selected_mask_path=None)
     assert not report.selected_mask_current
     assert any("explicitly selected" in item for item in report.blockers)
-    other = mask.parent / "c2-4-ffffffffffffffff-1234567890abcdef.png"
+    digest = hashlib.sha256(mask.read_bytes()).hexdigest()
+    other = mask.parent / f"c2-4-ffffffffffffffff-{digest[:16]}.png"
     other.write_bytes(mask.read_bytes())
     report = inspect_c3_mask_dry_run(snapshot, proposal, selected_mask_path=other)
     assert not report.selected_mask_current
