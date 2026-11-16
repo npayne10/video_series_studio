@@ -1,12 +1,85 @@
 # F5.4.2 Stage C3 — Provider Mask Compatibility and Controlled Dry-Run
 
-**Status: IMPLEMENTATION CANDIDATE — operator and Windows regression acceptance pending.**
+**Status: OPERATOR ACCEPTED — 2026-11-16, DIAGNOSTIC ONLY.** No GPU inference, provider mask execution, corrected Candidate registration or governed attempt use has been authorized.
 
 C3 assesses whether a C2 source-bound mask could be routed through a
 mask-aware local ComfyUI workflow. **It does not perform image generation.**
 C2.1 was operator accepted on 2026-11-16; C3 is a separate gate.
 C4, any GPU inference, paid AI requests and Candidate 4's protected
 final governed Attempt 2/2 remain unauthorized.
+
+## Formal operator acceptance record — 2026-11-16
+
+**Decision:** Stage C3 accepted for *read-only capability assessment and
+controlled, opt-in local GET-only dry-run*. This acceptance is
+**not** provider mask compatibility certification and grants **no
+execution authority**.
+
+**Windows validation:** On the C3 branch, the operator reported Ruff
+lint passing, Ruff formatting passing (`1,695 files already formatted`),
+Mypy passing on `711 source files`, focused regression `43 passed`,
+full regression `2,862 passed, 1 skipped` (Windows directory symlink
+unavailable), clean `git diff --check`, and no tracked local edits.
+The only untracked paths were the pre-existing
+`docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`
+and `qwen_f5_preflight_result.json`, not modified by C3.
+
+**Operator UI evidence:**
+1. The existing project `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI` and
+   Diagnostic Console supplementary Candidate 4 were reopened using
+   **Open Saved Candidate Review…**; the stored C2.1 human session
+   was restored, showing `4 of 4 fields reviewed`.
+2. The `components` failed defect remained
+   `protruding_instead_of_recessed`; its reviewed normalized ROI
+   was `0.64798851,0.45478723,0.06178161,0.07446809`.
+   Fresh C1 inspection used the previously sealed proposal SHA-256
+   `76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+3. Both C2 masks remained `HISTORICAL` relative to that C1 proposal.
+   The operator explicitly selected the historical mask with SHA-256
+   `1aa336f61f107ffe58d8331ea89caa6b60ee48ef11c15ea1bbe7d7dfa4dedd15`.
+   The offline report displayed `Mask matches current proposal: False`,
+   `Offline topology inspected: True`, and
+   `Loopback GET probe used: False`.
+   The managed Qwen graph and experimental masked graph SHA-256
+   digests were reported; **no files, jobs or masks were created**.
+4. After operator-controlled local ComfyUI GET-only inspection,
+   the report showed `Loopback GET probe used: True` and detected
+   `LoadImageMask`, `SetLatentNoiseMask` and
+   `ImageCompositeMasked`. ComfyUI reported the
+   `NVIDIA GeForce RTX 5060 Ti` GPU at approximately `15.9 GiB`
+   **total VRAM**, not free VRAM or proven peak inference capacity.
+   The current-proposal mask mismatch remained `False`; no
+   masked execution was authorized. No separate screenshot evidence
+   was supplied for the optional **No** cancellation branch.
+5. The operator explicitly confirmed the Candidate 4 image and
+   metadata, saved AI evaluation, both C2 PNGs, saved C2.1 JSON,
+   accepted CAP requirements and authority, Canon/MASTER status,
+   Candidate gallery registration and governed attempt counter
+   remained unchanged throughout the offline and GET-only tests.
+   The operator also confirmed **no image-generation job and no
+   correction output were created**. This is operator-confirmed
+   non-mutation rather than an independently executed filesystem audit.
+
+**Findings and remaining blockers:**
+- Existing managed XCIC Qwen correction workflow rejects a non-null
+  governed mask path. The experimental F5.4.1B topology inspection
+  demonstrates structural intent only.
+- Historical C2 mask evidence is not compatible with the current C1
+  proposal and cannot be adopted silently.
+- Presence of ComfyUI mask node classes and their input schemas does
+  not establish actual mask polarity, compositing semantics,
+  protected-pixel fidelity or provider input compatibility.
+- Live masked inference, RTX 5060 Ti 16 GiB peak VRAM fit,
+  post-run protected-pixel comparison, C4 output/attempt governance
+  and Candidate registration have not been tested or approved.
+
+**Authority boundary:** C3 is closed only for inspection. No
+`POST /prompt`, model load, GPU inference, paid API call, staging,
+mask override, new Candidate, attempt reservation or CAP/Canon/MASTER
+promotion is permitted. Candidate 4's protected final governed
+Attempt 2/2 remains untouched. Any later controlled execution
+requires a distinct C4 implementation, regression and explicit
+operator approval.
 
 ## Existing technical baseline and findings
 
@@ -164,6 +237,6 @@ git status --short
 **Acceptance criteria:** robust refusal of historical/stale masks,
 offline graph evidence, opt-in loopback GET inventory (or explicit
 unavailability), report of unresolved runtime blockers,
-and unchanged source/CAP/attempt records. C3 remains an
-implementation candidate until real Windows regression and
-operator proof have been reviewed.
+and unchanged source/CAP/attempt records. C3 was operator-accepted
+on 2026-11-16 for these diagnostic-only functions; the acceptance
+evidence is recorded above. C4 remains separately unauthorized.
