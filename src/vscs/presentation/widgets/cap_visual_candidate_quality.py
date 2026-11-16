@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from vscs.application.caps.c3_mask_provider_dry_run import inspect_c3_mask_dry_run
 from vscs.application.caps.general_visual_correction_triage import (
     candidate_visual_triage,
 )
@@ -381,6 +382,14 @@ class CandidateQualityReportDialog(QDialog):
         select_mask_button = QPushButton("Inspect Selected Existing Mask (No Generation)", dialog)
         select_mask_button.setObjectName("c21SelectExistingMask")
         layout.addWidget(select_mask_button)
+
+        layout.addWidget(QLabel("Stage C3 — Mask provider compatibility (no generation):"))
+        c3_offline = QPushButton("Inspect C3 Offline Provider Mask Dry-Run (No Generation)", dialog)
+        c3_offline.setObjectName("stageC3OfflineMaskDryRun")
+        layout.addWidget(c3_offline)
+        c3_probe = QPushButton("Probe Local ComfyUI C3 Node Schemas (GET Only)", dialog)
+        c3_probe.setObjectName("stageC3ComfyGetOnlyProbe")
+        layout.addWidget(c3_probe)
 
         def restore_selected_field() -> None:
             nonlocal selected_region, current_proposal, current_mask, mask_previewed
@@ -831,6 +840,43 @@ class CandidateQualityReportDialog(QDialog):
                 + "\nThis selects evidence for inspection only. "
                 "No GPU/provider compatibility, generation or approval is authorized."
             )
+
+        def inspect_c3(*, probe: bool) -> None:
+            if current_proposal is None:
+                QMessageBox.warning(
+                    dialog,
+                    "Stage C3 Blocked",
+                    "Reinspect and confirm the current Stage C1 handoff first.",
+                )
+                return
+            selected_path = mask_choices.currentData()
+            chosen = Path(selected_path) if isinstance(selected_path, str) and selected_path else None
+            if probe:
+                consent = QMessageBox.question(
+                    dialog,
+                    "C3 Local GET-only Probe",
+                    "Query local ComfyUI at http://127.0.0.1:8188 using GET "
+                    "/object_info and GET /system_stats only? No /prompt, "
+                    "image staging, GPU generation, API payment or attempt reservation.",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if consent != QMessageBox.StandardButton.Yes:
+                    return
+            try:
+                result = inspect_c3_mask_dry_run(
+                    report.snapshot,
+                    current_proposal,
+                    selected_mask_path=chosen,
+                    probe_local_comfyui=probe,
+                )
+            except (GeometryCorrectionError, OSError, ValueError, RuntimeError) as exc:
+                QMessageBox.warning(dialog, "Stage C3 Dry-Run Blocked", str(exc))
+                return
+            details.setPlainText(result.describe())
+
+        c3_offline.clicked.connect(lambda: inspect_c3(probe=False))
+        c3_probe.clicked.connect(lambda: inspect_c3(probe=True))
 
         refresh_sessions_button.clicked.connect(refresh_sessions)
         save_session_button.clicked.connect(save_session)
