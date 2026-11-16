@@ -82,9 +82,7 @@ def _source_and_proposal(tmp_path: Path):
     )
     mask_directory = root / "Canonical Assets" / asset / ".metadata" / "spatial_masks"
     mask_directory.mkdir(parents=True)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     path = save_reviewed_mask_once(
         evidence,
         proposal=proposal,
@@ -102,9 +100,7 @@ def test_offline_dry_run_reads_only_and_reports_current_proposal(tmp_path, monke
         "vscs.application.caps.c3_mask_provider_dry_run._get_json",
         lambda *_args: pytest.fail("Offline C3 must never contact ComfyUI"),
     )
-    report = inspect_c3_mask_dry_run(
-        snapshot, proposal, selected_mask_path=mask
-    )
+    report = inspect_c3_mask_dry_run(snapshot, proposal, selected_mask_path=mask)
     assert report.selected_mask_current
     assert report.selected_mask_sha256 == hashlib.sha256(raw_mask).hexdigest()
     assert report.managed_workflow_sha256
@@ -159,19 +155,20 @@ def test_comfyui_inventory_uses_only_get_and_refuses_remote(monkeypatch):
                     "LoadImageMask": {"image", "channel"},
                     "SetLatentNoiseMask": {"samples", "mask"},
                     "ImageCompositeMasked": {
-                        "destination", "source", "mask", "x", "y", "resize_source"
+                        "destination",
+                        "source",
+                        "mask",
+                        "x",
+                        "y",
+                        "resize_source",
                     },
                 }.items()
             }
         return {"devices": [{"name": "RTX 5060 Ti", "vram_total": 16 * 1024**3}]}
 
-    monkeypatch.setattr(
-        "vscs.application.caps.c3_mask_provider_dry_run._get_json", fake_get
-    )
+    monkeypatch.setattr("vscs.application.caps.c3_mask_provider_dry_run._get_json", fake_get)
     info, stats = _inventory("http://127.0.0.1:8188", 3)
-    assert set(info) == {
-        "LoadImageMask", "SetLatentNoiseMask", "ImageCompositeMasked"
-    }
+    assert set(info) == {"LoadImageMask", "SetLatentNoiseMask", "ImageCompositeMasked"}
     assert len(stats["devices"]) == 1
     assert calls == ["/object_info", "/system_stats"]
     with pytest.raises(ValueError, match="loopback"):
@@ -191,8 +188,12 @@ def test_local_probe_retains_nonexecution_boundary(tmp_path, monkeypatch):
                 "ImageCompositeMasked": {
                     "input": {
                         "required": {
-                            "destination": [], "source": [], "mask": [],
-                            "x": [], "y": [], "resize_source": []
+                            "destination": [],
+                            "source": [],
+                            "mask": [],
+                            "x": [],
+                            "y": [],
+                            "resize_source": [],
                         }
                     }
                 },
