@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.9 (living documentation, updated 2026-11-16)  
+**Version:** v0.10 (living documentation, updated 2026-11-16)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,26 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## F5.4.2 review matrix UI — selections beside corresponding actions
+
+**Implementation candidate; Windows/UI acceptance pending.** The
+General Visual Correction Review dialog now groups Finding/
+Classification, B, C1, C2, C2.1 Sessions, C2.1 Masks,
+C3 and C4A into compact, labelled Qt grid sections. Saved
+session and mask dropdowns are adjacent to their Refresh/
+Resume/Inspect actions; the field status and source ROI
+sit beside their Stage B operations. C1/C2 confirmations
+remain in the same section as their gated actions.
+All existing button object identifiers and callbacks are retained.
+
+This is **presentation only**; no paid AI request, GPU job,
+mask write, attempt reservation or CAP/Canon authority is added.
+The shared C2 mask selector remains the sole input for C3/C4A
+inspection to avoid divergent selections.
+
+See [User Manual and controlled operator test](VSCS_User_Manual.md#f542--compact-review-matrix-layout-ui-refinement)
+and [layout/regression acceptance plan](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md).
 
 ## Stage C4A — Mask Provider Contract Preparation (implementation candidate)
 
