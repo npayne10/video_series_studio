@@ -1,12 +1,87 @@
 # F5.4.2 Stage C2.1 — Persistent Human-Review Sessions
 
-**Status: IMPLEMENTATION CANDIDATE — Windows regression and operator acceptance required.**
+**Status: OPERATOR ACCEPTED — 2026-11-16.** Source-bound advisory session persistence only. C3/C4 remain unauthorized.
 
 Stage C2 was operator accepted on 2026-11-15. This phase adds explicit
 immutable session Save/Resume and inspection-only mask-version discovery.
 It does not authorize generation, import a mask into ComfyUI, register
 Candidates, consume governed attempts, change CAP requirements, or
 promote Canon/MASTER.
+
+## Formal operator acceptance record — 2026-11-16
+
+**Decision:** F5.4.2 Stage C2.1 accepted for persistent, review-only
+human evidence sessions and explicit saved-mask discovery. The operator
+performed a controlled VSCS shutdown/restart and supplied screenshots
+of the saved session receipt, restored assessments and mask selection,
+then expressly confirmed the C1 digest and non-mutation of protected
+records and counters.
+
+**Windows validation evidence:**
+- `python -m ruff check .`: **All checks passed**.
+- `python -m ruff format --check --no-cache .`:
+  **1,692 files already formatted**.
+- `python -m mypy src`: **Success; 710 source files**.
+- Focused C2.1/ROI/C2/B/C1/quality regression: **73 passed**.
+- Full `python -m pytest -q`: **2,857 passed, 1 skipped**;
+  the skip is Windows directory-symlink availability.
+- `git diff --check`: no issues. The only `git status --short`
+  entries were pre-existing, unrelated untracked
+  `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md` and
+  `qwen_f5_preflight_result.json`; neither was modified.
+
+**Observed controlled UI sequence:**
+1. On Candidate 4 for Diagnostic Console asset
+   `STORY-PRO-B00D168E43`, the operator opened the existing saved
+   AI Candidate review (without a repeated paid evaluation) and
+   inspected the F5.4.2 dialog. All new C2.1 controls were visible;
+   Stage B initially showed `0 of 4 fields reviewed`.
+2. The operator reviewed all four accepted CAP fields. `components`
+   was recorded FAILED for a rotary dial protruding rather than
+   recessed; other fields were independently marked
+   VERIFIED_BY_OPERATOR. Stage B showed `4 of 4 fields reviewed`.
+3. Source-relative rectangle recorded for `components`:
+   `0.64798851,0.45478723,0.06178161,0.07446809`.
+   A sealed, non-executable C1 handoff was inspected, with
+   proposal SHA-256:
+   `76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+4. The user clicked **Save Human Review Session (No Generation)**;
+   VSCS displayed an immutable JSON receipt under
+   `.metadata/human_visual_reviews`. The session filename
+   was `c21-4-d1aafcc27b2d4e098d835702542261c8.json`,
+   and it was visible in the session dropdown.
+5. After closing and reopening VSCS, returning to the same
+   project/Candidate via **Open Saved Candidate Review…**, the
+   operator selected that session and clicked **Resume Selected Human
+   Review (No Generation)**. All four field assessments, operator
+   observation and exact normalized ROI were restored.
+   C1 ROI and C2 mask checkboxes were **unchecked** on resume,
+   preserving the fresh-review requirement.
+6. The operator reinspected the source-bound C1 handoff and
+   **explicitly confirmed** that the recalculated C1 SHA-256
+   matched the original saved digest.
+7. **Find Masks for Current C1 Proposal** listed two previously
+   saved C2 masks, correctly marked `HISTORICAL` because neither
+   matched the restored current proposal. Explicit inspection of
+   the historical `1aa336f6...` mask displayed
+   `5,225` proposed editable pixels and exact SHA-256
+   `1aa336f61f107ffe58d8331ea89caa6b60ee48ef11c15ea1bbe7d7dfa4dedd15`.
+   It remained NOT bound to current C1; no provider capability
+   or generation was authorized.
+8. The operator **explicitly confirmed** that Candidate 4 and
+   its metadata, saved AI evaluation, accepted CAP authority,
+   Canon/MASTER status, gallery registration and governed
+   correction attempt counter remained unchanged during C2.1.
+   The only intentional new artifact was the immutable C2.1
+   session JSON. This is an operator attestation, not a separate
+   filesystem mutation audit.
+
+**Acceptance boundary:** C2.1 is a persistence and inspection feature,
+not automated semantic approval, source-matched historical-mask
+adoption, provider mask compatibility, protected-pixel preservation,
+GPU execution or Candidate registration. Historical Candidate 4
+governed Attempt 2/2 stays protected. C3 capability verification and
+C4 controlled production require separate review and acceptance.
 
 ## Persistence boundaries
 
@@ -175,6 +250,7 @@ git diff --check
 git status --short
 ```
 
-C2.1 remains unaccepted until the Windows checks, restart/resume UI,
-mask-version selection and non-mutation evidence are supplied. C3/C4
-remain disabled regardless of this phase's outcome.
+C2.1 was formally operator-accepted on 2026-11-16 based on the Windows
+validation and controlled UI evidence above. C3/C4 remain disabled
+regardless of this acceptance. Future implementation changes require
+their own regression and operator revalidation.
