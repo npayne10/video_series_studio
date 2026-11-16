@@ -110,7 +110,8 @@ class C4ProviderPreparation:
                 f"Selected C2 mask SHA-256: {self.selected_mask_sha256 or 'none'}",
                 f"Mask bound to current C1: {self.mask_matches_current_proposal}",
                 f"Managed workflow SHA-256: {self.managed_workflow_sha256 or 'unavailable'}",
-                f"Derived offline masked graph SHA-256: {self.derived_graph_sha256 or 'unavailable'}",
+                "Derived offline masked graph SHA-256: "
+                f"{self.derived_graph_sha256 or 'unavailable'}",
                 f"Mask node topology validated offline: {self.mask_node_wiring_validated_offline}",
                 f"C4A evidence SHA-256: {self.evidence_sha256}",
                 "Provider compatibility: NOT VERIFIED; runtime mask behavior: NOT VERIFIED",
