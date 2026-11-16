@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QGridLayout,
+    QGroupBox,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -267,7 +269,7 @@ class CandidateQualityReportDialog(QDialog):
         dialog = _GuardedHumanReviewDialog(self)
         dialog.setWindowTitle("F5.4.2 — General Visual Correction Review (Advisory)")
         dialog.setObjectName("generalVisualCorrectionTriageDialog")
-        dialog.resize(900, 760)
+        dialog.resize(1050, 800)
         outer = QVBoxLayout(dialog)
         scroll = QScrollArea(dialog)
         scroll.setWidgetResizable(True)
@@ -275,7 +277,22 @@ class CandidateQualityReportDialog(QDialog):
         outer.addWidget(scroll)
         content = QWidget(scroll)
         layout = QVBoxLayout(content)
+        layout.setSpacing(9)
         scroll.setWidget(content)
+
+        def matrix_section(title: str, object_name: str) -> QGridLayout:
+            group = QGroupBox(title, content)
+            group.setObjectName(object_name)
+            grid = QGridLayout(group)
+            grid.setHorizontalSpacing(10)
+            grid.setVerticalSpacing(6)
+            grid.setColumnStretch(1, 1)
+            layout.addWidget(group)
+            return grid
+
+        finding_grid = matrix_section(
+            "Finding and classification (advisory)", "reviewFindingMatrix"
+        )
 
         try:
             baseline = candidate_visual_triage(report)
@@ -287,15 +304,15 @@ class CandidateQualityReportDialog(QDialog):
         fields.setObjectName("generalTriageReviewedField")
         for check in baseline.mandatory_checks:
             fields.addItem(check.field, check.field)
-        layout.addWidget(QLabel("Reviewed Draft CAP field (operator selection):"))
-        layout.addWidget(fields)
+        finding_grid.addWidget(QLabel("CAP field"), 0, 0)
+        finding_grid.addWidget(fields, 0, 1)
 
         defect = QComboBox(dialog)
         defect.setObjectName("generalTriageDefectType")
         for kind in GeometryDefect:
             defect.addItem(kind.value.replace("_", " "), kind.value)
-        layout.addWidget(QLabel("Observed defect type (operator selection):"))
-        layout.addWidget(defect)
+        finding_grid.addWidget(QLabel("Defect type"), 1, 0)
+        finding_grid.addWidget(defect, 1, 1)
 
         reason = QPlainTextEdit(dialog)
         reason.setObjectName("generalTriageObservedFailure")
@@ -304,19 +321,20 @@ class CandidateQualityReportDialog(QDialog):
             "Do not invent or change accepted CAP requirements."
         )
         reason.setMaximumBlockCount(40)
-        layout.addWidget(QLabel("Observed discrepancy (required for classification):"))
-        layout.addWidget(reason)
+        reason.setFixedHeight(90)
+        finding_grid.addWidget(QLabel("Observed discrepancy"), 2, 0)
+        finding_grid.addWidget(reason, 2, 1)
 
         details = QPlainTextEdit(dialog)
         details.setObjectName("generalTriageAssessment")
         details.setReadOnly(True)
-        details.setMinimumHeight(230)
+        details.setMinimumHeight(205)
         details.setPlainText(baseline.describe())
         layout.addWidget(details, 1)
 
         classify = QPushButton("Classify and Inspect (No Generation)", dialog)
         classify.setObjectName("generalTriageClassify")
-        layout.addWidget(classify)
+        finding_grid.addWidget(classify, 3, 1)
 
         def inspect() -> None:
             try:
@@ -333,23 +351,27 @@ class CandidateQualityReportDialog(QDialog):
 
         classify.clicked.connect(inspect)
 
-        layout.addWidget(QLabel("Stage B: operator field status and optional spatial proposal:"))
+        stage_b_grid = matrix_section(
+            "Stage B - operator field evidence and ROI", "reviewStageBMatrix"
+        )
         evidence_status = QComboBox(dialog)
         evidence_status.setObjectName("spatialEvidenceStatus")
         for state in VisualEvidenceStatus:
             evidence_status.addItem(state.value.replace("_", " "), state.value)
-        layout.addWidget(evidence_status)
+        stage_b_grid.addWidget(QLabel("Field status"), 0, 0)
+        stage_b_grid.addWidget(evidence_status, 0, 1)
         roi = QLineEdit(dialog)
         roi.setObjectName("spatialEvidenceROI")
         roi.setReadOnly(True)
         roi.setPlaceholderText("No ROI selected — use the source-image rectangle selector")
-        layout.addWidget(roi)
+        stage_b_grid.addWidget(QLabel("Selected ROI"), 1, 0)
+        stage_b_grid.addWidget(roi, 1, 1)
         select_roi = QPushButton("Select ROI on Source Image (No Generation)", dialog)
         select_roi.setObjectName("stageC2SelectSourceROI")
-        layout.addWidget(select_roi)
+        stage_b_grid.addWidget(select_roi, 1, 2)
         propose = QPushButton("Inspect Stage B Evidence / ROI (No Generation)", dialog)
         propose.setObjectName("spatialEvidenceInspect")
-        layout.addWidget(propose)
+        stage_b_grid.addWidget(propose, 2, 1, 1, 2)
 
         current_evidence: SpatialEvidenceReview | None = None
         current_proposal: GovernedCorrectionProposal | None = None
@@ -360,50 +382,60 @@ class CandidateQualityReportDialog(QDialog):
         selected_region: NormalizedRegion | None = None
         review_progress = QLabel("0 of " + str(len(baseline.mandatory_checks)) + " fields reviewed")
         review_progress.setObjectName("spatialEvidenceReviewProgress")
-        layout.addWidget(review_progress)
+        stage_b_grid.addWidget(review_progress, 2, 0)
 
-        layout.addWidget(QLabel("C2.1 — Persisted review session (explicit save / resume):"))
+        sessions_grid = matrix_section(
+            "C2.1 - persistent human-review sessions", "reviewSessionsMatrix"
+        )
         session_choices = QComboBox(dialog)
         session_choices.setObjectName("c21SavedHumanReviewChoices")
-        layout.addWidget(session_choices)
+        sessions_grid.addWidget(QLabel("Saved session"), 0, 0)
+        sessions_grid.addWidget(session_choices, 0, 1)
         refresh_sessions_button = QPushButton("Refresh Saved Human Reviews (No Generation)", dialog)
         refresh_sessions_button.setObjectName("c21RefreshHumanReviews")
-        layout.addWidget(refresh_sessions_button)
+        sessions_grid.addWidget(refresh_sessions_button, 0, 2)
         save_session_button = QPushButton("Save Human Review Session (No Generation)", dialog)
         save_session_button.setObjectName("c21SaveHumanReview")
-        layout.addWidget(save_session_button)
+        sessions_grid.addWidget(save_session_button, 1, 1)
         resume_button = QPushButton("Resume Selected Human Review (No Generation)", dialog)
         resume_button.setObjectName("c21ResumeHumanReview")
-        layout.addWidget(resume_button)
+        sessions_grid.addWidget(resume_button, 1, 2)
 
-        layout.addWidget(QLabel("C2.1 — Existing C2 masks (explicit evidence selection only):"))
+        masks_grid = matrix_section(
+            "C2.1 - existing mask versions (inspection only)", "reviewMasksMatrix"
+        )
         mask_choices = QComboBox(dialog)
         mask_choices.setObjectName("c21SavedMaskChoices")
-        layout.addWidget(mask_choices)
+        masks_grid.addWidget(QLabel("Saved mask"), 0, 0)
+        masks_grid.addWidget(mask_choices, 0, 1)
         refresh_masks_button = QPushButton(
             "Find Masks for Current C1 Proposal (No Generation)", dialog
         )
         refresh_masks_button.setObjectName("c21RefreshMasks")
-        layout.addWidget(refresh_masks_button)
+        masks_grid.addWidget(refresh_masks_button, 0, 2)
         select_mask_button = QPushButton("Inspect Selected Existing Mask (No Generation)", dialog)
         select_mask_button.setObjectName("c21SelectExistingMask")
-        layout.addWidget(select_mask_button)
+        masks_grid.addWidget(select_mask_button, 1, 1, 1, 2)
 
-        layout.addWidget(QLabel("Stage C3 — Mask provider compatibility (no generation):"))
+        c3_grid = matrix_section(
+            "Stage C3 - mask provider diagnostics (no generation)", "reviewC3Matrix"
+        )
         c3_offline = QPushButton("Inspect C3 Offline Provider Mask Dry-Run (No Generation)", dialog)
         c3_offline.setObjectName("stageC3OfflineMaskDryRun")
-        layout.addWidget(c3_offline)
+        c3_grid.addWidget(c3_offline, 0, 0, 1, 2)
         c3_probe = QPushButton("Probe Local ComfyUI C3 Node Schemas (GET Only)", dialog)
         c3_probe.setObjectName("stageC3ComfyGetOnlyProbe")
-        layout.addWidget(c3_probe)
+        c3_grid.addWidget(c3_probe, 0, 2)
 
-        layout.addWidget(QLabel("Stage C4A — Provider contract preparation (offline only):"))
+        c4_grid = matrix_section(
+            "Stage C4A - provider contract (offline only)", "reviewC4AMatrix"
+        )
         c4_prepare = QPushButton("Inspect C4A Mask Provider Contract (No Generation)", dialog)
         c4_prepare.setObjectName("stageC4APrepareMaskProvider")
-        layout.addWidget(c4_prepare)
+        c4_grid.addWidget(c4_prepare, 0, 0, 1, 2)
         c4_ack = QPushButton("Acknowledge C4A Preparation Review (Not Execution Consent)", dialog)
         c4_ack.setObjectName("stageC4AReviewAcknowledgement")
-        layout.addWidget(c4_ack)
+        c4_grid.addWidget(c4_ack, 0, 2)
         current_c4_preparation: C4ProviderPreparation | None = None
 
         def restore_selected_field() -> None:
@@ -539,10 +571,13 @@ class CandidateQualityReportDialog(QDialog):
             dialog,
         )
         roi_confirmation.setObjectName("stageCReviewedROIConfirmation")
-        layout.addWidget(roi_confirmation)
+        c1_grid = matrix_section(
+            "Stage C1 - reviewed correction handoff (no generation)", "reviewC1Matrix"
+        )
+        c1_grid.addWidget(roi_confirmation, 0, 0, 1, 2)
         stage_c = QPushButton("Inspect Stage C Governed Handoff (No Generation)", dialog)
         stage_c.setObjectName("stageCGovernedCorrectionInspect")
-        layout.addWidget(stage_c)
+        c1_grid.addWidget(stage_c, 0, 2)
 
         def inspect_governed_handoff() -> None:
             nonlocal current_proposal, current_mask, mask_previewed, session_dirty
@@ -579,20 +614,23 @@ class CandidateQualityReportDialog(QDialog):
 
         preview_button = QPushButton("Preview Stage C2 Editable Region (No Generation)", dialog)
         preview_button.setObjectName("stageC2PreviewMask")
-        layout.addWidget(preview_button)
+        c2_grid = matrix_section(
+            "Stage C2 - reviewed mask evidence (no generation)", "reviewC2Matrix"
+        )
+        c2_grid.addWidget(preview_button, 0, 0, 1, 2)
 
         mask_confirmation = QCheckBox(
             "I reviewed the mask preview against the source image; the white area is editable.",
             dialog,
         )
         mask_confirmation.setObjectName("stageC2MaskReviewConfirmation")
-        layout.addWidget(mask_confirmation)
+        c2_grid.addWidget(mask_confirmation, 1, 0, 1, 2)
         inspect_mask_button = QPushButton("Inspect C2 Mask Evidence (No Generation)", dialog)
         inspect_mask_button.setObjectName("stageC2InspectMaskEvidence")
-        layout.addWidget(inspect_mask_button)
+        c2_grid.addWidget(inspect_mask_button, 0, 2)
         save_mask_button = QPushButton("Save C2 Mask Evidence (No Generation)", dialog)
         save_mask_button.setObjectName("stageC2SaveMaskEvidence")
-        layout.addWidget(save_mask_button)
+        c2_grid.addWidget(save_mask_button, 1, 2)
 
         def preview_mask() -> None:
             nonlocal mask_previewed, current_mask
