@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.5 (living documentation, updated 2026-11-15)  
+**Version:** v0.6 (living documentation, updated 2026-11-16)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -10,9 +10,9 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
-## Stage C2.1 — Persistent Human-Review Sessions (implementation candidate)
+## Stage C2.1 — Persistent Human-Review Sessions (operator accepted 2026-11-16)
 
-**Code implemented; Windows and operator acceptance pending.** In the existing
+**Accepted for read-only human-review persistence and mask inspection.** In the existing
 F5.4.2 advisory review dialog, new C2.1 controls support
 **Save Human Review Session**, **Refresh Saved Human Reviews** and
 **Resume Selected Human Review**. Save creates a new immutable,
@@ -35,8 +35,16 @@ restart/resume evidence and negative tests, see
 [Stage C2.1 User Manual](VSCS_User_Manual.md#f542-stage-c21--save-and-resume-human-correction-reviews)
 and [engineering acceptance plan](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md).
 
-**Stage C2 remains accepted. Stage C2.1 is not yet accepted.
-Stages C3/C4 remain unauthorized.**
+**Stage C2 remains accepted. Stage C2.1 was accepted 2026-11-16
+after Ruff/Mypy checks, 73 focused tests, 2,857 full-suite passes
+(1 Windows symlink skip), and an actual shutdown/restart/resume
+operator test.** The saved `c21-4-d1aafcc27b2d4e098d835702542261c8.json`
+session restored four reviewed fields and the exact ROI; the operator
+confirmed the C1 SHA-256 reproduced and all Candidate/CAP/Canon/attempt
+records remained unchanged. Both original C2 masks were listed as
+historical and explicitly inspection-only. See
+[formal acceptance evidence](../F5_4_2_STAGE_C2_1_PERSISTENT_HUMAN_REVIEW.md#formal-operator-acceptance-record--2026-11-16).
+**Stages C3/C4 remain unauthorized.**
 
 ## Stage C2 formally accepted — 2026-11-15
 
