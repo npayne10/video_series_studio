@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-16 (Stage C2.1 operator accepted; Stage C3 diagnostic implementation pending Windows/UI acceptance)  
+**Last verified:** 2026-11-16 (Stage C3 diagnostic-only provider-mask and local GET-only probe operator accepted; C4 remains unauthorized)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1761,7 +1761,7 @@ final Attempt 2/2 remains protected.
 
 ### F5.4.2 Stage C3 — Local provider-mask compatibility and controlled dry-run
 
-**Status: IMPLEMENTATION CANDIDATE; NO GPU / IMAGE GENERATION / PAID API.**
+**Status: OPERATOR ACCEPTED 2026-11-16 — DIAGNOSTIC ONLY. NO GPU / IMAGE GENERATION / PAID API.**
 
 Stage C3 builds on the accepted C2.1 persisted Stage B/C1 sessions
 and preserved C2 mask files. It introduces two separate controls within
@@ -1846,11 +1846,64 @@ create or save a replacement merely for this diagnostic test.
    or ComfyUI queue. **Do not** create a new C2 mask,
    stage an image, launch generation or perform C4 actions.
 9. Capture screenshots, command outputs and explicit
-   non-mutation confirmation. C3 remains unaccepted until
-   these tests pass and the operator approves the
-   diagnostic-only gate.
+   non-mutation confirmation. This controlled workflow was
+   operator-accepted as diagnostic-only on 2026-11-16.
+   Revalidate separately if production implementation changes.
 
 See [C3 engineering contract](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md).
 C4 controlled production, mask use in GPU inference,
 protected-pixel proof and Candidate/Canon promotion are
 separate unimplemented, unauthorized steps.
+
+
+#### F5.4.2 C3 formal operator acceptance — 2026-11-16
+
+**Accepted scope:** in-memory offline Qwen mask graph analysis,
+source/C1/mask SHA-256 and historical-mask classification,
+and optional local ComfyUI `GET /object_info` plus
+`GET /system_stats` capability probing with explicit consent.
+This is a read-only diagnostic gate, not verified masked generation.
+
+**Windows validation:** Ruff lint passed, Ruff format check
+passed (`1,695 files already formatted`), Mypy passed for
+711 source files, 43 focused tests passed and 2,862 full
+tests passed with one Windows directory-symlink skip.
+`git diff --check` was clean. The two pre-existing
+untracked architecture-audit/preflight files remained untouched.
+
+**UI test:** The Diagnostic Console Candidate 4 saved review
+and C2.1 human session were successfully reopened.
+The reviewed C1 proposal SHA-256 was
+`76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`,
+with normalized ROI
+`0.64798851,0.45478723,0.06178161,0.07446809`.
+The selected existing C2 mask beginning `1aa336f6`
+remained marked `HISTORICAL`, not bound to this C1.
+
+The offline C3 diagnostic produced both graph SHA-256
+fingerprints and showed topology inspected with
+`Loopback GET probe used: False`, without generating
+or writing any output. The opt-in GET-only local
+ComfyUI check subsequently returned `Loopback GET probe
+used: True`, detecting `LoadImageMask`,
+`SetLatentNoiseMask` and `ImageCompositeMasked`,
+plus the RTX 5060 Ti GPU with approximately 15.9 GiB
+**total**, not currently available, VRAM.
+
+The operator **explicitly confirmed** that Candidate 4,
+its saved AI report, both C2 mask PNGs, the C2.1 JSON,
+CAP requirements and authority, Canon/MASTER, gallery
+registration and governed attempt counter all remained
+unchanged. No generation job or correction output was
+created. These are operator-supplied confirmation and
+screenshots; they are not a separate filesystem audit.
+
+**Disallowed conclusions:** The node inventory does not
+prove mask binding, proper mask polarity, actual
+inpainting, hardware inference fit, or exact preservation
+outside the edit ROI. The managed Qwen workflow still
+rejects a governed mask input; C4 execution, candidate
+registration, protected Attempt 2/2 and CAP/Canon promotion
+remain locked.
+
+See the [full C3 engineering acceptance record](../F5_4_2_STAGE_C3_MASK_PROVIDER_DRY_RUN.md#formal-operator-acceptance-record--2026-11-16).
