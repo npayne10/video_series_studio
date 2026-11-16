@@ -384,9 +384,7 @@ class CandidateQualityReportDialog(QDialog):
         layout.addWidget(select_mask_button)
 
         layout.addWidget(QLabel("Stage C3 — Mask provider compatibility (no generation):"))
-        c3_offline = QPushButton(
-            "Inspect C3 Offline Provider Mask Dry-Run (No Generation)", dialog
-        )
+        c3_offline = QPushButton("Inspect C3 Offline Provider Mask Dry-Run (No Generation)", dialog)
         c3_offline.setObjectName("stageC3OfflineMaskDryRun")
         layout.addWidget(c3_offline)
         c3_probe = QPushButton("Probe Local ComfyUI C3 Node Schemas (GET Only)", dialog)
@@ -853,9 +851,7 @@ class CandidateQualityReportDialog(QDialog):
                 return
             selected_path = mask_choices.currentData()
             chosen = (
-                Path(selected_path)
-                if isinstance(selected_path, str) and selected_path
-                else None
+                Path(selected_path) if isinstance(selected_path, str) and selected_path else None
             )
             if probe:
                 consent = QMessageBox.question(
