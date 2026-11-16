@@ -294,8 +294,8 @@ class CandidateQualityReportDialog(QDialog):
         layout.setSpacing(9)
         scroll.setWidget(content)
 
-        finding_grid = _review_matrix_section(layout,
-            "Finding and classification (advisory)", "reviewFindingMatrix"
+        finding_grid = _review_matrix_section(
+            layout, "Finding and classification (advisory)", "reviewFindingMatrix"
         )
 
         try:
@@ -355,8 +355,8 @@ class CandidateQualityReportDialog(QDialog):
 
         classify.clicked.connect(inspect)
 
-        stage_b_grid = _review_matrix_section(layout,
-            "Stage B - operator field evidence and ROI", "reviewStageBMatrix"
+        stage_b_grid = _review_matrix_section(
+            layout, "Stage B - operator field evidence and ROI", "reviewStageBMatrix"
         )
         evidence_status = QComboBox(dialog)
         evidence_status.setObjectName("spatialEvidenceStatus")
@@ -377,11 +377,11 @@ class CandidateQualityReportDialog(QDialog):
         propose.setObjectName("spatialEvidenceInspect")
         stage_b_grid.addWidget(propose, 2, 1, 1, 2)
 
-        c1_grid = _review_matrix_section(layout,
-            "Stage C1 - reviewed correction handoff (no generation)", "reviewC1Matrix"
+        c1_grid = _review_matrix_section(
+            layout, "Stage C1 - reviewed correction handoff (no generation)", "reviewC1Matrix"
         )
-        c2_grid = _review_matrix_section(layout,
-            "Stage C2 - reviewed mask evidence (no generation)", "reviewC2Matrix"
+        c2_grid = _review_matrix_section(
+            layout, "Stage C2 - reviewed mask evidence (no generation)", "reviewC2Matrix"
         )
 
         current_evidence: SpatialEvidenceReview | None = None
@@ -395,8 +395,8 @@ class CandidateQualityReportDialog(QDialog):
         review_progress.setObjectName("spatialEvidenceReviewProgress")
         stage_b_grid.addWidget(review_progress, 2, 0)
 
-        sessions_grid = _review_matrix_section(layout,
-            "C2.1 - persistent human-review sessions", "reviewSessionsMatrix"
+        sessions_grid = _review_matrix_section(
+            layout, "C2.1 - persistent human-review sessions", "reviewSessionsMatrix"
         )
         session_choices = QComboBox(dialog)
         session_choices.setObjectName("c21SavedHumanReviewChoices")
@@ -412,8 +412,8 @@ class CandidateQualityReportDialog(QDialog):
         resume_button.setObjectName("c21ResumeHumanReview")
         sessions_grid.addWidget(resume_button, 1, 2)
 
-        masks_grid = _review_matrix_section(layout,
-            "C2.1 - existing mask versions (inspection only)", "reviewMasksMatrix"
+        masks_grid = _review_matrix_section(
+            layout, "C2.1 - existing mask versions (inspection only)", "reviewMasksMatrix"
         )
         mask_choices = QComboBox(dialog)
         mask_choices.setObjectName("c21SavedMaskChoices")
@@ -428,8 +428,8 @@ class CandidateQualityReportDialog(QDialog):
         select_mask_button.setObjectName("c21SelectExistingMask")
         masks_grid.addWidget(select_mask_button, 1, 1, 1, 2)
 
-        c3_grid = _review_matrix_section(layout,
-            "Stage C3 - mask provider diagnostics (no generation)", "reviewC3Matrix"
+        c3_grid = _review_matrix_section(
+            layout, "Stage C3 - mask provider diagnostics (no generation)", "reviewC3Matrix"
         )
         c3_offline = QPushButton("Inspect C3 Offline Provider Mask Dry-Run (No Generation)", dialog)
         c3_offline.setObjectName("stageC3OfflineMaskDryRun")
@@ -438,8 +438,8 @@ class CandidateQualityReportDialog(QDialog):
         c3_probe.setObjectName("stageC3ComfyGetOnlyProbe")
         c3_grid.addWidget(c3_probe, 0, 2)
 
-        c4_grid = _review_matrix_section(layout,
-            "Stage C4A - provider contract (offline only)", "reviewC4AMatrix"
+        c4_grid = _review_matrix_section(
+            layout, "Stage C4A - provider contract (offline only)", "reviewC4AMatrix"
         )
         c4_prepare = QPushButton("Inspect C4A Mask Provider Contract (No Generation)", dialog)
         c4_prepare.setObjectName("stageC4APrepareMaskProvider")
