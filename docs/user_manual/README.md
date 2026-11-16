@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.8 (living documentation, updated 2026-11-16)  
+**Version:** v0.9 (living documentation, updated 2026-11-16)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,35 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Stage C4A — Mask Provider Contract Preparation (implementation candidate)
+
+**Offline preparation only; Windows regression and UI acceptance pending.**
+The F5.4.2 advisory dialog now includes **Inspect C4A Mask Provider
+Contract (No Generation)** and **Acknowledge C4A Preparation Review
+(Not Execution Consent)**. The first verifies source/CAP/C1/C2 mask
+provenance, checks the experimental masked graph wiring offline and
+seals an inspection report with unresolved provider/GPU/Candidate
+governance blockers. The second requires the exact typed phrase
+`REVIEW ONLY`, storing an ephemeral acknowledgement that
+**never authorizes execution or reserves an attempt**.
+
+The new C4A backend also includes a pure read-only protected
+RGB pixel-comparison function for already-existing disposable
+external PNGs. It rejects non-current C2 masks, mismatched
+dimensions and any attempt to treat results inside the active
+CAP project as an external experiment. This cannot validate
+live Qwen inference or correction semantics; it only measures
+whether protected pixels changed in a supplied example output.
+The managed XCIC provider is **not yet mask-compatible**.
+
+Instructions beginning with launching `vscs`:
+[C4A User Manual procedure](VSCS_User_Manual.md#f542-stage-c4a--mask-capable-provider-preparation-and-protected-pixel-audit)
+and [C4A engineering acceptance plan](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md).
+
+**Stage C3 remains accepted. Stage C4A is not yet accepted.
+Real Stage C4 generation, GPU execution and Candidate 4's final
+Attempt 2/2 remain prohibited.**
 
 ## Stage C3 — Provider Mask Compatibility & Controlled Dry-Run (operator accepted 2026-11-16)
 
