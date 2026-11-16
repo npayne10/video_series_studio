@@ -33,15 +33,11 @@ from vscs.application.caps.qwen_mask_aware_qualification import (
 )
 from vscs.application.caps.visual_candidate_quality import CandidateQualitySnapshot
 
-_REQUIRED_MASK_NODES = frozenset(
-    {"LoadImageMask", "SetLatentNoiseMask", "ImageCompositeMasked"}
-)
+_REQUIRED_MASK_NODES = frozenset({"LoadImageMask", "SetLatentNoiseMask", "ImageCompositeMasked"})
 _EXPECTED_MASK_INPUTS = {
     "LoadImageMask": frozenset({"image", "channel"}),
     "SetLatentNoiseMask": frozenset({"samples", "mask"}),
-    "ImageCompositeMasked": frozenset(
-        {"destination", "source", "mask", "x", "y", "resize_source"}
-    ),
+    "ImageCompositeMasked": frozenset({"destination", "source", "mask", "x", "y", "resize_source"}),
 }
 
 
@@ -104,12 +100,10 @@ class C3MaskDryRun:
         )
 
 
-def _inventory(
-    url: str, timeout: float
-) -> tuple[dict[str, Any], dict[str, Any]]:
+def _inventory(url: str, timeout: float) -> tuple[dict[str, Any], dict[str, Any]]:
     base = _loopback_base(url)
     if not 0 < timeout <= 10:
-        raise GeometryCorrectionError("C3 GET timeout must be 0–10 seconds")
+        raise GeometryCorrectionError("C3 GET timeout must be 0-10 seconds")
     return (
         _get_json(base, "/object_info", timeout),
         _get_json(base, "/system_stats", timeout),
@@ -158,9 +152,12 @@ def inspect_c3_mask_dry_run(
         source_path=snapshot.image_path,
         reviewer_confirmed_mask=True,
     )
-    if selected is not None and selected.matches_current_proposal:
-        if selected.sha256 != expected.mask_sha256:
-            blockers.append("Current mask SHA does not match reviewed proposal")
+    if (
+        selected is not None
+        and selected.matches_current_proposal
+        and selected.sha256 != expected.mask_sha256
+    ):
+        blockers.append("Current mask SHA does not match reviewed proposal")
     managed_sha: str | None = None
     experimental_sha: str | None = None
     topology_inspected = False
