@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -25,6 +26,11 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps.c3_mask_provider_dry_run import inspect_c3_mask_dry_run
+from vscs.application.caps.c4_mask_provider_contract import (
+    C4ProviderPreparation,
+    acknowledge_c4_review,
+    prepare_c4_provider_contract,
+)
 from vscs.application.caps.general_visual_correction_triage import (
     candidate_visual_triage,
 )
@@ -390,6 +396,15 @@ class CandidateQualityReportDialog(QDialog):
         c3_probe = QPushButton("Probe Local ComfyUI C3 Node Schemas (GET Only)", dialog)
         c3_probe.setObjectName("stageC3ComfyGetOnlyProbe")
         layout.addWidget(c3_probe)
+
+        layout.addWidget(QLabel("Stage C4A — Provider contract preparation (offline only):"))
+        c4_prepare = QPushButton("Inspect C4A Mask Provider Contract (No Generation)", dialog)
+        c4_prepare.setObjectName("stageC4APrepareMaskProvider")
+        layout.addWidget(c4_prepare)
+        c4_ack = QPushButton("Acknowledge C4A Preparation Review (Not Execution Consent)", dialog)
+        c4_ack.setObjectName("stageC4AReviewAcknowledgement")
+        layout.addWidget(c4_ack)
+        current_c4_preparation: C4ProviderPreparation | None = None
 
         def restore_selected_field() -> None:
             nonlocal selected_region, current_proposal, current_mask, mask_previewed
@@ -879,6 +894,75 @@ class CandidateQualityReportDialog(QDialog):
 
         c3_offline.clicked.connect(lambda: inspect_c3(probe=False))
         c3_probe.clicked.connect(lambda: inspect_c3(probe=True))
+
+        def inspect_c4_preparation() -> None:
+            nonlocal current_c4_preparation
+            current_c4_preparation = None
+            if current_proposal is None:
+                QMessageBox.warning(
+                    dialog,
+                    "Stage C4A Blocked",
+                    "Reinspect the current C1 proposal before preparing C4A.",
+                )
+                return
+            selected_path = mask_choices.currentData()
+            chosen = (
+                Path(selected_path) if isinstance(selected_path, str) and selected_path else None
+            )
+            try:
+                prepared = prepare_c4_provider_contract(
+                    report.snapshot, current_proposal, selected_mask_path=chosen
+                )
+            except (GeometryCorrectionError, OSError, ValueError, RuntimeError) as exc:
+                QMessageBox.warning(dialog, "Stage C4A Preparation Blocked", str(exc))
+                return
+            current_c4_preparation = prepared
+            details.setPlainText(prepared.describe())
+
+        def acknowledge_c4_preparation() -> None:
+            if current_c4_preparation is None or current_proposal is None:
+                QMessageBox.warning(
+                    dialog, "Stage C4A Review Blocked", "Inspect C4A preparation first."
+                )
+                return
+            selected_path = mask_choices.currentData()
+            chosen = (
+                Path(selected_path) if isinstance(selected_path, str) and selected_path else None
+            )
+            try:
+                latest = prepare_c4_provider_contract(
+                    report.snapshot, current_proposal, selected_mask_path=chosen
+                )
+                if latest != current_c4_preparation:
+                    raise GeometryCorrectionError(
+                        "C4A input or provider contract changed; inspect preparation again"
+                    )
+            except (GeometryCorrectionError, OSError, ValueError, RuntimeError) as exc:
+                QMessageBox.warning(dialog, "Stage C4A Review Blocked", str(exc))
+                return
+            response, confirmed = QInputDialog.getText(
+                dialog,
+                "C4A Read-Only Review Acknowledgement",
+                "This is NOT permission for GPU generation, ComfyUI submission, "
+                "or attempt reservation. Type REVIEW ONLY to acknowledge "
+                "the preparation evidence:",
+            )
+            if not confirmed:
+                return
+            try:
+                receipt = acknowledge_c4_review(latest, operator_text=response)
+            except GeometryCorrectionError as exc:
+                QMessageBox.warning(dialog, "Stage C4A Review Blocked", str(exc))
+                return
+            details.setPlainText(
+                latest.describe()
+                + "\\nC4A REVIEW ACKNOWLEDGED (MEMORY ONLY / NO GENERATION)"
+                + f"\\nPreparation SHA-256: {receipt.preparation_sha256}"
+                + "\\nExecution remains blocked; no permanent consent was recorded."
+            )
+
+        c4_prepare.clicked.connect(inspect_c4_preparation)
+        c4_ack.clicked.connect(acknowledge_c4_preparation)
 
         refresh_sessions_button.clicked.connect(refresh_sessions)
         save_session_button.clicked.connect(save_session)
