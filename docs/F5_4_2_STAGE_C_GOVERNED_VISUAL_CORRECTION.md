@@ -9,6 +9,30 @@ gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
+## Stage C4A preparation — implementation candidate
+
+C4A has a separate, **non-executable** provider preparation
+contract. It checks the exact source/CAP/C1/C2 evidence,
+reviews the proposed F5.4.1B mask-to-latent and
+post-decode source compositing graph only in memory,
+and emits SHA-sealed blockers. It does not repair the
+existing XCIC Qwen mask incompatibility or establish
+live masked generation on RTX 5060 Ti 16 GiB.
+
+The C4A dialog contains explicit offline inspection and
+a typed **REVIEW ONLY** operator acknowledgement.
+This acknowledgement is *not* generation consent and
+cannot schedule, reserve, retry, produce or register
+a Candidate. An optional backend can inspect existing
+external disposable PNG output for exact protected RGB
+pixel differences, without writing or claiming
+provider correctness. The protected final Candidate 4
+Attempt 2/2 remains untouched.
+
+See [C4A technical contract and operator test](F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md).
+**C4A is pending Windows/UI acceptance; actual C4
+GPU inference and Candidate registration remain unauthorized.**
+
 ## Stage C3 diagnostic-only acceptance — 2026-11-16
 
 Stage C3 operator acceptance is recorded in
