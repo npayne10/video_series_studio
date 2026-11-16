@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-16 (Stage C3 diagnostic accepted; C4A contract preparation implemented, Windows/UI acceptance pending)  
+**Last verified:** 2026-11-16 (C3 accepted; C4A in validation; F5.4.2 review matrix UI refactor awaiting operator acceptance)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -2025,3 +2025,79 @@ protected-pixel verification after live output and
 operator-reviewed Candidate registration. **C4 generation
 is still prohibited until those gates are independently
 accepted.**
+
+
+### F5.4.2 — Compact review matrix layout (UI refinement)
+
+**Status: CODE COMMITTED; WINDOWS AND OPERATOR ACCEPTANCE PENDING.**
+
+The advisory General Visual Correction Review screen uses labeled
+matrix groups rather than a single long column of buttons. Field
+selection and defect classification appear with their corresponding
+inspection action; Stage B status and ROI selection share a local
+matrix; C1/C2 acknowledgement and action controls remain together.
+Saved C2.1 session and existing-mask dropdowns sit in their
+respective groups with Refresh, Save/Resume, Find/Inspect actions.
+C3's offline/GET-only diagnostics and C4A's contract/review-only
+actions each have their own adjacent rows below the shared
+mask-version selection.
+
+**No workflow permissions or saved evidence changed.** This is
+a PySide6 layout refactor, not a mask provider integration or
+new consent pathway. Existing button `objectName` values, signals,
+state validation and source/CAP boundary checks remain the same.
+
+#### Controlled operator acceptance — F5.4.2-MATRIX-UI-01
+
+1. Exit VSCS. From an activated `(.venv)` in
+   `D:\VSCS\video_series_studio`, fetch and switch
+   to `phase-f5.4.2-c4a-review-matrix-layout`, pull
+   and run Ruff lint, Ruff formatting check, Mypy,
+   focused matrix/C4A/C3/C2.1 tests and full pytest.
+   Exact commands are in the
+   [matrix engineering acceptance plan](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md#windows-validation).
+   Preserve unrelated untracked audit/preflight files.
+2. Launch `vscs`. Confirm **Dashboard → Active Project**
+   is `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`.
+3. Navigate to **Canonical Profiles → Diagnostic Console →
+   Edit Selected → Canonical Reference Gallery** and select
+   **Candidate 4**.
+4. Open **Open Saved Candidate Review…**, not the action
+   that runs a new paid AI evaluation. Click
+   **F5.4.2 Review General Visual Correction (No
+   Generation)…**.
+5. Confirm the Finding/Classification, Stage B,
+   Stage C1, Stage C2, C2.1 Sessions, C2.1 Masks,
+   Stage C3 and Stage C4A matrix groups are
+   visible in workflow order and can be reached
+   by scrolling. Verify dropdowns are directly
+   beside their applicable buttons and no
+   controls are clipped.
+6. In the **C2.1 Sessions** group, select the existing
+   `c21-4-d1aafcc27b2d4e098d835702542261c8.json`.
+   Click **Resume Selected Human Review** in the
+   same group. Confirm all four reviewed fields
+   and previously selected components ROI
+   `0.64798851,0.45478723,0.06178161,0.07446809`
+   are restored, with C1/C2 confirmations reset.
+7. After visually reinspecting the original image,
+   confirm the C1 handoff still yields
+   `76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+8. In **C2.1 Masks**, click Find, verify both
+   saved masks show HISTORICAL, select one
+   deliberately and click **Inspect Selected
+   Existing Mask**. No generation or mask write.
+9. Verify the C3 and C4A group actions remain
+   accessible. Resize the dialog to ensure
+   the stage matrices remain usable, and
+   screenshot the upper/lower sections.
+10. Confirm no Candidate 4 image/metadata,
+    saved AI evaluation, C2 PNGs, C2.1 JSON,
+    CAP/Canon/MASTER, gallery or attempt counter
+    changed, and no output or job was created.
+    The operator must explicitly accept this
+    presentation refactor after validation.
+
+See [F5.4.2 matrix UI engineering acceptance](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md).
+C4A remains preparation-only and actual masked
+correction remains unauthorized.
