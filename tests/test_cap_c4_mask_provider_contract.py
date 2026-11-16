@@ -35,9 +35,7 @@ from vscs.application.caps.visual_candidate_quality import CandidateQualityResul
 
 def _fixture(tmp_path: Path):
     project = tmp_path / "acceptance_project"
-    image_folder = (
-        project / "Canonical Assets" / "STORY-C4A-TEST" / "Images" / "Visual Candidates"
-    )
+    image_folder = project / "Canonical Assets" / "STORY-C4A-TEST" / "Images" / "Visual Candidates"
     image_folder.mkdir(parents=True)
     source_path = image_folder / "candidate.png"
     Image.new("RGB", (320, 256), (20, 40, 60)).save(source_path)
@@ -125,17 +123,13 @@ def test_preparation_sealed_and_no_provider_or_attempt_authority(tmp_path, monke
 
 def test_historical_and_missing_mask_fail_closed(tmp_path):
     snapshot, proposal, mask, _ = _fixture(tmp_path)
-    no_mask = prepare_c4_provider_contract(
-        snapshot, proposal, selected_mask_path=None
-    )
+    no_mask = prepare_c4_provider_contract(snapshot, proposal, selected_mask_path=None)
     assert not no_mask.mask_matches_current_proposal
     assert any("explicitly" in item for item in no_mask.blockers)
     digest = hashlib.sha256(mask.read_bytes()).hexdigest()
     historical = mask.parent / f"c2-4-ffffffffffffffff-{digest[:16]}.png"
     historical.write_bytes(mask.read_bytes())
-    old = prepare_c4_provider_contract(
-        snapshot, proposal, selected_mask_path=historical
-    )
+    old = prepare_c4_provider_contract(snapshot, proposal, selected_mask_path=historical)
     assert not old.mask_matches_current_proposal
     assert any("HISTORICAL" in item for item in old.blockers)
     assert not old.execution_authorized
