@@ -44,7 +44,23 @@
 | 25 | Release Candidate | ⏳ Planned | — | Not run | Pending |
 | 1.0.0 | VSCS Version 1.0 | ⏳ Planned | — | Not run | Pending |
 
-## Current forward backlog — Phase 20 H3 multi-frame provider evaluation
+## Current development priority — finish governed image correction
+
+**Reprioritized 2026-11-17:** Complete the accepted C4A image-correction
+workstream before beginning H3-MF1. **C4B is NEXT**, with isolated,
+explicitly authorized, disposable masked-Qwen runtime qualification:
+source/mask binding, polarity, actual VRAM and latency, and exact
+protected-pixel preservation. Candidate 4 and its protected final
+Attempt 2/2 must not be used for qualification.
+
+Once C4B is evidenced and approved, design/implement the remaining
+C4 production provider integration, separate execution consent,
+fail-closed attempt and recovery handling, corrected-Candidate quality
+verification/registration and end-to-end image-correction acceptance.
+These later work packages are *proposed*, not automatically approved
+for execution. H3-MF1 through H3-MF4 stay recorded as deferred work.
+
+## Deferred forward backlog — Phase 20 H3 multi-frame provider evaluation
 
 **Recorded 2026-11-17.** This backlog is a Phase 20
 provider-capability refinement under the authoritative
@@ -62,7 +78,7 @@ Primary GitHub tracking issue:
 
 | ID | Task | Priority | State | Evidence needed | Owner acceptance |
 |---|---|---|---|---|---|
-| H3-MF1 | Offline multi-frame workflow qualification: immutable fixture, `<Picture N>` binding correction, frame-zero anchor policy, guide bounds, deterministic seed, editor→API compilation and negative tests | **P1 — NEXT** | ⏳ Planned | GitHub code + Ruff/Mypy/pytest + operator read-only UI evidence; no GPU | Pending |
+| H3-MF1 | Offline multi-frame workflow qualification: immutable fixture, `<Picture N>` binding correction, frame-zero anchor policy, guide bounds, deterministic seed, editor→API compilation and negative tests | **Deferred until image-correction completion** | ⏳ Planned; not started | GitHub code + Ruff/Mypy/pytest + operator read-only UI evidence; no GPU | Pending |
 | H3-MF2 | Separately approved disposable 5-second fixed-seed GPU A/B and RTX 5060 Ti 16 GiB memory benchmark | P1 | ⛔ Blocked on MF1 and explicit GPU consent | Measured VRAM, time, source/guide manifests, outputs | Pending |
 | H3-MF3 | Frame-guide similarity, character/scene continuity and H3 audio QC | P1 | ⛔ Blocked on MF2 | Quantitative metrics and human quality review | Pending |
 | H3-MF4 | Governed H3 multi-frame provider mode with ProductionTask, exact Shot boundaries, GeneratedMedia QC and recovery | P2 | ⛔ Blocked on MF3 | End-to-end isolated Shot and no duplicate/unauthorized production outputs | Pending |
