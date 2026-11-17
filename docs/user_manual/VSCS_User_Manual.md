@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-17 (C4A, matrix UI and C4B.1 offline/GET-only qualification operator accepted; live C4B.2/C4 GPU production unauthorized)  
+**Last verified:** 2026-11-17 (C4B.1 offline/GET-only qualification operator accepted; C4B.2A disposable-only staging and launch-preview implementation pending Windows/operator acceptance; C4B.2B/C4 generation unauthorized)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -2369,3 +2369,98 @@ This is a human attestation, not an independent disk audit.
 separate explicit GPU consent and actual disposable
 protected-pixel proof. Candidate 4's protected final
 governed Attempt 2/2 remains untouched.
+
+
+### F5.4.2 C4B.2A — Disposable Mask Runtime Preparation (NO GENERATION)
+
+**Status: IMPLEMENTATION CANDIDATE; WINDOWS AND OPERATOR ACCEPTANCE PENDING.**
+
+**What changed:** C4B.2A provides a standalone Python backend
+that accepts a disposable project's current reviewed C1/C2
+source image and mask and prepares a separate,
+tamper-detectable Qwen input/graph/test-evidence workspace.
+It also previews (does NOT execute) a ComfyUI launch command
+using a separate local port and explicit disposable
+input/output/temp/user directory roots; validates externally
+provided node/model choice/GPU schemas; and compares the
+RGB pixels of *existing* disposable results against the
+original source and mask.
+
+There is **no new Candidate 4 UI control** for C4B.2A.
+Existing C4B.1 buttons remain advisory/read-only:
+**Inspect C4B Isolated Mask Graph (No Generation)** and
+**Probe C4B Local Mask Nodes (GET Only)**.
+
+**Use only a separate disposable project.** The Python
+preflight refuses the protected Diagnostic Console
+\`STORY-PRO-B00D168E43\` asset, requires a separately
+provided protected project root and a disjoint disposable
+project with exact marker
+\`.c4b2_disposable_project\` containing the line
+\`C4B2_DISPOSABLE_PROJECT\`. It copies only already
+reviewed current C1/C2 evidence. The original Candidate
+4 masks remain HISTORICAL and are never qualified inputs.
+
+**Dedicated runtime is not yet started or qualified.**
+The prepared command uses local port **8298** and
+separate roots, rejecting the normal port 8188.
+It is a preview only: no user should paste and run
+that command, stage real Candidate 4 images, submit
+the saved API graph, or assume the model will fit
+the 16 GiB GPU. A filename prefix is not an output
+sandbox; only a distinct, verifiably isolated
+ComfyUI process can make that guarantee.
+
+#### C4B.2A operator acceptance — from starting VSCS
+
+1. **Close VSCS first**, activate \`(.venv)\` and
+   update your local branch
+   \`phase-f5.4.2-c4b2-isolated-disposable-runtime-preflight\`.
+   From \`D:\VSCS\video_series_studio\` run Ruff
+   lint/format checks, Mypy, the focused C4B.2A +
+   C4B.1 regression, full pytest, \`git diff --check\`
+   and \`git status --short\`. Exact commands:
+   [engineering acceptance](../F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md#4-windows-engineering-validation).
+2. Run **\`vscs\`** from the activated virtual environment.
+   On the Dashboard, confirm the active project is the
+   previously accepted project; do not run any
+   Candidate generation, AI review or mask save.
+3. For protected-state baseline inspection open
+   **Canonical Profiles → Diagnostic Console →
+   Edit Selected → Canonical Reference Gallery →
+   Candidate 4**. Use **Open Saved Candidate Review**,
+   not the paid **Review Visual Candidate** action.
+4. The existing **F5.4.2 Review General Visual Correction
+   (No Generation)** dialog should still list
+   four accepted-field reviews, the existing C1
+   source ROI, two historic C2 mask PNGs and
+   C4B.1 offline and GET-only buttons. There is no
+   C4B.2 GPU/execute button.
+5. Close VSCS and use the Python pytest commands
+   to exercise all C4B.2A synthetic disposable
+   staging/graph-seal, path-collision, symlink,
+   launch-preview, node schema and fake-output
+   pixel-difference cases. Test outputs belong
+   to temporary pytest directories, not the
+   real ComfyUI input/output or production project.
+6. Confirm Candidate 4 source/metadata, saved AI
+   report, both original C2 masks, saved C2.1
+   session, CAP/Canon/MASTER, gallery and governed
+   attempt counter unchanged. Confirm there was
+   **no ComfyUI process launch, POST /prompt,
+   GPU inference, model loading, correction image,
+   paid review or attempt reservation**.
+7. Supply the Windows results and the protected-state
+   confirmation for C4B.2A offline acceptance.
+
+An external edited image's zero changed protected RGB
+pixels is **not** validation that Qwen truly performed
+a masked correction: the audit also has to establish
+model provenance, correct mask polarity, meaningful
+inside-mask correction and operator quality acceptance
+under a later C4B.2B gate.
+
+**C4B.2B actual GPU qualification requires a new,
+execution-specific approval and a separate
+once-only runner that has not been implemented.
+No C4 production registration is authorized.**
