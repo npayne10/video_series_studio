@@ -10,7 +10,8 @@ This is the adopted post-rationalisation roadmap covering the controlled develop
 
 ## Supporting roadmap documents
 
-- `MILESTONE_TRACKER.md` — milestone tracking and status evidence.
+- `MILESTONE_TRACKER.md` — milestone tracking and status evidence (including the **H3-MF1–MF4** provider qualification backlog, issue [#52](https://github.com/npayne10/video_series_studio/issues/52)).
+- [H3 multi-frame workflow assessment](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md) — source JSON evidence, required graph fixes and staged acceptance gates.
 - `RELEASE_PLAN.md` — release planning and release gates.
 - `TEST_PLAN.md` — testing strategy.
 - `CHANGELOG.md` — roadmap/project change history.
