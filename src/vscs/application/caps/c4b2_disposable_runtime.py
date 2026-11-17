@@ -265,10 +265,7 @@ def verify_c4b2_disposable_bundle(directory: Path) -> C4B2DisposableBundle:
     if not isinstance(source_name, str) or not isinstance(mask_name, str):
         raise C4B2IsolationError("C4B.2 staged input name is unsafe")
     if not all(
-        name.startswith("c4b_")
-        and name.endswith(".png")
-        and "/" not in name
-        and "\\" not in name
+        name.startswith("c4b_") and name.endswith(".png") and "/" not in name and "\\" not in name
         for name in (source_name, mask_name)
     ):
         raise C4B2IsolationError("C4B.2 staged input name is unsafe")
