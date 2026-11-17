@@ -1,8 +1,76 @@
 # F5.4.2 Stage C4A — Mask-Capable Provider Contract Preparation
 
-**Status: IMPLEMENTATION CANDIDATE — Windows regression and operator acceptance pending.**
+**Status: OPERATOR ACCEPTED — 2026-11-17, PREPARATION ONLY.**
 This is **C4 preparation only**, not C4 image generation, a trusted
 mask-capable provider, or permission to consume a governed attempt.
+
+## Formal C4A operator acceptance — 2026-11-17
+
+**Decision: ACCEPTED for non-executable provider-contract preparation
+and review acknowledgement only.** This is **not** acceptance of a
+working masked image-generation provider, a live provider run, GPU fit,
+protected-pixel fidelity of generated output or corrected-Candidate
+registration.
+
+**Windows validation:** The operator reported Ruff lint **All checks
+passed**, Ruff formatting **1,700 files already formatted**, Mypy
+**no issues in 712 source files**, focused C4A/matrix regression
+**9 passed**, full regression **2,871 passed, 1 skipped** (Windows
+directory-symlink limitation), and `git diff --check` clean.
+`git status --short` showed only two pre-existing untracked files:
+`docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`
+and `qwen_f5_preflight_result.json`; these were not modified.
+
+**Controlled operator observations:**
+1. Reopened the existing saved AI review for Diagnostic Console
+   `STORY-PRO-B00D168E43` Candidate 4 without a new AI evaluation;
+   restored C2.1 session
+   `c21-4-d1aafcc27b2d4e098d835702542261c8.json`,
+   showing **4 of 4** reviewed fields and the original
+   normalized ROI
+   `0.64798851,0.45478723,0.06178161,0.07446809`.
+   C1/C2 acknowledgement checkboxes remained unchecked upon
+   resumption, requiring new operator inspection.
+2. After reinspection, the C1 proposal digest remained
+   `76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+3. The selected `1aa336f6...` saved C2 mask remained
+   **HISTORICAL**, `Mask bound to current C1: False`.
+   The offline C4A report presented source/C1/mask/graph SHA-256
+   provenance, `Mask node topology validated offline: True`
+   and blocking findings including managed-Qwen mask incompatibility.
+   It reported provider compatibility, protected-pixel preservation
+   and GPU execution as **NOT VERIFIED**, and execution/production
+   as **BLOCKED**.
+4. The first acknowledgement button UX used a modal input and
+   produced no visible response for the operator. The revised
+   matrix includes an always-visible **Review phrase** field and
+   inline outcome status. The operator verified an invalid phrase
+   was rejected with **Stage C4A Review Blocked** and
+   `Type REVIEW ONLY to acknowledge C4A non-execution`.
+   Entering exactly `REVIEW ONLY` displayed
+   **REVIEW ACKNOWLEDGED — NO GENERATION**, including
+   `No provider job, registration or attempt reservation`.
+5. The operator explicitly confirmed that Candidate 4 image and
+   metadata, saved AI evaluation, both original C2 mask PNGs,
+   C2.1 review JSON, accepted CAP requirements/authority,
+   Canon/MASTER status, gallery registration and governed
+   correction attempt counter all remained unchanged.
+   The operator also confirmed **no ComfyUI generation job,
+   correction image, paid AI evaluation or attempt reservation**
+   occurred. These are operator-attested non-mutation findings,
+   not an independently executed filesystem audit.
+
+**Residual limitations and gates:** The C4A protected-pixel audit
+was exercised in synthetic automated regression, not on a
+real generated Candidate. Runtime mask polarity, true Qwen mask
+input binding, inference reliability, peak 16 GiB VRAM use and
+post-run pixel preservation remain untested. The accepted
+C4A review receipt is ephemeral and never constitutes
+generation consent, attempt authority or approval. The
+protected Candidate 4 final governed Attempt 2/2 stays locked.
+A separately designed, consented and operator-accepted
+isolated runtime qualification is required before any GPU work,
+and real governed C4 production is not authorized.
 
 ## Engineering decision
 
@@ -202,7 +270,7 @@ git diff --check
 git status --short
 ```
 
-**C4A is an implementation candidate**, not proof of a
+**C4A is operator-accepted for preparation only**, not proof of a
 genuinely mask-compatible execution provider. A future
 provider-integration and isolated generation phase requires
 independent implementation, validation and explicit operator
@@ -220,5 +288,5 @@ mode was not established from the screenshot alone.
 A code-level UI refinement now embeds the phrase input,
 explicit BLOCKED/ACKNOWLEDGED feedback and warning directly in
 the C4A matrix. No provider contract, governed attempt or
-generation permissions were changed. Windows regression and
-operator re-verification are required before C4A acceptance.
+generation permissions were changed. Windows regression and operator re-verification subsequently passed;
+the evidence is recorded in the formal acceptance record above.
