@@ -23,6 +23,7 @@ ai = [
   "keyring>=25",
   "openai>=1.68",
 ]
+gpu-qualification = ["psutil>=6,<8"]
 dev = [
   "pytest>=8.3",
   "pytest-cov>=6.0",
