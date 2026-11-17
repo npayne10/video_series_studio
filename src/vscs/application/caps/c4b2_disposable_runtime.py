@@ -16,6 +16,7 @@ from typing import Any
 from PIL import Image, UnidentifiedImageError
 
 from vscs.application.caps.c4b_isolated_mask_provider import (
+    inspect_c4b_node_schemas,
     prepare_c4b_isolated_blueprint,
     validate_c4b_api_graph,
 )
@@ -386,4 +387,101 @@ def audit_c4b2_external_result(
         result_sha256=result["composite_sha256"],
         protected_changed_pixels=result["protected_changed_pixels"],
         editable_changed_pixels=inside_changes,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class C4B2ReadinessEvidence:
+    """Static GET response interpretation; never a GPU authorization."""
+
+    missing_requirements: tuple[str, ...]
+    gpu_devices: tuple[str, ...]
+    graph_sha256: str
+
+    @property
+    def schema_readiness(self) -> bool:
+        return not self.missing_requirements
+
+    @property
+    def runtime_mask_qualified(self) -> bool:
+        return False
+
+    @property
+    def execution_authorized(self) -> bool:
+        return False
+
+
+def inspect_c4b2_offline_runtime_schemas(
+    directory: Path, *, object_info: dict[str, Any], system_stats: dict[str, Any]
+) -> C4B2ReadinessEvidence:
+    """Validate externally supplied GET /object_info and /system_stats only.
+
+    No HTTP call occurs. Installed node names alone are insufficient:
+    ensure model filenames, key dropdown options, and mask-chain output
+    port types match the compiled graph.
+    """
+    bundle = verify_c4b2_disposable_bundle(directory)
+    graph = _json_file(bundle.directory / _GRAPH)
+    problems = list(inspect_c4b_node_schemas(graph, object_info))
+    for class_type, field, value in (
+        ("UNETLoader", "unet_name", graph["170:161"]["inputs"]["unet_name"]),
+        ("CLIPLoader", "clip_name", graph["170:162"]["inputs"]["clip_name"]),
+        ("VAELoader", "vae_name", graph["170:146"]["inputs"]["vae_name"]),
+        ("ImageScale", "upscale_method", "nearest-exact"),
+        ("ImageScale", "upscale_method", "lanczos"),
+        ("LoadImageMask", "channel", "red"),
+    ):
+        node = object_info.get(class_type)
+        declared = node.get("input", {}) if isinstance(node, dict) else {}
+        choice = None
+        if isinstance(declared, dict):
+            for group in ("required", "optional"):
+                options = declared.get(group)
+                if isinstance(options, dict) and field in options:
+                    choice = options[field]
+                    break
+        choices = choice[0] if isinstance(choice, list) and choice else None
+        if not isinstance(choices, list) or value not in choices:
+            problems.append(f"{class_type}.{field} does not advertise {value}")
+    for class_type, types in (
+        ("LoadImage", ("IMAGE",)),
+        ("LoadImageMask", ("MASK",)),
+        ("GetImageSize", ("INT", "INT")),
+        ("MaskToImage", ("IMAGE",)),
+        ("ImageScale", ("IMAGE",)),
+        ("ImageToMask", ("MASK",)),
+        ("SetLatentNoiseMask", ("LATENT",)),
+        ("ImageCompositeMasked", ("IMAGE",)),
+    ):
+        info = object_info.get(class_type)
+        outputs = info.get("output") if isinstance(info, dict) else None
+        if not isinstance(outputs, list) or tuple(outputs[: len(types)]) != types:
+            problems.append(f"{class_type} output types are not the reviewed {types}")
+    devices = []
+    rows = system_stats.get("devices") if isinstance(system_stats, dict) else None
+    if isinstance(rows, list):
+        for row in rows:
+            if isinstance(row, dict) and isinstance(row.get("name"), str):
+                total = row.get("vram_total")
+                free = row.get("vram_free")
+                if (
+                    isinstance(total, (int, float))
+                    and not isinstance(total, bool)
+                    and total > 0
+                    and isinstance(free, (int, float))
+                    and not isinstance(free, bool)
+                    and free >= 0
+                    and free <= total
+                ):
+                    devices.append(
+                        f"{row['name']}: {total / (1024**3):.1f} GiB total, "
+                        f"{free / (1024**3):.1f} GiB free"
+                    )
+    if not devices:
+        problems.append("No coherent total/free GPU memory inventory")
+    # Model weights and peak VRAM are not inferred from this inventory.
+    return C4B2ReadinessEvidence(
+        missing_requirements=tuple(dict.fromkeys(problems)),
+        gpu_devices=tuple(devices),
+        graph_sha256=bundle.graph_sha256,
     )
