@@ -3,17 +3,18 @@
 **Status: Stage C1 accepted 2026-11-13; Stage C2 accepted 2026-11-15;
 Stage C2.1 and diagnostic-only Stage C3 accepted 2026-11-16;
 non-executable Stage C4A preparation and F5.4.2 review matrix
-UI accepted 2026-11-17.**
+UI accepted 2026-11-17; C4B.1 non-executing offline
+qualification/GET-only inventory operator accepted 2026-11-17.**
 Live C4 masked correction remains unimplemented and unauthorized.
-Neither C3 nor C4A authorizes provider mask generation, GPU
+Neither C3, C4A nor C4B.1 authorizes provider mask generation, GPU
 inference, attempt reservation or Candidate registration. Stage C is split into
 gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
-## Stage C4B.1 — isolated mask provider qualification (not accepted)
+## Stage C4B.1 — isolated mask provider qualification (operator accepted 2026-11-17)
 
-**Implementation candidate 2026-11-17.** C4B.1 is a separate,
+**Operator accepted 2026-11-17 for offline/GET-only scope.** C4B.1 is a separate,
 fail-closed read-only stage following accepted C4A. It adds
 an in-memory, SHA-sealed Qwen API graph that **does not
 use the managed XCIC queue, loader or output writer**;
@@ -31,6 +32,19 @@ reservation, or approval. The normal managed Qwen correction
 builder still rejects non-null `mask_path`.
 
 [Full C4B.1 contract and controlled operator steps](F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+Acceptance evidence: Ruff/format and Mypy clean (1,704 formatted files;
+713 typed source files), 51 focused and 2,890 full tests passed
+with one Windows symlink skip. The operator demonstrated rejection
+of the HISTORICAL C2 mask, the correct Yes/No consent dialog,
+GET-only discovery of all nine required mask/image classes
+(15.9 GiB GPU total, 14.7 GiB free), and confirmed that pressing
+No closed the dialog without an inventory report. The operator
+attested all Candidate 4 evidence, CAP/Canon/MASTER, gallery,
+and governed attempts stayed unchanged and no generation,
+corrected output, paid evaluation or attempt reservation occurred.
+These non-mutation findings are operator-attested, not an
+independent disk/provider forensic audit.
+
 No execution right follows from a graph topology or
 GET-only schema check. C4B.2 **actual GPU/inpainting
 qualification** requires separate disposable runtime,
@@ -264,8 +278,9 @@ git status --short
 ```
 
 **Acceptance gates:** fulfilled for C1, C2, C2.1,
-**diagnostic-only** C3 and **preparation-only** C4A,
-plus the matrix layout, based on Windows/operator tests.
+**diagnostic-only** C3, **preparation-only** C4A,
+**offline-only** C4B.1 and the matrix layout,
+based on Windows/operator tests.
 Live C4 still requires separate implementation, regression,
 independent controlled execution evidence and explicit operator
 approval. Source-edit connectivity does not run Windows tests.
