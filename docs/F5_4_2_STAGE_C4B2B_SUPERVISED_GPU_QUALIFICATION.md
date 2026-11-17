@@ -257,6 +257,40 @@ currently no operator-facing C4B.2A staging CLI/UI (the API is
 asset substitution or run `--inspect` against a nonexistent bundle.
 No `--execute`, GPU job, consent or Candidate registration occurred.
 
+## 3E. Operator Qwen model inventory (read-only) — 2026-11-17
+
+The operator enumerated installed model filenames and sizes; no
+`extra_model_paths*.yaml` exists in the ComfyUI root. The accepted
+VSCS Qwen v2.1 workflow JSON specifies the three names under
+the `qwen\\` model dropdown prefix.
+
+| Reviewed C4B.2B role | Installed path under `D:\\ComfyUI\\ComfyUI_windows_portable\\ComfyUI\\models\\` | Reported size |
+|---|---|---|
+| UNET | `diffusion_models\\qwen\\qwen_image_edit_2511_fp8mixed.safetensors` | 19.12 GiB |
+| CLIP | `text_encoders\\qwen\\qwen_2.5_vl_7b_fp8_scaled.safetensors` | 8.74 GiB |
+| VAE | `vae\\qwen\\qwen_image_vae.safetensors` | 0.24 GiB |
+
+These relative paths match the reviewed workflow node selections:
+UNET `170:161`, CLIP `170:162` and VAE `170:146`.
+A second encoder with the same filename exists under
+`text_encoders\\hunyuan\\` and **must not be substituted**.
+Additional `qwen_image_2512`, Lightning LoRA and MiniMax H3 assets
+are not the three fixed C4B.2B baseline model inputs.
+
+**Decision:** ACCEPT the *read-only file-discovery and workflow-name
+matching gate*. This is not cryptographic verification, installed
+ComfyUI node-dropdown validation, model-loader compatibility, CPU
+offload validation, actual VRAM qualification or GPU generation. The
+19.12 GiB UNET is larger than the 15.93 GiB installed GPU VRAM;
+the qualification therefore depends on successfully tested
+memory/offload behavior, not solely the 13.55 GiB free reading.
+
+**Next isolation gate:** obtain a truly separate disposable source,
+human-reviewed CURRENT C1/C2 mask and external sealed C4B.2A bundle.
+Do not select the historical Diagnostic Console masks or run a
+production candidate through the test controller. No one-shot
+consent has been requested or granted.
+
 ## 4. Future supervised live readiness — DO NOT EXECUTE YET
 
 After all engineering checks are accepted, the operator must produce a
