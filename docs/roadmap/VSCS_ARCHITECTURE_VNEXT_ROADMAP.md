@@ -143,6 +143,24 @@ Prove a real Shot can travel from UPD through ProductionTask to live ComfyUI, ou
 
 Evidence-driven subphases may be added beneath Phase 20 without changing the Phase 20 architectural objective. Current examples include provider capability validation and provider-ready reference governance. These refinements remain subordinate to the Phase 20 objective and must ultimately converge into Phase 20 integration and functional acceptance.
 
+#### C4B.2A isolated disposable runtime preflight — 2026-11-17
+
+**Implementation candidate; Windows and operator acceptance pending.**
+A dedicated, disjoint test-project bundle can now hold a
+current source/C1/C2-reviewed mask, sealed manifest and
+C4B.1 isolated Qwen graph. A non-executing launch
+preview specifies a separate localhost port and
+independent input/output/temp/user roots. Pure local
+schema/model dropdown/output-port and GPU metadata
+validation plus read-only synthetic pixel audits
+support the later controlled one-run experiment.
+[Engineering work and test steps](../F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md).
+
+**No actual C4B.2B GPU inference or one-use execution
+controller exists or is authorized.** Candidate 4
+Attempt 2/2, CAP, Canon/MASTER and GeneratedMedia stay
+protected. H3-MF1 remains deferred.
+
 #### Current image-correction corrective refinement — C4B (2026-11-17)
 
 **C4B.1 operator accepted 2026-11-17 for offline qualification only:** A source/C1/C2-bound
