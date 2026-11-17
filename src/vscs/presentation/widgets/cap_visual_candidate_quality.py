@@ -33,6 +33,7 @@ from vscs.application.caps.c4_mask_provider_contract import (
     prepare_c4_provider_contract,
 )
 from vscs.application.caps.c4b_isolated_mask_provider import (
+    inspect_c4b_local_node_inventory,
     prepare_c4b_isolated_blueprint,
 )
 from vscs.application.caps.general_visual_correction_triage import (
@@ -468,6 +469,9 @@ class CandidateQualityReportDialog(QDialog):
         c4b_prepare = QPushButton("Inspect C4B Isolated Mask Graph (No Generation)", dialog)
         c4b_prepare.setObjectName("stageC4BIsolatedGraphInspect")
         c4b_grid.addWidget(c4b_prepare, 0, 1)
+        c4b_probe = QPushButton("Probe C4B Local Mask Nodes (GET Only)", dialog)
+        c4b_probe.setObjectName("stageC4BGetOnlyNodeProbe")
+        c4b_grid.addWidget(c4b_probe, 0, 2)
         c4b_warning = QLabel(
             "Requires a CURRENT reviewed C2 mask. Historical masks are blocked. "
             "No files staged or GPU work.",
@@ -1069,6 +1073,31 @@ class CandidateQualityReportDialog(QDialog):
             details.setPlainText(result.describe())
 
         c4b_prepare.clicked.connect(inspect_c4b_blueprint)
+
+        def probe_c4b_local_nodes() -> None:
+            confirmed = QMessageBox.question(
+                dialog,
+                "C4B Local GET-only Probe",
+                "Query local ComfyUI using only GET /object_info and GET /system_stats? "
+                "This does NOT stage files, generate images, approve a provider, "
+                "reserve an attempt or register a Candidate.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if confirmed != QMessageBox.StandardButton.Yes:
+                return
+            try:
+                inventory = inspect_c4b_local_node_inventory()
+            except (OSError, ValueError, RuntimeError) as exc:
+                details.setPlainText(
+                    "STAGE C4B NODE INVENTORY: UNAVAILABLE (GET ONLY)\\n"
+                    + type(exc).__name__
+                    + "\\nNo ComfyUI POST, generation or attempt reservation."
+                )
+                return
+            details.setPlainText(inventory.describe())
+
+        c4b_probe.clicked.connect(probe_c4b_local_nodes)
 
         refresh_sessions_button.clicked.connect(refresh_sessions)
         save_session_button.clicked.connect(save_session)
