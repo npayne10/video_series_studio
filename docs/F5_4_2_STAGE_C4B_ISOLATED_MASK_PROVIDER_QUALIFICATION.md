@@ -1,6 +1,6 @@
 # F5.4.2 Stage C4B — Isolated Mask-Capable Provider Qualification
 
-**Status: C4B.1 OFFLINE IMPLEMENTATION CANDIDATE — Windows, UI and GET-only acceptance pending.**
+**Status: C4B.1 Windows/static validation and observed GET-only UI checks PASSED; final cancellation/non-mutation operator attestation pending.**
 **Live C4B.2 GPU qualification has NOT been performed or authorized.**
 **Date:** 2026-11-17
 **Tracking issue:** [#53 — C4B isolated provider qualification](https://github.com/npayne10/video_series_studio/issues/53)
@@ -164,7 +164,71 @@ execution, result-handoff automation and GPU memory capture.
 This intentional C4B.2 stop gate must not be bypassed.
 C4A `REVIEW ONLY` remains **not** generation consent.
 
-## 5. Regression and operator checks for C4B.1
+## 5. Operator validation evidence — 2026-11-17 (partial acceptance)
+
+The operator pulled the C4B branch to Windows, then reported:
+
+- Ruff lint: **All checks passed**.
+- Ruff formatting: **1,704 files already formatted**.
+- Mypy: **Success, no issues in 713 source files**.
+- Focused C4B/C4A/C3/C2.1/matrix regression:
+  **51 passed** (prior run after the final test addition).
+- Full regression: **2,890 passed, 1 skipped**
+  (directory symlinks unavailable on Windows, prior run).
+- `git diff --check`: clean. `git status --short`: only
+  the two previously existing untracked
+  `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`
+  and `qwen_f5_preflight_result.json`.
+
+**Observed UI screenshots**:
+
+1. The Stage C4B **Inspect C4B Isolated Mask Graph (No Generation)**
+   action rejected the selected HISTORICAL C2 mask with the
+   blocking message **"C4B rejects HISTORICAL or non-current C2 mask"**.
+2. The **Probe C4B Local Mask Nodes (GET Only)** action displayed
+   the explicit Yes/No confirmation and described the two
+   read-only GET endpoints, lack of generation and attempt
+   reservation. The No button appeared as the default.
+   Whether the operator actually tested cancelling with
+   **No** is **not yet attested**.
+3. The accepted **GET-only inventory result** listed all nine
+   expected classes:
+   `GetImageSize`, `ImageCompositeMasked`, `ImageScale`,
+   `ImageToMask`, `LoadImage`, `LoadImageMask`,
+   `MaskToImage`, `SaveImage`, `SetLatentNoiseMask`.
+   **Missing classes: none. Missing declared inputs: none.**
+   GPU: NVIDIA GeForce RTX 5060 Ti (cuda:0),
+   **15.9 GiB total; 14.7 GiB free** at observation.
+   The report explicitly retained **"Mask polarity, full graph
+   output wiring and GPU inference: NOT VERIFIED"** and
+   **"Provider compatibility, protected-pixel fidelity and
+   execution: BLOCKED"**.
+4. The same screenshot shows the restored `components`
+   discrepancy `protruding instead of recessed`,
+   **4 of 4 reviewed fields**,
+   normalized ROI
+   `0.64798851,0.45478723,0.06178161,0.07446809`,
+   C1/C2 UI inspection checkboxes checked after review, and
+   the C2.1 mask version still labelled **HISTORICAL**.
+
+**Not yet attested:** cancellation by **No** produces no
+inventory report, and the final protected-state/non-mutation
+check (Candidate 4 image/metadata, saved AI review, both C2
+PNGs, saved C2.1 JSON, CAP/Canon/MASTER, gallery registration,
+governed attempt count, and no paid evaluation/ComfyUI POST/
+output/attempt reservation). The inventory report states
+that it uses GET only but is not an independent audit of
+the running provider's request logs.
+
+**Acceptance boundary:** C4B.1 remains an offline,
+non-executing qualification candidate until the last
+operator confirmations are received. A complete node
+inventory is **not** proof of Qwen mask compatibility,
+mask polarity, GPU inference reliability or exact pixel
+fidelity. No C4B.2 inference or governed correction has
+been authorized.
+
+## 6. Regression and operator checks for C4B.1
 
 ### Windows validation
 
