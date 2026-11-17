@@ -1,5 +1,26 @@
 # VSCS Changelog
 
+## 2026-11-17 — F5.4.2 C4B.1 isolated Qwen masked-provider qualification candidate
+
+- Added standalone, offline-only API graph blueprint that removes
+  XCIC queue/output dependencies and requires current C1/C2 source/mask
+  evidence with exact SHA-256 provenance.
+- Mask alignment design adds processed-source mask resize for latent
+  conditioning, then original-size decoded output and protected
+  original-source compositing. Runtime inpainting correctness and
+  exact pixel preservation remain untested.
+- Added fail-closed graph, historical/stale evidence, deterministic
+  seed and GET-only schema/GPU inventory tests and a guarded F5.4.2
+  UI matrix section.
+- Added engineering specification, full operator UI acceptance
+  instructions and both User Manual updates.
+- **No real masked inference, shared ComfyUI POST, source staging,
+  attempt reservation, new Candidate or production authority.**
+  C4B.2 GPU qualification needs separate operator consent and
+  disposable-only runtime acceptance. Candidate 4 Attempt 2/2
+  remains protected.
+
+
 ## 2026-11-17 — Priority correction: finish C4B/image correction before H3-MF1
 
 - H3-MF1 remains an open, documented research task but is **deferred**; it is no longer designated NEXT.
