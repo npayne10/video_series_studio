@@ -198,7 +198,6 @@ def _build_isolated_graph(
     graph["9"] = _node(
         "SaveImage", images=[_COMPOSITE, 0], filename_prefix=_OUTPUT_PREFIX
     )
-    validate_c4b_api_graph(graph)
     return graph
 
 
@@ -292,6 +291,18 @@ def validate_c4b_api_graph(graph: dict[str, Any]) -> None:
                 and value[0] not in graph
             ):
                 raise GeometryCorrectionError("C4B graph contains a dangling node reference")
+    # The exact graph must equal a fresh derivation of the reviewed default
+    # Qwen baseline; do not permit custom nodes, modified prompts or
+    # alternate output sinks in a qualification blueprint.
+    gold = _build_isolated_graph(
+        default_workflow_path(),
+        source_name=source_inputs["image"],
+        mask_name=mask_inputs["image"],
+        seed=sampler["seed"],
+        positive=graph["170:151"]["inputs"]["prompt"],
+    )
+    if graph != gold:
+        raise GeometryCorrectionError("C4B graph differs from the reviewed isolated baseline")
 
 
 def inspect_c4b_node_schemas(
@@ -359,6 +370,7 @@ def prepare_c4b_isolated_blueprint(
         seed=seed,
         positive=managed_qwen_positive_prompt(proposal.accepted_fields, proposal.target_field),
     )
+    validate_c4b_api_graph(graph)
     return C4BProviderBlueprint(
         graph=graph,
         graph_sha256=_digest(graph),
