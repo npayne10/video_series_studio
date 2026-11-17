@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.12 (living documentation, updated 2026-11-17)  
+**Version:** v0.13 (living documentation, updated 2026-11-17)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -10,9 +10,9 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
-## Stage C4B.1 — isolated Qwen mask-provider qualification (implementation candidate)
+## Stage C4B.1 — isolated Qwen mask-provider qualification (operator accepted 2026-11-17)
 
-**C4B.1 is committed but not yet Windows/UI-accepted.** This is the
+**C4B.1 was Windows/UI operator accepted on 2026-11-17 for offline and GET-only scope.** This is the
 next still-image correction development gate after accepted C4A.
 The F5.4.2 advisory matrix now includes **Inspect C4B Isolated
 Mask Graph (No Generation)** and **Probe C4B Local Mask Nodes
@@ -32,6 +32,18 @@ runtime needs disposable input/temp/output roots.
 
 See [C4B.1 User Manual operator test](VSCS_User_Manual.md#f542-stage-c4b1--isolated-qwen-mask-provider-qualification-offline)
 and [C4B engineering qualification contract](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+**Accepted evidence:** Ruff/format clean (1,704 files), Mypy
+clean (713 source files), 51 focused and 2,890 full tests passed
+with one Windows symlink skip. The historical mask was blocked;
+GET-only inspection identified all nine required classes and
+15.9 GiB total/14.7 GiB free GPU memory. The operator confirmed
+No cancels without an inventory report, and attested that
+Candidate 4, both masks, saved C2.1 review, CAP/Canon/MASTER,
+gallery and governed attempts remained unchanged, with no
+ComfyUI generation, edited result, paid evaluation or attempt
+reservation. This is an operator attestation, not an independent
+filesystem/provider request audit.
+
 **C4B.2 live GPU tests, correction output, attempt reservation
 and Candidate registration remain unauthorized.**
 
