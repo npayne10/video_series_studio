@@ -68,6 +68,20 @@ correction remains blocked.
 [Complete C4B.2B engineering acceptance procedure](../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md)
 and [safe Windows/UI steps](VSCS_User_Manual.md#f542-c4b2b--supervised-disposable-qwen-gpu-qualification-implementation-candidate).
 
+**Operator choice — Approach B (2026-11-17):** Full new
+VSCS Story → reviewed planning/Shot binding → Draft CAP →
+local image Candidate → genuine saved quality evaluation →
+current C1/C2 reviewed mask → sealed C4B.2A bundle.
+The new project and exact disposable marker are operator-verified;
+source Story and downstream evidence remain pending.
+The [original draft Story source](
+../fixtures/C4B2B_Real_World_Story_Source.txt)
+and [exact non-paid setup runbook](
+../F5_4_2_STAGE_C4B2B_REAL_WORLD_STORY_SETUP.md)
+are now available. Do not run Analyse Story, pay for AI
+review or start a GPU job without separately authorized
+checkpoints.
+
 ## Stage C4B.1 — isolated Qwen mask-provider qualification (operator accepted 2026-11-17)
 
 **C4B.1 was Windows/UI operator accepted on 2026-11-17 for offline and GET-only scope.** This is the
