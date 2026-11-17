@@ -48,9 +48,7 @@ _REQUIRED_INPUTS: dict[str, frozenset[str]] = {
     "ImageScale": frozenset({"image", "upscale_method", "width", "height", "crop"}),
     "ImageToMask": frozenset({"image", "channel"}),
     "SetLatentNoiseMask": frozenset({"samples", "mask"}),
-    "ImageCompositeMasked": frozenset(
-        {"destination", "source", "mask", "x", "y", "resize_source"}
-    ),
+    "ImageCompositeMasked": frozenset({"destination", "source", "mask", "x", "y", "resize_source"}),
     "SaveImage": frozenset({"images", "filename_prefix"}),
 }
 
@@ -147,8 +145,18 @@ def _build_isolated_graph(
     )
     # Remove every XCIC queue/output dependency and LoRA/switch path;
     # qualification will use fixed 20-step, non-LoRA baseline.
-    for key in ("171", "170:153", "170:154", "170:155", "170:163",
-                "170:164", "170:165", "170:166", "170:167", "170:168"):
+    for key in (
+        "171",
+        "170:153",
+        "170:154",
+        "170:155",
+        "170:163",
+        "170:164",
+        "170:165",
+        "170:166",
+        "170:167",
+        "170:168",
+    ):
         graph.pop(key)
     graph["170:160"]["inputs"]["image"] = [_SOURCE, 0]
     graph["170:151"]["inputs"]["prompt"] = positive
@@ -223,8 +231,13 @@ def validate_c4b_api_graph(graph: dict[str, Any]) -> None:
         _EDIT_SIZE: ("GetImageSize", {"image": ["170:160", 0]}),
         _MASK_SCALE: (
             "ImageScale",
-            {"image": [_MASK_IMAGE, 0], "upscale_method": "nearest-exact",
-             "width": [_EDIT_SIZE, 0], "height": [_EDIT_SIZE, 1], "crop": "center"},
+            {
+                "image": [_MASK_IMAGE, 0],
+                "upscale_method": "nearest-exact",
+                "width": [_EDIT_SIZE, 0],
+                "height": [_EDIT_SIZE, 1],
+                "crop": "center",
+            },
         ),
         _EDIT_MASK: ("ImageToMask", {"image": [_MASK_SCALE, 0], "channel": "red"}),
         _LATENT_MASK: (
@@ -233,13 +246,24 @@ def validate_c4b_api_graph(graph: dict[str, Any]) -> None:
         ),
         _RESULT_SCALE: (
             "ImageScale",
-            {"image": ["170:158", 0], "upscale_method": "lanczos",
-             "width": [_SOURCE_SIZE, 0], "height": [_SOURCE_SIZE, 1], "crop": "center"},
+            {
+                "image": ["170:158", 0],
+                "upscale_method": "lanczos",
+                "width": [_SOURCE_SIZE, 0],
+                "height": [_SOURCE_SIZE, 1],
+                "crop": "center",
+            },
         ),
         _COMPOSITE: (
             "ImageCompositeMasked",
-            {"destination": [_SOURCE, 0], "source": [_RESULT_SCALE, 0],
-             "mask": [_MASK, 0], "x": 0, "y": 0, "resize_source": False},
+            {
+                "destination": [_SOURCE, 0],
+                "source": [_RESULT_SCALE, 0],
+                "mask": [_MASK, 0],
+                "x": 0,
+                "y": 0,
+                "resize_source": False,
+            },
         ),
         "9": (
             "SaveImage",
@@ -251,7 +275,9 @@ def validate_c4b_api_graph(graph: dict[str, Any]) -> None:
         if not isinstance(node, dict) or node.get("class_type") != kind:
             raise GeometryCorrectionError(f"C4B graph node {key} is not {kind}")
         inputs = node.get("inputs")
-        if not isinstance(inputs, dict) or any(inputs.get(k) != v for k, v in required.items()):
+        if not isinstance(inputs, dict) or any(
+            inputs.get(k) != v for k, v in required.items()
+        ):
             raise GeometryCorrectionError(f"C4B masked graph wiring changed at {key}")
     source_inputs = graph[_SOURCE]["inputs"]
     mask_inputs = graph[_MASK]["inputs"]
@@ -341,7 +367,6 @@ def inspect_c4b_node_schemas(
     # Node-name/input-schema presence cannot establish output types,
     # mask polarity or any inference result.
     return tuple(blockers)
-
 
 
 @dataclass(frozen=True, slots=True)
