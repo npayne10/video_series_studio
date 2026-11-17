@@ -170,16 +170,44 @@ Candidate restrictions.
 import, gives Ruff-formatted implementation branches,
 and explicitly narrows source/mask filename types to
 `str` before joining `Path`. `5505ba0` corrects
-the canonical synthetic Candidate path, aligns the
-stale-source assertion to the actual
-`Source Candidate SHA-256 mismatch` error, and
-formats the test file.
+the canonical synthetic Candidate path, added a
+stale-source assertion, and formats the test file.
+A subsequent Windows retest established that the earlier
+quality-review freshness guard rejects tampering before
+the later source-image SHA guard.
 
 **Validation status:** Re-run Windows Ruff, formatter,
 Mypy, focused/full pytest, diff and status checks on
 the updated branch. No acceptance is claimed for
 C4B.2A from the first failing run. No actual ComfyUI
 GPU inference took place in these test cases.
+
+## 3B. Second Windows regression — assertion and format correction
+
+**Second Windows run (2026-11-17): NOT YET ACCEPTED.**
+Ruff lint and Mypy passed (714 source files). Ruff formatting found
+one remaining line-wrap discrepancy in
+`src/vscs/application/caps/c4b2_disposable_runtime.py`.
+Focused tests: **1 failed, 53 passed, 1 skipped**.
+Full tests: **1 failed, 2,901 passed, 2 skipped**.
+The sole failure was the synthetic stale-source test expecting
+`Source Candidate SHA-256 mismatch`, whereas the existing,
+earlier quality-review freshness validation correctly raised
+`Candidate source changed since quality review`.
+No production validation or runtime execution fault was observed.
+
+**Follow-up correction:** apply Ruff's exact one-line formatting
+to the staged filename guard and assert the earlier, actual
+`Candidate source changed since quality review` error.
+The test still requires fail-closed behavior and an absent bundle.
+Neither the production quality guard nor the protected assets,
+C2 evidence, or governed attempts was changed. Both existing
+untracked user files remain untouched.
+
+**Status:** Wait for an entirely passing third Windows
+static/focused/full regression and operator non-mutation attestation
+before accepting C4B.2A. C4B.2B GPU execution remains separately
+prohibited and unimplemented.
 
 ## 4. Windows engineering validation
 
