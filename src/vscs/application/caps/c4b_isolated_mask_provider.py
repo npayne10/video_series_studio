@@ -361,7 +361,7 @@ class C4BLocalNodeInventory:
         return False
 
     def describe(self) -> str:
-        return "\\n".join(
+        return "\n".join(
             (
                 "F5.4.2 C4B - LOCAL MASK NODE INVENTORY (GET ONLY)",
                 "Present mask/image node classes: "
@@ -404,7 +404,10 @@ def inspect_c4b_local_node_inventory(
         if absent:
             bad_inputs.append(f"{kind}: {', '.join(sorted(absent))}")
     devices: list[str] = []
-    for item in stats.get("devices", ()):
+    device_rows = stats.get("devices", ())
+    if not isinstance(device_rows, (list, tuple)):
+        device_rows = ()
+    for item in device_rows:
         if isinstance(item, dict) and isinstance(item.get("name"), str):
             total = item.get("vram_total")
             free = item.get("vram_free")
