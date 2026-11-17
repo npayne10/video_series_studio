@@ -54,11 +54,14 @@ The F5.4.2 review dialog adds:
   creates an in-memory preparation report only, including all
   unresolved blockers.
 - **Acknowledge C4A Preparation Review (Not Execution Consent)**:
-  requires the operator to type the exact phrase
-  `REVIEW ONLY`. It revalidates that the selected
-  mask, source image and graph have not changed.
-  This creates a **memory-only review acknowledgement**,
-  not permanent authorization, execution consent or an attempt
+  the Stage C4A matrix includes a **Review phrase** text field
+  beside the button and an inline review-status label below it.
+  The operator must type exactly `REVIEW ONLY` and click
+  the button. The handler revalidates selected mask,
+  source image and graph, then reports a clearly labelled
+  BLOCKED or REVIEW ACKNOWLEDGED result in the same matrix.
+  This is a **memory-only review acknowledgement**, not
+  permanent authorization, execution consent or an attempt
   journal. Closing VSCS never implies consent.
 
 **Future C4 execution consent** must be separately implemented
@@ -149,12 +152,16 @@ changed protected pixel without using ComfyUI or Candidate 4.
    flagged, derived offline masked graph SHA-256 when available,
    managed-Qwen incompatibility and other C4 blockers,
    all authorization properties False.
-7. Click **Acknowledge C4A Preparation Review (Not
-   Execution Consent)**. Verify the clear non-execution
-   warning; enter an incorrect phrase first and confirm
-   it blocks. Repeat and enter exactly `REVIEW ONLY`.
-   Expected: a memory-only receipt, with **no
-   generation authorization or attempt reservation**.
+7. In the Stage C4A matrix enter `GENERATE` in
+   **Review phrase**, then click **Acknowledge C4A
+   Preparation Review (Not Execution Consent)**.
+   The in-matrix status must say BLOCKED and a warning
+   must explain the required phrase. Replace the text
+   with exactly `REVIEW ONLY`, click the same button,
+   and expect **REVIEW ACKNOWLEDGED — NO GENERATION**
+   in the visible status label and a memory-only
+   receipt in the assessment panel. No generation
+   authorization or attempt reservation is permitted.
 8. Review the contract report and confirm **no local
    ComfyUI GET/POST request**, new mask, file staging,
    output, Candidate registration, AI evaluation or
@@ -200,3 +207,18 @@ genuinely mask-compatible execution provider. A future
 provider-integration and isolated generation phase requires
 independent implementation, validation and explicit operator
 approval. This must not be recorded as completed C4.
+
+
+## C4A UI acknowledgement visibility correction — 2026-11-17
+
+The operator reported pressing the original C4A acknowledgement
+button with no visible response in the matrix layout.
+The implementation previously used `QInputDialog.getText`
+to ask for the review-only phrase. Its actual runtime failure
+mode was not established from the screenshot alone.
+
+A code-level UI refinement now embeds the phrase input,
+explicit BLOCKED/ACKNOWLEDGED feedback and warning directly in
+the C4A matrix. No provider contract, governed attempt or
+generation permissions were changed. Windows regression and
+operator re-verification are required before C4A acceptance.
