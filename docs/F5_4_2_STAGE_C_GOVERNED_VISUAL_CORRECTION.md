@@ -1,15 +1,51 @@
 # Phase F5.4.2 Stage C — Governed Visual Correction Integration
 
 **Status: Stage C1 accepted 2026-11-13; Stage C2 accepted 2026-11-15;
-Stage C2.1 and diagnostic-only Stage C3 accepted 2026-11-16.**
-Stage C4 remains unimplemented and unauthorized. Stage C3 does not
-authorize provider mask generation, GPU inference, attempt reservation
-or Candidate registration. Stage C is split into
+Stage C2.1 and diagnostic-only Stage C3 accepted 2026-11-16;
+non-executable Stage C4A preparation and F5.4.2 review matrix
+UI accepted 2026-11-17.**
+Live C4 masked correction remains unimplemented and unauthorized.
+Neither C3 nor C4A authorizes provider mask generation, GPU
+inference, attempt reservation or Candidate registration. Stage C is split into
 gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
-## Stage C4A preparation — implementation candidate
+## Stage C4A and review matrix acceptance — 2026-11-17
+
+The Stage C4A provider-contract preparation and F5.4.2
+workflow matrix layout were **operator accepted within their
+non-executable scope**. Ruff lint/format passed (1,700 files),
+Mypy passed (712 source files), focused tests 9 passed and
+full regression passed 2,871 tests with one Windows
+directory-symlink skip.
+
+Controlled UI evidence included saved C2.1 session restoration
+(4/4 fields, original ROI, reset C1/C2 checkboxes), matching
+sealed C1 proposal SHA, correct **HISTORICAL** C2 mask
+restriction, SHA-sealed C4A offline preparation report and
+clearly visible rejection of an invalid acknowledgement phrase.
+Typing exactly `REVIEW ONLY` produced an in-memory
+`REVIEW ACKNOWLEDGED — NO GENERATION` status.
+
+The operator explicitly confirmed that Candidate 4,
+its stored AI report, original C2 mask evidence,
+C2.1 saved session, CAP/Canon/MASTER, Candidate
+registration and governed attempt counter were unchanged,
+and that no paid AI evaluation, ComfyUI generation,
+correction output or attempt reservation occurred.
+
+See [C4A acceptance record](F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md#formal-c4a-operator-acceptance--2026-11-17)
+and [matrix-layout acceptance record](F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md#formal-layout-acceptance--2026-11-17).
+
+**These acceptances do not certify a mask-capable runtime
+provider or unlock Stage C4.** Candidate 4's final
+governed Attempt 2/2 remains protected. A separate
+runtime qualification design, VRAM/pixel-proof evidence,
+new execution-specific consent and explicit governed
+approval are mandatory before any real masked correction.
+
+## Stage C4A preparation — accepted for offline preparation only
 
 C4A has a separate, **non-executable** provider preparation
 contract. It checks the exact source/CAP/C1/C2 evidence,
@@ -30,7 +66,7 @@ provider correctness. The protected final Candidate 4
 Attempt 2/2 remains untouched.
 
 See [C4A technical contract and operator test](F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md).
-**C4A is pending Windows/UI acceptance; actual C4
+**C4A has passed Windows/UI acceptance for preparation only; actual C4
 GPU inference and Candidate registration remain unauthorized.**
 
 ## Stage C3 diagnostic-only acceptance — 2026-11-16
@@ -200,8 +236,9 @@ git diff --check
 git status --short
 ```
 
-**Acceptance gates:** fulfilled for C1, C2, C2.1 and
-**diagnostic-only** C3 based on operator evidence and Windows tests.
-C4 still requires separate implementation, regression,
+**Acceptance gates:** fulfilled for C1, C2, C2.1,
+**diagnostic-only** C3 and **preparation-only** C4A,
+plus the matrix layout, based on Windows/operator tests.
+Live C4 still requires separate implementation, regression,
 independent controlled execution evidence and explicit operator
 approval. Source-edit connectivity does not run Windows tests.
