@@ -1,5 +1,23 @@
 # VSCS Changelog
 
+## 2026-11-17 — C4B.1 offline qualification formally accepted
+
+- Operator confirmed the GET-only probe **No** cancellation
+  closes without generating an inventory report.
+- Operator attested Candidate 4 and metadata, saved AI
+  evaluation, both original C2 masks, saved C2.1 human
+  review, CAP/Canon/MASTER, gallery and governed attempt
+  count unchanged. No ComfyUI generation, edited output,
+  paid evaluation or attempt reservation occurred.
+- Ruff lint/format and Mypy passed; 51 focused and 2,890
+  full regressions passed (one Windows symlink skip).
+  Historical-mask rejection and all nine expected GET-only
+  mask/image node classes were demonstrated in the UI.
+- **Decision:** Accept C4B.1 for offline graph/GET-only
+  diagnosis only. C4B.2 disposable GPU qualification and
+  governed C4 remain separate and unauthorized.
+
+
 ## 2026-11-17 — F5.4.2 C4B.1 isolated Qwen masked-provider qualification candidate
 
 - Added standalone, offline-only API graph blueprint that removes
