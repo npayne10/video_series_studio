@@ -51,7 +51,10 @@ def _seal(payload: dict[str, Any]) -> str:
 def _safe_path(path: Path, *, existing: bool) -> Path:
     if not path.is_absolute():
         raise C4B2IsolationError("Every C4B.2 path must be absolute")
-    if any(part.is_symlink() for part in (path, *path.parents)):
+    if any(
+        part.is_symlink() or part.is_junction()
+        for part in (path, *path.parents)
+    ):
         raise C4B2IsolationError("C4B.2 paths cannot contain symlinks or junction links")
     try:
         return path.resolve(strict=existing)
