@@ -43,10 +43,10 @@ def _fixture(tmp_path: Path):
     protected.mkdir()
     project = tmp_path / "only_disposable_test_project"
     project.mkdir()
-    (project / ".c4b2_disposable_project").write_text(
-        "C4B2_DISPOSABLE_PROJECT\n", encoding="utf-8"
+    (project / ".c4b2_disposable_project").write_text("C4B2_DISPOSABLE_PROJECT\n", encoding="utf-8")
+    image_folder = (
+        project / "Canonical Assets" / "STORY-C4B2-SYNTHETIC" / "Images" / "Visual Candidates"
     )
-    image_folder = project / "Canonical Assets" / "STORY-C4B2-SYNTHETIC" / "Images"
     image_folder.mkdir(parents=True)
     source = image_folder / "source.png"
     Image.new("RGB", (320, 256), (20, 40, 60)).save(source)
@@ -94,9 +94,7 @@ def _fixture(tmp_path: Path):
     )
     mask_dir = project / "Canonical Assets" / snapshot.asset_id / ".metadata" / "spatial_masks"
     mask_dir.mkdir(parents=True)
-    evidence = prepare_reviewed_mask(
-        proposal, source_path=source, reviewer_confirmed_mask=True
-    )
+    evidence = prepare_reviewed_mask(proposal, source_path=source, reviewer_confirmed_mask=True)
     mask = save_reviewed_mask_once(
         evidence,
         proposal=proposal,
@@ -162,15 +160,25 @@ def test_c4b2_rejects_missing_marker_and_workspace_collisions(tmp_path):
     marker.unlink()
     with pytest.raises(C4B2IsolationError, match="marker"):
         prepare_c4b2_disposable_bundle(
-            snap, proposal, selected_mask_path=mask,
-            protected_project_root=protected, bundle_directory=tmp_path / "outside",
+            snap,
+            proposal,
+            selected_mask_path=mask,
+            protected_project_root=protected,
+            bundle_directory=tmp_path / "outside",
         )
     marker.write_text("C4B2_DISPOSABLE_PROJECT\n")
-    for target in (snap.project_root / "bundle", protected / "bundle", tmp_path / "protected_production_project"):
+    for target in (
+        snap.project_root / "bundle",
+        protected / "bundle",
+        tmp_path / "protected_production_project",
+    ):
         with pytest.raises(C4B2IsolationError):
             prepare_c4b2_disposable_bundle(
-                snap, proposal, selected_mask_path=mask,
-                protected_project_root=protected, bundle_directory=target,
+                snap,
+                proposal,
+                selected_mask_path=mask,
+                protected_project_root=protected,
+                bundle_directory=target,
             )
 
 
@@ -179,18 +187,24 @@ def test_c4b2_rejects_protected_identity_even_with_marker(tmp_path):
     snap.asset_id = "STORY-PRO-B00D168E43"
     with pytest.raises(C4B2IsolationError, match="protected Diagnostic Console"):
         prepare_c4b2_disposable_bundle(
-            snap, proposal, selected_mask_path=mask,
-            protected_project_root=protected, bundle_directory=tmp_path / "outside",
+            snap,
+            proposal,
+            selected_mask_path=mask,
+            protected_project_root=protected,
+            bundle_directory=tmp_path / "outside",
         )
 
 
 def test_c4b2_rejects_stale_source_and_mask(tmp_path):
     snap, proposal, mask, protected = _fixture(tmp_path)
     snap.image_path.write_bytes(b"tampered")
-    with pytest.raises(GeometryCorrectionError, match="source changed"):
+    with pytest.raises(GeometryCorrectionError, match="Source Candidate SHA-256 mismatch"):
         prepare_c4b2_disposable_bundle(
-            snap, proposal, selected_mask_path=mask,
-            protected_project_root=protected, bundle_directory=tmp_path / "outside",
+            snap,
+            proposal,
+            selected_mask_path=mask,
+            protected_project_root=protected,
+            bundle_directory=tmp_path / "outside",
         )
     assert not (tmp_path / "outside").exists()
 
@@ -235,7 +249,9 @@ def test_c4b2_launch_preview_only_and_refuses_shared_port(tmp_path):
     for port in (8188, 8299, 0, True):
         with pytest.raises(C4B2IsolationError, match="dedicated process"):
             preview_c4b2_isolated_launch(
-                prepared.directory, python_executable=python, comfyui_main=main,
+                prepared.directory,
+                python_executable=python,
+                comfyui_main=main,
                 port=port,
             )
 
