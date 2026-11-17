@@ -13,6 +13,7 @@ from PIL import Image
 from vscs.application.caps.c4b2_disposable_runtime import (
     C4B2IsolationError,
     audit_c4b2_external_result,
+    inspect_c4b2_offline_runtime_schemas,
     prepare_c4b2_disposable_bundle,
     preview_c4b2_isolated_launch,
     verify_c4b2_disposable_bundle,
@@ -278,3 +279,72 @@ def test_c4b2_rejects_symlinked_input(tmp_path):
         pytest.skip("Symlink privileges unavailable on this platform")
     with pytest.raises(C4B2IsolationError):
         verify_c4b2_disposable_bundle(prepared.directory)
+
+
+def test_c4b2_static_schema_and_model_inventory_not_gpu_approval(tmp_path):
+    *_, prepared = _prepared(tmp_path)
+    graph = json.loads((prepared.directory / "c4b2_api_graph.json").read_text())
+    classes = {node["class_type"] for node in graph.values()}
+    object_info = {
+        kind: {
+            "input": {
+                "required": {
+                    name: [["placeholder"], {}]
+                    for node in graph.values()
+                    if node["class_type"] == kind
+                    for name in node["inputs"]
+                },
+                "optional": {},
+            },
+            "output": [],
+        }
+        for kind in classes
+    }
+    outputs = {
+        "LoadImage": ["IMAGE"],
+        "LoadImageMask": ["MASK"],
+        "GetImageSize": ["INT", "INT"],
+        "MaskToImage": ["IMAGE"],
+        "ImageScale": ["IMAGE"],
+        "ImageToMask": ["MASK"],
+        "SetLatentNoiseMask": ["LATENT"],
+        "ImageCompositeMasked": ["IMAGE"],
+    }
+    for kind, output in outputs.items():
+        object_info[kind]["output"] = output
+    for kind, field, values in (
+        ("UNETLoader", "unet_name", [graph["170:161"]["inputs"]["unet_name"]]),
+        ("CLIPLoader", "clip_name", [graph["170:162"]["inputs"]["clip_name"]]),
+        ("VAELoader", "vae_name", [graph["170:146"]["inputs"]["vae_name"]]),
+        ("ImageScale", "upscale_method", ["nearest-exact", "lanczos"]),
+        ("LoadImageMask", "channel", ["red", "green", "blue", "alpha"]),
+    ):
+        object_info[kind]["input"]["required"][field] = [values, {}]
+    system = {
+        "devices": [
+            {
+                "name": "RTX 5060 Ti",
+                "vram_total": 16 * 1024**3,
+                "vram_free": 14 * 1024**3,
+            }
+        ]
+    }
+    checked = inspect_c4b2_offline_runtime_schemas(
+        prepared.directory, object_info=object_info, system_stats=system
+    )
+    assert checked.schema_readiness
+    assert checked.graph_sha256 == prepared.graph_sha256
+    assert "14.0 GiB free" in checked.gpu_devices[0]
+    assert not checked.runtime_mask_qualified
+    assert not checked.execution_authorized
+
+    object_info["GetImageSize"]["output"] = ["FLOAT", "INT"]
+    object_info["UNETLoader"]["input"]["required"]["unet_name"] = [["missing"], {}]
+    failed = inspect_c4b2_offline_runtime_schemas(
+        prepared.directory, object_info=object_info, system_stats={"devices": None}
+    )
+    assert not failed.schema_readiness
+    assert any("GetImageSize" in x for x in failed.missing_requirements)
+    assert any("UNETLoader" in x for x in failed.missing_requirements)
+    assert any("GPU" in x for x in failed.missing_requirements)
+    assert not failed.execution_authorized
