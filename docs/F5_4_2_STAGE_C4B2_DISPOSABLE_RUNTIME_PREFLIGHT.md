@@ -209,6 +209,30 @@ static/focused/full regression and operator non-mutation attestation
 before accepting C4B.2A. C4B.2B GPU execution remains separately
 prohibited and unimplemented.
 
+## 3C. Third Windows regression — tests passing, format-only follow-up
+
+**Third Windows run (2026-11-17): functional checks passed; full
+acceptance still PENDING.**
+
+- Ruff lint: **passed**.
+- Mypy: **passed**, 714 source files.
+- Focused regression: **54 passed, 1 skipped**.
+- Full regression: **2,902 passed, 2 skipped**.
+- Ruff format check: one remaining wrap change in
+  `tests/test_cap_c4b2_disposable_runtime.py`; all 1,706 other
+  files were formatted.
+- `git diff --check`: clean. Only the two previously known untracked
+  user files remain; they were not modified.
+
+**Corrective action:** applied the precise Ruff-requested multiline
+`pytest.raises(...)` formatting; no behavior, safety policy, or
+production files changed.
+
+**Next gate:** pull the formatting commit, rerun Ruff, Ruff format,
+Mypy, focused and full pytest, then complete documented operator
+non-mutation attestation. Do not mark C4B.2A accepted before that
+check. C4B.2B remains separately unimplemented and unauthorized.
+
 ## 4. Windows engineering validation
 
 Run in the existing activated \`(.venv)\` in PowerShell:
