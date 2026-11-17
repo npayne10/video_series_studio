@@ -1,6 +1,6 @@
 # VSCS F5.4.2 C4B.2A — Disposable GPU Runtime Preparation (No Execution)
 
-**Status:** IMPLEMENTED CANDIDATE — Windows static/focused/full regression and operator non-mutation acceptance PENDING  
+**Status:** WINDOWS ENGINEERING VALIDATION PASSED — operator non-mutation acceptance PENDING  
 **Date:** 2026-11-17  
 **Parent:** [C4B.1 acceptance](F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md) (offline graph and GET-only inventory operator accepted 2026-11-17)  
 **GitHub tracking:** [Issue #53](https://github.com/npayne10/video_series_studio/issues/53)
@@ -232,6 +232,34 @@ production files changed.
 Mypy, focused and full pytest, then complete documented operator
 non-mutation attestation. Do not mark C4B.2A accepted before that
 check. C4B.2B remains separately unimplemented and unauthorized.
+
+## 3D. Fourth Windows regression — engineering checks passed
+
+**Windows validation run (2026-11-17): PASSED.** The operator's
+fourth run on the corrected branch reports:
+
+- `python -m ruff check .`: **All checks passed**.
+- `python -m ruff format --check --no-cache .`:
+  **1,707 files already formatted**.
+- `python -m mypy src`: **714 source files, no issues**.
+- Focused regression: **54 passed, 1 skipped**.
+- Full regression: **2,902 passed, 2 skipped**.
+- `git diff --check`: **clean**.
+- `git status --short`: only the same two unrelated pre-existing
+  untracked files; neither was modified.
+
+The two skips reflect unavailable Windows symlink privileges, not
+regression failures. All implemented C4B.2A engineering checks pass.
+This run is **offline test validation only** and cannot establish
+actual ComfyUI GPU execution, real mask-provider efficacy, or
+non-mutation of the protected project without operator inspection.
+
+**Remaining C4B.2A gate:** explicit operator attestation that
+Diagnostic Console Candidate 4, its source/ROI, saved AI review,
+existing C2 masks and C2.1 record, governed attempt count (2/2),
+CAP/Canon/MASTER/gallery, and ComfyUI jobs/provider state have not
+changed during these tests. Do not accept C4B.2A until this is
+confirmed. C4B.2B inference remains separately prohibited.
 
 ## 4. Windows engineering validation
 
