@@ -1,6 +1,6 @@
 # F5.4.2 Stage C4B — Isolated Mask-Capable Provider Qualification
 
-**Status: C4B.1 Windows/static validation and observed GET-only UI checks PASSED; final cancellation/non-mutation operator attestation pending.**
+**Status: C4B.1 OPERATOR ACCEPTED — 2026-11-17 (NON-EXECUTING OFFLINE + GET-ONLY QUALIFICATION ONLY).**
 **Live C4B.2 GPU qualification has NOT been performed or authorized.**
 **Date:** 2026-11-17
 **Tracking issue:** [#53 — C4B isolated provider qualification](https://github.com/npayne10/video_series_studio/issues/53)
@@ -164,7 +164,7 @@ execution, result-handoff automation and GPU memory capture.
 This intentional C4B.2 stop gate must not be bypassed.
 C4A `REVIEW ONLY` remains **not** generation consent.
 
-## 5. Operator validation evidence — 2026-11-17 (partial acceptance)
+## 5. Formal C4B.1 operator acceptance — 2026-11-17
 
 The operator pulled the C4B branch to Windows, then reported:
 
@@ -211,22 +211,41 @@ The operator pulled the C4B branch to Windows, then reported:
    C1/C2 UI inspection checkboxes checked after review, and
    the C2.1 mask version still labelled **HISTORICAL**.
 
-**Not yet attested:** cancellation by **No** produces no
-inventory report, and the final protected-state/non-mutation
-check (Candidate 4 image/metadata, saved AI review, both C2
-PNGs, saved C2.1 JSON, CAP/Canon/MASTER, gallery registration,
-governed attempt count, and no paid evaluation/ComfyUI POST/
-output/attempt reservation). The inventory report states
-that it uses GET only but is not an independent audit of
-the running provider's request logs.
+**Final operator attestations (received 2026-11-17):**
 
-**Acceptance boundary:** C4B.1 remains an offline,
-non-executing qualification candidate until the last
-operator confirmations are received. A complete node
-inventory is **not** proof of Qwen mask compatibility,
-mask polarity, GPU inference reliability or exact pixel
-fidelity. No C4B.2 inference or governed correction has
-been authorized.
+- The operator selected **No** on the C4B GET-only confirmation
+  dialog and verified that it closed **without producing any
+  inventory report**. The successful Yes/GET-only inventory
+  is separately supported by the earlier GUI screenshot.
+- The operator explicitly confirmed Candidate 4's image,
+  metadata, saved AI evaluation, both original C2 mask PNGs,
+  saved C2.1 human review, CAP/Canon/MASTER authority,
+  gallery registration and governed correction attempt
+  counter **all remained unchanged** throughout testing.
+- The operator further confirmed **no ComfyUI generation
+  job, new correction output, paid AI evaluation or attempt
+  reservation** occurred.
+
+These protected-state statements are **operator-attested**,
+not a separately executed filesystem or provider-transport
+forensic audit. The GET-only implementation/report remains
+the evidence of the endpoint restrictions.
+
+**Formal decision: ACCEPT C4B.1 within the
+non-executing offline-graph and read-only node-inventory
+scope.** Static/automated validation, historical-mask
+rejection, Yes/No UI behaviour and non-mutation
+attestation together satisfy C4B.1's operator gate.
+
+**Not accepted:** actual Qwen masked inference,
+runtime mask polarity/semantics, peak 16 GiB VRAM
+requirements, GPU reliability, protected RGB pixel
+preservation of a real generated result, source/mask
+staging, isolated ComfyUI runtime, production Candidate
+registration, attempt reservation or CAP/Canon approval.
+A complete node inventory is **not** proof of any of
+these. **C4B.2 remains separately gated and NOT
+AUTHORIZED for GPU execution.**
 
 ## 6. Regression and operator checks for C4B.1
 
@@ -306,7 +325,9 @@ and `qwen_f5_preflight_result.json` must remain untouched.
     Capture status/report screenshots and logs for
     formal C4B.1 operator acceptance.
 
-**C4B.1 remains unaccepted until these Windows and UI
-results are reported and approved. Actual C4B.2 GPU
-qualification and real C4 correction remain separate
-not-authorized future work.**
+**C4B.1 accepted on 2026-11-17 for offline
+qualification and GET-only diagnostics.** The
+procedure above is retained for repeatable future
+acceptance/recovery checks. Actual C4B.2 GPU
+qualification and real C4 production correction
+remain separate **unauthorized** work packages.
