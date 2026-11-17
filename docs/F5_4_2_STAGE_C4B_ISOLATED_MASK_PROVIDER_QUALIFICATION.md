@@ -3,6 +3,7 @@
 **Status: C4B.1 OFFLINE IMPLEMENTATION CANDIDATE — Windows, UI and GET-only acceptance pending.**
 **Live C4B.2 GPU qualification has NOT been performed or authorized.**
 **Date:** 2026-11-17
+**Tracking issue:** [#53 — C4B isolated provider qualification](https://github.com/npayne10/video_series_studio/issues/53)
 
 ## 1. Scope and current authority
 
@@ -65,7 +66,8 @@ selected_mask_path=..., seed=1729)`:
 6. Uses `SaveImage` with prefix
    `C4B_DISPOSABLE_QUALIFICATION`, **without configuring
    any execution**, and returns SHA-256-sealed in-memory
-   graph evidence and deterministic input basenames
+   graph **and separate full source/C1/mask/template evidence**
+   with deterministic input basenames
    `c4b_source_<source hash prefix>.png` and
    `c4b_mask_<mask hash prefix>.png`.
 7. `validate_c4b_api_graph` rejects XCIC nodes, stale/unsafe
