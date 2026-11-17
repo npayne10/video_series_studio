@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-17 (C4A offline preparation and F5.4.2 matrix layout operator accepted; live C4 remains unauthorized)  
+**Last verified:** 2026-11-17 (C4A and matrix UI accepted; C4B.1 offline provider qualification implemented, Windows/UI acceptance pending; live C4B.2/C4 unauthorized)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -2235,3 +2235,123 @@ For the complete correction list, acceptance gates
 and source hash see
 [H3-MF workflow assessment](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md)
 and [issue #52](https://github.com/npayne10/video_series_studio/issues/52).
+
+
+### F5.4.2 Stage C4B.1 — Isolated Qwen mask-provider qualification (offline)
+
+**Status: IMPLEMENTATION CANDIDATE, LOCAL TESTS AND UI ACCEPTANCE PENDING.**
+This is the next development step after the accepted C4A preparation.
+It is **not** permission to run a masked Qwen edit, spend a
+correction attempt, or register an image.
+
+The F5.4.2 General Visual Correction Review dialog contains a new
+**Stage C4B — isolated Qwen provider (offline only)** matrix with:
+
+- **Inspect C4B Isolated Mask Graph (No Generation)**:
+  validates a *CURRENT* saved C2 mask against the currently
+  sealed C1 proposal, inspects the reviewed Qwen model route,
+  and constructs a SHA-sealed **standalone API graph in memory**.
+  The graph uses `LoadImage`, `LoadImageMask`,
+  `SetLatentNoiseMask`, and a final
+  `ImageCompositeMasked` operation. To address the
+  existing Qwen source-scaling problem, its **latent mask**
+  follows the processed source dimensions, while the
+  decoded image is resized to the original source dimensions
+  and composited against the original source using the
+  **original** mask. These nodes have **not yet been proven
+  to perform correctly on the local ComfyUI runtime**.
+  A missing/HISTORICAL mask yields a visible **BLOCKED**
+  result. No input staging, POST or output occurs.
+- **Probe C4B Local Mask Nodes (GET Only)**:
+  with an explicit Yes/No confirmation (No default), uses
+  local ComfyUI `GET /object_info` and
+  `GET /system_stats` only. Reports the presence
+  of nine required core/mask node classes, their input
+  schemas, and the GPU total/free memory where reported.
+  Available node names alone **never grant execution**.
+
+The new backend `inspect_c4b_node_schemas()` checks the
+compiled full graph's expected input names against a
+supplied live schema. The current stage retains fixed
+20-step, non-LoRA Qwen inference settings as an
+unexecuted **design proposal**, not a production setting.
+
+**Critical output isolation:** The compiled graph contains
+the standard `SaveImage` node. Its filename prefix is
+not an output-directory safeguard. Before any future
+GPU test, a separately authorized, disposable-only
+ComfyUI process must be launched with dedicated
+input/temp/output directories and a separate port.
+**Never submit this graph to your normal ComfyUI server.**
+
+#### C4B-UI-01 — complete operator acceptance steps
+
+1. Close VSCS. From the activated `(.venv)` at
+   `D:\VSCS\video_series_studio`, fetch and switch
+   to branch
+   `phase-f5.4.2-c4b-isolated-mask-provider-qualification`.
+   Pull, then run Ruff lint, Ruff formatting check,
+   Mypy, focused C4B/C4A/C3/C2.1/visual matrix
+   regression, full pytest, diff and status checks.
+   The exact commands appear in
+   [C4B engineering acceptance](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md#windows-validation).
+   The existing unrelated audit/preflight untracked files
+   must remain untouched.
+2. Start VSCS with `vscs`. Verify
+   **Dashboard → Active Project** is
+   `B5_22_DISPOSABLE_CAP_ACCEPTANCE_UI`.
+3. Open **Canonical Profiles → Diagnostic Console →
+   Edit Selected → Canonical Reference Gallery**.
+   Select **Candidate 4**.
+   Click **Open Saved Candidate Review…**,
+   not the paid **Review Visual Candidate… → Yes** action.
+4. Click **F5.4.2 Review General Visual Correction
+   (No Generation)…**. Under **C2.1 Persistent Human
+   Review Sessions**, select
+   `c21-4-d1aafcc27b2d4e098d835702542261c8.json`
+   and click **Resume Selected Human Review**.
+   Confirm four of four reviewed fields, the
+   `components` FAIL, and ROI
+   `0.64798851,0.45478723,0.06178161,0.07446809`.
+   C1/C2 acknowledgement boxes must be unchecked.
+5. With `components` selected, visually reinspect
+   the original source/ROI, tick the C1
+   operator acknowledgement and click
+   **Inspect Stage C Governed Handoff**.
+   Confirm SHA-256
+   `76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+6. Under **C2.1 Existing Mask Versions**, click
+   **Find Masks for Current C1 Proposal**.
+   Both existing masks must display HISTORICAL.
+   Deliberately select the mask beginning
+   `1aa336f6`.
+7. Under **C4B**, click **Inspect C4B Isolated Mask
+   Graph (No Generation)**. Expected: a visible
+   **BLOCKED** report/warning about the historical
+   C2 mask. **Do not create a new Candidate 4 mask**
+   merely to make the test pass.
+8. Click **Probe C4B Local Mask Nodes (GET Only)**.
+   Choose **No** first and confirm no change.
+   Repeat, choose **Yes** only if local ComfyUI is
+   running at `http://127.0.0.1:8188`.
+   Expected: a read-only list of mask/image node
+   classes, declared input names and GPU inventory,
+   with provider/generation still blocked.
+9. Only the disposable synthetic test fixture in
+   `tests/test_cap_c4b_isolated_mask_provider.py`
+   may exercise successful current-C1/C2 binding
+   at this stage. No actual GPU graph should be queued.
+10. Confirm Candidate 4 source/metadata, saved AI review,
+    both original C2 masks, C2.1 review JSON,
+    CAP/Canon/MASTER status, gallery and governed
+    correction attempt count unchanged. Confirm no
+    input staging, ComfyUI `POST`, GPU inference,
+    correction image, new paid evaluation or attempt
+    reservation. Capture screenshots and Windows
+    command results for operator acceptance.
+
+See [C4B engineering and runtime-gate contract](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+**C4B.1 may be accepted only as an offline qualification
+capability. C4B.2 requires separate explicit GPU consent
+and real disposable-output proof.** Candidate 4's
+protected final governed Attempt 2/2 remains untouched.
