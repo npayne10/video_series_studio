@@ -228,13 +228,13 @@ def test_c4b_node_schema_inventory_is_read_only(tmp_path):
     assert any("ImageScale" in x and "width" in x for x in problems)
 
 
-def test_changed_prompt_and_fake_xcic_node_rejected(tmp_path):
+def test_changed_prompt_seal_and_fake_xcic_node_rejected(tmp_path):
     snapshot, proposal, mask, _ = _fixture(tmp_path)
     plan = prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=mask)
     different = copy.deepcopy(plan.graph)
     different["170:151"]["inputs"]["prompt"] += " (unreviewed instruction)"
-    with pytest.raises(GeometryCorrectionError, match="differs"):
-        validate_c4b_api_graph(different)
+    with pytest.raises(GeometryCorrectionError, match="graph changed"):
+        replace(plan, graph=different).verify_seal()
     extra = copy.deepcopy(plan.graph)
     extra["evil"] = {"class_type": "XCICQwenReferenceJobLoader", "inputs": {}}
     with pytest.raises(GeometryCorrectionError, match="XCIC"):
