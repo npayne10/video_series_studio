@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.13 (living documentation, updated 2026-11-17)  
+**Version:** v0.14 (living documentation, updated 2026-11-17)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,35 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Stage C4B.2A — disposable runtime preparation (code committed, acceptance pending)
+
+**Offline safety functionality only.** C4B.2A now provides
+a separate, SHA-bound disposable source/mask staging bundle,
+manifest/graph integrity verification, a **non-executing**
+ComfyUI localhost port 8298 launcher-command preview,
+static runtime-node/model choice/GPU schema checks and
+an exact RGB external-output pixel comparison.
+It **cannot** launch a process or submit ComfyUI `POST /prompt`.
+
+A disposable test project must be **separate from the protected
+production project** and contain the exact
+`.c4b2_disposable_project` marker. C4B.2A refuses
+known protected Diagnostic Console assets, symlink or
+junction paths, historical masks, or overlapping roots.
+No C4B.2A operator controls have been added to the
+Candidate review dialog, because the guarded Candidate 4
+must not be used as a disposable GPU test fixture.
+Synthetic temporary evidence is created only by the
+automated acceptance tests.
+
+[Complete C4B.2A engineering acceptance steps](../F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md)
+and [C4B.2A operator guidance](VSCS_User_Manual.md#f542-c4b2a--disposable-mask-runtime-preparation-no-generation).
+
+**Status: IMPLEMENTED CANDIDATE; Windows/operator checks pending.**
+C4B.2B real Qwen GPU inference, model load, attempt claim,
+corrected Candidate and production approvals remain
+UNIMPLEMENTED and UNAUTHORIZED.
 
 ## Stage C4B.1 — isolated Qwen mask-provider qualification (operator accepted 2026-11-17)
 
