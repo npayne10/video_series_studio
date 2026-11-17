@@ -32,6 +32,9 @@ from vscs.application.caps.c4_mask_provider_contract import (
     acknowledge_c4_review,
     prepare_c4_provider_contract,
 )
+from vscs.application.caps.c4b_isolated_mask_provider import (
+    prepare_c4b_isolated_blueprint,
+)
 from vscs.application.caps.general_visual_correction_triage import (
     candidate_visual_triage,
 )
@@ -458,6 +461,20 @@ class CandidateQualityReportDialog(QDialog):
         c4_review_status.setWordWrap(True)
         c4_grid.addWidget(c4_review_status, 2, 0, 1, 3)
         current_c4_preparation: C4ProviderPreparation | None = None
+
+        c4b_grid = _review_matrix_section(
+            layout, "Stage C4B - isolated Qwen provider (offline only)", "reviewC4BMatrix"
+        )
+        c4b_prepare = QPushButton("Inspect C4B Isolated Mask Graph (No Generation)", dialog)
+        c4b_prepare.setObjectName("stageC4BIsolatedGraphInspect")
+        c4b_grid.addWidget(c4b_prepare, 0, 1)
+        c4b_warning = QLabel(
+            "Requires a CURRENT reviewed C2 mask. Historical masks are blocked. "
+            "No files staged or GPU work.",
+            dialog,
+        )
+        c4b_warning.setWordWrap(True)
+        c4b_grid.addWidget(c4b_warning, 1, 0, 1, 3)
 
         def restore_selected_field() -> None:
             nonlocal selected_region, current_proposal, current_mask, mask_previewed
@@ -1021,6 +1038,37 @@ class CandidateQualityReportDialog(QDialog):
 
         c4_prepare.clicked.connect(inspect_c4_preparation)
         c4_ack.clicked.connect(acknowledge_c4_preparation)
+
+        def inspect_c4b_blueprint() -> None:
+            if current_proposal is None:
+                QMessageBox.warning(
+                    dialog, "Stage C4B Blocked", "Reinspect the reviewed C1 proposal first."
+                )
+                return
+            selected_path = mask_choices.currentData()
+            chosen = (
+                Path(selected_path) if isinstance(selected_path, str) and selected_path else None
+            )
+            if chosen is None:
+                QMessageBox.warning(
+                    dialog, "Stage C4B Blocked", "Select an existing CURRENT C2 mask."
+                )
+                return
+            try:
+                result = prepare_c4b_isolated_blueprint(
+                    report.snapshot, current_proposal, selected_mask_path=chosen
+                )
+            except (GeometryCorrectionError, OSError, ValueError, RuntimeError) as exc:
+                details.setPlainText(
+                    "STAGE C4B ISOLATED GRAPH: BLOCKED (NO GENERATION)\\n"
+                    + str(exc)
+                    + "\\nNo image staging, GPU inference or attempt reservation."
+                )
+                QMessageBox.warning(dialog, "Stage C4B Blocked", str(exc))
+                return
+            details.setPlainText(result.describe())
+
+        c4b_prepare.clicked.connect(inspect_c4b_blueprint)
 
         refresh_sessions_button.clicked.connect(refresh_sessions)
         save_session_button.clicked.connect(save_session)
