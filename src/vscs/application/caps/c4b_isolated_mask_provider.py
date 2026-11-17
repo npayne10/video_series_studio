@@ -60,8 +60,16 @@ def _digest(value: dict[str, Any]) -> str:
 
 
 def _evidence_digest(
-    *, graph_sha: str, template_sha: str, source_sha: str, mask_sha: str,
-    proposal_sha: str, source_name: str, mask_name: str, seed: int, prefix: str
+    *,
+    graph_sha: str,
+    template_sha: str,
+    source_sha: str,
+    mask_sha: str,
+    proposal_sha: str,
+    source_name: str,
+    mask_name: str,
+    seed: int,
+    prefix: str,
 ) -> str:
     return _digest(
         {
