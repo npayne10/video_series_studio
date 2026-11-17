@@ -2469,12 +2469,15 @@ by the implementation commit.
 
 ## F5.4.2 C4B.2B — supervised disposable Qwen GPU qualification (implementation candidate)
 
-**Status: CODE COMMITTED; NO LIVE GPU ACCEPTANCE.** The new
-`c4b2b_supervised_gpu.py` backend is separate from the VSCS
-production UI. It cannot register Candidates or modify CAP authority.
-Unlike C4B.2A, it includes a **real** one-shot process and
-`POST /prompt` route, so testing must remain synthetic until
-the Windows and preflight gates are reviewed.
+**Status: WINDOWS ENGINEERING ACCEPTED 2026-11-17; OPERATOR/GPU ACCEPTANCE PENDING.**
+Ruff lint/format passed (1,710 files), Mypy passed (715 source files),
+focused regression **66 passed, 1 skipped**, full regression
+**2,914 passed, 2 skipped**. The two skips require unavailable Windows
+symlink privileges. The new `c4b2b_supervised_gpu.py` backend is
+separate from the VSCS production UI and cannot register Candidates
+or modify CAP authority. It includes a real one-shot process and
+`POST /prompt` route, so **do not execute it** until the protected-state
+UI check, separate current-mask preparation and live preflight are accepted.
 
 ### C4B.2B Windows engineering test — exact steps
 
