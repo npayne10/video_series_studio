@@ -19,7 +19,7 @@ and described in the
 The original editor JSON has undefined numbered Picture references for
 its timed-guide-only images, no explicit frame-zero guide,
 a frame-120 guide in a 124-frame example and random seed behavior.
-**H3-MF1 is PLANNED**: no API submission, GPU run, UI control,
+**H3-MF1 is PLANNED BUT DEFERRED UNTIL C4B AND THE IMAGE-CORRECTION LOOP ARE FINISHED**: no API submission, GPU run, UI control,
 CAP/Canon/MASTER modification or GeneratedMedia registration
 has been added. H3-MF2–MF4 require separate future approvals.
 See [Architecture vNext backlog](../roadmap/VSCS_ARCHITECTURE_VNEXT_ROADMAP.md)
