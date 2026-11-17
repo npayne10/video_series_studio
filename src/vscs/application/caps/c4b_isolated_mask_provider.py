@@ -115,9 +115,11 @@ class C4BProviderBlueprint:
                 f"Prepared source input name: {self.source_input_filename}",
                 f"Prepared mask input name: {self.mask_input_filename}",
                 f"Deterministic seed: {self.seed}",
-                f"Output prefix (requires dedicated isolated ComfyUI output root): {self.output_prefix}",
+                "Output prefix (requires isolated ComfyUI output root): "
+                f"{self.output_prefix}",
                 "Two mask paths: processed-size latent conditioning + original-size final composite.",
-                "Original source is the final composite destination; protected pixels remain unedited in the planned graph.",
+                "Original source is the final composite destination; protected "
+                "pixels are intended to remain unchanged.",
                 "Node schema, mask polarity, GPU fit and live pixel fidelity: NOT VERIFIED.",
                 "Input files have NOT been staged; SaveImage is NOT authorized on a shared server.",
                 "No queue POST, GPU inference, payment, attempt reservation, registration or CAP promotion.",
