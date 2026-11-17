@@ -113,6 +113,7 @@ def test_standalone_graph_is_source_bound_and_xcic_free(tmp_path, monkeypatch):
     assert plan.source_sha256 == snapshot.image_sha256
     assert plan.mask_sha256 == hashlib.sha256(before_mask).hexdigest()
     assert plan.c1_proposal_sha256 == proposal.proposal_sha256
+    assert len(plan.evidence_sha256) == 64
     assert plan.source_input_filename.startswith("c4b_source_")
     assert plan.mask_input_filename.startswith("c4b_mask_")
     assert plan.seed == 1234
@@ -227,6 +228,20 @@ def test_c4b_node_schema_inventory_is_read_only(tmp_path):
     del schemas["ImageScale"]["input"]["required"]["width"]
     problems = inspect_c4b_node_schemas(plan.graph, schemas)
     assert any("ImageScale" in x and "width" in x for x in problems)
+
+
+def test_c4b_full_evidence_seal_rejects_identity_tampering(tmp_path):
+    snapshot, proposal, mask, _ = _fixture(tmp_path)
+    plan = prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=mask)
+    for changed in (
+        replace(plan, source_sha256="a" * 64),
+        replace(plan, mask_sha256="b" * 64),
+        replace(plan, c1_proposal_sha256="c" * 64),
+        replace(plan, managed_template_sha256="d" * 64),
+        replace(plan, output_prefix="C4B_UNREVIEWED_OUTPUT"),
+    ):
+        with pytest.raises(GeometryCorrectionError, match="evidence seal"):
+            changed.verify_seal()
 
 
 def test_changed_prompt_seal_and_fake_xcic_node_rejected(tmp_path):
