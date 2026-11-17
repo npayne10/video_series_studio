@@ -1,5 +1,11 @@
 # VSCS Changelog
 
+## 2026-11-17 — Priority correction: finish C4B/image correction before H3-MF1
+
+- H3-MF1 remains an open, documented research task but is **deferred**; it is no longer designated NEXT.
+- C4B isolated, explicitly consented disposable masked-Qwen qualification is the immediate engineering priority, followed by fully governed C4 integration, corrected-Candidate validation and end-to-end image-correction acceptance.
+- Candidate 4's protected final Attempt 2/2 stays locked. No code, API calls or GPU tests were performed to change this priority.
+
 ## 2026-11-17 — H3-MF multi-frame provider research added to backlog
 
 - Inspected user-supplied MiniMax H3 multiframe ComfyUI editor
