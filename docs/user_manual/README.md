@@ -10,6 +10,21 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
+## Upcoming H3-MF1 multi-frame video research (backlog only — 2026-11-17)
+
+The operator-supplied MiniMax H3 multi-frame reference workflow
+is tracked as [GitHub issue #52](https://github.com/npayne10/video_series_studio/issues/52)
+and described in the
+[H3-MF engineering assessment](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md).
+The original editor JSON has undefined numbered Picture references for
+its timed-guide-only images, no explicit frame-zero guide,
+a frame-120 guide in a 124-frame example and random seed behavior.
+**H3-MF1 is PLANNED**: no API submission, GPU run, UI control,
+CAP/Canon/MASTER modification or GeneratedMedia registration
+has been added. H3-MF2–MF4 require separate future approvals.
+See [Architecture vNext backlog](../roadmap/VSCS_ARCHITECTURE_VNEXT_ROADMAP.md)
+and [milestone tracker](../roadmap/MILESTONE_TRACKER.md).
+
 ## C4A and F5.4.2 matrix acceptance evidence — 2026-11-17
 
 **Windows:** Ruff lint clean, Ruff formatting clean (1,700
