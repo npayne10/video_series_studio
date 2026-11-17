@@ -112,6 +112,28 @@ pure backend check compares every compiled graph class
 and input name against a supplied object-info inventory.
 Neither inventory constitutes authorization.
 
+## 4A. C4B.2A disposable-only runtime preparation (implementation candidate)
+
+**Code committed 2026-11-17; Windows and operator acceptance pending.**
+A separate C4B.2A backend now creates an external, sealed
+disposable project staging bundle from a CURRENT C1/C2
+source/mask pair, previews a separate ComfyUI runtime
+command, validates supplied node/model schema inventories
+and audits synthetic output pixel changes. The
+**C4B.2A code cannot launch ComfyUI or submit a prompt**.
+It refuses the protected Diagnostic Console asset and
+overlapping/symlink/junction paths. It requires an explicit
+disposable project marker, distinct project roots,
+independent port 8298 and input/output/temp/user roots.
+
+**Full implementation/acceptance contract:**
+[C4B.2A Disposable Runtime Preflight](F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md).
+No source image from Candidate 4 or historic C2 mask
+may enter this workspace. No ComfyUI POST, GPU inference,
+attempt or production registration is authorized.
+**C4B.2B separately approved GPU qualification remains
+unimplemented.**
+
 ## 4. Next real qualification — C4B.2 (PENDING SEPARATE CONSENT)
 
 In a **new disposable test project**, not the protected
