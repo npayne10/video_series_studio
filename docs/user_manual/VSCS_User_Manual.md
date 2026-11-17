@@ -2572,6 +2572,36 @@ are **not yet accepted**.
    an operator-facing UI button. No `--inspect` can be
    meaningfully run until its new external bundle exists.
 
+### C4B.2B real-world qualification Story setup — operator-selected 2026-11-17
+
+The previous **empty disposable project** checkpoint was
+completed: VSCS Dashboard showed
+`C4B2B_DISPOSABLE_GPU_01` at
+`D:\\VSCS\\C4B2B_DISPOSABLE_GPU_01`. Windows PowerShell
+verified the new root's non-link guard, wrote and read back
+the exact `.c4b2_disposable_project` marker (`True`,
+24 bytes), and listed the normal VSCS project directories.
+This checkpoint does **not** establish a source Candidate
+or current C1/C2 evidence.
+
+Neill selected **Approach B — a real, new VSCS Story and
+human-reviewed CAP/Candidate**, rather than the synthetic
+calibration fixture. The original draft source
+[Blue Signal — Diagnostic Console Inspection](
+../fixtures/C4B2B_Real_World_Story_Source.txt)
+is now committed to GitHub.
+
+**Exact first-step instructions, source-copy hash verification,
+Story → Story Definition → New Story, metadata, and the
+mandatory STOP before a potentially paid Analyse Story**
+are documented in [C4B.2B real-world setup](
+../F5_4_2_STAGE_C4B2B_REAL_WORLD_STORY_SETUP.md).
+The operator must review/save the draft Story and submit
+its ID/status and screenshot before beginning the next
+provider-backed gate. Do not invent CAP attributes,
+semantic failures, corrected Candidates or source-bound
+masks to accelerate the qualification.
+
 ### Separate live hardware gate — not yet permitted
 
 Do not use `--execute`, `--confirm-one-gpu-run`, or manually
