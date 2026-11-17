@@ -22,6 +22,13 @@ sit beside their Stage B operations. C1/C2 confirmations
 remain in the same section as their gated actions.
 All existing button object identifiers and callbacks are retained.
 
+The C4A matrix also includes a visible **Review phrase** input
+and **BLOCKED / REVIEW ACKNOWLEDGED — NO GENERATION**
+status label. This replaces the earlier modal entry flow
+after the operator reported no visible acknowledgement.
+Type exactly `REVIEW ONLY` to record an in-memory
+review receipt; it is not execution consent.
+
 This is **presentation only**; no paid AI request, GPU job,
 mask write, attempt reservation or CAP/Canon authority is added.
 The shared C2 mask selector remains the sole input for C3/C4A
