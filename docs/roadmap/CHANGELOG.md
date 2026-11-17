@@ -1,5 +1,26 @@
 # VSCS Changelog
 
+## 2026-11-17 — C4B.2A disposable runtime preflight implementation
+
+- Added strictly offline, disposable-project-only source and
+  current C1/C2 mask staging. Exclusive external workspace with
+  separate input/output/temp/user roots and SHA-sealed manifest.
+- Added separate localhost port 8298 ComfyUI launch command
+  **preview** (not executed); rejects shared port 8188,
+  project overlap, symlinks/junctions and protected Candidate 4.
+- Added static Qwen model dropdown, mask/output node-type,
+  source/mask graph and GPU inventory interpretation.
+- Added exact synthetic result pixel-difference audit inside
+  disposable output root; not real provider output evidence.
+- Added fail-closed regression tests, engineering specification,
+  current milestone record and both User Manual updates.
+- **Stage not yet accepted.** No process launch, POST,
+  inference, GPU model loading, paid evaluation,
+  attempt reservation, Candidate or CAP/Canon mutation.
+  C4B.2B live GPU execution remains unimplemented and
+  subject to a new explicit operator approval.
+
+
 ## 2026-11-17 — C4B.1 offline qualification formally accepted
 
 - Operator confirmed the GET-only probe **No** cancellation
