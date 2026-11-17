@@ -143,6 +143,25 @@ Prove a real Shot can travel from UPD through ProductionTask to live ComfyUI, ou
 
 Evidence-driven subphases may be added beneath Phase 20 without changing the Phase 20 architectural objective. Current examples include provider capability validation and provider-ready reference governance. These refinements remain subordinate to the Phase 20 objective and must ultimately converge into Phase 20 integration and functional acceptance.
 
+#### Current image-correction corrective refinement — C4B (2026-11-17)
+
+**C4B.1 in implementation, NOT accepted:** A source/C1/C2-bound
+offline Qwen mask graph blueprint replaces the XCIC-only
+loader/output route for isolated testing and provides
+explicit input names, processed-source mask scaling,
+original-source protected compositing and optional local
+GET-only node inventory. All outputs remain non-executable.
+[Engineering/acceptance record](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+
+**C4B.2 pending separate authorization:** isolated disposable
+ComfyUI runtime, measured RTX 5060 Ti 16 GiB memory/latency,
+mask-polarity behavior, exact original-source protected
+pixel fidelity, no attempts/Candidate registration.
+Then complete governed C4 production integration, once-only
+consent/attempt handling, corrected-Candidate QC and full
+image-correction acceptance. H3-MF1 is deferred until this
+sequence is completed.
+
 #### Backlog refinement — H3-MF: MiniMax H3 Multi-Frame Reference-to-Video (2026-11-17)
 
 **Status: DEFERRED BACKLOG — finish C4B and the governed image-correction loop first. H3-MF1 is not the next phase; no H3-MF generation is authorized.**
