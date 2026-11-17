@@ -20,7 +20,6 @@ from vscs.application.caps.c4b_isolated_mask_provider import (
     prepare_c4b_isolated_blueprint,
     validate_c4b_api_graph,
 )
-from vscs.application.caps.geometry_correction_policy import GeometryCorrectionError
 from vscs.application.caps.governed_visual_correction_handoff import (
     GovernedCorrectionProposal,
 )
@@ -51,10 +50,7 @@ def _seal(payload: dict[str, Any]) -> str:
 def _safe_path(path: Path, *, existing: bool) -> Path:
     if not path.is_absolute():
         raise C4B2IsolationError("Every C4B.2 path must be absolute")
-    if any(
-        part.is_symlink() or part.is_junction()
-        for part in (path, *path.parents)
-    ):
+    if any(part.is_symlink() or part.is_junction() for part in (path, *path.parents)):
         raise C4B2IsolationError("C4B.2 paths cannot contain symlinks or junction links")
     try:
         return path.resolve(strict=existing)
@@ -117,11 +113,7 @@ def _check_source_mask(source: bytes, mask: bytes) -> tuple[int, int]:
             ):
                 raise C4B2IsolationError("C4B.2 requires equal-sized RGB source and L mask")
             histogram = roi.histogram()
-            if (
-                any(histogram[1:255])
-                or histogram[0] == 0
-                or histogram[255] == 0
-            ):
+            if any(histogram[1:255]) or histogram[0] == 0 or histogram[255] == 0:
                 raise C4B2IsolationError("C4B.2 mask must have both binary regions")
             return image.size
     except (OSError, ValueError, UnidentifiedImageError) as exc:
@@ -270,9 +262,15 @@ def verify_c4b2_disposable_bundle(directory: Path) -> C4B2DisposableBundle:
         if not path.is_dir() or path.parent != target:
             raise C4B2IsolationError("C4B.2 dedicated directory is missing")
     source_name, mask_name = data.get("source_filename"), data.get("mask_filename")
-    if not all(isinstance(name, str) and name.startswith("c4b_") and
-               name.endswith(".png") and "/" not in name and "\\" not in name
-               for name in (source_name, mask_name)):
+    if not isinstance(source_name, str) or not isinstance(mask_name, str):
+        raise C4B2IsolationError("C4B.2 staged input name is unsafe")
+    if not all(
+        name.startswith("c4b_")
+        and name.endswith(".png")
+        and "/" not in name
+        and "\\" not in name
+        for name in (source_name, mask_name)
+    ):
         raise C4B2IsolationError("C4B.2 staged input name is unsafe")
     source = _regular_png(target / "input" / source_name)
     mask = _regular_png(target / "input" / mask_name)
@@ -326,12 +324,18 @@ def preview_c4b2_isolated_launch(
     return (
         str(interpreter),
         str(main),
-        "--listen", "127.0.0.1",
-        "--port", str(port),
-        "--input-directory", str(bundle.directory / "input"),
-        "--output-directory", str(bundle.directory / "output"),
-        "--temp-directory", str(bundle.directory / "temp"),
-        "--user-directory", str(bundle.directory / "user"),
+        "--listen",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--input-directory",
+        str(bundle.directory / "input"),
+        "--output-directory",
+        str(bundle.directory / "output"),
+        "--temp-directory",
+        str(bundle.directory / "temp"),
+        "--user-directory",
+        str(bundle.directory / "user"),
         "--disable-auto-launch",
     )
 
@@ -359,9 +363,7 @@ class C4B2OfflinePixelAudit:
         return False
 
 
-def audit_c4b2_external_result(
-    directory: Path, *, result_png: Path
-) -> C4B2OfflinePixelAudit:
+def audit_c4b2_external_result(directory: Path, *, result_png: Path) -> C4B2OfflinePixelAudit:
     """Compare an EXISTING isolated result; never generate, register or approve."""
     bundle = verify_c4b2_disposable_bundle(directory)
     output = _safe_path(result_png, existing=True)
