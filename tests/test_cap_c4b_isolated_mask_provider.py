@@ -34,6 +34,7 @@ from vscs.application.caps.spatial_visual_evidence import (
 )
 from vscs.application.caps.visual_candidate_quality import CandidateQualityResult
 
+
 def _fixture(tmp_path: Path):
     project = tmp_path / "acceptance_project"
     image_folder = project / "Canonical Assets" / "STORY-C4A-TEST" / "Images" / "Visual Candidates"
@@ -105,9 +106,7 @@ def test_standalone_graph_is_source_bound_and_xcic_free(tmp_path, monkeypatch):
         "vscs.application.caps.c4b_isolated_mask_provider.inspect_c4b_node_schemas",
         lambda *_args: pytest.fail("C4B preparation must not reach ComfyUI"),
     )
-    plan = prepare_c4b_isolated_blueprint(
-        snapshot, proposal, selected_mask_path=mask, seed=1234
-    )
+    plan = prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=mask, seed=1234)
     plan.verify_seal()
     assert plan.binding_contract_verified_offline
     assert plan.source_sha256 == snapshot.image_sha256
@@ -147,9 +146,7 @@ def test_standalone_graph_is_source_bound_and_xcic_free(tmp_path, monkeypatch):
 def test_seed_is_strict_fixed_u64(tmp_path, seed):
     snapshot, proposal, mask, _ = _fixture(tmp_path)
     with pytest.raises(GeometryCorrectionError, match="seed"):
-        prepare_c4b_isolated_blueprint(
-            snapshot, proposal, selected_mask_path=mask, seed=seed
-        )
+        prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=mask, seed=seed)
 
 
 def test_historical_mask_and_stale_source_block_contract(tmp_path):
@@ -158,23 +155,22 @@ def test_historical_mask_and_stale_source_block_contract(tmp_path):
     older = mask.parent / f"c2-4-ffffffffffffffff-{digest[:16]}.png"
     older.write_bytes(mask.read_bytes())
     with pytest.raises(GeometryCorrectionError, match="HISTORICAL"):
-        prepare_c4b_isolated_blueprint(
-            snapshot, proposal, selected_mask_path=older
-        )
+        prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=older)
     snapshot.image_path.write_bytes(b"tampered")
     with pytest.raises(GeometryCorrectionError, match="source changed"):
-        prepare_c4b_isolated_blueprint(
-            snapshot, proposal, selected_mask_path=mask
-        )
+        prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=mask)
 
 
-@pytest.mark.parametrize("tamper", [
-    ("C4B_MASK_SCALE", "upscale_method", "bilinear"),
-    ("C4B_COMPOSITE", "destination", ["170:160", 0]),
-    ("C4B_COMPOSITE", "mask", ["C4B_EDIT_MASK", 0]),
-    ("C4B_LATENT_MASK", "mask", ["C4B_MASK", 0]),
-    ("9", "filename_prefix", "../unsafe"),
-])
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        ("C4B_MASK_SCALE", "upscale_method", "bilinear"),
+        ("C4B_COMPOSITE", "destination", ["170:160", 0]),
+        ("C4B_COMPOSITE", "mask", ["C4B_EDIT_MASK", 0]),
+        ("C4B_LATENT_MASK", "mask", ["C4B_MASK", 0]),
+        ("9", "filename_prefix", "../unsafe"),
+    ],
+)
 def test_graph_tampering_rejected(tmp_path, tamper):
     snapshot, proposal, mask, _ = _fixture(tmp_path)
     original = prepare_c4b_isolated_blueprint(snapshot, proposal, selected_mask_path=mask)
@@ -222,9 +218,7 @@ def test_c4b_node_schema_inventory_is_read_only(tmp_path):
     del schemas["GetImageSize"]
     problems = inspect_c4b_node_schemas(plan.graph, schemas)
     assert any("GetImageSize" in x for x in problems)
-    schemas["GetImageSize"] = {
-        "input": {"required": {"image": ["IMAGE", {}]}, "optional": {}}
-    }
+    schemas["GetImageSize"] = {"input": {"required": {"image": ["IMAGE", {}]}, "optional": {}}}
     del schemas["ImageScale"]["input"]["required"]["width"]
     problems = inspect_c4b_node_schemas(plan.graph, schemas)
     assert any("ImageScale" in x and "width" in x for x in problems)
@@ -283,9 +277,7 @@ def test_get_only_inventory_never_confers_gpu_authority(monkeypatch):
             ]
         }
 
-    monkeypatch.setattr(
-        "vscs.application.caps.c4b_isolated_mask_provider._inventory", fake_get
-    )
+    monkeypatch.setattr("vscs.application.caps.c4b_isolated_mask_provider._inventory", fake_get)
     report = inspect_c4b_local_node_inventory()
     assert requests == [("http://127.0.0.1:8188", 3.0)]
     assert not report.missing_mask_node_classes
