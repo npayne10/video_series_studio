@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QGridLayout,
     QGroupBox,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -444,7 +443,18 @@ class CandidateQualityReportDialog(QDialog):
         c4_grid.addWidget(c4_prepare, 0, 0, 1, 2)
         c4_ack = QPushButton("Acknowledge C4A Preparation Review (Not Execution Consent)", dialog)
         c4_ack.setObjectName("stageC4AReviewAcknowledgement")
-        c4_grid.addWidget(c4_ack, 0, 2)
+        c4_grid.addWidget(c4_ack, 1, 2)
+        c4_review_entry = QLineEdit(dialog)
+        c4_review_entry.setObjectName("stageC4AReviewOnlyPhrase")
+        c4_review_entry.setPlaceholderText("Type REVIEW ONLY to acknowledge inspection, not execution")
+        c4_grid.addWidget(QLabel("Review phrase"), 1, 0)
+        c4_grid.addWidget(c4_review_entry, 1, 1)
+        c4_review_status = QLabel(
+            "Preparation inspection only. No generation consent or attempts.", dialog
+        )
+        c4_review_status.setObjectName("stageC4AReviewStatus")
+        c4_review_status.setWordWrap(True)
+        c4_grid.addWidget(c4_review_status, 2, 0, 1, 3)
         current_c4_preparation: C4ProviderPreparation | None = None
 
         def restore_selected_field() -> None:
@@ -958,10 +968,15 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Stage C4A Preparation Blocked", str(exc))
                 return
             current_c4_preparation = prepared
+            c4_review_entry.clear()
+            c4_review_status.setText(
+                "C4A preparation inspected. Type REVIEW ONLY below to acknowledge review."
+            )
             details.setPlainText(prepared.describe())
 
         def acknowledge_c4_preparation() -> None:
             if current_c4_preparation is None or current_proposal is None:
+                c4_review_status.setText("BLOCKED: inspect the C4A provider contract first.")
                 QMessageBox.warning(
                     dialog, "Stage C4A Review Blocked", "Inspect C4A preparation first."
                 )
@@ -979,22 +994,24 @@ class CandidateQualityReportDialog(QDialog):
                         "C4A input or provider contract changed; inspect preparation again"
                     )
             except (GeometryCorrectionError, OSError, ValueError, RuntimeError) as exc:
+                c4_review_status.setText("BLOCKED: C4A preparation changed. Reinspect first.")
                 QMessageBox.warning(dialog, "Stage C4A Review Blocked", str(exc))
-                return
-            response, confirmed = QInputDialog.getText(
-                dialog,
-                "C4A Read-Only Review Acknowledgement",
-                "This is NOT permission for GPU generation, ComfyUI submission, "
-                "or attempt reservation. Type REVIEW ONLY to acknowledge "
-                "the preparation evidence:",
-            )
-            if not confirmed:
                 return
             try:
-                receipt = acknowledge_c4_review(latest, operator_text=response)
+                receipt = acknowledge_c4_review(
+                    latest, operator_text=c4_review_entry.text()
+                )
             except GeometryCorrectionError as exc:
+                c4_review_status.setText(
+                    "BLOCKED: type exactly REVIEW ONLY. "
+                    "No generation consent or attempt reservation was granted."
+                )
                 QMessageBox.warning(dialog, "Stage C4A Review Blocked", str(exc))
                 return
+            c4_review_status.setText(
+                "REVIEW ACKNOWLEDGED — NO GENERATION. "
+                "No provider job, registration or attempt reservation."
+            )
             details.setPlainText(
                 latest.describe()
                 + "\\nC4A REVIEW ACKNOWLEDGED (MEMORY ONLY / NO GENERATION)"
