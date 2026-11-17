@@ -1,6 +1,6 @@
 # VSCS F5.4.2 C4B.2B — Supervised Disposable Qwen GPU Qualification
 
-**Status:** IMPLEMENTATION CANDIDATE — Windows tests and live GPU acceptance NOT YET PERFORMED  
+**Status:** WINDOWS ENGINEERING VALIDATION PASSED — protected-state operator check and live GPU acceptance PENDING  
 **Parent:** [C4B.2A formally accepted, 2026-11-17](F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md)  
 **Branch:** `phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification`  
 **Tracker:** [Issue #53](https://github.com/npayne10/video_series_studio/issues/53)
@@ -166,6 +166,37 @@ Candidate/CAP behavior was changed.
 **Status:** Re-pull the branch, re-run the entire Windows static,
 focused, full pytest and integrity sequence in Section 3. The
 operator non-mutation gate still applies; no live run is authorized.
+
+## 3B. Windows static and automated regression — PASSED, 2026-11-17
+
+The operator pulled the corrected C4B.2B branch and reported:
+
+- `python -m ruff check .`: **All checks passed**.
+- `python -m ruff format --check --no-cache .`: **1,710 files already formatted**.
+- `python -m mypy src`: **Success, no issues in 715 source files**.
+- Focused C4B.2B/C4B.2A/C4B.1/C4/C3/C2.1/matrix regression:
+  **66 passed, 1 skipped**.
+- Full `python -m pytest -q`: **2,914 passed, 2 skipped**.
+- `git diff --check`: clean.
+- `git status --short`: only the two unrelated, pre-existing untracked
+  `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`
+  and `qwen_f5_preflight_result.json`; these were untouched.
+
+Both skips reflect unavailable Windows symlink privileges, not
+C4B.2B failures. **Windows engineering validation is ACCEPTED.**
+These tests use fake processes/network and do **not** establish
+real ComfyUI launch, GPU model loading, mask-polarity correctness,
+runtime fidelity, true peak VRAM or operator non-mutation acceptance.
+
+**Remaining gates:** (1) Safe UI inspection and explicit operator
+confirmation of unchanged Candidate 4/masks/C2.1/CAP/Canon/MASTER
+and protected governed Attempt 2/2; (2) a genuinely separate
+disposable source + CURRENT C1/C2 mask, verified model paths and
+read-only process/permission readiness; (3) a fresh one-use
+operator execution consent; (4) one actual supervised GPU test
+followed by human semantic and non-mutation acceptance.
+
+**Do not use `--execute` yet.**
 
 ## 4. Future supervised live readiness — DO NOT EXECUTE YET
 
