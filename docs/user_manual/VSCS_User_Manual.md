@@ -2460,7 +2460,74 @@ model provenance, correct mask polarity, meaningful
 inside-mask correction and operator quality acceptance
 under a later C4B.2B gate.
 
-**C4B.2B actual GPU qualification requires a new,
-execution-specific approval and a separate
-once-only runner that has not been implemented.
-No C4 production registration is authorized.**
+**C4B.2A was formally accepted 2026-11-17 in offline-only scope.**
+C4B.2B now has an implementation-candidate one-use runner, but
+**Windows regression, supervised hardware preflight and a fresh
+execution-specific operator confirmation remain pending**.
+No GPU inference or C4 production registration is authorized
+by the implementation commit.
+
+## F5.4.2 C4B.2B — supervised disposable Qwen GPU qualification (implementation candidate)
+
+**Status: CODE COMMITTED; NO LIVE GPU ACCEPTANCE.** The new
+`c4b2b_supervised_gpu.py` backend is separate from the VSCS
+production UI. It cannot register Candidates or modify CAP authority.
+Unlike C4B.2A, it includes a **real** one-shot process and
+`POST /prompt` route, so testing must remain synthetic until
+the Windows and preflight gates are reviewed.
+
+### C4B.2B Windows engineering test — exact steps
+
+1. Close VSCS (or leave it idle) and open PowerShell with the
+   `(.venv)` active. **Do not start ComfyUI or click any
+   generation control for Candidate 4.**
+2. Run:
+
+```powershell
+cd D:\VSCS\video_series_studio
+git status --short
+git fetch origin
+git switch phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification
+git pull --ff-only origin phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification
+
+python -m ruff check .
+python -m ruff format --check --no-cache .
+python -m mypy src
+
+python -m pytest -q tests/test_cap_c4b2b_supervised_gpu.py tests/test_cap_c4b2_disposable_runtime.py tests/test_cap_c4b_isolated_mask_provider.py tests/test_cap_c4_mask_provider_contract.py tests/test_cap_c3_mask_provider_dry_run.py tests/test_cap_persistent_human_review.py tests/test_cap_visual_review_matrix_layout.py
+python -m pytest -q
+
+git diff --check
+git status --short
+```
+
+3. Confirm `docs/VSCS_Architecture_Workflow_Audit_2026-10-24.md`
+   and `qwen_f5_preflight_result.json` remain only the
+   previously untracked files. Do not delete or add them.
+4. Launch `vscs`; on Dashboard check the established acceptance
+   project. Open **Canonical Profiles → Diagnostic Console →
+   Edit Selected → Canonical Reference Gallery → Candidate 4**.
+5. Use **Open Saved Candidate Review**, then
+   **F5.4.2 Review General Visual Correction (No Generation)**.
+   Confirm the saved C2.1 session, original reviewed ROI and both
+   **HISTORICAL** masks. Do **not** select paid Review Visual
+   Candidate, create a new mask, or execute any ComfyUI graph.
+6. Check Candidate 4, its evaluations and masks, CAP/Canon/MASTER,
+   gallery, and final governed attempt count **2/2** remain
+   unchanged; confirm no new ComfyUI GPU job or paid review.
+7. Close all dialogs with **Close/Cancel** and exit VSCS.
+   Provide Windows command output and operator non-mutation
+   confirmation before any next gate.
+
+### Separate live hardware gate — not yet permitted
+
+Do not use `--execute`, `--confirm-one-gpu-run`, or manually
+POST the C4B.2A graph. A live test must have a **new disposable VSCS
+project**, a verified current C1/C2 source/mask pair and external
+bundle, exact operator-selected installed model paths, a read-only
+`--inspect` fingerprint, dedicated port 8298 process ownership,
+and a separately reviewed one-use consent phrase. Nothing from
+Diagnostic Console Candidate 4 may be used as the source or mask.
+
+See [complete C4B.2B engineering and safety procedure](
+../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md).
