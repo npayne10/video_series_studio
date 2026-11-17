@@ -11,6 +11,33 @@ gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
+## Stage C4B.1 — isolated mask provider qualification (not accepted)
+
+**Implementation candidate 2026-11-17.** C4B.1 is a separate,
+fail-closed read-only stage following accepted C4A. It adds
+an in-memory, SHA-sealed Qwen API graph that **does not
+use the managed XCIC queue, loader or output writer**;
+uses explicit independent source/mask input basenames;
+adds a source-aligned mask-resize-to-latent path and
+original-size protected-region compositing; and offers
+a gated, GET-only ComfyUI node inventory.
+
+The initial Candidate 4 C2 PNGs remain HISTORICAL relative
+to its accepted C1 ROI and **cannot** produce an eligible
+C4B blueprint. C4B.1 is tested positively only with
+synthetic current-C1/C2 fixtures. There is no file staging,
+ComfyUI POST, GPU inference, edited Candidate, attempt
+reservation, or approval. The normal managed Qwen correction
+builder still rejects non-null `mask_path`.
+
+[Full C4B.1 contract and controlled operator steps](F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+No execution right follows from a graph topology or
+GET-only schema check. C4B.2 **actual GPU/inpainting
+qualification** requires separate disposable runtime,
+operator consent and exact protected-pixel evidence.
+Candidate 4 protected final governed Attempt 2/2 stays
+untouched. C4 integration/production is still unauthorized.
+
 ## Stage C4A and review matrix acceptance — 2026-11-17
 
 The Stage C4A provider-contract preparation and F5.4.2
