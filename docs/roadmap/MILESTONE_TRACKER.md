@@ -48,14 +48,14 @@
 
 **Date:** 2026-11-17  
 **Branch:** `phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification`  
-**State:** ✅ Windows engineering passed (2,914 tests); operator non-mutation and live GPU qualification pending  
+**State:** ✅ Windows engineering and operator protected-state non-mutation accepted 2026-11-17 (2,914 tests); real disposable GPU qualification pending  
 **Engineering contract:** [C4B.2B supervised one-shot qualification](../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md).
 
 | Gate | Work | Status |
 |---|---|---|
 | C4B.1 | Offline graph and localhost GET-only schema inspection | ✅ Accepted 2026-11-17 |
 | C4B.2A | External sealed disposable source/C1/C2 staging, preview, offline GPU inventory and synthetic pixel audit | ✅ Formally accepted 2026-11-17 (54 focused, 2,902 full tests; operator non-mutation) |
-| C4B.2B | Exact one-use consent, PID/port isolation, local model hashes, single disposable Qwen GPU prompt and protected-pixel audit | ✅ Windows engineering passed; **operator check and real GPU qualification PENDING** |
+| C4B.2B | Exact one-use consent, PID/port isolation, local model hashes, single disposable Qwen GPU prompt and protected-pixel audit | ✅ Windows + operator protected-state acceptance 2026-11-17; **disposable current-mask preparation and real GPU qualification PENDING** |
 | C4 production | Governed correction attempt, Candidate quality assurance and registration | ⛔ Not authorized |
 | H3-MF1 | Video multi-frame provider evaluation | ⏳ Deferred until image-correction closure |
 
