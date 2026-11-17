@@ -145,15 +145,19 @@ Evidence-driven subphases may be added beneath Phase 20 without changing the Pha
 
 #### Current image-correction corrective refinement — C4B (2026-11-17)
 
-**C4B.1 in implementation, NOT accepted:** A source/C1/C2-bound
+**C4B.1 operator accepted 2026-11-17 for offline qualification only:** A source/C1/C2-bound
 offline Qwen mask graph blueprint replaces the XCIC-only
 loader/output route for isolated testing and provides
 explicit input names, processed-source mask scaling,
 original-source protected compositing and optional local
-GET-only node inventory. All outputs remain non-executable.
+GET-only node inventory. All outputs remain non-executable. Windows checks passed
+(51 focused; 2,890 full, 1 skipped; Ruff/format/Mypy clean).
+Historical-mask rejection and local GET-only node discovery
+passed UI review; No cancellation and protected-state
+non-mutation were explicitly operator-attested.
 [Engineering/acceptance record](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
 
-**C4B.2 pending separate authorization:** isolated disposable
+**C4B.2 remains NOT AUTHORIZED for GPU execution:** isolated disposable
 ComfyUI runtime, measured RTX 5060 Ti 16 GiB memory/latency,
 mask-polarity behavior, exact original-source protected
 pixel fidelity, no attempts/Candidate registration.
