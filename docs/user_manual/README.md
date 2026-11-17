@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.11 (living documentation, updated 2026-11-17)  
+**Version:** v0.12 (living documentation, updated 2026-11-17)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -9,6 +9,31 @@
 2. [Automation Progress Audit](Automation_Progress_Audit.md) — which Story Automation buttons lack running feedback, safety constraints, remediation and Qt acceptance criteria.
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
+
+## Stage C4B.1 — isolated Qwen mask-provider qualification (implementation candidate)
+
+**C4B.1 is committed but not yet Windows/UI-accepted.** This is the
+next still-image correction development gate after accepted C4A.
+The F5.4.2 advisory matrix now includes **Inspect C4B Isolated
+Mask Graph (No Generation)** and **Probe C4B Local Mask Nodes
+(GET Only)**. The former needs a currently bound C1/C2 mask;
+the old Candidate 4 C2 masks are HISTORICAL and must be blocked.
+The latter uses operator-consented localhost GET-only node/GPU
+inventory and never starts an AI job.
+
+The isolated graph replaces XCIC loader/writer dependencies
+with core `LoadImage`/`SaveImage` and uses a resized
+mask for latent conditioning, then **original-size**
+protected-region compositing against the unmodified source.
+This is **offline graph design**, not proven Qwen inpainting
+or pixel fidelity. `SaveImage` must never be queued on
+the shared ComfyUI server; a future separately approved
+runtime needs disposable input/temp/output roots.
+
+See [C4B.1 User Manual operator test](VSCS_User_Manual.md#f542-stage-c4b1--isolated-qwen-mask-provider-qualification-offline)
+and [C4B engineering qualification contract](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+**C4B.2 live GPU tests, correction output, attempt reservation
+and Candidate registration remain unauthorized.**
 
 ## Upcoming H3-MF1 multi-frame video research (backlog only — 2026-11-17)
 
