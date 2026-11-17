@@ -44,6 +44,35 @@
 | 25 | Release Candidate | ⏳ Planned | — | Not run | Pending |
 | 1.0.0 | VSCS Version 1.0 | ⏳ Planned | — | Not run | Pending |
 
+## Current forward backlog — Phase 20 H3 multi-frame provider evaluation
+
+**Recorded 2026-11-17.** This backlog is a Phase 20
+provider-capability refinement under the authoritative
+[Architecture vNext roadmap](VSCS_ARCHITECTURE_VNEXT_ROADMAP.md).
+The **Current milestone** register above is retained as a historical
+tracking entry; this new backlog is not a claim that any prior
+production phase has been re-approved.
+
+**Finding:** User-supplied
+`video_minimax_h3_multiframe_reference_VSCS(1).json`
+contains 41 nodes / 53 links and is not production-ready.
+See [full assessment and required fixes](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md).
+Primary GitHub tracking issue:
+[#52](https://github.com/npayne10/video_series_studio/issues/52).
+
+| ID | Task | Priority | State | Evidence needed | Owner acceptance |
+|---|---|---|---|---|---|
+| H3-MF1 | Offline multi-frame workflow qualification: immutable fixture, `<Picture N>` binding correction, frame-zero anchor policy, guide bounds, deterministic seed, editor→API compilation and negative tests | **P1 — NEXT** | ⏳ Planned | GitHub code + Ruff/Mypy/pytest + operator read-only UI evidence; no GPU | Pending |
+| H3-MF2 | Separately approved disposable 5-second fixed-seed GPU A/B and RTX 5060 Ti 16 GiB memory benchmark | P1 | ⛔ Blocked on MF1 and explicit GPU consent | Measured VRAM, time, source/guide manifests, outputs | Pending |
+| H3-MF3 | Frame-guide similarity, character/scene continuity and H3 audio QC | P1 | ⛔ Blocked on MF2 | Quantitative metrics and human quality review | Pending |
+| H3-MF4 | Governed H3 multi-frame provider mode with ProductionTask, exact Shot boundaries, GeneratedMedia QC and recovery | P2 | ⛔ Blocked on MF3 | End-to-end isolated Shot and no duplicate/unauthorized production outputs | Pending |
+
+**Explicit non-goals for H3-MF1:** changing the existing
+H3 production default, `POST /prompt`, GPU/model inference,
+AI API charges, modification of accepted production images,
+CAP/Canon/MASTER promotion, new GeneratedMedia, attempt
+reservation, or executing the C4 still-image correction work.
+
 ## Milestone completion checklist
 
 A milestone may be marked complete only when all applicable items are checked:
