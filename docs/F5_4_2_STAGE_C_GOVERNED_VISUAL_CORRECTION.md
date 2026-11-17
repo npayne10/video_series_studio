@@ -12,6 +12,29 @@ gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
+## C4B.2A — disposable runtime safety preflight (not yet accepted)
+
+**Implementation candidate 2026-11-17.** A new
+non-executing service prepares a SHA-sealed external
+disposable bundle containing current synthetic C1/C2
+image/mask evidence and the C4B.1 reviewed graph;
+returns a separate 127.0.0.1:8298 ComfyUI launch
+**preview** with isolated input/output/temp/user paths;
+checks externally supplied node/model/GPU schema
+inventories, and audits RGB protected pixel differences
+in an existing external result.
+
+This is **not** runtime C4B.2B masked inference.
+No launched process, input staging from Candidate 4,
+ComfyUI POST, GPU model load, new Candidate,
+CAP/Canon/MASTER approval or governed attempt
+is authorized. The actual runtime still requires
+an approved one-use runner, process/port verification,
+measured GPU memory and real source-bound generated
+pixel-fidelity/semantic evidence.
+
+[Implementation and acceptance specification](F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md).
+
 ## Stage C4B.1 — isolated mask provider qualification (operator accepted 2026-11-17)
 
 **Operator accepted 2026-11-17 for offline/GET-only scope.** C4B.1 is a separate,
