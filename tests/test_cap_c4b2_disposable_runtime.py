@@ -198,7 +198,9 @@ def test_c4b2_rejects_protected_identity_even_with_marker(tmp_path):
 def test_c4b2_rejects_stale_source_and_mask(tmp_path):
     snap, proposal, mask, protected = _fixture(tmp_path)
     snap.image_path.write_bytes(b"tampered")
-    with pytest.raises(GeometryCorrectionError, match="Candidate source changed since quality review"):
+    with pytest.raises(
+        GeometryCorrectionError, match="Candidate source changed since quality review"
+    ):
         prepare_c4b2_disposable_bundle(
             snap,
             proposal,
