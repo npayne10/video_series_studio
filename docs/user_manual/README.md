@@ -10,7 +10,7 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
-## Stage C4B.2A — disposable runtime preparation (code committed, acceptance pending)
+## Stage C4B.2A — disposable runtime preparation (formally accepted offline)
 
 **Offline safety functionality only.** C4B.2A now provides
 a separate, SHA-bound disposable source/mask staging bundle,
@@ -49,7 +49,19 @@ port 8298, explicit model file SHA checks, process PID/port ownership,
 external-only output, durable pre-launch reservation and exact
 operator consent. **Windows engineering passed 2026-11-17:** Ruff/format/Mypy
 clean, 66 focused passed (1 skipped), 2,914 full passed (2 skipped).
-**Operator protected-state review and live GPU acceptance remain PENDING.**
+**Windows and operator protected-state non-mutation checks were ACCEPTED 2026-11-17.**
+Read-only host readiness found ComfyUI Python and `main.py`, port
+8298 unbound and RTX 5060 Ti (16,311 MiB total; 13,877 MiB free).
+The reviewed workflow names match the installed Qwen edit UNET
+(19.12 GiB), Qwen VL encoder in `text_encoders\\qwen`
+(8.74 GiB), and Qwen VAE (0.24 GiB); the identical filename
+under `text_encoders\\hunyuan` is not the selected input.
+These observations do **not** establish model compatibility,
+safe memory offloading or GPU qualification. An actual
+separate disposable CURRENT C1/C2 source/mask, external bundle,
+read-only `--inspect` and fresh one-shot operator consent
+are still PENDING. The next UI step is an **empty, new
+disposable VSCS project**; no GPU job or paid evaluation.
 No GPU run is authorized by this code commit; production Candidate/CAP
 correction remains blocked.
 
