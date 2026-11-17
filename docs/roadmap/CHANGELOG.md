@@ -1,5 +1,21 @@
 # VSCS Changelog
 
+## 2026-11-17 — H3-MF multi-frame provider research added to backlog
+
+- Inspected user-supplied MiniMax H3 multiframe ComfyUI editor
+  JSON (41 nodes, 53 links); recorded original SHA-256 and
+  detailed correction/gov-risk assessment.
+- Registered **H3-MF1** as next **offline-only** provider
+  qualification; **H3-MF2–MF4** remain separately gated
+  disposable GPU, QC and integration tasks.
+- Updated authoritative Architecture vNext Phase 20 refinement,
+  milestone tracker, roadmap index and both User Manual files.
+  Tracking: [GitHub issue #52](https://github.com/npayne10/video_series_studio/issues/52).
+- **Documentation and backlog only:** no source workflow,
+  running VSCS project, provider default, GPU job or
+  governed attempt was modified.
+
+
 All notable changes to the Video Series Creation System are recorded here.
 
 The project follows semantic versioning where practical.
