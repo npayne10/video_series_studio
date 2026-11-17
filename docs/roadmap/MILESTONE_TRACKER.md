@@ -44,6 +44,21 @@
 | 25 | Release Candidate | ⏳ Planned | — | Not run | Pending |
 | 1.0.0 | VSCS Version 1.0 | ⏳ Planned | — | Not run | Pending |
 
+## C4B.1 current subphase implementation — not yet accepted
+
+**Branch:** `phase-f5.4.2-c4b-isolated-mask-provider-qualification`  
+**Status:** 🧪 Implementation candidate, Windows/GUI/GET-only validation pending  
+**Technical record:** [C4B isolated Qwen contract](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
+
+C4B.1 contains only offline source/mask graph binding, synthetic
+negative tests and optional operator-consented GET-only model/node
+inventory. **No runtime inference has occurred**; C4B is not
+fully qualified. Next gate after Windows/static/UI acceptance:
+separately approved disposable C4B.2 live GPU/pixel-fidelity
+qualification. Then governed C4 integration, Candidate quality
+assessment and end-to-end acceptance as distinct tasks.
+H3-MF1 remains deferred.
+
 ## Current development priority — finish governed image correction
 
 **Reprioritized 2026-11-17:** Complete the accepted C4A image-correction
