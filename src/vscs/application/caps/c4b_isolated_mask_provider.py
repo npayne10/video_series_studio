@@ -126,17 +126,20 @@ class C4BProviderBlueprint:
     def verify_seal(self) -> None:
         if _digest(self.graph) != self.graph_sha256:
             raise GeometryCorrectionError("C4B graph changed since offline qualification")
-        if _evidence_digest(
-            graph_sha=self.graph_sha256,
-            template_sha=self.managed_template_sha256,
-            source_sha=self.source_sha256,
-            mask_sha=self.mask_sha256,
-            proposal_sha=self.c1_proposal_sha256,
-            source_name=self.source_input_filename,
-            mask_name=self.mask_input_filename,
-            seed=self.seed,
-            prefix=self.output_prefix,
-        ) != self.evidence_sha256:
+        if (
+            _evidence_digest(
+                graph_sha=self.graph_sha256,
+                template_sha=self.managed_template_sha256,
+                source_sha=self.source_sha256,
+                mask_sha=self.mask_sha256,
+                proposal_sha=self.c1_proposal_sha256,
+                source_name=self.source_input_filename,
+                mask_name=self.mask_input_filename,
+                seed=self.seed,
+                prefix=self.output_prefix,
+            )
+            != self.evidence_sha256
+        ):
             raise GeometryCorrectionError("C4B source/C1/mask evidence seal mismatch")
         validate_c4b_api_graph(self.graph)
 
@@ -154,8 +157,7 @@ class C4BProviderBlueprint:
                 f"Prepared source input name: {self.source_input_filename}",
                 f"Prepared mask input name: {self.mask_input_filename}",
                 f"Deterministic seed: {self.seed}",
-                "Output prefix (requires isolated ComfyUI output root): "
-                f"{self.output_prefix}",
+                f"Output prefix (requires isolated ComfyUI output root): {self.output_prefix}",
                 "Two mask paths: processed-size latent conditioning + original-size final composite.",
                 "Original source is the final composite destination; protected "
                 "pixels are intended to remain unchanged.",
@@ -181,9 +183,7 @@ def _build_isolated_graph(
 ) -> dict[str, Any]:
     """Derive a new core-IO graph from the inspected Qwen model route."""
     inspect_managed_qwen_edit_workflow(workflow_path)
-    graph: dict[str, Any] = copy.deepcopy(
-        json.loads(workflow_path.read_text(encoding="utf-8"))
-    )
+    graph: dict[str, Any] = copy.deepcopy(json.loads(workflow_path.read_text(encoding="utf-8")))
     # Remove every XCIC queue/output dependency and LoRA/switch path;
     # qualification will use fixed 20-step, non-LoRA baseline.
     for key in (
@@ -225,9 +225,7 @@ def _build_isolated_graph(
         crop="center",
     )
     graph[_EDIT_MASK] = _node("ImageToMask", image=[_MASK_SCALE, 0], channel="red")
-    graph[_LATENT_MASK] = _node(
-        "SetLatentNoiseMask", samples=["170:156", 0], mask=[_EDIT_MASK, 0]
-    )
+    graph[_LATENT_MASK] = _node("SetLatentNoiseMask", samples=["170:156", 0], mask=[_EDIT_MASK, 0])
     graph[_RESULT_SCALE] = _node(
         "ImageScale",
         image=["170:158", 0],
@@ -247,9 +245,7 @@ def _build_isolated_graph(
     )
     # SaveImage will write to the ComfyUI instance's configured output root.
     # Never submit this graph to a shared/production server.
-    graph["9"] = _node(
-        "SaveImage", images=[_COMPOSITE, 0], filename_prefix=_OUTPUT_PREFIX
-    )
+    graph["9"] = _node("SaveImage", images=[_COMPOSITE, 0], filename_prefix=_OUTPUT_PREFIX)
     return graph
 
 
@@ -316,9 +312,7 @@ def validate_c4b_api_graph(graph: dict[str, Any]) -> None:
         if not isinstance(node, dict) or node.get("class_type") != kind:
             raise GeometryCorrectionError(f"C4B graph node {key} is not {kind}")
         inputs = node.get("inputs")
-        if not isinstance(inputs, dict) or any(
-            inputs.get(k) != v for k, v in required.items()
-        ):
+        if not isinstance(inputs, dict) or any(inputs.get(k) != v for k, v in required.items()):
             raise GeometryCorrectionError(f"C4B masked graph wiring changed at {key}")
     source_inputs = graph[_SOURCE]["inputs"]
     mask_inputs = graph[_MASK]["inputs"]
@@ -375,9 +369,7 @@ def validate_c4b_api_graph(graph: dict[str, Any]) -> None:
         raise GeometryCorrectionError("C4B graph differs from the reviewed isolated baseline")
 
 
-def inspect_c4b_node_schemas(
-    graph: dict[str, Any], object_info: dict[str, Any]
-) -> tuple[str, ...]:
+def inspect_c4b_node_schemas(graph: dict[str, Any], object_info: dict[str, Any]) -> tuple[str, ...]:
     """Pure inspection of ComfyUI GET /object_info: no runtime inference."""
     validate_c4b_api_graph(graph)
     blockers: list[str] = []
@@ -479,9 +471,17 @@ def inspect_c4b_local_node_inventory(
         if isinstance(item, dict) and isinstance(item.get("name"), str):
             total = item.get("vram_total")
             free = item.get("vram_free")
-            if type(total) in (int, float) and total > 0:
+            if (
+                isinstance(total, (int, float))
+                and not isinstance(total, bool)
+                and total > 0
+            ):
                 memory = f"{total / (1024**3):.1f} GiB total"
-                if type(free) in (int, float) and free >= 0:
+                if (
+                    isinstance(free, (int, float))
+                    and not isinstance(free, bool)
+                    and free >= 0
+                ):
                     memory += f", {free / (1024**3):.1f} GiB free"
                 devices.append(f"{item['name']}: {memory}")
     problems: list[str] = []
