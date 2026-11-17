@@ -16,7 +16,7 @@ named Qt `QGroupBox` / `QGridLayout` matrices in workflow order.
 | C2.1 Sessions | Saved human review dropdown | Refresh, Save, Resume |
 | C2.1 Masks | Existing C2 mask dropdown | Find, Inspect selected |
 | C3 | Current shared selected mask from C2.1 | Offline dry-run, GET-only probe |
-| C4A | Current shared selected mask from C2.1 | Inspect contract, review-only acknowledgement |
+| C4A | Shared selected mask; inline Review phrase | Inspect contract, review-only acknowledgement with visible status |
 
 The result assessment panel remains read-only, and the overall dialog
 remains scrollable. The default dialog width is increased to 1050 px
@@ -92,9 +92,14 @@ git status --short
    for the current ROI. Select a mask and click
    **Inspect Selected Existing Mask** beside the dropdown.
    No mask may be silently promoted to CURRENT or executed.
-9. Verify the **C3** offline/GET-only buttons and the
-   **C4A** contract/review-only buttons are grouped
-   and visible; do not run generation. Optionally
+9. Verify the **C3** offline/GET-only buttons and
+   **C4A** contract/review-only button are grouped
+   and visible. C4A must also display a **Review phrase**
+   entry and a status label directly beside/below the
+   acknowledgement action. Enter an invalid phrase and
+   check BLOCKED feedback, then enter `REVIEW ONLY`
+   and check **REVIEW ACKNOWLEDGED — NO GENERATION**.
+   Do not run generation. Optionally
    inspect C3 offline or C4A contract using the
    historical mask and confirm the same blockers.
    If testing GET-only probe, retain the existing
