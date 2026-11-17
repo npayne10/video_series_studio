@@ -59,12 +59,32 @@ def _digest(value: dict[str, Any]) -> str:
     ).hexdigest()
 
 
+def _evidence_digest(
+    *, graph_sha: str, template_sha: str, source_sha: str, mask_sha: str,
+    proposal_sha: str, source_name: str, mask_name: str, seed: int, prefix: str
+) -> str:
+    return _digest(
+        {
+            "graph": graph_sha,
+            "template": template_sha,
+            "source": source_sha,
+            "mask": mask_sha,
+            "proposal": proposal_sha,
+            "source_name": source_name,
+            "mask_name": mask_name,
+            "seed": seed,
+            "output_prefix": prefix,
+        }
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class C4BProviderBlueprint:
     """In-memory evidence; graph is untrusted until reverified at every use."""
 
     graph: dict[str, Any]
     graph_sha256: str
+    evidence_sha256: str
     managed_template_sha256: str
     source_sha256: str
     mask_sha256: str
@@ -98,6 +118,18 @@ class C4BProviderBlueprint:
     def verify_seal(self) -> None:
         if _digest(self.graph) != self.graph_sha256:
             raise GeometryCorrectionError("C4B graph changed since offline qualification")
+        if _evidence_digest(
+            graph_sha=self.graph_sha256,
+            template_sha=self.managed_template_sha256,
+            source_sha=self.source_sha256,
+            mask_sha=self.mask_sha256,
+            proposal_sha=self.c1_proposal_sha256,
+            source_name=self.source_input_filename,
+            mask_name=self.mask_input_filename,
+            seed=self.seed,
+            prefix=self.output_prefix,
+        ) != self.evidence_sha256:
+            raise GeometryCorrectionError("C4B source/C1/mask evidence seal mismatch")
         validate_c4b_api_graph(self.graph)
 
     def describe(self) -> str:
@@ -110,6 +142,7 @@ class C4BProviderBlueprint:
                 f"Current C2 mask SHA-256: {self.mask_sha256}",
                 f"Managed Qwen baseline SHA-256: {self.managed_template_sha256}",
                 f"Isolated API graph SHA-256: {self.graph_sha256}",
+                f"C4B source-bound evidence SHA-256: {self.evidence_sha256}",
                 f"Prepared source input name: {self.source_input_filename}",
                 f"Prepared mask input name: {self.mask_input_filename}",
                 f"Deterministic seed: {self.seed}",
@@ -489,10 +522,23 @@ def prepare_c4b_isolated_blueprint(
         positive=managed_qwen_positive_prompt(proposal.accepted_fields, proposal.target_field),
     )
     validate_c4b_api_graph(graph)
+    graph_sha = _digest(graph)
+    template_sha = preparation.managed_workflow_sha256 or ""
     return C4BProviderBlueprint(
         graph=graph,
-        graph_sha256=_digest(graph),
-        managed_template_sha256=preparation.managed_workflow_sha256 or "",
+        graph_sha256=graph_sha,
+        evidence_sha256=_evidence_digest(
+            graph_sha=graph_sha,
+            template_sha=template_sha,
+            source_sha=snapshot.image_sha256,
+            mask_sha=preparation.selected_mask_sha256,
+            proposal_sha=proposal.proposal_sha256,
+            source_name=source_name,
+            mask_name=mask_name,
+            seed=seed,
+            prefix=_OUTPUT_PREFIX,
+        ),
+        managed_template_sha256=template_sha,
         source_sha256=snapshot.image_sha256,
         mask_sha256=preparation.selected_mask_sha256,
         c1_proposal_sha256=proposal.proposal_sha256,
