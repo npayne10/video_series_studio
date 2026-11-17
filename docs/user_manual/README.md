@@ -1,6 +1,6 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.10 (living documentation, updated 2026-11-16)  
+**Version:** v0.11 (living documentation, updated 2026-11-17)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
 ## Open first
@@ -10,9 +10,37 @@
 3. [Production workflow architecture](../engineering/VSCS_Video_Production_Workflow_V2.md) — architecture/aspirational workflow for context; verify every action against the user manual and actual UI.
 4. [B.5.22 disk-backed acceptance](../engineering/Phase_20_19_3B5_22_Disk_Backed_CAP_Persistence_Acceptance.md) — automated SQLite durability, governance and separate desktop operator acceptance.
 
-## F5.4.2 review matrix UI — selections beside corresponding actions
+## C4A and F5.4.2 matrix acceptance evidence — 2026-11-17
 
-**Implementation candidate; Windows/UI acceptance pending.** The
+**Windows:** Ruff lint clean, Ruff formatting clean (1,700
+files), Mypy clean (712 source files), 9 focused tests
+passed and 2,871 full-suite tests passed with one
+Windows symlink skip. Git diff check clean, with only
+two pre-existing untracked audit/preflight files.
+
+**Operator UI:** C2.1 review resumed with 4/4 fields and
+original normalized ROI; C1/C2 checkboxes were reset
+on resume. C4A produced a sealed offline provider
+preparation that rejected the historical C2 mask as
+not current. An invalid review phrase was blocked;
+exact `REVIEW ONLY` produced visible
+**REVIEW ACKNOWLEDGED — NO GENERATION** status.
+
+The operator explicitly confirmed unchanged Candidate 4,
+saved AI report, C2 masks, C2.1 session, CAP/Canon/MASTER,
+gallery registration and governed attempt count, with
+no ComfyUI generation, corrected image, paid evaluation
+or reservation.
+
+[Formal C4A acceptance](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md#formal-c4a-operator-acceptance--2026-11-17) and
+[Formal matrix-layout acceptance](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md#formal-layout-acceptance--2026-11-17).
+
+**Only preparation and UI are accepted. No real masked
+provider execution or governed C4 correction is authorized.**
+
+## F5.4.2 review matrix UI — operator accepted 2026-11-17
+
+**Operator accepted 2026-11-17, presentation only.** The
 General Visual Correction Review dialog now groups Finding/
 Classification, B, C1, C2, C2.1 Sessions, C2.1 Masks,
 C3 and C4A into compact, labelled Qt grid sections. Saved
@@ -37,9 +65,9 @@ inspection to avoid divergent selections.
 See [User Manual and controlled operator test](VSCS_User_Manual.md#f542--compact-review-matrix-layout-ui-refinement)
 and [layout/regression acceptance plan](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md).
 
-## Stage C4A — Mask Provider Contract Preparation (implementation candidate)
+## Stage C4A — Mask Provider Contract Preparation (operator accepted 2026-11-17)
 
-**Offline preparation only; Windows regression and UI acceptance pending.**
+**Operator accepted for offline preparation and review-only acknowledgement on 2026-11-17.**
 The F5.4.2 advisory dialog now includes **Inspect C4A Mask Provider
 Contract (No Generation)** and **Acknowledge C4A Preparation Review
 (Not Execution Consent)**. The first verifies source/CAP/C1/C2 mask
@@ -62,9 +90,10 @@ Instructions beginning with launching `vscs`:
 [C4A User Manual procedure](VSCS_User_Manual.md#f542-stage-c4a--mask-capable-provider-preparation-and-protected-pixel-audit)
 and [C4A engineering acceptance plan](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md).
 
-**Stage C3 remains accepted. Stage C4A is not yet accepted.
-Real Stage C4 generation, GPU execution and Candidate 4's final
-Attempt 2/2 remain prohibited.**
+**Stage C3 remains accepted. Stage C4A and the matrix layout were
+operator accepted on 2026-11-17 for offline preparation and
+presentation only. Live Stage C4 generation, GPU execution and
+Candidate 4's protected final Attempt 2/2 remain prohibited.**
 
 ## Stage C3 — Provider Mask Compatibility & Controlled Dry-Run (operator accepted 2026-11-16)
 
