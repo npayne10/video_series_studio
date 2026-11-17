@@ -1090,9 +1090,9 @@ class CandidateQualityReportDialog(QDialog):
                 inventory = inspect_c4b_local_node_inventory()
             except (OSError, ValueError, RuntimeError) as exc:
                 details.setPlainText(
-                    "STAGE C4B NODE INVENTORY: UNAVAILABLE (GET ONLY)\\n"
+                    "STAGE C4B NODE INVENTORY: UNAVAILABLE (GET ONLY)\n"
                     + type(exc).__name__
-                    + "\\nNo ComfyUI POST, generation or attempt reservation."
+                    + "\nNo ComfyUI POST, generation or attempt reservation."
                 )
                 return
             details.setPlainText(inventory.describe())
