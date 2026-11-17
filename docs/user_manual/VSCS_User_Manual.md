@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-16 (C3 accepted; C4A in validation; F5.4.2 review matrix UI refactor awaiting operator acceptance)  
+**Last verified:** 2026-11-17 (C4A offline preparation and F5.4.2 matrix layout operator accepted; live C4 remains unauthorized)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -1911,7 +1911,7 @@ See the [full C3 engineering acceptance record](../F5_4_2_STAGE_C3_MASK_PROVIDER
 
 ### F5.4.2 Stage C4A — Mask-capable provider preparation and protected-pixel audit
 
-**Status: CODE IMPLEMENTED, WINDOWS/OPERATOR ACCEPTANCE PENDING.
+**Status: OPERATOR ACCEPTED — 2026-11-17, OFFLINE PREPARATION ONLY.
 NO GENERATED IMAGE OR GOVERNED ATTEMPT ALLOWED.**
 
 Stage C4A is an engineering preparation gate, **not** a live C4
@@ -2037,7 +2037,7 @@ accepted.**
 
 ### F5.4.2 — Compact review matrix layout (UI refinement)
 
-**Status: CODE COMMITTED; WINDOWS AND OPERATOR ACCEPTANCE PENDING.**
+**Status: OPERATOR ACCEPTED — 2026-11-17, PRESENTATION ONLY.**
 
 The advisory General Visual Correction Review screen uses labeled
 matrix groups rather than a single long column of buttons. Field
@@ -2129,3 +2129,69 @@ UI-only feedback: the underlying C4A model contract
 still refuses execution, attempt reservation and Candidate
 registration. Re-run the C4A acceptance checkpoint after
 updating the branch; no image generation is required.
+
+#### C4A and matrix layout — operator acceptance result (2026-11-17)
+
+**C4A preparation and the new stage-matrix layout are formally
+operator accepted within their limited, non-executable scope.**
+On Windows, the operator reported Ruff lint **passed**,
+Ruff formatting **1,700 files formatted**, Mypy **712
+source files clean**, focused matrix/C4A regression
+**9 passed**, full suite **2,871 passed, 1 skipped**
+(Windows symlink limitation) and `git diff --check` clean.
+The two existing untracked audit/preflight files were
+left untouched.
+
+The screenshots demonstrated stage groups from Finding
+and Stage B through C1, C2, C2.1 Sessions/Masks, C3 and
+C4A, with dropdowns adjacent to their relevant actions.
+The operator restored the immutable C2.1 review
+`c21-4-d1aafcc27b2d4e098d835702542261c8.json`
+to **4 of 4 fields**, including the
+`components` discrepancy and normalized ROI
+`0.64798851,0.45478723,0.06178161,0.07446809`.
+Neither C1 nor C2 acknowledgement remained checked
+after loading the session.
+
+After fresh source ROI inspection, the C1 SHA-256
+remained
+`76bd6349cdb3b4b399495d5d4c2144f845d155388cb7049a64d8f50f0a966cdc`.
+The C4A offline report correctly classified
+the selected `1aa336f6...` C2 mask as **HISTORICAL**
+and not bound to current C1; managed Qwen
+mask compatibility, live inference, protected-pixel
+preservation and GPU readiness remained unverified
+or blocked.
+
+An original C4A modal acknowledgement produced no
+visible response for the operator. The revised
+in-matrix **Review phrase** and status label
+correctly rejected an invalid entry with
+`Type REVIEW ONLY to acknowledge C4A non-execution`.
+Entering exactly `REVIEW ONLY` subsequently
+displayed **REVIEW ACKNOWLEDGED — NO GENERATION**,
+with an explicit notice that no provider job,
+registration or attempt reservation occurred.
+
+The operator explicitly confirmed that Candidate 4
+image/metadata, saved AI report, both C2 mask PNGs,
+saved C2.1 JSON, accepted CAP requirements/authority,
+Canon/MASTER, gallery registration and governed
+attempt count remained unchanged throughout acceptance,
+and **no ComfyUI generation job, correction image,
+paid AI evaluation or attempt reservation occurred**.
+This is an operator attestation, not an independent
+filesystem audit.
+
+**Acceptance scope:** C4A offline contract preparation,
+non-executing review acknowledgement, and the
+matrix-layout usability change only. The mask
+provider has not been qualified for live execution.
+No protected Attempt 2/2 was consumed or unlocked.
+Real C4 masked correction, GPU inference and
+automatic Candidate/Canon promotion remain forbidden.
+
+For full evidence see
+[C4A formal acceptance](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md#formal-c4a-operator-acceptance--2026-11-17)
+and
+[Matrix UI formal acceptance](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md#formal-layout-acceptance--2026-11-17).
