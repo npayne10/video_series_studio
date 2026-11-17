@@ -2195,3 +2195,43 @@ For full evidence see
 [C4A formal acceptance](../F5_4_2_STAGE_C4A_MASK_PROVIDER_CONTRACT.md#formal-c4a-operator-acceptance--2026-11-17)
 and
 [Matrix UI formal acceptance](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md#formal-layout-acceptance--2026-11-17).
+
+
+### Planned: H3-MF1 Multi-Frame Reference Video Qualification (NO NEW UI)
+
+**Backlog entry recorded 2026-11-17; NOT IMPLEMENTED OR ACCEPTED.**
+
+The user-supplied `video_minimax_h3_multiframe_reference_VSCS(1).json`
+contains 41 ComfyUI editor-format nodes and 53 links,
+with a MiniMax H3 reference input and three additional
+frame guides at 1.5, 3.0 and 5.0 seconds.
+It is not a production-safe VSCS API graph in its
+current form: the prompt references unbound numbered
+`<Picture 2>`–`<Picture 4>` identities, Picture 1
+lacks explicit frame-zero guidance, the final guide is
+near the end of a 124-frame clip, and seed handling is
+nondeterministic. Actual 15–20-second reliability,
+16 GiB GPU memory demand and guide-fidelity output
+are not yet qualified.
+
+Next planned **H3-MF1** work is offline import/schema,
+semantic-reference vs timed-guide validation, source
+and CAP/Shot-boundary provenance, safe frame-grid
+calculations, deterministic API graph compilation,
+negative tests, and comparison with existing H3
+production authority. **No button or feature is
+available to operators yet. Do not import and run
+the attached graph as a governed production Shot.**
+No ComfyUI `POST /prompt`, GPU inference, paid AI
+calls, GeneratedMedia registration or modifications
+to approved project state are authorized by this entry.
+
+Following separate approvals, **H3-MF2** would run an
+isolated fixed-seed GPU A/B trial, **MF3** would
+qualify continuity/QC, and **MF4** would integrate
+an accepted provider mode into ProductionTask,
+GeneratedMedia and human approval workflows.
+For the complete correction list, acceptance gates
+and source hash see
+[H3-MF workflow assessment](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md)
+and [issue #52](https://github.com/npayne10/video_series_studio/issues/52).
