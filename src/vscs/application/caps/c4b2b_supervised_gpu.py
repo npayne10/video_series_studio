@@ -32,7 +32,7 @@ from vscs.application.caps.c4b2_disposable_runtime import (
     preview_c4b2_isolated_launch,
     verify_c4b2_disposable_bundle,
 )
-from vscs.application.caps.guided_edit_live_transport import _RejectRedirects, _history_file
+from vscs.application.caps.guided_edit_live_transport import _history_file, _RejectRedirects
 
 _RESERVATION = "c4b2b_execution_reserved.json"
 _SUCCESS = "c4b2b_gpu_result.json"
@@ -102,8 +102,7 @@ def _model_files(
             or not isinstance(expected, str)
             or path.name.casefold() != Path(expected).name.casefold()
             or any(
-                root == path or root in path.parents
-                for root in (protected, disposable, directory)
+                root == path or root in path.parents for root in (protected, disposable, directory)
             )
         ):
             raise C4B2BQualificationError(f"{name} model is not the isolated reviewed file")
@@ -115,9 +114,7 @@ def _protected_asset_snapshot(directory: Path) -> str:
     """Read-only, size-bounded evidence for the specifically protected asset."""
     manifest = _json_file(directory / "c4b2_manifest.json")
     protected = _safe_path(Path(str(manifest["protected_project_root"])), existing=True)
-    asset = _safe_path(
-        protected / "Canonical Assets" / "STORY-PRO-B00D168E43", existing=True
-    )
+    asset = _safe_path(protected / "Canonical Assets" / "STORY-PRO-B00D168E43", existing=True)
     if not asset.is_dir() or protected not in asset.parents:
         raise C4B2BQualificationError("Protected Diagnostic Console asset is unavailable")
     members: list[tuple[str, int, str]] = []
@@ -199,8 +196,8 @@ def _port_unbound() -> None:
 def _listener_owned_by(pid: int) -> bool:
     """Fail closed unless the exact ComfyUI child owns 127.0.0.1:8298."""
     try:
-        psutil = importlib.import_module("psutil")
-        connections = getattr(psutil, "net_connections")(kind="tcp")
+        psutil: Any = importlib.import_module("psutil")
+        connections = psutil.net_connections(kind="tcp")
     except (ImportError, OSError, RuntimeError) as exc:
         raise C4B2BQualificationError("psutil is required to verify listener PID") from exc
     return any(
@@ -247,15 +244,18 @@ def _gpu_free_bytes(stats: dict[str, Any]) -> int:
     devices = stats.get("devices")
     if not isinstance(devices, list) or not devices:
         raise C4B2BQualificationError("ComfyUI GPU memory inventory is unavailable")
-    free = [
-        device.get("vram_free")
-        for device in devices
-        if isinstance(device, dict) and "NVIDIA" in str(device.get("name", "")).upper()
-    ]
-    values = [value for value in free if type(value) in (int, float) and value >= 0]
-    if not values:
+    free_values: list[int | float] = []
+    for device in devices:
+        if not isinstance(device, dict):
+            continue
+        if "NVIDIA" not in str(device.get("name", "")).upper():
+            continue
+        free = device.get("vram_free")
+        if isinstance(free, (int, float)) and not isinstance(free, bool) and free >= 0:
+            free_values.append(free)
+    if not free_values:
         raise C4B2BQualificationError("No NVIDIA GPU memory can be verified")
-    return int(min(values))
+    return int(min(free_values))
 
 
 def _wait_until_ready(process: subprocess.Popen[bytes], deadline: float) -> None:
