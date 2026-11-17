@@ -1,5 +1,30 @@
 # VSCS Changelog
 
+## 2026-11-17 — C4B.2B supervised disposable Qwen GPU controller candidate
+
+- Added a separately gated CLI controller using C4B.2A sealed,
+  current disposable source/mask/graph evidence, dedicated
+  localhost port 8298 and isolated input/output/temp/user roots.
+- Added read-only actual model file hashes, one-use consent
+  fingerprint, durable pre-launch reservation, PID/port ownership,
+  compatible model/schema GET preflight and idle queue check.
+- Added one-shot bounded POST/history/result path, source/mask
+  protected-pixel audit, model/protected-asset post-run checks,
+  runtime log, success/failure evidence and child cleanup.
+- Added negative tests with mocked processes and HTTP; no real
+  ComfyUI process or GPU job is launched by tests. Declared optional
+  `gpu-qualification` dependency for runtime `psutil` PID checks.
+- Added full safety contract, step-by-step Windows engineering
+  checks, safe operator UI inspection, manual/roadmap and
+  issue tracking.
+- **NOT YET ACCEPTED:** Windows Ruff/Mypy/focused/full regression,
+  supervised disposable source/current-mask preparation, native
+  process and model-directory safety review, real RTX GPU output,
+  actual peak VRAM, human semantic quality and operator
+  non-mutation acceptance remain pending. No GPU authorization
+  or production Candidate/CAP integration is granted.
+
+
 ## 2026-11-17 — C4B.2A disposable runtime preflight implementation
 
 - Added strictly offline, disposable-project-only source and
@@ -14,11 +39,11 @@
   disposable output root; not real provider output evidence.
 - Added fail-closed regression tests, engineering specification,
   current milestone record and both User Manual updates.
-- **Stage not yet accepted.** No process launch, POST,
-  inference, GPU model loading, paid evaluation,
-  attempt reservation, Candidate or CAP/Canon mutation.
-  C4B.2B live GPU execution remains unimplemented and
-  subject to a new explicit operator approval.
+- **C4B.2A formally accepted 2026-11-17 for offline-only scope.**
+  Ruff/format/Mypy clean; 54 focused and 2,902 full tests passed
+  (1 and 2 Windows symlink skips); operator confirmed non-mutation
+  of Candidate 4, reviews, historical masks, attempt 2/2 and
+  CAP/Canon/MASTER/gallery. No process/POST/GPU/purchase.
 
 
 ## 2026-11-17 — C4B.1 offline qualification formally accepted
