@@ -143,6 +143,39 @@ Prove a real Shot can travel from UPD through ProductionTask to live ComfyUI, ou
 
 Evidence-driven subphases may be added beneath Phase 20 without changing the Phase 20 architectural objective. Current examples include provider capability validation and provider-ready reference governance. These refinements remain subordinate to the Phase 20 objective and must ultimately converge into Phase 20 integration and functional acceptance.
 
+#### Backlog refinement — H3-MF: MiniMax H3 Multi-Frame Reference-to-Video (2026-11-17)
+
+**Status: BACKLOG — H3-MF1 NEXT OFFLINE QUALIFICATION; NOTHING GENERATION-AUTHORIZED.**
+**Issue:** [#52 — H3-MF1 offline workflow qualification](https://github.com/npayne10/video_series_studio/issues/52).
+**Detailed assessment:** [H3-MF workflow findings and correction backlog](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md).
+
+The reviewed user-supplied editor graph contains 41 nodes and 53
+links, chained MiniMax H3 timeline guides, and multiple reference
+images. The graph is **not** a validated API workflow. Its prompt
+references `<Picture 2>`–`<Picture 4>` without registering them
+as semantic `ref_images`, contains no explicit frame-zero guide,
+puts its final guide at frame 120 of 124, and randomizes its seed.
+Runtime 16 GiB GPU viability and exact 15–20-second Shot continuity
+remain unqualified.
+
+| ID | Priority | Work | Status / mandatory gate |
+|---|---|---|---|
+| **H3-MF1** | P1 next provider research | Offline editor-to-API graph/source and guide-binding qualification, frame validation, immutable SHA provenance, deterministic source and authority checks, negative tests, VSCS H3 comparison | **Planned**; strict no-GPU/no-prompt/no-Candidate mutation; Windows static/full regression and operator inspection required |
+| **H3-MF2** | P1, gated on MF1 | Explicitly consented disposable fixed-seed 5 s GPU reference-only vs timed-guides A/B with VRAM/time/quality logs | **Planned; blocked pending MF1 and fresh operator GPU approval** |
+| **H3-MF3** | P1, gated on MF2 | QC for visual guide fidelity, identity/scene continuity and audio; exact frames/duration | **Planned; requires accepted disposable outputs** |
+| **H3-MF4** | P2, gated on MF3 | VSCS governed multi-frame H3 provider mode, readiness, GeneratedMedia, safe recovery and human acceptance | **Planned; requires distinct full integration/acceptance** |
+
+This refinement **reuses** existing H3 ProductionTask, reference role,
+timed span, approved Shot opening/closing, GeneratedMedia and QC
+contracts. It must not introduce a second production truth, overwrite
+the current H3 workflow, bypass image correction C4A/C4B gates,
+or consume Candidate 4 protected Attempt 2/2. For 20-second Shots,
+the official H3 Reference-to-Video node's ~124–362-frame trained
+range demands separately qualified continuation/internal spans;
+an integer 481-frame setting alone is insufficient.
+
+
+
 ---
 
 # 5. Phase 21 — Production Quality & Repair
