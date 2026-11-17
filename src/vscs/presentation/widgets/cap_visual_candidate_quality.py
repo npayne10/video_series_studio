@@ -446,7 +446,9 @@ class CandidateQualityReportDialog(QDialog):
         c4_grid.addWidget(c4_ack, 1, 2)
         c4_review_entry = QLineEdit(dialog)
         c4_review_entry.setObjectName("stageC4AReviewOnlyPhrase")
-        c4_review_entry.setPlaceholderText("Type REVIEW ONLY to acknowledge inspection, not execution")
+        c4_review_entry.setPlaceholderText(
+            "Type REVIEW ONLY to acknowledge inspection, not execution"
+        )
         c4_grid.addWidget(QLabel("Review phrase"), 1, 0)
         c4_grid.addWidget(c4_review_entry, 1, 1)
         c4_review_status = QLabel(
@@ -998,9 +1000,7 @@ class CandidateQualityReportDialog(QDialog):
                 QMessageBox.warning(dialog, "Stage C4A Review Blocked", str(exc))
                 return
             try:
-                receipt = acknowledge_c4_review(
-                    latest, operator_text=c4_review_entry.text()
-                )
+                receipt = acknowledge_c4_review(latest, operator_text=c4_review_entry.text())
             except GeometryCorrectionError as exc:
                 c4_review_status.setText(
                     "BLOCKED: type exactly REVIEW ONLY. "
