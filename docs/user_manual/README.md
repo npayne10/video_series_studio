@@ -47,9 +47,11 @@ A separate, one-use local ComfyUI controller has been implemented on
 It requires a new sealed disposable project/bundle, dedicated
 port 8298, explicit model file SHA checks, process PID/port ownership,
 external-only output, durable pre-launch reservation and exact
-operator consent. **Windows regression, operator review and real GPU
-acceptance have NOT been completed. No live GPU run is authorized by
-this code commit; production Candidate/CAP correction remains blocked.**
+operator consent. **Windows engineering passed 2026-11-17:** Ruff/format/Mypy
+clean, 66 focused passed (1 skipped), 2,914 full passed (2 skipped).
+**Operator protected-state review and live GPU acceptance remain PENDING.**
+No GPU run is authorized by this code commit; production Candidate/CAP
+correction remains blocked.
 
 [Complete C4B.2B engineering acceptance procedure](../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md)
 and [safe Windows/UI steps](VSCS_User_Manual.md#f542-c4b2b--supervised-disposable-qwen-gpu-qualification-implementation-candidate).
