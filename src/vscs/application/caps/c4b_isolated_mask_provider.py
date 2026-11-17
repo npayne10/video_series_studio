@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from vscs.application.caps.c3_mask_provider_dry_run import _inventory
 from vscs.application.caps.c4_mask_provider_contract import prepare_c4_provider_contract
 from vscs.application.caps.geometry_correction_policy import GeometryCorrectionError
 from vscs.application.caps.governed_visual_correction_handoff import (
@@ -338,6 +339,93 @@ def inspect_c4b_node_schemas(
     # Node-name/input-schema presence cannot establish output types,
     # mask polarity or any inference result.
     return tuple(blockers)
+
+
+
+@dataclass(frozen=True, slots=True)
+class C4BLocalNodeInventory:
+    """Only GET-derived node names and GPU inventory, never runtime authority."""
+
+    present_mask_node_classes: tuple[str, ...]
+    missing_mask_node_classes: tuple[str, ...]
+    missing_input_names: tuple[str, ...]
+    gpu_devices: tuple[str, ...]
+    blockers: tuple[str, ...]
+
+    @property
+    def execution_authorized(self) -> bool:
+        return False
+
+    @property
+    def gpu_generation_verified(self) -> bool:
+        return False
+
+    def describe(self) -> str:
+        return "\\n".join(
+            (
+                "F5.4.2 C4B - LOCAL MASK NODE INVENTORY (GET ONLY)",
+                "Present mask/image node classes: "
+                + (", ".join(self.present_mask_node_classes) or "none"),
+                "Missing classes: " + (", ".join(self.missing_mask_node_classes) or "none"),
+                "Missing declared inputs: " + (", ".join(self.missing_input_names) or "none"),
+                "GPU inventory: " + ("; ".join(self.gpu_devices) or "unavailable"),
+                "Mask polarity, full graph output wiring and GPU inference: NOT VERIFIED.",
+                "Provider compatibility, protected-pixel fidelity and execution: BLOCKED.",
+                "No ComfyUI POST, GPU work, API charge, file staging or attempt reservation.",
+                *(f"- {reason}" for reason in self.blockers),
+            )
+        )
+
+
+def inspect_c4b_local_node_inventory(
+    *, comfyui_url: str = "http://127.0.0.1:8188", timeout: float = 3.0
+) -> C4BLocalNodeInventory:
+    """GET only. Call only after an explicit UI operator confirmation."""
+    info, stats = _inventory(comfyui_url, timeout)
+    present: list[str] = []
+    missing: list[str] = []
+    bad_inputs: list[str] = []
+    for kind, expected in sorted(_REQUIRED_INPUTS.items()):
+        declared = info.get(kind)
+        if not isinstance(declared, dict):
+            missing.append(kind)
+            continue
+        present.append(kind)
+        inputs = declared.get("input", {})
+        if not isinstance(inputs, dict):
+            bad_inputs.append(f"{kind}: malformed input schema")
+            continue
+        required = inputs.get("required", {})
+        optional = inputs.get("optional", {})
+        if not isinstance(required, dict) or not isinstance(optional, dict):
+            bad_inputs.append(f"{kind}: malformed required/optional inputs")
+            continue
+        absent = expected - (set(required) | set(optional))
+        if absent:
+            bad_inputs.append(f"{kind}: {', '.join(sorted(absent))}")
+    devices: list[str] = []
+    for item in stats.get("devices", ()):
+        if isinstance(item, dict) and isinstance(item.get("name"), str):
+            total = item.get("vram_total")
+            free = item.get("vram_free")
+            if type(total) in (int, float) and total > 0:
+                memory = f"{total / (1024**3):.1f} GiB total"
+                if type(free) in (int, float) and free >= 0:
+                    memory += f", {free / (1024**3):.1f} GiB free"
+                devices.append(f"{item['name']}: {memory}")
+    problems: list[str] = []
+    if missing or bad_inputs:
+        problems.append("Installed node classes/inputs do not satisfy C4B primitive inventory")
+    if not devices:
+        problems.append("ComfyUI did not report an identifiable GPU device")
+    problems.append("Installed node names do not prove runtime Qwen mask compatibility")
+    return C4BLocalNodeInventory(
+        present_mask_node_classes=tuple(present),
+        missing_mask_node_classes=tuple(missing),
+        missing_input_names=tuple(bad_inputs),
+        gpu_devices=tuple(devices),
+        blockers=tuple(problems),
+    )
 
 
 def prepare_c4b_isolated_blueprint(
