@@ -1,7 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-17 (C4A and matrix UI accepted; C4B.1 offline provider qualification implemented, Windows/UI acceptance pending; live C4B.2/C4 unauthorized)  
+**Last verified:** 2026-11-17 (C4A, matrix UI and C4B.1 offline/GET-only qualification operator accepted; live C4B.2/C4 GPU production unauthorized)  
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
@@ -2239,7 +2239,7 @@ and [issue #52](https://github.com/npayne10/video_series_studio/issues/52).
 
 ### F5.4.2 Stage C4B.1 — Isolated Qwen mask-provider qualification (offline)
 
-**Status: IMPLEMENTATION CANDIDATE, LOCAL TESTS AND UI ACCEPTANCE PENDING.**
+**Status: OPERATOR ACCEPTED — 2026-11-17, NON-EXECUTING OFFLINE/GET-ONLY SCOPE.**
 This is the next development step after the accepted C4A preparation.
 It is **not** permission to run a masked Qwen edit, spend a
 correction attempt, or register an image.
@@ -2351,7 +2351,21 @@ input/temp/output directories and a separate port.
     command results for operator acceptance.
 
 See [C4B engineering and runtime-gate contract](../F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md).
-**C4B.1 may be accepted only as an offline qualification
-capability. C4B.2 requires separate explicit GPU consent
-and real disposable-output proof.** Candidate 4's
-protected final governed Attempt 2/2 remains untouched.
+**C4B.1 accepted for offline graph inspection and local
+GET-only node inventory (2026-11-17).** The operator
+confirmed No cancels the node probe with no report,
+while Yes returned nine installed required node classes,
+no missing declared inputs, and RTX 5060 Ti inventory
+(15.9 GiB total, 14.7 GiB free). Windows checks passed
+(Ruff lint/format, Mypy 713 source files, 51 focused tests,
+2,890 full tests with one Windows symlink skip).
+Candidate 4 and the original C2/C2.1 evidence,
+CAP/Canon/MASTER, gallery and governed attempt counter
+were operator-confirmed unchanged, with no ComfyUI job,
+correction result, paid evaluation or attempt reservation.
+This is a human attestation, not an independent disk audit.
+
+**C4B.2 remains unauthorized for inference** and requires
+separate explicit GPU consent and actual disposable
+protected-pixel proof. Candidate 4's protected final
+governed Attempt 2/2 remains untouched.
