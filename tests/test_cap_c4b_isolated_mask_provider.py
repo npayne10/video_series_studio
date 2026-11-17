@@ -10,6 +10,7 @@ import pytest
 from PIL import Image
 
 from vscs.application.caps.c4b_isolated_mask_provider import (
+    inspect_c4b_local_node_inventory,
     inspect_c4b_node_schemas,
     prepare_c4b_isolated_blueprint,
     validate_c4b_api_graph,
@@ -239,3 +240,72 @@ def test_changed_prompt_seal_and_fake_xcic_node_rejected(tmp_path):
     extra["evil"] = {"class_type": "XCICQwenReferenceJobLoader", "inputs": {}}
     with pytest.raises(GeometryCorrectionError, match="XCIC"):
         validate_c4b_api_graph(extra)
+
+
+def test_get_only_inventory_never_confers_gpu_authority(monkeypatch):
+    from vscs.application.caps.c4b_isolated_mask_provider import _REQUIRED_INPUTS
+
+    info = {
+        kind: {
+            "input": {
+                "required": {key: ["STRING", {}] for key in fields},
+                "optional": {},
+            }
+        }
+        for kind, fields in _REQUIRED_INPUTS.items()
+    }
+    requests: list[tuple[str, float]] = []
+
+    def fake_get(url: str, timeout: float):
+        requests.append((url, timeout))
+        return info, {
+            "devices": [
+                {
+                    "name": "RTX 5060 Ti",
+                    "vram_total": 16 * 1024**3,
+                    "vram_free": 12 * 1024**3,
+                }
+            ]
+        }
+
+    monkeypatch.setattr(
+        "vscs.application.caps.c4b_isolated_mask_provider._inventory", fake_get
+    )
+    report = inspect_c4b_local_node_inventory()
+    assert requests == [("http://127.0.0.1:8188", 3.0)]
+    assert not report.missing_mask_node_classes
+    assert not report.missing_input_names
+    assert len(report.present_mask_node_classes) == len(_REQUIRED_INPUTS)
+    assert "12.0 GiB free" in report.describe()
+    assert not report.execution_authorized
+    assert not report.gpu_generation_verified
+    del info["ImageScale"]["input"]["required"]["width"]
+    del info["GetImageSize"]
+    info["LoadImageMask"]["input"]["required"] = {}
+    invalid = inspect_c4b_local_node_inventory()
+    assert "GetImageSize" in invalid.missing_mask_node_classes
+    assert any("ImageScale" in detail for detail in invalid.missing_input_names)
+    assert any("LoadImageMask" in detail for detail in invalid.missing_input_names)
+    assert invalid.blockers
+
+
+def test_malformed_gpu_info_remains_an_unverified_blocker(monkeypatch):
+    from vscs.application.caps.c4b_isolated_mask_provider import _REQUIRED_INPUTS
+
+    schemas = {
+        kind: {
+            "input": {
+                "required": {key: [] for key in fields},
+                "optional": {},
+            }
+        }
+        for kind, fields in _REQUIRED_INPUTS.items()
+    }
+    monkeypatch.setattr(
+        "vscs.application.caps.c4b_isolated_mask_provider._inventory",
+        lambda *_args: (schemas, {"devices": None}),
+    )
+    result = inspect_c4b_local_node_inventory()
+    assert not result.gpu_devices
+    assert any("GPU" in item for item in result.blockers)
+    assert not result.execution_authorized
