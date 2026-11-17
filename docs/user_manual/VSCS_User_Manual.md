@@ -2462,14 +2462,13 @@ under a later C4B.2B gate.
 
 **C4B.2A was formally accepted 2026-11-17 in offline-only scope.**
 C4B.2B now has an implementation-candidate one-use runner, but
-**Windows regression, supervised hardware preflight and a fresh
-execution-specific operator confirmation remain pending**.
+**Windows regression and operator protected-state review passed; disposable source/mask setup, complete preflight and fresh execution-specific operator confirmation remain pending**.
 No GPU inference or C4 production registration is authorized
 by the implementation commit.
 
 ## F5.4.2 C4B.2B — supervised disposable Qwen GPU qualification (implementation candidate)
 
-**Status: WINDOWS ENGINEERING ACCEPTED 2026-11-17; OPERATOR/GPU ACCEPTANCE PENDING.**
+**Status: WINDOWS ENGINEERING + OPERATOR NON-MUTATION ACCEPTED 2026-11-17; REAL GPU QUALIFICATION PENDING.**
 Ruff lint/format passed (1,710 files), Mypy passed (715 source files),
 focused regression **66 passed, 1 skipped**, full regression
 **2,914 passed, 2 skipped**. The two skips require unavailable Windows
@@ -2521,6 +2520,57 @@ git status --short
 7. Close all dialogs with **Close/Cancel** and exit VSCS.
    Provide Windows command output and operator non-mutation
    confirmation before any next gate.
+
+### C4B.2B accepted host/model discovery — 2026-11-17
+
+Neill explicitly confirmed the protected-state non-mutation
+check after successful Windows regression (**2,914 passed,
+2 skipped**). The separate read-only host check found embedded
+Python and ComfyUI `main.py`, an unoccupied dedicated port
+8298 at observation time, and RTX 5060 Ti with **16,311 MiB
+total / 13,877 MiB free VRAM**. This does not authorize inference.
+
+The reviewed v2.1 workflow chooses precisely these three
+installed model files under
+`D:\\ComfyUI\\ComfyUI_windows_portable\\ComfyUI\\models`:
+
+1. `diffusion_models\\qwen\\qwen_image_edit_2511_fp8mixed.safetensors`
+   (19.12 GiB) — UNET, node `170:161`.
+2. `text_encoders\\qwen\\qwen_2.5_vl_7b_fp8_scaled.safetensors`
+   (8.74 GiB) — CLIP, node `170:162`.
+3. `vae\\qwen\\qwen_image_vae.safetensors` (0.24 GiB) —
+   VAE, node `170:146`.
+
+An alternate same-named encoder is located under
+`text_encoders\\hunyuan`: do not use it. No
+`extra_model_paths*.yaml` was found in the ComfyUI root.
+The fixed C4B.2B baseline does not use the 2512 image
+model, Lightning LoRAs or MiniMax H3 text encoder.
+Model cryptographic hashes, installed node dropdown options,
+GPU memory offload, true peak VRAM, and actual masked generation
+are **not yet accepted**.
+
+**Next safe UI checkpoint — create only an empty disposable project:**
+
+1. Keep Candidate 4, its C2.1 session and both historical masks
+   untouched. Close the protected Candidate review and VSCS.
+2. Start VSCS with `vscs` from the repo's activated `(.venv)`.
+3. Select **File → New Project**. Enter a distinct name such as
+   `C4B2B_DISPOSABLE_GPU_01` and a **new, unused directory**
+   such as `D:\\VSCS\\C4B2B_DISPOSABLE_GPU_01` (never beneath
+   a protected project, model path, or external GPU bundle).
+4. Confirm **Dashboard → Active Project** displays precisely
+   the new project name and its directory. Save a screenshot
+   showing this checkpoint.
+5. **Stop there.** Do not copy Candidate 4, import production
+   assets, create a CAP, run Story Analysis, use any paid AI
+   review, generate an image or edit a project database.
+   Current source-bound C1/C2 evidence and the manually
+   reviewed disposable marker still need a separate,
+   explicit preparation workflow. The existing
+   `prepare_c4b2_disposable_bundle` is an API, not
+   an operator-facing UI button. No `--inspect` can be
+   meaningfully run until its new external bundle exists.
 
 ### Separate live hardware gate — not yet permitted
 
