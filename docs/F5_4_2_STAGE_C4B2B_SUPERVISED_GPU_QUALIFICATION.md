@@ -146,6 +146,27 @@ tests may skip because of local privilege limitations.
 **C4B.2B adds no new production UI control.** These UI steps only check
 that running synthetic unit tests has not modified the protected state.
 
+## 3A. First Windows static validation and corrective follow-up
+
+**Operator report, 2026-11-17:** Ruff lint found two import/optional
+`psutil` attribute issues; Ruff format found two line-wrapping
+differences in the C4B.2B source; strict Mypy found three errors
+because a filtered `vram_free` list still had type `Any | None`.
+No focused/full pytest result was submitted for this first run.
+
+**Correction committed:** Apply Ruff's precise import order and
+line wraps; call the optional module's attribute directly with an
+explicit `Any` annotation for dynamic import; and construct a
+typed `list[int | float]` only after `isinstance` narrowing and
+explicit boolean exclusion. The runtime memory gate continues to
+require coherent nonnegative NVIDIA free-VRAM values and fails
+closed if none are present. No GPU submission or production
+Candidate/CAP behavior was changed.
+
+**Status:** Re-pull the branch, re-run the entire Windows static,
+focused, full pytest and integrity sequence in Section 3. The
+operator non-mutation gate still applies; no live run is authorized.
+
 ## 4. Future supervised live readiness — DO NOT EXECUTE YET
 
 After all engineering checks are accepted, the operator must produce a
