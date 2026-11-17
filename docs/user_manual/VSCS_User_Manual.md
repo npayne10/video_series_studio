@@ -1930,11 +1930,14 @@ mask, and inspects the separate experimental F5.4.1B mask graph
   non-executable report; a HISTORICAL mask remains a blocker.
   Never stage source/mask files or use ComfyUI.
 - **Acknowledge C4A Preparation Review (Not Execution Consent)**:
-  explicitly warns that it cannot authorize generation. Requires
-  entering exactly `REVIEW ONLY`, produces only an in-memory
-  review receipt after revalidating the contract. It creates
+  uses the **Review phrase** text field in the **Stage C4A matrix**
+  immediately beside the button, rather than a separate modal input.
+  Enter exactly `REVIEW ONLY`. The adjacent **C4A review status**
+  label shows whether the acknowledgement was blocked or accepted;
+  the assessment panel displays the in-memory receipt on success.
+  The button revalidates the underlying preparation; it creates
   **no provider job, saved consent, attempt reservation or
-  corrected Candidate**. The phrase is **not** an execution
+  corrected Candidate**. The phrase is **not** execution consent
   or paid API approval.
 
 **Pixel audit design:** `audit_external_masked_result` is an
@@ -1998,12 +2001,17 @@ Candidate 4's protected final Attempt 2/2.
    (No Generation)**. Verify that provider execution,
    mask compatibility and Candidate registration
    remain unauthorized, with a historical-mask blocker.
-8. Click **Acknowledge C4A Preparation Review (Not
-   Execution Consent)**. Test an incorrect phrase
-   to confirm it blocks. Repeat and type exactly
-   `REVIEW ONLY`. Verify only an in-memory
-   review acknowledgement appears; there is no
-   ComfyUI, GPU, paid provider, output or attempt.
+8. In **Stage C4A**, enter `GENERATE` into the
+   **Review phrase** field next to **Acknowledge C4A
+   Preparation Review (Not Execution Consent)**.
+   Click the button and confirm the inline status
+   says **BLOCKED**, with a warning, and no receipt.
+   Replace the text with exactly `REVIEW ONLY`,
+   click the button again, and confirm the inline
+   status reads **REVIEW ACKNOWLEDGED — NO GENERATION**
+   and the assessment panel shows an in-memory
+   receipt. There must be no ComfyUI, GPU, paid
+   provider, output or attempt.
 9. Use **isolated Python tests**, not Candidate 4,
    to verify an external synthetic PNG comparison:
    one changed editable pixel leaves the protected
@@ -2101,3 +2109,23 @@ state validation and source/CAP boundary checks remain the same.
 See [F5.4.2 matrix UI engineering acceptance](../F5_4_2_REVIEW_MATRIX_UI_REFINEMENT.md).
 C4A remains preparation-only and actual masked
 correction remains unauthorized.
+
+
+#### F5.4.2 C4A — Inline review acknowledgement usability correction (2026-11-17)
+
+During C4A operator acceptance on the stage-matrix layout,
+the operator clicked **Acknowledge C4A Preparation Review**
+but observed no visible result. The previously implemented
+static `QInputDialog.getText` interaction was replaced
+with an always-visible **Review phrase** `QLineEdit`,
+directly next to the C4A acknowledgement button,
+and a named `stageC4AReviewStatus` status label.
+
+The acknowledgement handler now shows an explicit failure
+when preparation is absent, stale or the phrase is not
+exactly `REVIEW ONLY`, and an explicit in-memory success
+receipt for a correctly acknowledged review. This is
+UI-only feedback: the underlying C4A model contract
+still refuses execution, attempt reservation and Candidate
+registration. Re-run the C4A acceptance checkpoint after
+updating the branch; no image generation is required.
