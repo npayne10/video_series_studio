@@ -471,17 +471,9 @@ def inspect_c4b_local_node_inventory(
         if isinstance(item, dict) and isinstance(item.get("name"), str):
             total = item.get("vram_total")
             free = item.get("vram_free")
-            if (
-                isinstance(total, (int, float))
-                and not isinstance(total, bool)
-                and total > 0
-            ):
+            if isinstance(total, (int, float)) and not isinstance(total, bool) and total > 0:
                 memory = f"{total / (1024**3):.1f} GiB total"
-                if (
-                    isinstance(free, (int, float))
-                    and not isinstance(free, bool)
-                    and free >= 0
-                ):
+                if isinstance(free, (int, float)) and not isinstance(free, bool) and free >= 0:
                     memory += f", {free / (1024**3):.1f} GiB free"
                 devices.append(f"{item['name']}: {memory}")
     problems: list[str] = []
