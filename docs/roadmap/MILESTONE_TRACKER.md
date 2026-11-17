@@ -44,24 +44,27 @@
 | 25 | Release Candidate | ⏳ Planned | — | Not run | Pending |
 | 1.0.0 | VSCS Version 1.0 | ⏳ Planned | — | Not run | Pending |
 
-## Current active corrective subphase — C4B.2A (disposable preflight)
+## Current active corrective subphase — C4B.2B (supervised GPU controller)
 
 **Date:** 2026-11-17  
-**Branch:** `phase-f5.4.2-c4b2-isolated-disposable-runtime-preflight`  
-**State:** 🧪 Code committed, Windows regression and operator acceptance pending  
-**Engineering contract:** [C4B.2A isolation/preflight](../F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md).
+**Branch:** `phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification`  
+**State:** 🧪 Implementation candidate — Windows tests and live GPU operator qualification pending  
+**Engineering contract:** [C4B.2B supervised one-shot qualification](../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md).
 
 | Gate | Work | Status |
 |---|---|---|
-| C4B.1 | Approved offline graph and local GET-only schema inspection | ✅ Accepted 2026-11-17 |
-| C4B.2A | External disposable source/C1/C2 staging, manifest SHA, launch preview, static inventory and synthetic output pixel audit | 🧪 Implementation candidate |
-| C4B.2B | Execution-specific one-use approval, dedicated process/PID/port control, one real disposable GPU edit, peak VRAM, runtime mask polarity, pixel preservation and quality assessment | ⛔ Not implemented or authorized |
-| C4 production | Governed correction attempt, corrected Candidate QA and registration | ⛔ Not authorized |
-| H3-MF1 | Video multi-frame provider research | ⏳ Deferred until image correction closure |
+| C4B.1 | Offline graph and localhost GET-only schema inspection | ✅ Accepted 2026-11-17 |
+| C4B.2A | External sealed disposable source/C1/C2 staging, preview, offline GPU inventory and synthetic pixel audit | ✅ Formally accepted 2026-11-17 (54 focused, 2,902 full tests; operator non-mutation) |
+| C4B.2B | Exact one-use consent, PID/port isolation, local model hashes, single disposable Qwen GPU prompt and protected-pixel audit | 🧪 Code candidate; **NO GPU TEST OR AUTHORIZATION** |
+| C4 production | Governed correction attempt, Candidate quality assurance and registration | ⛔ Not authorized |
+| H3-MF1 | Video multi-frame provider evaluation | ⏳ Deferred until image-correction closure |
 
-The C4B.2A code has **no ComfyUI subprocess launcher, GPU
-inference or POST transport**. No stage is accepted
-automatically from a successful mocked pixel audit.
+C4B.2B has a controlled execution route but is **not** yet
+accepted. The new test suite uses fake processes and HTTP
+responses. No real model load, ComfyUI launch, GPU prompt, paid
+evaluation or attempt has been performed by the development step.
+Actual hardware testing requires successful Windows regression,
+reviewed disposable source/current mask and fresh operator consent.
 
 ## C4B.1 current subphase — operator accepted (offline only, 2026-11-17)
 
