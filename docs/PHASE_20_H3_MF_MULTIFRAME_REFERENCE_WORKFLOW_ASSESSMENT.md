@@ -1,7 +1,7 @@
 # H3-MF — MiniMax H3 Multi-Frame Reference Workflow: Assessment and Remediation Backlog
 
 **Date:** 2026-11-17  
-**Status:** ENGINEERING ASSESSMENT RECORDED; H3-MF1 OFFLINE QUALIFICATION BACKLOGGED, NOT STARTED  
+**Status:** ENGINEERING ASSESSMENT RECORDED; H3-MF1 DEFERRED UNTIL C4B AND THE GOVERNED IMAGE-CORRECTION LOOP ARE COMPLETED. NOT STARTED.  
 **Scope:** Supplementary provider capability for Phase 20 (Provider Execution & Generated Media), not a replacement for existing H3 authority or a C4 image-correction provider.
 
 ## 1. Evidence and provenance
@@ -105,13 +105,15 @@ provider and does not unlock Candidate 4's protected Attempt 2/2.
 
 | Task ID | Work item | Deliverable | Exit gate |
 |---|---|---|---|
-| **H3-MF1** | **Offline multi-frame qualification (NEXT)** | Immutable fixture; schema/node and capacity checks; editor→API graph compiler design/prototype; ref/guide separation; frame-index/duration/sequence validation; negative/fail-closed tests; baseline comparison to current H3 provider | Windows Ruff, Mypy, focused/full pytest; offline operator inspection; **no ComfyUI POST/GPU/cost** |
+| **H3-MF1** | **Offline multi-frame qualification (DEFERRED)** | Immutable fixture; schema/node and capacity checks; editor→API graph compiler design/prototype; ref/guide separation; frame-index/duration/sequence validation; negative/fail-closed tests; baseline comparison to current H3 provider | Windows Ruff, Mypy, focused/full pytest; offline operator inspection; **no ComfyUI POST/GPU/cost** |
 | **H3-MF2** | Explicitly consented disposable GPU A/B | Controlled fixed-seed ref-only vs multi-guide tests at 608×352, then 864×480 if safe; record system/VRAM, runtime and output hashes | Separate operator authorization; zero production-state mutation; no paid provider |
 | **H3-MF3** | Continuity, guide-fidelity and audio QC | Exact guide-frame comparison and adjacent-window stability, identity/scene continuity, frame count and audio QC metrics | Human-reviewed evidence and repeatable benchmark thresholds before use |
 | **H3-MF4** | Governed VSCS H3 multi-frame production mode | Reuse ProductionTask, boundary authority, provider plan, once-only claim, GeneratedMedia registration and review | End-to-end disposable Shot and failure/recovery acceptance; distinct production approval |
 
-**Phase order:** H3-MF1 may proceed as an isolated provider
-qualification after user authorization. MF2 must NOT start
+**Priority decision 2026-11-17:** Finish C4B isolated masked-Qwen qualification, then the remaining governed still-image correction steps and end-to-end acceptance **before** beginning H3-MF1. This preserves the existing backlog without diverting current development.
+
+**Within the H3-MF workstream:** H3-MF1 may proceed as an isolated provider
+qualification only after the image-correction priority is completed and the owner authorizes it. MF2 must NOT start
 automatically after MF1, because it loads models/runs GPU jobs.
 MF3 depends on MF2 outputs. MF4 depends on MF1–MF3 acceptance.
 No production H3 provider default, CAP, Canon/MASTER, approved
