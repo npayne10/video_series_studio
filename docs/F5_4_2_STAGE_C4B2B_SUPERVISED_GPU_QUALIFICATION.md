@@ -291,6 +291,38 @@ Do not select the historical Diagnostic Console masks or run a
 production candidate through the test controller. No one-shot
 consent has been requested or granted.
 
+## 3F. Full real-world VSCS route chosen — 2026-11-17
+
+Neill explicitly chose **Approach B**, a genuine new VSCS
+Story/CAP/Candidate route, for stronger production-workflow
+qualification. This supersedes the earlier proposed synthetic
+calibration-fixture path; no synthetic source will be passed off as
+production-style evidence.
+
+The new `C4B2B_DISPOSABLE_GPU_01` active project and path were
+confirmed by operator screenshot. Its normal VSCS folders and
+`project.vscs` exist; its exact UTF-8
+`.c4b2_disposable_project` marker passed the operator's
+read-back comparison (`True`, 24 bytes, no link-guard error).
+This accepts the disposable *root/marker* gate only, not
+the required source, C1/C2 mask or external bundle.
+
+A standalone original **draft** Story text,
+[Blue Signal — Diagnostic Console Inspection](fixtures/C4B2B_Real_World_Story_Source.txt),
+and [non-paid first-stage operator instructions](
+F5_4_2_STAGE_C4B2B_REAL_WORLD_STORY_SETUP.md) have been
+committed to this branch. The operator must review and import
+the actual Story source, save a Draft and stop *before* the
+provider-backed `Analyse Story`. Story/Shot/CAP governance,
+local Candidate, saved AI review and current C1/C2 evidence
+remain separate later gates. An AI analysis or semantic
+evaluation may incur cost and requires fresh approval.
+
+No GPU or paid-provider authority was granted by selecting
+Approach B. A proper current-evidence-to-C4B.2A
+operator staging bridge still requires design/validation;
+do not manually manufacture current proposal/mask JSON.
+
 ## 4. Future supervised live readiness — DO NOT EXECUTE YET
 
 After all engineering checks are accepted, the operator must produce a
