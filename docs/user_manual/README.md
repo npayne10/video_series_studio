@@ -34,10 +34,25 @@ automated acceptance tests.
 [Complete C4B.2A engineering acceptance steps](../F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md)
 and [C4B.2A operator guidance](VSCS_User_Manual.md#f542-c4b2a--disposable-mask-runtime-preparation-no-generation).
 
-**Status: IMPLEMENTED CANDIDATE; Windows/operator checks pending.**
-C4B.2B real Qwen GPU inference, model load, attempt claim,
-corrected Candidate and production approvals remain
-UNIMPLEMENTED and UNAUTHORIZED.
+**Status: C4B.2A FORMALLY ACCEPTED 2026-11-17, offline only.**
+Windows Ruff/format/Mypy passed; 54 focused tests passed (1 skipped)
+and 2,902 full tests passed (2 symlink skips). The operator explicitly
+attested Candidate 4/C2.1/masks/authority/attempt 2/2 unchanged,
+with no new ComfyUI job or paid review.
+
+## Stage C4B.2B — supervised disposable GPU qualification (code candidate)
+
+A separate, one-use local ComfyUI controller has been implemented on
+`phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification`.
+It requires a new sealed disposable project/bundle, dedicated
+port 8298, explicit model file SHA checks, process PID/port ownership,
+external-only output, durable pre-launch reservation and exact
+operator consent. **Windows regression, operator review and real GPU
+acceptance have NOT been completed. No live GPU run is authorized by
+this code commit; production Candidate/CAP correction remains blocked.**
+
+[Complete C4B.2B engineering acceptance procedure](../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md)
+and [safe Windows/UI steps](VSCS_User_Manual.md#f542-c4b2b--supervised-disposable-qwen-gpu-qualification-implementation-candidate).
 
 ## Stage C4B.1 — isolated Qwen mask-provider qualification (operator accepted 2026-11-17)
 
