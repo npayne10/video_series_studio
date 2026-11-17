@@ -1,6 +1,6 @@
 # VSCS F5.4.2 C4B.2B — Supervised Disposable Qwen GPU Qualification
 
-**Status:** WINDOWS ENGINEERING VALIDATION PASSED — protected-state operator check and live GPU acceptance PENDING  
+**Status:** WINDOWS ENGINEERING + OPERATOR NON-MUTATION ACCEPTED — live GPU qualification PENDING  
 **Parent:** [C4B.2A formally accepted, 2026-11-17](F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md)  
 **Branch:** `phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification`  
 **Tracker:** [Issue #53](https://github.com/npayne10/video_series_studio/issues/53)
@@ -188,15 +188,45 @@ These tests use fake processes/network and do **not** establish
 real ComfyUI launch, GPU model loading, mask-polarity correctness,
 runtime fidelity, true peak VRAM or operator non-mutation acceptance.
 
-**Remaining gates:** (1) Safe UI inspection and explicit operator
-confirmation of unchanged Candidate 4/masks/C2.1/CAP/Canon/MASTER
-and protected governed Attempt 2/2; (2) a genuinely separate
-disposable source + CURRENT C1/C2 mask, verified model paths and
-read-only process/permission readiness; (3) a fresh one-use
-operator execution consent; (4) one actual supervised GPU test
-followed by human semantic and non-mutation acceptance.
+**Remaining gates:** (1) A genuinely separate disposable source + CURRENT
+C1/C2 mask, verified model paths and read-only process/permission
+readiness; (2) a fresh one-use operator execution consent; (3) one
+actual supervised GPU test followed by human semantic and
+non-mutation acceptance. The protected-state operator gate is now
+**accepted**, separately from real GPU qualification.
 
 **Do not use `--execute` yet.**
+
+## 3C. Formal Windows/operator non-mutation acceptance — 2026-11-17
+
+**Operator decision: ACCEPT the C4B.2B Windows and protected-state
+non-mutation gates only.** Neill explicitly confirmed, after completing
+the exact guided operator checks, that all protected-state checks passed.
+
+The confirmation covers the unchanged Diagnostic Console
+`STORY-PRO-B00D168E43` Candidate 4, saved AI evaluation and
+C2.1 human-review session, both historical C2 mask versions,
+the governed correction Attempt **2/2**, and the CAP/Canon/MASTER
+and reference gallery. There was no new Candidate, ComfyUI generation,
+paid AI review or corrected production output.
+
+The engineering evidence is recorded in Section 3B (Ruff clean,
+1,710 files formatted, Mypy 715 files, focused **66 passed/1 skipped**,
+full **2,914 passed/2 skipped**, clean diff). The only untracked
+files remain the unrelated pre-existing audit and Qwen preflight JSON.
+
+**Evidence boundary:** This is the operator's explicit attestation,
+not an independently measured forensic disk/network audit. The Windows
+tests exercised fake processes/network. **It does not qualify the live
+Qwen GPU, issue a one-use consent, authorize `--execute`, permit use
+of the two historical masks, or approve any production correction.**
+C4B.2B remains **OPEN** for the genuinely disposable CURRENT C1/C2
+bundle, actual model/process inspection, fresh one-shot consent,
+one supervised GPU prompt, pixel/semantic validation and separate
+final operator acceptance.
+
+**GitHub tracking:** [Issue #53](https://github.com/npayne10/video_series_studio/issues/53)
+records this gate as passed; the live qualification checkboxes stay open.
 
 ## 4. Future supervised live readiness — DO NOT EXECUTE YET
 
