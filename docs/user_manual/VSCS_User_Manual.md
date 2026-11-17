@@ -2214,7 +2214,7 @@ nondeterministic. Actual 15–20-second reliability,
 16 GiB GPU memory demand and guide-fidelity output
 are not yet qualified.
 
-Next planned **H3-MF1** work is offline import/schema,
+**Deferred H3-MF1** work, to resume only after C4B and the complete image-correction acceptance, is offline import/schema,
 semantic-reference vs timed-guide validation, source
 and CAP/Shot-boundary provenance, safe frame-grid
 calculations, deterministic API graph compilation,
