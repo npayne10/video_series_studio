@@ -316,3 +316,25 @@ def test_malformed_gpu_info_remains_an_unverified_blocker(monkeypatch):
     assert not result.gpu_devices
     assert any("GPU" in item for item in result.blockers)
     assert not result.execution_authorized
+
+
+def test_get_only_inventory_handles_nullable_gpu_memory(monkeypatch):
+    monkeypatch.setattr(
+        "vscs.application.caps.c4b_isolated_mask_provider._inventory",
+        lambda *_args: (
+            {},
+            {
+                "devices": [
+                    {"name": "GPU missing", "vram_total": None, "vram_free": None},
+                    {"name": "GPU valid", "vram_total": 16 * 1024**3, "vram_free": None},
+                    {"name": "GPU invalid", "vram_total": True, "vram_free": 10},
+                ]
+            },
+        ),
+    )
+    inventory = inspect_c4b_local_node_inventory()
+    assert inventory.gpu_devices == ("GPU valid: 16.0 GiB total",)
+    assert inventory.missing_mask_node_classes
+    assert inventory.blockers
+    assert not inventory.execution_authorized
+    assert not inventory.gpu_generation_verified
