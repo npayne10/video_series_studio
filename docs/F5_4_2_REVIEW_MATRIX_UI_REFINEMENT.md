@@ -1,6 +1,6 @@
 # F5.4.2 Review Matrix — UI Layout Refinement
 
-**Status: IMPLEMENTATION CANDIDATE — Windows regression and UI acceptance pending.**
+**Status: OPERATOR ACCEPTED — 2026-11-17, UI/PRESENTATION ONLY.**
 
 The F5.4.2 advisory dialog previously stacked independent full-width
 buttons below the output panel, separating selections from the operations
@@ -32,6 +32,54 @@ acknowledgement is not generation consent. No provider, GPU,
 candidate/Canon promotion, output registration, attempt reservation,
 or paid AI operation is added. Candidate 4 protected Attempt 2/2
 remains untouched.
+
+## Formal layout acceptance — 2026-11-17
+
+**Decision: ACCEPTED for the F5.4.2 matrix layout, without
+changing correction authority.**
+
+The operator supplied full-dialog screenshots showing the
+Finding/Classification, Stage B, C1, C2, C2.1 Sessions,
+C2.1 Mask Versions, C3 and C4A grouped layouts. The CAP
+field/defect/observation inputs, status/ROI selection, saved
+session/mask dropdowns and their actions were aligned in
+their corresponding groups. The scrollable results panel
+and all lower-stage buttons were visible and accessible.
+
+The operator then resumed the previously saved C2.1 human
+review in the redesigned dialog. The UI restored **4 of 4
+reviewed fields**, component failure, original observation
+and exact normalized ROI while C1/C2 acknowledgements
+remained unchecked. C1 handoff and C4A provider-contract
+inspection succeeded with the historical C2 mask correctly
+shown as not bound to the current C1 proposal.
+
+An original C4A acknowledgement popup was not visible to
+the operator; a subsequent corrective UI commit placed
+the typed `REVIEW ONLY` field and BLOCKED/ACKNOWLEDGED
+feedback inside the C4A matrix. Operator screenshots showed
+both invalid-phrase rejection and successful
+`REVIEW ACKNOWLEDGED — NO GENERATION` feedback.
+
+**Windows results:** Ruff lint clean; Ruff formatting
+`1,700 files already formatted`; Mypy clean in `712`
+source files; focused matrix/C4A regression `9 passed`;
+full regression `2,871 passed, 1 skipped` (Windows
+directory symlink limitation); `git diff --check`
+clean. Only two unrelated pre-existing untracked files
+remained.
+
+The operator expressly confirmed no Candidate 4 image,
+metadata, saved AI review, C2 PNG, C2.1 session, CAP,
+Canon/MASTER, gallery or attempt mutation and no ComfyUI
+job, corrected output, paid AI evaluation or attempt
+reservation. These are operator-attested findings.
+
+The layout acceptance covers the tested normal-size
+dialog and workflow controls. It is not independent
+evidence of every possible display scaling or window
+size. C4A remains preparation-only, and live masked
+GPU correction remains forbidden.
 
 ## Windows validation
 
