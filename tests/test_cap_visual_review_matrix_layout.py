@@ -2,7 +2,6 @@
 
 from PySide6.QtWidgets import (
     QComboBox,
-    QGridLayout,
     QGroupBox,
     QPushButton,
     QVBoxLayout,
