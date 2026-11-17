@@ -228,6 +228,35 @@ final operator acceptance.
 **GitHub tracking:** [Issue #53](https://github.com/npayne10/video_series_studio/issues/53)
 records this gate as passed; the live qualification checkboxes stay open.
 
+## 3D. Operator hardware readiness (read-only) — 2026-11-17
+
+Neill reported the following direct Windows PowerShell checks after
+C4B.2B Windows/operator non-mutation acceptance:
+
+| Gate | Observed result |
+|---|---|
+| `D:\\ComfyUI\\ComfyUI_windows_portable\\python_embeded\\python.exe` | `Test-Path=True` |
+| `D:\\ComfyUI\\ComfyUI_windows_portable\\ComfyUI\\main.py` | `Test-Path=True` |
+| `Get-NetTCPConnection -State Listen -LocalPort 8298` | No listener output at observation time |
+| NVIDIA device | RTX 5060 Ti |
+| `nvidia-smi` total VRAM | 16,311 MiB |
+| `nvidia-smi` free VRAM | 13,877 MiB |
+
+**Decision:** ACCEPT the *read-only path/port/GPU inventory gate*.
+The observed free VRAM is above the controller's initial 8 GiB gate,
+but is **not** evidence that the Qwen UNET/CLIP/VAE all fit or that
+masked generation will succeed. The isolated test instance has not
+been started and the port must be rechecked at actual execution.
+
+**Still required:** Verify exact model filenames and paths read-only;
+create a distinct disposable VSCS project and reviewed CURRENT C1/C2
+source-bound binary mask; prepare and verify a fresh external bundle;
+review custom-node trust and model file permissions. There is
+currently no operator-facing C4B.2A staging CLI/UI (the API is
+`prepare_c4b2_disposable_bundle`); do not improvise a production
+asset substitution or run `--inspect` against a nonexistent bundle.
+No `--execute`, GPU job, consent or Candidate registration occurred.
+
 ## 4. Future supervised live readiness — DO NOT EXECUTE YET
 
 After all engineering checks are accepted, the operator must produce a
