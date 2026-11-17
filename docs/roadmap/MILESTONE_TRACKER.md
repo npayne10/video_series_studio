@@ -44,6 +44,25 @@
 | 25 | Release Candidate | ⏳ Planned | — | Not run | Pending |
 | 1.0.0 | VSCS Version 1.0 | ⏳ Planned | — | Not run | Pending |
 
+## Current active corrective subphase — C4B.2A (disposable preflight)
+
+**Date:** 2026-11-17  
+**Branch:** `phase-f5.4.2-c4b2-isolated-disposable-runtime-preflight`  
+**State:** 🧪 Code committed, Windows regression and operator acceptance pending  
+**Engineering contract:** [C4B.2A isolation/preflight](../F5_4_2_STAGE_C4B2_DISPOSABLE_RUNTIME_PREFLIGHT.md).
+
+| Gate | Work | Status |
+|---|---|---|
+| C4B.1 | Approved offline graph and local GET-only schema inspection | ✅ Accepted 2026-11-17 |
+| C4B.2A | External disposable source/C1/C2 staging, manifest SHA, launch preview, static inventory and synthetic output pixel audit | 🧪 Implementation candidate |
+| C4B.2B | Execution-specific one-use approval, dedicated process/PID/port control, one real disposable GPU edit, peak VRAM, runtime mask polarity, pixel preservation and quality assessment | ⛔ Not implemented or authorized |
+| C4 production | Governed correction attempt, corrected Candidate QA and registration | ⛔ Not authorized |
+| H3-MF1 | Video multi-frame provider research | ⏳ Deferred until image correction closure |
+
+The C4B.2A code has **no ComfyUI subprocess launcher, GPU
+inference or POST transport**. No stage is accepted
+automatically from a successful mocked pixel audit.
+
 ## C4B.1 current subphase — operator accepted (offline only, 2026-11-17)
 
 **Branch:** `phase-f5.4.2-c4b-isolated-mask-provider-qualification`  
