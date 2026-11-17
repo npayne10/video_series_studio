@@ -1,6 +1,6 @@
 # VSCS F5.4.2 C4B.2A — Disposable GPU Runtime Preparation (No Execution)
 
-**Status:** WINDOWS ENGINEERING VALIDATION PASSED — operator non-mutation acceptance PENDING  
+**Status:** FORMALLY ACCEPTED 2026-11-17 — C4B.2A offline disposable preflight ONLY; C4B.2B GPU execution NOT AUTHORIZED  
 **Date:** 2026-11-17  
 **Parent:** [C4B.1 acceptance](F5_4_2_STAGE_C4B_ISOLATED_MASK_PROVIDER_QUALIFICATION.md) (offline graph and GET-only inventory operator accepted 2026-11-17)  
 **GitHub tracking:** [Issue #53](https://github.com/npayne10/video_series_studio/issues/53)
@@ -326,6 +326,61 @@ Do **not** manually run the previewed ComfyUI command or submit
 test artifacts until a separately accepted one-shot execution
 controller and explicit GPU authorization exist.
 
+## 5A. Formal C4B.2A operator acceptance — 2026-11-17
+
+**Engineering evidence:** Final Windows run on the corrected
+C4B.2A branch: Ruff lint passed; Ruff format reported
+**1,707 files already formatted**; Mypy passed in **714 source
+files**; focused pytest **54 passed, 1 skipped**; full pytest
+**2,902 passed, 2 skipped**; `git diff --check` clean.
+Both skips concern unavailable Windows symlink privileges.
+The two unrelated pre-existing untracked user files were untouched.
+
+**Screenshots supplied in the operator conversation:**
+
+1. **Canonical Profile — Production Contract** shows
+   `STORY-PRO-B00D168E43` (Diagnostic Console) and
+   Candidate 4 still present in the Canonical Reference Gallery.
+2. **Visual Candidate Quality Review — Advisory** shows the
+   stored Candidate-reference-4 review and its non-authoritative
+   `REGENERATE_RECOMMENDED` decision. This was opened via
+   **Open Saved Candidate Review**, not a newly paid evaluation.
+3. **F5.4.2 — General Visual Correction Review** shows
+   `components` / `protruding instead of recessed`;
+   **4 of 4 fields reviewed**; retained normalized ROI
+   `0.64798851,0.45478723,0.06178161,0.07446809`;
+   saved C2.1 session
+   `c21-4-d1aafcc27b2d4e098d835702542261c8.json`;
+   two mask entries labelled **HISTORICAL** with SHA prefixes
+   `1aa336f6` and `19564b7f`; and explicit
+   **no version selected for execution**. C4B remains
+   labelled offline-only and requires a CURRENT reviewed mask.
+
+**Explicit operator attestation received 2026-11-17:**
+
+> Candidate 4, saved AI evaluation, C2.1 session, both historical
+> C2 masks, governed attempt counter 2/2, and CAP/Canon/MASTER/gallery
+> remained unchanged. No new Candidate, ComfyUI generation, or paid
+> AI evaluation occurred.
+
+The operator's non-mutation statement is an **attestation**, not
+an independently performed disk audit or HTTP/GPU execution trace.
+The automated tests use only synthetic/current evidence and cannot
+establish actual Qwen model or mask performance.
+
+**Formal decision: ACCEPT F5.4.2 C4B.2A** within the implemented
+**non-executing, disposable-only offline staging, launch preview,
+GET-snapshot interpretation, and external-result pixel-audit
+scope**. All Windows engineering and operator acceptance gates are
+satisfied. No generation consent, attempt reservation, protected
+Candidate modification, output registration, production authority,
+or provider runtime qualification is granted.
+
+**Next phase:** C4B.2B remains **NOT IMPLEMENTED / NOT AUTHORIZED**.
+It requires a separate design, implementation, explicit operator
+consent, one-shot disposable GPU test, and acceptance before any
+governed C4 correction or H3-MF1 advancement.
+
 ## 6. Forward C4B.2B gate — separately approved GPU inference
 
 Still required, **not yet implemented or authorized**:
@@ -349,6 +404,6 @@ Still required, **not yet implemented or authorized**:
   integration, Candidate correction attempt, paid review
   or H3-MF1 work.
 
-**C4B.2A is not completed until Windows and operator acceptance
-are recorded. C4B.2B GPU runtime is still unimplemented;
-this file must not be treated as a GPU success report.**
+**C4B.2A was formally accepted on 2026-11-17 in its offline-only
+scope. C4B.2B GPU runtime remains unimplemented and unauthorized;
+this file is not a GPU success report.**
