@@ -19,7 +19,10 @@ from vscs.application.caps.c4b2_disposable_runtime import (
     verify_c4b2_disposable_bundle,
 )
 from vscs.application.caps.general_visual_correction_triage import candidate_visual_triage
-from vscs.application.caps.geometry_correction_policy import GeometryDefect
+from vscs.application.caps.geometry_correction_policy import (
+    GeometryCorrectionError,
+    GeometryDefect,
+)
 from vscs.application.caps.governed_visual_correction_handoff import (
     prepare_governed_correction_proposal,
 )
@@ -184,7 +187,7 @@ def test_c4b2_rejects_protected_identity_even_with_marker(tmp_path):
 def test_c4b2_rejects_stale_source_and_mask(tmp_path):
     snap, proposal, mask, protected = _fixture(tmp_path)
     snap.image_path.write_bytes(b"tampered")
-    with pytest.raises(Exception):
+    with pytest.raises(GeometryCorrectionError, match="source changed"):
         prepare_c4b2_disposable_bundle(
             snap, proposal, selected_mask_path=mask,
             protected_project_root=protected, bundle_directory=tmp_path / "outside",
