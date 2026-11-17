@@ -145,7 +145,7 @@ Evidence-driven subphases may be added beneath Phase 20 without changing the Pha
 
 #### Backlog refinement — H3-MF: MiniMax H3 Multi-Frame Reference-to-Video (2026-11-17)
 
-**Status: BACKLOG — H3-MF1 NEXT OFFLINE QUALIFICATION; NOTHING GENERATION-AUTHORIZED.**
+**Status: DEFERRED BACKLOG — finish C4B and the governed image-correction loop first. H3-MF1 is not the next phase; no H3-MF generation is authorized.**
 **Issue:** [#52 — H3-MF1 offline workflow qualification](https://github.com/npayne10/video_series_studio/issues/52).
 **Detailed assessment:** [H3-MF workflow findings and correction backlog](../PHASE_20_H3_MF_MULTIFRAME_REFERENCE_WORKFLOW_ASSESSMENT.md).
 
@@ -160,10 +160,12 @@ remain unqualified.
 
 | ID | Priority | Work | Status / mandatory gate |
 |---|---|---|---|
-| **H3-MF1** | P1 next provider research | Offline editor-to-API graph/source and guide-binding qualification, frame validation, immutable SHA provenance, deterministic source and authority checks, negative tests, VSCS H3 comparison | **Planned**; strict no-GPU/no-prompt/no-Candidate mutation; Windows static/full regression and operator inspection required |
+| **H3-MF1** | Deferred until image-correction closure | Offline editor-to-API graph/source and guide-binding qualification, frame validation, immutable SHA provenance, deterministic source and authority checks, negative tests, VSCS H3 comparison | **Planned**; strict no-GPU/no-prompt/no-Candidate mutation; Windows static/full regression and operator inspection required |
 | **H3-MF2** | P1, gated on MF1 | Explicitly consented disposable fixed-seed 5 s GPU reference-only vs timed-guides A/B with VRAM/time/quality logs | **Planned; blocked pending MF1 and fresh operator GPU approval** |
 | **H3-MF3** | P1, gated on MF2 | QC for visual guide fidelity, identity/scene continuity and audio; exact frames/duration | **Planned; requires accepted disposable outputs** |
 | **H3-MF4** | P2, gated on MF3 | VSCS governed multi-frame H3 provider mode, readiness, GeneratedMedia, safe recovery and human acceptance | **Planned; requires distinct full integration/acceptance** |
+
+**Current priority decision (2026-11-17):** C4A is accepted for offline preparation only. The next work is **C4B isolated masked-provider runtime qualification** on disposable image assets (source/mask polarity, actual GPU memory, protected-pixel fidelity), followed by governed C4 integration, post-edit Candidate validation and full image-correction acceptance under separate approvals. Keep Candidate 4's protected final Attempt 2/2 locked. H3-MF1–MF4 remain preserved for a later video-production workstream and must not displace the active image-correction closure path.
 
 This refinement **reuses** existing H3 ProductionTask, reference role,
 timed span, approved Shot opening/closing, GeneratedMedia and QC
