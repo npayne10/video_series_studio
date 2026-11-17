@@ -145,6 +145,42 @@ CAP authority, Canon/MASTER or corrected image approval.
 All staging is **fail-closed before any ComfyUI execution**.
 There is **no automatic retry** and no production registration.
 
+## 3A. First Windows regression — identified fixture defect and correction
+
+**First Windows run (2026-11-17): NOT ACCEPTED.**
+The operator reported Ruff lint one unused `GeometryCorrectionError`
+import; Ruff formatting changes in the source and test; Mypy two
+errors from using `Any | None` image filenames as `Path /` operands.
+Focused regression returned **13 failed, 42 passed**; full regression
+**13 failed, 2,890 passed, 1 skipped** (Windows directory symlink).
+`git diff --check` was clean; the two previous untracked files
+remained untouched.
+
+**Root cause:** all thirteen C4B.2A failures had a common
+precondition failure. The *synthetic test fixture*, not the
+production Candidate-path validator, created the PNG under
+`Canonical Assets/STORY-C4B2-SYNTHETIC/Images/source.png`.
+The accepted C2 source-mask contract strictly requires
+`Canonical Assets/STORY-C4B2-SYNTHETIC/Images/Visual Candidates/source.png`.
+The synthetic directory was fixed **without relaxing**
+`human_reviewed_mask_evidence._source_image` canonical
+Candidate restrictions.
+
+**Corrective commits:** `91e591d` removes the unused
+import, gives Ruff-formatted implementation branches,
+and explicitly narrows source/mask filename types to
+`str` before joining `Path`. `5505ba0` corrects
+the canonical synthetic Candidate path, aligns the
+stale-source assertion to the actual
+`Source Candidate SHA-256 mismatch` error, and
+formats the test file.
+
+**Validation status:** Re-run Windows Ruff, formatter,
+Mypy, focused/full pytest, diff and status checks on
+the updated branch. No acceptance is claimed for
+C4B.2A from the first failing run. No actual ComfyUI
+GPU inference took place in these test cases.
+
 ## 4. Windows engineering validation
 
 Run in the existing activated \`(.venv)\` in PowerShell:
