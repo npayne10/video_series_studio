@@ -84,9 +84,7 @@ from vscs.presentation.widgets.cap_visual_candidate_regeneration import (
 )
 
 
-def _review_matrix_section(
-    layout: QVBoxLayout, title: str, object_name: str
-) -> QGridLayout:
+def _review_matrix_section(layout: QVBoxLayout, title: str, object_name: str) -> QGridLayout:
     """Create a named stage group so each control stays beside its action."""
     group = QGroupBox(title)
     group.setObjectName(object_name)
