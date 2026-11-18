@@ -66,9 +66,12 @@ class StoryCAPBatchService:
         if source:
             source_hash = hashlib.sha256(source.encode("utf-8")).hexdigest()
             identity += (
-                "\n" + str(getattr(story, "source_type", ""))
-                + "\n" + str(getattr(story, "source_path", ""))
-                + "\n" + source_hash
+                "\n"
+                + str(getattr(story, "source_type", ""))
+                + "\n"
+                + str(getattr(story, "source_path", ""))
+                + "\n"
+                + source_hash
             )
         return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
@@ -78,8 +81,8 @@ class StoryCAPBatchService:
         if not str(getattr(story, "source_path", "")).strip():
             return ""
         from vscs.application.story_analysis.source_reader import (
-            StorySourceReadError,
             StorySourceReader,
+            StorySourceReadError,
         )
 
         try:
