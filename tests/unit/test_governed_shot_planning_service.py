@@ -187,7 +187,80 @@ def test_legacy_shots_remain_visible_but_outside_governed_storage(tmp_path: Path
     context.shutdown()
 
 
-def test_provider_neutral_replan_uses_fifteen_second_cinematic_ceiling(
+def test_eighteen_second_ready_shot_remains_ready_and_preview_is_read_only(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=18,
+    )
+    existing = _create(shots, scene.scene_id, runtime=18)
+    ready = shots.mark_ready(existing.shot_id)
+    before = shots.planning_file.read_bytes()
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert ready.status is ShotPlanStatus.READY
+    assert proposal.maximum_shot_runtime_seconds == 20
+    assert proposal.proposed_shot_count == 1
+    assert proposal.proposed_shots[0].target_runtime_seconds == 18
+    assert shots.plan(existing.shot_id) == ready
+    assert shots.planning_file.read_bytes() == before
+    context.shutdown()
+
+
+def test_thirty_five_second_semantic_shot_splits_to_eighteen_and_seventeen(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=35,
+    )
+    _create(shots, scene.scene_id, runtime=35)
+
+    proposal = shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert [shot.target_runtime_seconds for shot in proposal.proposed_shots] == [18, 17]
+    assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 35
+    assert all(15 <= shot.target_runtime_seconds <= 20 for shot in proposal.proposed_shots)
+    context.shutdown()
+
+
+def test_oversized_draft_shot_cannot_be_promoted_to_ready(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=21,
+    )
+    draft = _create(shots, scene.scene_id, runtime=21)
+
+    with pytest.raises(GovernedShotPlanningError, match="Shot maximum of 20s"):
+        shots.mark_ready(draft.shot_id)
+
+    assert shots.plan(draft.shot_id).status is ShotPlanStatus.DRAFT
+    context.shutdown()
+
+
+def test_semantic_replan_rejects_subminimum_cinematic_segments_without_writing(
+    tmp_path: Path,
+) -> None:
+    context, _episodes, _scenes, shots, _legacy, scene = _planning(
+        tmp_path,
+        scene_runtime=21,
+    )
+    existing = _create(shots, scene.scene_id, runtime=21)
+    before = shots.planning_file.read_bytes()
+
+    with pytest.raises(GovernedShotPlanningError, match="human revision is required"):
+        shots.propose_hardware_aware_replan(scene.scene_id)
+
+    assert shots.plan(existing.shot_id) == existing
+    assert shots.planning_file.read_bytes() == before
+    context.shutdown()
+
+
+def test_provider_neutral_replan_uses_twenty_second_cinematic_ceiling(
     tmp_path: Path,
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
@@ -196,15 +269,15 @@ def test_provider_neutral_replan_uses_fifteen_second_cinematic_ceiling(
     )
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
-    assert proposal.maximum_shot_runtime_seconds == 15
-    assert proposal.proposed_shot_count == 12
+    assert proposal.maximum_shot_runtime_seconds == 20
+    assert proposal.proposed_shot_count == 9
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 180
-    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 15
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 20
     assert all(shot.status is ShotPlanStatus.DRAFT for shot in proposal.proposed_shots)
     assert proposal.proposed_shots[0].title.endswith("— Establish")
     assert proposal.proposed_shots[-1].title.endswith("— Resolve")
     assert all(
-        "Governed cinematic Shot runtime must not exceed 15 seconds." in shot.shot_constraints
+        "Governed cinematic Shot runtime must not exceed 20 seconds." in shot.shot_constraints
         for shot in proposal.proposed_shots
     )
     context.shutdown()
@@ -223,8 +296,8 @@ def test_provider_neutral_replan_archives_previous_governed_authority(
     result = shots.apply_hardware_aware_replan(scene.scene_id)
 
     assert result.previous_shot_count == 1
-    assert result.new_shot_count == 4
-    assert result.maximum_shot_runtime_seconds == 15
+    assert result.new_shot_count == 3
+    assert result.maximum_shot_runtime_seconds == 20
     assert result.archive_path is not None
     assert result.archive_path.is_file()
     archived = result.archive_path.read_text(encoding="utf-8")
@@ -232,7 +305,7 @@ def test_provider_neutral_replan_archives_previous_governed_authority(
     assert "hardware-aware-scene-replan" in archived
     assert '"duration_policy": "provider-neutral-cinematic-v1"' in archived
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 4
+    assert len(current) == 3
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     assert all(shot.status is ShotPlanStatus.DRAFT for shot in current)
     context.shutdown()
@@ -248,13 +321,13 @@ def test_cinematic_planning_is_decoupled_from_legacy_provider_hardware_ceiling(
 
     assert capability["validated_maximum_shot_seconds"] == 7
     assert accepted.target_runtime_seconds == 12
-    assert shots.governed_shot_limit_seconds() == 15
-    assert shots.hardware_shot_limit_seconds() == 15
+    assert shots.governed_shot_limit_seconds() == 20
+    assert shots.hardware_shot_limit_seconds() == 20
 
     proposal = shots.propose_hardware_aware_replan(scene.scene_id)
 
-    assert proposal.maximum_shot_runtime_seconds == 15
-    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 15
+    assert proposal.maximum_shot_runtime_seconds == 20
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 20
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
     context.shutdown()
 
@@ -325,13 +398,13 @@ def test_semantic_replan_prefers_richer_archived_narrative_authority(
 
     assert proposal.semantic_source.startswith("archived:")
     assert proposal.semantic_source_shot_count == 3
-    assert proposal.proposed_shot_count == 6
+    assert proposal.proposed_shot_count == 3
     assert any(shot.title.startswith("Sandra Finds the Signal") for shot in proposal.proposed_shots)
     assert any(
         shot.dialogue_requirement == "Commander, I have something unusual."
         for shot in proposal.proposed_shots
     )
-    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 15
+    assert max(shot.target_runtime_seconds for shot in proposal.proposed_shots) <= 20
     assert sum(shot.target_runtime_seconds for shot in proposal.proposed_shots) == 60
     context.shutdown()
 
@@ -380,7 +453,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
 ) -> None:
     context, _episodes, _scenes, shots, _legacy, scene = _planning(
         tmp_path,
-        scene_runtime=60,
+        scene_runtime=80,
     )
     source = shots.create(
         scene_id=scene.scene_id,
@@ -388,7 +461,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
         title="Weak Repeating Signal",
         narrative_purpose="Convey Sandra's analysis of the repeating transmission.",
         production_objective="Establish that the signal comes from the outer moon.",
-        target_runtime_seconds=60,
+        target_runtime_seconds=80,
         required_action=(
             "Sandra studies the repeating signal while James follows her analysis "
             "and the display shows the forty-seven second pattern."
@@ -400,7 +473,7 @@ def test_semantic_cinematic_coverage_assigns_distinct_editorial_roles(
     children = proposal.proposed_shots
 
     assert len(children) == 4
-    assert [shot.target_runtime_seconds for shot in children] == [15, 15, 15, 15]
+    assert [shot.target_runtime_seconds for shot in children] == [20, 20, 20, 20]
     assert [shot.coverage_role for shot in children] == [
         CinematicCoverageRole.ESTABLISHING,
         CinematicCoverageRole.DIALOGUE_DELIVERY,
@@ -830,7 +903,7 @@ def test_production_aware_replan_fails_closed_for_noncontiguous_produced_shots(
     )
     shots.apply_hardware_aware_replan(scene.scene_id)
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 4
+    assert len(current) == 3
 
     project = tmp_path / "Demo"
     boundary_path = project / ".vscs" / "governed_shot_boundaries.json"

@@ -112,9 +112,15 @@ In **Story → Automation**, the application exposes **Planning Proposals**, **S
 
 **B.5.22 latest observed checkpoint:** 1 Episode + 1 Scene proposal generated; compilation/authority **not yet verified**.
 
-### 4.3 Shot Proposals — code-confirmed; actual operator output pending
+### 4.3 Shot Proposals — C4B.2B operator workflow verified; duration correction pending local acceptance
 
-The **Shot Proposals…** action produces reviewable Shot proposals. The completion message explicitly says **No governed Shot Plan was created**. Review and accept, compile accepted proposals through the proper workflow, then inspect **Production Planning** for actual persisted Shot records. For the disposable test use a single ~15-second Shot if the available proposals and governed plan allow it; do not silently override the Story evidence.
+The **Shot Proposals…** action produces reviewable Shot proposals. The completion message explicitly says **No governed Shot Plan was created**. Review and accept, compile accepted proposals through the proper workflow, then inspect **Story → Episode Planner → Scene Planner… → Shot Planner…** for actual persisted Shot records. The older B.5.22 test had a separate 35-second Scene; do not carry its duration into the C4B.2B Story.
+
+**C4B.2B observed checkpoint (2026-11-18):** For Story `STORY-001`, `EP-001`, `EP-001-SC-001`, the operator accepted the 18-second AI Shot proposal `AUT-SHOT-D7FC62B73D16`, compiled it and independently observed `EP-001-SC-001-SHT-001` as **Ready, 0:18**, within a Ready 0:18 Scene and Episode. The compiler reported **Shots: 1 created**, **Ready promotions: 1**, **Blockers: 5** (the five unresolved Draft canonical assets); no final Production Approval or provider generation submission occurred.
+
+**Governed Shot-duration rule (GitHub correction; Windows acceptance pending):** AI Scene/Shot proposals already require **15–20 seconds** per proposed Shot. The provider-neutral governed Shot Planner default now permits **up to 20 seconds**, so the legitimate 18-second Ready Shot is within policy. A Draft Shot exceeding 20 seconds cannot be promoted Ready. For semantic source beats of at least 15 seconds, a cinematic replan only proposes splits whose segments each fit the 15–20-second window; if that is impossible without changing approved runtime, it stops for human revision. A 35-second semantic Shot may propose 18+17 seconds. Legacy shorter governed Shots may remain in the project; actual provider direct-generation limits are separate, provider-specific and checked downstream.
+
+**Do not click “Re-plan Scene from Story” merely to test the duration correction:** that is an acceptance-affecting operation that can archive/replace governed Shot authority. Confirm the label says **maximum governed Shot 20s** and that the existing `EP-001-SC-001-SHT-001` stays **Ready, 0:18**, then proceed to the separate five-asset CAP readiness workflow.
 
 ### 4.4 Other Automation actions — source-confirmed scope
 

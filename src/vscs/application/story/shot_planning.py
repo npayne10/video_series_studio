@@ -108,7 +108,8 @@ class GovernedShotPlanningService:
     SCHEMA_VERSION = "1.1"
     HISTORY_DIRECTORY = "shot_plan_history"
     DEFAULT_HARDWARE_SHOT_LIMIT_SECONDS = 7
-    DEFAULT_GOVERNED_SHOT_LIMIT_SECONDS = 15
+    MIN_CINEMATIC_SHOT_SECONDS = 15
+    DEFAULT_GOVERNED_SHOT_LIMIT_SECONDS = 20
     HARDWARE_CAPABILITY_FILE = Path(".vscs") / "provider_executions" / "hardware_capability.json"
 
     def __init__(
@@ -891,6 +892,16 @@ class GovernedShotPlanningService:
                     f"Unable to decompose semantic Shot {source.shot_id} within "
                     f"the active {limit}s governed cinematic limit"
                 )
+            if (
+                limit >= self.MIN_CINEMATIC_SHOT_SECONDS
+                and source.target_runtime_seconds >= self.MIN_CINEMATIC_SHOT_SECONDS
+                and any(runtime < self.MIN_CINEMATIC_SHOT_SECONDS for runtime in runtimes)
+            ):
+                raise GovernedShotPlanningError(
+                    f"Semantic Shot {source.shot_id} cannot be divided into "
+                    f"{self.MIN_CINEMATIC_SHOT_SECONDS}–{limit}s cinematic Shots "
+                    "without changing approved runtime; human revision is required"
+                )
 
             for piece_index, runtime in enumerate(runtimes, start=1):
                 shot_id = self._shot_id(scene.scene_id, sequence)
@@ -1247,7 +1258,13 @@ class GovernedShotPlanningService:
         self._required(shot.narrative_purpose, "Narrative purpose")
         self._required(shot.production_objective, "Production objective")
         self._required(shot.required_action, "Required action")
-        self._runtime(shot.target_runtime_seconds)
+        runtime = self._runtime(shot.target_runtime_seconds)
+        limit = self.governed_shot_limit_seconds()
+        if runtime > limit:
+            raise GovernedShotPlanningError(
+                f"Shot runtime {runtime}s exceeds the provider-neutral governed "
+                f"Shot maximum of {limit}s; revise the Draft Shot before marking Ready"
+            )
 
     def _validate_runtime_budget(
         self,

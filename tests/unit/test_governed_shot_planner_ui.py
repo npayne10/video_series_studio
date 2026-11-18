@@ -152,7 +152,7 @@ def test_governed_shot_planner_exposes_provider_neutral_cinematic_replanning(
 
     assert dialog.replan_button.objectName() == "hardwareAwareSceneReplan"
     assert dialog.replan_button.isEnabled()
-    assert "maximum governed Shot 15s" in dialog.hardware_label.text()
+    assert "maximum governed Shot 20s" in dialog.hardware_label.text()
     assert "provider-neutral" in dialog.hardware_label.text()
     assert "Provider direct-generation limits" in dialog.hardware_label.text()
     context.shutdown()
@@ -208,7 +208,7 @@ def test_replan_button_archives_and_replaces_scene_after_human_confirmation(
     dialog.replan_button.click()
 
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 4
+    assert len(current) == 3
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     assert all(shot.status.value == "draft" for shot in current)
     assert any(
@@ -248,7 +248,7 @@ def test_replan_confirmation_uses_button_value_equality(
     dialog.replan_button.click()
 
     current = shots.list_plans(scene_id=scene.scene_id)
-    assert len(current) == 4
+    assert len(current) == 3
     assert sum(shot.target_runtime_seconds for shot in current) == 60
     context.shutdown()
 

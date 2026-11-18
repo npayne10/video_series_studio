@@ -1,6 +1,6 @@
 # VSCS F5.4.2 C4B.2B — Real-World Disposable Story and CAP Qualification Route
 
-**Status:** APPROACH B SELECTED BY OPERATOR — initial Story setup only; NO PAID OR GPU CONSENT  
+**Status:** C4B.2B observed through governed Ready 18-second Shot; targeted Shot-duration correction awaiting Windows acceptance; CAP pending; no GPU run  
 **Date:** 2026-11-17  
 **Branch:** `phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification`  
 **Parent:** [C4B.2B supervised controller](F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md)  
@@ -73,3 +73,29 @@ Expected outcome: only a newly saved Draft Story in the separate project, with m
 ## 5. Record for each checkpoint
 
 Project path and name, Story ID/revision, original text hash, UI screenshot, Story status, any paid-provider authorization and result, generated proposal IDs and governed compiled IDs, CAP spec/accepted-field fingerprints, Candidate reference/image SHA, quality-report ID, current C1 proposal, current C2 mask SHA and evidence, exact external bundle root, run log/prompt ID, VRAM, timing, pixel counts, and final operator disposition. If a step fails or times out, stop before rerunning; assess whether an external provider request may already have been accepted.
+
+
+## 6. C4B.2B operator evidence and targeted Shot-duration correction (2026-11-18)
+
+The operator completed the original `Blue Signal — Diagnostic Console Inspection` Story `STORY-001`, approved it, approved five entity identities linked to existing XPD/CAP asset IDs, and compiled one Episode (`EP-001`), Scene (`EP-001-SC-001`) and Shot (`EP-001-SC-001-SHT-001`). Episode, Scene and Shot are **Ready at 0:18**. The independent Shot compilation popup reported **Shots 1 created, Ready promotions 1, Blockers 5**, with no final Production Approval/provider submission. All five Draft assets still need human CAP preparation; compilation's blockers are expected and are **not** duration errors.
+
+The Shot Planner UI displayed a **15-second provider-neutral governed ceiling** despite the operator's valid 18-second Ready Shot. The AI Scene/Shot proposal service already enforces **15–20 seconds**. The targeted correction raises the governed planner's default **maximum** to **20 seconds**, preserves the provider-specific hardware/generation limits, and blocks promotion of an oversized Draft Shot to Ready. Semantic replanning with source beats at least 15 seconds refuses decompositions that would yield pieces shorter than 15 seconds; it does not silently truncate or stretch approved runtime (e.g. 35 seconds → 18+17 is valid, whereas a 21-second beat cannot be auto-split within this window). Existing Ready Shot records are not migrated or rewritten. Existing legacy shorter Shots remain readable; this is not a blanket backdated minimum-duration rule.
+
+**Source changes only; local Windows qualification pending.** On the existing VSCS Windows virtual environment, pull the current development branch and run the project's lint, format, type and unit/integration checks:
+
+```powershell
+cd D:\VSCS\video_series_studio
+git fetch origin
+git switch phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification
+git pull --ff-only origin phase-f5.4.2-c4b2b-supervised-disposable-gpu-qualification
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src
+python -m pytest -q tests/unit/test_governed_shot_planning_service.py tests/unit/test_governed_shot_planner_ui.py tests/unit/test_scene_shot_proposal_automation.py tests/unit/test_proposal_acceptance_orchestration.py
+python -m pytest -q
+git status --short
+```
+
+For read-only UI acceptance: restart VSCS, select exactly `C4B2B_DISPOSABLE_GPU_01`, navigate **Story → Episode Planner → Scene Planner… → Shot Planner…**, and verify the label now reads **maximum governed Shot 20s** and the same `EP-001-SC-001-SHT-001` is still **Ready, 0:18** within the approved 18-second Scene. Preserve the five unresolved-asset blockers until CAP governance is genuinely completed. **Do not click “Re-plan Scene from Story” or rerun paid proposal calls** for this source-only correction. Stop on any differing identity, duration, readiness or unexpected mutation.
+
+This GitHub change does not authorize a new provider run, a GPU request, final Production Approval or CAP/MASTER promotion; the previously agreed billable qualification workflow and separate supervised GPU controls remain governed by their own checkpoints.
