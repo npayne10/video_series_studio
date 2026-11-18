@@ -893,7 +893,7 @@ class GovernedShotPlanningService:
                     f"the active {limit}s governed cinematic limit"
                 )
             if (
-                limit >= self.MIN_CINEMATIC_SHOT_SECONDS
+                limit == self.DEFAULT_GOVERNED_SHOT_LIMIT_SECONDS
                 and source.target_runtime_seconds >= self.MIN_CINEMATIC_SHOT_SECONDS
                 and any(runtime < self.MIN_CINEMATIC_SHOT_SECONDS for runtime in runtimes)
             ):
