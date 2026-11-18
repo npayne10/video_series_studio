@@ -58,7 +58,7 @@ def _services(tmp_path: Path):
     return store, acceptance, orchestrator, episodes, scenes, shots
 
 
-def _save_structure(store: AutomationProposalService) -> None:
+def _save_structure(store: AutomationProposalService, *, runtime_seconds: int = 18) -> None:
     provenance = _provenance()
     for proposal in (
         AutomationProposal(
@@ -71,7 +71,7 @@ def _save_structure(store: AutomationProposalService) -> None:
                 "title": "The Silent Relay",
                 "story_scope": "Test story scope",
                 "production_objective": "Produce one test scene",
-                "target_runtime_seconds": 60,
+                "target_runtime_seconds": runtime_seconds,
                 "continuity_in": "",
                 "continuity_out": "",
                 "production_constraints": [],
@@ -88,7 +88,7 @@ def _save_structure(store: AutomationProposalService) -> None:
                 "title": "Signal",
                 "story_scope": "The signal is detected",
                 "production_objective": "Present the detection",
-                "target_runtime_seconds": 60,
+                "target_runtime_seconds": runtime_seconds,
                 "setting_requirement": "Bridge interior",
                 "required_events": ["Signal detected"],
                 "continuity_in": "",
@@ -107,7 +107,7 @@ def _save_structure(store: AutomationProposalService) -> None:
                 "title": "Detection",
                 "narrative_purpose": "Reveal the signal",
                 "production_objective": "Show the signal detection clearly",
-                "target_runtime_seconds": 60,
+                "target_runtime_seconds": runtime_seconds,
                 "required_action": "Sandra detects the signal",
                 "dialogue_requirement": "",
                 "continuity_in": "",
@@ -195,3 +195,30 @@ def test_auto_compilation_materializes_accepted_structure_with_canonical_id_mapp
     assert second.scenes_created == 0 and second.scenes_reused == 1
     assert second.shots_created == 0 and second.shots_reused == 1
     assert second.ready_promotions == 0
+
+
+def test_auto_compilation_blocks_sixty_second_shot_without_ready_promotion(
+    tmp_path: Path,
+) -> None:
+    store, acceptance, orchestrator, episodes, scenes, shots = _services(tmp_path)
+    _save_structure(store, runtime_seconds=60)
+    acceptance.accept_eligible_current(
+        story_id="STORY-001",
+        source_revision="rev-1",
+        reviewed_by="Neill",
+    )
+
+    report = orchestrator.compile_current(
+        story_id="STORY-001",
+        source_revision="rev-1",
+        compiled_by="Neill",
+    )
+
+    assert report.episodes_created == 1
+    assert report.scenes_created == 1
+    assert report.shots_created == 0
+    assert report.blocked_proposals == 1
+    assert any("Shot maximum of 20s" in blocker for blocker in report.blockers)
+    assert episodes.plan("EP-001").status is EpisodePlanStatus.READY
+    assert scenes.plan("EP-001-SCN-001").status is ScenePlanStatus.READY
+    assert shots.plan("EP-001-SCN-001-SHT-001").status is ShotPlanStatus.DRAFT
