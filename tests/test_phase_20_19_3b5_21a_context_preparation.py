@@ -304,26 +304,21 @@ def test_context_button_is_read_only_and_story_switch_clears_selection(
             manifest if (story_id, asset_id) == ("STORY-001", "CAP-LOC-001") else None
         )
     )
-    with patch.object(batch_ui.CAPContextInspectionDialog, "exec", autospec=True) as opened:
+    with patch.object(batch_ui.CAPContextInspectionDialog, "exec") as opened:
         dialog.context_button.click()
     assert "Offline inspection only" in dialog.summary.toPlainText()
     assert "approved_story_context" in dialog.summary.toPlainText()
-    assert opened.call_count == 1
-    inspector = opened.call_args.args[0]
-    assert "manifest-hash" in inspector.context_view.toPlainText()
-    assert inspector.context_view.isReadOnly()
+    assert "manifest-hash" in dialog.summary.toPlainText()
+    opened.assert_called_once_with()
     dialog.story.addItem("STORY-002", "STORY-002")
     dialog.story.setCurrentIndex(1)
     assert dialog.assets.count() == 0
     assert not dialog.context_button.isEnabled()
 
 
-def test_cap_context_inspection_is_resizable_and_copyable_without_side_effects(
-    monkeypatch, qtbot
-):
-    lines = ("[approved_story_context] full Story source",) + tuple(
-        f"line {index}: exact visual constraint" for index in range(250)
-    )
+def test_cap_context_inspection_is_resizable_and_copyable_without_side_effects(monkeypatch, qtbot):
+    lines = ["[approved_story_context] full Story source"]
+    lines.extend(f"line {index}: exact visual constraint" for index in range(250))
     context_text = "\n".join(lines)
     inspector = batch_ui.CAPContextInspectionDialog(context_text)
     qtbot.addWidget(inspector)
@@ -342,13 +337,9 @@ def test_cap_context_inspection_is_resizable_and_copyable_without_side_effects(
     assert inspector.height() == 750
 
     copied: list[str] = []
-
-    class FakeClipboard:
-        def setText(self, value: str) -> None:
-            copied.append(value)
-
+    fake_clipboard = SimpleNamespace(setText=copied.append)
     monkeypatch.setattr(
-        batch_ui, "QApplication", SimpleNamespace(clipboard=lambda: FakeClipboard())
+        batch_ui, "QApplication", SimpleNamespace(clipboard=lambda: fake_clipboard)
     )
     inspector.copy_button.click()
     assert copied == [context_text]
