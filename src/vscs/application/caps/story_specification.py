@@ -142,7 +142,11 @@ class StoryCAPSpecificationService:
 
     @staticmethod
     def generate_from_snapshot(
-        asset: Asset, approved_story_context: str, provider: CAPGenerationProvider
+        asset: Asset,
+        approved_story_context: str,
+        provider: CAPGenerationProvider,
+        *,
+        grounding_context: str | None = None,
     ) -> StoryCAPProposal:
         """Provider-only generation from an immutable snapshot, safe for a worker thread.
 
@@ -161,7 +165,7 @@ class StoryCAPSpecificationService:
         )
         draft: GeneratedCAPDraft = provider.generate_cap(request)
         return StoryCAPSpecificationService.proposal_from_draft(
-            asset, approved_story_context, draft, provider
+            asset, approved_story_context, draft, provider, grounding_context=grounding_context
         )
 
     @staticmethod
@@ -170,8 +174,11 @@ class StoryCAPSpecificationService:
         approved_story_context: str,
         draft: GeneratedCAPDraft,
         provider: CAPGenerationProvider,
+        *,
+        grounding_context: str | None = None,
     ) -> StoryCAPProposal:
         """Pure proposal assembly; the provider may run paid design expansion."""
+        approved_grounding = grounding_context or approved_story_context
         key = _CATEGORY_KEYS.get(asset.category, "identity")
         identity = draft.visual_identity.strip() or draft.canonical_description.strip()
         if not identity:
@@ -196,16 +203,19 @@ class StoryCAPSpecificationService:
             canonical_attributes={key: identity},
             master_prompt=prompt,
             continuity_rules=draft.continuity_rules,
-            source_description="Operator-supplied approved Story context; provider draft (not verified canon)",
+            source_description=(
+                "Approved Story plus labelled Shot supporting context; "
+                "provider draft (not verified canon)"
+            ),
             origin="story_intelligence_proposal",
         )
         proposed.validate_category_contract()
         suggestions: tuple[ProposedDesignField, ...] = ()
         if isinstance(provider, CAPDesignExpansionProvider):
-            response = provider.expand_cap_design(proposed, approved_story_context)
+            response = provider.expand_cap_design(proposed, approved_grounding)
             verified = validate_design_expansion(proposed, response)
             suggestions = tuple(verified.values())
-            grounding_issues = assess_design_grounding(approved_story_context, suggestions)
+            grounding_issues = assess_design_grounding(approved_grounding, suggestions)
             if grounding_issues:
                 raise ValueError(
                     "Design-expansion grounding must be corrected before review: "
@@ -219,7 +229,7 @@ class StoryCAPSpecificationService:
                 "Provider-inferred appearances and dimensions are proposals, not established canon.",
                 "Review missing dependencies, variants, and prompt fidelity before saving.",
             ),
-            expand_details(proposed, draft, approved_story_context),
+            expand_details(proposed, draft, approved_grounding),
             suggestions,
             assess_design_quality(asset.category, suggestions),
         )

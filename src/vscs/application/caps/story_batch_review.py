@@ -135,6 +135,7 @@ class StoryCAPBatchReviewService:
                 story.description,
                 fingerprint,
                 asset_fingerprint,
+                approved_story_source=self.batch.approved_source_text(selected),
             )
             if self.batch.current_story_fingerprint(selected) != fingerprint:
                 raise StoryBatchError("Approved Story changed during CAP context preparation")

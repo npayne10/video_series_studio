@@ -98,6 +98,15 @@ def discover_governed_shot_evidence(
                     for field in ("required_action", "narrative_purpose", "production_objective")
                     if isinstance((value := shot.get(field)), str) and value.strip()
                 )
+                constraints = shot.get("shot_constraints", [])
+                if isinstance(constraints, list):
+                    retained = [
+                        str(value).strip()
+                        for value in constraints
+                        if isinstance(value, str) and value.strip()
+                    ]
+                    if retained:
+                        text_fields += (("shot_constraints", "\n".join(retained)),)
                 candidates.append(
                     GovernedShotEvidence(
                         approved_story_id,

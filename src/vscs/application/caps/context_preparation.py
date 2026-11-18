@@ -68,6 +68,8 @@ def prepare_cap_context(
     story_description: str,
     story_fingerprint: str,
     asset_fingerprint: str,
+    *,
+    approved_story_source: str = "",
 ) -> CAPContextManifest:
     """Report source provenance without making Draft Shot text approved evidence.
 
@@ -90,6 +92,17 @@ def prepare_cap_context(
                 story_description.strip(),
                 "approved_story_context",
                 _digest(story_id, story_fingerprint, story_description.strip()),
+            )
+        )
+    if approved_story_source.strip():
+        sources.append(
+            CAPContextSource(
+                "approved_story",
+                story_id,
+                "source_text",
+                approved_story_source.strip(),
+                "approved_story_context",
+                _digest(story_id, story_fingerprint, approved_story_source.strip()),
             )
         )
     warnings = list(discovered.warnings[:-1])
@@ -141,3 +154,39 @@ def prepare_cap_context(
         tuple(dict.fromkeys(warnings)),
         fingerprint,
     )
+
+
+def render_approved_story_context(manifest: CAPContextManifest) -> str:
+    """Render only approved Story authority for grounding and design validation."""
+    approved = tuple(
+        source for source in manifest.sources if source.authority == "approved_story_context"
+    )
+    if not approved:
+        raise ValueError("CAP provider context has no approved Story source")
+    return "\n\n".join(
+        f"APPROVED STORY {source.record_id}.{source.field}:\n{source.excerpt}"
+        for source in approved
+    )
+
+
+def render_cap_provider_context(manifest: CAPContextManifest) -> str:
+    """Pass approved Story evidence and explicitly non-canonical Shot intent to AI."""
+    approved = render_approved_story_context(manifest)
+    supporting = tuple(
+        source for source in manifest.sources if source.authority != "approved_story_context"
+    )
+    parts = [
+        "Propose canonical design features only when supported by the APPROVED STORY "
+        "or the registered asset description. Shot planning below is supporting "
+        "context; unverified Shot evidence does not establish canonical geometry.",
+        f"Selected asset: {manifest.asset_id}. Story: {manifest.story_id}.",
+        approved,
+    ]
+    for source in supporting:
+        label = (
+            "VERIFIED READY SHOT"
+            if source.authority == "verified_ready_shot"
+            else "UNVERIFIED SHOT - NOT CANON"
+        )
+        parts.append(f"{label} {source.record_id}.{source.field}:\n{source.excerpt}")
+    return "\n\n".join(parts)

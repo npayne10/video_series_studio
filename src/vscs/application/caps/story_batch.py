@@ -14,7 +14,7 @@ from vscs.application.caps.story_specification import (
     StoryCAPProposal,
     StoryCAPSpecificationService,
 )
-from vscs.application.story.lifecycle import StoryLifecycleService, StoryStatus
+from vscs.application.story.lifecycle import StoryLifecycleService, StoryRecord, StoryStatus
 
 
 class StoryBatchError(ValueError):
@@ -61,16 +61,62 @@ class StoryCAPBatchService:
             raise StoryBatchError(
                 "Approved Story description is empty; no grounded prose is available"
             )
-        return hashlib.sha256(
-            (story.story_id + "\n" + story.title + "\n" + context).encode("utf-8")
-        ).hexdigest()
+        source = self._source_text(story)
+        identity = story.story_id + "\n" + story.title + "\n" + context
+        if source:
+            source_hash = hashlib.sha256(source.encode("utf-8")).hexdigest()
+            identity += (
+                "\n" + str(getattr(story, "source_type", ""))
+                + "\n" + str(getattr(story, "source_path", ""))
+                + "\n" + source_hash
+            )
+        return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _source_text(story: StoryRecord) -> str:
+        """Read the current source with the same parser used by Story Analysis."""
+        if not str(getattr(story, "source_path", "")).strip():
+            return ""
+        from vscs.application.story_analysis.source_reader import (
+            StorySourceReadError,
+            StorySourceReader,
+        )
+
+        try:
+            return StorySourceReader().read(story)
+        except StorySourceReadError as exc:
+            raise StoryBatchError(f"Approved Story source cannot be read: {exc}") from exc
+
+    def approved_source_text(self, story_id: str) -> str:
+        """Return approved Story source or fail closed on a configured unreadable file."""
+        story = self.stories.story(story_id)
+        if story is None or story.status not in {StoryStatus.APPROVED, StoryStatus.LOCKED}:
+            raise StoryBatchError("Story must exist in this project and be Approved or Locked")
+        return self._source_text(story)
+
+    def approved_story_context(self, story_id: str) -> str:
+        """Provide detailed approved Story context without any unverified Shot claims."""
+        self.current_story_fingerprint(story_id)
+        story = self.stories.story(story_id)
+        if story is None:
+            raise StoryBatchError("Approved Story disappeared before CAP context preparation")
+        description = story.description.strip()
+        source = self._source_text(story)
+        if not source:
+            return description
+        return (
+            "APPROVED STORY DESCRIPTION:\n"
+            + description
+            + "\n\nAPPROVED STORY SOURCE TEXT:\n"
+            + source
+        )
 
     def preview(self, story_id: str, asset_ids: tuple[str, ...]) -> StoryBatchPreview:
         fingerprint = self.current_story_fingerprint(story_id)
         story = self.stories.story(story_id)
         if story is None:
             raise StoryBatchError("Story disappeared during preview")
-        context = story.description.strip()
+        context = self.approved_story_context(story_id)
         candidates: list[StoryBatchProposal] = []
         skipped: list[str] = []
         seen: set[str] = set()

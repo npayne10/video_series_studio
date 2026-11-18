@@ -13,17 +13,21 @@ from vscs.application.caps.context_preparation import (
     CAPContextManifest,
     CAPContextSource,
     prepare_cap_context,
+    render_approved_story_context,
+    render_cap_provider_context,
 )
 from vscs.application.caps.governed_planning_evidence import ProductionPlanningContracts
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.story_batch import StoryCAPBatchService
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
+from vscs.application.caps.story_specification import StoryCAPSpecificationService
 from vscs.application.story.asset_resolver import AssetBindingStatus, ShotAssetBinding
 from vscs.application.story.episode_planning import EpisodePlan, EpisodePlanStatus
-from vscs.application.story.lifecycle import StoryRecord, StoryStatus
+from vscs.application.story.lifecycle import StoryRecord, StorySourceType, StoryStatus
 from vscs.application.story.scene_planning import ScenePlan, ScenePlanStatus
 from vscs.application.story.shot_planning import ShotPlan, ShotPlanStatus
 from vscs.domain.assets.models import Asset, AssetCategory
+from vscs.domain.caps.generation import ExtractedCanonicalFact, GeneratedCAPDraft
 from vscs.presentation.dialogs import story_cap_batch_dialog as batch_ui
 
 
@@ -309,3 +313,180 @@ def test_context_button_is_read_only_and_story_switch_clears_selection(
     dialog.story.setCurrentIndex(1)
     assert dialog.assets.count() == 0
     assert not dialog.context_button.isEnabled()
+
+
+def test_paid_cap_request_receives_full_story_and_labelled_draft_shot_context(tmp_path):
+    """Capture the provider request without making a billable call."""
+    shot, bindings = _fixture(tmp_path)
+    required_dial = (
+        "The outermost surface of the dial must remain below the surrounding "
+        "shelf plane, so the dial is recessed."
+    )
+    source_text = (
+        "A freestanding diagnostic console has one broad cobalt-blue display, "
+        "exactly three small circular buttons in a straight row and a rotary dial. "
+        + required_dial
+        + " A separate maintenance workstation stands beside it."
+    )
+    revised = replace(shot, shot_constraints=(required_dial,))
+    _write(tmp_path, "shot_plans.json", "shots", [asdict(revised)])
+    contracts = ProductionPlanningContracts()
+    bindings = [
+        replace(
+            binding,
+            shot_contract_hash=contracts.shot_contract_hash(asdict(revised)),
+            status=AssetBindingStatus.DRAFT,
+        )
+        for binding in bindings
+    ]
+    _write(tmp_path, "asset_resolutions.json", "bindings", [asdict(b) for b in bindings])
+
+    manifest = prepare_cap_context(
+        tmp_path,
+        "STORY-001",
+        "CAP-PRP-001",
+        "Short Story summary without console geometry.",
+        "story-fingerprint",
+        "asset-fingerprint",
+        approved_story_source=source_text,
+    )
+    provider_context = render_cap_provider_context(manifest)
+    approved_context = render_approved_story_context(manifest)
+    assert any(
+        item.field == "shot_constraints" and item.authority == "unverified_shot"
+        for item in manifest.sources
+    )
+    for detail in (
+        "cobalt-blue",
+        "exactly three",
+        "outermost surface",
+        "below the surrounding shelf plane",
+        "maintenance workstation",
+    ):
+        assert detail in provider_context
+    assert "UNVERIFIED SHOT - NOT CANON" in provider_context
+    assert "shot_constraints" in provider_context
+    assert "UNVERIFIED SHOT" not in approved_context
+    assert required_dial in approved_context
+
+    captured = []
+
+    class CapturingProvider:
+        def generate_cap(self, request):
+            captured.append(request)
+            raise RuntimeError("captured mock CAP request")
+
+    asset = Asset.model_construct(
+        asset_id="CAP-PRP-001",
+        name="Diagnostic console",
+        category=AssetCategory.PROP,
+        description="A console with a blue screen.",
+    )
+    with pytest.raises(RuntimeError, match="captured mock CAP request"):
+        StoryCAPSpecificationService.generate_from_snapshot(
+            asset, provider_context, CapturingProvider(), grounding_context=approved_context
+        )
+    assert len(captured) == 1
+    assert captured[0].story_context == provider_context
+    assert captured[0].asset_id == "CAP-PRP-001"
+
+
+def test_prepared_cap_context_cache_key_tracks_full_story_source(tmp_path):
+    _fixture(tmp_path)
+    first = prepare_cap_context(
+        tmp_path,
+        "STORY-001",
+        "CAP-LOC-001",
+        "Short Story summary.",
+        "story-fingerprint",
+        "asset-fingerprint",
+        approved_story_source="The diagnostic console has three buttons.",
+    )
+    second = prepare_cap_context(
+        tmp_path,
+        "STORY-001",
+        "CAP-LOC-001",
+        "Short Story summary.",
+        "story-fingerprint",
+        "asset-fingerprint",
+        approved_story_source=(
+            "The diagnostic console has exactly three buttons and a recessed dial."
+        ),
+    )
+    assert first.fingerprint != second.fingerprint
+
+
+def test_offline_batch_manifest_reads_original_approved_story_file(tmp_path):
+    _fixture(tmp_path)
+    source = tmp_path / "blue_signal.txt"
+    source.write_text(
+        "The upright graphite console has one cobalt-blue display, exactly three "
+        "buttons, and a dial recessed below the shelf plane.",
+        encoding="utf-8",
+    )
+    story = StoryRecord(
+        story_id="STORY-001",
+        title="Blue Signal",
+        description="An inspection occurs in an engineering bay.",
+        source_type=StorySourceType.PLAIN_TEXT,
+        source_path=str(source),
+        status=StoryStatus.APPROVED,
+    )
+    asset = Asset.model_construct(
+        asset_id="CAP-PRP-001",
+        name="Diagnostic console",
+        category=AssetCategory.PROP,
+        description="A freestanding console.",
+    )
+    project = SimpleNamespace(project_directory=tmp_path, is_project_open=True)
+    assets = SimpleNamespace(projects=project, list=lambda: (asset,), get=lambda _: asset)
+
+    def missing(_asset_id):
+        raise CAPNotFoundError("Not yet specified")
+
+    specifications = SimpleNamespace(get=lambda _: None, caps=SimpleNamespace(get=missing))
+    batch = StoryCAPBatchService(
+        SimpleNamespace(story=lambda _: story),
+        SimpleNamespace(generator=SimpleNamespace(assets=assets), specifications=specifications),
+    )
+    manifest = StoryCAPBatchReviewService(batch).prepare_context("STORY-001", "CAP-PRP-001")
+    original = next(item for item in manifest.sources if item.field == "source_text")
+    assert original.authority == "approved_story_context"
+    assert "exactly three" in original.excerpt
+    assert "recessed below" in render_cap_provider_context(manifest)
+
+
+def test_unverified_shot_only_fact_cannot_become_story_detail_authority():
+    asset = Asset.model_construct(
+        asset_id="CAP-PRP-001",
+        name="Diagnostic console",
+        category=AssetCategory.PROP,
+        description="A console.",
+    )
+    claimed_identity = "A diagnostic console with an additional control dial"
+    unverified_claim = "additional control dial"
+    draft = GeneratedCAPDraft(
+        title="Diagnostic console",
+        canonical_description=claimed_identity,
+        visual_identity=claimed_identity,
+        canonical_facts=(
+            ExtractedCanonicalFact(
+                fact=claimed_identity,
+                evidence=unverified_claim,
+                confidence=0.95,
+            ),
+        ),
+    )
+    provider_context = (
+        "APPROVED STORY: A freestanding diagnostic console.\n\n"
+        "UNVERIFIED SHOT - NOT CANON: A diagnostic console with an additional control dial."
+    )
+    result = StoryCAPSpecificationService.proposal_from_draft(
+        asset,
+        provider_context,
+        draft,
+        object(),
+        grounding_context="APPROVED STORY: A freestanding diagnostic console.",
+    )
+    assert result.detail_expansion is not None
+    assert result.detail_expansion.candidates[0].authority.value == "design_proposal"

@@ -19,6 +19,10 @@ from PySide6.QtWidgets import (
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.category_identity import category_identity_issues
+from vscs.application.caps.context_preparation import (
+    render_approved_story_context,
+    render_cap_provider_context,
+)
 from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.draft_cap_revision import prepare_draft_cap_revision
 from vscs.application.caps.generator import CAPGeneratorService
@@ -454,13 +458,17 @@ class StoryCAPBatchDialog(QDialog):
                 story_snapshot = self.stories.story(story_id)
                 if story_snapshot is None:
                     raise StoryBatchError("Approved Story disappeared before provider submission")
-                approved_context = story_snapshot.description.strip()
+                provider_context = render_cap_provider_context(context)
+                grounding_context = render_approved_story_context(context)
                 asset_snapshot = asset.model_copy(deep=True)
                 proposal = self._generation_progress.run(
                     f"CAP Proposal Generation — {asset.name}",
                     story_id,
                     lambda: StoryCAPSpecificationService.generate_from_snapshot(
-                        asset_snapshot, approved_context, provider
+                        asset_snapshot,
+                        provider_context,
+                        provider,
+                        grounding_context=grounding_context,
                     ),
                 )
                 # The provider worker never reads/writes project repositories. Recheck
@@ -507,7 +515,7 @@ class StoryCAPBatchDialog(QDialog):
             # Cached proposals predate later quality gates. Never allow a
             # previously cached ungrounded design to bypass current policy.
             cached_issues = assess_design_grounding(
-                story.description, item.proposal.design_suggestions
+                render_approved_story_context(context), item.proposal.design_suggestions
             )
             category_issues = category_identity_issues(
                 asset.category,
@@ -573,7 +581,11 @@ class StoryCAPBatchDialog(QDialog):
                 item.proposal,
                 self,
                 spatial_candidates=spatial_candidates,
-                story_evidence=(story_id, story.description, registered_ids),
+                story_evidence=(
+                    story_id,
+                    render_approved_story_context(context),
+                    registered_ids,
+                ),
                 narrative_assets=tuple(self.generator.assets.list()),
                 shot_sources=verified_shots,
                 shot_evidence_status=shot_evidence_status,

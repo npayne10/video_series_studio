@@ -197,6 +197,10 @@ The new progress window does **not** generate planning authority, auto-accept pr
 4. Check `approved_story_context` versus `unverified_shot`, source fields, fingerprints and warnings; Draft Shot bindings must remain unverified.
 5. Click **Prepare Queue (Offline)** to inspect all discovered assets without provider calls, CAP writes or Canon approval.
 
+**C4B.2B CAP provider-context correction (GitHub; Windows validation required):** For a Story with a configured text, Markdown, DOCX or FDX source, CAP context preparation reads that full source using the same reader as Story Analysis, alongside the brief Story description. The offline manifest must show `approved_story_context` for `STORY-001.source_text`; the governed Shot's `shot_constraints` are also included but stay `unverified_shot` while bindings are Draft. The paid CAP worker receives both, explicitly labelled, whereas canonical design expansion and grounding validation use the approved Story material only. The provider is instructed not to treat unverified Shot content as established canonical geometry. The source content is included in the Story/context cache fingerprints; changing the source invalidates old proposals, and an unreadable configured source blocks submission. No offline preparation contacts the provider or creates/approves a CAP.
+
+For `Blue Signal — Diagnostic Console Inspection`, inspect `CAP-PRP-002` (Diagnostic console) before consenting to generation: the offline source must contain exactly three circular buttons, one cobalt-blue display, a rotary dial whose outermost surface stays **below** the shelf plane, a separate maintenance workstation and the no-extra-controls rule. If any detail is missing or marked only as unverified Shot intent, **STOP**; do not spend a CAP-generation call. Re-read the paid confirmation carefully because the provider may make additional corrective billable calls. Re-running Story/Planning/Shot AI is not required for this correction.
+
 ### 6.2 Cache-first queue
 
 - `cached_current`: context-bound cached proposal exists; **still unapproved**.

@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
-from vscs.application.story.lifecycle import StoryStatus
+from vscs.application.story.lifecycle import StorySourceType, StoryStatus
 
 
 def _story(status=StoryStatus.APPROVED, description="A control room and vessel"):
@@ -66,3 +66,27 @@ def test_locked_story_may_be_previewed_without_writes():
     result = StoryCAPBatchService(stories, generator).preview("STORY-001", ("CAP-LOC-001",))
     assert len(result.candidates) == 1
     generator.specifications.save_draft.assert_not_called()
+
+
+def test_full_story_source_is_read_and_fingerprinted_for_cap_cache(tmp_path):
+    source = tmp_path / "blue_signal.txt"
+    source.write_text("The dial's outermost surface stays below the shelf plane.", encoding="utf-8")
+    story = _story()
+    story.source_type = StorySourceType.PLAIN_TEXT
+    story.source_path = str(source)
+    stories = Mock()
+    stories.story.return_value = story
+    batch = StoryCAPBatchService(stories, Mock())
+
+    before = batch.current_story_fingerprint("STORY-001")
+    assert "outermost surface" in batch.approved_source_text("STORY-001")
+    assert "outermost surface" in batch.approved_story_context("STORY-001")
+
+    source.write_text("The dial is visibly raised above the shelf plane.", encoding="utf-8")
+    after = batch.current_story_fingerprint("STORY-001")
+    assert after != before
+    assert "visibly raised" in batch.approved_story_context("STORY-001")
+
+    source.unlink()
+    with pytest.raises(StoryBatchError, match="source cannot be read"):
+        batch.current_story_fingerprint("STORY-001")
