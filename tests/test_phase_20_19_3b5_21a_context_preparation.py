@@ -338,9 +338,7 @@ def test_cap_context_inspection_is_resizable_and_copyable_without_side_effects(m
 
     copied: list[str] = []
     fake_clipboard = SimpleNamespace(setText=copied.append)
-    monkeypatch.setattr(
-        batch_ui, "QApplication", SimpleNamespace(clipboard=lambda: fake_clipboard)
-    )
+    monkeypatch.setattr(batch_ui, "QApplication", SimpleNamespace(clipboard=lambda: fake_clipboard))
     inspector.copy_button.click()
     assert copied == [context_text]
     assert inspector.context_view.toPlainText() == context_text
