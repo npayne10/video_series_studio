@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import replace
 
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QHBoxLayout,
     QInputDialog,
     QLabel,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QTextEdit,
     QVBoxLayout,
@@ -68,6 +70,39 @@ from vscs.presentation.dialogs.story_cap_specification_dialog import (
     StoryCAPSpecificationDialog,
 )
 from vscs.presentation.widgets.automation_progress import AutomationProgressRunner
+
+
+class CAPContextInspectionDialog(QDialog):
+    """Resizable, read-only offline context inspection; no authority changes."""
+
+    def __init__(self, context_text: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Prepared CAP Context (Offline)")
+        self.setMinimumSize(650, 400)
+        self.resize(1000, 700)
+        self.setSizeGripEnabled(True)
+
+        layout = QVBoxLayout(self)
+        self.context_view = QPlainTextEdit(self)
+        self.context_view.setObjectName("preparedCAPContextText")
+        self.context_view.setReadOnly(True)
+        self.context_view.setPlainText(context_text)
+        layout.addWidget(self.context_view)
+
+        actions = QHBoxLayout()
+        actions.addStretch()
+        self.copy_button = QPushButton("Copy Context", self)
+        self.copy_button.setObjectName("copyPreparedCAPContext")
+        self.copy_button.clicked.connect(self.copy_context)
+        actions.addWidget(self.copy_button)
+        self.close_button = QPushButton("Close", self)
+        self.close_button.clicked.connect(self.accept)
+        actions.addWidget(self.close_button)
+        layout.addLayout(actions)
+
+    def copy_context(self) -> None:
+        """Copy exactly the inspected text without changing project state."""
+        QApplication.clipboard().setText(self.context_view.toPlainText())
 
 
 class StoryCAPBatchDialog(QDialog):
@@ -309,8 +344,9 @@ class StoryCAPBatchDialog(QDialog):
             )
         if manifest.warnings:
             lines.extend(("", "Warnings:", *manifest.warnings))
-        self.summary.setPlainText("\n".join(lines))
-        QMessageBox.information(self, "Prepared CAP Context (Offline)", "\n".join(lines))
+        context_text = "\n".join(lines)
+        self.summary.setPlainText(context_text)
+        CAPContextInspectionDialog(context_text, self).exec()
 
     def discover(self) -> None:
         self.assets.clear()

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QDialog
 
 from vscs.application.caps.authoritative_shot_text import ShotTextAuthorityError
 from vscs.application.caps.context_preparation import (
@@ -304,15 +304,58 @@ def test_context_button_is_read_only_and_story_switch_clears_selection(
             manifest if (story_id, asset_id) == ("STORY-001", "CAP-LOC-001") else None
         )
     )
-    with patch.object(QMessageBox, "information") as notice:
+    with patch.object(batch_ui.CAPContextInspectionDialog, "exec", autospec=True) as opened:
         dialog.context_button.click()
     assert "Offline inspection only" in dialog.summary.toPlainText()
     assert "approved_story_context" in dialog.summary.toPlainText()
-    assert "manifest-hash" in notice.call_args.args[2]
+    assert opened.call_count == 1
+    inspector = opened.call_args.args[0]
+    assert "manifest-hash" in inspector.context_view.toPlainText()
+    assert inspector.context_view.isReadOnly()
     dialog.story.addItem("STORY-002", "STORY-002")
     dialog.story.setCurrentIndex(1)
     assert dialog.assets.count() == 0
     assert not dialog.context_button.isEnabled()
+
+
+def test_cap_context_inspection_is_resizable_and_copyable_without_side_effects(
+    monkeypatch, qtbot
+):
+    lines = ("[approved_story_context] full Story source",) + tuple(
+        f"line {index}: exact visual constraint" for index in range(250)
+    )
+    context_text = "\n".join(lines)
+    inspector = batch_ui.CAPContextInspectionDialog(context_text)
+    qtbot.addWidget(inspector)
+
+    assert inspector.width() == 1000
+    assert inspector.height() == 700
+    assert inspector.minimumWidth() == 650
+    assert inspector.minimumHeight() == 400
+    assert inspector.isSizeGripEnabled()
+    assert inspector.context_view.isReadOnly()
+    assert inspector.context_view.toPlainText() == context_text
+    assert inspector.context_view.verticalScrollBar() is not None
+
+    inspector.resize(1100, 750)
+    assert inspector.width() == 1100
+    assert inspector.height() == 750
+
+    copied: list[str] = []
+
+    class FakeClipboard:
+        def setText(self, value: str) -> None:
+            copied.append(value)
+
+    monkeypatch.setattr(
+        batch_ui, "QApplication", SimpleNamespace(clipboard=lambda: FakeClipboard())
+    )
+    inspector.copy_button.click()
+    assert copied == [context_text]
+    assert inspector.context_view.toPlainText() == context_text
+
+    inspector.close_button.click()
+    assert inspector.result() == QDialog.DialogCode.Accepted
 
 
 def test_paid_cap_request_receives_full_story_and_labelled_draft_shot_context(tmp_path):
