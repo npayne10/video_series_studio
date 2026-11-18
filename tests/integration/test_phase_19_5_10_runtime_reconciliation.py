@@ -94,7 +94,7 @@ def test_recompile_fits_complete_accepted_shot_set_and_repairs_prior_automation_
                     "title": "The Silent Relay",
                     "story_scope": "Test scope",
                     "production_objective": "Produce test",
-                    "target_runtime_seconds": 60,
+                    "target_runtime_seconds": 40,
                     "continuity_in": "",
                     "continuity_out": "",
                     "production_constraints": [],
@@ -112,7 +112,7 @@ def test_recompile_fits_complete_accepted_shot_set_and_repairs_prior_automation_
                     "title": "Scene",
                     "story_scope": "Scene scope",
                     "production_objective": "Scene objective",
-                    "target_runtime_seconds": 60,
+                    "target_runtime_seconds": 40,
                     "setting_requirement": "Bridge",
                     "required_events": ["Event"],
                     "continuity_in": "",
@@ -121,7 +121,7 @@ def test_recompile_fits_complete_accepted_shot_set_and_repairs_prior_automation_
                 },
             )
         )
-        store.save(_shot(1, 40))
+        store.save(_shot(1, 20))
         store.save(_shot(2, 20))
 
         orchestrator = application.services.require(ProposalAutoCompilationOrchestrator)
@@ -129,10 +129,11 @@ def test_recompile_fits_complete_accepted_shot_set_and_repairs_prior_automation_
             story_id="STORY-001", source_revision="rev-1", compiled_by="Neill"
         )
         assert first.shots_created == 2
+        assert first.blocked_proposals == 0
 
         # Simulate the early Phase 19.5 proposal-store case: a later accepted Shot
         # appears in the same Story revision after an earlier structural compilation.
-        store.save(_shot(3, 30))
+        store.save(_shot(3, 20))
         second = orchestrator.compile_current(
             story_id="STORY-001", source_revision="rev-1", compiled_by="Neill"
         )
@@ -144,5 +145,6 @@ def test_recompile_fits_complete_accepted_shot_set_and_repairs_prior_automation_
         assert second.shots_reused == 2
         assert second.blocked_proposals == 0
         assert len(plans) == 3
-        assert sum(plan.target_runtime_seconds for plan in plans) == 60
+        assert [plan.target_runtime_seconds for plan in plans] == [14, 13, 13]
+        assert sum(plan.target_runtime_seconds for plan in plans) == 40
         assert all(plan.status.value == "ready" for plan in plans)
