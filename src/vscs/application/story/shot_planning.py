@@ -899,7 +899,7 @@ class GovernedShotPlanningService:
             ):
                 raise GovernedShotPlanningError(
                     f"Semantic Shot {source.shot_id} cannot be divided into "
-                    f"{self.MIN_CINEMATIC_SHOT_SECONDS}–{limit}s cinematic Shots "
+                    f"{self.MIN_CINEMATIC_SHOT_SECONDS}-{limit}s cinematic Shots "
                     "without changing approved runtime; human revision is required"
                 )
 
