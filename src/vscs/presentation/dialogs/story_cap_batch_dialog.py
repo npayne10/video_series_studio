@@ -164,7 +164,8 @@ class StoryCAPBatchDialog(QDialog):
             "Review Cached Proposal never calls OpenAI. "
             "Generate / Regenerate Using AI (Paid) always requires a cost confirmation. "
             "The new-CAP selector excludes already specified assets; use the separate "
-            "Edit Existing Draft CAP control for a governed Draft-only field revision. "
+            "Edit Existing Draft CAP control for a governed Draft-only field revision, "
+            "including offline approved-Story suggestions for deferred fields. "
             "No action here approves Canon or MASTER."
         )
         row = QHBoxLayout()
