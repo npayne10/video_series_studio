@@ -6,10 +6,11 @@ The operator must review suggested identity and variants before persistence.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from vscs.application.caps.category_identity import category_identity_issues
+from vscs.application.caps.context_preparation import CAPContextManifest
 from vscs.application.caps.design_quality import (
     DesignQualityIssue,
     assess_design_grounding,
@@ -21,6 +22,11 @@ from vscs.application.caps.provider_design_expansion import (
     CAPDesignExpansionProvider,
     ProposedDesignField,
     validate_design_expansion,
+)
+from vscs.application.caps.story_field_grounding import (
+    CAPFieldOrigin,
+    CAPFieldProvenance,
+    reconcile_grounded_fields,
 )
 from vscs.application.caps.structured_specification import (
     CAPStructuredSpecification,
@@ -53,6 +59,57 @@ class StoryCAPProposal:
     detail_expansion: CanonicalDetailExpansion | None = None
     design_suggestions: tuple[ProposedDesignField, ...] = ()
     quality_issues: tuple[DesignQualityIssue, ...] = ()
+    field_provenance: tuple[CAPFieldProvenance, ...] = ()
+
+    def ground_against_story(self, asset: Asset, context: CAPContextManifest) -> StoryCAPProposal:
+        """Offline Story field mapping; preserve cached human edits verbatim."""
+        proposed, evidence, findings = reconcile_grounded_fields(
+            self.specification, asset.name, context, self.design_suggestions
+        )
+        existing = {item.field: item for item in self.field_provenance}
+        evidence = tuple(
+            existing[item.field]
+            if item.field in existing
+            and existing[item.field].origin is CAPFieldOrigin.OPERATOR_EDITED
+            and existing[item.field].value == item.value
+            and existing[item.field].context_fingerprint == context.fingerprint
+            else item
+            for item in evidence
+        )
+        quality = tuple(dict.fromkeys((*self.quality_issues, *findings)))
+        return replace(
+            self, specification=proposed, field_provenance=evidence, quality_issues=quality
+        )
+
+    def with_operator_edits(self, reviewed: CAPStructuredSpecification) -> StoryCAPProposal:
+        """Never mislabel a local text edit as provider or Story-derived authority."""
+        if (
+            reviewed.asset_id != self.specification.asset_id
+            or reviewed.category != self.specification.category
+        ):
+            raise ValueError("Reviewed CAP identity differs from the source proposal")
+        previous = {item.field: item for item in self.field_provenance}
+        for field, value in reviewed.canonical_attributes.items():
+            if value == self.specification.canonical_attributes.get(field):
+                continue
+            source = previous.get(field)
+            previous[field] = CAPFieldProvenance(
+                field=field,
+                value=value,
+                origin=CAPFieldOrigin.OPERATOR_EDITED,
+                source_record_id=source.source_record_id if source else "",
+                source_field=source.source_field if source else "",
+                source_fingerprint=source.source_fingerprint if source else "",
+                context_fingerprint=source.context_fingerprint if source else "",
+                excerpt=source.excerpt if source else "",
+                shot_authority=source.shot_authority if source else "",
+                shot_record_id=source.shot_record_id if source else "",
+                shot_field=source.shot_field if source else "",
+                shot_fingerprint=source.shot_fingerprint if source else "",
+                shot_excerpt=source.shot_excerpt if source else "",
+                note="Human-edited proposal; prior source is context, not proof of this new wording.",
+            )
+        return replace(self, specification=reviewed, field_provenance=tuple(previous.values()))
 
     def to_cache(self) -> dict[str, Any]:
         """Serialize all review data, never an approval decision."""
@@ -81,6 +138,7 @@ class StoryCAPProposal:
                 {"field": item.field, "code": item.code, "message": item.message}
                 for item in self.quality_issues
             ],
+            "field_provenance": [item.model_dump(mode="json") for item in self.field_provenance],
         }
 
     @classmethod
@@ -117,6 +175,9 @@ class StoryCAPProposal:
             expansion,
             tuple(ProposedDesignField.model_validate(item) for item in raw["design_suggestions"]),
             tuple(DesignQualityIssue(**item) for item in raw["quality_issues"]),
+            tuple(
+                CAPFieldProvenance.model_validate(item) for item in raw.get("field_provenance", ())
+            ),
         )
 
 
