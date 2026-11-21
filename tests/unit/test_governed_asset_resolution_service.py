@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -21,6 +22,7 @@ from vscs.application.story import (
     ScenePlanningService,
     ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
+    ShotAssetVisualScope,
     StoryLifecycleService,
     StoryService,
     register_governed_asset_resolution,
@@ -203,6 +205,45 @@ def _binding(
         requirement="The Iron Horizon must be visible and canonically identifiable.",
         expected_category=AssetCategory.SHIP,
         asset_id=asset_id,
+    )
+
+
+def _inspection_shot(shots, shot, *, action: str):
+    """Replace the fixture's Ready Shot without weakening governed contracts."""
+    draft = shots.return_to_draft(shot.shot_id)
+    updated = shots.update(
+        draft.shot_id,
+        title="Automated Console Inspection",
+        narrative_purpose="Reveal the diagnostic console controls.",
+        production_objective="Keep the freestanding console and workstation distinct.",
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action=action,
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=("No objects move and no operator enters the room.",),
+    )
+    return shots.mark_ready(updated.shot_id)
+
+
+def _camera_binding(context, service, shot):
+    context.services.require(AssetService).create(
+        AssetCreate(
+            asset_id="CAP-TEC-001",
+            name="Automated inspection camera",
+            category=AssetCategory.TECHNOLOGY,
+            description="Unapproved inspection camera proposal.",
+            status=AssetStatus.DRAFT,
+        )
+    )
+    return service.create(
+        shot_id=shot.shot_id,
+        sequence_number=1,
+        role="Prop/Technology",
+        requirement="Automated inspection camera is required by the governed Shot.",
+        expected_category=AssetCategory.TECHNOLOGY,
+        asset_id="CAP-TEC-001",
+        inference_source=ShotAssetInferenceSource.DETERMINISTIC,
     )
 
 
@@ -1198,4 +1239,313 @@ def test_character_inference_matches_canonical_name_without_rank_title(
     assert sandra.matched_asset_name == "Captain Sandra Crawford"
     assert sandra.role == "Dialogue Speaker"
     assert "without rank/title" in sandra.rationale
+    context.shutdown()
+
+
+def test_camera_motion_is_suggested_as_viewpoint_but_never_automatically_exempt(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action=(
+            "An automated inspection camera advances slowly from a three-quarter front-left "
+            "view toward the console. The camera settles and holds its view."
+        ),
+    )
+    binding = _camera_binding(context, service, updated)
+
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    camera = next(item for item in proposals if item.matched_asset_id == binding.asset_id)
+
+    assert camera.suggested_scope is ShotAssetVisualScope.CAMERA_VIEWPOINT
+    assert "camera advances" in camera.scope_evidence
+    assert binding.visual_scope is ShotAssetVisualScope.VISIBLE_ASSET
+    assert not service.is_scope_exempt(binding)
+    assert not service.shot_ready(updated.shot_id)
+    context.shutdown()
+
+
+def test_human_viewpoint_review_persists_and_exempts_only_that_requirement(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action=(
+            "An automated inspection camera advances toward the console from a front-left "
+            "view. No camera equipment enters the frame. The camera holds its view."
+        ),
+    )
+    camera = _camera_binding(context, service, updated)
+    ship_id = _approved_ship(context, tmp_path)
+    ship = service.create(
+        shot_id=updated.shot_id,
+        sequence_number=2,
+        role="Vehicle/Ship",
+        requirement="The Iron Horizon is visible in the Shot.",
+        expected_category=AssetCategory.SHIP,
+        asset_id=ship_id,
+    )
+    service.mark_ready(ship.binding_id)
+    assert not service.shot_ready(updated.shot_id)
+
+    reviewed = service.review_visual_scope(
+        camera.binding_id,
+        scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        reviewed_by="Neill",
+        reason="Confirmed offscreen viewpoint from governed Shot action.",
+    )
+
+    assert reviewed.binding_id == camera.binding_id
+    assert reviewed.status is AssetBindingStatus.DRAFT
+    assert reviewed.scope_reviewed_by == "Neill"
+    assert reviewed.scope_source_evidence
+    assert service.binding(camera.binding_id) == reviewed
+    assert service.is_scope_exempt(reviewed)
+    assert not service.is_production_ready(reviewed)
+    assert service.shot_ready(updated.shot_id)
+    with pytest.raises(GovernedAssetResolutionError, match="not a visible production asset"):
+        service.mark_ready(reviewed.binding_id)
+
+    payload = json.loads(service.planning_file.read_text(encoding="utf-8"))
+    saved = next(item for item in payload["bindings"] if item["binding_id"] == camera.binding_id)
+    assert saved["visual_scope"] == ShotAssetVisualScope.CAMERA_VIEWPOINT.value
+    assert saved["scope_reviewed_by"] == "Neill"
+    assert saved["scope_shot_hash"] == reviewed.shot_contract_hash
+    assert saved["asset_id"] == "CAP-TEC-001"
+    assert saved["scope_review_history"][0]["scene_contract_hash"] == updated.scene_contract_hash
+    assert saved["scope_review_history"][0]["reviewed_by"] == "Neill"
+    context.shutdown()
+
+
+def test_viewpoint_review_becomes_stale_after_shot_change_and_is_not_deleted_by_inference(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action="An automated inspection camera advances toward the console and holds its view.",
+    )
+    camera = _camera_binding(context, service, updated)
+    reviewed = service.review_visual_scope(
+        camera.binding_id,
+        scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        reviewed_by="Operator",
+        reason="Camera is the moving viewpoint, not a visible prop.",
+    )
+    assert service.is_scope_exempt(reviewed)
+
+    draft = shots.return_to_draft(updated.shot_id)
+    changed = shots.update(
+        draft.shot_id,
+        title=draft.title,
+        narrative_purpose=draft.narrative_purpose,
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="A visible camera robot rolls into frame beside the console.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=draft.shot_constraints,
+    )
+    changed = shots.mark_ready(changed.shot_id)
+
+    assert not service.is_scope_exempt(service.binding(camera.binding_id))
+    assert not service.shot_ready(changed.shot_id)
+    proposals = service.infer_requirements(changed.shot_id, include_ai=False)
+    service.apply_inferred_requirements(changed.shot_id, proposals)
+    retained = service.binding(camera.binding_id)
+    assert retained is not None
+    # The old human decision remains visible as a stale audit entry; it is
+    # never considered a current exemption for the changed Shot contract.
+    assert retained.visual_scope is ShotAssetVisualScope.CAMERA_VIEWPOINT
+    assert retained.scope_reviewed_by == "Operator"
+    assert not service.is_scope_exempt(retained)
+    context.shutdown()
+
+
+def test_visible_camera_robot_cannot_be_scoped_out_as_viewpoint(tmp_path: Path) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action=(
+            "A visible camera robot enters the frame. The camera housing and wheels "
+            "are shown while the unit rolls closer to the console."
+        ),
+    )
+    camera = _camera_binding(context, service, updated)
+    suggestion = service.scope_suggestion_for_binding(camera)
+    assert suggestion.suggested_scope is ShotAssetVisualScope.VISIBLE_ASSET
+
+    with pytest.raises(GovernedAssetResolutionError, match="does not establish"):
+        service.review_visual_scope(
+            camera.binding_id,
+            scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+            reviewed_by="Operator",
+            reason="Not a visible prop.",
+        )
+    assert service.binding(camera.binding_id) == camera
+    context.shutdown()
+
+
+def test_mixed_camera_motion_and_visible_robot_remains_a_physical_requirement(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action=(
+            "The camera pans left as a visible camera robot rolls into the frame "
+            "next to the stationary workstation."
+        ),
+    )
+    camera = _camera_binding(context, service, updated)
+    suggestion = service.scope_suggestion_for_binding(camera)
+    assert suggestion.suggested_scope is ShotAssetVisualScope.VISIBLE_ASSET
+    with pytest.raises(GovernedAssetResolutionError, match="does not establish"):
+        service.review_visual_scope(
+            camera.binding_id,
+            scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+            reviewed_by="Operator",
+            reason="Ignore the visible camera robot.",
+        )
+    context.shutdown()
+
+
+def test_cached_inference_replay_keeps_review_without_paid_semantic_call(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action="An automated inspection camera advances toward the console and holds.",
+    )
+    camera = _camera_binding(context, service, updated)
+    proposals = service.infer_requirements(updated.shot_id, include_ai=False)
+    service.apply_inferred_requirements(updated.shot_id, proposals)
+    # Replay the exact inferred binding after it has received a human review.
+    inferred_camera = next(
+        binding
+        for binding in service.list_bindings(shot_id=updated.shot_id)
+        if binding.asset_id == camera.asset_id and binding.inference_source is not None
+    )
+    reviewed = service.review_visual_scope(
+        inferred_camera.binding_id,
+        scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        reviewed_by="Operator",
+        reason="Offscreen camera movement is a cinematic instruction.",
+    )
+
+    def forbidden_paid_inference(**_kwargs):
+        raise AssertionError("Replaying a cached decision must never make a paid call")
+
+    service.semantic_provider = SimpleNamespace(infer_requirements=forbidden_paid_inference)
+    service.apply_inferred_requirements(updated.shot_id, proposals)
+    replayed = service.binding(inferred_camera.binding_id)
+    assert replayed is not None
+    assert replayed.scope_review_history == reviewed.scope_review_history
+    assert service.is_scope_exempt(replayed)
+    assert (
+        len([binding for binding in service.list_bindings() if binding.asset_id == camera.asset_id])
+        == 1
+    )  # The reviewed inferred binding is refreshed, never duplicated.
+    context.shutdown()
+
+
+def test_setting_context_needs_explicit_review_and_exterior_ship_remains_visible(
+    tmp_path: Path,
+) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    context.services.require(AssetService).create(
+        AssetCreate(
+            asset_id="CAP-SHP-001",
+            name="Deep-space survey vessel",
+            category=AssetCategory.SHIP,
+            status=AssetStatus.DRAFT,
+        )
+    )
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action=(
+            "Inside an engineering bay aboard a deep-space survey vessel, the console "
+            "remains visible and the workstation stands nearby."
+        ),
+    )
+    ship = service.create(
+        shot_id=updated.shot_id,
+        sequence_number=1,
+        role="Vehicle/Ship",
+        requirement="The deep-space survey vessel provides the scene's setting.",
+        expected_category=AssetCategory.SHIP,
+        asset_id="CAP-SHP-001",
+    )
+    assert service.scope_suggestion_for_binding(ship).suggested_scope is (
+        ShotAssetVisualScope.SETTING_CONTEXT
+    )
+    scoped = service.review_visual_scope(
+        ship.binding_id,
+        scope=ShotAssetVisualScope.SETTING_CONTEXT,
+        reviewed_by="Operator",
+        reason="The interior bay establishes ship context; no ship exterior is depicted.",
+    )
+    assert service.is_scope_exempt(scoped)
+    assert not service.shot_ready(updated.shot_id)  # Scope-only must not make an empty Shot ready.
+
+    draft = shots.return_to_draft(updated.shot_id)
+    exterior = shots.update(
+        draft.shot_id,
+        title="Exterior survey vessel",
+        narrative_purpose=draft.narrative_purpose,
+        production_objective=draft.production_objective,
+        target_runtime_seconds=draft.target_runtime_seconds,
+        required_action="From outside the ship, show an exterior view of the vessel hull.",
+        dialogue_requirement="",
+        continuity_in="",
+        continuity_out="",
+        shot_constraints=(),
+    )
+    exterior = shots.mark_ready(exterior.shot_id)
+    assert service.scope_suggestion_for_binding(ship).suggested_scope is (
+        ShotAssetVisualScope.VISIBLE_ASSET
+    )
+    assert not service.is_scope_exempt(scoped)
+    context.shutdown()
+
+
+def test_scope_review_can_be_reversed_to_visible_without_asset_approval(tmp_path: Path) -> None:
+    context, shots, service, shot = _planning(tmp_path)
+    updated = _inspection_shot(
+        shots,
+        shot,
+        action="An automated inspection camera advances from the left and holds the view.",
+    )
+    binding = _camera_binding(context, service, updated)
+    reviewed = service.review_visual_scope(
+        binding.binding_id,
+        scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        reviewed_by="Operator",
+        reason="Camera is a production viewpoint.",
+    )
+    assert service.is_scope_exempt(reviewed)
+
+    restored = service.review_visual_scope(
+        binding.binding_id,
+        scope=ShotAssetVisualScope.VISIBLE_ASSET,
+        reviewed_by="Operator",
+        reason="Returning requirement to full physical CAP/reference review.",
+    )
+    assert restored.visual_scope is ShotAssetVisualScope.VISIBLE_ASSET
+    assert not service.is_scope_exempt(restored)
+    assert restored.status is AssetBindingStatus.DRAFT
+    assert len(restored.scope_review_history) == 2
+    assert restored.scope_review_history[0].scope is ShotAssetVisualScope.CAMERA_VIEWPOINT
+    assert restored.scope_review_history[1].scope is ShotAssetVisualScope.VISIBLE_ASSET
     context.shutdown()

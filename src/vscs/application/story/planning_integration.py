@@ -160,7 +160,14 @@ class GovernedPlanningIntegrationService:
             )
 
         asset_payload: list[dict[str, Any]] = []
+        scoped_requirements: list[dict[str, Any]] = []
         for binding in bindings:
+            scope_exempt = getattr(self.reviews.assets, "is_scope_exempt", None)
+            if callable(scope_exempt) and scope_exempt(binding):
+                # Preserve the reviewed nonvisual requirement in the production
+                # package audit, but never treat it as a canonical image asset.
+                scoped_requirements.append(asdict(binding))
+                continue
             resolved = self.reviews.assets.resolution(binding)
             if resolved is None:
                 raise PlanningIntegrationError(
@@ -188,6 +195,8 @@ class GovernedPlanningIntegrationService:
             "lighting": asdict(lighting),
             "environment": asdict(environment),
         }
+        if scoped_requirements:
+            payload["scoped_requirements"] = scoped_requirements
         return json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
 
     def _write(self, packages: tuple[IntegratedPlanningPackage, ...]) -> None:

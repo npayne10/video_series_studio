@@ -7,6 +7,7 @@ import json
 import re
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,31 @@ class ShotAssetInferenceSource(StrEnum):
     AI_SEMANTIC = "ai_semantic"
 
 
+class ShotAssetVisualScope(StrEnum):
+    """Human-reviewed relationship between a Shot and a named project asset.
+
+    A suggestion is never authority. Only a separately persisted review of the
+    current governed Shot may exempt a nonvisual requirement from image/CAP gates.
+    """
+
+    VISIBLE_ASSET = "visible_asset"
+    CAMERA_VIEWPOINT = "camera_viewpoint"
+    SETTING_CONTEXT = "setting_context"
+
+
+@dataclass(frozen=True, slots=True)
+class ShotAssetScopeReviewRecord:
+    """Historical human decision tied to an explicit governed Shot revision."""
+
+    scope: ShotAssetVisualScope
+    reviewed_by: str
+    reason: str
+    source_evidence: str
+    shot_contract_hash: str
+    scene_contract_hash: str
+    reviewed_at_utc: str
+
+
 @dataclass(frozen=True, slots=True)
 class ShotAssetRequirementProposal:
     """Reviewable proposal; never governed binding authority by itself."""
@@ -53,6 +79,8 @@ class ShotAssetRequirementProposal:
     source: ShotAssetInferenceSource = ShotAssetInferenceSource.DETERMINISTIC
     rationale: str = ""
     canonical_status: str = "unresolved"
+    suggested_scope: ShotAssetVisualScope = ShotAssetVisualScope.VISIBLE_ASSET
+    scope_evidence: str = ""
 
     @property
     def matched(self) -> bool:
@@ -144,6 +172,12 @@ class ShotAssetBinding:
     asset_dependency_hash: str = ""
     inference_source: ShotAssetInferenceSource | None = None
     status: AssetBindingStatus = AssetBindingStatus.DRAFT
+    visual_scope: ShotAssetVisualScope = ShotAssetVisualScope.VISIBLE_ASSET
+    scope_reviewed_by: str = ""
+    scope_review_reason: str = ""
+    scope_source_evidence: str = ""
+    scope_shot_hash: str = ""
+    scope_review_history: tuple[ShotAssetScopeReviewRecord, ...] = ()
 
 
 class GovernedAssetResolutionService:
@@ -253,7 +287,12 @@ class GovernedAssetResolutionService:
                 scene,
             )
         )
-        classified = tuple(self._classify_proposal_role(proposal, shot) for proposal in proposals)
+        classified = tuple(
+            self._suggest_visual_scope(
+                self._classify_proposal_role(proposal, shot), shot, scene_text
+            )
+            for proposal in proposals
+        )
         deduplicated = self._deduplicate_proposals(classified)
         without_placeholders = self._suppress_story_placeholders(deduplicated)
         return self._collapse_environment_overlaps(without_placeholders)
@@ -290,6 +329,13 @@ class GovernedAssetResolutionService:
         refreshed: list[ShotAssetBinding] = []
         for binding, proposal in plan["refresh"]:
             selected_asset = proposal.matched_asset_id.strip().upper()
+            same_requirement = (
+                binding.role == proposal.role
+                and binding.requirement == proposal.requirement
+                and binding.expected_category is proposal.expected_category
+                and binding.asset_id == selected_asset
+                and binding.shot_contract_hash == self._shot_contract_hash(shot)
+            )
             refreshed.append(
                 replace(
                     binding,
@@ -305,6 +351,17 @@ class GovernedAssetResolutionService:
                     ),
                     inference_source=proposal.source,
                     status=AssetBindingStatus.DRAFT,
+                    visual_scope=(
+                        binding.visual_scope
+                        if same_requirement
+                        else ShotAssetVisualScope.VISIBLE_ASSET
+                    ),
+                    scope_reviewed_by=binding.scope_reviewed_by if same_requirement else "",
+                    scope_review_reason=binding.scope_review_reason if same_requirement else "",
+                    scope_source_evidence=(
+                        binding.scope_source_evidence if same_requirement else ""
+                    ),
+                    scope_shot_hash=binding.scope_shot_hash if same_requirement else "",
                 )
             )
 
@@ -414,7 +471,12 @@ class GovernedAssetResolutionService:
             else:
                 refresh.append((binding, proposal))
 
-        retire = tuple(binding for binding in inferred if binding.binding_id not in matched_ids)
+        # A reviewed nonvisual decision is a retained audit record, even if a
+        # later inference stops proposing that asset. It becomes stale rather
+        # than being silently retired by a new machine proposal set.
+        unmatched = tuple(binding for binding in inferred if binding.binding_id not in matched_ids)
+        unchanged.extend(binding for binding in unmatched if binding.scope_reviewed_by)
+        retire = tuple(binding for binding in unmatched if not binding.scope_reviewed_by)
         return {
             "manual": manual,
             "unchanged": tuple(unchanged),
@@ -1003,6 +1065,207 @@ class GovernedAssetResolutionService:
         return replace(proposal, role=role)
 
     @classmethod
+    def _suggest_visual_scope(
+        cls,
+        proposal: ShotAssetRequirementProposal,
+        shot: ShotPlan,
+        scene_text: str,
+    ) -> ShotAssetRequirementProposal:
+        """Suggest only narrowly evidenced nonvisual roles; never exempt an asset.
+
+        The governed Shot controls visibility. Scene context may establish where a
+        Shot occurs but cannot silently turn camera motion into a visible robot or
+        make an exterior vessel silhouette necessary in an interior-only Shot.
+        """
+        name = cls._normalize_text(proposal.matched_asset_name)
+        shot_fields = (
+            shot.required_action,
+            shot.production_objective,
+            shot.narrative_purpose,
+            *shot.shot_constraints,
+        )
+        shot_text = cls._normalize_text(" ".join(shot_fields))
+        if proposal.expected_category in {AssetCategory.PROP, AssetCategory.TECHNOLOGY}:
+            camera_name = "camera" in name.split()
+            camera_motion = (
+                "camera advances",
+                "camera approaches",
+                "camera moves",
+                "camera tracks",
+                "camera pans",
+                "camera tilts",
+                "camera dollies",
+                "camera pushes",
+                "camera pulls",
+                "camera settles",
+                "camera holds",
+                "camera viewpoint",
+                "moving viewpoint",
+            )
+            visible_camera = (
+                "visible camera",
+                "camera is visible",
+                "camera appears",
+                "camera enters frame",
+                "camera enters the frame",
+                "camera comes into view",
+                "camera robot",
+                "camera unit",
+                "camera body",
+                "camera housing",
+                "camera wheels",
+                "show the camera",
+            )
+            if (
+                camera_name
+                and any(phrase in shot_text for phrase in camera_motion)
+                and not any(phrase in shot_text for phrase in visible_camera)
+            ):
+                evidence = next(
+                    (
+                        value.strip()
+                        for value in shot_fields
+                        if any(phrase in cls._normalize_text(value) for phrase in camera_motion)
+                    ),
+                    "",
+                )
+                if evidence:
+                    return replace(
+                        proposal,
+                        suggested_scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+                        scope_evidence=evidence,
+                    )
+
+        if proposal.expected_category in {AssetCategory.SHIP, AssetCategory.VEHICLE} and name:
+            scene_scope = cls._normalize_text(scene_text)
+            contextual = any(
+                f"{prefix} {name}" in scene_scope
+                for prefix in (
+                    "aboard a",
+                    "aboard the",
+                    "aboard",
+                    "inside a",
+                    "inside the",
+                    "onboard a",
+                    "onboard the",
+                )
+            )
+            exterior_cues = (
+                "exterior view",
+                "hull visible",
+                "ship crosses",
+                "vessel crosses",
+                "ship flies",
+                "ship enters",
+                "spacecraft approaches",
+                "view of the ship",
+                "outside the ship",
+            )
+            if contextual and not any(cue in shot_text for cue in exterior_cues):
+                return replace(
+                    proposal,
+                    suggested_scope=ShotAssetVisualScope.SETTING_CONTEXT,
+                    scope_evidence=scene_text[:500].strip(),
+                )
+        return replace(
+            proposal,
+            suggested_scope=ShotAssetVisualScope.VISIBLE_ASSET,
+            scope_evidence="",
+        )
+
+    def scope_suggestion_for_binding(
+        self, binding: ShotAssetBinding
+    ) -> ShotAssetRequirementProposal:
+        """Inspect the present governed Shot and local asset name without an AI call."""
+        shot = self._require_ready_shot(binding.shot_id)
+        scene = self.shots.scenes.plan(shot.scene_id)
+        matched_name = next(
+            (item.name for item in self.browser.assets.list() if item.asset_id == binding.asset_id),
+            "",
+        )
+        proposal = ShotAssetRequirementProposal(
+            proposal_id=f"{binding.binding_id}-SCOPE",
+            shot_id=shot.shot_id,
+            role=binding.role,
+            requirement=binding.requirement,
+            expected_category=binding.expected_category,
+            matched_asset_id=binding.asset_id,
+            matched_asset_name=matched_name,
+        )
+        return self._suggest_visual_scope(proposal, shot, self._scene_shot_text(shot, scene))
+
+    def review_visual_scope(
+        self,
+        binding_id: str,
+        *,
+        scope: ShotAssetVisualScope,
+        reviewed_by: str,
+        reason: str,
+    ) -> ShotAssetBinding:
+        """Persist an explicit Shot-scoped human decision, never CAP/asset approval."""
+        current = self._require_binding(binding_id)
+        if current.status is not AssetBindingStatus.DRAFT:
+            raise GovernedAssetResolutionError(
+                "Return the asset binding to Draft before reviewing its visual scope"
+            )
+        shot = self._require_ready_shot(current.shot_id)
+        fingerprint = self._shot_contract_hash(shot)
+        if current.shot_contract_hash != fingerprint:
+            raise GovernedAssetResolutionError(
+                "The governed Shot changed; refresh the Draft binding before reviewing scope"
+            )
+        reviewer = self._required(reviewed_by, "Scope reviewer")
+        justification = self._required(reason, "Human scope review reason")
+        suggested = self.scope_suggestion_for_binding(current)
+        if scope is not ShotAssetVisualScope.VISIBLE_ASSET and (
+            suggested.suggested_scope is not scope or not suggested.scope_evidence
+        ):
+            raise GovernedAssetResolutionError(
+                "Current governed Shot evidence does not establish this nonvisual scope; "
+                "retain the physical requirement or review the Shot contract first"
+            )
+        reviewed = replace(
+            current,
+            visual_scope=scope,
+            scope_reviewed_by=reviewer,
+            scope_review_reason=justification,
+            scope_source_evidence=suggested.scope_evidence,
+            scope_shot_hash=fingerprint,
+            scope_review_history=(
+                *current.scope_review_history,
+                ShotAssetScopeReviewRecord(
+                    scope=scope,
+                    reviewed_by=reviewer,
+                    reason=justification,
+                    source_evidence=suggested.scope_evidence,
+                    shot_contract_hash=fingerprint,
+                    scene_contract_hash=shot.scene_contract_hash,
+                    reviewed_at_utc=datetime.now(UTC).isoformat(),
+                ),
+            ),
+        )
+        self._replace(reviewed)
+        return reviewed
+
+    def is_scope_exempt(self, binding: ShotAssetBinding) -> bool:
+        """Nonvisual requirements remain auditable but do not require image authority."""
+        if (
+            binding.visual_scope is ShotAssetVisualScope.VISIBLE_ASSET
+            or binding.status is not AssetBindingStatus.DRAFT
+            or not binding.scope_reviewed_by.strip()
+            or not binding.scope_review_reason.strip()
+            or not binding.scope_source_evidence.strip()
+            or not self.is_upstream_current(binding)
+            or binding.scope_shot_hash != binding.shot_contract_hash
+        ):
+            return False
+        try:
+            suggestion = self.scope_suggestion_for_binding(binding)
+        except GovernedAssetResolutionError:
+            return False
+        return suggestion.suggested_scope is binding.visual_scope
+
+    @classmethod
     def _asset_name_in_shot(cls, name: str, shot: ShotPlan) -> bool:
         normalized_name = cls._normalize_text(name)
         normalized_shot = cls._normalize_text(cls._shot_only_text(shot))
@@ -1252,7 +1515,8 @@ class GovernedAssetResolutionService:
         """Return whether downstream specialist planners may consume this binding."""
         shot = self.shots.plan(binding.shot_id)
         return (
-            binding.status is AssetBindingStatus.READY
+            binding.visual_scope is ShotAssetVisualScope.VISIBLE_ASSET
+            and binding.status is AssetBindingStatus.READY
             and shot is not None
             and self.shots.is_production_ready(shot)
             and self.is_upstream_current(binding)
@@ -1316,6 +1580,13 @@ class GovernedAssetResolutionService:
         shot = self._require_ready_shot(current.shot_id)
         self._validate_category(expected_category)
         selected_asset = asset_id.strip().upper()
+        same_requirement = (
+            current.role == role.strip()
+            and current.requirement == requirement.strip()
+            and current.expected_category is expected_category
+            and current.asset_id == selected_asset
+            and current.shot_contract_hash == self._shot_contract_hash(shot)
+        )
         updated = replace(
             current,
             role=self._required(role, "Production role"),
@@ -1326,6 +1597,13 @@ class GovernedAssetResolutionService:
             shot_contract_hash=self._shot_contract_hash(shot),
             asset_dependency_hash=self._dependency_hash(selected_asset, expected_category),
             inference_source=None,
+            visual_scope=(
+                current.visual_scope if same_requirement else ShotAssetVisualScope.VISIBLE_ASSET
+            ),
+            scope_reviewed_by=current.scope_reviewed_by if same_requirement else "",
+            scope_review_reason=current.scope_review_reason if same_requirement else "",
+            scope_source_evidence=current.scope_source_evidence if same_requirement else "",
+            scope_shot_hash=current.scope_shot_hash if same_requirement else "",
         )
         self._replace(updated)
         return updated
@@ -1338,6 +1616,11 @@ class GovernedAssetResolutionService:
                 return current
             raise GovernedAssetResolutionError(
                 "Ready asset bindings must return to Draft before re-approval"
+            )
+        if current.visual_scope is not ShotAssetVisualScope.VISIBLE_ASSET:
+            raise GovernedAssetResolutionError(
+                "Camera viewpoint/setting context is not a visible production asset. "
+                "Re-review its scope as a visible asset before marking Ready"
             )
         shot = self._require_ready_shot(current.shot_id)
         if current.shot_contract_hash != self._shot_contract_hash(shot):
@@ -1422,7 +1705,10 @@ class GovernedAssetResolutionService:
         bindings = self.list_bindings(shot_id=shot_id)
         if not bindings:
             return False
-        inferred = tuple(binding for binding in bindings if binding.inference_source is not None)
+        physical = tuple(binding for binding in bindings if not self.is_scope_exempt(binding))
+        if not physical:
+            return False
+        inferred = tuple(binding for binding in physical if binding.inference_source is not None)
         proposals: tuple[ShotAssetRequirementProposal, ...] | None = None
         if inferred:
             proposals = self.infer_requirements(
@@ -1432,7 +1718,7 @@ class GovernedAssetResolutionService:
                     for binding in inferred
                 ),
             )
-        return all(self.is_production_ready(binding, proposals=proposals) for binding in bindings)
+        return all(self.is_production_ready(binding, proposals=proposals) for binding in physical)
 
     def _dependency_hash(self, asset_id: str, category: AssetCategory) -> str:
         if not asset_id:
@@ -1508,6 +1794,11 @@ class GovernedAssetResolutionService:
         raw["inference_source"] = (
             binding.inference_source.value if binding.inference_source is not None else ""
         )
+        raw["visual_scope"] = binding.visual_scope.value
+        raw["scope_review_history"] = [
+            {**asdict(record), "scope": record.scope.value}
+            for record in binding.scope_review_history
+        ]
         return raw
 
     @staticmethod
@@ -1532,6 +1823,25 @@ class GovernedAssetResolutionService:
                 ShotAssetInferenceSource(inference_value) if inference_value else None
             ),
             status=AssetBindingStatus(str(raw.get("status", AssetBindingStatus.DRAFT.value))),
+            visual_scope=ShotAssetVisualScope(
+                str(raw.get("visual_scope", ShotAssetVisualScope.VISIBLE_ASSET.value))
+            ),
+            scope_reviewed_by=str(raw.get("scope_reviewed_by", "")),
+            scope_review_reason=str(raw.get("scope_review_reason", "")),
+            scope_source_evidence=str(raw.get("scope_source_evidence", "")),
+            scope_shot_hash=str(raw.get("scope_shot_hash", "")),
+            scope_review_history=tuple(
+                ShotAssetScopeReviewRecord(
+                    scope=ShotAssetVisualScope(str(event["scope"])),
+                    reviewed_by=str(event["reviewed_by"]),
+                    reason=str(event["reason"]),
+                    source_evidence=str(event.get("source_evidence", "")),
+                    shot_contract_hash=str(event["shot_contract_hash"]),
+                    scene_contract_hash=str(event.get("scene_contract_hash", "")),
+                    reviewed_at_utc=str(event.get("reviewed_at_utc", "")),
+                )
+                for event in raw.get("scope_review_history", ())
+            ),
         )
 
     @classmethod

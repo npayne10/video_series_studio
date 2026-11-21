@@ -127,6 +127,29 @@ def test_integrates_complete_renderer_neutral_planning_payload(tmp_path: Path) -
     assert "renderer" not in payload
 
 
+def test_integration_excludes_reviewed_viewpoint_from_physical_assets(tmp_path: Path) -> None:
+    service, reviews = _service(tmp_path)
+
+    class _ScopedAssets(_Assets):
+        def list_bindings(self, *, shot_id: str) -> tuple[_Binding, ...]:
+            assert shot_id == "SHOT-001"
+            return (
+                self.binding,
+                _Binding("BIND-CAMERA", "SHOT-001", "Reviewed offscreen viewpoint"),
+            )
+
+        def is_scope_exempt(self, binding: _Binding) -> bool:
+            return binding.binding_id == "BIND-CAMERA"
+
+    reviews.assets = _ScopedAssets()
+    package = service.integrate("SHOT-001")
+    payload = package.payload()
+
+    assert [item["binding"]["binding_id"] for item in payload["assets"]] == ["BIND-001"]
+    assert payload["scoped_requirements"][0]["binding_id"] == "BIND-CAMERA"
+    assert payload["scoped_requirements"][0]["production_role"] == ("Reviewed offscreen viewpoint")
+
+
 def test_identical_approved_planning_is_idempotent_and_persistent(tmp_path: Path) -> None:
     service, reviews = _service(tmp_path)
 

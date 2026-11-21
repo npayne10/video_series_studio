@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -31,6 +32,7 @@ from vscs.application.story import (
     ShotAssetBinding,
     ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
+    ShotAssetVisualScope,
     ShotPlan,
 )
 from vscs.domain.assets import AssetCategory
@@ -205,6 +207,125 @@ class AssetBindingEditorDialog(QDialog):
         )
 
 
+class AssetVisualScopeReviewDialog(QDialog):
+    """Explicitly review a binding's visible-asset versus nonvisual Shot role."""
+
+    def __init__(
+        self,
+        service: GovernedAssetResolutionService,
+        binding: ShotAssetBinding,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setObjectName("assetVisualScopeReviewDialog")
+        self.setWindowTitle(f"Review Shot Asset Visibility — {binding.binding_id}")
+        self.setMinimumSize(700, 430)
+        proposal = service.scope_suggestion_for_binding(binding)
+
+        guidance = QLabel(
+            "Review what the current governed Shot actually depicts. A camera viewpoint "
+            "belongs to Camera Planning, not a visible wheeled robot. An enclosing vessel "
+            "may provide setting context without an exterior image. This decision preserves "
+            "the original binding and does not approve a CAP, MASTER or production asset.",
+            self,
+        )
+        guidance.setWordWrap(True)
+        self.suggestion_label = QLabel(
+            f"Offline suggestion: {proposal.suggested_scope.value} — not yet reviewed",
+            self,
+        )
+        self.suggestion_label.setObjectName("assetVisualScopeSuggestion")
+        self.scope_combo = QComboBox(self)
+        self.scope_combo.setObjectName("assetVisualScopeChoice")
+        self.scope_combo.addItem(
+            "Visible physical asset — full CAP/reference required",
+            ShotAssetVisualScope.VISIBLE_ASSET,
+        )
+        self.scope_combo.addItem(
+            "Offscreen camera viewpoint — Camera Planning", ShotAssetVisualScope.CAMERA_VIEWPOINT
+        )
+        self.scope_combo.addItem(
+            "Enclosing setting context — no exterior reference",
+            ShotAssetVisualScope.SETTING_CONTEXT,
+        )
+        selected = binding.visual_scope if binding.scope_reviewed_by else proposal.suggested_scope
+        self.scope_combo.setCurrentIndex(self.scope_combo.findData(selected))
+
+        self.evidence_edit = QPlainTextEdit(self)
+        self.evidence_edit.setObjectName("assetVisualScopeShotEvidence")
+        self.evidence_edit.setReadOnly(True)
+        self.evidence_edit.setPlainText(
+            proposal.scope_evidence
+            or "No current governed Shot evidence establishes a nonvisual exception. "
+            "Keep this as a visible asset unless the Shot contract is reviewed."
+        )
+        self.history_edit = QPlainTextEdit(self)
+        self.history_edit.setObjectName("assetVisualScopeAuditHistory")
+        self.history_edit.setReadOnly(True)
+        self.history_edit.setMaximumHeight(100)
+        history = getattr(binding, "scope_review_history", ())
+        self.history_edit.setPlainText(
+            "\n".join(
+                f"{item.reviewed_at_utc} | {item.reviewed_by} | {item.scope.value} | "
+                f"Shot {item.shot_contract_hash[:12]} | {item.reason}"
+                for item in history
+            )
+            or "No previous human visibility reviews."
+        )
+        self.reason_edit = QPlainTextEdit(self)
+        self.reason_edit.setObjectName("assetVisualScopeReason")
+        self.reason_edit.setPlainText(
+            binding.scope_review_reason
+            or {
+                ShotAssetVisualScope.CAMERA_VIEWPOINT: (
+                    "The governed Shot describes the moving viewpoint, not an on-screen camera device."
+                ),
+                ShotAssetVisualScope.SETTING_CONTEXT: (
+                    "The vessel establishes the interior setting, not a required exterior view."
+                ),
+                ShotAssetVisualScope.VISIBLE_ASSET: "",
+            }[selected]
+        )
+        self.confirm_box = QCheckBox(
+            "I reviewed the current Shot evidence and confirm this classification as Operator.",
+            self,
+        )
+        self.confirm_box.setObjectName("confirmAssetVisualScopeReview")
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
+            self,
+        )
+        save = buttons.button(QDialogButtonBox.StandardButton.Save)
+        save.setEnabled(False)
+        self.confirm_box.toggled.connect(save.setEnabled)
+        buttons.accepted.connect(self._accept_if_valid)
+        buttons.rejected.connect(self.reject)
+
+        form = QFormLayout()
+        form.addRow("Review classification", self.scope_combo)
+        form.addRow("Current governed Shot evidence", self.evidence_edit)
+        form.addRow("Saved human review history", self.history_edit)
+        form.addRow("Operator reason *", self.reason_edit)
+        root = QVBoxLayout(self)
+        root.addWidget(guidance)
+        root.addWidget(self.suggestion_label)
+        root.addLayout(form)
+        root.addWidget(self.confirm_box)
+        root.addWidget(buttons)
+
+    def _accept_if_valid(self) -> None:
+        if not self.confirm_box.isChecked() or not self.reason_edit.toPlainText().strip():
+            QMessageBox.warning(
+                self, "Asset Scope Review", "Confirm and explain the reviewed scope."
+            )
+            return
+        self.accept()
+
+    def values(self) -> tuple[ShotAssetVisualScope, str]:
+        scope = ShotAssetVisualScope(str(self.scope_combo.currentData()))
+        return scope, self.reason_edit.toPlainText().strip()
+
+
 class GovernedAssetResolverDialog(QDialog):
     """Resolve authoritative project assets beneath one current Ready Shot."""
 
@@ -249,6 +370,8 @@ class GovernedAssetResolverDialog(QDialog):
         self.analyze_button.setObjectName("analyzeShotAssetRequirements")
         self.new_button = QPushButton("New Requirement", self)
         self.edit_button = QPushButton("Edit", self)
+        self.scope_button = QPushButton("Review Visibility…", self)
+        self.scope_button.setObjectName("reviewAssetVisualScope")
         self.delete_button = QPushButton("Delete Draft", self)
         self.ready_button = QPushButton("Mark Ready", self)
         self.draft_button = QPushButton("Return to Draft", self)
@@ -258,6 +381,7 @@ class GovernedAssetResolverDialog(QDialog):
             self.analyze_button,
             self.new_button,
             self.edit_button,
+            self.scope_button,
             self.delete_button,
             self.ready_button,
             self.draft_button,
@@ -295,6 +419,7 @@ class GovernedAssetResolverDialog(QDialog):
         self.analyze_button.clicked.connect(self._analyze_requirements)
         self.new_button.clicked.connect(self._new)
         self.edit_button.clicked.connect(self._edit)
+        self.scope_button.clicked.connect(self._review_scope)
         self.delete_button.clicked.connect(self._delete)
         self.ready_button.clicked.connect(self._mark_ready)
         self.draft_button.clicked.connect(self._return_to_draft)
@@ -341,15 +466,31 @@ class GovernedAssetResolverDialog(QDialog):
             for binding in bindings
             if self.service.is_production_ready(binding, proposals=proposals)
         )
+        scope_checker = getattr(self.service, "is_scope_exempt", None)
+        scoped = {
+            binding.binding_id
+            for binding in bindings
+            if callable(scope_checker) and scope_checker(binding)
+        }
+        scoped_label = f" • {len(scoped)} reviewed nonvisual" if scoped else ""
         self.summary_label.setText(
             f"Asset requirements: {len(bindings)} declared • {ready_count} production-ready • "
-            f"{len(bindings) - ready_count} unresolved, Draft or stale"
+            f"{len(bindings) - ready_count - len(scoped)} unresolved, Draft or stale"
+            f"{scoped_label}"
         )
         self.table.setRowCount(len(bindings))
         for row, binding in enumerate(bindings):
-            resolution = self.service.resolution(binding)
+            scope_exempt = binding.binding_id in scoped
+            resolution = None if scope_exempt else self.service.resolution(binding)
             resolution_status = "Unbound"
-            if resolution is not None:
+            if scope_exempt:
+                visual_scope = getattr(binding, "visual_scope", ShotAssetVisualScope.VISIBLE_ASSET)
+                resolution_status = (
+                    "Viewpoint-only (reviewed)"
+                    if visual_scope is ShotAssetVisualScope.CAMERA_VIEWPOINT
+                    else "Setting context (reviewed)"
+                )
+            elif resolution is not None:
                 resolution_status = resolution.status.value.title()
                 if (
                     resolution.status is AssetResolutionStatus.RESOLVED
@@ -358,8 +499,17 @@ class GovernedAssetResolverDialog(QDialog):
                 ):
                     resolution_status += " / Changed"
             governance = binding.status.value.title()
+            if scope_exempt:
+                governance += " / Visibility Reviewed"
             if not self.service.is_upstream_current(binding):
                 governance += " / Shot Stale"
+            elif (
+                getattr(binding, "scope_reviewed_by", "")
+                and getattr(binding, "visual_scope", ShotAssetVisualScope.VISIBLE_ASSET)
+                is not ShotAssetVisualScope.VISIBLE_ASSET
+                and not scope_exempt
+            ):
+                governance += " / Visibility Review Stale"
             elif binding.status is AssetBindingStatus.READY:
                 if not self.service.is_asset_current(binding):
                     governance += " / Asset Stale"
@@ -401,8 +551,16 @@ class GovernedAssetResolverDialog(QDialog):
         self.analyze_button.setEnabled(shot_ready)
         self.new_button.setEnabled(shot_ready)
         self.edit_button.setEnabled(shot_ready and draft)
+        self.scope_button.setEnabled(
+            shot_ready and draft and bool(getattr(binding, "asset_id", ""))
+        )
         self.delete_button.setEnabled(draft)
-        self.ready_button.setEnabled(shot_ready and draft)
+        self.ready_button.setEnabled(
+            shot_ready
+            and draft
+            and getattr(binding, "visual_scope", ShotAssetVisualScope.VISIBLE_ASSET)
+            is ShotAssetVisualScope.VISIBLE_ASSET
+        )
         self.draft_button.setEnabled(ready)
         row = self.table.currentRow()
         self.up_button.setEnabled(binding is not None and row > 0)
@@ -429,12 +587,22 @@ class GovernedAssetResolverDialog(QDialog):
         self._inference_proposals = proposals
         matched = sum(1 for proposal in proposals if proposal.matched)
         unresolved = len(proposals) - matched
+        nonvisual = sum(
+            1
+            for proposal in proposals
+            if proposal.suggested_scope is not ShotAssetVisualScope.VISIBLE_ASSET
+        )
         ai_enabled = self.service.semantic_provider is not None
         self.inference_label.setText(
             f"Automated analysis: {len(proposals)} requirement proposal(s) • "
             f"{matched} canonical match(es) • {unresolved} unresolved • "
             f"AI semantic inference {'enabled' if ai_enabled else 'not configured'}. "
             "Use Analyze Requirements to review proposals before creating Draft bindings."
+            + (
+                f" {nonvisual} nonvisual scope suggestion(s) require separate human review."
+                if nonvisual
+                else ""
+            )
         )
 
     def _analyze_requirements(self) -> None:
@@ -530,7 +698,7 @@ class GovernedAssetResolverDialog(QDialog):
         return (
             f"• {proposal.role} | {proposal.expected_category.value} | {asset} | "
             f"{proposal.source.value} {proposal.confidence:.0%} | "
-            f"{proposal.canonical_status}"
+            f"{proposal.canonical_status} | suggested: {proposal.suggested_scope.value}"
         )
 
     def _new(self) -> None:
@@ -581,6 +749,37 @@ class GovernedAssetResolverDialog(QDialog):
             return
         self.refresh()
         self._select_identity(updated.binding_id)
+
+    def _review_scope(self) -> None:
+        binding = self._selected()
+        if binding is None or binding.status is not AssetBindingStatus.DRAFT:
+            return
+        try:
+            dialog = AssetVisualScopeReviewDialog(self.service, binding, self)
+        except GovernedAssetResolutionError as exc:
+            QMessageBox.warning(self, "Asset Scope Review", str(exc))
+            return
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        scope, reason = dialog.values()
+        try:
+            updated = self.service.review_visual_scope(
+                binding.binding_id,
+                scope=scope,
+                reviewed_by="Operator",
+                reason=reason,
+            )
+        except GovernedAssetResolutionError as exc:
+            QMessageBox.warning(self, "Asset Scope Review", str(exc))
+            return
+        self.refresh()
+        self._select_identity(updated.binding_id)
+        QMessageBox.information(
+            self,
+            "Asset Scope Review Saved",
+            "The current Shot-specific visibility decision was saved. "
+            "It does not approve any asset, CAP or reference.",
+        )
 
     def _delete(self) -> None:
         binding = self._selected()

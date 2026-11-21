@@ -5,18 +5,20 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any, cast
 
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
 
 from vscs.application.asset_resolution import AssetResolutionStatus
 from vscs.application.story import (
     AssetBindingStatus,
     ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
+    ShotAssetVisualScope,
     ShotPlan,
 )
 from vscs.domain.assets import AssetCategory
 from vscs.presentation.widgets.governed_asset_resolver import (
     AssetBindingEditorDialog,
+    AssetVisualScopeReviewDialog,
     GovernedAssetResolverDialog,
 )
 
@@ -188,3 +190,79 @@ def test_partial_draft_binding_is_not_mislabelled_as_changed(qtbot) -> None:
 
     assert dialog.table.item(0, 5).text() == "Partial"
     assert dialog.table.item(0, 6).text() == "Draft"
+
+
+def test_scope_review_dialog_requires_explicit_human_confirmation(qtbot) -> None:
+    binding = SimpleNamespace(
+        binding_id="EP-001-SCN-001-SHT-001-AST-005",
+        visual_scope=ShotAssetVisualScope.VISIBLE_ASSET,
+        scope_reviewed_by="",
+        scope_review_reason="",
+    )
+    suggestion = ShotAssetRequirementProposal(
+        proposal_id="scope-suggestion",
+        shot_id=_shot().shot_id,
+        role="Prop/Technology",
+        requirement="Automated inspection camera",
+        expected_category=AssetCategory.TECHNOLOGY,
+        suggested_scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        scope_evidence="The camera advances toward the diagnostic console.",
+    )
+    service = cast(
+        Any,
+        SimpleNamespace(scope_suggestion_for_binding=lambda _binding: suggestion),
+    )
+    dialog = AssetVisualScopeReviewDialog(service, binding)
+    qtbot.addWidget(dialog)
+    buttons = dialog.findChild(QDialogButtonBox)
+    assert buttons is not None
+    save = buttons.button(QDialogButtonBox.StandardButton.Save)
+    assert not save.isEnabled()
+    assert dialog.scope_combo.currentData() == ShotAssetVisualScope.CAMERA_VIEWPOINT.value
+    assert "camera advances" in dialog.evidence_edit.toPlainText()
+
+    dialog.confirm_box.setChecked(True)
+    assert save.isEnabled()
+    assert dialog.values()[0] is ShotAssetVisualScope.CAMERA_VIEWPOINT
+    save.click()
+    assert dialog.result() == QDialog.DialogCode.Accepted
+
+
+def test_reviewed_viewpoint_is_traceable_in_resolver_without_ready_button(qtbot) -> None:
+    shot = _shot()
+    binding = SimpleNamespace(
+        binding_id=f"{shot.shot_id}-AST-005",
+        role="Prop/Technology",
+        expected_category=AssetCategory.TECHNOLOGY,
+        requirement="Automated inspection camera",
+        asset_id="CAP-TEC-001",
+        notes="Inferred from Story evidence",
+        status=AssetBindingStatus.DRAFT,
+        visual_scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        scope_reviewed_by="Operator",
+    )
+    service = cast(
+        Any,
+        SimpleNamespace(
+            shots=SimpleNamespace(
+                plan=lambda _shot_id: shot,
+                is_production_ready=lambda _shot: True,
+            ),
+            semantic_provider=None,
+            list_bindings=lambda **_kwargs: (binding,),
+            binding=lambda _binding_id: binding,
+            infer_requirements=lambda _shot_id: (),
+            is_scope_exempt=lambda _binding: True,
+            is_production_ready=lambda _binding, **_kwargs: False,
+            is_upstream_current=lambda _binding: True,
+        ),
+    )
+
+    dialog = GovernedAssetResolverDialog(service, shot)
+    qtbot.addWidget(dialog)
+    dialog.table.selectRow(0)
+    assert "1 reviewed nonvisual" in dialog.summary_label.text()
+    assert dialog.table.item(0, 5).text() == "Viewpoint-only (reviewed)"
+    assert "Visibility Reviewed" in dialog.table.item(0, 6).text()
+    assert dialog.scope_button.isEnabled()
+    assert not dialog.ready_button.isEnabled()

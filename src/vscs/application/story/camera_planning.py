@@ -20,7 +20,7 @@ from vscs.application.asset_resolution import (
 from vscs.application.projects import ProjectNotOpenError, ProjectService
 from vscs.domain.assets import AssetCategory
 
-from .asset_resolver import GovernedAssetResolutionService
+from .asset_resolver import GovernedAssetResolutionService, ShotAssetVisualScope
 from .shot_planning import CinematicCoverageRole, GovernedShotPlanningService, ShotPlan
 
 
@@ -259,6 +259,22 @@ class GovernedCameraPlanningService:
             focus_strategy = "hold the governed detail in precise readable focus"
             movement_notes = "keep the insert mechanically stable unless the Shot explicitly moves"
 
+        # Asset Resolver may contain a human-reviewed production viewpoint that
+        # was mistakenly inferred as a physical camera/robot. Carry the current
+        # Shot-scoped evidence into the *Draft* Camera Plan, never into Canon or
+        # an automatically Ready plan. The Shot text is still the authority.
+        for binding in self.assets.list_bindings(shot_id=shot.shot_id):
+            if getattr(
+                binding, "visual_scope", None
+            ) is ShotAssetVisualScope.CAMERA_VIEWPOINT and self.assets.is_scope_exempt(binding):
+                movement = self._viewpoint_movement(binding.scope_source_evidence)
+                movement_notes = (
+                    f"Reviewed offscreen camera viewpoint ({binding.binding_id}): "
+                    f"{binding.scope_source_evidence} "
+                    "Confirm movement and framing before marking this Camera Plan Ready."
+                )
+                break
+
         return CameraPlan(
             camera_plan_id=self._camera_plan_id(shot.shot_id),
             shot_id=shot.shot_id,
@@ -276,6 +292,21 @@ class GovernedCameraPlanningService:
             shot_contract_hash=self._shot_contract_hash(shot),
             asset_context_hash=self._asset_context_hash(shot.shot_id),
         )
+
+    @staticmethod
+    def _viewpoint_movement(action: str) -> CameraMovement:
+        """Translate explicit camera verbs into renderer-neutral draft movement."""
+        text = " ".join(action.casefold().split())
+        for phrases, movement in (
+            (("camera pans", "camera panning"), CameraMovement.PAN),
+            (("camera tilts", "camera tilting"), CameraMovement.TILT),
+            (("camera pulls", "camera retreats"), CameraMovement.PULL_BACK),
+            (("camera advances", "camera approaches", "camera pushes"), CameraMovement.PUSH_IN),
+            (("camera tracks", "camera moves", "camera dollies"), CameraMovement.TRACK),
+        ):
+            if any(phrase in text for phrase in phrases):
+                return movement
+        return CameraMovement.STATIC
 
     def create_suggested(self, shot_id: str) -> CameraPlan:
         if self.plan(shot_id) is not None:
@@ -564,6 +595,16 @@ class GovernedCameraPlanningService:
                 "asset_dependency_hash": binding.asset_dependency_hash,
                 "status": binding.status.value,
                 "production_ready": self.assets.is_production_ready(binding),
+                **(
+                    {
+                        "visual_scope": binding.visual_scope.value,
+                        "scope_shot_hash": binding.scope_shot_hash,
+                        "scope_reviewed_by": binding.scope_reviewed_by,
+                        "scope_review_reason": binding.scope_review_reason,
+                    }
+                    if getattr(binding, "scope_reviewed_by", "")
+                    else {}
+                ),
             }
             for binding in bindings
         ]
