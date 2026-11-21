@@ -523,6 +523,16 @@ class GovernedLightingPlanningService:
                 "asset_dependency_hash": binding.asset_dependency_hash,
                 "status": binding.status.value,
                 "production_ready": self.assets.is_production_ready(binding),
+                **(
+                    {
+                        "visual_scope": binding.visual_scope.value,
+                        "scope_shot_hash": binding.scope_shot_hash,
+                        "scope_reviewed_by": binding.scope_reviewed_by,
+                        "scope_review_reason": binding.scope_review_reason,
+                    }
+                    if getattr(binding, "scope_reviewed_by", "")
+                    else {}
+                ),
             }
             for binding in bindings
         ]

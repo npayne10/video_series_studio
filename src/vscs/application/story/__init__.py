@@ -15,6 +15,7 @@ from .asset_resolver import (
     ShotAssetInferenceSource,
     ShotAssetRequirementProposal,
     ShotAssetSemanticInferenceProvider,
+    ShotAssetVisualScope,
 )
 from .bootstrap import (
     register_episode_planning,
@@ -186,6 +187,7 @@ __all__ = [
     "ShotAssetInferenceSource",
     "ShotAssetRequirementProposal",
     "ShotAssetSemanticInferenceProvider",
+    "ShotAssetVisualScope",
     "ShotPlan",
     "ShotPlanStatus",
     "ShotSize",

@@ -15,6 +15,7 @@ from vscs.application.story import (
     GovernedCameraPlanningService,
     LensFamily,
     ShotAssetBinding,
+    ShotAssetVisualScope,
     ShotPlan,
     ShotPlanStatus,
     ShotSize,
@@ -64,6 +65,12 @@ class FakeAssets:
 
     def is_production_ready(self, binding: ShotAssetBinding) -> bool:
         return self.ready and binding.asset_dependency_hash == self.binding.asset_dependency_hash
+
+    def is_scope_exempt(self, binding: ShotAssetBinding) -> bool:
+        return (
+            binding.visual_scope is ShotAssetVisualScope.CAMERA_VIEWPOINT
+            and binding.scope_reviewed_by == "Operator"
+        )
 
 
 class FakeResolver:
@@ -118,6 +125,36 @@ def test_suggested_plan_is_deterministic_and_grounded(tmp_path: Path) -> None:
     assert plan.camera_height_m == pytest.approx(1.6)
     assert "plausible" in plan.focus_strategy.lower()
     assert "screen direction" in plan.continuity_notes.lower() or plan.continuity_notes
+
+
+def test_reviewed_offscreen_viewpoint_routes_to_draft_camera_movement(tmp_path: Path) -> None:
+    shot = replace(
+        _shot(),
+        required_action=(
+            "An automated inspection camera advances toward the console, "
+            "then holds the camera view while objects remain stationary."
+        ),
+    )
+    service, _shots, assets = _service(tmp_path, shot)
+    assets.binding = replace(
+        assets.binding,
+        status=AssetBindingStatus.DRAFT,
+        expected_category=AssetCategory.TECHNOLOGY,
+        visual_scope=ShotAssetVisualScope.CAMERA_VIEWPOINT,
+        scope_reviewed_by="Operator",
+        scope_source_evidence=shot.required_action,
+    )
+
+    proposal = service.suggested_plan(shot.shot_id)
+
+    assert proposal.movement is CameraMovement.PUSH_IN
+    assert "Reviewed offscreen camera viewpoint" in proposal.movement_notes
+    assert shot.required_action in proposal.movement_notes
+    assert proposal.status is CameraPlanStatus.DRAFT
+
+    assets.binding = replace(assets.binding, scope_reviewed_by="")
+    unreviewed = service.suggested_plan(shot.shot_id)
+    assert "Reviewed offscreen" not in unreviewed.movement_notes
 
 
 def test_draft_camera_work_can_begin_before_assets_are_ready(tmp_path: Path) -> None:
