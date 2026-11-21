@@ -23,6 +23,7 @@ from vscs.application.caps.design_completion import (
     DetailDecision,
     DetailOrigin,
     apply_review,
+    reviewed_canonical_attributes,
 )
 from vscs.application.caps.design_quality import DesignQualityIssue
 from vscs.application.caps.provider_design_expansion import ProposedDesignField
@@ -39,11 +40,24 @@ class CAPDetailReviewDialog(QDialog):
         reviewer: str = "Operator",
         suggestions: tuple[ProposedDesignField, ...] = (),
         quality_issues: tuple[DesignQualityIssue, ...] = (),
+        previous_review: DesignReviewPackage | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.spec = spec
         self.reviewer = reviewer
+        if previous_review is not None and (
+            previous_review.asset_id != spec.asset_id
+            or previous_review.base_fingerprint != spec.fingerprint()
+        ):
+            raise ValueError("Saved design review is stale; begin a new field review")
+        self.previous_review = previous_review
+        previous_fields = (
+            {field.field: field for field in previous_review.fields}
+            if previous_review is not None
+            else {}
+        )
+        self._previous_fields = previous_fields
         proposed = {item.field: item for item in suggestions}
         issue_map: dict[str, list[str]] = {}
         for issue in quality_issues:
@@ -56,7 +70,8 @@ class CAPDetailReviewDialog(QDialog):
         note = QLabel(
             "Every required or populated field needs Accept/Edit/Reject/Defer. "
             "Suggested details are not proven Story Canon. "
-            "This creates only a Draft specification and review record."
+            "If every field is rejected or deferred, Save retains an immutable "
+            "review-only decision record; no CAP specification or approval is created."
         )
         note.setWordWrap(True)
         layout.addWidget(note)
@@ -69,9 +84,12 @@ class CAPDetailReviewDialog(QDialog):
         fields = tuple(dict.fromkeys((*required_fields, *spec.canonical_attributes, *proposed)))
         for field in fields:
             suggestion = proposed.get(field)
+            previous = previous_fields.get(field)
             value = QTextEdit()
             value.setPlainText(
-                spec.canonical_attributes.get(field, "")
+                (previous.final_value or previous.proposed_value)
+                if previous is not None
+                else spec.canonical_attributes.get(field, "")
                 or (suggestion.proposed_value if suggestion is not None else "")
             )
             value.setMinimumHeight(100)
@@ -79,7 +97,9 @@ class CAPDetailReviewDialog(QDialog):
             choice = QComboBox()
             for decision in DetailDecision:
                 choice.addItem(decision.value.title(), decision)
-            choice.setCurrentIndex(choice.findData(DetailDecision.DEFER))
+            choice.setCurrentIndex(
+                choice.findData(previous.decision if previous is not None else DetailDecision.DEFER)
+            )
             evidence = QTextEdit()
             evidence.setMinimumHeight(100)
             evidence.setPlaceholderText("Evidence / reason (optional; not auto-verified)")
@@ -87,7 +107,9 @@ class CAPDetailReviewDialog(QDialog):
             if suggestion is not None:
                 comments.append(f"AI design proposal: {suggestion.rationale}")
             comments.extend(f"QUALITY REVIEW: {message}" for message in issue_map.get(field, ()))
-            evidence.setPlainText("\n".join(comments))
+            evidence.setPlainText(
+                previous.evidence if previous is not None else "\n".join(comments)
+            )
             row = QHBoxLayout()
             row.addWidget(value, 4)
             row.addWidget(choice, 1)
@@ -115,12 +137,16 @@ class CAPDetailReviewDialog(QDialog):
             for field, value, choice, evidence in self.rows:
                 decision: DetailDecision = choice.currentData()
                 text = value.toPlainText().strip()
+                previous = self._previous_fields.get(field)
+                proposed = self._suggestions.get(field)
                 fields.append(
                     DesignFieldReview(
                         field=field,
                         proposed_value=(
-                            self._suggestions[field].proposed_value
-                            if field in self._suggestions
+                            previous.proposed_value
+                            if previous is not None
+                            else proposed.proposed_value
+                            if proposed is not None
                             else self.spec.canonical_attributes.get(field, "")
                         ),
                         final_value=text
@@ -129,6 +155,7 @@ class CAPDetailReviewDialog(QDialog):
                         decision=decision,
                         origin=(DetailOrigin.DESIGN_PROPOSAL if text else DetailOrigin.UNRESOLVED),
                         evidence=evidence.toPlainText().strip(),
+                        rationale=previous.rationale if previous is not None else "",
                     )
                 )
             package = DesignReviewPackage(
@@ -137,9 +164,9 @@ class CAPDetailReviewDialog(QDialog):
                 reviewer=self.reviewer,
                 fields=tuple(fields),
             )
-            # Validate the completed Draft in memory; reject all-deferred or
-            # incomplete decisions before any CAP or cache persistence.
-            apply_review(self.spec, package)
+            # A complete zero-eligible review is valid *as a decision*, not a CAP.
+            if reviewed_canonical_attributes(self.spec, package):
+                apply_review(self.spec, package)
         except ValueError as exc:
             QMessageBox.warning(self, "Invalid Detail Review", str(exc))
             return

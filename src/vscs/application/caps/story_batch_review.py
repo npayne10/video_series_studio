@@ -13,13 +13,21 @@ from vscs.application.caps.context_preparation import (
     prepare_cap_context,
 )
 from vscs.application.caps.cross_asset_continuity import validate_dependencies
-from vscs.application.caps.design_completion import DesignReviewPackage, DesignReviewPersistence
+from vscs.application.caps.design_completion import (
+    DesignReviewPackage,
+    DesignReviewPersistence,
+    reviewed_canonical_attributes,
+)
 from vscs.application.caps.governed_planning_evidence import discover_governed_shot_evidence
 from vscs.application.caps.proposal_cache import cache_fingerprint
 from vscs.application.caps.service import CAPNotFoundError
 from vscs.application.caps.spatial_graph import assess_spatial_graph
 from vscs.application.caps.story_batch import StoryBatchError, StoryCAPBatchService
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
+from vscs.application.caps.unresolved_design_reviews import (
+    UnresolvedCAPReviewLedger,
+    UnresolvedCAPReviewRecord,
+)
 from vscs.application.story.lifecycle import StoryStatus
 from vscs.domain.caps import CAPCreate, CAPStatus
 
@@ -35,11 +43,28 @@ class CAPAssetCandidate:
     has_specification: bool
 
 
+@dataclass(frozen=True)
+class CAPReviewSaveOutcome:
+    """Explicitly distinguish a review-only save from Draft CAP creation."""
+
+    outcome: str
+    record_id: str = ""
+
+
 class StoryCAPBatchReviewService:
     """Discover without writes; commit only individual explicitly reviewed records."""
 
     def __init__(self, batch: StoryCAPBatchService) -> None:
         self.batch = batch
+
+    def unresolved_reviews(
+        self, story_id: str, asset_id: str
+    ) -> tuple[UnresolvedCAPReviewRecord, ...]:
+        """Inspect immutable decisions without a provider request or CAP mutation."""
+        root = self.batch.generator.generator.assets.projects.project_directory
+        if root is None:
+            raise StoryBatchError("Open a project before inspecting saved CAP reviews")
+        return UnresolvedCAPReviewLedger(root).list_records(story_id, asset_id)
 
     def _approved_story_id(self, story_id: str | None) -> str:
         """Explicit selection preferred; legacy calls require one approved Story."""
@@ -206,12 +231,13 @@ class StoryCAPBatchReviewService:
         review: DesignReviewPackage | None = None,
         *,
         expected_context_fingerprint: str | None = None,
-    ) -> None:
+    ) -> CAPReviewSaveOutcome:
         """Recheck Story authority and current asset/CAP state before persistence."""
         # Revalidate directly from persisted Story, never regenerate a paid AI proposal.
         current_fingerprint = self.batch.current_story_fingerprint(story_id)
         if current_fingerprint != approved_fingerprint:
             raise StoryBatchError("Story changed after proposal; review a new draft")
+        current: CAPContextManifest | None = None
         if expected_context_fingerprint is not None:
             if review is None:
                 raise StoryBatchError("Governed CAP save requires explicit field review")
@@ -235,15 +261,27 @@ class StoryCAPBatchReviewService:
         if existing_spec is not None:
             raise StoryBatchError("A structured CAP already exists; revision review is required")
         caps = self.batch.generator.specifications.caps
-        self.validate_reviewed_dependencies(specification)
         asset = caps.assets.get(specification.asset_id)
         if asset.category != specification.category:
             raise StoryBatchError("Asset category changed during review")
-        created = False
         try:
             cap = caps.get(specification.asset_id)
         except CAPNotFoundError:
             cap = None
+        if cap is not None and cap.status != CAPStatus.DRAFT:
+            raise StoryBatchError("Existing CAP is not Draft")
+        if review is not None and not reviewed_canonical_attributes(specification, review):
+            if current is None:
+                raise StoryBatchError(
+                    "Unresolved design review requires a current governed context"
+                )
+            root = caps.assets.projects.project_directory
+            if root is None:
+                raise StoryBatchError("Open a project before saving CAP review decisions")
+            record = UnresolvedCAPReviewLedger(root).save(specification, review, current)
+            return CAPReviewSaveOutcome("no_eligible_attributes", record.record_id)
+        self.validate_reviewed_dependencies(specification)
+        created = False
         if cap is None:
             caps.create(
                 CAPCreate(
@@ -254,8 +292,6 @@ class StoryCAPBatchReviewService:
                 )
             )
             created = True
-        elif cap.status != CAPStatus.DRAFT:
-            raise StoryBatchError("Existing CAP is not Draft")
         try:
             if review is None:
                 self.batch.generator.save_reviewed(specification)
@@ -269,3 +305,4 @@ class StoryCAPBatchReviewService:
             if created and self.batch.generator.specifications.get(asset.asset_id) is None:
                 caps.delete(asset.asset_id)
             raise
+        return CAPReviewSaveOutcome("draft_cap")

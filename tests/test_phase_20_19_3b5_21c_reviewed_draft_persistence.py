@@ -211,14 +211,15 @@ def test_existing_non_draft_cap_is_never_overwritten():
     caps.delete.assert_not_called()
 
 
-def test_all_deferred_detail_review_is_blocked_before_dialog_accept(qtbot):
+def test_all_deferred_detail_review_is_review_only_without_cap_materialization(qtbot):
     dialog = CAPDetailReviewDialog(_spec())
     qtbot.addWidget(dialog)
     with patch.object(QMessageBox, "warning") as warning:
         dialog._accept_review()
-    warning.assert_called_once()
-    with pytest.raises(ValueError, match="No accepted review"):
-        dialog.reviewed()
+    warning.assert_not_called()
+    assert all(item.decision is DetailDecision.DEFER for item in dialog.reviewed().fields)
+    with pytest.raises(ValueError, match="No eligible canonical attributes"):
+        apply_review(_spec(), dialog.reviewed())
 
 
 def test_real_review_persistence_stores_one_unapproved_draft_and_audit():

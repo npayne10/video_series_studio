@@ -25,6 +25,7 @@ from vscs.application.caps.context_preparation import (
     render_approved_story_context,
     render_cap_provider_context,
 )
+from vscs.application.caps.design_completion import reviewed_canonical_attributes
 from vscs.application.caps.design_quality import assess_design_grounding
 from vscs.application.caps.draft_cap_revision import prepare_draft_cap_revision
 from vscs.application.caps.generator import CAPGeneratorService
@@ -75,9 +76,15 @@ from vscs.presentation.widgets.automation_progress import AutomationProgressRunn
 class CAPContextInspectionDialog(QDialog):
     """Resizable, read-only offline context inspection; no authority changes."""
 
-    def __init__(self, context_text: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        context_text: str,
+        parent: QWidget | None = None,
+        *,
+        title: str = "Prepared CAP Context (Offline)",
+    ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Prepared CAP Context (Offline)")
+        self.setWindowTitle(title)
         self.setMinimumSize(650, 400)
         self.resize(1000, 700)
         self.setSizeGripEnabled(True)
@@ -140,6 +147,7 @@ class StoryCAPBatchDialog(QDialog):
         self.inspect = QPushButton("Discover Shot Assets")
         self.map_scenes = QPushButton("Assign Story Scenes (Reviewed)")
         self.context_button = QPushButton("Prepare CAP Context (Offline)")
+        self.saved_reviews_button = QPushButton("Inspect Saved Detail Reviews (Offline)")
         self.queue_button = QPushButton("Prepare Queue (Offline)")
         self.preview = QPushButton("Review Cached Proposal")
         self.regenerate = QPushButton("Generate / Regenerate Using AI (Paid)")
@@ -174,6 +182,7 @@ class StoryCAPBatchDialog(QDialog):
         revision_row.addWidget(self.edit_existing)
         layout.addLayout(revision_row)
         layout.addWidget(self.context_button)
+        layout.addWidget(self.saved_reviews_button)
         layout.addWidget(self.queue_button)
         layout.addWidget(self.map_scenes)
         acceptance_row = QHBoxLayout()
@@ -185,6 +194,7 @@ class StoryCAPBatchDialog(QDialog):
         self.inspect.clicked.connect(self.discover)
         self.edit_existing.clicked.connect(self.edit_existing_draft_cap)
         self.context_button.clicked.connect(self.prepare_selected_context)
+        self.saved_reviews_button.clicked.connect(self.inspect_saved_reviews)
         self.queue_button.clicked.connect(self.prepare_queue)
         self.story.currentIndexChanged.connect(self._story_changed)
         self.map_scenes.clicked.connect(self.assign_story_scenes)
@@ -193,6 +203,7 @@ class StoryCAPBatchDialog(QDialog):
         self.close_button.clicked.connect(self.reject)
         self.spatial_acceptance.clicked.connect(self.review_spatial_acceptance)
         self.context_button.setEnabled(False)
+        self.saved_reviews_button.setEnabled(False)
         self.queue_button.setEnabled(False)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
@@ -285,6 +296,7 @@ class StoryCAPBatchDialog(QDialog):
         self.edit_existing.setEnabled(False)
         self.assets.clear()
         self.context_button.setEnabled(False)
+        self.saved_reviews_button.setEnabled(False)
         self.queue_button.setEnabled(False)
         self.preview.setEnabled(False)
         self.regenerate.setEnabled(False)
@@ -348,6 +360,66 @@ class StoryCAPBatchDialog(QDialog):
         self.summary.setPlainText(context_text)
         CAPContextInspectionDialog(context_text, self).exec()
 
+    def inspect_saved_reviews(self) -> None:
+        """Reopen human decisions and provenance locally without CAP writes."""
+        story_id = self.story.currentData()
+        asset_id = self.assets.currentData()
+        if not isinstance(story_id, str) or not isinstance(asset_id, str):
+            return
+        try:
+            records = self.review_service.unresolved_reviews(story_id, asset_id)
+        except (StoryBatchError, ValueError, OSError) as exc:
+            QMessageBox.warning(self, "Saved CAP Detail Reviews", str(exc))
+            return
+        current_fingerprint: str | None = None
+        context_note = ""
+        try:
+            current_fingerprint = self.review_service.prepare_context(
+                story_id, asset_id
+            ).fingerprint
+        except (StoryBatchError, ValueError, OSError) as exc:
+            context_note = f"Current context unavailable; saved evidence is historical: {exc}"
+        lines = [
+            f"Story: {story_id}  Asset: {asset_id}",
+            "REVIEW ONLY — no eligible attributes, CAP, Canon, MASTER or production approval.",
+            f"Saved decision records: {len(records)}",
+            context_note,
+        ]
+        for record in records:
+            lines.extend(
+                (
+                    "",
+                    f"Review {record.record_id} at {record.reviewed_at_utc}",
+                    f"Outcome: {record.outcome}",
+                    f"Current governed context: {current_fingerprint is not None and record.context_fingerprint == current_fingerprint}",
+                    f"Story fingerprint: {record.story_fingerprint}",
+                    f"Context fingerprint: {record.context_fingerprint}",
+                    f"Asset fingerprint: {record.asset_fingerprint}",
+                    f"Proposal fingerprint: {record.base_fingerprint}",
+                    f"Reviewer: {record.review.reviewer}",
+                )
+            )
+            for field in record.review.fields:
+                lines.append(
+                    f"{field.field}: {field.decision.value.upper()} ({field.origin.value})"
+                )
+                lines.extend(
+                    (
+                        f"  Proposed: {field.proposed_value}",
+                        f"  Reason/evidence: {field.evidence}",
+                        f"  Rationale: {field.rationale}",
+                    )
+                )
+            for source in record.context_sources:
+                lines.append(
+                    f"[{source.authority}] {source.source_type} "
+                    f"{source.record_id}.{source.field} [{source.fingerprint}]: {source.excerpt}"
+                )
+            lines.extend(record.context_warnings)
+        CAPContextInspectionDialog(
+            "\n".join(lines), self, title="Saved CAP Human Detail Decisions (Offline)"
+        ).exec()
+
     def discover(self) -> None:
         self.assets.clear()
         self.existing_assets.clear()
@@ -385,6 +457,7 @@ class StoryCAPBatchDialog(QDialog):
         )
         self.edit_existing.setEnabled(self.existing_assets.count() > 0)
         self.context_button.setEnabled(self.assets.count() > 0)
+        self.saved_reviews_button.setEnabled(self.assets.count() > 0)
         self.queue_button.setEnabled(self.assets.count() > 0)
         self.preview.setEnabled(self.assets.count() > 0)
         self.regenerate.setEnabled(self.preview.isEnabled())
@@ -646,32 +719,54 @@ class StoryCAPBatchDialog(QDialog):
             if self.cache is not None:
                 self.cache.save(item, asset_fingerprint, provider_fingerprint, context.fingerprint)
             self._proposal_cache[cache_key] = item
-            warnings = self.review_service.validate_reviewed_dependencies(dialog.reviewed())
-            if dialog.reviewed().dependency_asset_ids:
-                graph = assess_spatial_graph(
-                    dialog.reviewed(), self.review_service.batch.generator.specifications
-                )
-                report = build_spatial_review_report(graph)
-                SpatialContinuityReportDialog(report, self).exec()
-            if warnings:
-                self.summary.setPlainText(
-                    "Dependency validation remains unverified:\n" + "\n".join(warnings)
-                )
+            previous = next(
+                (
+                    record.review
+                    for record in reversed(
+                        self.review_service.unresolved_reviews(story_id, asset_id)
+                    )
+                    if record.base_fingerprint == dialog.reviewed().fingerprint()
+                    and record.context_fingerprint == context.fingerprint
+                    and record.story_fingerprint == item.story_fingerprint
+                    and record.asset_fingerprint == asset_fingerprint
+                ),
+                None,
+            )
             detail_dialog = CAPDetailReviewDialog(
                 dialog.reviewed(),
                 suggestions=item.proposal.design_suggestions,
                 quality_issues=item.proposal.quality_issues,
+                previous_review=previous,
                 parent=self,
             )
             if not detail_dialog.exec():
                 return
+            reviewed_fields = detail_dialog.reviewed()
+            creates_cap = bool(reviewed_canonical_attributes(dialog.reviewed(), reviewed_fields))
+            # A refused provider proposal is not a CAP; its speculative physical
+            # dependencies must not prevent the operator from saving that refusal.
+            if creates_cap:
+                if dialog.reviewed().dependency_asset_ids:
+                    graph = assess_spatial_graph(
+                        dialog.reviewed(), self.review_service.batch.generator.specifications
+                    )
+                    SpatialContinuityReportDialog(build_spatial_review_report(graph), self).exec()
+                warnings = self.review_service.validate_reviewed_dependencies(dialog.reviewed())
+                if warnings:
+                    self.summary.setPlainText(
+                        "Dependency validation remains unverified:\n" + "\n".join(warnings)
+                    )
             confirm = QMessageBox.question(
                 self,
-                "Create Reviewed Draft CAP?",
-                f"Save the reviewed CAP specification for {asset_id}?\n"
-                "A missing CAP record will be created in Draft status.\n"
-                "All required and populated design fields must be explicitly reviewed.\n"
-                "Current Story, asset and governed Shot context will be rechecked at save.\n"
+                "Create Reviewed Draft CAP?" if creates_cap else "Save Unresolved Detail Review?",
+                (
+                    f"Save the reviewed CAP specification for {asset_id}?\n"
+                    "A missing CAP record will be created in Draft status.\n"
+                    if creates_cap
+                    else f"Save all Reject/Defer decisions for {asset_id} as an immutable "
+                    "review-only record?\nNo CAP specification or asset will be created.\n"
+                )
+                + "Current Story, asset and governed Shot context will be rechecked.\n"
                 "No Canon, reference, image, or production approval will be granted.",
             )
             if confirm != QMessageBox.StandardButton.Yes:
@@ -692,13 +787,13 @@ class StoryCAPBatchDialog(QDialog):
                 raise StoryBatchError("CAP context changed before Draft persistence")
             if provider_cache_fingerprint(self.generator.provider) != provider_fingerprint:
                 raise StoryBatchError("CAP provider configuration changed during review")
-            reviewed_decisions = detail_dialog.reviewed().model_copy(
+            reviewed_decisions = reviewed_fields.model_copy(
                 update={
                     "story_fingerprint": item.story_fingerprint,
                     "context_fingerprint": context.fingerprint,
                 }
             )
-            self.review_service.save_reviewed(
+            outcome = self.review_service.save_reviewed(
                 story_id,
                 dialog.reviewed(),
                 item.story_fingerprint,
@@ -709,5 +804,15 @@ class StoryCAPBatchDialog(QDialog):
             QMessageBox.warning(self, "CAP Batch Review", str(exc))
             return
         self._proposal_cache.clear()
-        QMessageBox.information(self, "CAP Draft Saved", f"{asset_id} saved as Draft.")
+        if outcome.outcome == "no_eligible_attributes":
+            QMessageBox.information(
+                self,
+                "CAP Detail Review Saved — No CAP Created",
+                f"{asset_id}: all design fields were rejected or deferred. "
+                "Human decisions, reasons, proposal and governed context were saved "
+                "for offline inspection and later re-review. "
+                "No eligible CAP attributes were created; no CAP, Canon or production authority.",
+            )
+        else:
+            QMessageBox.information(self, "CAP Draft Saved", f"{asset_id} saved as Draft.")
         self.discover()

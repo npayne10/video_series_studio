@@ -77,20 +77,12 @@ def apply_review(
     review: DesignReviewPackage,
 ) -> tuple[CAPStructuredSpecification, str]:
     """Produce reviewed Draft plus stable audit payload; no database writes."""
-    if review.asset_id != spec.asset_id or review.base_fingerprint != spec.fingerprint():
-        raise ValueError("CAP identity or fingerprint changed; review must be repeated")
-    required = REQUIRED_FIELDS.get(spec.category, ("identity",))
-    decisions = {item.field: item for item in review.fields}
-    if not set(required).issubset(decisions):
-        raise ValueError("Every required category field needs an explicit review decision")
-    if not set(spec.canonical_attributes).issubset(decisions):
-        raise ValueError("Every populated CAP attribute needs an explicit review decision")
-    attributes = dict(spec.canonical_attributes)
-    for item in review.fields:
-        if item.decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}:
-            attributes[item.field] = item.final_value
-        else:
-            attributes.pop(item.field, None)
+    attributes = reviewed_canonical_attributes(spec, review)
+    if not attributes:
+        raise ValueError(
+            "No eligible canonical attributes were accepted or edited; "
+            "save these decisions as a review-only record, not a CAP specification"
+        )
     updated = CAPStructuredSpecification.model_validate(
         {**spec.model_dump(), "canonical_attributes": attributes}
     )
@@ -107,6 +99,32 @@ def apply_review(
         "canon_approved": False,
     }
     return updated, json.dumps(audit, sort_keys=True, separators=(",", ":"))
+
+
+def reviewed_canonical_attributes(
+    spec: CAPStructuredSpecification,
+    review: DesignReviewPackage,
+) -> dict[str, str]:
+    """Validate complete decisions without requiring any accepted physical facts.
+
+    An empty result is an entirely legitimate human review, but it must never
+    pass the structured CAP schema's nonempty canonical_attributes contract.
+    """
+    if review.asset_id != spec.asset_id or review.base_fingerprint != spec.fingerprint():
+        raise ValueError("CAP identity or fingerprint changed; review must be repeated")
+    required = REQUIRED_FIELDS.get(spec.category, ("identity",))
+    decisions = {item.field: item for item in review.fields}
+    if not set(required).issubset(decisions):
+        raise ValueError("Every required category field needs an explicit review decision")
+    if not set(spec.canonical_attributes).issubset(decisions):
+        raise ValueError("Every populated CAP attribute needs an explicit review decision")
+    attributes = dict(spec.canonical_attributes)
+    for item in review.fields:
+        if item.decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}:
+            attributes[item.field] = item.final_value
+        else:
+            attributes.pop(item.field, None)
+    return attributes
 
 
 def build_reviewed_master_prompt(
