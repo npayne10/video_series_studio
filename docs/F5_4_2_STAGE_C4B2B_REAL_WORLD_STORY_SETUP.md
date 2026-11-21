@@ -159,3 +159,37 @@ git status --short
 6. Save a screenshot of the reviewed bindings and the draft Camera Plan suggestion plus the QA terminal transcript. If an upstream Shot is edited later, the previous visibility review must show stale and stop contributing to readiness until explicitly refreshed and reviewed again. **Do not edit the Ready Shot solely to exercise that test in the real project**; stale/visible-robot regression coverage belongs to automated fixtures.
 
 **No-go boundary:** Do not create/approve canonical references or publish video merely because #56 is merged. Continue the outstanding CAP/MASTER/canonical and production-planning backlog under separate user-authorized steps. No provider billable call or GPU execution is part of this fix.
+
+## 10. P0-C Story-grounded CAP field normalization — Issue #54 (Windows acceptance pending)
+
+**Observed problem:** Approved `STORY-001.source_text` already specifies the Diagnostic Console's physical material, display, three-button layout, recessed rotary dial and ribbed grips. Earlier cached AI output bundled physical facts under `geometry`, left required `materials` and `components` to manual transcription, or suggested invented numerical scale. A first-pass Location proposal similarly lacked separate grounded `layout` and `lighting`. Ship dimensions and workstation geometry must never be inferred from nearby objects or the enclosed bay. Unverified or verified *Shot* descriptions can give context but are not approved Story authority for a permanent CAP design.
+
+**Change under review:** A local, deterministic reconciliation step reads `approved_story_context` sources only, identifies missing required fields with asset-scoped verbatim excerpts, and labels each field with origin, Story ID/field/SHA and current context fingerprint. Existing provider content and cached human edits are preserved. AI alternatives and Shot-only evidence remain separately labelled; unsupported scale and containing-vessel dimensions cause advisory quality warnings. The detail review shows attribution and offers an *explicit, non-persisting* button to preselect supported Story-source fields while leaving AI-only/unresolved values deferred. Operators retain field-by-field Accept/Edit/Reject/Defer authority and separate final save confirmation; all-Defer/Reject remains an immutable review-only outcome under Issue #57. No new provider request, CAP, image, reference or Production Approval is initiated by reconciliation.
+
+**Safe Windows non-paid test sequence (do not skip the initial hashes):**
+
+1. Close VSCS, check for unrelated working edits, then fetch and switch to the Issue #54 branch or reviewed PR test commit. Run Ruff lint and format, Mypy and `python -m pytest -q tests/test_issue_54_story_grounded_cap_fields.py tests/test_issue_57_unresolved_cap_review.py`, followed by full `python -m pytest -q`. Two existing Windows symlink privilege skips are expected; other skips/failures must be investigated. Record branch, commit, counts and the active project path.
+2. In PowerShell, capture the current planning asset-bindings hash *before launching the UI*:
+
+   ```powershell
+   $assetFile = 'D:\VSCS\C4B2B_DISPOSABLE_GPU_01\planning\asset_resolutions.json'
+   $beforeHash = (Get-FileHash -LiteralPath $assetFile -Algorithm SHA256).Hash
+   Write-Host "Asset bindings before: $beforeHash"
+   ```
+
+3. Start VSCS with **exactly** `D:\VSCS\C4B2B_DISPOSABLE_GPU_01` active. Verify `STORY-001` remains Approved and `EP-001-SC-001-SHT-001` remains Ready, 0:18, without modifying either. The Asset Resolver must retain all five original bindings, the two reviewed nonvisual classifications, and exactly three physical Draft/Partial requirements. Do not edit/resave them for this test.
+4. Open **Canonical Profiles → Story → CAP Batch…** and **Discover Shot Assets**. Select `CAP-PRP-002` **Diagnostic console**. Click **Prepare CAP Context (Offline)** and confirm the full `STORY-001.source_text` is labelled approved with source SHA, while Draft Shot constraints retain `unverified_shot`. If the source is unavailable, unreadable, or only Shot-labelled, **STOP**.
+5. Click **Review Cached Proposal**. If no current eligible cache exists, **STOP** and report `missing`/`stale` status; do not click **Generate / Regenerate Using AI (Paid)** as a workaround. In **Review Story CAP Draft**, check `materials` includes the Story's matte graphite-coated metal, and `components` explicitly preserves the cobalt-blue display, three circular buttons, recessed rotary dial below the shelf plane and ribbed grips. `scale` must not acquire an invented numeric value. The read-only **Field provenance / AI alternatives** view must show Story ID/field/SHA for the quoted fields and distinguish unsupported provider alternatives. A suggestion that contradicts the Story must remain unapproved, not silently replace a sourced fact.
+6. For the *non-persistence* UI test, click **Save Review & Continue** only after noting that this updates the local *proposal cache*. In **Review CAP Detail Decisions**, verify every field initially says **Defer** unless a previously saved review exists (in which case decisions are deliberately restored). Read the provenance rows. Click **Apply Story-Source Suggestions** and verify **materials/components** become **Accept**, while **scale** and AI-only `geometry` stay **Defer**. **Cancel** this dialog; do not click its **Save** or the final Draft persistence confirmation. Reopen the proposal once to verify the cache/source fingerprint remains current. The asset bindings must be untouched.
+7. If an independently current cached `CAP-LOC-001` proposal exists, repeat the read-only inspection for the bay: only Story-supported layout and diffuse overhead utility lighting may populate; no invented room dimensions, construction materials, service chase or doorway should be auto-filled. If not cached, record *not exercised*, not failed. Likewise, any ship proposal may cite its enclosing relationship but must not present a contained bay's metres as ship dimensions. Do not create or accept another CAP to force these checks.
+8. Close VSCS and rehash the asset bindings:
+
+   ```powershell
+   $afterHash = (Get-FileHash -LiteralPath $assetFile -Algorithm SHA256).Hash
+   Write-Host "Asset bindings after:  $afterHash"
+   if ($beforeHash -eq $afterHash) { Write-Host 'PASS: no asset-binding mutation' -ForegroundColor Green } else { Write-Host 'FAIL: asset bindings changed; STOP' -ForegroundColor Red }
+   ```
+
+9. Verify no newly created CAP specification/approved reference/MASTER or production execution. A cache JSON change after **Save Review & Continue** is expected and *does not count as an asset mutation*. Capture the provenance screenshot, field classification screenshot, cache status, before/after hashes and terminal output. Report whether the source-grounded fields passed, were absent, or were ambiguous. **Do not approve/canonize these source candidates merely to complete the test.**
+
+**Stop criteria:** Unexpected source label/SHA; stale Story/Shot; console inheriting workstation hardware; bay inheriting console materials; ship inheriting interior dimensions; invented scale silently accepted; implicit Accept/Canon/MASTER; mutated `asset_resolutions.json`; any provider charge. The operator should report these before proceeding to final Draft CAP review, canonical Candidate creation or Production Planning.
