@@ -10,7 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from PySide6.QtCore import QByteArray, QSettings, Qt, QUrl
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QGuiApplication, QImage, QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -229,8 +229,12 @@ class EpisodeAssemblyWorkspace(QWidget):
         self.playback_view.setMaximumHeight(410)
         preview_layout.addWidget(self.playback_view)
         self.playback_player = QMediaPlayer(self)
-        self.playback_audio = QAudioOutput(self)
-        self.playback_player.setAudioOutput(self.playback_audio)
+        # Qt's audio backend can crash during initialization on headless Linux
+        # runners. Video inspection still works without an audio device there.
+        self.playback_audio: QAudioOutput | None = None
+        if QGuiApplication.platformName() != "offscreen":
+            self.playback_audio = QAudioOutput(self)
+            self.playback_player.setAudioOutput(self.playback_audio)
         self.playback_player.setVideoOutput(self.playback_view)
         self.playback_player.positionChanged.connect(self._playback_position_changed)
         self.playback_player.errorOccurred.connect(self._playback_error)
