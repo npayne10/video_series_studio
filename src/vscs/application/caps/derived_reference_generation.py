@@ -10,14 +10,17 @@ from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.domain.caps import (
+    CanonicalReference,
     CanonicalReferenceCreate,
     CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
+    CanonicalReferenceStatus,
     CanonicalReferenceType,
     CanonicalReferenceView,
     ReferenceCoverage,
 )
+from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 
 
 class DerivedReferenceGenerationError(RuntimeError):
@@ -110,6 +113,58 @@ class DerivedReferenceGenerationService:
         """Return category-template coverage for the active CAP reference set."""
         return self.templates.coverage(asset_id)
 
+    def master_authority_state(self, asset_id: str) -> tuple[bool, str]:
+        """Read-only UI gate; never invoke a provider to determine MASTER status."""
+        try:
+            self._resolve_locked_master(asset_id)
+        except DerivedReferenceGenerationError as exc:
+            return False, str(exc)
+        return True, "Approved, locked ChatGPT MASTER and reference record agree"
+
+    def _resolve_locked_master(
+        self, asset_id: str
+    ) -> tuple[
+        Path,
+        tuple[ReferenceLibraryEntry, ...],
+        ReferenceLibraryEntry,
+        CanonicalReference,
+        Path,
+    ]:
+        project = self.references.caps.assets.projects.project_directory
+        if project is None:
+            raise DerivedReferenceGenerationError("Open a project before generating references")
+        project = project.resolve(strict=False)
+        entries = self.library.list_for_cap(asset_id)
+        master = next(
+            (
+                entry
+                for entry in entries
+                if entry.family is CanonicalReferenceFamily.MASTER
+                and entry.lifecycle is CanonicalReferenceLifecycle.LOCKED
+            ),
+            None,
+        )
+        if master is None:
+            raise DerivedReferenceGenerationError(
+                "A locked ChatGPT MASTER is required before derived references can be generated"
+            )
+        master_record = self.references.get(master.reference_record_id)
+        if (
+            master_record.status is not CanonicalReferenceStatus.APPROVED
+            or not master_record.locked
+            or master_record.role is not CanonicalReferenceRole.PRIMARY
+        ):
+            raise DerivedReferenceGenerationError(
+                "Locked MASTER authority mismatch between the reference library and the "
+                "canonical reference record; review the MASTER in Assets before generation"
+            )
+        master_path = (project / master_record.file_path).resolve(strict=False)
+        if not master_path.exists() or not master_path.is_file():
+            raise DerivedReferenceGenerationError(
+                f"MASTER reference file does not exist: {master_record.file_path}"
+            )
+        return project, entries, master, master_record, master_path
+
     def generate_missing_required(
         self,
         asset_id: str,
@@ -160,31 +215,7 @@ class DerivedReferenceGenerationService:
 
         provider = self.providers.require(provider_name)
         cap = self.references.caps.get(asset_id)
-        project = self.references.caps.assets.projects.project_directory
-        if project is None:
-            raise DerivedReferenceGenerationError("Open a project before generating references")
-        project = project.resolve(strict=False)
-
-        entries = self.library.list_for_cap(asset_id)
-        master = next(
-            (
-                entry
-                for entry in entries
-                if entry.family is CanonicalReferenceFamily.MASTER
-                and entry.lifecycle is CanonicalReferenceLifecycle.LOCKED
-            ),
-            None,
-        )
-        if master is None:
-            raise DerivedReferenceGenerationError(
-                "A locked ChatGPT MASTER is required before derived references can be generated"
-            )
-        master_record = self.references.get(master.reference_record_id)
-        master_path = (project / master_record.file_path).resolve(strict=False)
-        if not master_path.exists():
-            raise DerivedReferenceGenerationError(
-                f"MASTER reference file does not exist: {master_record.file_path}"
-            )
+        project, entries, master, master_record, master_path = self._resolve_locked_master(asset_id)
 
         existing_views = {
             entry.view

@@ -19,8 +19,19 @@ from vscs.application.caps.file_manager import (
     CanonicalReferenceFileManager,
     DuplicateFileResolution,
 )
+from vscs.application.caps.reference_library import (
+    ReferenceLibraryError,
+    ReferenceLibraryNotFoundError,
+    ReferenceLibraryService,
+)
 from vscs.application.caps.reference_service import CanonicalReferenceError
-from vscs.domain.caps import CanonicalReferenceRole, CanonicalReferenceStatus
+from vscs.domain.caps import (
+    CanonicalReferenceFamily,
+    CanonicalReferenceLifecycle,
+    CanonicalReferenceRole,
+    CanonicalReferenceStatus,
+)
+from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 from vscs.infrastructure.xcic import XCICImageProvider
 from vscs.presentation.dialogs.canonical_asset_generation_dialog import (
     CanonicalAssetGenerationDialog,
@@ -185,7 +196,7 @@ def _generate_references(dialog: Any) -> None:
 def _run_workflow(dialog: Any, action: Callable[[], object], success: str | None = None) -> None:
     try:
         action()
-    except (CanonicalReferenceError, ValueError) as exc:
+    except (CanonicalReferenceError, ReferenceLibraryError, ValueError) as exc:
         QMessageBox.critical(dialog, "Canonical Reference Workflow", str(exc))
         return
     if success:
@@ -193,30 +204,116 @@ def _run_workflow(dialog: Any, action: Callable[[], object], success: str | None
     dialog._refresh_references()
 
 
+def _registered_reference(
+    dialog: Any, reference_id: int
+) -> tuple[ReferenceLibraryService, ReferenceLibraryEntry | None]:
+    """Never mistake a gallery-only reference for a governed production reference."""
+    library = ReferenceLibraryService(dialog.reference_service)
+    try:
+        return library, library.get(reference_id)
+    except ReferenceLibraryNotFoundError:
+        return library, None
+
+
 def _set_primary_reference(dialog: Any, reference_id: int) -> None:
     if dialog.reference_service is not None:
-        _run_workflow(dialog, lambda: dialog.reference_service.set_primary(reference_id))
+
+        def apply() -> object:
+            _library, registered = _registered_reference(dialog, reference_id)
+            if registered is not None:
+                raise CanonicalReferenceError(
+                    "Governed MASTER and derived reference roles cannot be changed in the "
+                    "gallery. MASTER authority is managed from Assets; derived views stay "
+                    "Supplementary."
+                )
+            asset_id = getattr(getattr(dialog, "profile", None), "asset_id", None)
+            if isinstance(asset_id, str) and any(
+                entry.family is CanonicalReferenceFamily.MASTER
+                and entry.lifecycle is not CanonicalReferenceLifecycle.ARCHIVED
+                for entry in _library.list_for_cap(asset_id)
+            ):
+                raise CanonicalReferenceError(
+                    "This CAP already has a governed MASTER. Gallery Primary cannot replace "
+                    "or compete with its authority; use Assets for an approved MASTER revision."
+                )
+            if (
+                QMessageBox.question(
+                    dialog,
+                    "Gallery Primary Role Only",
+                    "Set this unregistered reference as the gallery Primary? This does NOT "
+                    "create or approve a ChatGPT MASTER and does NOT satisfy governed "
+                    "reference readiness.",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                is not QMessageBox.StandardButton.Yes
+            ):
+                return None
+            return dialog.reference_service.set_primary(reference_id)
+
+        _run_workflow(dialog, apply)
 
 
 def _mark_candidate(dialog: Any, reference_id: int) -> None:
     if dialog.reference_service is not None:
-        _run_workflow(dialog, lambda: dialog.reference_service.mark_candidate(reference_id))
+
+        def apply() -> object:
+            library, registered = _registered_reference(dialog, reference_id)
+            if registered is not None:
+                return library.mark_candidate(reference_id, actor=getpass.getuser())
+            return dialog.reference_service.mark_candidate(reference_id)
+
+        _run_workflow(dialog, apply)
 
 
 def _approve(dialog: Any, reference_id: int) -> None:
     if dialog.reference_service is None:
         return
     reference = dialog.reference_service.get(reference_id)
+    try:
+        _library, registered = _registered_reference(dialog, reference_id)
+    except ReferenceLibraryError as exc:
+        QMessageBox.critical(dialog, "Canonical Reference Workflow", str(exc))
+        return
+    if registered is not None and registered.family is CanonicalReferenceFamily.MASTER:
+        QMessageBox.critical(
+            dialog,
+            "MASTER Governance",
+            "MASTER approval and locking are owned by Assets. Do not promote or "
+            "reclassify a MASTER through the Canonical Profile gallery.",
+        )
+        return
+    authority_note = (
+        "The old gallery already marked this reference Approved, but its governed "
+        "library entry is still Candidate. Confirm this separate governed approval."
+        if registered is not None
+        and registered.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+        and reference.status is CanonicalReferenceStatus.APPROVED
+        else (
+            "The governed library will record this view's independent approval."
+            if registered is not None
+            else "This unregistered gallery reference does NOT establish MASTER or satisfy "
+            "governed production-view readiness."
+        )
+    )
     if (
         QMessageBox.question(
             dialog,
             "Approve Canonical Reference",
-            f"Approve '{reference.title}' for production?\n\nThe reference will become locked.",
+            f"Approve '{reference.title}'?\n\nThe reference will become locked.\n\n"
+            f"{authority_note}",
         )
         is not QMessageBox.StandardButton.Yes
     ):
         return
-    _run_workflow(dialog, lambda: dialog.reference_service.approve(reference_id, getpass.getuser()))
+
+    def apply() -> object:
+        library, entry = _registered_reference(dialog, reference_id)
+        if entry is not None:
+            return library.approve(reference_id, getpass.getuser())
+        return dialog.reference_service.approve(reference_id, getpass.getuser())
+
+    _run_workflow(dialog, apply)
 
 
 def _reject(dialog: Any, reference_id: int) -> None:
@@ -229,7 +326,14 @@ def _reject(dialog: Any, reference_id: int) -> None:
         )
         is QMessageBox.StandardButton.Yes
     ):
-        _run_workflow(dialog, lambda: dialog.reference_service.reject(reference_id))
+
+        def apply() -> object:
+            library, registered = _registered_reference(dialog, reference_id)
+            if registered is not None:
+                return library.return_to_candidate(reference_id, actor=getpass.getuser())
+            return dialog.reference_service.reject(reference_id)
+
+        _run_workflow(dialog, apply)
 
 
 def _archive(dialog: Any, reference_id: int) -> None:
@@ -242,7 +346,19 @@ def _archive(dialog: Any, reference_id: int) -> None:
         )
         is QMessageBox.StandardButton.Yes
     ):
-        _run_workflow(dialog, lambda: dialog.reference_service.archive(reference_id))
+
+        def apply() -> object:
+            library, registered = _registered_reference(dialog, reference_id)
+            if registered is not None:
+                if registered.family is CanonicalReferenceFamily.MASTER:
+                    raise CanonicalReferenceError(
+                        "A governed MASTER can only be archived as part of a reviewed "
+                        "revision in Assets, after dependent derived views are resolved."
+                    )
+                return library.archive(reference_id, actor=getpass.getuser())
+            return dialog.reference_service.archive(reference_id)
+
+        _run_workflow(dialog, apply)
 
 
 def _unlock(dialog: Any, reference_id: int) -> None:
@@ -255,7 +371,14 @@ def _unlock(dialog: Any, reference_id: int) -> None:
         )
         is QMessageBox.StandardButton.Yes
     ):
-        _run_workflow(dialog, lambda: dialog.reference_service.unlock(reference_id))
+
+        def apply() -> object:
+            library, registered = _registered_reference(dialog, reference_id)
+            if registered is not None:
+                return library.return_to_candidate(reference_id, actor=getpass.getuser())
+            return dialog.reference_service.unlock(reference_id)
+
+        _run_workflow(dialog, apply)
 
 
 def _update_edit_controls(dialog: Any) -> None:
@@ -324,10 +447,13 @@ def install_canonical_reference_file_management() -> None:
             return
         try:
             references = self.reference_service.list_for_cap(self.profile.asset_id)
-        except CanonicalReferenceError as exc:
+            governed = ReferenceLibraryService(self.reference_service).list_for_cap(
+                self.profile.asset_id, include_archived=True
+            )
+        except (CanonicalReferenceError, ReferenceLibraryError) as exc:
             QMessageBox.critical(self, "Canonical Reference Error", str(exc))
             return
-        gallery.set_references(references, self.project_directory)
+        gallery.set_references(references, self.project_directory, governed_entries=governed)
         _update_edit_controls(self)
 
     def managed_selected_reference_id(self: Any) -> int | None:

@@ -19,6 +19,7 @@ from vscs.domain.caps import (
     CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
+    CanonicalReferenceStatus,
     CanonicalReferenceType,
     CAPCreate,
     CAPStatus,
@@ -54,6 +55,26 @@ class CanonicalAssetCreationService:
         self.caps = caps
         self.references = references
         self.library = library
+
+    def active_master_lifecycle(self, asset_id: str) -> CanonicalReferenceLifecycle | None:
+        """An Asset file path alone is never proof of MASTER governance."""
+        for entry in self.library.list_for_cap(asset_id):
+            if (
+                entry.family is not CanonicalReferenceFamily.MASTER
+                or entry.lifecycle is CanonicalReferenceLifecycle.ARCHIVED
+            ):
+                continue
+            reference = self.references.get(entry.reference_record_id)
+            if entry.lifecycle is CanonicalReferenceLifecycle.LOCKED and (
+                reference.status is not CanonicalReferenceStatus.APPROVED
+                or not reference.locked
+                or reference.role is not CanonicalReferenceRole.PRIMARY
+            ):
+                # Historical gallery actions could unlock the legacy row without
+                # changing the production library. Do not claim a verified lock.
+                return None
+            return entry.lifecycle
+        return None
 
     def create(
         self,

@@ -5,7 +5,10 @@ from types import SimpleNamespace
 from vscs.application.caps.readiness_service import CAPReadinessService
 from vscs.domain.assets import AssetCategory
 from vscs.domain.caps import (
+    CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
+    CanonicalReferenceRole,
+    CanonicalReferenceStatus,
     CanonicalReferenceView,
     CAPStatus,
     CategoryReferenceTemplate,
@@ -64,12 +67,24 @@ def test_ready_location_with_locked_master_has_generation_readiness() -> None:
         production_notes="Maintain canonical dimensions and lighting logic.",
     )
     master = SimpleNamespace(
+        reference_record_id=7,
+        family=CanonicalReferenceFamily.MASTER,
         view=CanonicalReferenceView.MASTER,
         lifecycle=CanonicalReferenceLifecycle.LOCKED,
     )
     service = CAPReadinessService.__new__(CAPReadinessService)
     service.caps = _Caps(cap, asset)
-    service.references = SimpleNamespace()
+    service.references = SimpleNamespace(
+        get=lambda record_id: (
+            SimpleNamespace(
+                status=CanonicalReferenceStatus.APPROVED,
+                locked=True,
+                role=CanonicalReferenceRole.PRIMARY,
+            )
+            if record_id == 7
+            else None
+        )
+    )
     service.library = _Library((master,))
     service.templates = _Templates()
 

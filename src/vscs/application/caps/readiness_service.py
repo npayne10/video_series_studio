@@ -5,11 +5,21 @@ from __future__ import annotations
 from typing import ClassVar
 
 from vscs.application.caps.reference_library import ReferenceLibraryService
-from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.application.caps.reference_service import (
+    CanonicalReferenceError,
+    CanonicalReferenceService,
+)
 from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.application.caps.service import CAPService
 from vscs.domain.assets import AssetCategory
-from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView, CAPStatus
+from vscs.domain.caps import (
+    CanonicalReferenceFamily,
+    CanonicalReferenceLifecycle,
+    CanonicalReferenceRole,
+    CanonicalReferenceStatus,
+    CanonicalReferenceView,
+    CAPStatus,
+)
 from vscs.domain.caps.readiness import (
     ReadinessAssessment,
     ReadinessDimension,
@@ -18,6 +28,7 @@ from vscs.domain.caps.readiness import (
     ReadinessSeverity,
     ReadinessState,
 )
+from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 from vscs.domain.caps.structured_knowledge import is_production_authority
 
 _APPROVED_REFERENCE_STATES = {
@@ -112,8 +123,24 @@ class CAPReadinessService:
     def blocking_gaps(self, asset_id: str) -> tuple[ReadinessGap, ...]:
         return self.evaluate(asset_id).blocking_gaps
 
+    def _has_consistent_approval(self, entry: ReferenceLibraryEntry) -> bool:
+        """A library lifecycle label cannot overrule a stale legacy reference."""
+        try:
+            reference = self.references.get(entry.reference_record_id)
+        except CanonicalReferenceError:
+            return False
+        master = entry.family is CanonicalReferenceFamily.MASTER
+        expected_role = (
+            CanonicalReferenceRole.PRIMARY if master else CanonicalReferenceRole.SUPPLEMENTARY
+        )
+        return (
+            reference.status is CanonicalReferenceStatus.APPROVED
+            and reference.locked
+            and reference.role is expected_role
+        )
+
     def _identity(
-        self, cap: object, entries: tuple[object, ...], category: AssetCategory
+        self, cap: object, entries: tuple[ReferenceLibraryEntry, ...], category: AssetCategory
     ) -> ReadinessAssessment:
         gaps: list[ReadinessGap] = []
         checks = 3
@@ -140,6 +167,7 @@ class CAPReadinessService:
                 for entry in entries
                 if getattr(entry, "view", None) is CanonicalReferenceView.MASTER
                 and getattr(entry, "lifecycle", None) is CanonicalReferenceLifecycle.LOCKED
+                and self._has_consistent_approval(entry)
             ),
             None,
         )
@@ -182,11 +210,18 @@ class CAPReadinessService:
             gaps=tuple(gaps),
         )
 
-    def _references(self, asset_id: str, entries: tuple[object, ...]) -> ReadinessAssessment:
+    def _references(
+        self, asset_id: str, entries: tuple[ReferenceLibraryEntry, ...]
+    ) -> ReadinessAssessment:
         template = self.templates.template_for(asset_id)
-        lifecycle_by_view = {
-            getattr(entry, "view", None): getattr(entry, "lifecycle", None) for entry in entries
-        }
+        lifecycle_by_view = {}
+        for entry in entries:
+            lifecycle = getattr(entry, "lifecycle", None)
+            # Keep a stale/unlocked legacy record non-authoritative even when
+            # the project-local overlay still says Approved/Locked.
+            if lifecycle in _APPROVED_REFERENCE_STATES and not self._has_consistent_approval(entry):
+                lifecycle = CanonicalReferenceLifecycle.CANDIDATE
+            lifecycle_by_view[entry.view] = lifecycle
         required_ready = [
             view
             for view in template.required_views

@@ -1,16 +1,25 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.14 (living documentation, updated 2026-11-17)  
+**Version:** v0.15 (living documentation, updated 2026-11-22)
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
-## Issue #58 — honest multi-field Stage C1 review (operator acceptance pending)
+## Issue #61 — governed ChatGPT MASTER-to-derived-reference route (operator acceptance pending)
+
+The real entry point is **Assets → Add Asset / Edit Selected → Browse…** with a separately human-approved, authentic ChatGPT image and explicit provenance confirmation. That **single save** registers, approves and locks the MASTER immediately; the software does not perform a staged ChatGPT MASTER quality review for the operator. Existing local ComfyUI/Qwen supplementary Candidates remain supplementary and may not be mislabelled as ChatGPT MASTER. **Canonical Profiles → Generate Production References** requires consistent locked MASTER authority and produces **Supplementary Candidates**, not approved references. The gallery now routes registered derived approvals/rejections/archives into the production library, prevents derived-Primary/MASTER promotion, and clearly distinguishes an unregistered gallery image from production authority. Readiness fails closed on a legacy/library lock mismatch.
+
+- [Exact Windows runbook: safe offline screenshots, then separately authorised real MASTER/derived cycle](VSCS_User_Manual.md#issue-61--governed-chatgpt-master-and-derived-references-windows-acceptance-pending)
+- [Issue #61 formal engineering contract, view templates and acceptance matrix](../engineering/Issue_61_Governed_MASTER_Workflow_Audit.md)
+
+**No actual ChatGPT MASTER image, paid semantic review, GPU output, CAP approval or video clips are created by this audit.** The operator must supply/review the real origin evidence and separately authorise all project writes before the full workflow can be accepted.
+
+## Issue #58 — honest multi-field Stage C1 review (merged, operator accepted 2026-11-22)
 
 The Stage C1 implementation candidate now permits one *source-quoted, operator-reviewed* shared atomic correction for two independently FAILED accepted CAP fields, such as the Console Candidate 1 raised dial violating both `geometry` and `components`. Different failures remain FAILED and need their own correction scope, not an invented PASS. C2.1 retains the scope for offline replay while resetting fresh ROI consent. Semantic findings are saved-report hints only; no paid AI, GPU job, attempt or image is initiated.
 
-- [Exact GUI runbook from launching VSCS through SHA non-mutation checks](VSCS_User_Manual.md#issue-58--correlated-stage-b--c1-field-failures-implementation-candidate-2026-11-22)
+- [Exact GUI runbook from launching VSCS through SHA non-mutation checks](VSCS_User_Manual.md#issue-58--correlated-stage-b--c1-field-failures-pr-65-merged-2026-11-22)
 - [Stage C engineering contract](../F5_4_2_STAGE_C_GOVERNED_VISUAL_CORRECTION.md)
 
-**Operator acceptance is not complete.** Protect historical Candidate 4 and the previously saved C2/C2.1 evidence; only a separately reviewed new immutable C2.1 record may be added during the offline acceptance.
+**Merged in PR #65** on 2026-11-22 following operator UI approval and historical CAP review non-mutation. Protected historical Candidate 4 and existing C2/C2.1 evidence remain governed; later actual edits and generation require fresh consent.
 
 ## Open first
 

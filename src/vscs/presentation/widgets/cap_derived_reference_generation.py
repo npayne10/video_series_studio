@@ -42,6 +42,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.asset_id = asset_id
         self.service = service
         self.coverage = service.coverage(asset_id)
+        self.master_ready, master_note = service.master_authority_state(asset_id)
         self.setWindowTitle(f"Generate Production References — {asset_id}")
         self.setMinimumWidth(760)
 
@@ -53,6 +54,10 @@ class DerivedReferenceGenerationDialog(QDialog):
 
         self.coverage_label = QLabel(self._coverage_text())
         self.coverage_label.setWordWrap(True)
+        self.master_authority_label = QLabel(
+            ("MASTER authority verified: " if self.master_ready else "BLOCKED — ") + master_note
+        )
+        self.master_authority_label.setWordWrap(True)
 
         self.provider = QComboBox()
         for name in service.providers.names():
@@ -111,17 +116,20 @@ class DerivedReferenceGenerationDialog(QDialog):
             for view in self.coverage.missing_required
             if view is not CanonicalReferenceView.MASTER
         )
-        self.generate_missing_button.setEnabled(bool(generatable_missing))
+        self.generate_missing_button.setEnabled(self.master_ready and bool(generatable_missing))
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Generate Selected")
+        self.generate_selected_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        self.generate_selected_button.setEnabled(self.master_ready)
         buttons.accepted.connect(self._generate)
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
         layout.addWidget(intro)
+        layout.addWidget(self.master_authority_label)
         layout.addWidget(self.coverage_label)
         layout.addLayout(settings)
         layout.addWidget(QLabel("Category production reference views"))
