@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -266,6 +267,71 @@ def test_reopened_review_can_be_reclassified_without_paying_or_overwriting(tmp_p
         DetailDecision.DEFER,
         DetailDecision.REJECT,
     }
+
+
+def test_pre_story_provenance_review_digest_reopens_without_rewriting_history(tmp_path):
+    """Issue #57 records predating #54 lack the eight optional provenance keys."""
+    spec = _spec()
+    review = _review(spec, dict.fromkeys(spec.canonical_attributes, DetailDecision.DEFER))
+    ledger = UnresolvedCAPReviewLedger(tmp_path)
+    current = ledger.save(spec, review, _manifest(spec))
+    current_path = ledger._directory_for("STORY-001", spec.asset_id) / f"{current.record_id}.json"
+    content = json.loads(current_path.read_text(encoding="utf-8"))
+    old_provenance_keys = (
+        "source_record_id",
+        "source_field",
+        "source_fingerprint",
+        "source_excerpt",
+        "shot_authority",
+        "shot_source_record_id",
+        "shot_source_fingerprint",
+        "shot_excerpt",
+    )
+    for field in content["review"]["fields"]:
+        for key in old_provenance_keys:
+            assert field.pop(key) == ""
+    identity = {
+        key: content[key]
+        for key in (
+            "story_id",
+            "asset_id",
+            "story_fingerprint",
+            "context_fingerprint",
+            "asset_fingerprint",
+            "base_fingerprint",
+        )
+    }
+    identity["review"] = content["review"]
+    legacy_digest = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
+    content["record_id"] = legacy_digest
+    current_path.unlink()
+    historic_path = current_path.with_name(f"{legacy_digest}.json")
+    historic_path.write_text(json.dumps(content), encoding="utf-8")
+    before = historic_path.read_bytes()
+
+    restored = ledger.list_records("STORY-001", spec.asset_id)
+    assert len(restored) == 1
+    assert restored[0].record_id == legacy_digest
+    assert restored[0].review == review
+    assert historic_path.read_bytes() == before
+    assert not current_path.exists()
+
+    # Injecting even a blank new-schema field is not covered by the historical
+    # digest. Such a mutation must not be silently treated as an old record.
+    content["review"]["fields"][0]["source_excerpt"] = ""
+    historic_path.write_text(json.dumps(content), encoding="utf-8")
+    with pytest.raises(ValueError, match="invalid"):
+        ledger.list_records("STORY-001", spec.asset_id)
+    content["review"]["fields"][0].pop("source_excerpt")
+
+    # Old SHA remains binding: altering a reviewed value or adding new provenance
+    # without an updated (and independently reviewed) digest must fail closed.
+    content["review"]["fields"][0]["proposed_value"] = "Tampered proposal"
+    historic_path.write_text(json.dumps(content), encoding="utf-8")
+    with pytest.raises(ValueError, match="invalid"):
+        ledger.list_records("STORY-001", spec.asset_id)
 
 
 def test_qt_zero_eligible_decision_accept_and_offline_reopen(qtbot, tmp_path):

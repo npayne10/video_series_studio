@@ -140,7 +140,7 @@ def test_unknown_or_second_failed_field_blocks_handoff():
         defect=GeometryDefect.MERGED_OBJECTS,
         correction_stages=("establish_geometry", "verify_design"),
     )
-    with pytest.raises(GeometryCorrectionError, match="exactly one"):
+    with pytest.raises(GeometryCorrectionError, match="Multiple FAILED"):
         _propose(replace(review, reviewed_fields=tuple(fields)))
 
 

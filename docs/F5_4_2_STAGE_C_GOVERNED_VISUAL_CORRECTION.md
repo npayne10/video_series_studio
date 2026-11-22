@@ -12,6 +12,19 @@ gated milestones rather than immediately enabling the live ComfyUI/managed
 Qwen generator. Stage B was operator-accepted on 2026-11-13.
 See [formal C2 acceptance record](F5_4_2_STAGE_C2_HUMAN_REVIEWED_MASK_EVIDENCE.md#formal-operator-acceptance-record--2026-11-15).
 
+## Issue #58 — correlated multi-field correction scope (2026-11-22; operator acceptance pending)
+
+The original Stage C1 accepted a **single** independently FAILED field only. That is insufficient for `CAP-PRP-002` Console Candidate 1, where the rotary dial's surface above the shelf violates both accepted `geometry` and `components`. The revised C1 contract preserves all individual Stage B statuses without changing accepted CAP authority:
+
+- A single-failure/otherwise-verified review retains the legacy C1 schema and SHA derivation so existing saved C1/C2 evidence does not silently become current under a new hash.
+- An operator may select **two or more FAILED fields** in one scope only when they have the same reviewed defect type and exactly the same operator-selected normalized ROI. For each field, the operator must provide a **verbatim excerpt from that field's accepted CAP requirement** (at least 12 characters) and a separate plain-language shared atomic constraint. No semantic report or tokenizer can mark the fields FAILED/PASS by itself.
+- Every accepted field remains independently reviewed; UNKNOWN always blocks. Unrelated FAILED fields are **excluded from that ROI scope but remain FAILED** in the sealed C1 field-review evidence. A single-field correction alongside other failures requires a separate explicit acknowledgement. The operator must prepare a distinct C1 scope for the unrelated defect in a separate correction cycle, never mark it falsely VERIFIED.
+- New multi-field/separate-failure C1 proposals use `schema_version=2` and seal source SHA, accepted requirements, target defect, ROI, source-quoted mapping, shared statement, included/excluded failed fields and all individual reviews. The saved immutable C2.1 record stores the advisory scope for exact offline replay and checks it against the original field evidence and digest. **Reopening resets C1 ROI and C2 mask confirmations.** Existing schema-1 saved sessions continue to load.
+- C2 white=editable and black=protected raster semantics, source hash, mask bytes, exclusive persistence and no-authority flags are unchanged. Offline tests verify exact pixel polarity; this is **not** a claim of protected-pixel correctness for a generated output. #53 isolated preflight and separate fresh consent remain mandatory before any GPU execution.
+- UI progress shows FAILED/VERIFIED/UNKNOWN totals. **Reuse Existing FAILED ROI (Confirm)** copies an exact previously reviewed source ROI only after fresh source SHA validation and an explicit human same-region confirmation; the second field still needs its own Stage B inspection. Saved semantic violations can suggest field-associated text in a read-only panel; **Copy Saved Finding for Human Review** only enters editable text, never changes a status or makes a provider request. Inline C2.1 labels confirm local save/reopen and source re-review requirements.
+
+**Evidence needed for acceptance:** focused/full regression and static checks; Windows screenshots of both FAILED field reviews, matching ROI, per-field accepted CAP excerpts, one C1 scope, saved/reopened C2.1 mapping and reset acknowledgements; SHA-256 before/after checks on the asset resolution file, Candidate source, saved semantic report, historical Candidate 4, old C2/C2.1 artifacts and governed attempts. No generation, new attempt, CAP approval, MASTER or video clip. Exact [operator manual steps](user_manual/VSCS_User_Manual.md#issue-58--correlated-stage-b--c1-field-failures-implementation-candidate-2026-11-22).
+
 ## C4B.2A — disposable runtime safety preflight (not yet accepted)
 
 **Implementation candidate 2026-11-17.** A new

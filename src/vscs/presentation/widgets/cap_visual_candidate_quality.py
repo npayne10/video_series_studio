@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -38,6 +39,7 @@ from vscs.application.caps.c4b_isolated_mask_provider import (
 )
 from vscs.application.caps.general_visual_correction_triage import (
     candidate_visual_triage,
+    semantic_field_suggestions,
 )
 from vscs.application.caps.geometry_correction_policy import (
     GeometryCorrectionError,
@@ -330,6 +332,33 @@ class CandidateQualityReportDialog(QDialog):
         finding_grid.addWidget(QLabel("Observed discrepancy"), 2, 0)
         finding_grid.addWidget(reason, 2, 1)
 
+        suggestions = semantic_field_suggestions(report)
+        semantic_hint = QPlainTextEdit(dialog)
+        semantic_hint.setObjectName("stageBSourceSemanticSuggestions")
+        semantic_hint.setReadOnly(True)
+        semantic_hint.setFixedHeight(80)
+        finding_grid.addWidget(QLabel("Saved semantic hints (not verified)"), 3, 0)
+        finding_grid.addWidget(semantic_hint, 3, 1)
+        use_hint = QPushButton("Copy Saved Finding for Human Review (No AI)", dialog)
+        use_hint.setObjectName("stageBUseSavedSemanticFinding")
+        finding_grid.addWidget(use_hint, 3, 2)
+
+        def show_semantic_hint() -> None:
+            values = suggestions.get(str(fields.currentData()), ())
+            semantic_hint.setPlainText(
+                "Saved semantic report only — no field status inferred.\n"
+                + ("\n".join(values) if values else "No field-matched semantic violations.")
+            )
+            use_hint.setEnabled(bool(values))
+            if values and not reason.toPlainText().strip():
+                reason.setPlaceholderText(values[0])
+
+        use_hint.clicked.connect(
+            lambda: reason.setPlainText(suggestions[str(fields.currentData())][0])
+        )
+        fields.currentIndexChanged.connect(lambda _index: show_semantic_hint())
+        show_semantic_hint()
+
         details = QPlainTextEdit(dialog)
         details.setObjectName("generalTriageAssessment")
         details.setReadOnly(True)
@@ -339,7 +368,7 @@ class CandidateQualityReportDialog(QDialog):
 
         classify = QPushButton("Classify and Inspect (No Generation)", dialog)
         classify.setObjectName("generalTriageClassify")
-        finding_grid.addWidget(classify, 3, 1)
+        finding_grid.addWidget(classify, 4, 1)
 
         def inspect() -> None:
             try:
@@ -374,6 +403,9 @@ class CandidateQualityReportDialog(QDialog):
         select_roi = QPushButton("Select ROI on Source Image (No Generation)", dialog)
         select_roi.setObjectName("stageC2SelectSourceROI")
         stage_b_grid.addWidget(select_roi, 1, 2)
+        reuse_roi = QPushButton("Reuse Existing FAILED ROI (Confirm)", dialog)
+        reuse_roi.setObjectName("stageBReuseReviewedFailedROI")
+        stage_b_grid.addWidget(reuse_roi, 1, 3)
         propose = QPushButton("Inspect Stage B Evidence / ROI (No Generation)", dialog)
         propose.setObjectName("spatialEvidenceInspect")
         stage_b_grid.addWidget(propose, 2, 1, 1, 2)
@@ -381,6 +413,36 @@ class CandidateQualityReportDialog(QDialog):
         c1_grid = _review_matrix_section(
             layout, "Stage C1 - reviewed correction handoff (no generation)", "reviewC1Matrix"
         )
+        shared_constraint = QLineEdit(dialog)
+        shared_constraint.setObjectName("stageC1SharedAtomicConstraint")
+        shared_constraint.setPlaceholderText(
+            "For correlated FAILED fields: describe one shared atomic visual defect"
+        )
+        c1_grid.addWidget(QLabel("Shared constraint (multi-field only)"), 1, 0)
+        c1_grid.addWidget(shared_constraint, 1, 1, 1, 2)
+        source_quotes = QPlainTextEdit(dialog)
+        source_quotes.setObjectName("stageC1CorrelatedSourceQuotes")
+        source_quotes.setPlaceholderText(
+            "For each correlated FAILED field, one line: field|verbatim excerpt from its accepted CAP requirement"
+        )
+        source_quotes.setFixedHeight(92)
+        c1_grid.addWidget(QLabel("Field|CAP-source excerpts"), 2, 0)
+        c1_grid.addWidget(source_quotes, 2, 1, 1, 2)
+        accepted_source = QPlainTextEdit(dialog)
+        accepted_source.setObjectName("stageC1AcceptedSourceRequirements")
+        accepted_source.setReadOnly(True)
+        accepted_source.setFixedHeight(105)
+        accepted_source.setPlainText(
+            "\n".join(f"{check.field}: {check.requirement}" for check in baseline.mandatory_checks)
+        )
+        c1_grid.addWidget(QLabel("Exact accepted CAP source"), 3, 0)
+        c1_grid.addWidget(accepted_source, 3, 1, 1, 2)
+        separate_ack = QCheckBox(
+            "Other FAILED fields are still FAILED and require separately scoped corrections.",
+            dialog,
+        )
+        separate_ack.setObjectName("stageC1SeparateFailuresAcknowledgement")
+        c1_grid.addWidget(separate_ack, 4, 0, 1, 3)
         c2_grid = _review_matrix_section(
             layout, "Stage C2 - reviewed mask evidence (no generation)", "reviewC2Matrix"
         )
@@ -412,6 +474,10 @@ class CandidateQualityReportDialog(QDialog):
         resume_button = QPushButton("Resume Selected Human Review (No Generation)", dialog)
         resume_button.setObjectName("c21ResumeHumanReview")
         sessions_grid.addWidget(resume_button, 1, 2)
+        session_status = QLabel("No saved C2.1 review loaded or written in this dialog.", dialog)
+        session_status.setObjectName("c21InlineReviewStatus")
+        session_status.setWordWrap(True)
+        sessions_grid.addWidget(session_status, 2, 0, 1, 3)
 
         masks_grid = _review_matrix_section(
             layout, "C2.1 - existing mask versions (inspection only)", "reviewMasksMatrix"
@@ -480,6 +546,34 @@ class CandidateQualityReportDialog(QDialog):
         c4b_warning.setWordWrap(True)
         c4b_grid.addWidget(c4b_warning, 1, 0, 1, 3)
 
+        def ensure_current_image() -> None:
+            source = report.snapshot.image_path
+            try:
+                if (
+                    source.is_symlink()
+                    or not source.is_file()
+                    or hashlib.sha256(source.read_bytes()).hexdigest()
+                    != report.snapshot.image_sha256
+                ):
+                    raise GeometryCorrectionError(
+                        "Candidate image SHA changed; reopen the saved report against the current source"
+                    )
+            except OSError as exc:
+                raise GeometryCorrectionError("Cannot verify current Candidate source") from exc
+
+        def update_review_progress(evidence: SpatialEvidenceReview) -> None:
+            failed = sum(
+                item.status is VisualEvidenceStatus.FAILED for item in evidence.reviewed_fields
+            )
+            verified = sum(
+                item.status is VisualEvidenceStatus.VERIFIED_BY_OPERATOR
+                for item in evidence.reviewed_fields
+            )
+            review_progress.setText(
+                f"Reviewed {failed + verified}/{len(evidence.reviewed_fields)}: "
+                f"{failed} FAILED, {verified} VERIFIED, {evidence.outstanding_fields} UNKNOWN"
+            )
+
         def restore_selected_field() -> None:
             nonlocal selected_region, current_proposal, current_mask, mask_previewed
             roi_confirmation.setChecked(False)
@@ -492,6 +586,7 @@ class CandidateQualityReportDialog(QDialog):
             if current_evidence is None:
                 evidence_status.setCurrentIndex(0)
                 reason.clear()
+                show_semantic_hint()
                 return
             name = str(fields.currentData())
             item = next((i for i in current_evidence.reviewed_fields if i.field == name), None)
@@ -499,6 +594,7 @@ class CandidateQualityReportDialog(QDialog):
                 return
             evidence_status.setCurrentIndex(evidence_status.findData(item.status.value))
             reason.setPlainText(item.observation)
+            show_semantic_hint()
             if item.defect is not None:
                 defect.setCurrentIndex(defect.findData(item.defect.value))
             selected_region = item.proposed_region
@@ -566,10 +662,74 @@ class CandidateQualityReportDialog(QDialog):
 
         select_roi.clicked.connect(open_source_roi_selector)
 
+        def reuse_failed_roi() -> None:
+            nonlocal selected_region, current_proposal, current_mask, mask_previewed
+            if (
+                current_evidence is None
+                or evidence_status.currentData() != VisualEvidenceStatus.FAILED.value
+            ):
+                QMessageBox.warning(
+                    dialog, "ROI Reuse Blocked", "Review an existing FAILED field first."
+                )
+                return
+            prior = [
+                item
+                for item in current_evidence.reviewed_fields
+                if item.field != fields.currentData()
+                and item.status is VisualEvidenceStatus.FAILED
+                and item.proposed_region is not None
+            ]
+            unique = {item.proposed_region for item in prior}
+            if len(unique) != 1:
+                QMessageBox.warning(
+                    dialog,
+                    "ROI Reuse Blocked",
+                    "A single previously reviewed FAILED ROI is required; "
+                    "distinct defects must keep separate scopes.",
+                )
+                return
+            try:
+                ensure_current_image()
+            except GeometryCorrectionError as exc:
+                QMessageBox.warning(dialog, "ROI Reuse Blocked", str(exc))
+                return
+            consent = QMessageBox.question(
+                dialog,
+                "Confirm Existing Source ROI",
+                f"Use the exact existing source-image ROI from {prior[0].field} "
+                f"for {fields.currentData()}? Confirm these failures describe "
+                "the same physical region after inspecting the original Candidate. "
+                "This does not mark a field verified, save Stage B, or generate an image.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if consent != QMessageBox.StandardButton.Yes:
+                return
+            selected_region = prior[0].proposed_region
+            if selected_region is None:
+                return
+            roi.setText(
+                f"{selected_region.x:.8f},{selected_region.y:.8f},"
+                f"{selected_region.width:.8f},{selected_region.height:.8f}"
+            )
+            current_proposal = None
+            current_mask = None
+            mask_previewed = False
+            roi_confirmation.setChecked(False)
+            mask_confirmation.setChecked(False)
+            details.setPlainText(
+                "Exact ROI copied from an independently FAILED Stage B field after "
+                "fresh SHA check and explicit human confirmation. "
+                "Now inspect this field's Stage B evidence. No generation or approval."
+            )
+
+        reuse_roi.clicked.connect(reuse_failed_roi)
+
         def inspect_spatial_evidence() -> None:
             nonlocal current_evidence, current_proposal, current_mask, mask_previewed
             nonlocal selected_region, loaded_c1_digest, session_dirty
             try:
+                ensure_current_image()
                 state = VisualEvidenceStatus(str(evidence_status.currentData()))
                 region = selected_region if state is VisualEvidenceStatus.FAILED else None
                 evidence = propose_spatial_evidence(
@@ -600,9 +760,9 @@ class CandidateQualityReportDialog(QDialog):
             mask_previewed = False
             roi_confirmation.setChecked(False)
             mask_confirmation.setChecked(False)
-            reviewed = len(evidence.reviewed_fields) - evidence.outstanding_fields
-            review_progress.setText(
-                f"{reviewed} of {len(evidence.reviewed_fields)} fields reviewed"
+            update_review_progress(evidence)
+            session_status.setText(
+                "Stage B review changed locally; not saved. No image, CAP or attempt changed."
             )
             details.setPlainText(evidence.describe())
 
@@ -618,6 +778,40 @@ class CandidateQualityReportDialog(QDialog):
         stage_c.setObjectName("stageCGovernedCorrectionInspect")
         c1_grid.addWidget(stage_c, 0, 2)
 
+        def parse_source_quotes() -> dict[str, str]:
+            raw = source_quotes.toPlainText().strip()
+            if not raw:
+                return {}
+            if len(raw) > 4000:
+                raise GeometryCorrectionError("Correlated source excerpts are too long")
+            mapping: dict[str, str] = {}
+            for line in raw.splitlines():
+                field, divider, quote = line.partition("|")
+                field, quote = field.strip(), quote.strip()
+                if not divider or not field or not quote or field in mapping:
+                    raise GeometryCorrectionError(
+                        "Use unique field|exact accepted CAP excerpt lines for correlations"
+                    )
+                mapping[field] = quote
+            return mapping
+
+        def invalidate_c1_scope() -> None:
+            nonlocal current_proposal, current_mask, mask_previewed, session_dirty
+            if current_proposal is not None:
+                session_dirty = True
+                current_proposal = None
+                current_mask = None
+                mask_previewed = False
+                roi_confirmation.setChecked(False)
+                mask_confirmation.setChecked(False)
+                session_status.setText(
+                    "C1 mapping edited; previous handoff invalidated. Reconfirm ROI and inspect C1."
+                )
+
+        shared_constraint.textChanged.connect(lambda _text: invalidate_c1_scope())
+        source_quotes.textChanged.connect(invalidate_c1_scope)
+        separate_ack.toggled.connect(lambda _checked: invalidate_c1_scope())
+
         def inspect_governed_handoff() -> None:
             nonlocal current_proposal, current_mask, mask_previewed, session_dirty
             if current_evidence is None:
@@ -626,11 +820,15 @@ class CandidateQualityReportDialog(QDialog):
                 )
                 return
             try:
+                ensure_current_image()
                 proposal = prepare_governed_correction_proposal(
                     current_evidence,
                     target_field=str(fields.currentData()),
                     expected_source_sha256=report.snapshot.image_sha256,
                     reviewer_confirmed_roi=roi_confirmation.isChecked(),
+                    correlated_field_quotes=parse_source_quotes(),
+                    shared_atomic_constraint=shared_constraint.text(),
+                    confirm_separate_failures=separate_ack.isChecked(),
                 )
             except GeometryCorrectionError as exc:
                 QMessageBox.warning(dialog, "Stage C Handoff Blocked", str(exc))
@@ -647,6 +845,10 @@ class CandidateQualityReportDialog(QDialog):
             session_dirty = True
             current_mask = None
             mask_previewed = False
+            session_status.setText(
+                "C1 scope inspected locally; save C2.1 session to retain this mapping. "
+                "No mask, GPU call or attempt was made."
+            )
             details.setPlainText(proposal.describe())
 
         stage_c.clicked.connect(inspect_governed_handoff)
@@ -843,6 +1045,10 @@ class CandidateQualityReportDialog(QDialog):
             )
             refresh_sessions()
             session_choices.setCurrentIndex(session_choices.findData(str(path)))
+            session_status.setText(
+                f"SAVED immutable C2.1 review: {path.name}. "
+                "Field statuses and C1 scope are advisory only; no approval or execution."
+            )
             details.setPlainText(
                 "C2.1 HUMAN REVIEW SESSION SAVED (NO GENERATION)\n"
                 f"Immutable session: {path}\n"
@@ -871,11 +1077,24 @@ class CandidateQualityReportDialog(QDialog):
             selected_region = None
             roi_confirmation.setChecked(False)
             mask_confirmation.setChecked(False)
-            reviewed = len(saved.review.reviewed_fields) - saved.review.outstanding_fields
-            review_progress.setText(
-                f"{reviewed} of {len(saved.review.reviewed_fields)} fields reviewed"
+            scope = saved.c1_scope
+            shared_constraint.setText(scope.shared_atomic_constraint if scope else "")
+            source_quotes.setPlainText(
+                "\n".join(f"{field}|{quote}" for field, quote in scope.field_source_quotes)
+                if scope
+                else ""
             )
+            separate_ack.setChecked(scope.confirm_separate_failures if scope else False)
+            if scope is not None:
+                target_index = fields.findData(scope.target_field)
+                if target_index >= 0:
+                    fields.setCurrentIndex(target_index)
+            update_review_progress(saved.review)
             restore_selected_field()
+            session_status.setText(
+                f"RESTORED {saved.path.name}. Reconfirm source ROI and inspect C1; "
+                "no saved consent or approval was restored."
+            )
             details.setPlainText(
                 saved.review.describe()
                 + "\nC2.1 RESTORED SAVED REVIEW (NO GENERATION)"

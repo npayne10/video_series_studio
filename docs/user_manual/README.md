@@ -3,6 +3,15 @@
 **Version:** v0.14 (living documentation, updated 2026-11-17)  
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
+## Issue #58 — honest multi-field Stage C1 review (operator acceptance pending)
+
+The Stage C1 implementation candidate now permits one *source-quoted, operator-reviewed* shared atomic correction for two independently FAILED accepted CAP fields, such as the Console Candidate 1 raised dial violating both `geometry` and `components`. Different failures remain FAILED and need their own correction scope, not an invented PASS. C2.1 retains the scope for offline replay while resetting fresh ROI consent. Semantic findings are saved-report hints only; no paid AI, GPU job, attempt or image is initiated.
+
+- [Exact GUI runbook from launching VSCS through SHA non-mutation checks](VSCS_User_Manual.md#issue-58--correlated-stage-b--c1-field-failures-implementation-candidate-2026-11-22)
+- [Stage C engineering contract](../F5_4_2_STAGE_C_GOVERNED_VISUAL_CORRECTION.md)
+
+**Operator acceptance is not complete.** Protect historical Candidate 4 and the previously saved C2/C2.1 evidence; only a separately reviewed new immutable C2.1 record may be added during the offline acceptance.
+
 ## Open first
 
 1. [VSCS User Manual](VSCS_User_Manual.md) — project creation, Story, analysis, approved Story workflow, proposal/authority separation, CAP review, safety and acceptance steps.
