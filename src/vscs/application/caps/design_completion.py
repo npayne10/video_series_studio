@@ -25,6 +25,7 @@ class DetailDecision(StrEnum):
 class DetailOrigin(StrEnum):
     STORY_CANDIDATE = "story_candidate_unverified"
     DESIGN_PROPOSAL = "design_proposal"
+    OPERATOR_EDITED = "operator_edited"
     UNRESOLVED = "unresolved"
 
 
@@ -40,6 +41,14 @@ class DesignFieldReview(BaseModel):
     origin: DetailOrigin
     evidence: str = ""
     rationale: str = ""
+    source_record_id: str = ""
+    source_field: str = ""
+    source_fingerprint: str = ""
+    source_excerpt: str = ""
+    shot_authority: str = ""
+    shot_source_record_id: str = ""
+    shot_source_fingerprint: str = ""
+    shot_excerpt: str = ""
 
     @model_validator(mode="after")
     def check_decision(self) -> DesignFieldReview:

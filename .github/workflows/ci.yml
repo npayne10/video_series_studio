@@ -18,11 +18,16 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install Qt runtime dependencies
-        run: sudo apt-get update && sudo apt-get install -y libegl1
+      - name: Install Linux media runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libpulse0 ffmpeg
 
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      # The dev extra permits newer lint/type releases. Keep CI reproducible;
+      # update these together after a full Windows and Linux qualification.
+      - name: Pin CI quality tools
+        run: python -m pip install "ruff==0.17.6" "mypy==2.4.1"
 
       - name: Lint
         run: ruff check .

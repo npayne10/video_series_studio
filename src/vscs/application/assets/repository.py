@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus, AssetUpdate
@@ -60,7 +60,7 @@ class AssetRepository:
         status: AssetStatus | None = None,
     ) -> tuple[Asset, ...]:
         """Return assets matching optional text and classification filters."""
-        statement: Select[tuple[AssetRecord]] = select(AssetRecord)
+        statement = select(AssetRecord)
         if query.strip():
             pattern = f"%{query.strip()}%"
             statement = statement.where(

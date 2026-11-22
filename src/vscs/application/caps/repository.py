@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
-from sqlalchemy import Select, or_, select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.caps import CanonicalAssetProfile, CAPCreate, CAPStatus, CAPUpdate
@@ -81,7 +81,7 @@ class CAPRepository:
     def list(
         self, *, query: str = "", status: CAPStatus | None = None
     ) -> tuple[CanonicalAssetProfile, ...]:
-        statement: Select[tuple[CanonicalAssetProfileRecord]] = select(CanonicalAssetProfileRecord)
+        statement = select(CanonicalAssetProfileRecord)
         if query.strip():
             pattern = f"%{query.strip()}%"
             statement = statement.where(

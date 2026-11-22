@@ -21,6 +21,11 @@ from vscs.application.caps.design_completion import (
 )
 from vscs.application.caps.review_snapshot import load_review_snapshot
 from vscs.application.caps.story_batch_review import StoryCAPBatchReviewService
+from vscs.application.caps.story_field_grounding import (
+    CAPFieldOrigin,
+    CAPFieldProvenance,
+    reconcile_grounded_fields,
+)
 from vscs.application.caps.structured_specification import (
     SPECIFICATION_METADATA_KEY,
     CAPStructuredSpecification,
@@ -88,6 +93,39 @@ def prepare_draft_cap_revision(
     )
 
 
+def prepare_story_field_revisions(
+    service: StoryCAPBatchReviewService,
+    snapshot: DraftCAPRevisionSnapshot,
+) -> tuple[CAPFieldProvenance, ...]:
+    """Inspect source-backed missing fields on the *existing* Draft, without writes.
+
+    Only source text owned by the approved Story may generate a suggestion.
+    Previously accepted/edited fields remain outside the revision surface.
+    """
+    current = prepare_draft_cap_revision(service, snapshot.story_id, snapshot.asset_id)
+    if current.expected_metadata != snapshot.expected_metadata:
+        raise DraftCAPRevisionError("Draft CAP changed; reopen before reviewing Story suggestions")
+    manifest = service.prepare_context(snapshot.story_id, snapshot.asset_id)
+    if manifest.fingerprint != snapshot.context_fingerprint:
+        raise DraftCAPRevisionError("Story/Shot context changed; reopen Draft CAP review")
+    caps = service.batch.generator.specifications.caps
+    asset = caps.assets.get(snapshot.asset_id)
+    if asset.category != snapshot.specification.category:
+        raise DraftCAPRevisionError("Asset category changed before Story field review")
+    _, evidence, _ = reconcile_grounded_fields(snapshot.specification, asset.name, manifest, ())
+    eligible = {
+        field.field
+        for field in snapshot.review.fields
+        if field.decision in {DetailDecision.DEFER, DetailDecision.REJECT}
+        and field.field not in snapshot.specification.canonical_attributes
+    }
+    return tuple(
+        item
+        for item in evidence
+        if item.field in eligible and item.origin is CAPFieldOrigin.STORY_CANDIDATE
+    )
+
+
 def save_draft_cap_field_revision(
     service: StoryCAPBatchReviewService,
     snapshot: DraftCAPRevisionSnapshot,
@@ -96,6 +134,7 @@ def save_draft_cap_field_revision(
     reviewed_value: str,
     rationale: str,
     reviewer: str,
+    story_provenance: CAPFieldProvenance | None = None,
 ) -> CAPStructuredSpecification:
     """Preserve all other decisions; commit only if Draft metadata is unchanged."""
     value = reviewed_value.strip()
@@ -116,14 +155,42 @@ def save_draft_cap_field_revision(
         != snapshot.context_fingerprint
     ):
         raise DraftCAPRevisionError("Governed CAP context changed; reopen review")
+    if story_provenance is not None:
+        # Require the exact candidate to be re-derived from CURRENT approved
+        # Story evidence, not a client-supplied label or a Draft Shot excerpt.
+        current = prepare_story_field_revisions(service, snapshot)
+        proven = next((item for item in current if item.field == field), None)
+        if (
+            proven is None
+            or proven != story_provenance
+            or story_provenance.origin is not CAPFieldOrigin.STORY_CANDIDATE
+            or story_provenance.value != value
+        ):
+            raise DraftCAPRevisionError("Story-grounded field evidence changed or is unsupported")
     new_field = DesignFieldReview(
         field=original.field,
-        proposed_value=original.proposed_value,
+        proposed_value=(story_provenance.value if story_provenance else original.proposed_value),
         final_value=value,
         decision=DetailDecision.EDIT,
-        origin=DetailOrigin.DESIGN_PROPOSAL,
+        origin=(
+            DetailOrigin.STORY_CANDIDATE
+            if story_provenance is not None
+            else DetailOrigin.DESIGN_PROPOSAL
+        ),
         evidence=reason,
-        rationale=f"Operator revision of former {original.decision.value} field",
+        rationale=(
+            f"Operator accepted approved-Story candidate for former {original.decision.value} field"
+            if story_provenance is not None
+            else f"Operator revision of former {original.decision.value} field"
+        ),
+        source_record_id=story_provenance.source_record_id if story_provenance else "",
+        source_field=story_provenance.source_field if story_provenance else "",
+        source_fingerprint=story_provenance.source_fingerprint if story_provenance else "",
+        source_excerpt=story_provenance.excerpt if story_provenance else "",
+        shot_authority=story_provenance.shot_authority if story_provenance else "",
+        shot_source_record_id=story_provenance.shot_record_id if story_provenance else "",
+        shot_source_fingerprint=(story_provenance.shot_fingerprint if story_provenance else ""),
+        shot_excerpt=story_provenance.shot_excerpt if story_provenance else "",
     )
     fields = tuple(new_field if item.field == field else item for item in snapshot.review.fields)
     package = DesignReviewPackage(
@@ -160,6 +227,8 @@ def save_draft_cap_field_revision(
             "prior_review_audit": snapshot.expected_metadata[DESIGN_REVIEW_KEY],
             "prior_specification_fingerprint": snapshot.specification.fingerprint(),
             "new_specification_fingerprint": revised.fingerprint(),
+            "source_record_id": story_provenance.source_record_id if story_provenance else "",
+            "source_fingerprint": story_provenance.source_fingerprint if story_provenance else "",
         }
     )
     metadata[SPECIFICATION_METADATA_KEY] = json.dumps(

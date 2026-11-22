@@ -3,6 +3,7 @@
 from fractions import Fraction
 
 import pytest
+from PySide6.QtGui import QGuiApplication
 
 from vscs.application.episode_assembly_playback import map_timeline_frame
 from vscs.application.episode_assembly_preview import AssemblyPreviewPlan, PreviewSegment
@@ -44,6 +45,10 @@ def test_playback_buttons_fail_closed_until_preview_verified(qtbot, tmp_path):
     qtbot.addWidget(workspace)
     assert not workspace.playback_play.isEnabled()
     assert not workspace.playback_seek.isEnabled()
+    if QGuiApplication.platformName() == "offscreen":
+        assert workspace.playback_audio is None
+    else:
+        assert workspace.playback_audio is not None
     workspace._start_playback()
     assert not workspace.complete_button.isEnabled()
     assert workspace.playback_player.mediaStatus() is not None

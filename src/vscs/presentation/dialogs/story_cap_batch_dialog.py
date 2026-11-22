@@ -164,7 +164,8 @@ class StoryCAPBatchDialog(QDialog):
             "Review Cached Proposal never calls OpenAI. "
             "Generate / Regenerate Using AI (Paid) always requires a cost confirmation. "
             "The new-CAP selector excludes already specified assets; use the separate "
-            "Edit Existing Draft CAP control for a governed Draft-only field revision. "
+            "Edit Existing Draft CAP control for a governed Draft-only field revision, "
+            "including offline approved-Story suggestions for deferred fields. "
             "No action here approves Canon or MASTER."
         )
         row = QHBoxLayout()
@@ -410,6 +411,18 @@ class StoryCAPBatchDialog(QDialog):
                         f"  Rationale: {field.rationale}",
                     )
                 )
+                if field.source_record_id:
+                    lines.append(
+                        f"  Field Story source: {field.source_record_id}."
+                        f"{field.source_field} [{field.source_fingerprint}] — "
+                        f"{field.source_excerpt}"
+                    )
+                if field.shot_authority:
+                    lines.append(
+                        f"  Shot-only [{field.shot_authority}]: "
+                        f"{field.shot_source_record_id} "
+                        f"[{field.shot_source_fingerprint}] — {field.shot_excerpt}"
+                    )
             for source in record.context_sources:
                 lines.append(
                     f"[{source.authority}] {source.source_type} "
@@ -609,10 +622,11 @@ class StoryCAPBatchDialog(QDialog):
                 }:
                     raise StoryBatchError("Asset is no longer eligible after CAP generation")
                 item = StoryBatchProposal(story_id, fingerprint, asset_id, proposal)
-                if self.cache is not None:
-                    self.cache.save(
-                        item, asset_fingerprint, provider_fingerprint, context.fingerprint
-                    )
+            # Reconcile approved Story facts locally, including a legacy cached
+            # proposal. This never invokes the provider or grants CAP authority.
+            item = replace(item, proposal=item.proposal.ground_against_story(asset, context))
+            if force_regenerate and self.cache is not None:
+                self.cache.save(item, asset_fingerprint, provider_fingerprint, context.fingerprint)
             self._proposal_cache[cache_key] = item
             registered_ids = tuple(asset.asset_id for asset in self.generator.assets.list())
             spatial_candidates = load_project_spatial_candidates(
@@ -715,7 +729,7 @@ class StoryCAPBatchDialog(QDialog):
                 raise StoryBatchError("CAP context changed during review; reprepare queue")
             # Save the operator's reviewed fields as unapproved working material.
             # This is NOT CAP persistence, Canon approval or a provider call.
-            item = replace(item, proposal=replace(item.proposal, specification=dialog.reviewed()))
+            item = replace(item, proposal=item.proposal.with_operator_edits(dialog.reviewed()))
             if self.cache is not None:
                 self.cache.save(item, asset_fingerprint, provider_fingerprint, context.fingerprint)
             self._proposal_cache[cache_key] = item
@@ -736,6 +750,7 @@ class StoryCAPBatchDialog(QDialog):
                 dialog.reviewed(),
                 suggestions=item.proposal.design_suggestions,
                 quality_issues=item.proposal.quality_issues,
+                field_provenance=item.proposal.field_provenance,
                 previous_review=previous,
                 parent=self,
             )

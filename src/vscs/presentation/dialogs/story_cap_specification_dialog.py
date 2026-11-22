@@ -32,6 +32,7 @@ from vscs.application.caps.shot_spatial_evidence import (
     inspect_shot_spatial_evidence,
 )
 from vscs.application.caps.spatial_proposals import propose_spatial_relationships
+from vscs.application.caps.story_field_grounding import CAPFieldOrigin
 from vscs.application.caps.story_spatial_evidence import plan_story_spatial_evidence
 from vscs.application.caps.story_specification import StoryCAPProposal
 from vscs.application.caps.structured_specification import (
@@ -69,7 +70,7 @@ class StoryCAPSpecificationDialog(QDialog):
         self.resize(860, 700)
         self.setMinimumSize(520, 380)
         note = QLabel(
-            "Advisory AI proposal only — distinguish story evidence from inferred design. "
+            "Unapproved Story-grounded candidates and AI proposals — distinguish sources. "
             "Save Review & Continue retains edits in the local proposal cache. "
             "Final CAP persistence requires separate confirmation; nothing approves Canon."
         )
@@ -83,16 +84,41 @@ class StoryCAPSpecificationDialog(QDialog):
         self.attributes.textChanged.connect(self._update_completeness)
         self.detail_evidence = QTextEdit()
         self.detail_evidence.setReadOnly(True)
-        self.detail_evidence.setMaximumHeight(140)
+        self.detail_evidence.setMaximumHeight(240)
+        evidence_lines = ["FIELD PROVENANCE — source candidates require human acceptance:"]
+        for field in proposal.field_provenance:
+            evidence_lines.append(f"{field.field}: {field.origin.value} — {field.note}")
+            if field.origin is CAPFieldOrigin.OPERATOR_EDITED:
+                evidence_lines.append(f"  Human-edited working value: {field.value}")
+            if field.source_record_id:
+                evidence_lines.append(
+                    f"  {field.source_record_id}.{field.source_field} "
+                    f"[SHA {field.source_fingerprint}]: "
+                    + (
+                        field.excerpt
+                        if field.origin is CAPFieldOrigin.OPERATOR_EDITED
+                        else field.value
+                    )
+                )
+            if field.shot_authority:
+                evidence_lines.append(
+                    f"  SHOT-ONLY [{field.shot_authority}] "
+                    f"{field.shot_record_id}.{field.shot_field} "
+                    f"[SHA {field.shot_fingerprint}]: {field.shot_excerpt}"
+                )
+        evidence_lines.append("PROVIDER / EARLIER EXPANSION (NOT STORY CANON):")
         expansion = proposal.detail_expansion
         if expansion is not None:
-            self.detail_evidence.setPlainText(
-                "\n".join(
-                    f"{candidate.field}: {candidate.authority.value}"
-                    + (f" | {candidate.evidence}" if candidate.evidence else "")
-                    for candidate in expansion.candidates
-                )
+            evidence_lines.extend(
+                f"{candidate.field}: {candidate.authority.value}"
+                + (f" | {candidate.evidence}" if candidate.evidence else "")
+                for candidate in expansion.candidates
             )
+        evidence_lines.extend(
+            f"AI {item.field}: {item.proposed_value} ({item.rationale})"
+            for item in proposal.design_suggestions
+        )
+        self.detail_evidence.setPlainText("\n".join(evidence_lines))
         self.variants = QTextEdit()
         self.variants.setPlaceholderText("Optional variant=value1|value2")
         self.prompt = QTextEdit(spec.master_prompt)
@@ -135,7 +161,7 @@ class StoryCAPSpecificationDialog(QDialog):
         form.addRow("Design intent", self.intent)
         form.addRow("Canonical attributes (key=value)", self.attributes)
         form.addRow("Completeness (not approval)", self.completeness)
-        form.addRow("Source evidence / design status", self.detail_evidence)
+        form.addRow("Field provenance / AI alternatives (read-only)", self.detail_evidence)
         form.addRow("Allowed variants", self.variants)
         form.addRow("Master reference prompt", self.prompt)
         form.addRow("Continuity (one rule per line)", self.rules)
