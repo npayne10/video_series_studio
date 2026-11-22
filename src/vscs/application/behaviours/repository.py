@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
-from sqlalchemy import Select, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.assets import AssetCategory
@@ -86,7 +86,7 @@ class BehaviourProfileRepository:
         authority: BehaviourAuthority | None = None,
         asset_category: AssetCategory | None = None,
     ) -> tuple[BehaviourProfile, ...]:
-        statement: Select[tuple[BehaviourProfileRecord]] = select(BehaviourProfileRecord)
+        statement = select(BehaviourProfileRecord)
         if query.strip():
             pattern = f"%{query.strip()}%"
             statement = statement.where(

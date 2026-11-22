@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import Select, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from vscs.domain.caps import (
@@ -72,7 +72,7 @@ class CanonicalReferenceRepository:
         reference_type: CanonicalReferenceType | None = None,
         status: CanonicalReferenceStatus | None = None,
     ) -> tuple[CanonicalReference, ...]:
-        statement: Select[tuple[CanonicalReferenceRecord]] = select(CanonicalReferenceRecord).where(
+        statement = select(CanonicalReferenceRecord).where(
             CanonicalReferenceRecord.cap_id == cap_id
         )
         if reference_type is not None:

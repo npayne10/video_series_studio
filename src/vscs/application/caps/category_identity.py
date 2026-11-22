@@ -96,19 +96,18 @@ def category_identity_issues(
                 "the room or location. Describe the room's supported layout "
                 "or leave its architecture unresolved.",
             )
-    elif category in (AssetCategory.PROP, AssetCategory.TECHNOLOGY):
-        if (
-            _match(rf"\b{_LOCATION}\b", value)
-            and not _match(
-                rf"\b{_PROP}\b[^.\n]{{0,130}}\b{_PROP_STRUCTURE}\b"
-                rf"|\b{_PROP_STRUCTURE}\b[^.\n]{{0,130}}\b{_PROP}\b",
-                value,
-            )
-            and not _match(rf"\b{_PROP}\b[^.\n]{{0,120}}\b{_UNKNOWN}\b", value)
-        ):
-            return (
-                "Prop/technology geometry describes its containing location "
-                "instead of the physical asset. Describe the prop's supported "
-                "geometry or leave it unresolved.",
-            )
+    elif category in (AssetCategory.PROP, AssetCategory.TECHNOLOGY) and (
+        _match(rf"\b{_LOCATION}\b", value)
+        and not _match(
+            rf"\b{_PROP}\b[^.\n]{{0,130}}\b{_PROP_STRUCTURE}\b"
+            rf"|\b{_PROP_STRUCTURE}\b[^.\n]{{0,130}}\b{_PROP}\b",
+            value,
+        )
+        and not _match(rf"\b{_PROP}\b[^.\n]{{0,120}}\b{_UNKNOWN}\b", value)
+    ):
+        return (
+            "Prop/technology geometry describes its containing location "
+            "instead of the physical asset. Describe the prop's supported "
+            "geometry or leave it unresolved.",
+        )
     return ()
