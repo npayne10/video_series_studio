@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from vscs.application.caps.geometry_correction_policy import (
@@ -39,6 +40,11 @@ class GovernedCorrectionProposal:
     reviewed_roi: NormalizedRegion
     stages: tuple[str, ...]
     proposal_sha256: str
+    scoped_failed_fields: tuple[str, ...] = ()
+    shared_atomic_constraint: str = ""
+    field_source_quotes: tuple[tuple[str, str], ...] = ()
+    separate_failed_fields: tuple[str, ...] = ()
+    field_reviews: tuple[tuple[str, str, str], ...] = ()
     region_reviewed_by_operator: bool = True
     mask_verified: bool = False
     outside_mask_pixels_verified: bool = False
@@ -54,12 +60,64 @@ class GovernedCorrectionProposal:
         return False
 
     def verify_seal(self) -> None:
-        if self.schema_version != 1 or not _SHA256.fullmatch(self.source_sha256):
+        if self.schema_version not in (1, 2) or not _SHA256.fullmatch(self.source_sha256):
             raise GeometryCorrectionError("Stage C correction identity is invalid")
         if self.stages != tuple(stage.value for stage in _ALLOWED_STAGES[self.defect]):
             raise GeometryCorrectionError("Stage C correction stages changed")
         if self.reviewed_requirement != dict(self.accepted_fields).get(self.target_field):
             raise GeometryCorrectionError("Stage C target no longer matches CAP requirements")
+        if self.schema_version == 1:
+            if any(
+                (
+                    self.scoped_failed_fields,
+                    self.shared_atomic_constraint,
+                    self.field_source_quotes,
+                    self.separate_failed_fields,
+                    self.field_reviews,
+                )
+            ):
+                raise GeometryCorrectionError("Legacy C1 scope cannot contain new claims")
+        else:
+            accepted = dict(self.accepted_fields)
+            names = tuple(accepted)
+            scoped = self.scoped_failed_fields
+            separate = self.separate_failed_fields
+            if (
+                len(accepted) != len(self.accepted_fields)
+                or len(self.field_reviews) != len(names)
+                or tuple(field for field, _, _ in self.field_reviews) != names
+                or not scoped
+                or self.target_field not in scoped
+                or len(set(scoped + separate)) != len(scoped) + len(separate)
+                or set(scoped + separate)
+                != {
+                    field
+                    for field, status, _ in self.field_reviews
+                    if status == VisualEvidenceStatus.FAILED.value
+                }
+                or any(
+                    status
+                    not in (
+                        VisualEvidenceStatus.FAILED.value,
+                        VisualEvidenceStatus.VERIFIED_BY_OPERATOR.value,
+                    )
+                    or not 12 <= len(observation.strip()) <= 2000
+                    for _, status, observation in self.field_reviews
+                )
+            ):
+                raise GeometryCorrectionError("Stage C correlation scope is invalid")
+            if len(scoped) > 1:
+                if (
+                    not 12 <= len(self.shared_atomic_constraint.strip()) <= 500
+                    or tuple(field for field, _ in self.field_source_quotes) != scoped
+                    or any(
+                        len(quote.strip()) < 12 or quote.strip() not in accepted[field]
+                        for field, quote in self.field_source_quotes
+                    )
+                ):
+                    raise GeometryCorrectionError("Stage C correlated CAP source quotes invalid")
+            elif self.shared_atomic_constraint or self.field_source_quotes or not separate:
+                raise GeometryCorrectionError("Stage C scope requires explicit separate failures")
         if (
             not self.region_reviewed_by_operator
             or self.mask_verified
@@ -84,6 +142,37 @@ class GovernedCorrectionProposal:
                 f"Asset: {self.asset_id} | Source Candidate: {self.source_reference_id}",
                 f"Source SHA-256: {self.source_sha256}",
                 f"Target reviewed field: {self.target_field}",
+                *(
+                    (f"Scoped FAILED fields: {', '.join(self.scoped_failed_fields)}",)
+                    if self.schema_version == 2
+                    else ()
+                ),
+                *(
+                    (
+                        f"Shared atomic constraint (operator asserted): {self.shared_atomic_constraint}",
+                    )
+                    if self.shared_atomic_constraint
+                    else ()
+                ),
+                *(
+                    (
+                        f"Source CAP quote [{field}]: {quote}"
+                        for field, quote in self.field_source_quotes
+                    )
+                ),
+                *(
+                    (
+                        f"Other FAILED fields requiring separate corrections: {', '.join(self.separate_failed_fields)}",
+                    )
+                    if self.separate_failed_fields
+                    else ()
+                ),
+                *(
+                    (
+                        f"Independent review [{field}]: {status} — {observation}"
+                        for field, status, observation in self.field_reviews
+                    )
+                ),
                 f"Accepted requirement: {self.reviewed_requirement}",
                 f"Observed failure: {self.observed_failure}",
                 f"Defect: {self.defect.value}",
@@ -121,6 +210,16 @@ def _seal(proposal: GovernedCorrectionProposal) -> str:
         "canon_approval_allowed": proposal.canon_approval_allowed,
         "governed_attempt_allowed": proposal.governed_attempt_allowed,
     }
+    if proposal.schema_version == 2:
+        payload.update(
+            {
+                "scoped_failed_fields": proposal.scoped_failed_fields,
+                "shared_atomic_constraint": proposal.shared_atomic_constraint,
+                "field_source_quotes": proposal.field_source_quotes,
+                "separate_failed_fields": proposal.separate_failed_fields,
+                "field_reviews": proposal.field_reviews,
+            }
+        )
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
@@ -131,6 +230,9 @@ def prepare_governed_correction_proposal(
     target_field: str,
     expected_source_sha256: str,
     reviewer_confirmed_roi: bool,
+    correlated_field_quotes: Mapping[str, str] | None = None,
+    shared_atomic_constraint: str = "",
+    confirm_separate_failures: bool = False,
 ) -> GovernedCorrectionProposal:
     """Convert fully reviewed Stage B evidence into an offline correction intent.
 
@@ -162,10 +264,20 @@ def prepare_governed_correction_proposal(
         item.field.strip() and item.requirement.strip() for item in fields
     ):
         raise GeometryCorrectionError("Stage C accepted fields are invalid")
+    if any(
+        not isinstance(item.status, VisualEvidenceStatus)
+        or item.region_reviewer_confirmed
+        or (
+            item.proposed_region is not None
+            and not isinstance(item.proposed_region, NormalizedRegion)
+        )
+        for item in fields
+    ):
+        raise GeometryCorrectionError("Stage C review status or ROI authority is invalid")
     failed = [item for item in fields if item.status is VisualEvidenceStatus.FAILED]
-    if len(failed) != 1 or failed[0].field != target_field:
-        raise GeometryCorrectionError("Stage C requires exactly one reviewed failed target")
-    target = failed[0]
+    target = next((item for item in failed if item.field == target_field), None)
+    if target is None:
+        raise GeometryCorrectionError("Stage C requires a reviewed FAILED target")
     if (
         not isinstance(target.defect, GeometryDefect)
         or target.proposed_region is None
@@ -177,17 +289,65 @@ def prepare_governed_correction_proposal(
     ):
         raise GeometryCorrectionError("Stage C target evidence or ROI invalid")
     if any(
-        item.status is not VisualEvidenceStatus.VERIFIED_BY_OPERATOR
-        or not 12 <= len(item.observation.strip()) <= 2000
-        or item.defect is not None
-        or item.proposed_region is not None
+        not 12 <= len(item.observation.strip()) <= 2000
+        or (
+            item.status is VisualEvidenceStatus.VERIFIED_BY_OPERATOR
+            and (item.defect is not None or item.proposed_region is not None)
+        )
+        or (
+            item.status is VisualEvidenceStatus.FAILED
+            and (
+                not isinstance(item.defect, GeometryDefect)
+                or item.correction_stages
+                != tuple(stage.value for stage in _ALLOWED_STAGES[item.defect])
+            )
+        )
         for item in fields
         if item.field != target_field
     ):
         raise GeometryCorrectionError("Stage C non-target fields require independent review")
+    if correlated_field_quotes is not None and not isinstance(correlated_field_quotes, Mapping):
+        raise GeometryCorrectionError("Stage C correlation evidence must be a field mapping")
+    quotes = correlated_field_quotes or {}
+    if not all(isinstance(k, str) and isinstance(v, str) for k, v in quotes.items()):
+        raise GeometryCorrectionError("Stage C correlation quotes must be source text")
+    if quotes:
+        if target_field not in quotes or len(quotes) < 2:
+            raise GeometryCorrectionError(
+                "Correlation must include target and another FAILED field"
+            )
+        scoped = tuple(item.field for item in failed if item.field in quotes)
+        if len(scoped) != len(quotes) or any(
+            item.defect != target.defect or item.proposed_region != target.proposed_region
+            for item in failed
+            if item.field in quotes
+        ):
+            raise GeometryCorrectionError("Correlated fields must share defect and exact ROI")
+        if not 12 <= len(shared_atomic_constraint.strip()) <= 500:
+            raise GeometryCorrectionError("Describe the shared atomic visual constraint")
+        source_quotes = tuple((field, quotes[field].strip()) for field in scoped)
+        accepted_requirements = {item.field: item.requirement for item in fields}
+        if any(
+            len(quote) < 12 or quote not in accepted_requirements[field]
+            for field, quote in source_quotes
+        ):
+            raise GeometryCorrectionError("Quote the exact accepted CAP source for each field")
+    else:
+        if shared_atomic_constraint.strip():
+            raise GeometryCorrectionError("Shared constraint needs source quotes for each field")
+        scoped = (target_field,)
+        source_quotes = ()
+    separate = tuple(item.field for item in failed if item.field not in scoped)
+    if separate and not confirm_separate_failures:
+        raise GeometryCorrectionError(
+            "Multiple FAILED fields require a correlated source mapping or explicit separate corrections"
+        )
+    if type(confirm_separate_failures) is not bool:
+        raise GeometryCorrectionError("Separate failure confirmation must be explicit")
+    version = 2 if len(scoped) > 1 or separate else 1
     accepted = tuple((item.field, item.requirement) for item in fields)
     provisional = GovernedCorrectionProposal(
-        schema_version=1,
+        schema_version=version,
         asset_id=review.asset_id,
         source_reference_id=review.reference_id,
         source_sha256=review.source_sha256,
@@ -199,6 +359,15 @@ def prepare_governed_correction_proposal(
         reviewed_roi=target.proposed_region,
         stages=target.correction_stages,
         proposal_sha256="",
+        scoped_failed_fields=scoped if version == 2 else (),
+        shared_atomic_constraint=shared_atomic_constraint.strip() if version == 2 else "",
+        field_source_quotes=source_quotes if version == 2 else (),
+        separate_failed_fields=separate if version == 2 else (),
+        field_reviews=(
+            tuple((item.field, item.status.value, item.observation) for item in fields)
+            if version == 2
+            else ()
+        ),
     )
     from dataclasses import replace
 

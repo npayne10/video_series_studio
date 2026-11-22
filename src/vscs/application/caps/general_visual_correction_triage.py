@@ -6,6 +6,7 @@ A human explicitly selects defect and field; evaluator prose is evidence only.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from vscs.application.caps.geometry_correction_policy import (
@@ -128,3 +129,57 @@ def candidate_visual_triage(
         selected_defect=selected_defect,
         stages=stages,
     )
+
+
+_COMMON_WORDS = {
+    "with",
+    "from",
+    "that",
+    "this",
+    "which",
+    "their",
+    "under",
+    "along",
+    "below",
+    "above",
+    "inside",
+    "outside",
+    "other",
+    "each",
+    "only",
+    "exactly",
+    "visible",
+    "separate",
+    "surface",
+    "physical",
+    "housing",
+    "reviewed",
+}
+
+
+def semantic_field_suggestions(report: CandidateQualityResult) -> dict[str, tuple[str, ...]]:
+    """Find *advisory* semantic violations mentioning words in CAP requirements.
+
+    Token overlap is for navigation only: never infers FAILED or VERIFIED status.
+    All source text comes from the already-saved report, with no provider call.
+    """
+    if report.semantic is None:
+        return {}
+    result: dict[str, tuple[str, ...]] = {}
+    for field, requirement in report.snapshot.accepted_fields:
+        terms = {
+            token
+            for token in re.findall(r"[a-z]{4,}", requirement.casefold())
+            if token not in _COMMON_WORDS
+        }
+        scored = []
+        for violation in report.semantic.violations:
+            if not isinstance(violation, str) or not violation.strip():
+                continue
+            tokens = set(re.findall(r"[a-z]{4,}", violation.casefold()))
+            overlap = len(terms & tokens)
+            if overlap:
+                scored.append((overlap, violation.strip()))
+        if scored:
+            result[field] = tuple(value for _, value in sorted(scored, key=lambda pair: -pair[0]))
+    return result

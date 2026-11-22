@@ -40,6 +40,17 @@ class SavedHumanReview:
     review: SpatialEvidenceReview
     proposal_sha256: str | None
     saved_utc: str
+    c1_scope: SavedC1Scope | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SavedC1Scope:
+    """Advisory C1 mapping retained for replay; not an ROI confirmation."""
+
+    target_field: str
+    shared_atomic_constraint: str
+    field_source_quotes: tuple[tuple[str, str], ...]
+    confirm_separate_failures: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +158,9 @@ def _payload(
             target_field=proposal.target_field,
             expected_source_sha256=snapshot.image_sha256,
             reviewer_confirmed_roi=True,
+            correlated_field_quotes=dict(proposal.field_source_quotes),
+            shared_atomic_constraint=proposal.shared_atomic_constraint,
+            confirm_separate_failures=bool(proposal.separate_failed_fields),
         )
         if proposal != expected:
             raise GeometryCorrectionError("C1 provenance is not bound to these reviewed fields")
@@ -170,6 +184,16 @@ def _payload(
         "identity": _identity(snapshot),
         "fields": fields,
         "c1_proposal_sha256": proposal.proposal_sha256 if proposal is not None else None,
+        "c1_scope": (
+            {
+                "target_field": proposal.target_field,
+                "shared_atomic_constraint": proposal.shared_atomic_constraint,
+                "field_source_quotes": [list(pair) for pair in proposal.field_source_quotes],
+                "confirm_separate_failures": bool(proposal.separate_failed_fields),
+            }
+            if proposal is not None and proposal.schema_version == 2
+            else None
+        ),
         "saved_utc": datetime.now(UTC).isoformat(),
         "no_authority": True,
     }
@@ -283,7 +307,44 @@ def load_human_review_session(
         not isinstance(proposal_hash, str) or not _HEX.fullmatch(proposal_hash)
     ):
         raise GeometryCorrectionError("Saved C1 provenance digest invalid")
-    return SavedHumanReview(path, review, proposal_hash, data["saved_utc"])
+    scope_data = data.get("c1_scope")
+    scope: SavedC1Scope | None = None
+    if scope_data is not None:
+        if (
+            not isinstance(scope_data, dict)
+            or not isinstance(scope_data.get("target_field"), str)
+            or not isinstance(scope_data.get("shared_atomic_constraint"), str)
+            or type(scope_data.get("confirm_separate_failures")) is not bool
+            or not isinstance(scope_data.get("field_source_quotes"), list)
+            or any(
+                not isinstance(pair, list)
+                or len(pair) != 2
+                or not all(isinstance(item, str) for item in pair)
+                for pair in scope_data["field_source_quotes"]
+            )
+            or proposal_hash is None
+        ):
+            raise GeometryCorrectionError("Saved correlated C1 scope is malformed")
+        scope = SavedC1Scope(
+            target_field=scope_data["target_field"],
+            shared_atomic_constraint=scope_data["shared_atomic_constraint"],
+            field_source_quotes=tuple(tuple(pair) for pair in scope_data["field_source_quotes"]),
+            confirm_separate_failures=scope_data["confirm_separate_failures"],
+        )
+        if len(dict(scope.field_source_quotes)) != len(scope.field_source_quotes):
+            raise GeometryCorrectionError("Saved correlated C1 source fields are duplicated")
+        expected = prepare_governed_correction_proposal(
+            review,
+            target_field=scope.target_field,
+            expected_source_sha256=snapshot.image_sha256,
+            reviewer_confirmed_roi=True,
+            correlated_field_quotes=dict(scope.field_source_quotes),
+            shared_atomic_constraint=scope.shared_atomic_constraint,
+            confirm_separate_failures=scope.confirm_separate_failures,
+        )
+        if expected.schema_version != 2 or expected.proposal_sha256 != proposal_hash:
+            raise GeometryCorrectionError("Saved correlated C1 provenance does not match review")
+    return SavedHumanReview(path, review, proposal_hash, data["saved_utc"], scope)
 
 
 def list_existing_mask_versions(
