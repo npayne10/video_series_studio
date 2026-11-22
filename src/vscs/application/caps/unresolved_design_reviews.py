@@ -22,6 +22,22 @@ from vscs.application.caps.design_completion import (
 )
 from vscs.application.caps.structured_specification import CAPStructuredSpecification
 
+# Issue #54 added optional Story/Shot provenance to each design field. Historical
+# Issue #57 review-only records were sealed before those keys existed. Preserve
+# their original hash calculation; never rewrite their immutable JSON files.
+_POST_V1_FIELD_PROVENANCE = frozenset(
+    {
+        "source_record_id",
+        "source_field",
+        "source_fingerprint",
+        "source_excerpt",
+        "shot_authority",
+        "shot_source_record_id",
+        "shot_source_fingerprint",
+        "shot_excerpt",
+    }
+)
+
 
 def _review_digest(
     story_id: str,
@@ -31,7 +47,14 @@ def _review_digest(
     asset_fingerprint: str,
     base_fingerprint: str,
     review: DesignReviewPackage,
+    *,
+    pre_story_provenance: bool = False,
 ) -> str:
+    review_payload = review.model_dump(mode="json")
+    if pre_story_provenance:
+        for field in review_payload["fields"]:
+            for key in _POST_V1_FIELD_PROVENANCE:
+                field.pop(key)
     identity = {
         "story_id": story_id,
         "asset_id": asset_id,
@@ -39,7 +62,26 @@ def _review_digest(
         "context_fingerprint": context_fingerprint,
         "asset_fingerprint": asset_fingerprint,
         "base_fingerprint": base_fingerprint,
-        "review": review.model_dump(mode="json"),
+        "review": review_payload,
+    }
+    return hashlib.sha256(
+        json.dumps(identity, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
+
+
+def _stored_review_digest(data: dict[str, object]) -> str:
+    """Seal the review as stored, before Pydantic supplies newer optional defaults."""
+    identity = {
+        key: data[key]
+        for key in (
+            "story_id",
+            "asset_id",
+            "story_fingerprint",
+            "context_fingerprint",
+            "asset_fingerprint",
+            "base_fingerprint",
+            "review",
+        )
     }
     return hashlib.sha256(
         json.dumps(identity, sort_keys=True, ensure_ascii=False).encode()
@@ -71,6 +113,22 @@ class UnresolvedCAPReviewRecord(BaseModel):
 
     @model_validator(mode="after")
     def verify_review_only(self) -> UnresolvedCAPReviewRecord:
+        digest_args = (
+            self.story_id,
+            self.asset_id,
+            self.story_fingerprint,
+            self.context_fingerprint,
+            self.asset_fingerprint,
+            self.base_fingerprint,
+            self.review,
+        )
+        allowed_hashes = {_review_digest(*digest_args)}
+        if all(
+            not getattr(field, key)
+            for field in self.review.fields
+            for key in _POST_V1_FIELD_PROVENANCE
+        ):
+            allowed_hashes.add(_review_digest(*digest_args, pre_story_provenance=True))
         if (
             self.specification_snapshot.asset_id != self.asset_id
             or self.review.asset_id != self.asset_id
@@ -78,16 +136,7 @@ class UnresolvedCAPReviewRecord(BaseModel):
             or self.review.context_fingerprint != self.context_fingerprint
             or self.base_fingerprint != self.specification_snapshot.fingerprint()
             or reviewed_canonical_attributes(self.specification_snapshot, self.review)
-            or self.record_id
-            != _review_digest(
-                self.story_id,
-                self.asset_id,
-                self.story_fingerprint,
-                self.context_fingerprint,
-                self.asset_fingerprint,
-                self.base_fingerprint,
-                self.review,
-            )
+            or self.record_id not in allowed_hashes
             or not self.context_sources
         ):
             raise ValueError("The saved review is not a valid unresolved CAP decision")
@@ -115,9 +164,10 @@ class UnresolvedCAPReviewLedger:
         try:
             records = []
             for path in directory.glob("*.json"):
-                record = UnresolvedCAPReviewRecord.model_validate_json(
-                    path.read_text(encoding="utf-8")
-                )
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                record = UnresolvedCAPReviewRecord.model_validate(raw)
+                if record.record_id != _stored_review_digest(raw):
+                    raise ValueError("Stored CAP decision's source audit hash does not match")
                 if path.stem != record.record_id:
                     raise ValueError("Stored CAP decision filename does not match its audit hash")
                 records.append(record)
