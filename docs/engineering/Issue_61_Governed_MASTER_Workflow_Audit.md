@@ -1,7 +1,8 @@
 # Issue #61 — governed ChatGPT MASTER and derived-reference route
 
-**Status (2026-11-22): implementation and offline tests; Windows/operator acceptance
-pending.** Parent #55, prerequisite #58. This audit neither creates actual
+**Status (2026-11-23): Stage A Windows/operator offline UI and non-mutation
+accepted; Stage B genuine MASTER import and derived-view testing pending.**
+Parent #55, prerequisite #58. This audit neither creates actual
 references nor approves a CAP or authorizes GPU/image/video production.
 
 ## Authority and the real UI route
@@ -133,8 +134,11 @@ of these missing image/approval requirements.
 Do not count this as an operator-confirmed real MASTER/derived lifecycle until
 the Windows runbook in `docs/user_manual/VSCS_User_Manual.md` has captured the
 necessary screenshots and source-file SHA evidence. In particular, no
-legitimate ChatGPT MASTER was supplied to this engineering audit; physical
-image fidelity and protected pixels cannot be certified from offline tests.
+legitimate ChatGPT MASTER was supplied to the original engineering audit;
+physical image fidelity and protected pixels cannot be certified from offline
+tests. A new ChatGPT image was subsequently generated and visually approved
+by Neill on 2026-11-23, but it has **not** yet been imported or locked in VSCS;
+see [the source-specific Stage B handoff](Issue_61_Stage_B_Console_Reference_Handoff.md).
 
 ## Real-world test boundary and stop conditions
 

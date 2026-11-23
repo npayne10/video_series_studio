@@ -1,16 +1,18 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.15 (living documentation, updated 2026-11-22)
+**Version:** v0.16 (living documentation, updated 2026-11-23)
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
-## Issue #61 — governed ChatGPT MASTER-to-derived-reference route (operator acceptance pending)
+## Issue #61 — governed ChatGPT MASTER-to-derived-reference route (Stage A accepted)
 
 The real entry point is **Assets → Add Asset / Edit Selected → Browse…** with a separately human-approved, authentic ChatGPT image and explicit provenance confirmation. That **single save** registers, approves and locks the MASTER immediately; the software does not perform a staged ChatGPT MASTER quality review for the operator. Existing local ComfyUI/Qwen supplementary Candidates remain supplementary and may not be mislabelled as ChatGPT MASTER. **Canonical Profiles → Generate Production References** requires consistent locked MASTER authority and produces **Supplementary Candidates**, not approved references. The gallery now routes registered derived approvals/rejections/archives into the production library, prevents derived-Primary/MASTER promotion, and clearly distinguishes an unregistered gallery image from production authority. Readiness fails closed on a legacy/library lock mismatch.
 
-- [Exact Windows runbook: safe offline screenshots, then separately authorised real MASTER/derived cycle](VSCS_User_Manual.md#issue-61--governed-chatgpt-master-and-derived-references-windows-acceptance-pending)
+- [Exact Windows runbook: accepted offline checks and controlled real MASTER/derived cycle](VSCS_User_Manual.md#issue-61--governed-chatgpt-master-and-derived-references-stage-a-accepted-stage-b-pending)
 - [Issue #61 formal engineering contract, view templates and acceptance matrix](../engineering/Issue_61_Governed_MASTER_Workflow_Audit.md)
 
-**No actual ChatGPT MASTER image, paid semantic review, GPU output, CAP approval or video clips are created by this audit.** The operator must supply/review the real origin evidence and separately authorise all project writes before the full workflow can be accepted.
+**Stage A operator accepted on 2026-11-23:** 19 focused / 2,993 full Windows tests (2 expected skips), CI, four UI screens, and 9 protected SHA-256 snapshot entries unchanged. **Stage B pending:** the newly ChatGPT-generated and human-approved Diagnostic Console image has **not yet been imported, registered or locked**. Follow the [exact Console source handoff and SHA test](../engineering/Issue_61_Stage_B_Console_Reference_Handoff.md). Actual derived GPU generation still requires separate per-call consent. No new real CAP/Canon/production or video approval was granted.
+
+**Target automation (approved specification; not yet built):** [Governed OpenAI MASTER generation and correction v1.0](../engineering/Governed_OpenAI_MASTER_Generation_Specification_V1.md), tracked separately in [Issue #67](https://github.com/npayne10/video_series_studio/issues/67). After the real MASTER/derived lifecycle has passed, rebuild the complete development and full-system UAT/end-to-end production acceptance backlog.
 
 ## Issue #58 — honest multi-field Stage C1 review (merged, operator accepted 2026-11-22)
 

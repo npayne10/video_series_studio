@@ -1,16 +1,16 @@
 # Video Series Studio (VSCS) — User Manual
 
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-22 (Issue #58 operator-accepted and merged; Issue #61 engineering-only, Windows acceptance pending; prior C4B.1 offline/GET-only qualification accepted; C4B.2B/C4 generation unauthorized)
+**Last verified:** 2026-11-23 (Issue #58 merged; Issue #61 Stage A Windows/UI/SHA accepted, Stage B human-approved ChatGPT image not yet registered in VSCS; C4B.2B/C4 video generation unauthorized)
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
 
 This manual lives in the VSCS repository and must change with each material UI or workflow change. The source of truth for a feature's actual behavior is the current working-branch code and a successful operator UI acceptance. Do not present a planned feature as available, and do not assume a proposed item is production authority.
 
-## Issue #61 — governed ChatGPT MASTER and derived references (Windows acceptance pending)
+## Issue #61 — governed ChatGPT MASTER and derived references (Stage A accepted; Stage B pending)
 
-**Scope:** Verify the actual MASTER-to-derived-reference path; the application must never treat a local ComfyUI/Qwen supplementary Candidate, an AI quality score, gallery Primary status or an unreviewed file path as an approved ChatGPT-origin MASTER. This release fixes the gap between the Canonical Reference Gallery's legacy approval status and the separately governed production-reference library; it does **not** create a MASTER image or authorize paid/GPU/video generation. The supporting [Issue #61 engineering audit](../engineering/Issue_61_Governed_MASTER_Workflow_Audit.md) identifies the exact authority checks and the limitations of human origin attestation.
+**Scope:** Verify the actual MASTER-to-derived-reference path; the application must never treat a local ComfyUI/Qwen supplementary Candidate, an AI quality score, gallery Primary status or an unreviewed file path as an approved ChatGPT-origin MASTER. The Issue #61 code fixes the gap between the Gallery's legacy approval and the governed production-reference library. **Stage A was operator accepted on 2026-11-23:** Windows Ruff/format/Mypy, 19 focused tests, 2,993 full tests (2 expected symlink skips), four real UI screenshots, GitHub CI, and a fresh 9-entry before/after SHA-256 snapshot with zero changes. Stage B requires separately reviewed source files and intentional project writes. The [engineering audit](../engineering/Issue_61_Governed_MASTER_Workflow_Audit.md) explains the authority model.
 
 ### A. Safe offline Windows acceptance (start VSCS; no writes to project)
 
@@ -24,7 +24,7 @@ This manual lives in the VSCS repository and must change with each material UI o
 8. If needed, inspect **Open Saved Candidate Review…** (offline, no new AI charge). Do not click **Review Visual Candidate… → Yes**, which authorizes a separate paid semantic call. A review score never approves or locks any reference.
 9. Close VSCS and capture **AFTER** SHA-256 over the same protected inventory. All existing hashes, CAP/Asset Resolution, reference counts, MASTER and production approvals, and correction-attempt counters must match BEFORE. Record screenshots and expected/actual results. Any mutation, enabled generation despite missing MASTER, incorrect locked label, new reference, provider call or premature readiness is **FAIL**.
 
-**Expected engineering-only result:** The offline UI reports real missing authority, prevents generation and preserves the project. The automated tests use a synthetic, disposable fake MASTER and a test-only offline derived provider; that is not proof of a real ChatGPT-origin identity or image quality. Do **not** mark Issue #61 fully accepted on this offline check alone.
+**Operator accepted Stage A:** The offline UI reported real missing authority, prevented generation and preserved the project, with matching protected SHA-256 snapshots over 9 monitored entries. The automated tests used a synthetic fake MASTER and test-only offline derived provider. **This does not mark Stage B or Issue #61 fully accepted.**
 
 ### B. Separately authorised genuine MASTER creation and derived-view cycle
 
@@ -38,6 +38,36 @@ Complete these steps only after Neill deliberately approves the **actual** ChatG
 6. Reopen **CAP Readiness**. Confirm required views are *approved* rather than merely *present*, the original MASTER remains LOCKED and both databases agree, and any missing CAP Approved status, structured functional capabilities/constraints, visual identity, production guidance, and downstream Asset Resolution are still enforced. Resolve each through its separate human-reviewed authority workflow. Only then continue Production Planning—**stop before actual video clip creation**.
 
 **Acceptance screenshots:** initial Asset MASTER status; provenance attestation before Save (if authorised); locked MASTER in Assets/gallery; generation view template and provider settings; one unapproved derived Candidate with parent/version; a deliberately approved/rejected view; reopened lifecycle/readiness; before/after hashes and expected changes. Do not equate the synthetic automated tests with this complete real-world visual acceptance.
+
+### B.1 Approved Diagnostic Console source — exact Stage B handoff
+
+Neill approved the ChatGPT-conversation-generated physical design of `CAP-PRP-002`
+on **2026-11-23**, including the visually recessed dial, three buttons, blue
+display and ribbed graphite housing; numeric scale is still unresolved. The
+approved original PNG is **1024 × 1536**, SHA-256
+`C9741D39D1713E7EDDB600A15DD8D8D1B7A5C353225445CE2E4444589B9A3A38`.
+The file has **not** yet been moved into the Windows project or registered as
+MASTER. Do not substitute the local supplementary Candidate or a resaved,
+visually similar image. A downloaded PNG must match this exact SHA or be
+re-reviewed before importing.
+
+The [full controlled Stage B Console handoff](../engineering/Issue_61_Stage_B_Console_Reference_Handoff.md)
+provides copy/verification PowerShell, a new versioned project filename, the
+single **Assets → Edit Selected → Browse → explicit confirmation → Save**
+registration, read-back of both statuses, and the stop before separately
+authorised local GPU derived-view generation. Capture an intentional-change
+inventory: new MASTER/source/database records may change; historical
+Candidate 4, C2/C2.1 masks/reviews and old attempts must not change.
+
+For **routine future production**, Neill has approved the architecture of an
+in-app **Generate OpenAI MASTER Candidate → Review/Correct → Approve & Lock**
+workflow. It is a **specification, not an existing VSCS button**; see
+[Governed OpenAI MASTER generation v1.0](../engineering/Governed_OpenAI_MASTER_Generation_Specification_V1.md)
+and [Issue #67](https://github.com/npayne10/video_series_studio/issues/67).
+The human ChatGPT-browser import path remains supported during this test.
+The full remaining-fixes/UAT/end-to-end production backlog will be reconciled
+after the real MASTER and derived-reference lifecycle is proven, before any
+authorised first video generation.
 
 ## Issue #58 — correlated Stage B / C1 field failures (PR #65 merged, 2026-11-22)
 
