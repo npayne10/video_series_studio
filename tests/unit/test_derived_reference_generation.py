@@ -52,3 +52,27 @@ def test_cardinal_view_prompts_have_unambiguous_camera_orientations() -> None:
         prompt = DerivedReferenceGenerationService._prompt("Console", "Three buttons", view)
         assert required in prompt
         assert "MASTER image as the absolute visual identity authority" in prompt
+
+
+def test_reference_prompt_excludes_external_story_relationships() -> None:
+    description = (
+        "A freestanding diagnostic console beside, but physically separate from, "
+        "the maintenance workstation. It has an upright rectangular housing "
+        "and a front display above a control shelf."
+    )
+    isolated, excluded = DerivedReferenceGenerationService._isolated_description(description)
+    prompt = DerivedReferenceGenerationService._prompt(
+        isolated, "Three circular buttons and one rotary dial", CanonicalReferenceView.FRONT
+    )
+    assert "workstation" not in prompt.lower()
+    assert "upright rectangular housing" in prompt
+    assert len(excluded) == 1
+    assert "maintenance workstation" in excluded[0]
+    assert description.startswith(excluded[0])
+
+
+def test_reference_prompt_preserves_internal_component_relationships() -> None:
+    description = "A button beside the rotary dial. Three buttons next to the screen."
+    isolated, excluded = DerivedReferenceGenerationService._isolated_description(description)
+    assert isolated == description
+    assert excluded == ()

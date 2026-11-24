@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
@@ -260,12 +261,16 @@ class DerivedReferenceGenerationService:
                 prior_file = (project / prior_record.file_path).resolve(strict=False)
                 if prior_file.is_file():
                     predecessor_hash = sha256(prior_file.read_bytes()).hexdigest()
+            isolated_description, excluded_context = self._isolated_description(
+                cap.canonical_description
+            )
+            isolated_visual, excluded_visual = self._isolated_description(cap.visual_identity)
             request = DerivedReferenceRequest(
                 asset_id=asset_id.upper(),
                 title=cap.title,
                 view=view,
                 master_path=master_path,
-                prompt=self._prompt(cap.canonical_description, cap.visual_identity, view),
+                prompt=self._prompt(isolated_description, isolated_visual, view),
                 negative_prompt=self._negative_prompt(),
                 width=width,
                 height=height,
@@ -299,6 +304,9 @@ class DerivedReferenceGenerationService:
                         f"Supersedes reference: {predecessor.reference_id if predecessor else 'none'}\n"
                         f"Previous image SHA-256: {predecessor_hash or 'none'}\n"
                         f"Seed: {generated.seed}\n"
+                        "Prompt scope: isolated asset, context excluded from provider input\n"
+                        "Excluded scene context: "
+                        f"{' | '.join((*excluded_context, *excluded_visual)) or 'none'}\n"
                         f"Production capable provider: {provider.production_capable}"
                     ),
                     version=master_record.version,
@@ -318,6 +326,40 @@ class DerivedReferenceGenerationService:
             if progress_callback is not None:
                 progress_callback(f"Registered {view.value} Candidate {reference.id}")
         return tuple(created_ids)
+
+    @staticmethod
+    def _isolated_description(description: str) -> tuple[str, tuple[str, ...]]:
+        """Exclude explicit scene relationships without modifying the persisted CAP.
+
+        The exclusion is sentence-based and audit-visible, not an AI rewrite.
+        No removed content is sent to the provider as a negative prompt either.
+        """
+        contextual = re.compile(
+            r"\b(?:beside|alongside|next to|adjacent to|nearby|opposite|"
+            r"surrounded by|located in|located within|aboard|"
+            r"physically separate from|in the same room)\b",
+            flags=re.IGNORECASE,
+        )
+        external = re.compile(
+            r"\b(?:workstation|inspection bay|vessel|spaceship|room|"
+            r"surroundings|environment|scene|background)\b",
+            flags=re.IGNORECASE,
+        )
+        sentences = tuple(
+            sentence.strip()
+            for sentence in re.split(r"(?<=[.!?])\s+", description.strip())
+            if sentence.strip()
+        )
+        excluded = tuple(
+            sentence
+            for sentence in sentences
+            if contextual.search(sentence) and external.search(sentence)
+        )
+        kept = tuple(sentence for sentence in sentences if sentence not in excluded)
+        return (
+            " ".join(kept) or "Preserve the canonical asset visible in the MASTER image.",
+            excluded,
+        )
 
     @staticmethod
     def _prompt(description: str, visual_identity: str, view: CanonicalReferenceView) -> str:

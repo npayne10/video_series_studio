@@ -570,3 +570,11 @@ The operator has **visually approved the final isolated F5.4.1D `run_004` illust
 ### F5.4.2 Stage A operator acceptance — 2026-11-12
 
 Software validation **2,800 passed, 1 skipped**, Ruff/Mypy clean. UI screenshot confirms the Candidate review shows four reviewed fields as unverified, separates advisory semantic findings, and routes operator-selected `components` + `missing_component` to `reconstruct_component -> verify_design` with no generation action. **Stage A accepted** for visible workflow; no independent CAP non-mutation audit was supplied. Candidate 4's historic report remains distinct from visually approved external `run_004`. Candidate 4 governed final Attempt 2/2 remains protected. See [Stage A acceptance record](VSCS_User_Manual.md#f542-stage-a--operator-ui-acceptance-evidence-2026-11-12).
+
+# Issue #61 Stage B.2 — viewpoint qualification
+
+The [Stage B.2 engineering/operator runbook](../engineering/Issue_61_Stage_B2_Deterministic_Viewpoint_Qualification.md)
+documents isolated derived-reference prompts and the read-only evaluation of
+ComfyUI's Qwen multiple-angle camera workflow. The audit never authorises
+generation, modification of approved MASTER assets or automated reference
+approval. The original managed Qwen v2.1 workflow remains unchanged.
