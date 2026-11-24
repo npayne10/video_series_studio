@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QEvent, QObject
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QPushButton
 
 from vscs.application.caps.asset_generator import (
     CanonicalAssetGenerationError,
@@ -317,9 +317,50 @@ def _approve(dialog: Any, reference_id: int) -> None:
 
 
 def _reject(dialog: Any, reference_id: int) -> None:
+    if dialog.reference_service is None:
+        return
+    try:
+        _library, registered = _registered_reference(dialog, reference_id)
+    except ReferenceLibraryError as exc:
+        QMessageBox.critical(dialog, "Canonical Reference Workflow", str(exc))
+        return
+    if registered is not None and registered.family is CanonicalReferenceFamily.MASTER:
+        QMessageBox.critical(
+            dialog, "MASTER Governance", "The locked MASTER cannot be rejected here."
+        )
+        return
+    if registered is not None and registered.lifecycle is CanonicalReferenceLifecycle.CANDIDATE:
+        reason, accepted = QInputDialog.getMultiLineText(
+            dialog,
+            "Reject Derived Candidate — Quality Control",
+            "Document the observed failure and requested correction. The image and review "
+            "history will be retained:",
+        )
+        if not accepted:
+            return
+        reason = reason.strip()
+        if not reason:
+            QMessageBox.warning(dialog, "QC reason required", "Enter a QC rejection reason.")
+            return
+        if (
+            QMessageBox.question(
+                dialog,
+                "Confirm Candidate Rejection",
+                "Reject this derived Candidate with the recorded reason? "
+                "Its image will be retained; a replacement may then be generated.",
+            )
+            is not QMessageBox.StandardButton.Yes
+        ):
+            return
+
+        def reject_candidate() -> object:
+            library, _entry = _registered_reference(dialog, reference_id)
+            return library.reject(reference_id, actor=getpass.getuser(), note=reason)
+
+        _run_workflow(dialog, reject_candidate)
+        return
     if (
-        dialog.reference_service is not None
-        and QMessageBox.question(
+        QMessageBox.question(
             dialog,
             "Return to Candidate",
             "Remove production approval and return this reference to Candidate status?",

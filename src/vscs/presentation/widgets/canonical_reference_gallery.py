@@ -391,8 +391,24 @@ class CanonicalReferenceGallery(QWidget):
             else "Approve"
         )
         self.reject_button.setEnabled(
-            reference.status is CanonicalReferenceStatus.APPROVED
-            and (governed is None or governed.lifecycle is CanonicalReferenceLifecycle.APPROVED)
+            not reference.locked
+            and (
+                (governed is None and reference.status is CanonicalReferenceStatus.APPROVED)
+                or (
+                    governed is not None
+                    and governed.family is not CanonicalReferenceFamily.MASTER
+                    and governed.lifecycle
+                    in {
+                        CanonicalReferenceLifecycle.CANDIDATE,
+                        CanonicalReferenceLifecycle.APPROVED,
+                    }
+                )
+            )
+        )
+        self.reject_button.setText(
+            "Reject Candidate (QC)"
+            if governed is not None and governed.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+            else "Return to Candidate"
         )
         self.archive_button.setEnabled(
             reference.status is not CanonicalReferenceStatus.ARCHIVED

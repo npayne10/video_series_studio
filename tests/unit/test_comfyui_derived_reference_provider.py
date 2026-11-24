@@ -101,3 +101,7 @@ def test_comfyui_provider_compiles_master_conditioned_runtime_job(tmp_path: Path
     runtime = project / ".vscs" / "runtime" / "comfyui"
     assert tuple((runtime / "compiled").glob("*.json"))
     assert tuple((runtime / "jobs").glob("*/job.json"))
+    manifest_path = next((runtime / "jobs").glob("*/job.json"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["comfyui_prompt_id"] == "prompt-1"
+    assert manifest["dimension_policy"] == "MASTER-derived by FluxKontextImageScale"

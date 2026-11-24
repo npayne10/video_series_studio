@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import QElapsedTimer, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QLabel,
     QMessageBox,
+    QProgressBar,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -29,6 +31,60 @@ from vscs.infrastructure.ai.comfyui_derived_reference_provider import (
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 
 
+class _DerivedGenerationWorker(QThread):
+    """Execute provider I/O without blocking Qt's GUI event loop."""
+
+    progress = Signal(str)
+    completed = Signal(object)
+    failed = Signal(str)
+
+    def __init__(
+        self,
+        service: DerivedReferenceGenerationService,
+        asset_id: str,
+        views: tuple[CanonicalReferenceView, ...] | None,
+        provider_name: str,
+        width: int,
+        height: int,
+        seed: int,
+        parent: QWidget,
+    ) -> None:
+        super().__init__(parent)
+        self.service = service
+        self.asset_id = asset_id
+        self.views = views
+        self.provider_name = provider_name
+        self.width = width
+        self.height = height
+        self.seed = seed
+
+    def run(self) -> None:
+        try:
+            if self.views is None:
+                created = self.service.generate_missing_required(
+                    self.asset_id,
+                    provider_name=self.provider_name,
+                    width=self.width,
+                    height=self.height,
+                    seed=self.seed,
+                    progress_callback=self.progress.emit,
+                )
+            else:
+                created = self.service.generate(
+                    self.asset_id,
+                    self.views,
+                    provider_name=self.provider_name,
+                    width=self.width,
+                    height=self.height,
+                    seed=self.seed,
+                    progress_callback=self.progress.emit,
+                )
+        except (DerivedReferenceGenerationError, OSError, RuntimeError, ValueError) as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.completed.emit(created)
+
+
 class DerivedReferenceGenerationDialog(QDialog):
     """Choose category-aware derived views without redefining canonical identity."""
 
@@ -41,6 +97,13 @@ class DerivedReferenceGenerationDialog(QDialog):
         super().__init__(parent)
         self.asset_id = asset_id
         self.service = service
+        self._worker: _DerivedGenerationWorker | None = None
+        self._completed_count: int | None = None
+        self._last_progress = ""
+        self._elapsed = QElapsedTimer()
+        self._progress_timer = QTimer(self)
+        self._progress_timer.setInterval(1000)
+        self._progress_timer.timeout.connect(self._update_elapsed)
         self.coverage = service.coverage(asset_id)
         self.master_ready, master_note = service.master_authority_state(asset_id)
         self.setWindowTitle(f"Generate Production References — {asset_id}")
@@ -94,6 +157,11 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.height.setRange(256, 8192)
         self.height.setValue(720)
         self.height.setToolTip(self.width.toolTip())
+        self.dimension_note = QLabel(
+            "Requested dimensions are metadata only for Qwen v2.1. Actual image dimensions "
+            "are determined from the MASTER by FluxKontextImageScale."
+        )
+        self.dimension_note.setWordWrap(True)
         self.seed = QSpinBox()
         self.seed.setRange(0, 2_147_483_647)
         self.seed.setValue(0)
@@ -132,6 +200,14 @@ class DerivedReferenceGenerationDialog(QDialog):
         layout.addWidget(self.master_authority_label)
         layout.addWidget(self.coverage_label)
         layout.addLayout(settings)
+        layout.addWidget(self.dimension_note)
+        self.progress_label = QLabel("No generation in progress")
+        self.progress_label.setWordWrap(True)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_label)
+        layout.addWidget(self.progress_bar)
         layout.addWidget(QLabel("Category production reference views"))
         layout.addLayout(grid)
         layout.addWidget(self.generate_missing_button)
@@ -148,42 +224,99 @@ class DerivedReferenceGenerationDialog(QDialog):
         self._run_generation(views)
 
     def _generate_missing_required(self) -> None:
-        provider_name = str(self.provider.currentData() or "")
-        try:
-            created = self.service.generate_missing_required(
-                self.asset_id,
-                provider_name=provider_name,
-                width=self.width.value(),
-                height=self.height.value(),
-                seed=self.seed.value(),
-            )
-        except (DerivedReferenceGenerationError, OSError, RuntimeError, ValueError) as exc:
-            QMessageBox.critical(self, "Derived Reference Generation", str(exc))
-            return
-        if not created:
-            QMessageBox.information(
-                self,
-                "Reference Coverage Complete",
-                "No required derived reference views are missing for this category.",
-            )
-            return
-        self._generation_complete(len(created))
+        self._start_generation(None)
 
     def _run_generation(self, views: tuple[CanonicalReferenceView, ...]) -> None:
-        provider_name = str(self.provider.currentData() or "")
-        try:
-            created = self.service.generate(
-                self.asset_id,
-                views,
-                provider_name=provider_name,
-                width=self.width.value(),
-                height=self.height.value(),
-                seed=self.seed.value(),
-            )
-        except (DerivedReferenceGenerationError, OSError, RuntimeError, ValueError) as exc:
-            QMessageBox.critical(self, "Derived Reference Generation", str(exc))
+        self._start_generation(views)
+
+    def _start_generation(self, views: tuple[CanonicalReferenceView, ...] | None) -> None:
+        if self._worker is not None and self._worker.isRunning():
             return
-        self._generation_complete(len(created))
+        provider_name = str(self.provider.currentData() or "")
+        self._worker = _DerivedGenerationWorker(
+            self.service,
+            self.asset_id,
+            views,
+            provider_name,
+            self.width.value(),
+            self.height.value(),
+            self.seed.value(),
+            self,
+        )
+        self._worker.progress.connect(self._show_progress)
+        self._worker.completed.connect(self._worker_completed)
+        self._worker.failed.connect(self._worker_failed)
+        self._worker.finished.connect(self._worker_finished)
+        self.provider.setEnabled(False)
+        self.width.setEnabled(False)
+        self.height.setEnabled(False)
+        self.seed.setEnabled(False)
+        self.generate_selected_button.setEnabled(False)
+        self.generate_missing_button.setEnabled(False)
+        for checkbox in self.checkboxes.values():
+            checkbox.setEnabled(False)
+        self.progress_bar.setVisible(True)
+        self._elapsed.start()
+        self._progress_timer.start()
+        self._show_progress(f"Starting {provider_name} — {self._views_text(views or ())}")
+        self._worker.start()
+
+    def _show_progress(self, message: str) -> None:
+        self._last_progress = message
+        self._update_elapsed()
+
+    def _update_elapsed(self) -> None:
+        elapsed_seconds = self._elapsed.elapsed() // 1000 if self._elapsed.isValid() else 0
+        self.progress_label.setText(f"{self._last_progress}\nElapsed: {elapsed_seconds}s")
+
+    def _worker_completed(self, created: object) -> None:
+        self._completed_count = len(created) if isinstance(created, tuple) else 0
+
+    def _worker_failed(self, message: str) -> None:
+        self.progress_label.setText(f"Generation failed: {message}")
+        QMessageBox.critical(self, "Derived Reference Generation", message)
+
+    def _worker_finished(self) -> None:
+        self._progress_timer.stop()
+        self.progress_bar.setVisible(False)
+        if self._completed_count is not None:
+            count = self._completed_count
+            self._completed_count = None
+            if not count:
+                QMessageBox.information(
+                    self,
+                    "Reference Coverage Complete",
+                    "No required derived reference views are missing for this category.",
+                )
+            else:
+                self._generation_complete(count)
+            return
+        self.provider.setEnabled(True)
+        self.width.setEnabled(True)
+        self.height.setEnabled(True)
+        self.seed.setEnabled(True)
+        self.generate_selected_button.setEnabled(self.master_ready)
+        self.generate_missing_button.setEnabled(
+            self.master_ready and bool(self.coverage.missing_required)
+        )
+        for view, checkbox in self.checkboxes.items():
+            checkbox.setEnabled(view not in self.coverage.present_views)
+
+    def reject(self) -> None:
+        if self._worker is not None and self._worker.isRunning():
+            QMessageBox.information(
+                self,
+                "Generation Running",
+                "Generation is still running. Wait for completion before closing this dialog.",
+            )
+            return
+        super().reject()
+
+    def closeEvent(self, event) -> None:  # noqa: N802
+        if self._worker is not None and self._worker.isRunning():
+            event.ignore()
+            return
+        super().closeEvent(event)
 
     def _generation_complete(self, count: int) -> None:
         QMessageBox.information(

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from vscs.application.caps.derived_reference_generation import (
+    DerivedReferenceGenerationService,
     DerivedReferenceGeneratorRegistry,
     DerivedReferenceRequest,
 )
@@ -39,3 +40,15 @@ def test_offline_provider_requires_and_reads_master(tmp_path: Path) -> None:
     assert result.media_type == "image/svg+xml"
     assert b"MASTER input: MASTER.png" in result.content
     assert provider.production_capable is False
+
+
+def test_cardinal_view_prompts_have_unambiguous_camera_orientations() -> None:
+    for view, required in (
+        (CanonicalReferenceView.FRONT, "no three-quarter angle"),
+        (CanonicalReferenceView.REAR, "straight-on rear elevation"),
+        (CanonicalReferenceView.LEFT, "asset's own left side"),
+        (CanonicalReferenceView.RIGHT, "asset's own right side"),
+    ):
+        prompt = DerivedReferenceGenerationService._prompt("Console", "Three buttons", view)
+        assert required in prompt
+        assert "MASTER image as the absolute visual identity authority" in prompt

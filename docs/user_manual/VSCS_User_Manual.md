@@ -2748,3 +2748,31 @@ Diagnostic Console Candidate 4 may be used as the source or mask.
 
 See [complete C4B.2B engineering and safety procedure](
 ../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md).
+
+### Issue #61 Stage B.1 — Reject and replace a derived production reference
+
+Use **Canonical Profiles → select CAP → reference Gallery**. For a generated
+production-view Candidate, select its thumbnail and click **Reject Candidate
+(QC)**. Enter a specific visual failure reason and confirm. The reference is
+now **Rejected** in the governed library, while the original image, MASTER,
+operator and timestamped QC event are retained. A Candidate's rejection is not
+the same operation as returning an already approved view to Candidate status.
+
+To correct it, open **Generate Production References**, choose only the failed
+view and the local ComfyUI Qwen provider, and enter a documented seed. The
+provider uses explicit cardinal-view instructions; outputs are still subject
+to visual inspection, not guaranteed correct. A new unique image filename is
+used and its reference notes identify the previous reference and image hash.
+The dialog runs in the background with an indeterminate progress indicator,
+elapsed time, provider status and ComfyUI prompt ID where available. Buttons
+remain disabled during the job to prevent duplicate submissions; wait before
+closing. A failure does not grant approval. Inspect the replacement before
+clicking **Approve** on that particular Candidate.
+
+The Qwen v2.1 Width/Height fields record *requested* dimensions only. Actual
+output geometry comes from the source MASTER through `FluxKontextImageScale`;
+inspect the produced image dimensions independently. For the Diagnostic Console
+Stage B test, preserve the original `front.png` with SHA-256
+`038A00EB3C502F8C352A2C9B6504D1A7F7A1AE91F0A3E8E76B44BC5D1198D915`.
+See the [Issue #61 Stage B handoff](../engineering/Issue_61_Stage_B_Console_Reference_Handoff.md)
+for the exact operator test sequence, snapshots and stop conditions.

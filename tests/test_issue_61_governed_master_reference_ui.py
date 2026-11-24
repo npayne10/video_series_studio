@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -36,9 +37,67 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
 from vscs.presentation.widgets.cap_reference_file_management import (
     _approve,
     _archive,
+    _reject,
     _set_primary_reference,
     _unlock,
 )
+
+
+def test_rejected_derived_candidate_retains_image_reason_and_replacement_lineage(tmp_path):
+    context, project, _assets, _caps, references, library, master, generator, provider = _context(
+        tmp_path
+    )
+    original = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.FRONT,), provider_name=provider
+    )[0]
+    original_path = project / references.get(original).file_path
+    original_bytes = original_path.read_bytes()
+    dialog = _dialog(references)
+    with (
+        patch(
+            "vscs.presentation.widgets.cap_reference_file_management.QInputDialog.getMultiLineText",
+            return_value=("Oblique, not straight-on Front", True),
+        ),
+        patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes),
+        patch.object(QMessageBox, "critical") as errors,
+    ):
+        _reject(dialog, original)
+    errors.assert_not_called()
+    rejected = library.get(original)
+    assert rejected.lifecycle is CanonicalReferenceLifecycle.REJECTED
+    assert rejected.history[-1].note == "Oblique, not straight-on Front"
+
+    replacement = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.FRONT,), provider_name=provider, seed=1
+    )[0]
+    replacement_record = references.get(replacement)
+    assert replacement_record.file_path != references.get(original).file_path
+    assert f"Supersedes reference: {rejected.reference_id}" in replacement_record.notes
+    assert sha256(original_bytes).hexdigest() in replacement_record.notes
+    assert original_path.read_bytes() == original_bytes
+    assert library.get(replacement).lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+    assert library.get(master.reference_record_id).lifecycle is CanonicalReferenceLifecycle.LOCKED
+    context.shutdown()
+
+
+def test_blank_candidate_qc_reason_does_not_mutate_authority(tmp_path):
+    context, _project, _assets, _caps, references, library, _master, generator, provider = _context(
+        tmp_path
+    )
+    candidate = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.REAR,), provider_name=provider
+    )[0]
+    with (
+        patch(
+            "vscs.presentation.widgets.cap_reference_file_management.QInputDialog.getMultiLineText",
+            return_value=("   ", True),
+        ),
+        patch.object(QMessageBox, "warning") as warning,
+    ):
+        _reject(_dialog(references), candidate)
+    warning.assert_called_once()
+    assert library.get(candidate).lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+    context.shutdown()
 
 
 def _context(tmp_path: Path):

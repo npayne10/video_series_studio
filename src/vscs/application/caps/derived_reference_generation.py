@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
 
@@ -41,6 +43,7 @@ class DerivedReferenceRequest:
     height: int = 720
     seed: int = 0
     project_directory: Path | None = None
+    progress_callback: Callable[[str], None] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,6 +177,7 @@ class DerivedReferenceGenerationService:
         width: int = 1280,
         height: int = 720,
         seed: int = 0,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> tuple[int, ...]:
         """Generate every currently missing required derived view for the asset category."""
         coverage = self.coverage(asset_id)
@@ -193,6 +197,7 @@ class DerivedReferenceGenerationService:
             width=width,
             height=height,
             seed=seed,
+            progress_callback=progress_callback,
         )
 
     def generate(
@@ -205,6 +210,7 @@ class DerivedReferenceGenerationService:
         width: int = 1280,
         height: int = 720,
         seed: int = 0,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> tuple[int, ...]:
         """Generate selected views and register every output as a derived Candidate."""
         normalized_views = tuple(dict.fromkeys(views))
@@ -237,6 +243,23 @@ class DerivedReferenceGenerationService:
         image_root.mkdir(parents=True, exist_ok=True)
         created_ids: list[int] = []
         for offset, view in enumerate(normalized_views):
+            previous = [
+                entry
+                for entry in entries
+                if entry.view is view
+                and entry.lifecycle
+                in {
+                    CanonicalReferenceLifecycle.REJECTED,
+                    CanonicalReferenceLifecycle.ARCHIVED,
+                }
+            ]
+            predecessor = previous[-1] if previous else None
+            predecessor_hash = ""
+            if predecessor is not None:
+                prior_record = self.references.get(predecessor.reference_record_id)
+                prior_file = (project / prior_record.file_path).resolve(strict=False)
+                if prior_file.is_file():
+                    predecessor_hash = sha256(prior_file.read_bytes()).hexdigest()
             request = DerivedReferenceRequest(
                 asset_id=asset_id.upper(),
                 title=cap.title,
@@ -248,7 +271,10 @@ class DerivedReferenceGenerationService:
                 height=height,
                 seed=seed + offset,
                 project_directory=project,
+                progress_callback=progress_callback,
             )
+            if progress_callback is not None:
+                progress_callback(f"Starting {view.value} with {provider.name}")
             generated = provider.generate(request)
             suffix = Path(generated.filename).suffix or ".png"
             destination = self._destination(image_root, view, suffix)
@@ -270,6 +296,9 @@ class DerivedReferenceGenerationService:
                         f"Model: {generated.model or 'unspecified'}\n"
                         f"MASTER: {master.reference_id}\n"
                         f"View: {view.value}\n"
+                        f"Supersedes reference: {predecessor.reference_id if predecessor else 'none'}\n"
+                        f"Previous image SHA-256: {predecessor_hash or 'none'}\n"
+                        f"Seed: {generated.seed}\n"
                         f"Production capable provider: {provider.production_capable}"
                     ),
                     version=master_record.version,
@@ -286,6 +315,8 @@ class DerivedReferenceGenerationService:
                 note=f"Generated {view.value} from locked MASTER {master.reference_id}",
             )
             created_ids.append(reference.id)
+            if progress_callback is not None:
+                progress_callback(f"Registered {view.value} Candidate {reference.id}")
         return tuple(created_ids)
 
     @staticmethod
@@ -294,12 +325,33 @@ class DerivedReferenceGenerationService:
         visual = (
             visual_identity.strip() or "Preserve every visible canonical feature from the MASTER."
         )
+        viewpoints = {
+            CanonicalReferenceView.FRONT: (
+                "Strict straight-on frontal elevation, camera centred on the front face, "
+                "perpendicular to its plane; no three-quarter angle, visible side face "
+                "or visible top surface."
+            ),
+            CanonicalReferenceView.REAR: (
+                "Strict straight-on rear elevation, centred and perpendicular to the back; "
+                "no front face, three-quarter angle or visible top surface."
+            ),
+            CanonicalReferenceView.LEFT: (
+                "Strict straight-on view of the asset's own left side, perpendicular to "
+                "that side; no front or rear three-quarter angle."
+            ),
+            CanonicalReferenceView.RIGHT: (
+                "Strict straight-on view of the asset's own right side, perpendicular to "
+                "that side; no front or rear three-quarter angle."
+            ),
+        }
+        orientation = viewpoints.get(view, f"Show only the specified {label} viewpoint.")
         return (
             f"Using the supplied MASTER image as the absolute visual identity authority, create a "
             f"canonical {label} production reference of the exact same asset. Do not redesign, "
             f"restyle, add, remove, or reinterpret canonical features. Preserve geometry, "
             f"proportions, materials, colours, markings and identity exactly. Asset canon: "
             f"{description.strip()} Visual identity: {visual} Requested viewpoint only: {label}. "
+            f"Camera and orientation requirement: {orientation} "
             f"Neutral production-reference presentation, no dramatic action or scene context."
         )
 

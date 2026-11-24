@@ -4,7 +4,9 @@
 after visual inspection. It has **not** been downloaded into the Windows
 project, registered in Assets, locked in VSCS or used for derived generation.
 Stage A offline UI/non-mutation was formally accepted; Stage B remains open.
-This is an operator runbook, not permission for an automated GPU or paid call.
+This is an operator runbook. Neill has authorised local ComfyUI GPU generation
+within the agreed Issue #61 acceptance scope. Paid API calls and actual video
+generation remain separately controlled.
 
 ## Approved human-visible source
 
@@ -134,21 +136,55 @@ but are not cryptographic proof of generation origin.
    structured capability/constraint blockers may remain. An automatic 100%
    readiness result is **FAIL** unless every independent gate is truly met.
 
-### 3. Derived-reference acceptance (separate consent per generation)
+### 3. Derived-reference acceptance (local GPU generation authorised for agreed tests)
 
 1. Open **Canonical Profiles → `CAP-PRP-002` → Generate Production
    References**. Confirm `MASTER authority verified` and required views
    `MASTER`, `Front`, `Rear`, `Left`, `Right`; Top and Detail are recommended.
    The two Generate controls must only become usable once source authority
    is genuinely consistent. Opening the dialog does **not** make a GPU call.
-2. **Stop for explicit provider/model/GPU and one-view-generation consent.**
-   Do not click Generate Selected or Generate Missing Required Views merely
-   because they are enabled. Initial supervised proposal: generate only Front,
-   inspect and approve/reject, then proceed individually to other views.
+2. Local ComfyUI generation is pre-authorised for this controlled acceptance.
+   Select only one planned view at a time and avoid redundant retries. Do not
+   use a paid provider or generate video without separate authorisation.
 3. Every new view must appear as a `Supplementary Candidate`, not as an
    already approved reference. Verify image features against this MASTER,
    inspect the model/seed/version/parent evidence and quality report, record
-   independent human approval (or rejection and fresh correction consent).
+   independent human approval (or documented rejection and correction).
+
+### 3A. Stage B.1 — Correct an unsuitable Front Candidate
+
+The first live Front Candidate was generated on 2026-11-24. It retained a
+three-quarter angle and is **not approved**. Its original SHA-256 is
+`038A00EB3C502F8C352A2C9B6504D1A7F7A1AE91F0A3E8E76B44BC5D1198D915`.
+Do not edit or replace its `front.png` on disk.
+
+1. Persist a new protected BEFORE snapshot, including the original derived
+   image and `cap_reference_library.json`. Verify the original hash before proceeding.
+2. Open Canonical Profiles, select `CAP-PRP-002`, open the reference Gallery
+   and select **Diagnostic console — Front** (Candidate).
+3. Click **Reject Candidate (QC)**. Enter the reason: `Front view is oblique;
+   side and top faces are visible. Require centred, straight-on frontal elevation.`
+   Confirm the rejection. The governed lifecycle becomes `Rejected` with an
+   operator/time/reason event; the old image remains unchanged.
+4. Reopen **Generate Production References**. Select only **Front**, choose
+   `ComfyUI — Qwen Derived Reference v2.1`, and use a new documented seed
+   (suggested `1`). The UI must remain responsive and show job and prompt IDs
+   as provided by ComfyUI. The indicator is indeterminate: do not interpret
+   it as measured percentage progress. Attempt only once initially.
+5. After generation, inspect the new Candidate separately against MASTER:
+   camera centred, no top/side surface, correct console identity, three
+   circular controls and one rotary dial. Verify the old `front.png` hash,
+   new `front_2.png` (or other unique name), replacement provenance note,
+   parent MASTER and Candidate status.
+6. If acceptable, approve this *new* derived Candidate explicitly. If not,
+   record a fresh QC reason and stop to reassess rather than blindly retry.
+7. Compare AFTER against the **persisted** BEFORE snapshot; only the intended
+   reference-library update, new image and new reference records are allowed.
+   Restart VSCS and verify history, reason and authority persist.
+
+PASS requires retained original image, reasoned rejection, unique replacement,
+correct viewpoint/identity, independent explicit approval and unchanged MASTER.
+Any overwrite, implicit approval, missing record, or UI lock-up is FAIL.
 4. Reopen the Gallery and CAP Readiness after each decision. Only explicitly
    approved required views count toward reference readiness. Neither a local
    Candidate's prior score nor a gallery-only Primary changes MASTER status.

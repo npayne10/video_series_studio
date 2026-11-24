@@ -89,6 +89,9 @@ class ComfyUIDerivedReferenceProvider:
         self._validate_template(prompt)
 
         job_id = str(uuid4())
+        report = request.progress_callback
+        if report is not None:
+            report(f"ComfyUI job {job_id}: preparing workflow for {request.view.value}")
         runtime_root = project / ".vscs" / "runtime" / "comfyui"
         job_root = runtime_root / "jobs" / job_id
         queue_root = runtime_root / "queues"
@@ -153,7 +156,14 @@ class ComfyUIDerivedReferenceProvider:
             self.client.healthcheck()
             self.client.validate_nodes(prompt)
             prompt_id = self.client.submit(prompt)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["comfyui_prompt_id"] = str(prompt_id)
+            manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+            if report is not None:
+                report(f"ComfyUI prompt {prompt_id}: queued; waiting for execution")
             self.client.wait(prompt_id, timeout_seconds=self.configuration.timeout_seconds)
+            if report is not None:
+                report(f"ComfyUI prompt {prompt_id}: execution completed; collecting image")
         except XCICCoreClientError as exc:
             raise ComfyUIDerivedReferenceError(str(exc)) from exc
 
