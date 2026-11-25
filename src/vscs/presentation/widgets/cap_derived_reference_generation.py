@@ -5,8 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QElapsedTimer, QThread, QTimer, Signal
+from PySide6.QtCore import QElapsedTimer, Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -40,6 +42,56 @@ from vscs.infrastructure.ai.comfyui_derived_reference_provider import (
 )
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 from vscs.infrastructure.xcic_core import XCICCoreClient
+
+
+class GpuQualificationAuthorizationDialog(QDialog):
+    """Copyable, exact-match authorization without implicit GPU consent."""
+
+    def __init__(
+        self, view: CanonicalReferenceView, phrase: str, parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("One-Use GPU Qualification Authorization")
+        self.setMinimumWidth(650)
+        self.phrase = phrase
+        layout = QVBoxLayout(self)
+        explanation = QLabel(
+            f"View: {view.value}\n"
+            "This stages a new queue and submits exactly one real ComfyUI GPU job. "
+            "It can use significant VRAM/time. The resulting image will be a Candidate, "
+            "never approved automatically."
+        )
+        explanation.setWordWrap(True)
+        layout.addWidget(explanation)
+        layout.addWidget(QLabel("Copy the exact authorization phrase:"))
+        self.phrase_field = QLineEdit(phrase)
+        self.phrase_field.setObjectName("gpuQualificationAuthorizationPhrase")
+        self.phrase_field.setReadOnly(True)
+        self.phrase_field.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        layout.addWidget(self.phrase_field)
+        self.copy_button = QPushButton("Copy Authorization Phrase")
+        self.copy_button.setObjectName("copyGpuQualificationAuthorization")
+        self.copy_button.clicked.connect(self._copy_phrase)
+        layout.addWidget(self.copy_button)
+        layout.addWidget(QLabel("Paste the phrase below to explicitly authorize this one trial:"))
+        self.confirmation_field = QLineEdit()
+        self.confirmation_field.setObjectName("gpuQualificationAuthorizationConfirmation")
+        layout.addWidget(self.confirmation_field)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.confirm_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        self.confirm_button.setText("Authorize One GPU Trial")
+        self.confirm_button.setEnabled(False)
+        self.confirmation_field.textChanged.connect(
+            lambda value: self.confirm_button.setEnabled(value == self.phrase)
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _copy_phrase(self) -> None:
+        QApplication.clipboard().setText(self.phrase)
 
 
 class _MultipleAngleQualificationWorker(QThread):
@@ -307,19 +359,11 @@ class DerivedReferenceGenerationDialog(QDialog):
         if not root_confirmed or not root_value.strip():
             return
         phrase = f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}"
-        answer, confirmed = QInputDialog.getText(
-            self,
-            "One-Use GPU Qualification Authorization",
-            f"View: {views[0].value}\n"
-            "This stages a new queue and submits exactly one real ComfyUI GPU job. "
-            "It can use significant VRAM/time. The resulting image will be a Candidate, "
-            "never approved automatically.\n\n"
-            f"Type exactly:\n{phrase}",
-        )
-        if not confirmed or answer != phrase:
+        consent = GpuQualificationAuthorizationDialog(views[0], phrase, self)
+        if consent.exec() != QDialog.DialogCode.Accepted:
             return
         worker = _MultipleAngleQualificationWorker(
-            self.service, plan, Path(root_value), answer, self
+            self.service, plan, Path(root_value), phrase, self
         )
         self._worker = worker
         worker.completed.connect(self._worker_completed)

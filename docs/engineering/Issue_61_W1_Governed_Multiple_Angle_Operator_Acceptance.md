@@ -22,7 +22,7 @@
 ## Separate GPU acceptance — only if Neill explicitly authorizes a real trial
 
 1. In **Generate Production References**, select exactly one missing cardinal viewpoint (prefer **Front**, where the historical candidates are rejected but retained). Set a documented seed.
-2. Choose **Qualify One View (Controlled GPU Trial)**, confirm the model directory, and examine the one-use authorization prompt. A real GPU job runs **only** after entering its exact unique `AUTHORIZE GPU QUALIFICATION <32-hex-id>` phrase.
+2. Choose **Qualify One View (Controlled GPU Trial)** and confirm the model directory. In the one-use authorization dialog, click **Copy Authorization Phrase**, then paste into the confirmation field. The **Authorize One GPU Trial** button is disabled until the entire unique `AUTHORIZE GPU QUALIFICATION <32-hex-id>` phrase matches exactly. Copying alone does not authorize GPU execution.
 3. Wait for the bounded GPU execution. On error, record the message and inspect immutable `multiple_angle_<id>.*` audit files. **Do not** resubmit that ID.
 4. On success, confirm the gallery shows one new Front **Candidate**, never automatically approved; the original MASTER and historical candidates must have unchanged SHA-256 digests. Save the new image digest, prompt ID, execution duration and GPU VRAM evidence.
 5. Compare the output against the locked MASTER: front face camera perpendicular, no visible side/top, correct control arrangement, housing, proportions, display, materials and markers. **Human visual QC is mandatory.** Reject if anything drifts; an incorrect camera frame is a qualification failure even when ComfyUI reports completion.

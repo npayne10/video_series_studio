@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Event
 from unittest.mock import patch
 
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox
 
 from vscs.application.assets import AssetService
 from vscs.application.assets.canonical_creation import CanonicalAssetCreationService
@@ -21,6 +21,7 @@ from vscs.domain.caps import CanonicalReferenceView
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
 from vscs.presentation.widgets.cap_derived_reference_generation import (
     DerivedReferenceGenerationDialog,
+    GpuQualificationAuthorizationDialog,
 )
 
 
@@ -34,6 +35,24 @@ def _options(tmp_path: Path) -> BootstrapOptions:
         load_plugins=False,
         validate_environment=False,
     )
+
+
+def test_gpu_authorization_phrase_is_copyable_but_not_automatically_confirmed(qtbot) -> None:
+    phrase = "AUTHORIZE GPU QUALIFICATION " + "a" * 32
+    dialog = GpuQualificationAuthorizationDialog(CanonicalReferenceView.FRONT, phrase, None)
+    qtbot.addWidget(dialog)
+    assert dialog.phrase_field.text() == phrase
+    assert dialog.phrase_field.isReadOnly()
+    assert not dialog.confirm_button.isEnabled()
+    dialog.copy_button.click()
+    assert QApplication.clipboard().text() == phrase
+    assert not dialog.confirm_button.isEnabled()
+    dialog.confirmation_field.setText(phrase[:-1])
+    assert not dialog.confirm_button.isEnabled()
+    dialog.confirmation_field.setText(phrase)
+    assert dialog.confirm_button.isEnabled()
+    dialog.confirm_button.click()
+    assert dialog.result() == QDialog.DialogCode.Accepted
 
 
 def test_dialog_exposes_selectable_views_and_provider(qtbot, tmp_path: Path) -> None:
