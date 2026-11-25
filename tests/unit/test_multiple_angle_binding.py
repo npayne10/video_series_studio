@@ -135,7 +135,9 @@ def test_template_source_tampering_is_rejected(tmp_path: Path) -> None:
     context.shutdown()
 
 
-def test_reviewed_template_accepts_windows_crlf_but_rejects_changed_content(tmp_path: Path) -> None:
+def test_reviewed_template_accepts_windows_crlf_but_rejects_changed_content(
+    tmp_path: Path,
+) -> None:
     context, _project, service = _prepare(tmp_path)
     compiler = MultipleAngleOfflineCompiler(service)
     original_bytes = compiler.template_path.read_bytes()
@@ -151,7 +153,8 @@ def test_reviewed_template_accepts_windows_crlf_but_rejects_changed_content(tmp_
 
     windows_path.write_bytes(
         windows_path.read_bytes().replace(
-            b"__VSCS_PENDING_MASTER_BINDING__", b"__VSCS_PENDING_MASTER_BINDING_TAMPERED__"
+            b"__VSCS_PENDING_MASTER_BINDING__",
+            b"__VSCS_PENDING_MASTER_BINDING_TAMPERED__",
         )
     )
     with pytest.raises(MultipleAngleBindingError, match="template hash changed"):
