@@ -13,6 +13,8 @@ from vscs.application.caps.multiple_angle_execution_guard import stage_offline_q
 from vscs.application.caps.multiple_angle_live_execution import (
     execute_qualified_multiple_angle,
 )
+from vscs.application.caps.multiple_angle_runtime_readiness import plan_multiple_angle_runtime
+from vscs.application.caps.reference_library import ReferenceLibraryConflictError
 from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView
 
 
@@ -184,4 +186,48 @@ def test_untrusted_provider_image_never_registers_a_candidate(tmp_path: Path, mo
         for item in service.library.list_for_cap("CAP-PRP-999", include_archived=True)
     )
     assert staged.queue_path.with_suffix(".submission.json").exists()
+    context.shutdown()
+
+
+def test_rear_candidate_requires_documented_human_geometry_review(
+    tmp_path: Path, monkeypatch
+) -> None:
+    context, _project, service, _front_plan = _prepare(tmp_path)
+    plan = plan_multiple_angle_runtime(
+        service,
+        "CAP-PRP-999",
+        CanonicalReferenceView.REAR,
+        seed=2,
+        qualification_id="e" * 32,
+    )
+    staged = stage_offline_qualification(service, plan, allow_offline_staging=True)
+    _permit_preflight(monkeypatch)
+    client = FakeComfyUI()
+    client.qualification_id = plan.qualification_id
+    result = execute_qualified_multiple_angle(
+        service,
+        plan,
+        staged,
+        client=client,
+        model_root=_models(tmp_path / "models"),
+        authorization=f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}",
+    )
+    with pytest.raises(ReferenceLibraryConflictError, match="geometry review"):
+        service.library.approve(result.reference_record_id, "test-operator")
+    assert (
+        service.library.get(result.reference_record_id).lifecycle
+        is CanonicalReferenceLifecycle.CANDIDATE
+    )
+    service.library.approve(
+        result.reference_record_id,
+        "test-operator",
+        note=(
+            "CANONICAL GEOMETRY REVIEW: Synthetic acceptance fixture: reviewed "
+            "the required rear surfaces against signed engineering drawings."
+        ),
+    )
+    assert (
+        service.library.get(result.reference_record_id).lifecycle
+        is CanonicalReferenceLifecycle.APPROVED
+    )
     context.shutdown()

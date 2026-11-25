@@ -253,6 +253,25 @@ class ReferenceLibraryService:
         if not approver:
             raise ValueError("Approved by is required")
         reference = self.references.get(reference_record_id)
+        if (
+            entry.origin is CanonicalReferenceOrigin.VSCS_DERIVED
+            and entry.view
+            in {
+                CanonicalReferenceView.REAR,
+                CanonicalReferenceView.LEFT,
+                CanonicalReferenceView.RIGHT,
+            }
+            and "_qualification_" in Path(reference.file_path).name
+            and (
+                not note.startswith("CANONICAL GEOMETRY REVIEW: ")
+                or len(note.split(": ", 1)[-1].strip()) < 30
+            )
+        ):
+            raise ReferenceLibraryConflictError(
+                "Rear/side qualified views need an explicit human canonical geometry "
+                "review attestation before approval; undocumented hidden features "
+                "must remain Candidate or be rejected"
+            )
         if reference.status is CanonicalReferenceStatus.IMPORTED:
             self.references.mark_candidate(reference_record_id)
         reference = self.references.get(reference_record_id)

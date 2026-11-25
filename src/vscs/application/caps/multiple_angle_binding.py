@@ -64,6 +64,12 @@ class MultipleAngleOfflineCompiler:
         CanonicalReferenceView.REAR: 180,
         CanonicalReferenceView.LEFT: 270,
     }
+    CAMERA_DESCRIPTIONS: ClassVar[dict[CanonicalReferenceView, str]] = {
+        CanonicalReferenceView.FRONT: "front view eye-level shot medium shot",
+        CanonicalReferenceView.RIGHT: "right side view eye-level shot medium shot",
+        CanonicalReferenceView.REAR: "back view eye-level shot medium shot",
+        CanonicalReferenceView.LEFT: "left side view eye-level shot medium shot",
+    }
 
     def __init__(
         self,
@@ -139,16 +145,28 @@ class MultipleAngleOfflineCompiler:
         graph["219:169"]["inputs"]["seed"] = seed
         graph[self.OUTPUT]["inputs"]["filename_prefix"] = "__VSCS_UNQUALIFIED_OUTPUT__"
 
+        canonical_prompt = self.derived_service._prompt(isolated_description, isolated_visual, view)
+        negative_prompt = self.derived_service._negative_prompt()
+        # CameraAngle's output is a STRING, not an enforced 3D camera transform.
+        # A direct literal prompt avoids relying on an uninstalled concatenation
+        # node and ensures *both* LoRA camera tokens and CAP canon reach Qwen.
+        # The reviewed API template remains unchanged and hash-pinned.
+        conditioned_prompt = (
+            f"<sks> {self.CAMERA_DESCRIPTIONS[view]}\n"
+            f"{canonical_prompt}\n"
+            "Treat unseen faces and mechanisms as unverified, not factual canon."
+        )
+        graph[self.POSITIVE]["inputs"]["prompt"] = conditioned_prompt
+        graph["219:149"]["inputs"]["prompt"] = negative_prompt
+
         queue_payload: dict[str, Any] = {
             "jobs": [
                 {
                     "asset_id": asset_id.upper(),
                     "asset_category": "prop" if "-PRP-" in asset_id.upper() else "asset",
                     "reference_inputs": [str(master_path)],
-                    "positive_prompt": self.derived_service._prompt(
-                        isolated_description, isolated_visual, view
-                    ),
-                    "negative_prompt": self.derived_service._negative_prompt(),
+                    "positive_prompt": conditioned_prompt,
+                    "negative_prompt": negative_prompt,
                     "view": view.value,
                     "seed": seed,
                     "generation": {"enable_turbo_mode": True},

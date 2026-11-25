@@ -68,6 +68,16 @@ def test_all_cardinal_views_bind_locked_master_without_io(tmp_path: Path) -> Non
         assert report.compiled_graph["1"]["inputs"]["queue_file"].startswith("__VSCS_")
         assert report.compiled_graph["219:160"]["inputs"]["image"] == ["1", 0]
         assert report.queue_payload["jobs"][0]["reference_inputs"] == [str(project / "master.png")]
+        positive = report.compiled_graph["219:151"]["inputs"]["prompt"]
+        negative = report.compiled_graph["219:149"]["inputs"]["prompt"]
+        assert isinstance(positive, str) and positive.startswith("<sks> ")
+        assert f"canonical {view.value.title()} production reference" in positive
+        assert "Preserve geometry" in positive
+        assert "unseen faces and mechanisms" in positive
+        assert report.queue_payload["jobs"][0]["positive_prompt"] == positive
+        assert report.queue_payload["jobs"][0]["negative_prompt"] == negative
+        assert "identity drift" in negative
+        assert report.compiled_graph["221"]["inputs"]["image"] == ["1", 0]
         assert report.source_master_reference_id
         assert report.blockers
     assert (project / "master.png").read_bytes() == before

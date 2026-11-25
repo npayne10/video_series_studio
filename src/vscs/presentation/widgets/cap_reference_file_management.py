@@ -30,6 +30,7 @@ from vscs.domain.caps import (
     CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
+    CanonicalReferenceView,
 )
 from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 from vscs.infrastructure.xcic import XCICImageProvider
@@ -283,6 +284,34 @@ def _approve(dialog: Any, reference_id: int) -> None:
             "reclassify a MASTER through the Canonical Profile gallery.",
         )
         return
+    geometry_note = ""
+    if (
+        registered is not None
+        and registered.view
+        in {
+            CanonicalReferenceView.REAR,
+            CanonicalReferenceView.LEFT,
+            CanonicalReferenceView.RIGHT,
+        }
+        and "_qualification_" in Path(reference.file_path).name
+    ):
+        attestation, accepted = QInputDialog.getMultiLineText(
+            dialog,
+            "Canonical Geometry Evidence Required",
+            "This rear/side view includes surfaces not fully established by the MASTER. "
+            "Describe the approved design evidence and how every newly visible panel, "
+            "vent and structural feature was checked. If no such evidence exists, "
+            "Cancel and keep the image Candidate or reject it. Do not infer canon "
+            "from model plausibility.",
+        )
+        if not accepted or len(attestation.strip()) < 30:
+            QMessageBox.warning(
+                dialog,
+                "Geometry Review Required",
+                "Approval requires a substantive human canonical geometry review.",
+            )
+            return
+        geometry_note = f"CANONICAL GEOMETRY REVIEW: {attestation.strip()}"
     authority_note = (
         "The old gallery already marked this reference Approved, but its governed "
         "library entry is still Candidate. Confirm this separate governed approval."
@@ -310,7 +339,7 @@ def _approve(dialog: Any, reference_id: int) -> None:
     def apply() -> object:
         library, entry = _registered_reference(dialog, reference_id)
         if entry is not None:
-            return library.approve(reference_id, getpass.getuser())
+            return library.approve(reference_id, getpass.getuser(), note=geometry_note)
         return dialog.reference_service.approve(reference_id, getpass.getuser())
 
     _run_workflow(dialog, apply)
