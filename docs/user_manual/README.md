@@ -593,3 +593,7 @@ explains how to compare the reviewed API workflow with a saved ComfyUI
 `/object_info` snapshot, interpret missing node interfaces and model selectors,
 and preserve the MASTER/candidate audit boundary. Results do not authorise GPU
 generation. Camera calibration and VRAM fit remain operator qualification gates.
+
+Stage B.2D.1 refines this report for dynamic `ComfySwitchNode` branches and the
+intentional pending MASTER source marker. Mixed/unresolved switch types remain
+blocking; the marker is reported as unresolved binding, not a missing model.
