@@ -187,6 +187,8 @@ def inspect_offline_qualification(
         queue_hash = hashlib.sha256(staged.queue_path.read_bytes()).hexdigest()
     except (OSError, ValueError) as exc:
         return "invalid", (f"Incomplete staging records: {exc}",)
+    if not isinstance(manifest, dict) or not isinstance(reservation, dict):
+        return "invalid", ("Staging records must be JSON objects",)
     if (
         manifest.get("qualification_id") != staged.qualification_id
         or reservation.get("qualification_id") != staged.qualification_id
