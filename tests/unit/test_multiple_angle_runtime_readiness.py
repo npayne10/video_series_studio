@@ -67,9 +67,7 @@ def test_planned_binding_is_scoped_unique_and_never_written(tmp_path: Path) -> N
     assert report.output_path.is_relative_to(project)
     assert report.proposed_graph["1"]["inputs"]["queue_file"] == str(report.queue_path)
     assert report.proposed_queue["jobs"][0]["master_sha256"] == report.master_sha256
-    assert report.proposed_queue["jobs"][0]["reference_inputs"] == [
-        str(project / "master.png")
-    ]
+    assert report.proposed_queue["jobs"][0]["reference_inputs"] == [str(project / "master.png")]
     assert report.blockers
     assert not report.generation_authorized
     assert not report.queue_path.exists()
