@@ -83,3 +83,11 @@ def test_empty_and_malformed_graphs_fail_closed() -> None:
     report = inspect_provider_compatibility(graph, _inventory())
     assert report.invalid_links
     assert not report.generation_authorized
+
+
+def test_incompatible_provider_output_type_is_reported() -> None:
+    inventory = _inventory()
+    inventory["LoadImage"]["output"] = ["STRING"]
+    report = inspect_provider_compatibility(_graph(), inventory)
+    assert report.incompatible_link_types == ("camera.image",)
+    assert not report.generation_authorized
