@@ -604,3 +604,11 @@ The [Stage B.2E readiness runbook](../engineering/Issue_61_Stage_B2E_MASTER_Runt
 describes governed MASTER hash/authority rechecks, unique non-overwriting
 queue/output planning and the explicit execution stop gates. Plans exist only
 in memory and do not create candidates, stage queue files or run ComfyUI.
+
+### Issue #61 Stage B.2F — offline execution safeguard preparation
+
+The [Stage B.2F staging runbook](../engineering/Issue_61_Stage_B2F_Execution_Safeguards.md)
+covers explicit offline-only staging consent, exclusive queue/manifest creation,
+restart inspection, cancellation records and failure handling. Do not use the
+protected disposable GPU project for staging tests: pytest creates disposable
+fixtures. No ComfyUI submission or generated Candidate is authorised.
