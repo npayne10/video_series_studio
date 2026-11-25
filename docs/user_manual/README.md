@@ -597,3 +597,10 @@ generation. Camera calibration and VRAM fit remain operator qualification gates.
 Stage B.2D.1 refines this report for dynamic `ComfySwitchNode` branches and the
 intentional pending MASTER source marker. Mixed/unresolved switch types remain
 blocking; the marker is reported as unresolved binding, not a missing model.
+
+### Issue #61 Stage B.2E — MASTER runtime qualification readiness
+
+The [Stage B.2E readiness runbook](../engineering/Issue_61_Stage_B2E_MASTER_Runtime_Readiness.md)
+describes governed MASTER hash/authority rechecks, unique non-overwriting
+queue/output planning and the explicit execution stop gates. Plans exist only
+in memory and do not create candidates, stage queue files or run ComfyUI.
