@@ -69,6 +69,8 @@ def plan_multiple_angle_runtime(
     project, entries, master, _record, master_path = service._resolve_locked_master(
         asset_id
     )
+    if not master_path.resolve(strict=False).is_relative_to(project.resolve(strict=False)):
+        raise DerivedReferenceGenerationError("MASTER path escapes project boundary")
     active = {
         entry.view
         for entry in entries
