@@ -83,3 +83,35 @@ verify `front.png` and `front_2.png` preserved and not approved; separately
 confirm whether `front_2.png` has been QC rejected. Compare historical audit
 baseline for canonical image bytes, reference records and planning data.
 Unexpected mutation is a STOP. Do not merge PR #66 or close Issue #61.
+
+## Stage B.2D.1 — dynamic switch and source-binding interpretation
+
+The 2026-11-25 Windows inventory found all 19 node classes, no missing inputs,
+and no broken graph references. Its original nine link-type diagnostics all
+passed through three `ComfySwitchNode` instances (`219:163`: MODEL,
+`219:164`: FLOAT, `219:167`: INT). The additional unavailable widget value
+was exactly `1.image: __VSCS_PENDING_MASTER_BINDING__`.
+
+The B.2D.1 refinement checks a switch's `on_false` and `on_true` source
+output types recursively using the supplied node inventory. Only matching,
+concrete branch types can be inferred for switch output port 0. Mixed or
+unresolvable branches, missing inputs, or cyclic links populate
+`unresolved_switch_types` and remain explicit blockers. A concrete provider
+type advertised for either switch input must also agree with the inferred
+type. Other node mismatches retain the original fail-closed behaviour.
+
+The exact marker `1.image: __VSCS_PENDING_MASTER_BINDING__` is now reported
+in `unresolved_source_bindings`, not `unavailable_model_selections`.
+This is **not a binding pass**: the MASTER path is still unbound in the
+template and execution remains blocked. Other unavailable image or model
+selections remain failures.
+
+Re-run the same offline command above with a freshly saved or dated
+`/object_info` snapshot. Inspect the four fields
+`incompatible_link_types`, `unresolved_switch_types`,
+`unresolved_source_bindings` and `unavailable_model_selections`.
+Expect `generation_authorized: false` regardless of static results.
+
+The static inference does not prove ComfyUI's runtime wildcard handling,
+checkpoint fit, camera-angle correctness, or asset identity. No GPU test
+is authorised by Stage B.2D.1.
