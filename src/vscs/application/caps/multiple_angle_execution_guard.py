@@ -69,10 +69,14 @@ def _exclusive_json(path: Path, payload: dict[str, Any]) -> str:
     if hasattr(os, "O_BINARY"):
         flags |= os.O_BINARY
     descriptor = os.open(path, flags, 0o600)
-    with os.fdopen(descriptor, "wb") as stream:
-        stream.write(data)
-        stream.flush()
-        os.fsync(stream.fileno())
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
     return hashlib.sha256(data).hexdigest()
 
 
@@ -188,6 +192,10 @@ def inspect_offline_qualification(
         or reservation.get("qualification_id") != staged.qualification_id
         or manifest.get("queue_sha256") != queue_hash
         or staged.queue_sha256 != queue_hash
+        or manifest.get("state") != "staged_offline_unsubmitted"
+        or manifest.get("queue_path") != str(staged.queue_path)
+        or manifest.get("output_path") != str(staged.output_path)
+        or reservation.get("output_path") != str(staged.output_path)
     ):
         errors.append("Qualification provenance or queue digest mismatch")
     if staged.output_path.exists():
