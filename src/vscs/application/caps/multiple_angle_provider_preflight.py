@@ -20,6 +20,8 @@ class ProviderCompatibilityPreflight:
     missing_input_names: tuple[str, ...]
     invalid_links: tuple[str, ...]
     incompatible_link_types: tuple[str, ...]
+    unresolved_switch_types: tuple[str, ...]
+    unresolved_source_bindings: tuple[str, ...]
     unavailable_model_selections: tuple[str, ...]
     blockers: tuple[str, ...]
 
@@ -38,16 +40,68 @@ def inspect_provider_compatibility(
     bad_links: set[str] = set()
     type_mismatches: set[str] = set()
     unavailable_models: set[str] = set()
+    unresolved_switches: set[str] = set()
+    source_bindings: set[str] = set()
     checked: set[str] = set()
     blockers: list[str] = []
 
     if not isinstance(graph, dict) or not graph:
         return ProviderCompatibilityPreflight(
-            (), (), (), (), (), (), ("A nonempty API graph is required",)
+            (), (), (), (), (), (), (), (), ("A nonempty API graph is required",)
         )
     if object_info is None or not isinstance(object_info, dict):
         blockers.append("Saved ComfyUI /object_info inventory is required")
         object_info = {}
+
+    # ComfySwitchNode may advertise a generic output. Resolve that type only
+    # when BOTH branches lead to the same concrete provider output type.
+    def resolved_output_type(
+        node_id: str, port: int, visiting: frozenset[str] = frozenset()
+    ) -> str | None:
+        if node_id in visiting:
+            return None
+        source = graph.get(node_id)
+        if not isinstance(source, dict):
+            return None
+        source_type = source.get("class_type")
+        if not isinstance(source_type, str):
+            return None
+        definition = object_info.get(source_type)
+        if not isinstance(definition, dict):
+            return None
+        outputs = definition.get("output")
+        if not isinstance(outputs, list) or not 0 <= port < len(outputs):
+            return None
+        if source_type != "ComfySwitchNode":
+            result = outputs[port]
+            return result if isinstance(result, str) else None
+        if port != 0:
+            return None
+        switch_inputs = source.get("inputs")
+        if not isinstance(switch_inputs, dict):
+            return None
+        branch_types: list[str] = []
+        for branch in ("on_false", "on_true"):
+            link = switch_inputs.get(branch)
+            if not (
+                isinstance(link, list)
+                and len(link) == 2
+                and isinstance(link[0], str)
+                and isinstance(link[1], int)
+            ):
+                return None
+            branch_type = resolved_output_type(
+                link[0], link[1], visiting | {node_id}
+            )
+            if branch_type is None:
+                return None
+            branch_types.append(branch_type)
+        return branch_types[0] if branch_types[0] == branch_types[1] else None
+
+    concrete_types = {
+        "MODEL", "FLOAT", "INT", "BOOLEAN", "STRING", "IMAGE", "LATENT",
+        "CONDITIONING", "CLIP", "VAE", "MASK",
+    }
 
     for node_id, node in graph.items():
         if not isinstance(node, dict):
@@ -94,16 +148,48 @@ def inspect_provider_compatibility(
                                     bad_links.add(f"{node_id}.{input_name}: invalid output port")
                                 elif input_name in declared:
                                     expected = declared[input_name]
-                                    if (
-                                        isinstance(expected, list)
+                                    expected_type = (
+                                        expected[0]
+                                        if isinstance(expected, list)
                                         and expected
                                         and isinstance(expected[0], str)
-                                        and expected[0] != outputs[port]
-                                        and expected[0] not in ("*", "ANY")
+                                        else None
+                                    )
+                                    actual_type = resolved_output_type(upstream, port)
+                                    is_switch_branch = (
+                                        node_type == "ComfySwitchNode"
+                                        and input_name in ("on_false", "on_true")
+                                    )
+                                    if is_switch_branch:
+                                        shared_type = resolved_output_type(node_id, 0)
+                                        if shared_type is None:
+                                            unresolved_switches.add(node_id)
+                                        elif actual_type != shared_type:
+                                            type_mismatches.add(f"{node_id}.{input_name}")
+                                        elif (
+                                            expected_type in concrete_types
+                                            and expected_type != shared_type
+                                        ):
+                                            type_mismatches.add(f"{node_id}.{input_name}")
+                                    elif source_type == "ComfySwitchNode" and actual_type is None:
+                                        unresolved_switches.add(upstream)
+                                    elif (
+                                        expected_type is not None
+                                        and actual_type is not None
+                                        and expected_type != actual_type
+                                        and expected_type not in ("*", "ANY")
                                     ):
                                         type_mismatches.add(f"{node_id}.{input_name}")
                     continue
             if input_name in declared and isinstance(value, str):
+                if (
+                    node_id == "1"
+                    and node_type == "LoadImage"
+                    and input_name == "image"
+                    and value == "__VSCS_PENDING_MASTER_BINDING__"
+                ):
+                    source_bindings.add(f"{node_id}.{input_name}")
+                    continue
                 option_spec = declared[input_name]
                 if (
                     isinstance(option_spec, list)
@@ -121,6 +207,10 @@ def inspect_provider_compatibility(
         blockers.append("Graph contains invalid references or output ports")
     if type_mismatches:
         blockers.append("Provider link data types are incompatible")
+    if unresolved_switches:
+        blockers.append("Dynamic switch branches cannot be proven to share a type")
+    if source_bindings:
+        blockers.append("Reviewed MASTER source binding is unresolved in template")
     if unavailable_models:
         blockers.append("Node widget selections are absent from provider inventory")
 
@@ -141,6 +231,8 @@ def inspect_provider_compatibility(
         missing_input_names=tuple(sorted(missing_inputs)),
         invalid_links=tuple(sorted(bad_links)),
         incompatible_link_types=tuple(sorted(type_mismatches)),
+        unresolved_switch_types=tuple(sorted(unresolved_switches)),
+        unresolved_source_bindings=tuple(sorted(source_bindings)),
         unavailable_model_selections=tuple(sorted(unavailable_models)),
         blockers=tuple(blockers),
     )
@@ -165,6 +257,8 @@ def main() -> int:
                 "missing_input_names": report.missing_input_names,
                 "invalid_links": report.invalid_links,
                 "incompatible_link_types": report.incompatible_link_types,
+                "unresolved_switch_types": report.unresolved_switch_types,
+                "unresolved_source_bindings": report.unresolved_source_bindings,
                 "unavailable_model_selections": report.unavailable_model_selections,
                 "blockers": report.blockers,
                 "generation_authorized": report.generation_authorized,
