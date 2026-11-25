@@ -133,3 +133,29 @@ def test_template_source_tampering_is_rejected(tmp_path: Path) -> None:
             "CAP-PRP-999", CanonicalReferenceView.FRONT, seed=1
         )
     context.shutdown()
+
+
+def test_reviewed_template_accepts_windows_crlf_but_rejects_changed_content(tmp_path: Path) -> None:
+    context, _project, service = _prepare(tmp_path)
+    compiler = MultipleAngleOfflineCompiler(service)
+    original_bytes = compiler.template_path.read_bytes()
+    assert b"\r\n" not in original_bytes
+    windows_path = tmp_path / compiler.TEMPLATE_NAME
+    windows_path.write_bytes(original_bytes.replace(b"\n", b"\r\n"))
+
+    windows_report = MultipleAngleOfflineCompiler(
+        service, template_path=windows_path
+    ).compile("CAP-PRP-999", CanonicalReferenceView.FRONT, seed=1)
+    assert windows_report.template_sha256 == compiler.EXPECTED_TEMPLATE_SHA256
+    assert not windows_report.generation_authorized
+
+    windows_path.write_bytes(
+        windows_path.read_bytes().replace(
+            b"__VSCS_PENDING_MASTER_BINDING__", b"__VSCS_PENDING_MASTER_BINDING_TAMPERED__"
+        )
+    )
+    with pytest.raises(MultipleAngleBindingError, match="template hash changed"):
+        MultipleAngleOfflineCompiler(service, template_path=windows_path).compile(
+            "CAP-PRP-999", CanonicalReferenceView.FRONT, seed=1
+        )
+    context.shutdown()
