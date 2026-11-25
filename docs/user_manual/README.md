@@ -578,3 +578,10 @@ documents isolated derived-reference prompts and the read-only evaluation of
 ComfyUI's Qwen multiple-angle camera workflow. The audit never authorises
 generation, modification of approved MASTER assets or automated reference
 approval. The original managed Qwen v2.1 workflow remains unchanged.
+
+### Issue #61 Stage B.2C — camera workflow preflight
+
+The [offline multiple-angle binding runbook](../engineering/Issue_61_Stage_B2C_Multiple_Angle_Offline_Binding.md)
+documents provisional cardinal camera settings, locked MASTER source-binding
+checks, required node/model evidence, and the explicit no-GPU boundary.
+The compiled draft graph is not executable or production-approved.
