@@ -141,13 +141,13 @@ def test_reviewed_template_accepts_windows_crlf_but_rejects_changed_content(
     context, _project, service = _prepare(tmp_path)
     compiler = MultipleAngleOfflineCompiler(service)
     original_bytes = compiler.template_path.read_bytes()
-    assert b"\r\n" not in original_bytes
+    normalized_bytes = original_bytes.replace(b"\r\n", b"\n")
     windows_path = tmp_path / compiler.TEMPLATE_NAME
-    windows_path.write_bytes(original_bytes.replace(b"\n", b"\r\n"))
+    windows_path.write_bytes(normalized_bytes.replace(b"\n", b"\r\n"))
 
-    windows_report = MultipleAngleOfflineCompiler(
-        service, template_path=windows_path
-    ).compile("CAP-PRP-999", CanonicalReferenceView.FRONT, seed=1)
+    windows_report = MultipleAngleOfflineCompiler(service, template_path=windows_path).compile(
+        "CAP-PRP-999", CanonicalReferenceView.FRONT, seed=1
+    )
     assert windows_report.template_sha256 == compiler.EXPECTED_TEMPLATE_SHA256
     assert not windows_report.generation_authorized
 
