@@ -123,3 +123,53 @@ def test_missing_master_rejects_readiness(tmp_path: Path) -> None:
             seed=1,
         )
     context.shutdown()
+
+
+def test_master_change_during_compilation_aborts(tmp_path: Path, monkeypatch) -> None:
+    context, project, service = _prepare(tmp_path)
+    original_resolver = service._resolve_locked_master
+    calls = 0
+
+    def resolve_with_change(asset_id: str):
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            (project / "master.png").write_bytes(b"changed disposable fixture")
+        return original_resolver(asset_id)
+
+    monkeypatch.setattr(service, "_resolve_locked_master", resolve_with_change)
+    with pytest.raises(DerivedReferenceGenerationError, match="MASTER changed"):
+        plan_multiple_angle_runtime(
+            service,
+            "CAP-PRP-999",
+            CanonicalReferenceView.FRONT,
+            seed=1,
+        )
+    assert calls == 3
+    assert not (project / ".vscs" / "runtime").exists()
+    context.shutdown()
+
+
+def test_existing_output_file_is_preserved(tmp_path: Path) -> None:
+    context, project, service = _prepare(tmp_path)
+    qualification_id = "c" * 32
+    destination = (
+        project
+        / "Canonical Assets"
+        / "CAP-PRP-999"
+        / "Images"
+        / "Derived"
+        / f"front_qualification_{qualification_id}.png"
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(b"historical test candidate")
+    with pytest.raises(DerivedReferenceGenerationError, match="collision"):
+        plan_multiple_angle_runtime(
+            service,
+            "CAP-PRP-999",
+            CanonicalReferenceView.FRONT,
+            seed=1,
+            qualification_id=qualification_id,
+        )
+    assert destination.read_bytes() == b"historical test candidate"
+    context.shutdown()
