@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import cast
 
 from PySide6.QtCore import QElapsedTimer, Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
@@ -29,6 +30,7 @@ from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGenerationService,
     DerivedReferenceGeneratorRegistry,
 )
+from vscs.application.caps.multiple_angle_binding import QualificationMode
 from vscs.application.caps.multiple_angle_execution_guard import stage_offline_qualification
 from vscs.application.caps.multiple_angle_live_execution import execute_qualified_multiple_angle
 from vscs.application.caps.multiple_angle_runtime_readiness import (
@@ -48,7 +50,12 @@ class GpuQualificationAuthorizationDialog(QDialog):
     """Copyable, exact-match authorization without implicit GPU consent."""
 
     def __init__(
-        self, view: CanonicalReferenceView, phrase: str, parent: QWidget | None = None
+        self,
+        view: CanonicalReferenceView,
+        phrase: str,
+        parent: QWidget | None = None,
+        *,
+        sampling_mode: QualificationMode = "fast",
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("One-Use GPU Qualification Authorization")
@@ -56,7 +63,7 @@ class GpuQualificationAuthorizationDialog(QDialog):
         self.phrase = phrase
         layout = QVBoxLayout(self)
         explanation = QLabel(
-            f"View: {view.value}\n"
+            f"View: {view.value} | Mode: {sampling_mode.title()}\n"
             "This stages a new queue and submits exactly one real ComfyUI GPU job. "
             "It can use significant VRAM/time. The resulting image will be a Candidate, "
             "never approved automatically."
@@ -267,6 +274,14 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.seed = QSpinBox()
         self.seed.setRange(0, 2_147_483_647)
         self.seed.setValue(0)
+        self.qualification_mode = QComboBox()
+        self.qualification_mode.setObjectName("multipleAngleQualificationMode")
+        self.qualification_mode.addItem("Fast — 4 steps (Lightning)", "fast")
+        self.qualification_mode.addItem("Detailed — 40 steps (no Lightning)", "detailed")
+        self.qualification_mode.setToolTip(
+            "Only applies to controlled multiple-angle GPU qualification. "
+            "Detailed uses more time and VRAM; neither mode guarantees accurate geometry."
+        )
 
         settings = QGridLayout()
         settings.addWidget(QLabel("Generator"), 0, 0)
@@ -277,6 +292,8 @@ class DerivedReferenceGenerationDialog(QDialog):
         settings.addWidget(self.height, 1, 3)
         settings.addWidget(QLabel("Seed"), 2, 0)
         settings.addWidget(self.seed, 2, 1)
+        settings.addWidget(QLabel("Camera qualification"), 2, 2)
+        settings.addWidget(self.qualification_mode, 2, 3)
 
         self.generate_missing_button = QPushButton("Generate Missing Required Views")
         self.generate_missing_button.setObjectName("generateMissingRequiredViews")
@@ -341,8 +358,13 @@ class DerivedReferenceGenerationDialog(QDialog):
             )
             return
         try:
+            sampling_mode = cast(QualificationMode, self.qualification_mode.currentData())
             plan = plan_multiple_angle_runtime(
-                self.service, self.asset_id, views[0], seed=self.seed.value()
+                self.service,
+                self.asset_id,
+                views[0],
+                seed=self.seed.value(),
+                sampling_mode=sampling_mode,
             )
         except (OSError, RuntimeError, ValueError) as exc:
             QMessageBox.critical(self, "Multiple-Angle Qualification", str(exc))
@@ -359,7 +381,9 @@ class DerivedReferenceGenerationDialog(QDialog):
         if not root_confirmed or not root_value.strip():
             return
         phrase = f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}"
-        consent = GpuQualificationAuthorizationDialog(views[0], phrase, self)
+        consent = GpuQualificationAuthorizationDialog(
+            views[0], phrase, self, sampling_mode=sampling_mode
+        )
         if consent.exec() != QDialog.DialogCode.Accepted:
             return
         worker = _MultipleAngleQualificationWorker(
@@ -372,7 +396,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         self._disable_during_generation()
         self._elapsed.start()
         self._progress_timer.start()
-        self._show_progress(f"Controlled GPU qualification: {views[0].value}")
+        self._show_progress(f"Controlled GPU qualification: {views[0].value} ({sampling_mode})")
         worker.start()
 
     def _disable_during_generation(self) -> None:
@@ -380,6 +404,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.width.setEnabled(False)
         self.height.setEnabled(False)
         self.seed.setEnabled(False)
+        self.qualification_mode.setEnabled(False)
         self.generate_selected_button.setEnabled(False)
         self.generate_missing_button.setEnabled(False)
         self.qualify_button.setEnabled(False)
@@ -461,6 +486,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.width.setEnabled(True)
         self.height.setEnabled(True)
         self.seed.setEnabled(True)
+        self.qualification_mode.setEnabled(True)
         self.generate_selected_button.setEnabled(self.master_ready)
         self.qualify_button.setEnabled(self.master_ready)
         self.generate_missing_button.setEnabled(

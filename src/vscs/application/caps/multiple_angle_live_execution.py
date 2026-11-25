@@ -79,6 +79,8 @@ def execute_qualified_multiple_angle(
         )
     if staged.qualification_id != plan.qualification_id or staged.queue_path != plan.queue_path:
         raise DerivedReferenceGenerationError("Staged qualification does not match readiness")
+    if staged.sampling_mode != plan.sampling_mode:
+        raise DerivedReferenceGenerationError("Qualification sampling mode changed after staging")
     state, errors = inspect_offline_qualification(staged)
     if state != "staged_offline_unsubmitted" or errors:
         raise DerivedReferenceGenerationError("Qualification staging is invalid or already used")
@@ -87,8 +89,15 @@ def execute_qualified_multiple_angle(
         plan.asset_id,
         plan.view,
         seed=plan.proposed_queue["jobs"][0]["seed"],
+        sampling_mode=plan.sampling_mode,
         model_root=model_root,
     )
+    if (
+        plan.proposed_graph["219:168"]["inputs"]["value"] != (plan.sampling_mode == "fast")
+        or plan.proposed_graph["219:151"]["inputs"]["prompt"]
+        != compiled.compiled_graph["219:151"]["inputs"]["prompt"]
+    ):
+        raise DerivedReferenceGenerationError("Reviewed camera sampling or prompt binding changed")
     if compiled.missing_model_files or not model_root.is_dir():
         raise DerivedReferenceGenerationError("Missing required multiple-angle model files")
     info = client.object_info()
@@ -127,6 +136,7 @@ def execute_qualified_multiple_angle(
             "qualification_id": plan.qualification_id,
             "master_sha256": plan.master_sha256,
             "queue_sha256": staged.queue_sha256,
+            "sampling_mode": plan.sampling_mode,
             "state": "submission_attempt_reserved",
         },
     )
@@ -185,6 +195,7 @@ def execute_qualified_multiple_angle(
             "master_reference_id": plan.master_reference_id,
             "master_sha256": plan.master_sha256,
             "output_sha256": digest,
+            "sampling_mode": plan.sampling_mode,
             "output_path": str(path),
             "state": "output_reconciled_pending_candidate_registration",
         },
@@ -198,6 +209,7 @@ def execute_qualified_multiple_angle(
         qualification_id=plan.qualification_id,
         provider_name="ComfyUI — Qwen Multiple Angles Qualification",
         seed=queue["jobs"][0]["seed"],
+        sampling_mode=plan.sampling_mode,
     )
     _exclusive_json(
         staged.queue_path.with_suffix(".candidate.json"),

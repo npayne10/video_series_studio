@@ -88,6 +88,11 @@ def test_dialog_exposes_selectable_views_and_provider(qtbot, tmp_path: Path) -> 
     assert CanonicalReferenceView.TOP in dialog.checkboxes
     assert dialog.provider.currentText() == provider.name
     assert dialog.qualify_button.objectName() == "qualifyMultipleAngleView"
+    assert dialog.qualification_mode.objectName() == "multipleAngleQualificationMode"
+    assert dialog.qualification_mode.currentData() == "fast"
+    assert dialog.qualification_mode.itemData(1) == "detailed"
+    dialog.qualification_mode.setCurrentIndex(1)
+    assert dialog.qualification_mode.currentData() == "detailed"
     assert dialog.qualify_button.isEnabled()
     assert not (project / ".vscs" / "runtime").exists()
     dialog.checkboxes[CanonicalReferenceView.FRONT].setChecked(True)

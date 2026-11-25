@@ -101,6 +101,35 @@ def test_invalid_view_seed_and_unavailable_node_are_fail_closed(tmp_path: Path) 
     context.shutdown()
 
 
+def test_fast_and_detailed_use_same_authority_but_different_sampling(tmp_path: Path) -> None:
+    context, _project, service = _prepare(tmp_path)
+    compiler = MultipleAngleOfflineCompiler(service)
+    fast = compiler.compile("CAP-PRP-999", CanonicalReferenceView.REAR, seed=27)
+    detailed = compiler.compile(
+        "CAP-PRP-999", CanonicalReferenceView.REAR, seed=27, sampling_mode="detailed"
+    )
+    assert fast.sampling_mode == "fast"
+    assert detailed.sampling_mode == "detailed"
+    assert fast.compiled_graph["219:168"]["inputs"]["value"] is True
+    assert detailed.compiled_graph["219:168"]["inputs"]["value"] is False
+    assert fast.queue_payload["jobs"][0]["generation"]["enable_turbo_mode"] is True
+    assert detailed.queue_payload["jobs"][0]["generation"]["enable_turbo_mode"] is False
+    assert fast.master_sha256 == detailed.master_sha256
+    assert (
+        fast.queue_payload["jobs"][0]["reference_inputs"]
+        == detailed.queue_payload["jobs"][0]["reference_inputs"]
+    )
+    assert (
+        fast.compiled_graph["219:151"]["inputs"]["prompt"]
+        == detailed.compiled_graph["219:151"]["inputs"]["prompt"]
+    )
+    with pytest.raises(MultipleAngleBindingError, match="sampling mode"):
+        compiler.compile(
+            "CAP-PRP-999", CanonicalReferenceView.REAR, seed=27, sampling_mode="unknown"
+        )  # type: ignore[arg-type]
+    context.shutdown()
+
+
 def test_read_only_model_inventory_fails_closed_on_missing_files(tmp_path: Path) -> None:
     context, _project, service = _prepare(tmp_path)
     model_root = tmp_path / "models"

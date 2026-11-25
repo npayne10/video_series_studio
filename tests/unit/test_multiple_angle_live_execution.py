@@ -1,5 +1,6 @@
 """Fail-closed, synthetic tests of one-use multiple-angle qualification."""
 
+import json
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -135,6 +136,38 @@ def test_qualified_output_registers_only_candidate_and_replay_fails(
             authorization=f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}",
         )
     assert client.submissions == 1
+    context.shutdown()
+
+
+def test_detailed_mode_is_recorded_on_single_candidate(tmp_path: Path, monkeypatch) -> None:
+    context, _project, service, _plan = _prepare(tmp_path)
+    plan = plan_multiple_angle_runtime(
+        service,
+        "CAP-PRP-999",
+        CanonicalReferenceView.REAR,
+        seed=11,
+        sampling_mode="detailed",
+        qualification_id="a" * 32,
+    )
+    staged = stage_offline_qualification(service, plan, allow_offline_staging=True)
+    _permit_preflight(monkeypatch)
+    client = FakeComfyUI()
+    client.qualification_id = plan.qualification_id
+    result = execute_qualified_multiple_angle(
+        service,
+        plan,
+        staged,
+        client=client,
+        model_root=_models(tmp_path / "models"),
+        authorization=f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}",
+    )
+    assert client.submissions == 1
+    assert (
+        json.loads(staged.queue_path.with_suffix(".submission.json").read_text())["sampling_mode"]
+        == "detailed"
+    )
+    assert "Sampling mode: detailed" in service.references.get(result.reference_record_id).notes
+    assert not result.production_approved
     context.shutdown()
 
 

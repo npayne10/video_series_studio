@@ -1,5 +1,6 @@
 """Issue #61 B.2F offline staging is never a GPU submission."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -82,6 +83,23 @@ def test_offline_staging_and_restart_inspection_preserve_master(tmp_path: Path) 
     assert not staged.generation_authorized
     assert inspect_offline_qualification(staged) == ("staged_offline_unsubmitted", ())
     assert (project / "master.png").read_bytes() == before
+    context.shutdown()
+
+
+def test_detailed_mode_is_persisted_and_guarded_before_submission(tmp_path: Path) -> None:
+    context, _project, service, _plan = _prepare(tmp_path)
+    plan = plan_multiple_angle_runtime(
+        service,
+        "CAP-PRP-999",
+        CanonicalReferenceView.REAR,
+        seed=11,
+        sampling_mode="detailed",
+        qualification_id="f" * 32,
+    )
+    staged = stage_offline_qualification(service, plan, allow_offline_staging=True)
+    assert staged.sampling_mode == "detailed"
+    assert json.loads(staged.manifest_path.read_text())["sampling_mode"] == "detailed"
+    assert inspect_offline_qualification(staged) == ("staged_offline_unsubmitted", ())
     context.shutdown()
 
 

@@ -6,6 +6,7 @@
 
 - **Normal Generate Selected** retains the existing Qwen Derived Reference v2.1 workflow.
 - **Qualify One View (Controlled GPU Trial)** is a distinct opt-in route and accepts **exactly one missing Front, Rear, Left or Right** view per run.
+- **Camera qualification mode** defaults to **Fast** (4-step Lightning branch, CFG 1); **Detailed** selects the reviewed graph's 40-step, CFG 4 branch without Lightning. Both modes use the same pinned workflow, MASTER, model and multiple-angles LoRA. The selection affects **only** controlled multiple-angle qualification, not the normal Qwen v2.1 generator. Detailed can cost substantially more time/VRAM and is **not** a guarantee of frontal alignment or authentic unseen geometry. Mode is written into queue, manifest, submission, reconciliation and Candidate notes.
 - Before staging, the dialog presents a qualification-specific phrase. No typing/no match means **no staging and no GPU execution**. Staging itself uses exclusive queue/reservation/manifest creation.
 - The runtime verifies the locked MASTER digest, compatible ComfyUI node inputs and output links, required model presence, and unique destination. It reserves an immutable submission journal before calling ComfyUI; a transport failure must **not** be automatically retried.
 - ComfyUI SaveImage history must indicate successful completion and return **one** output with the qualification-specific filename prefix. Image bytes are fetched through the local ComfyUI `/view` endpoint and exclusively stored under the CAP `Images/Derived` path after PNG and dimension checks.
@@ -21,7 +22,7 @@
 
 ## Separate GPU acceptance — only if Neill explicitly authorizes a real trial
 
-1. In **Generate Production References**, select exactly one missing cardinal viewpoint (prefer **Front**, where the historical candidates are rejected but retained). Set a documented seed.
+1. In **Generate Production References**, select exactly one missing cardinal viewpoint and set a documented seed. Choose **Fast** for a quick camera/identity probe; use **Detailed** only if the Fast result warrants additional quality comparison. Record the *same* seed and viewpoint when comparing modes; each attempt needs a fresh qualification ID.
 2. Choose **Qualify One View (Controlled GPU Trial)** and confirm the model directory. In the one-use authorization dialog, click **Copy Authorization Phrase**, then paste into the confirmation field. The **Authorize One GPU Trial** button is disabled until the entire unique `AUTHORIZE GPU QUALIFICATION <32-hex-id>` phrase matches exactly. Copying alone does not authorize GPU execution.
 3. Wait for the bounded GPU execution. On error, record the message and inspect immutable `multiple_angle_<id>.*` audit files. **Do not** resubmit that ID.
 4. On success, confirm the gallery shows one new Front **Candidate**, never automatically approved; the original MASTER and historical candidates must have unchanged SHA-256 digests. Save the new image digest, prompt ID, execution duration and GPU VRAM evidence.

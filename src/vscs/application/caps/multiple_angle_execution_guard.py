@@ -17,6 +17,7 @@ from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGenerationError,
     DerivedReferenceGenerationService,
 )
+from vscs.application.caps.multiple_angle_binding import QualificationMode
 from vscs.application.caps.multiple_angle_runtime_readiness import (
     MultipleAngleRuntimeReadiness,
     _contained_path,
@@ -27,6 +28,7 @@ from vscs.domain.caps import CanonicalReferenceLifecycle
 @dataclass(frozen=True)
 class OfflineQualificationStaging:
     qualification_id: str
+    sampling_mode: QualificationMode
     queue_path: Path
     manifest_path: Path
     reservation_path: Path
@@ -111,6 +113,9 @@ def stage_offline_qualification(
     job = plan.proposed_queue["jobs"][0]
     if (
         job.get("qualification_id") != plan.qualification_id
+        or job.get("sampling_mode") != plan.sampling_mode
+        or job.get("generation", {}).get("enable_turbo_mode") != (plan.sampling_mode == "fast")
+        or plan.proposed_graph["219:168"]["inputs"]["value"] != (plan.sampling_mode == "fast")
         or job.get("master_sha256") != plan.master_sha256
         or job.get("reference_inputs") != [str(master_path)]
         or job.get("output", {}).get("candidate_filename") != output.name
@@ -143,6 +148,7 @@ def stage_offline_qualification(
                 "qualification_id": plan.qualification_id,
                 "asset_id": plan.asset_id,
                 "view": plan.view.value,
+                "sampling_mode": plan.sampling_mode,
                 "master_reference_id": plan.master_reference_id,
                 "master_sha256": plan.master_sha256,
                 "queue_sha256": queue_hash,
@@ -160,6 +166,7 @@ def stage_offline_qualification(
         raise
     return OfflineQualificationStaging(
         qualification_id=plan.qualification_id,
+        sampling_mode=plan.sampling_mode,
         queue_path=queue,
         manifest_path=manifest,
         reservation_path=reservation,
@@ -184,6 +191,7 @@ def inspect_offline_qualification(
         return "invalid", ("Staging records must be JSON objects",)
     if (
         manifest.get("qualification_id") != staged.qualification_id
+        or manifest.get("sampling_mode") != staged.sampling_mode
         or reservation.get("qualification_id") != staged.qualification_id
         or manifest.get("queue_sha256") != queue_hash
         or staged.queue_sha256 != queue_hash

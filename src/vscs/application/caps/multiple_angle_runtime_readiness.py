@@ -20,6 +20,7 @@ from vscs.application.caps.derived_reference_generation import (
 from vscs.application.caps.multiple_angle_binding import (
     MultipleAngleOfflineCompiler,
     MultipleAnglePreflight,
+    QualificationMode,
 )
 from vscs.application.caps.multiple_angle_provider_preflight import (
     ProviderCompatibilityPreflight,
@@ -32,6 +33,7 @@ from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView
 class MultipleAngleRuntimeReadiness:
     asset_id: str
     view: CanonicalReferenceView
+    sampling_mode: QualificationMode
     master_reference_id: str
     master_sha256: str
     qualification_id: str
@@ -61,6 +63,7 @@ def plan_multiple_angle_runtime(
     view: CanonicalReferenceView,
     *,
     seed: int,
+    sampling_mode: QualificationMode = "fast",
     qualification_id: str | None = None,
     object_info: dict[str, Any] | None = None,
     model_root: Path | None = None,
@@ -96,6 +99,7 @@ def plan_multiple_angle_runtime(
         asset_id,
         view,
         seed=seed,
+        sampling_mode=sampling_mode,
         object_info=object_info,
         model_root=model_root,
     )
@@ -170,6 +174,7 @@ def plan_multiple_angle_runtime(
     return MultipleAngleRuntimeReadiness(
         asset_id=asset,
         view=view,
+        sampling_mode=sampling_mode,
         master_reference_id=master.reference_id,
         master_sha256=before_hash,
         qualification_id=qualification_id,

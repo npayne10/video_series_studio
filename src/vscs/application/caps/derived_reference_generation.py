@@ -338,6 +338,7 @@ class DerivedReferenceGenerationService:
         qualification_id: str,
         provider_name: str,
         seed: int,
+        sampling_mode: str = "fast",
         actor: str = "Multiple-angle qualification",
     ) -> int:
         """Adopt a reconciled output as Candidate, never as an approved reference.
@@ -395,7 +396,8 @@ class DerivedReferenceGenerationService:
                     f"VSCS multiple-angle qualified Candidate\nProvider: {provider_name}\n"
                     f"MASTER: {master_reference_id}\nMASTER SHA-256: {master_sha256}\n"
                     f"Qualification: {qualification_id}\nOutput SHA-256: {sha256(path.read_bytes()).hexdigest()}\n"
-                    f"View: {view.value}\nSeed: {seed}\nHuman QC and approval required"
+                    f"View: {view.value}\nSeed: {seed}\nSampling mode: {sampling_mode}\n"
+                    "Human QC and approval required"
                 ),
                 version=master_record.version,
             ),

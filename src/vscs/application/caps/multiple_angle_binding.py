@@ -11,7 +11,7 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, Literal, cast
 
 from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGenerationService,
@@ -23,6 +23,9 @@ class MultipleAngleBindingError(RuntimeError):
     """A draft multiple-angle binding failed before any provider interaction."""
 
 
+QualificationMode = Literal["fast", "detailed"]
+
+
 @dataclass(frozen=True)
 class MultipleAnglePreflight:
     asset_id: str
@@ -32,6 +35,7 @@ class MultipleAnglePreflight:
     template_sha256: str
     camera_horizontal_degrees: int
     camera_vertical_degrees: int
+    sampling_mode: QualificationMode
     queue_payload: dict[str, Any]
     compiled_graph: dict[str, Any]
     missing_node_types: tuple[str, ...]
@@ -88,6 +92,7 @@ class MultipleAngleOfflineCompiler:
         view: CanonicalReferenceView,
         *,
         seed: int,
+        sampling_mode: QualificationMode = "fast",
         object_info: dict[str, Any] | None = None,
         model_root: Path | None = None,
     ) -> MultipleAnglePreflight:
@@ -97,6 +102,8 @@ class MultipleAngleOfflineCompiler:
             )
         if seed < 0:
             raise MultipleAngleBindingError("Seed must be nonnegative")
+        if sampling_mode not in ("fast", "detailed"):
+            raise MultipleAngleBindingError("Qualification sampling mode is unsupported")
 
         _project, _entries, master, _master_record, master_path = (
             self.derived_service._resolve_locked_master(asset_id)
@@ -143,6 +150,7 @@ class MultipleAngleOfflineCompiler:
         graph[self.CAMERA]["inputs"]["image"] = [self.SOURCE, 0]
         graph[self.SCALE]["inputs"]["image"] = [self.SOURCE, 0]
         graph["219:169"]["inputs"]["seed"] = seed
+        graph["219:168"]["inputs"]["value"] = sampling_mode == "fast"
         graph[self.OUTPUT]["inputs"]["filename_prefix"] = "__VSCS_UNQUALIFIED_OUTPUT__"
 
         canonical_prompt = self.derived_service._prompt(isolated_description, isolated_visual, view)
@@ -169,7 +177,8 @@ class MultipleAngleOfflineCompiler:
                     "negative_prompt": negative_prompt,
                     "view": view.value,
                     "seed": seed,
-                    "generation": {"enable_turbo_mode": True},
+                    "sampling_mode": sampling_mode,
+                    "generation": {"enable_turbo_mode": sampling_mode == "fast"},
                     "generation_policy": {"force_standard_mode": True},
                     "output": {
                         "candidate_directory": "__VSCS_UNQUALIFIED_OUTPUT_DIRECTORY__",
@@ -218,6 +227,7 @@ class MultipleAngleOfflineCompiler:
             template_sha256=template_hash,
             camera_horizontal_degrees=angle,
             camera_vertical_degrees=0,
+            sampling_mode=sampling_mode,
             queue_payload=queue_payload,
             compiled_graph=graph,
             missing_node_types=missing,
