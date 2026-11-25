@@ -99,8 +99,17 @@ def inspect_provider_compatibility(
         return branch_types[0] if branch_types[0] == branch_types[1] else None
 
     concrete_types = {
-        "MODEL", "FLOAT", "INT", "BOOLEAN", "STRING", "IMAGE", "LATENT",
-        "CONDITIONING", "CLIP", "VAE", "MASK",
+        "MODEL",
+        "FLOAT",
+        "INT",
+        "BOOLEAN",
+        "STRING",
+        "IMAGE",
+        "LATENT",
+        "CONDITIONING",
+        "CLIP",
+        "VAE",
+        "MASK",
     }
 
     for node_id, node in graph.items():
@@ -171,7 +180,10 @@ def inspect_provider_compatibility(
                                             and expected_type != shared_type
                                         ):
                                             type_mismatches.add(f"{node_id}.{input_name}")
-                                    elif source_type == "ComfySwitchNode" and actual_type is None:
+                                    elif (
+                                        source_type == "ComfySwitchNode"
+                                        and actual_type is None
+                                    ):
                                         unresolved_switches.add(upstream)
                                     elif (
                                         expected_type is not None
