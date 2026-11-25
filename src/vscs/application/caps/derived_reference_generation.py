@@ -327,6 +327,91 @@ class DerivedReferenceGenerationService:
                 progress_callback(f"Registered {view.value} Candidate {reference.id}")
         return tuple(created_ids)
 
+    def register_qualified_candidate(
+        self,
+        asset_id: str,
+        view: CanonicalReferenceView,
+        *,
+        output_path: Path,
+        master_reference_id: str,
+        master_sha256: str,
+        qualification_id: str,
+        provider_name: str,
+        seed: int,
+        actor: str = "Multiple-angle qualification",
+    ) -> int:
+        """Adopt a reconciled output as Candidate, never as an approved reference.
+
+        The caller must first verify the provider result and create its durable
+        audit record. This method rechecks MASTER and view authority at commit.
+        """
+        cap = self.references.caps.get(asset_id)
+        project, entries, master, master_record, master_path = self._resolve_locked_master(asset_id)
+        if (
+            master.reference_id != master_reference_id
+            or sha256(master_path.read_bytes()).hexdigest() != master_sha256
+        ):
+            raise DerivedReferenceGenerationError("MASTER changed before Candidate registration")
+        if any(
+            entry.view is view
+            and entry.lifecycle
+            not in {CanonicalReferenceLifecycle.REJECTED, CanonicalReferenceLifecycle.ARCHIVED}
+            for entry in entries
+        ):
+            raise DerivedReferenceGenerationError(
+                "Active production view blocks Candidate registration"
+            )
+        image_root = (
+            project / "Canonical Assets" / asset_id.upper() / "Images" / "Derived"
+        ).resolve()
+        path = output_path.resolve(strict=True)
+        if not path.is_relative_to(image_root) or path.suffix.lower() != ".png":
+            raise DerivedReferenceGenerationError(
+                "Qualified output is outside managed Derived images"
+            )
+        if not path.is_file() or not path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"):
+            raise DerivedReferenceGenerationError("Qualified output is not a PNG image")
+        if (
+            not qualification_id
+            or path.name != f"{view.value}_qualification_{qualification_id}.png"
+        ):
+            raise DerivedReferenceGenerationError(
+                "Qualification output filename does not match view"
+            )
+        reference = self.references.create(
+            asset_id,
+            CanonicalReferenceCreate(
+                cap_id=cap.id,
+                reference_type=CanonicalReferenceType.IMAGE,
+                role=CanonicalReferenceRole.SUPPLEMENTARY,
+                title=f"{cap.title} — {self._label(view)}",
+                file_path=path.relative_to(project),
+                description=self._prompt(
+                    self._isolated_description(cap.canonical_description)[0],
+                    self._isolated_description(cap.visual_identity)[0],
+                    view,
+                ),
+                notes=(
+                    f"VSCS multiple-angle qualified Candidate\nProvider: {provider_name}\n"
+                    f"MASTER: {master_reference_id}\nMASTER SHA-256: {master_sha256}\n"
+                    f"Qualification: {qualification_id}\nOutput SHA-256: {sha256(path.read_bytes()).hexdigest()}\n"
+                    f"View: {view.value}\nSeed: {seed}\nHuman QC and approval required"
+                ),
+                version=master_record.version,
+            ),
+        )
+        self.references.mark_candidate(reference.id)
+        self.library.register_derived(
+            asset_id,
+            reference.id,
+            family=self._family(view),
+            view=view,
+            generator=provider_name,
+            actor=actor,
+            note=f"Qualified {qualification_id} from locked MASTER {master_reference_id}; Candidate only",
+        )
+        return reference.id
+
     @staticmethod
     def _isolated_description(description: str) -> tuple[str, tuple[str, ...]]:
         """Exclude explicit scene relationships without modifying the persisted CAP.

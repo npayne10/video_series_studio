@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from PySide6.QtCore import QElapsedTimer, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -9,6 +12,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QGridLayout,
+    QInputDialog,
     QLabel,
     QMessageBox,
     QProgressBar,
@@ -23,12 +27,58 @@ from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGenerationService,
     DerivedReferenceGeneratorRegistry,
 )
+from vscs.application.caps.multiple_angle_execution_guard import stage_offline_qualification
+from vscs.application.caps.multiple_angle_live_execution import execute_qualified_multiple_angle
+from vscs.application.caps.multiple_angle_runtime_readiness import (
+    MultipleAngleRuntimeReadiness,
+    plan_multiple_angle_runtime,
+)
 from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.domain.caps import CanonicalReferenceView, ReferenceRequirement
 from vscs.infrastructure.ai.comfyui_derived_reference_provider import (
     ComfyUIDerivedReferenceProvider,
 )
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
+from vscs.infrastructure.xcic_core import XCICCoreClient
+
+
+class _MultipleAngleQualificationWorker(QThread):
+    """One explicitly authorized GPU trial, never an implicit batch run."""
+
+    completed = Signal(object)
+    failed = Signal(str)
+
+    def __init__(
+        self,
+        service: DerivedReferenceGenerationService,
+        plan: MultipleAngleRuntimeReadiness,
+        model_root: Path,
+        authorization: str,
+        parent: QWidget,
+    ) -> None:
+        super().__init__(parent)
+        self.service = service
+        self.plan = plan
+        self.model_root = model_root
+        self.authorization = authorization
+
+    def run(self) -> None:
+        try:
+            staged = stage_offline_qualification(
+                self.service, self.plan, allow_offline_staging=True
+            )
+            result = execute_qualified_multiple_angle(
+                self.service,
+                self.plan,
+                staged,
+                client=XCICCoreClient(os.environ.get("VSCS_COMFYUI_URL", "http://127.0.0.1:8188")),
+                model_root=self.model_root,
+                authorization=self.authorization,
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.completed.emit((result.reference_record_id,))
 
 
 class _DerivedGenerationWorker(QThread):
@@ -97,7 +147,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         super().__init__(parent)
         self.asset_id = asset_id
         self.service = service
-        self._worker: _DerivedGenerationWorker | None = None
+        self._worker: _DerivedGenerationWorker | _MultipleAngleQualificationWorker | None = None
         self._completed_count: int | None = None
         self._last_progress = ""
         self._elapsed = QElapsedTimer()
@@ -186,6 +236,15 @@ class DerivedReferenceGenerationDialog(QDialog):
         )
         self.generate_missing_button.setEnabled(self.master_ready and bool(generatable_missing))
 
+        self.qualify_button = QPushButton("Qualify One View (Controlled GPU Trial)")
+        self.qualify_button.setObjectName("qualifyMultipleAngleView")
+        self.qualify_button.setToolTip(
+            "Requires a separate qualification-specific typed GPU authorization. "
+            "The generated reference enters Candidate review, never automatic approval."
+        )
+        self.qualify_button.setEnabled(self.master_ready)
+        self.qualify_button.clicked.connect(self._qualify_one_view)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -211,7 +270,78 @@ class DerivedReferenceGenerationDialog(QDialog):
         layout.addWidget(QLabel("Category production reference views"))
         layout.addLayout(grid)
         layout.addWidget(self.generate_missing_button)
+        layout.addWidget(self.qualify_button)
         layout.addWidget(buttons)
+
+    def _qualify_one_view(self) -> None:
+        """Plan without side effects before requesting one-use operator consent."""
+        if self._worker is not None and self._worker.isRunning():
+            return
+        views = self.selected_views()
+        if len(views) != 1 or views[0] not in {
+            CanonicalReferenceView.FRONT,
+            CanonicalReferenceView.REAR,
+            CanonicalReferenceView.LEFT,
+            CanonicalReferenceView.RIGHT,
+        }:
+            QMessageBox.warning(
+                self, "Multiple-Angle Qualification", "Select exactly one missing cardinal view."
+            )
+            return
+        try:
+            plan = plan_multiple_angle_runtime(
+                self.service, self.asset_id, views[0], seed=self.seed.value()
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.critical(self, "Multiple-Angle Qualification", str(exc))
+            return
+        root_value, root_confirmed = QInputDialog.getText(
+            self,
+            "ComfyUI Model Directory",
+            "Confirm the installed ComfyUI models directory:",
+            text=os.environ.get(
+                "VSCS_COMFYUI_MODEL_ROOT",
+                r"D:\ComfyUI\ComfyUI_windows_portable\ComfyUI\models",
+            ),
+        )
+        if not root_confirmed or not root_value.strip():
+            return
+        phrase = f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}"
+        answer, confirmed = QInputDialog.getText(
+            self,
+            "One-Use GPU Qualification Authorization",
+            f"View: {views[0].value}\n"
+            "This stages a new queue and submits exactly one real ComfyUI GPU job. "
+            "It can use significant VRAM/time. The resulting image will be a Candidate, "
+            "never approved automatically.\n\n"
+            f"Type exactly:\n{phrase}",
+        )
+        if not confirmed or answer != phrase:
+            return
+        worker = _MultipleAngleQualificationWorker(
+            self.service, plan, Path(root_value), answer, self
+        )
+        self._worker = worker
+        worker.completed.connect(self._worker_completed)
+        worker.failed.connect(self._worker_failed)
+        worker.finished.connect(self._worker_finished)
+        self._disable_during_generation()
+        self._elapsed.start()
+        self._progress_timer.start()
+        self._show_progress(f"Controlled GPU qualification: {views[0].value}")
+        worker.start()
+
+    def _disable_during_generation(self) -> None:
+        self.provider.setEnabled(False)
+        self.width.setEnabled(False)
+        self.height.setEnabled(False)
+        self.seed.setEnabled(False)
+        self.generate_selected_button.setEnabled(False)
+        self.generate_missing_button.setEnabled(False)
+        self.qualify_button.setEnabled(False)
+        for checkbox in self.checkboxes.values():
+            checkbox.setEnabled(False)
+        self.progress_bar.setVisible(True)
 
     def selected_views(self) -> tuple[CanonicalReferenceView, ...]:
         return tuple(view for view, checkbox in self.checkboxes.items() if checkbox.isChecked())
@@ -247,15 +377,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         self._worker.completed.connect(self._worker_completed)
         self._worker.failed.connect(self._worker_failed)
         self._worker.finished.connect(self._worker_finished)
-        self.provider.setEnabled(False)
-        self.width.setEnabled(False)
-        self.height.setEnabled(False)
-        self.seed.setEnabled(False)
-        self.generate_selected_button.setEnabled(False)
-        self.generate_missing_button.setEnabled(False)
-        for checkbox in self.checkboxes.values():
-            checkbox.setEnabled(False)
-        self.progress_bar.setVisible(True)
+        self._disable_during_generation()
         self._elapsed.start()
         self._progress_timer.start()
         self._show_progress(f"Starting {provider_name} — {self._views_text(views or ())}")
@@ -296,6 +418,7 @@ class DerivedReferenceGenerationDialog(QDialog):
         self.height.setEnabled(True)
         self.seed.setEnabled(True)
         self.generate_selected_button.setEnabled(self.master_ready)
+        self.qualify_button.setEnabled(self.master_ready)
         self.generate_missing_button.setEnabled(
             self.master_ready and bool(self.coverage.missing_required)
         )

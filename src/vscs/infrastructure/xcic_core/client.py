@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 from uuid import uuid4
@@ -71,6 +72,32 @@ class XCICCoreClient:
                     return record
             time.sleep(1.0)
         raise XCICCoreClientError(f"XCIC render timed out after {timeout_seconds:.0f} seconds")
+
+    def fetch_output_image(self, image: dict[str, Any]) -> bytes:
+        """Retrieve a named SaveImage result without accepting arbitrary paths/URLs."""
+        name = image.get("filename")
+        folder = image.get("subfolder", "")
+        kind = image.get("type", "output")
+        if (
+            not isinstance(name, str)
+            or not name.endswith(".png")
+            or not name
+            or "/" in name
+            or "\\" in name
+            or name in (".", "..")
+            or not isinstance(folder, str)
+            or folder not in ("",)
+            or kind != "output"
+        ):
+            raise XCICCoreClientError("Untrusted ComfyUI SaveImage output descriptor")
+        query = urllib.parse.urlencode({"filename": name, "subfolder": "", "type": "output"})
+        try:
+            with urllib.request.urlopen(
+                f"{self.base_url}/view?{query}", timeout=self.timeout
+            ) as response:
+                return bytes(response.read())
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise XCICCoreClientError(f"Unable to retrieve ComfyUI output: {exc}") from exc
 
     def _request(
         self,

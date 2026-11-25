@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Event
 from unittest.mock import patch
 
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from vscs.application.assets import AssetService
 from vscs.application.assets.canonical_creation import CanonicalAssetCreationService
@@ -68,6 +68,14 @@ def test_dialog_exposes_selectable_views_and_provider(qtbot, tmp_path: Path) -> 
     assert CanonicalReferenceView.FRONT in dialog.checkboxes
     assert CanonicalReferenceView.TOP in dialog.checkboxes
     assert dialog.provider.currentText() == provider.name
+    assert dialog.qualify_button.objectName() == "qualifyMultipleAngleView"
+    assert dialog.qualify_button.isEnabled()
+    assert not (project / ".vscs" / "runtime").exists()
+    dialog.checkboxes[CanonicalReferenceView.FRONT].setChecked(True)
+    with patch.object(QInputDialog, "getText", return_value=("", False)):
+        dialog._qualify_one_view()
+    assert dialog._worker is None
+    assert not (project / ".vscs" / "runtime").exists()
     context.shutdown()
 
 

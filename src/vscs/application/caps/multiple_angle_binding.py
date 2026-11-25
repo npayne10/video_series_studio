@@ -95,6 +95,13 @@ class MultipleAngleOfflineCompiler:
         _project, _entries, master, _master_record, master_path = (
             self.derived_service._resolve_locked_master(asset_id)
         )
+        cap = self.derived_service.references.caps.get(asset_id)
+        isolated_description, _excluded_description = self.derived_service._isolated_description(
+            cap.canonical_description
+        )
+        isolated_visual, _excluded_visual = self.derived_service._isolated_description(
+            cap.visual_identity
+        )
         master_hash = hashlib.sha256(master_path.read_bytes()).hexdigest()
         template_bytes = self.template_path.read_bytes()
         # Git may check out text files as CRLF on Windows. Validate the
@@ -138,8 +145,10 @@ class MultipleAngleOfflineCompiler:
                     "asset_id": asset_id.upper(),
                     "asset_category": "prop" if "-PRP-" in asset_id.upper() else "asset",
                     "reference_inputs": [str(master_path)],
-                    "positive_prompt": "Preserve the isolated canonical asset from the approved MASTER.",
-                    "negative_prompt": "unrelated objects, extra components, scene background",
+                    "positive_prompt": self.derived_service._prompt(
+                        isolated_description, isolated_visual, view
+                    ),
+                    "negative_prompt": self.derived_service._negative_prompt(),
                     "view": view.value,
                     "seed": seed,
                     "generation": {"enable_turbo_mode": True},
