@@ -585,3 +585,11 @@ The [offline multiple-angle binding runbook](../engineering/Issue_61_Stage_B2C_M
 documents provisional cardinal camera settings, locked MASTER source-binding
 checks, required node/model evidence, and the explicit no-GPU boundary.
 The compiled draft graph is not executable or production-approved.
+
+### Issue #61 Stage B.2D — offline provider compatibility
+
+The [provider compatibility preflight runbook](../engineering/Issue_61_Stage_B2D_Provider_Compatibility_Preflight.md)
+explains how to compare the reviewed API workflow with a saved ComfyUI
+`/object_info` snapshot, interpret missing node interfaces and model selectors,
+and preserve the MASTER/candidate audit boundary. Results do not authorise GPU
+generation. Camera calibration and VRAM fit remain operator qualification gates.
