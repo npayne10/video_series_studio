@@ -169,12 +169,12 @@ def test_cycle_in_dynamic_switch_fails_closed() -> None:
 
 def test_reviewed_master_placeholder_is_unresolved_not_unavailable() -> None:
     graph = _graph()
-    graph["source"]["inputs"]["image"] = "__VSCS_PENDING_MASTER_BINDING__"
+    graph["1"] = graph.pop("source")
+    graph["camera"]["inputs"]["image"] = ["1", 0]
+    graph["1"]["inputs"]["image"] = "__VSCS_PENDING_MASTER_BINDING__"
     report = inspect_provider_compatibility(graph, _inventory())
-    assert report.unresolved_source_bindings == ("source.image",) or (
-        not report.unresolved_source_bindings
-        and report.unavailable_model_selections
-    )
+    assert report.unresolved_source_bindings == ("1.image",)
+    assert not report.unavailable_model_selections
     assert not report.generation_authorized
 
 
