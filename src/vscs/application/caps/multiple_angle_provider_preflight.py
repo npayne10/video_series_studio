@@ -81,7 +81,9 @@ def inspect_provider_compatibility(
                 if isinstance(upstream, str) and isinstance(port, int):
                     source = graph.get(upstream)
                     if not isinstance(source, dict):
-                        bad_links.add(f"{node_id}.{input_name}: unknown source {upstream}")
+                        bad_links.add(
+                            f"{node_id}.{input_name}: unknown source {upstream}"
+                        )
                     else:
                         source_type = source.get("class_type")
                         source_definition = (
@@ -93,7 +95,9 @@ def inspect_provider_compatibility(
                             outputs = source_definition.get("output")
                             if isinstance(outputs, list):
                                 if not 0 <= port < len(outputs):
-                                    bad_links.add(f"{node_id}.{input_name}: invalid output port")
+                                    bad_links.add(
+                                        f"{node_id}.{input_name}: invalid output port"
+                                    )
                                 elif input_name in declared:
                                     expected = declared[input_name]
                                     if (
@@ -149,7 +153,9 @@ def inspect_provider_compatibility(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Offline ComfyUI provider compatibility audit")
+    parser = argparse.ArgumentParser(
+        description="Offline ComfyUI provider compatibility audit"
+    )
     parser.add_argument("--workflow", type=Path, required=True)
     parser.add_argument("--object-info", type=Path, required=True)
     args = parser.parse_args()
