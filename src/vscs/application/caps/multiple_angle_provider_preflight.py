@@ -19,6 +19,7 @@ class ProviderCompatibilityPreflight:
     missing_node_types: tuple[str, ...]
     missing_input_names: tuple[str, ...]
     invalid_links: tuple[str, ...]
+    incompatible_link_types: tuple[str, ...]
     unavailable_model_selections: tuple[str, ...]
     blockers: tuple[str, ...]
 
@@ -35,13 +36,14 @@ def inspect_provider_compatibility(
     missing_types: set[str] = set()
     missing_inputs: set[str] = set()
     bad_links: set[str] = set()
+    type_mismatches: set[str] = set()
     unavailable_models: set[str] = set()
     checked: set[str] = set()
     blockers: list[str] = []
 
     if not isinstance(graph, dict) or not graph:
         return ProviderCompatibilityPreflight(
-            (), (), (), (), (), ("A nonempty API graph is required",)
+            (), (), (), (), (), (), ("A nonempty API graph is required",)
         )
     if object_info is None or not isinstance(object_info, dict):
         blockers.append("Saved ComfyUI /object_info inventory is required")
@@ -80,10 +82,28 @@ def inspect_provider_compatibility(
                     source = graph.get(upstream)
                     if not isinstance(source, dict):
                         bad_links.add(f"{node_id}.{input_name}: unknown source {upstream}")
-                    elif isinstance(object_info.get(source.get("class_type")), dict):
-                        outputs = object_info[source["class_type"]].get("output")
-                        if isinstance(outputs, list) and not 0 <= port < len(outputs):
-                            bad_links.add(f"{node_id}.{input_name}: invalid output port")
+                    else:
+                        source_type = source.get("class_type")
+                        source_definition = (
+                            object_info.get(source_type)
+                            if isinstance(source_type, str)
+                            else None
+                        )
+                        if isinstance(source_definition, dict):
+                            outputs = source_definition.get("output")
+                            if isinstance(outputs, list):
+                                if not 0 <= port < len(outputs):
+                                    bad_links.add(f"{node_id}.{input_name}: invalid output port")
+                                elif input_name in declared:
+                                    expected = declared[input_name]
+                                    if (
+                                        isinstance(expected, list)
+                                        and expected
+                                        and isinstance(expected[0], str)
+                                        and expected[0] != outputs[port]
+                                        and expected[0] not in ("*", "ANY")
+                                    ):
+                                        type_mismatches.add(f"{node_id}.{input_name}")
                     continue
             if input_name in declared and isinstance(value, str):
                 option_spec = declared[input_name]
@@ -101,6 +121,8 @@ def inspect_provider_compatibility(
         blockers.append("Provider node input interfaces differ from reviewed graph")
     if bad_links:
         blockers.append("Graph contains invalid references or output ports")
+    if type_mismatches:
+        blockers.append("Provider link data types are incompatible")
     if unavailable_models:
         blockers.append("Node widget selections are absent from provider inventory")
 
@@ -120,6 +142,7 @@ def inspect_provider_compatibility(
         missing_node_types=tuple(sorted(missing_types)),
         missing_input_names=tuple(sorted(missing_inputs)),
         invalid_links=tuple(sorted(bad_links)),
+        incompatible_link_types=tuple(sorted(type_mismatches)),
         unavailable_model_selections=tuple(sorted(unavailable_models)),
         blockers=tuple(blockers),
     )
@@ -143,6 +166,7 @@ def main() -> int:
                 "missing_node_types": report.missing_node_types,
                 "missing_input_names": report.missing_input_names,
                 "invalid_links": report.invalid_links,
+                "incompatible_link_types": report.incompatible_link_types,
                 "unavailable_model_selections": report.unavailable_model_selections,
                 "blockers": report.blockers,
                 "generation_authorized": report.generation_authorized,
