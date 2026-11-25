@@ -90,9 +90,7 @@ def inspect_provider_compatibility(
                 and isinstance(link[1], int)
             ):
                 return None
-            branch_type = resolved_output_type(
-                link[0], link[1], visiting | {node_id}
-            )
+            branch_type = resolved_output_type(link[0], link[1], visiting | {node_id})
             if branch_type is None:
                 return None
             branch_types.append(branch_type)
@@ -173,17 +171,12 @@ def inspect_provider_compatibility(
                                         shared_type = resolved_output_type(node_id, 0)
                                         if shared_type is None:
                                             unresolved_switches.add(node_id)
-                                        elif actual_type != shared_type:
-                                            type_mismatches.add(f"{node_id}.{input_name}")
-                                        elif (
+                                        elif actual_type != shared_type or (
                                             expected_type in concrete_types
                                             and expected_type != shared_type
                                         ):
                                             type_mismatches.add(f"{node_id}.{input_name}")
-                                    elif (
-                                        source_type == "ComfySwitchNode"
-                                        and actual_type is None
-                                    ):
+                                    elif source_type == "ComfySwitchNode" and actual_type is None:
                                         unresolved_switches.add(upstream)
                                     elif (
                                         expected_type is not None
