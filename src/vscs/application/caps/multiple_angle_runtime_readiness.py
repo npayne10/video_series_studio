@@ -66,9 +66,7 @@ def plan_multiple_angle_runtime(
     model_root: Path | None = None,
 ) -> MultipleAngleRuntimeReadiness:
     """Produce a scoped proposal, with no queue/output file or GPU side effects."""
-    project, entries, master, _record, master_path = service._resolve_locked_master(
-        asset_id
-    )
+    project, entries, master, _record, master_path = service._resolve_locked_master(asset_id)
     if not master_path.resolve(strict=False).is_relative_to(project.resolve(strict=False)):
         raise DerivedReferenceGenerationError("MASTER path escapes project boundary")
     active = {
@@ -143,9 +141,7 @@ def plan_multiple_angle_runtime(
     graph = deepcopy(compiled.compiled_graph)
     queue = deepcopy(compiled.queue_payload)
     graph["1"]["inputs"]["queue_file"] = str(queue_path)
-    graph["2"]["inputs"]["filename_prefix"] = (
-        f"VSCS_QUALIFICATION_{qualification_id}"
-    )
+    graph["2"]["inputs"]["filename_prefix"] = f"VSCS_QUALIFICATION_{qualification_id}"
     job = queue["jobs"][0]
     job["output"]["candidate_directory"] = str(output_path.parent)
     job["output"]["candidate_filename"] = output_path.name
@@ -154,9 +150,7 @@ def plan_multiple_angle_runtime(
     job["master_reference_id"] = master.reference_id
 
     provider_report = (
-        inspect_provider_compatibility(graph, object_info)
-        if object_info is not None
-        else None
+        inspect_provider_compatibility(graph, object_info) if object_info is not None else None
     )
     blockers = list(compiled.blockers)
     if provider_report is None:
