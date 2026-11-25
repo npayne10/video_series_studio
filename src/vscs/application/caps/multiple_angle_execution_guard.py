@@ -101,19 +101,12 @@ def stage_offline_qualification(
     """Persist audit-only queue evidence, never submit it to any provider."""
     if not allow_offline_staging:
         raise DerivedReferenceGenerationError("Explicit offline staging consent is required")
-    project, _entries, _master, _record, _path = service._resolve_locked_master(
-        plan.asset_id
-    )
+    project, _entries, _master, _record, _path = service._resolve_locked_master(plan.asset_id)
     project = project.resolve(strict=False)
     master_path = _fresh_master(service, plan)
     queue = _contained_path(project, plan.queue_path)
     manifest, reservation, output = _paths(plan, project)
-    if (
-        queue.exists()
-        or manifest.exists()
-        or reservation.exists()
-        or output.exists()
-    ):
+    if queue.exists() or manifest.exists() or reservation.exists() or output.exists():
         raise DerivedReferenceGenerationError("Qualification queue/output collision")
     job = plan.proposed_queue["jobs"][0]
     if (
