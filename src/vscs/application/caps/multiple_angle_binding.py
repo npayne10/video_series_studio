@@ -97,7 +97,10 @@ class MultipleAngleOfflineCompiler:
         )
         master_hash = hashlib.sha256(master_path.read_bytes()).hexdigest()
         template_bytes = self.template_path.read_bytes()
-        template_hash = hashlib.sha256(template_bytes).hexdigest()
+        # Git may check out text files as CRLF on Windows. Validate the
+        # reviewed LF-normalized content without weakening content integrity.
+        normalized_template_bytes = template_bytes.replace(b"\r\n", b"\n")
+        template_hash = hashlib.sha256(normalized_template_bytes).hexdigest()
         if (
             self.template_path.name == self.TEMPLATE_NAME
             and template_hash != self.EXPECTED_TEMPLATE_SHA256
