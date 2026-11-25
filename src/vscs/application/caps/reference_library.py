@@ -41,6 +41,33 @@ class InvalidReferenceLifecycleTransitionError(ReferenceLibraryError):
     """Raised when a requested production lifecycle transition is invalid."""
 
 
+VIEWPOINT_ATTESTATION = "VIEWPOINT ACCEPTANCE: "
+GEOMETRY_ATTESTATION = "CANONICAL GEOMETRY REVIEW: "
+
+
+def _qualified_view_review(note: str, *, unseen_geometry: bool) -> bool:
+    """Require independent, substantive operator attestations; no inferred approval."""
+    lines = note.splitlines()
+    viewpoint = [
+        line[len(VIEWPOINT_ATTESTATION) :].strip()
+        for line in lines
+        if line.startswith(VIEWPOINT_ATTESTATION)
+    ]
+    geometry = [
+        line[len(GEOMETRY_ATTESTATION) :].strip()
+        for line in lines
+        if line.startswith(GEOMETRY_ATTESTATION)
+    ]
+    if len(viewpoint) != 1 or not viewpoint[0].startswith("PASS — ") or len(viewpoint[0]) < 37:
+        return False
+    return not (
+        unseen_geometry
+        and (
+            len(geometry) != 1 or not geometry[0].startswith("VERIFIED — ") or len(geometry[0]) < 41
+        )
+    )
+
+
 class ReferenceLibraryStore:
     """Persist production reference metadata without changing the legacy DB schema."""
 
@@ -257,20 +284,20 @@ class ReferenceLibraryService:
             entry.origin is CanonicalReferenceOrigin.VSCS_DERIVED
             and entry.view
             in {
+                CanonicalReferenceView.FRONT,
                 CanonicalReferenceView.REAR,
                 CanonicalReferenceView.LEFT,
                 CanonicalReferenceView.RIGHT,
             }
             and "_qualification_" in Path(reference.file_path).name
-            and (
-                not note.startswith("CANONICAL GEOMETRY REVIEW: ")
-                or len(note.split(": ", 1)[-1].strip()) < 30
+            and not _qualified_view_review(
+                note, unseen_geometry=entry.view is not CanonicalReferenceView.FRONT
             )
         ):
             raise ReferenceLibraryConflictError(
-                "Rear/side qualified views need an explicit human canonical geometry "
-                "review attestation before approval; undocumented hidden features "
-                "must remain Candidate or be rejected"
+                "Qualified views require separate human viewpoint acceptance and, "
+                "for Rear/side, canonical geometry review backed by design evidence. "
+                "Unverified features must remain Candidate or be rejected"
             )
         if reference.status is CanonicalReferenceStatus.IMPORTED:
             self.references.mark_candidate(reference_record_id)

@@ -11,6 +11,7 @@
 - The runtime verifies the locked MASTER digest, compatible ComfyUI node inputs and output links, required model presence, and unique destination. It reserves an immutable submission journal before calling ComfyUI; a transport failure must **not** be automatically retried.
 - ComfyUI SaveImage history must indicate successful completion and return **one** output with the qualification-specific filename prefix. Image bytes are fetched through the local ComfyUI `/view` endpoint and exclusively stored under the CAP `Images/Derived` path after PNG and dimension checks.
 - After a fresh MASTER check, the result is registered in the canonical reference database **and** production reference library as **Candidate**. No generated reference is automatically Approved, production-ready, or Primary.
+- **Independent viewpoint/geometry gates:** approval of every cardinal `*_qualification_*.png` requires an explicit operator **PASS** on alignment with a substantive camera-review note. Rear/Left/Right additionally require a separate **VERIFIED** canonical-geometry attestation naming independently reviewed design evidence; the front-only MASTER cannot authenticate unseen rear/side mechanisms. Either failed or unverified gate leaves the image Candidate (or the operator may reject it). Both decisions are preserved in the governed approval history; neither generation mode is evidence of geometry truth. Existing approved records are not retroactively changed.
 - Queue, receipt, reconciliation and Candidate audit records remain preserved on failure. Do not delete, reuse or manually modify a qualification record to force a retry; start a new qualification ID after reviewing the failure.
 
 ## Windows preparation — no GPU needed
@@ -27,7 +28,7 @@
 3. Wait for the bounded GPU execution. On error, record the message and inspect immutable `multiple_angle_<id>.*` audit files. **Do not** resubmit that ID.
 4. On success, confirm the gallery shows one new Front **Candidate**, never automatically approved; the original MASTER and historical candidates must have unchanged SHA-256 digests. Save the new image digest, prompt ID, execution duration and GPU VRAM evidence.
 5. Compare the output against the locked MASTER: front face camera perpendicular, no visible side/top, correct control arrangement, housing, proportions, display, materials and markers. **Human visual QC is mandatory.** Reject if anything drifts; an incorrect camera frame is a qualification failure even when ComfyUI reports completion.
-6. Only after explicit human acceptance should the gallery's governed **Approve** action be used. Verify the reference and library lifecycle agree after application restart. No CAP downstream consumption of an unapproved Candidate.
+6. Only after explicit human acceptance should the gallery's governed **Approve** action be used. Record the **Viewpoint Acceptance** decision and camera evidence. For Rear/Left/Right, separately identify the independent geometry evidence and confirm **Canonical Geometry Verified**. If either cannot pass, Cancel and retain Candidate or reject. Verify the reference and library lifecycle agree after application restart. No CAP downstream consumption of an unapproved Candidate.
 
 ## Gates for declaring W1 usable and complete
 

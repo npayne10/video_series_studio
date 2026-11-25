@@ -15,7 +15,10 @@ from vscs.application.caps.multiple_angle_live_execution import (
     execute_qualified_multiple_angle,
 )
 from vscs.application.caps.multiple_angle_runtime_readiness import plan_multiple_angle_runtime
-from vscs.application.caps.reference_library import ReferenceLibraryConflictError
+from vscs.application.caps.reference_library import (
+    ReferenceLibraryConflictError,
+    _qualified_view_review,
+)
 from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView
 
 
@@ -23,6 +26,24 @@ def _png() -> bytes:
     buffer = BytesIO()
     Image.new("RGB", (64, 64), "blue").save(buffer, format="PNG")
     return buffer.getvalue()
+
+
+def test_separate_camera_and_geometry_attestations_fail_closed() -> None:
+    camera = "VIEWPOINT ACCEPTANCE: PASS — Operator checked perpendicular rear elevation."
+    geometry = (
+        "CANONICAL GEOMETRY REVIEW: VERIFIED — Compared every rear panel and "
+        "mounting feature against approved engineering drawings."
+    )
+    assert _qualified_view_review(camera, unseen_geometry=False)
+    assert not _qualified_view_review(camera, unseen_geometry=True)
+    assert not _qualified_view_review(geometry, unseen_geometry=True)
+    assert _qualified_view_review(camera + "\n" + geometry, unseen_geometry=True)
+    assert not _qualified_view_review(
+        camera.replace("PASS", "FAIL") + "\n" + geometry, unseen_geometry=True
+    )
+    assert not _qualified_view_review(
+        camera + "\n" + geometry.replace("VERIFIED", "UNVERIFIED"), unseen_geometry=True
+    )
 
 
 class FakeComfyUI:
@@ -245,17 +266,28 @@ def test_rear_candidate_requires_documented_human_geometry_review(
         model_root=_models(tmp_path / "models"),
         authorization=f"AUTHORIZE GPU QUALIFICATION {plan.qualification_id}",
     )
-    with pytest.raises(ReferenceLibraryConflictError, match="geometry review"):
+    with pytest.raises(ReferenceLibraryConflictError, match="viewpoint acceptance"):
         service.library.approve(result.reference_record_id, "test-operator")
     assert (
         service.library.get(result.reference_record_id).lifecycle
         is CanonicalReferenceLifecycle.CANDIDATE
     )
+    with pytest.raises(ReferenceLibraryConflictError, match="viewpoint acceptance"):
+        service.library.approve(
+            result.reference_record_id,
+            "test-operator",
+            note=(
+                "VIEWPOINT ACCEPTANCE: PASS — Synthetic fixture: camera is perpendicular "
+                "to requested rear elevation but geometry is still unverified"
+            ),
+        )
     service.library.approve(
         result.reference_record_id,
         "test-operator",
         note=(
-            "CANONICAL GEOMETRY REVIEW: Synthetic acceptance fixture: reviewed "
+            "VIEWPOINT ACCEPTANCE: PASS — Synthetic fixture: camera is perpendicular "
+            "to requested rear elevation\n"
+            "CANONICAL GEOMETRY REVIEW: VERIFIED — Synthetic acceptance fixture: reviewed "
             "the required rear surfaces against signed engineering drawings."
         ),
     )

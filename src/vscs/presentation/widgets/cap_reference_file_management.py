@@ -284,7 +284,43 @@ def _approve(dialog: Any, reference_id: int) -> None:
             "reclassify a MASTER through the Canonical Profile gallery.",
         )
         return
-    geometry_note = ""
+    review_note = ""
+    if (
+        registered is not None
+        and registered.view
+        in {
+            CanonicalReferenceView.FRONT,
+            CanonicalReferenceView.REAR,
+            CanonicalReferenceView.LEFT,
+            CanonicalReferenceView.RIGHT,
+        }
+        and "_qualification_" in Path(reference.file_path).name
+    ):
+        viewpoint, accepted = QInputDialog.getMultiLineText(
+            dialog,
+            "Viewpoint Acceptance — Independent QC",
+            "Confirm this is the requested cardinal elevation. Record alignment evidence "
+            "including any visible side/top face, yaw/elevation error and whether the "
+            "viewpoint passes. Cancel if the camera is not acceptable.",
+        )
+        if not accepted or len(viewpoint.strip()) < 30:
+            QMessageBox.warning(
+                dialog, "Viewpoint Review Required", "Viewpoint acceptance is required."
+            )
+            return
+        if (
+            QMessageBox.question(
+                dialog,
+                "Accept Camera Viewpoint?",
+                "Does the image PASS the requested cardinal viewpoint, including "
+                "camera alignment and acceptable side/top visibility?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            is not QMessageBox.StandardButton.Yes
+        ):
+            return
+        review_note = f"VIEWPOINT ACCEPTANCE: PASS — {viewpoint.strip()}"
     if (
         registered is not None
         and registered.view
@@ -298,9 +334,11 @@ def _approve(dialog: Any, reference_id: int) -> None:
         attestation, accepted = QInputDialog.getMultiLineText(
             dialog,
             "Canonical Geometry Evidence Required",
-            "This rear/side view includes surfaces not fully established by the MASTER. "
-            "Describe the approved design evidence and how every newly visible panel, "
-            "vent and structural feature was checked. If no such evidence exists, "
+            "Independent geometry acceptance: identify the approved source drawings, "
+            "multi-view references or other operator-verified design evidence. "
+            "Explain how newly visible panels, vents and structural features were checked. "
+            "The front-only MASTER does not establish unseen rear/side features. "
+            "If no such evidence exists, "
             "Cancel and keep the image Candidate or reject it. Do not infer canon "
             "from model plausibility.",
         )
@@ -311,7 +349,20 @@ def _approve(dialog: Any, reference_id: int) -> None:
                 "Approval requires a substantive human canonical geometry review.",
             )
             return
-        geometry_note = f"CANONICAL GEOMETRY REVIEW: {attestation.strip()}"
+        if (
+            QMessageBox.question(
+                dialog,
+                "Verify Canonical Geometry?",
+                "Have ALL newly visible structural features been verified against "
+                "independent design authority? If any are unknown, select No and "
+                "retain the Candidate.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            is not QMessageBox.StandardButton.Yes
+        ):
+            return
+        review_note += f"\nCANONICAL GEOMETRY REVIEW: VERIFIED — {attestation.strip()}"
     authority_note = (
         "The old gallery already marked this reference Approved, but its governed "
         "library entry is still Candidate. Confirm this separate governed approval."
@@ -339,7 +390,7 @@ def _approve(dialog: Any, reference_id: int) -> None:
     def apply() -> object:
         library, entry = _registered_reference(dialog, reference_id)
         if entry is not None:
-            return library.approve(reference_id, getpass.getuser(), note=geometry_note)
+            return library.approve(reference_id, getpass.getuser(), note=review_note)
         return dialog.reference_service.approve(reference_id, getpass.getuser())
 
     _run_workflow(dialog, apply)
