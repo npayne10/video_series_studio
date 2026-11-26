@@ -26,6 +26,7 @@ from vscs.domain.caps import (
     CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
+    CanonicalReferenceUpdate,
     CanonicalReferenceView,
 )
 from vscs.infrastructure.ai.derived_reference_provider import OfflineDerivedReferencePreviewProvider
@@ -169,6 +170,78 @@ def test_derived_gallery_approval_updates_governed_library_and_readiness(tmp_pat
     assert not any("Front" in gap.message for gap in after.references.gaps)
     assert not after.references.ready  # Rear/Left/Right remain genuinely missing.
     assert not after.production.ready  # Draft CAP remains unapproved.
+    context.shutdown()
+
+
+def test_rear_qualification_approval_requires_all_three_confirmations(tmp_path):
+    context, _root, _assets, _caps, references, library, _master, generator, provider = _context(
+        tmp_path
+    )
+    candidate = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.REAR,), provider_name=provider
+    )[0]
+    references.update(
+        candidate,
+        CanonicalReferenceUpdate(file_path=Path("Derived/rear_qualification_qa.png")),
+    )
+    dialog = _dialog(references)
+    review_entries = iter(
+        [
+            ("PASS: Rear camera near perpendicular; a slight top face remains visible.", True),
+            (
+                "Reviewed actual engineering drawing revision A: rear surface has "
+                "no added ports, vents, or unverified features.",
+                True,
+            ),
+        ]
+    )
+    with (
+        patch(
+            "vscs.presentation.widgets.cap_reference_file_management.QInputDialog.getMultiLineText",
+            side_effect=lambda *args: next(review_entries),
+        ) as prompts,
+        patch.object(
+            QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes
+        ) as questions,
+        patch.object(QMessageBox, "information") as notices,
+    ):
+        _approve(dialog, candidate)
+
+    assert prompts.call_count == 2  # Camera QC and distinct geometry evidence
+    assert [call.args[1] for call in questions.call_args_list] == [
+        "Accept Camera Viewpoint?",
+        "Verify Canonical Geometry?",
+        "Approve Canonical Reference",
+    ]
+    notices.assert_not_called()
+    assert library.get(candidate).lifecycle is CanonicalReferenceLifecycle.APPROVED
+    assert "CANONICAL GEOMETRY REVIEW: VERIFIED" in library.get(candidate).history[-1].note
+    context.shutdown()
+
+
+def test_rear_camera_decline_explains_unchanged_candidate(tmp_path):
+    context, _root, _assets, _caps, references, library, _master, generator, provider = _context(
+        tmp_path
+    )
+    candidate = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.REAR,), provider_name=provider
+    )[0]
+    references.update(
+        candidate,
+        CanonicalReferenceUpdate(file_path=Path("Derived/rear_qualification_qa.png")),
+    )
+    with (
+        patch(
+            "vscs.presentation.widgets.cap_reference_file_management.QInputDialog.getMultiLineText",
+            return_value=("PASS: Rear camera aligned with a small visible top face.", True),
+        ),
+        patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No),
+        patch.object(QMessageBox, "information") as notices,
+    ):
+        _approve(_dialog(references), candidate)
+    notices.assert_called_once()
+    assert "Camera Viewpoint" in notices.call_args.args[1]
+    assert library.get(candidate).lifecycle is CanonicalReferenceLifecycle.CANDIDATE
     context.shutdown()
 
 

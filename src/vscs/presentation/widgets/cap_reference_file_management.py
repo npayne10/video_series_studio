@@ -308,17 +308,21 @@ def _approve(dialog: Any, reference_id: int) -> None:
                 dialog, "Viewpoint Review Required", "Viewpoint acceptance is required."
             )
             return
-        if (
-            QMessageBox.question(
+        camera_response = QMessageBox.question(
+            dialog,
+            "Accept Camera Viewpoint?",
+            "Does the image PASS the requested cardinal viewpoint, including "
+            "camera alignment and acceptable side/top visibility?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if camera_response != QMessageBox.StandardButton.Yes:
+            QMessageBox.information(
                 dialog,
-                "Accept Camera Viewpoint?",
-                "Does the image PASS the requested cardinal viewpoint, including "
-                "camera alignment and acceptable side/top visibility?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                "Approval Not Completed — Camera Viewpoint",
+                "The camera viewpoint was not confirmed as passing. The reference "
+                "remains a Candidate; no approval was recorded.",
             )
-            is not QMessageBox.StandardButton.Yes
-        ):
             return
         review_note = f"VIEWPOINT ACCEPTANCE: PASS — {viewpoint.strip()}"
     if (
@@ -349,18 +353,22 @@ def _approve(dialog: Any, reference_id: int) -> None:
                 "Approval requires a substantive human canonical geometry review.",
             )
             return
-        if (
-            QMessageBox.question(
+        geometry_response = QMessageBox.question(
+            dialog,
+            "Verify Canonical Geometry?",
+            "Have ALL newly visible structural features been verified against "
+            "independent design authority? If any are unknown, select No and "
+            "retain the Candidate.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if geometry_response != QMessageBox.StandardButton.Yes:
+            QMessageBox.information(
                 dialog,
-                "Verify Canonical Geometry?",
-                "Have ALL newly visible structural features been verified against "
-                "independent design authority? If any are unknown, select No and "
-                "retain the Candidate.",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                "Approval Not Completed — Canonical Geometry",
+                "Independent geometry verification was not confirmed. The reference "
+                "remains a Candidate; no approval was recorded.",
             )
-            is not QMessageBox.StandardButton.Yes
-        ):
             return
         review_note += f"\nCANONICAL GEOMETRY REVIEW: VERIFIED — {attestation.strip()}"
     authority_note = (
@@ -376,15 +384,18 @@ def _approve(dialog: Any, reference_id: int) -> None:
             "governed production-view readiness."
         )
     )
-    if (
-        QMessageBox.question(
+    final_response = QMessageBox.question(
+        dialog,
+        "Approve Canonical Reference",
+        f"Approve '{reference.title}'?\n\nThe reference will become locked.\n\n{authority_note}",
+    )
+    if final_response != QMessageBox.StandardButton.Yes:
+        QMessageBox.information(
             dialog,
-            "Approve Canonical Reference",
-            f"Approve '{reference.title}'?\n\nThe reference will become locked.\n\n"
-            f"{authority_note}",
+            "Approval Not Completed — Final Confirmation",
+            "Final approval was not confirmed. The reference remains a Candidate; "
+            "no approval was recorded.",
         )
-        is not QMessageBox.StandardButton.Yes
-    ):
         return
 
     def apply() -> object:
