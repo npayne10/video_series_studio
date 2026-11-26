@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -100,7 +101,13 @@ class StructuredKnowledgeProposalDialog(QDialog):
         )
         summary.setWordWrap(True)
         preview = QTableWidget(0, 3)
+        preview.setObjectName("structuredKnowledgeProposalPreview")
         preview.setHorizontalHeaderLabels(("Type", "Value", "Authority"))
+        preview.setWordWrap(True)
+        preview.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        preview.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        preview.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        preview.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         for fact in knowledge.facts:
             _add_row(preview, ("Fact", f"{fact.key}: {fact.value}", fact.authority.value))
         for capability in knowledge.functional_identity:
@@ -113,7 +120,6 @@ class StructuredKnowledgeProposalDialog(QDialog):
                 preview,
                 (constraint.kind.value.title(), constraint.rule, constraint.authority.value),
             )
-        preview.horizontalHeader().setStretchLastSection(True)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )

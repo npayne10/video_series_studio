@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem
+from PySide6.QtWidgets import QDialog, QHeaderView, QMessageBox, QTableWidget, QTableWidgetItem
 
 from vscs.application.assets import AssetService
 from vscs.application.caps import CanonicalReferenceService, CAPService
@@ -17,7 +17,10 @@ from vscs.domain.caps import (
     StructuredCAPKnowledge,
 )
 from vscs.presentation.widgets.cap_manager import CAPEditorDialog
-from vscs.presentation.widgets.cap_structured_knowledge import _propose
+from vscs.presentation.widgets.cap_structured_knowledge import (
+    StructuredKnowledgeProposalDialog,
+    _propose,
+)
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -153,3 +156,31 @@ def test_offline_proposal_preserves_existing_and_requires_review(
     )
     _propose(dialog, offline=False)
     context.shutdown()
+
+
+def test_structured_proposal_wraps_long_values_without_clipping(qtbot) -> None:
+    long_value = "One broad display and three circular buttons. " * 18
+    proposal = StructuredKnowledgeProposalDialog(
+        StructuredCAPKnowledge(
+            facts=(
+                PersistedCanonicalFact(
+                    key="components",
+                    value=long_value,
+                    source="reviewed-spec:abc",
+                    authority=KnowledgeAuthority.PROPOSED,
+                ),
+            )
+        )
+    )
+    qtbot.addWidget(proposal)
+    proposal.resize(760, 520)
+    proposal.show()
+    qtbot.waitExposed(proposal)
+
+    preview = proposal.findChild(QTableWidget, "structuredKnowledgeProposalPreview")
+    assert preview is not None
+    assert preview.wordWrap()
+    assert preview.horizontalHeader().sectionResizeMode(1) is QHeaderView.ResizeMode.Stretch
+    assert preview.verticalHeader().sectionResizeMode(0) is QHeaderView.ResizeMode.ResizeToContents
+    assert preview.item(0, 1).text() == "components: " + long_value.strip()
+    assert preview.rowHeight(0) > preview.fontMetrics().height() * 2
