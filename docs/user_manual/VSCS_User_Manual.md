@@ -1,5 +1,7 @@
 # Video Series Studio (VSCS) — User Manual
 
+> **For every new Episode, follow the [End-to-End Episode Production Runbook](VSCS_Episode_Production_Runbook.md) in order.** Its Stage B Asset Resolver, Camera, Lighting, Environment and Planning Review gates must be completed **before** Production Packages, ProductionTask preparation or GPU video generation. The historical phase acceptance sections below are reference material, not permission to skip those gates.
+
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
 **Last verified:** 2026-11-23 (Issue #58 merged; Issue #61 Stage A Windows/UI/SHA accepted, Stage B human-approved ChatGPT image not yet registered in VSCS; C4B.2B/C4 video generation unauthorized)
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  

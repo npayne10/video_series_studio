@@ -1,5 +1,11 @@
 # VSCS — Operator Help and User Manual Index
 
+## Start here for every Episode
+
+**[End-to-End Episode Production Runbook](VSCS_Episode_Production_Runbook.md)** is the required operator sequence: Story and proposal compilation → Episode/Scene/Shot Planner → Asset Resolver → Camera/Lighting/Environment Planner → Planning Review → Production Packages and all compiler tabs → Tasks/Scheduling → provider readiness → separately authorized video → GeneratedMedia QC → Episode Assembly → Post-Production/export. It includes per-gate acceptance checks and a record template.
+
+**Current stop (2026-11-26):** the diagnostic-console Shot's Asset Resolver shows **5 declared, 0 production-ready, 3 unresolved/Draft/stale visible assets, 2 reviewed nonvisual**. Resolve these three visible requirements before Camera Planner Ready and downstream W2.2 execution. The H3 GPU trial is **on hold**, regardless of code-level readiness.
+
 **Version:** v0.16 (living documentation, updated 2026-11-23)
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
