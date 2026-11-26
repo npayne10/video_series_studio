@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import json
-
 from pydantic import BaseModel, ConfigDict
 
-from vscs.application.caps.design_completion import DESIGN_REVIEW_KEY, DetailDecision
+from vscs.application.caps.design_completion import DetailDecision
+from vscs.application.caps.review_snapshot import load_review_snapshot
 from vscs.application.caps.service import CAPService
-from vscs.application.caps.structured_specification import (
-    SPECIFICATION_METADATA_KEY,
-    CAPStructuredSpecification,
-)
 from vscs.domain.caps import (
     CanonicalConstraintKind,
     CAPUpdate,
@@ -51,40 +46,33 @@ class CAPStructuredKnowledgeService:
     def propose_from_reviewed_cap(self, asset_id: str) -> StructuredKnowledgeProposal:
         """Reconcile persisted, human-reviewed facts without calling an AI provider.
 
-        The design-review fingerprint binds each accepted attribute to its current
-        specification; deferred, rejected or stale evidence never becomes canon.
+        Verify the saved field-level review, including historical records whose
+        master prompt was rebuilt after the review result hash was recorded.
+        Deferred, rejected or altered attributes never become proposed canon.
         """
         cap = self.caps.get(asset_id)
         asset = self.caps.assets.get(asset_id)
-        metadata = cap.production_metadata
-        try:
-            raw_spec = metadata[SPECIFICATION_METADATA_KEY]
-            raw_audit = metadata[DESIGN_REVIEW_KEY]
-            specification = CAPStructuredSpecification.model_validate(json.loads(raw_spec))
-            audit = json.loads(raw_audit)
-            if (
-                specification.asset_id != cap.asset_id
-                or specification.category != asset.category
-                or audit.get("result_fingerprint") != specification.fingerprint()
-                or audit.get("canon_approved") is True
-            ):
-                raise ValueError("Reviewed specification identity or fingerprint is inconsistent")
-            reviewed_fields = {
-                entry["field"]: entry
-                for entry in audit["fields"]
-                if entry.get("decision") in {DetailDecision.ACCEPT.value, DetailDecision.EDIT.value}
-            }
-        except (KeyError, TypeError, ValueError) as exc:
+        specification, review, diagnostic = load_review_snapshot(cap.production_metadata)
+        if specification is None or review is None:
             raise StructuredKnowledgeError(
-                "A current saved human-reviewed CAP specification is required for offline "
-                "structured completion. No provider request was submitted."
-            ) from exc
-
-        approved_attributes = {
-            key: value
-            for key, value in specification.canonical_attributes.items()
-            if key in reviewed_fields and reviewed_fields[key].get("final_value") == value
+                f"A current saved human-reviewed CAP specification is required: {diagnostic} "
+                "No provider request was submitted."
+            )
+        reviewed_attributes = {
+            field.field: field.final_value
+            for field in review.fields
+            if field.decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}
         }
+        if (
+            specification.asset_id != cap.asset_id
+            or specification.category != asset.category
+            or specification.canonical_attributes != reviewed_attributes
+        ):
+            raise StructuredKnowledgeError(
+                "Saved CAP identity or reviewed canonical attributes have changed; "
+                "repeat the CAP design review. No provider request was submitted."
+            )
+        approved_attributes = reviewed_attributes
         if not approved_attributes:
             raise StructuredKnowledgeError(
                 "No accepted or edited canonical attributes are current; review the CAP "

@@ -79,20 +79,31 @@ def test_reviewed_cap_offline_completion_uses_only_current_accepted_fields(tmp_p
         design_intent="A console",
         canonical_attributes={
             "geometry": "A tall housing with a blue display and three buttons",
-            "components": "One recessed dial",
         },
         master_prompt="Keep original housing",
         continuity_rules=("Keep controls in their original positions",),
     )
     audit = {
-        "result_fingerprint": spec.fingerprint(),
+        # Save rebuilds the reviewed MASTER prompt after generating this hash.
+        # Legitimate persisted reviews therefore have a different result hash.
+        "result_fingerprint": "a" * 64,
+        "version": 1,
+        "reviewer": "Operator",
+        "base_fingerprint": "b" * 64,
+        "image_authorized": False,
         "fields": [
             {
                 "field": "geometry",
                 "decision": "accept",
                 "final_value": spec.canonical_attributes["geometry"],
+                "origin": "design_proposal",
             },
-            {"field": "components", "decision": "defer", "final_value": ""},
+            {
+                "field": "components",
+                "decision": "defer",
+                "final_value": "",
+                "origin": "design_proposal",
+            },
         ],
         "canon_approved": False,
     }
@@ -122,7 +133,8 @@ def test_reviewed_cap_offline_completion_uses_only_current_accepted_fields(tmp_p
     assert caps.get("CAP-PRP-778").production_metadata["existing_review"] == "must stay"
 
     caps.update("CAP-PRP-778", CAPUpdate(canonical_description="Changed prose"))
-    # A changed canonical spec hash fails closed rather than reusing stale review.
+    # An altered accepted canonical attribute fails closed even if its hash is
+    # already different from the saved result hash after MASTER reconstruction.
     changed_spec = spec.model_copy(update={"canonical_attributes": {"geometry": "Changed"}})
     caps.update(
         "CAP-PRP-778",
@@ -135,6 +147,21 @@ def test_reviewed_cap_offline_completion_uses_only_current_accepted_fields(tmp_p
     )
     from pytest import raises
 
-    with raises(Exception, match="current saved human-reviewed"):
+    with raises(Exception, match="Reviewed field geometry does not match"):
+        service.propose_from_reviewed_cap("CAP-PRP-778")
+    # Unreviewed attributes must not be quietly omitted from an offline proposal.
+    extra_spec = spec.model_copy(
+        update={"canonical_attributes": {**spec.canonical_attributes, "materials": "Steel"}}
+    )
+    caps.update(
+        "CAP-PRP-778",
+        CAPUpdate(
+            production_metadata={
+                SPECIFICATION_METADATA_KEY: extra_spec.model_dump_json(),
+                DESIGN_REVIEW_KEY: json.dumps(audit),
+            }
+        ),
+    )
+    with raises(Exception, match="reviewed canonical attributes"):
         service.propose_from_reviewed_cap("CAP-PRP-778")
     context.shutdown()
