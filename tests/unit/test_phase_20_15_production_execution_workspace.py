@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QLineEdit
 
 from vscs.application.production_execution import (
     ProductionDeviceTelemetry,
@@ -337,3 +338,39 @@ def test_workspace_selects_governed_span_provider_profile(qtbot, tmp_path: Path)
 
     assert "READY" in workspace.provider_readiness_state.text()
     assert "PLAN-READY" in workspace.provider_readiness_state.text()
+
+
+def test_video_gpu_authorization_requires_exact_copyable_one_use_phrase(
+    qtbot, tmp_path: Path, monkeypatch
+) -> None:
+    backend = ProviderSelectionWorkspaceBackend(tmp_path / "production_package.json")
+    workspace = ProductionExecutionWorkspace(lambda: ProductionExecutionUiService(backend))
+    qtbot.addWidget(workspace)
+    workspace.refresh()
+    workspace.table.selectRow(0)
+    workspace._validate_provider_readiness()
+
+    seen_phrases: list[str] = []
+
+    def accept_exact(self: QDialog) -> int:
+        lines = self.findChildren(QLineEdit)
+        phrase = lines[0].text()
+        assert lines[0].isReadOnly()
+        assert "AUTHORIZE VIDEO GPU " in phrase
+        assert lines[1].text() == ""
+        lines[1].setText(phrase)
+        seen_phrases.append(phrase)
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(QDialog, "exec", accept_exact)
+    assert workspace._confirm_one_use_video_gpu_authorization("PT-20-15-UI-001", "production")
+    assert workspace._confirm_one_use_video_gpu_authorization("PT-20-15-UI-001", "production")
+    assert seen_phrases[0] != seen_phrases[1]
+
+    def reject_mismatch(self: QDialog) -> int:
+        lines = self.findChildren(QLineEdit)
+        lines[1].setText(lines[0].text() + " ")
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(QDialog, "exec", reject_mismatch)
+    assert not workspace._confirm_one_use_video_gpu_authorization("PT-20-15-UI-001", "production")
