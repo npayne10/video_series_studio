@@ -1,5 +1,9 @@
 # VSCS — Operator Help and User Manual Index
 
+## Automated structured CAP completion
+
+For an existing human-reviewed CAP, **Structured Production Knowledge → Prepare from Reviewed CAP (Offline)…** creates reviewable Facts, visible affordances, canonical Constraints and a draft Visual Identity from saved, current reviewed CAP fields. **Accept Reviewed Entries**, inspect and Save to persist; approval of CAP, Asset and reference views remains separate. The optional **AI Proposal (May Cost)…** requires explicit cost confirmation. [Operator procedure](../engineering/VSCS_Automated_Structured_CAP_Knowledge_Completion.md).
+
 ## Start here for every Episode
 
 **[End-to-End Episode Production Runbook](VSCS_Episode_Production_Runbook.md)** is the required operator sequence: Story and proposal compilation → Episode/Scene/Shot Planner → Asset Resolver → Camera/Lighting/Environment Planner → Planning Review → Production Packages and all compiler tabs → Tasks/Scheduling → provider readiness → separately authorized video → GeneratedMedia QC → Episode Assembly → Post-Production/export. It includes per-gate acceptance checks and a record template.
