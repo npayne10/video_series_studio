@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QEvent, QObject
+from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -55,7 +55,14 @@ from vscs.presentation.widgets.canonical_reference_gallery import CanonicalRefer
 class ReferenceEvidenceDialog(QDialog):
     """Resizable review form with readable instructions and an editable evidence note."""
 
-    def __init__(self, title: str, instructions: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        title: str,
+        instructions: str,
+        parent: QWidget | None = None,
+        *,
+        prepared_context: str = "",
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setMinimumSize(440, 250)
@@ -65,6 +72,14 @@ class ReferenceEvidenceDialog(QDialog):
         self.instruction_label.setObjectName("referenceEvidenceInstructions")
         self.instruction_label.setWordWrap(True)
         layout.addWidget(self.instruction_label)
+        if prepared_context:
+            self.context_label = QLabel(
+                "Prepared record context (not approval evidence):\n" + prepared_context
+            )
+            self.context_label.setObjectName("referenceEvidencePreparedContext")
+            self.context_label.setWordWrap(True)
+            self.context_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            layout.addWidget(self.context_label)
         self.evidence_edit = QPlainTextEdit()
         self.evidence_edit.setObjectName("referenceEvidenceNote")
         self.evidence_edit.setPlaceholderText("Record the observed evidence and any limitations…")
@@ -77,11 +92,30 @@ class ReferenceEvidenceDialog(QDialog):
         layout.addWidget(buttons)
 
 
-def _request_reference_evidence(dialog: Any, title: str, instructions: str) -> tuple[str, bool]:
-    review = ReferenceEvidenceDialog(title, instructions, parent=dialog)
+def _request_reference_evidence(
+    dialog: Any, title: str, instructions: str, *, prepared_context: str = ""
+) -> tuple[str, bool]:
+    review = ReferenceEvidenceDialog(
+        title, instructions, parent=dialog, prepared_context=prepared_context
+    )
     if review.exec() != QDialog.DialogCode.Accepted:
         return "", False
     return review.evidence_edit.toPlainText().strip(), True
+
+
+def _prepared_reference_context(reference: Any, registered: ReferenceLibraryEntry) -> str:
+    """Expose persisted identifiers and source lineage; never fabricate QC findings."""
+    details = [
+        f"Asset: {registered.asset_id}",
+        f"Requested view: {registered.view.value}",
+        f"Reference: {registered.reference_id} (record {registered.reference_record_id})",
+        f"Candidate file: {reference.file_path}",
+        f"Lifecycle: {registered.lifecycle.value}",
+    ]
+    if registered.source_master_version:
+        details.append(f"Source MASTER version: {registered.source_master_version}")
+    details.append("Camera alignment and unseen geometry: not independently verified by VSCS.")
+    return "\n".join(details)
 
 
 class CanonicalReferenceDropFilter(QObject):
@@ -345,6 +379,7 @@ def _approve(dialog: Any, reference_id: int) -> None:
             "Confirm this is the requested cardinal elevation. Record alignment evidence "
             "including any visible side/top face, yaw/elevation error and whether the "
             "viewpoint passes. Cancel if the camera is not acceptable.",
+            prepared_context=_prepared_reference_context(reference, registered),
         )
         if not accepted or len(viewpoint.strip()) < 30:
             QMessageBox.warning(
@@ -388,6 +423,7 @@ def _approve(dialog: Any, reference_id: int) -> None:
             "If no such evidence exists, "
             "Cancel and keep the image Candidate or reject it. Do not infer canon "
             "from model plausibility.",
+            prepared_context=_prepared_reference_context(reference, registered),
         )
         if not accepted or len(attestation.strip()) < 30:
             QMessageBox.warning(

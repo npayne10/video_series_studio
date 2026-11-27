@@ -39,6 +39,7 @@ from vscs.presentation.widgets.cap_reference_file_management import (
     ReferenceEvidenceDialog,
     _approve,
     _archive,
+    _prepared_reference_context,
     _reject,
     _set_primary_reference,
     _unlock,
@@ -199,7 +200,7 @@ def test_rear_qualification_approval_requires_all_three_confirmations(tmp_path):
     with (
         patch(
             "vscs.presentation.widgets.cap_reference_file_management._request_reference_evidence",
-            side_effect=lambda *args: next(review_entries),
+            side_effect=lambda *args, **kwargs: next(review_entries),
         ) as prompts,
         patch.object(
             QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes
@@ -209,6 +210,10 @@ def test_rear_qualification_approval_requires_all_three_confirmations(tmp_path):
         _approve(dialog, candidate)
 
     assert prompts.call_count == 2  # Camera QC and distinct geometry evidence
+    for call in prompts.call_args_list:
+        assert "Asset: CAP-PRP-999" in call.kwargs["prepared_context"]
+        assert "Requested view: rear" in call.kwargs["prepared_context"]
+        assert "not independently verified" in call.kwargs["prepared_context"]
     assert [call.args[1] for call in questions.call_args_list] == [
         "Accept Camera Viewpoint?",
         "Verify Canonical Geometry?",
@@ -250,16 +255,40 @@ def test_reference_evidence_dialog_wraps_and_resizes(qtbot):
     instructions = (
         "Explain how newly visible panels, vents and structural features were checked. " * 8
     )
-    dialog = ReferenceEvidenceDialog("Canonical Geometry Evidence Required", instructions)
+    dialog = ReferenceEvidenceDialog(
+        "Canonical Geometry Evidence Required",
+        instructions,
+        prepared_context="Asset: CAP-PRP-002\nRequested view: rear",
+    )
     qtbot.addWidget(dialog)
     dialog.show()
     assert dialog.instruction_label.wordWrap()
     assert dialog.instruction_label.text() == instructions
+    assert "Asset: CAP-PRP-002" in dialog.context_label.text()
+    assert dialog.evidence_edit.toPlainText() == ""  # No manufactured attestation
     assert dialog.size().width() >= 780
     dialog.resize(520, 440)
     assert dialog.width() == 520
     dialog.evidence_edit.setPlainText("Approved drawing revision A, rear face verified.")
     assert "drawing revision A" in dialog.evidence_edit.toPlainText()
+
+
+def test_prepared_context_never_invents_geometry_verification():
+    reference = SimpleNamespace(file_path=Path("Derived/rear_qualification_a.png"))
+    entry = SimpleNamespace(
+        asset_id="CAP-PRP-002",
+        view=CanonicalReferenceView.REAR,
+        reference_id="ref-rear-a",
+        reference_record_id=17,
+        lifecycle=CanonicalReferenceLifecycle.CANDIDATE,
+        source_master_version="1.0",
+    )
+    context = _prepared_reference_context(reference, entry)
+    assert "CAP-PRP-002" in context
+    assert "rear_qualification_a.png" in context
+    assert "Source MASTER version: 1.0" in context
+    assert "not independently verified" in context
+    assert "VERIFIED —" not in context
 
 
 def test_derived_primary_and_locked_master_unlock_are_blocked(tmp_path):
