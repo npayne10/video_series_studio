@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -25,6 +26,12 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps import StructuredKnowledgeError
+from vscs.application.caps.design_revision import REVISION_REFRESH_KEY
+from vscs.application.caps.revision_reconciliation import (
+    REVISION_RECONCILED_KEY,
+    CAPRevisionReconciliation,
+    plan_revision_reconciliation,
+)
 from vscs.domain.caps import (
     CanonicalConstraintKind,
     KnowledgeAuthority,
@@ -50,6 +57,7 @@ def preserve_governed_review_metadata(
         DESIGN_REVIEW_KEY,
         REVISION_HISTORY_KEY,
         REVISION_REFRESH_KEY,
+        REVISION_RECONCILED_KEY,
     ):
         if key in current:
             retained[key] = current[key]
@@ -167,6 +175,44 @@ class StructuredKnowledgeProposalDialog(QDialog):
             field.setReadOnly(protected)
             layout.addWidget(caption)
             layout.addWidget(field)
+        layout.addWidget(buttons)
+
+
+class CAPRevisionReconciliationDialog(QDialog):
+    """Show the exact proposed replacements before independent human acceptance."""
+
+    def __init__(self, plan: CAPRevisionReconciliation, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Reconcile Reviewed CAP Revision — Human Acceptance")
+        self.setObjectName("capRevisionReconciliationDialog")
+        self.resize(900, 640)
+        layout = QVBoxLayout(self)
+        guidance = QLabel(
+            "Inspect each old/new replacement. Only entries tied to the superseded reviewed "
+            "field are replaced; unrelated approved entries and metadata remain intact. "
+            "Accepting stages changes in the CAP editor. Save the CAP to persist; no provider "
+            "or approval action is triggered."
+        )
+        guidance.setWordWrap(True)
+        layout.addWidget(guidance)
+        table = QTableWidget(0, 3)
+        table.setObjectName("capRevisionReconciliationPreview")
+        table.setHorizontalHeaderLabels(("Target", "Existing value", "Reconciled value"))
+        table.setWordWrap(True)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        for row in plan.changes:
+            _add_row(table, row)
+        layout.addWidget(table, 1)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Accept Reconciled Entries")
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
 
@@ -325,6 +371,30 @@ def install_structured_cap_editor() -> None:
         metadata = preserve_governed_review_metadata(
             existing_metadata, knowledge.production_metadata
         )
+        pending = getattr(self, "_accepted_revision_reconciliation", None)
+        if pending is not None and existing_metadata.get(REVISION_REFRESH_KEY):
+            current = _read_knowledge(self)
+            if (
+                current.facts == pending.knowledge.facts
+                and current.constraints == pending.knowledge.constraints
+                and self.visual_identity.toPlainText() == pending.visual_identity
+                and self.production_notes.toPlainText() == pending.production_notes
+                and json.loads(existing_metadata[REVISION_REFRESH_KEY]).get(
+                    "specification_fingerprint"
+                )
+                == pending.fingerprint
+            ):
+                metadata.pop(REVISION_REFRESH_KEY, None)
+                from vscs.application.caps.design_revision import REVISION_HISTORY_KEY
+
+                metadata[REVISION_RECONCILED_KEY] = json.dumps(
+                    {
+                        "specification_fingerprint": pending.fingerprint,
+                        "human_accepted": True,
+                        "history_count": len(json.loads(existing_metadata[REVISION_HISTORY_KEY])),
+                    },
+                    sort_keys=True,
+                )
         return value.model_copy(
             update={
                 "structured_schema_version": knowledge.schema_version,
@@ -574,6 +644,33 @@ def _propose(dialog: Any, *, offline: bool = True) -> None:
     except (StructuredKnowledgeError, RuntimeError, ValueError) as exc:
         QMessageBox.critical(dialog, "Structured CAP Knowledge", str(exc))
         return
+    if offline:
+        metadata = dialog.caps.get(dialog.profile.asset_id).production_metadata
+        if REVISION_REFRESH_KEY in metadata:
+            try:
+                reconciliation = plan_revision_reconciliation(
+                    metadata,
+                    _read_knowledge(dialog),
+                    proposal,
+                    dialog.visual_identity.toPlainText(),
+                    dialog.production_notes.toPlainText(),
+                )
+            except (ValueError, TypeError, KeyError) as exc:
+                QMessageBox.warning(dialog, "CAP Revision Requires Independent Review", str(exc))
+                return
+            if not CAPRevisionReconciliationDialog(reconciliation, dialog).exec():
+                return
+            _apply_to_editor(dialog, reconciliation.knowledge)
+            dialog.visual_identity.setPlainText(reconciliation.visual_identity)
+            dialog.production_notes.setPlainText(reconciliation.production_notes)
+            dialog._accepted_revision_reconciliation = reconciliation
+            QMessageBox.information(
+                dialog,
+                "CAP Revision Reconciliation Staged",
+                "The reviewed replacements are staged. Save this CAP to persist them. "
+                "Then reopen and reassess the visual candidate.",
+            )
+            return
     review = StructuredKnowledgeProposalDialog(
         proposal.knowledge,
         dialog,
