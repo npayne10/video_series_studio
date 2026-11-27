@@ -8,7 +8,18 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QEvent, QObject
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QInputDialog,
+    QLabel,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from vscs.application.caps.asset_generator import (
     CanonicalAssetGenerationError,
@@ -39,6 +50,38 @@ from vscs.presentation.dialogs.canonical_asset_generation_dialog import (
 )
 from vscs.presentation.widgets import cap_manager
 from vscs.presentation.widgets.canonical_reference_gallery import CanonicalReferenceGallery
+
+
+class ReferenceEvidenceDialog(QDialog):
+    """Resizable review form with readable instructions and an editable evidence note."""
+
+    def __init__(self, title: str, instructions: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setMinimumSize(440, 250)
+        self.resize(780, 370)
+        layout = QVBoxLayout(self)
+        self.instruction_label = QLabel(instructions)
+        self.instruction_label.setObjectName("referenceEvidenceInstructions")
+        self.instruction_label.setWordWrap(True)
+        layout.addWidget(self.instruction_label)
+        self.evidence_edit = QPlainTextEdit()
+        self.evidence_edit.setObjectName("referenceEvidenceNote")
+        self.evidence_edit.setPlaceholderText("Record the observed evidence and any limitations…")
+        layout.addWidget(self.evidence_edit, 1)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+
+def _request_reference_evidence(dialog: Any, title: str, instructions: str) -> tuple[str, bool]:
+    review = ReferenceEvidenceDialog(title, instructions, parent=dialog)
+    if review.exec() != QDialog.DialogCode.Accepted:
+        return "", False
+    return review.evidence_edit.toPlainText().strip(), True
 
 
 class CanonicalReferenceDropFilter(QObject):
@@ -296,7 +339,7 @@ def _approve(dialog: Any, reference_id: int) -> None:
         }
         and "_qualification_" in Path(reference.file_path).name
     ):
-        viewpoint, accepted = QInputDialog.getMultiLineText(
+        viewpoint, accepted = _request_reference_evidence(
             dialog,
             "Viewpoint Acceptance — Independent QC",
             "Confirm this is the requested cardinal elevation. Record alignment evidence "
@@ -335,7 +378,7 @@ def _approve(dialog: Any, reference_id: int) -> None:
         }
         and "_qualification_" in Path(reference.file_path).name
     ):
-        attestation, accepted = QInputDialog.getMultiLineText(
+        attestation, accepted = _request_reference_evidence(
             dialog,
             "Canonical Geometry Evidence Required",
             "Independent geometry acceptance: identify the approved source drawings, "

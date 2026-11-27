@@ -36,6 +36,7 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
     DerivedReferenceGenerationDialog,
 )
 from vscs.presentation.widgets.cap_reference_file_management import (
+    ReferenceEvidenceDialog,
     _approve,
     _archive,
     _reject,
@@ -197,7 +198,7 @@ def test_rear_qualification_approval_requires_all_three_confirmations(tmp_path):
     )
     with (
         patch(
-            "vscs.presentation.widgets.cap_reference_file_management.QInputDialog.getMultiLineText",
+            "vscs.presentation.widgets.cap_reference_file_management._request_reference_evidence",
             side_effect=lambda *args: next(review_entries),
         ) as prompts,
         patch.object(
@@ -232,7 +233,7 @@ def test_rear_camera_decline_explains_unchanged_candidate(tmp_path):
     )
     with (
         patch(
-            "vscs.presentation.widgets.cap_reference_file_management.QInputDialog.getMultiLineText",
+            "vscs.presentation.widgets.cap_reference_file_management._request_reference_evidence",
             return_value=("PASS: Rear camera aligned with a small visible top face.", True),
         ),
         patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No),
@@ -243,6 +244,22 @@ def test_rear_camera_decline_explains_unchanged_candidate(tmp_path):
     assert "Camera Viewpoint" in notices.call_args.args[1]
     assert library.get(candidate).lifecycle is CanonicalReferenceLifecycle.CANDIDATE
     context.shutdown()
+
+
+def test_reference_evidence_dialog_wraps_and_resizes(qtbot):
+    instructions = (
+        "Explain how newly visible panels, vents and structural features were checked. " * 8
+    )
+    dialog = ReferenceEvidenceDialog("Canonical Geometry Evidence Required", instructions)
+    qtbot.addWidget(dialog)
+    dialog.show()
+    assert dialog.instruction_label.wordWrap()
+    assert dialog.instruction_label.text() == instructions
+    assert dialog.size().width() >= 780
+    dialog.resize(520, 440)
+    assert dialog.width() == 520
+    dialog.evidence_edit.setPlainText("Approved drawing revision A, rear face verified.")
+    assert "drawing revision A" in dialog.evidence_edit.toPlainText()
 
 
 def test_derived_primary_and_locked_master_unlock_are_blocked(tmp_path):
