@@ -258,7 +258,13 @@ def install_cap_editor_contract_refactoring() -> None:
         # Persisted structured CAP/review data is not part of the legacy
         # general-purpose CAP fields. Expose it without editing or approvals.
         if self.profile is not None:
-            panel = CAPReviewedSpecificationPanel(dict(self.profile.production_metadata), self)
+            panel = CAPReviewedSpecificationPanel(
+                dict(self.profile.production_metadata),
+                self,
+                caps=self.caps,
+                asset_id=self.profile.asset_id,
+                status=self.profile.status,
+            )
             self.reviewed_specification_panel = panel
             scroll = self.findChild(QScrollArea, "capEditorScrollArea")
             form = (

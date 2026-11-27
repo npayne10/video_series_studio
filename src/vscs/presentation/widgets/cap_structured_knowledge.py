@@ -43,7 +43,14 @@ def preserve_governed_review_metadata(
     from vscs.application.caps.structured_specification import SPECIFICATION_METADATA_KEY
 
     retained = dict(edited)
-    for key in (SPECIFICATION_METADATA_KEY, DESIGN_REVIEW_KEY):
+    from vscs.application.caps.design_revision import REVISION_HISTORY_KEY, REVISION_REFRESH_KEY
+
+    for key in (
+        SPECIFICATION_METADATA_KEY,
+        DESIGN_REVIEW_KEY,
+        REVISION_HISTORY_KEY,
+        REVISION_REFRESH_KEY,
+    ):
         if key in current:
             retained[key] = current[key]
         else:
@@ -308,7 +315,13 @@ def install_structured_cap_editor() -> None:
         value = original_update_value(self)
         knowledge = _read_knowledge(self)
         # The generic editor is not an authority-changing review workflow.
-        existing_metadata = self.profile.production_metadata if self.profile is not None else {}
+        # A revision may be saved from the reviewed-specification panel while
+        # this editor is open. Never restore stale metadata from self.profile.
+        existing_metadata = (
+            self.caps.get(self.profile.asset_id).production_metadata
+            if self.profile is not None
+            else {}
+        )
         metadata = preserve_governed_review_metadata(
             existing_metadata, knowledge.production_metadata
         )
