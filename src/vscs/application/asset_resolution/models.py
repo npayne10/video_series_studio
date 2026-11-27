@@ -38,6 +38,7 @@ class AssetResolutionRequest:
     require_cap: bool = True
     require_approved_cap: bool = True
     require_approved_references: bool = True
+    cinematic_references: bool = False
 
     def __post_init__(self) -> None:
         normalized = self.asset_id.strip().upper()

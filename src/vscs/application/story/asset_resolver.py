@@ -170,6 +170,7 @@ class ShotAssetBinding:
     notes: str = ""
     shot_contract_hash: str = ""
     asset_dependency_hash: str = ""
+    cinematic_references: bool = False
     inference_source: ShotAssetInferenceSource | None = None
     status: AssetBindingStatus = AssetBindingStatus.DRAFT
     visual_scope: ShotAssetVisualScope = ShotAssetVisualScope.VISIBLE_ASSET
@@ -1451,6 +1452,7 @@ class GovernedAssetResolutionService:
                 require_cap=True,
                 require_approved_cap=True,
                 require_approved_references=True,
+                cinematic_references=binding.cinematic_references,
             )
         )
 
@@ -1464,7 +1466,7 @@ class GovernedAssetResolutionService:
         projections = self.resolver.production_projections
         if projections is None:
             return None
-        return projections.project(binding.asset_id)
+        return projections.project(binding.asset_id, cinematic=binding.cinematic_references)
 
     def is_upstream_current(self, binding: ShotAssetBinding) -> bool:
         """Return whether the binding still matches its authoritative Shot contract."""
@@ -1534,6 +1536,7 @@ class GovernedAssetResolutionService:
         expected_category: AssetCategory,
         asset_id: str = "",
         notes: str = "",
+        cinematic_references: bool = False,
         inference_source: ShotAssetInferenceSource | None = None,
     ) -> ShotAssetBinding:
         """Create one Draft asset requirement beneath a current Ready Shot."""
@@ -1555,7 +1558,10 @@ class GovernedAssetResolutionService:
             asset_id=selected_asset,
             notes=notes.strip(),
             shot_contract_hash=self._shot_contract_hash(shot),
-            asset_dependency_hash=self._dependency_hash(selected_asset, expected_category),
+            asset_dependency_hash=self._dependency_hash(
+                selected_asset, expected_category, cinematic_references=cinematic_references
+            ),
+            cinematic_references=cinematic_references,
             inference_source=inference_source,
         )
         self._write((*self.list_bindings(), binding))
@@ -1570,6 +1576,7 @@ class GovernedAssetResolutionService:
         expected_category: AssetCategory,
         asset_id: str,
         notes: str,
+        cinematic_references: bool | None = None,
     ) -> ShotAssetBinding:
         """Update a Draft binding and refresh both upstream fingerprints."""
         current = self._require_binding(binding_id)
@@ -1580,6 +1587,9 @@ class GovernedAssetResolutionService:
         shot = self._require_ready_shot(current.shot_id)
         self._validate_category(expected_category)
         selected_asset = asset_id.strip().upper()
+        use_cinematic = (
+            current.cinematic_references if cinematic_references is None else cinematic_references
+        )
         same_requirement = (
             current.role == role.strip()
             and current.requirement == requirement.strip()
@@ -1595,7 +1605,10 @@ class GovernedAssetResolutionService:
             asset_id=selected_asset,
             notes=notes.strip(),
             shot_contract_hash=self._shot_contract_hash(shot),
-            asset_dependency_hash=self._dependency_hash(selected_asset, expected_category),
+            asset_dependency_hash=self._dependency_hash(
+                selected_asset, expected_category, cinematic_references=use_cinematic
+            ),
+            cinematic_references=use_cinematic,
             inference_source=None,
             visual_scope=(
                 current.visual_scope if same_requirement else ShotAssetVisualScope.VISIBLE_ASSET
@@ -1720,7 +1733,9 @@ class GovernedAssetResolutionService:
             )
         return all(self.is_production_ready(binding, proposals=proposals) for binding in physical)
 
-    def _dependency_hash(self, asset_id: str, category: AssetCategory) -> str:
+    def _dependency_hash(
+        self, asset_id: str, category: AssetCategory, *, cinematic_references: bool = False
+    ) -> str:
         if not asset_id:
             return ""
         result = self.resolver.resolve(
@@ -1731,6 +1746,7 @@ class GovernedAssetResolutionService:
                 require_cap=True,
                 require_approved_cap=True,
                 require_approved_references=True,
+                cinematic_references=cinematic_references,
             )
         )
         return result.fingerprint.checksum if result.fingerprint is not None else ""
@@ -1819,6 +1835,7 @@ class GovernedAssetResolutionService:
             notes=notes,
             shot_contract_hash=str(raw.get("shot_contract_hash", "")),
             asset_dependency_hash=str(raw.get("asset_dependency_hash", "")),
+            cinematic_references=bool(raw.get("cinematic_references", False)),
             inference_source=(
                 ShotAssetInferenceSource(inference_value) if inference_value else None
             ),
