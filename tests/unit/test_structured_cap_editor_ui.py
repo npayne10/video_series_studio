@@ -124,6 +124,7 @@ def test_offline_proposal_preserves_existing_and_requires_review(
             )
         ),
         source_summary="reviewed local test",
+        production_notes="Preserve reviewed geometry: Approved housing",
     )
 
     class OfflineOnly:
@@ -148,6 +149,12 @@ def test_offline_proposal_preserves_existing_and_requires_review(
         next(item for item in update.facts if item.key == "geometry").source == "reviewed-spec:abc"
     )
     assert "Geometry: Approved housing" in dialog.visual_identity.toPlainText()
+    assert "Preserve reviewed geometry" in dialog.production_notes.toPlainText()
+    dialog.visual_identity.setPlainText("Operator authored identity")
+    dialog.production_notes.setPlainText("Operator authored production notes")
+    _propose(dialog, offline=True)
+    assert dialog.visual_identity.toPlainText() == "Operator authored identity"
+    assert dialog.production_notes.toPlainText() == "Operator authored production notes"
 
     monkeypatch.setattr(
         QMessageBox,

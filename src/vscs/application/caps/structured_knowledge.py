@@ -30,6 +30,9 @@ class StructuredKnowledgeProposal(BaseModel):
     source_summary: str = ""
     unresolved_questions: tuple[str, ...] = ()
     contradictions: tuple[str, ...] = ()
+    visual_identity: str = ""
+    production_notes: str = ""
+    deferred_fields: tuple[str, ...] = ()
 
 
 class StructuredKnowledgeError(RuntimeError):
@@ -98,6 +101,13 @@ class CAPStructuredKnowledgeService:
             )
             for key, value in sorted(approved_attributes.items())
         )
+        deferred = tuple(
+            sorted(
+                field.field
+                for field in review.fields
+                if field.decision in {DetailDecision.DEFER, DetailDecision.REJECT}
+            )
+        )
         constraints += tuple(
             PersistedCanonicalConstraint(
                 kind=CanonicalConstraintKind.REQUIRED,
@@ -106,7 +116,7 @@ class CAPStructuredKnowledgeService:
                 source=source,
                 authority=KnowledgeAuthority.PROPOSED,
             )
-            for rule in specification.continuity_rules
+            for rule in (() if deferred else specification.continuity_rules)
             if rule.strip()
         )
 
@@ -133,10 +143,38 @@ class CAPStructuredKnowledgeService:
                 )
             )
         existing = self.knowledge(asset_id)
-        questions = (
-            ("No explicit functional capability is supported by the reviewed fields.",)
-            if not capabilities
-            else ()
+        identity = "\n".join(
+            f"{key.replace('_', ' ').title()}: {value}"
+            for key, value in sorted(approved_attributes.items())
+            if value.strip()
+        )
+        notes = "\n".join(
+            (
+                "Maintain the reviewed asset identity, materials, components and appearance "
+                "consistently across production shots.",
+                *(
+                    f"Preserve reviewed {key.replace('_', ' ')}: {value}"
+                    for key, value in sorted(approved_attributes.items())
+                    if value.strip()
+                ),
+                *(
+                    f"Continuity: {rule}"
+                    for rule in (() if deferred else specification.continuity_rules)
+                    if rule.strip()
+                ),
+            )
+        )
+        questions = tuple(
+            (
+                ["No explicit functional capability is supported by the reviewed fields."]
+                if not capabilities
+                else []
+            )
+            + (
+                ["Continuity prose withheld because deferred/rejected design fields need review."]
+                if deferred and specification.continuity_rules
+                else []
+            )
         )
         return StructuredKnowledgeProposal(
             asset_id=asset_id,
@@ -152,6 +190,9 @@ class CAPStructuredKnowledgeService:
             ),
             source_summary=source,
             unresolved_questions=questions,
+            visual_identity=identity,
+            production_notes=notes,
+            deferred_fields=deferred,
         )
 
     def propose(self, asset_id: str) -> StructuredKnowledgeProposal:

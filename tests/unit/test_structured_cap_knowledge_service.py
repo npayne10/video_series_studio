@@ -129,6 +129,11 @@ def test_reviewed_cap_offline_completion_uses_only_current_accepted_fields(tmp_p
     assert "three buttons" in proposal.knowledge.facts[0].value
     assert proposal.knowledge.functional_identity
     assert proposal.knowledge.constraints
+    assert "Geometry: A tall housing" in proposal.visual_identity
+    assert "Preserve reviewed geometry" in proposal.production_notes
+    assert "components" in proposal.deferred_fields
+    assert "Continuity:" not in proposal.production_notes
+    assert "Continuity prose withheld" in proposal.unresolved_questions[-1]
     assert caps.get("CAP-PRP-778").facts == ()
     assert caps.get("CAP-PRP-778").production_metadata["existing_review"] == "must stay"
 

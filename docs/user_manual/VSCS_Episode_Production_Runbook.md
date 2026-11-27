@@ -36,6 +36,8 @@
 
 ## B. Asset Resolver — the current blocked stage
 
+**CAP preparation update (W2.4):** Before resolving visible assets, open **Canonical Profiles → CAP → Edit Selected → Structured Production Knowledge → Prepare from Reviewed CAP (Offline)…**. Review the proposed Visual Identity and Production Notes together with Facts, Capabilities and Constraints. Accept the proposal and then **Save** the CAP. Existing text is preserved; unresolved/deferred design decisions remain non-authoritative. Follow the [full W2.4 procedure](../engineering/Issue_61_W2_4_Automated_CAP_Guidance_Completion.md) for CAP-PRP-001 and CAP-LOC-001.
+
 Open **Shot Planner → Asset Resolver…** for the selected Shot. The upper summary distinguishes (a) actual production-ready visible bindings, (b) unresolved/Draft/stale visible bindings and (c) independently reviewed **nonvisual** requirements. Press **Analyze Requirements** to review suggested canonical mappings; these are advisory. Each mapping must be evaluated on its own current Shot evidence.
 
 1. For each **visible physical asset**, select its row and **Edit** if enabled. Confirm production role, category, requirement, project asset and the **Current resolution** diagnostic. Save correct mapping as Draft. *Merely* matching a CAP ID or seeing `Partial` in the table is **not** production-ready.

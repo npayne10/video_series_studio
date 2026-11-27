@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QTableWidget,
@@ -83,6 +84,11 @@ class StructuredKnowledgeProposalDialog(QDialog):
         *,
         source_summary: str = "",
         unresolved_questions: tuple[str, ...] = (),
+        visual_identity: str = "",
+        production_notes: str = "",
+        deferred_fields: tuple[str, ...] = (),
+        existing_visual_identity: bool = False,
+        existing_production_notes: bool = False,
     ) -> None:
         super().__init__(parent)
         self.knowledge = knowledge
@@ -94,6 +100,8 @@ class StructuredKnowledgeProposalDialog(QDialog):
             "you save the CAP. Existing entries are preserved.\n\n"
             f"Evidence: {source_summary or 'provider proposal'}\n"
             f"Unresolved: {'; '.join(unresolved_questions) or 'none'}\n\n"
+            f"Deferred/rejected design fields (not proposed as canon): "
+            f"{', '.join(deferred_fields) or 'none'}\n\n"
             f"Facts: {len(knowledge.facts)}\n"
             f"Capabilities: {len(knowledge.functional_identity)}\n"
             f"Constraints: {len(knowledge.constraints)}\n"
@@ -129,6 +137,29 @@ class StructuredKnowledgeProposalDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(summary)
         layout.addWidget(preview, 1)
+        self.visual_identity_edit = QPlainTextEdit(visual_identity)
+        self.visual_identity_edit.setObjectName("reviewedVisualIdentityProposal")
+        self.visual_identity_edit.setMinimumHeight(90)
+        self.production_notes_edit = QPlainTextEdit(production_notes)
+        self.production_notes_edit.setObjectName("reviewedProductionNotesProposal")
+        self.production_notes_edit.setMinimumHeight(110)
+        for title, field, protected in (
+            ("Visual Identity", self.visual_identity_edit, existing_visual_identity),
+            (
+                "Production Notes / Continuity",
+                self.production_notes_edit,
+                existing_production_notes,
+            ),
+        ):
+            caption = QLabel(
+                f"{title} — existing editor text preserved (read-only proposal)"
+                if protected
+                else f"{title} — review/edit before accepting; filled only if currently empty"
+            )
+            caption.setWordWrap(True)
+            field.setReadOnly(protected)
+            layout.addWidget(caption)
+            layout.addWidget(field)
         layout.addWidget(buttons)
 
 
@@ -535,6 +566,20 @@ def _propose(dialog: Any, *, offline: bool = True) -> None:
         dialog,
         source_summary=proposal.source_summary,
         unresolved_questions=proposal.unresolved_questions,
+        visual_identity=proposal.visual_identity
+        or (
+            "\n".join(
+                f"{item.key.replace('_', ' ').title()}: {item.value}"
+                for item in proposal.knowledge.facts
+                if item.value.strip()
+            )
+            if offline
+            else ""
+        ),
+        production_notes=proposal.production_notes,
+        deferred_fields=proposal.deferred_fields,
+        existing_visual_identity=bool(dialog.visual_identity.toPlainText().strip()),
+        existing_production_notes=bool(dialog.production_notes.toPlainText().strip()),
     )
     if review.exec():
         current = _read_knowledge(dialog)
@@ -581,12 +626,11 @@ def _propose(dialog: Any, *, offline: bool = True) -> None:
             ),
         )
         if offline and not dialog.visual_identity.toPlainText().strip():
-            # An explicitly accepted reviewed-attribute summary fills only an
-            # empty visual-identity Draft. Never overwrite operator-authored text.
-            identity = "\n".join(
-                f"{item.key.replace('_', ' ').title()}: {item.value}"
-                for item in proposed.facts
-                if item.value.strip()
-            )
+            # A human-accepted proposal fills only an empty editor field.
+            identity = review.visual_identity_edit.toPlainText().strip()
             if identity:
                 dialog.visual_identity.setPlainText(identity)
+        if offline and not dialog.production_notes.toPlainText().strip():
+            guidance = review.production_notes_edit.toPlainText().strip()
+            if guidance:
+                dialog.production_notes.setPlainText(guidance)
