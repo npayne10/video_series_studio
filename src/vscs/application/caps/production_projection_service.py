@@ -48,12 +48,16 @@ class ProductionProjectionService:
         self.library = library or ReferenceLibraryService(references)
         self.readiness = readiness or CAPReadinessService(caps, references, self.library)
 
-    def project(self, asset_id: str) -> ProductionProjection:
+    def project(self, asset_id: str, *, cinematic: bool = False) -> ProductionProjection:
         """Return a stable projection including readiness diagnostics when blocked."""
         self._synchronize_asset_master(asset_id)
         cap = self.caps.get(asset_id)
         asset = self.caps.assets.get(asset_id)
-        readiness = self.readiness.evaluate(asset_id)
+        readiness = (
+            self.readiness.evaluate_cinematic(asset_id)
+            if cinematic
+            else self.readiness.evaluate(asset_id)
+        )
         production_references = tuple(
             sorted(
                 (
@@ -64,6 +68,7 @@ class ProductionProjectionService:
                         CanonicalReferenceLifecycle.APPROVED,
                         CanonicalReferenceLifecycle.LOCKED,
                     }
+                    or (cinematic and self.library.cinematic_usable(entry.reference_record_id))
                 ),
                 key=lambda reference: (
                     reference.family.value,
@@ -72,6 +77,7 @@ class ProductionProjectionService:
                 ),
             )
         )
+
         return ProductionProjection(
             identity=CanonicalIdentity(
                 asset_id=asset.asset_id,
@@ -98,6 +104,17 @@ class ProductionProjectionService:
             readiness=readiness,
             source_cap_version=cap.version,
         )
+
+    def project_cinematic(self, asset_id: str) -> ProductionProjection:
+        """Explicit limited-use projection; candidate lifecycle remains visible."""
+        return self.project(asset_id, cinematic=True)
+
+    def require_cinematic_ready(self, asset_id: str) -> ProductionProjection:
+        """Require a fresh, human-accepted cinematic projection for video use."""
+        projection = self.project_cinematic(asset_id)
+        if not projection.production_ready:
+            raise ProductionProjectionBlockedError(projection)
+        return projection
 
     def require_ready(self, asset_id: str) -> ProductionProjection:
         """Return the projection only when Production Readiness is authoritative READY."""

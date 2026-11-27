@@ -8,15 +8,19 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
+    QHBoxLayout,
     QInputDialog,
     QLabel,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -30,12 +34,16 @@ from vscs.application.caps.file_manager import (
     CanonicalReferenceFileManager,
     DuplicateFileResolution,
 )
+from vscs.application.caps.readiness_service import CAPReadinessService
 from vscs.application.caps.reference_library import (
     ReferenceLibraryError,
     ReferenceLibraryNotFoundError,
     ReferenceLibraryService,
 )
-from vscs.application.caps.reference_service import CanonicalReferenceError
+from vscs.application.caps.reference_service import (
+    CanonicalReferenceError,
+    CanonicalReferenceService,
+)
 from vscs.domain.caps import (
     CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
@@ -116,6 +124,95 @@ def _prepared_reference_context(reference: Any, registered: ReferenceLibraryEntr
         details.append(f"Source MASTER version: {registered.source_master_version}")
     details.append("Camera alignment and unseen geometry: not independently verified by VSCS.")
     return "\n".join(details)
+
+
+class CinematicCrossViewDialog(QDialog):
+    """Compare actual managed images, then collect a separate human-use judgment."""
+
+    def __init__(
+        self,
+        references: CanonicalReferenceService,
+        entries: tuple[ReferenceLibraryEntry, ...],
+        root: Path,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Cross-View Cinematic Acceptance — Human QC")
+        self.resize(1020, 600)
+        layout = QVBoxLayout(self)
+        guidance = QLabel(
+            "Compare the locked MASTER, approved Front and available side/rear candidates. "
+            "Accept only if overall silhouette, materials, identity and continuity are "
+            "suitable for cinematic video. This does NOT verify unseen geometry or "
+            "approve a canonical reference."
+        )
+        guidance.setWordWrap(True)
+        layout.addWidget(guidance)
+        strip = QWidget()
+        strip_layout = QHBoxLayout(strip)
+        project = root.resolve(strict=False)
+        for entry in entries:
+            column = QVBoxLayout()
+            path = (project / references.get(entry.reference_record_id).file_path).resolve(
+                strict=False
+            )
+            caption = QLabel(f"{entry.view.value.title()} — {entry.lifecycle.value.title()}")
+            caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            column.addWidget(caption)
+            picture = QLabel()
+            picture.setObjectName(f"cinematicComparisonImage_{entry.reference_record_id}")
+            picture.setFixedSize(180, 210)
+            picture.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            if path.is_relative_to(project) and path.is_file():
+                pixmap = QPixmap(str(path))
+                if not pixmap.isNull():
+                    picture.setPixmap(
+                        pixmap.scaled(
+                            picture.size(),
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+                    )
+            column.addWidget(picture)
+            cell = QWidget()
+            cell.setLayout(column)
+            strip_layout.addWidget(cell)
+        strip_layout.addStretch()
+        scroller = QScrollArea()
+        scroller.setWidgetResizable(True)
+        scroller.setWidget(strip)
+        layout.addWidget(scroller, 1)
+        self.assessment = QPlainTextEdit()
+        self.assessment.setObjectName("cinematicAssessment")
+        self.assessment.setPlaceholderText(
+            "Describe cross-view identity and continuity, camera-angle limitations "
+            "and any visible contradictions (at least 30 characters)."
+        )
+        layout.addWidget(self.assessment)
+        self.confirm = QCheckBox(
+            "I independently reviewed the displayed views and accept this candidate "
+            "for cinematic use only; no unseen geometry is declared canonical."
+        )
+        self.confirm.setObjectName("cinematicAcceptanceConfirmation")
+        layout.addWidget(self.confirm)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Accept Cinematic Use")
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _accept(self) -> None:
+        if not self.confirm.isChecked() or len(self.assessment.toPlainText().strip()) < 30:
+            QMessageBox.warning(
+                self,
+                "Human Cinematic QC Required",
+                "Review the views, provide substantive QC observations and check "
+                "the independent cinematic-use confirmation.",
+            )
+            return
+        self.accept()
 
 
 class CanonicalReferenceDropFilter(QObject):
@@ -486,6 +583,67 @@ def _approve(dialog: Any, reference_id: int) -> None:
     _run_workflow(dialog, apply)
 
 
+def _accept_cinematic(dialog: Any, reference_id: int) -> None:
+    """Record a limited-use decision without invoking canonical approval."""
+    if dialog.reference_service is None or dialog.project_directory is None:
+        return
+    library = ReferenceLibraryService(dialog.reference_service)
+    try:
+        entry = library.get(reference_id)
+        comparisons = library.cinematic_comparison(reference_id)
+        if entry.lifecycle is not CanonicalReferenceLifecycle.CANDIDATE:
+            raise ReferenceLibraryError("Only Candidate references may be accepted for cinema")
+    except ReferenceLibraryError as exc:
+        QMessageBox.warning(dialog, "Cinematic Review Unavailable", str(exc))
+        return
+    review = CinematicCrossViewDialog(
+        dialog.reference_service, comparisons, dialog.project_directory, parent=dialog
+    )
+    if review.exec() != QDialog.DialogCode.Accepted:
+        return
+    if (
+        QMessageBox.question(
+            dialog,
+            "Confirm Cinematic-Only Acceptance?",
+            "Record limited cinematic-use acceptance for this Candidate? "
+            "It will NOT become an Approved or Locked canonical reference.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        != QMessageBox.StandardButton.Yes
+    ):
+        return
+
+    def apply() -> object:
+        return library.accept_cinematic(
+            reference_id, getpass.getuser(), review.assessment.toPlainText()
+        )
+
+    _run_workflow(dialog, apply)
+
+
+def _show_cinematic_readiness(dialog: Any) -> None:
+    if dialog.reference_service is None or dialog.profile is None:
+        return
+    try:
+        report = CAPReadinessService(
+            dialog.reference_service.caps, dialog.reference_service
+        ).evaluate_cinematic(dialog.profile.asset_id)
+    except (ReferenceLibraryError, CanonicalReferenceError, ValueError) as exc:
+        QMessageBox.warning(dialog, "Cinematic Readiness Unavailable", str(exc))
+        return
+    gaps = "\n".join(f"• {gap.message}" for gap in report.blocking_gaps) or "No blockers"
+    QMessageBox.information(
+        dialog,
+        "Cinematic Production Readiness — Separate Assessment",
+        f"Cinematic overall: {report.overall_score}%\n"
+        f"Cinematic reference readiness: {report.references.score}%\n"
+        f"Generation gate: {report.generation.state.value}\n\n"
+        f"Remaining blockers:\n{gaps}\n\n"
+        "Canonical readiness and approval remain unchanged. No GPU job was submitted.",
+    )
+
+
 def _reject(dialog: Any, reference_id: int) -> None:
     if dialog.reference_service is None:
         return
@@ -618,6 +776,10 @@ def install_canonical_reference_file_management() -> None:
         )
         self.reference_gallery.candidate_requested.connect(lambda rid: _mark_candidate(self, rid))
         self.reference_gallery.approve_requested.connect(lambda rid: _approve(self, rid))
+        self.reference_gallery.cinematic_requested.connect(lambda rid: _accept_cinematic(self, rid))
+        self.reference_gallery.cinematic_readiness_requested.connect(
+            lambda: _show_cinematic_readiness(self)
+        )
         self.reference_gallery.reject_requested.connect(lambda rid: _reject(self, rid))
         self.reference_gallery.archive_requested.connect(lambda rid: _archive(self, rid))
         self.reference_gallery.unlock_requested.connect(lambda rid: _unlock(self, rid))

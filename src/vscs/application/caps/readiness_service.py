@@ -84,14 +84,14 @@ class CAPReadinessService:
         self.library = library or ReferenceLibraryService(references)
         self.templates = templates or CategoryReferenceTemplateService(references, self.library)
 
-    def evaluate(self, asset_id: str) -> ReadinessReport:
+    def evaluate(self, asset_id: str, *, cinematic: bool = False) -> ReadinessReport:
         """Evaluate one CAP from persisted canonical data only."""
         cap = self.caps.get(asset_id)
         asset = self.caps.assets.get(asset_id)
         entries = self.library.list_for_cap(asset_id)
 
         identity = self._identity(cap, entries, asset.category)
-        references = self._references(asset_id, entries)
+        references = self._references(asset_id, entries, cinematic=cinematic)
         generation = self._generation(cap.status, identity, references)
         production = self._production(cap, asset.category, generation)
         overall_score = round(
@@ -109,6 +109,10 @@ class CAPReadinessService:
             production=production,
             overall_score=overall_score,
         )
+
+    def evaluate_cinematic(self, asset_id: str) -> ReadinessReport:
+        """Explicit video-use assessment; canonical readiness remains unchanged."""
+        return self.evaluate(asset_id, cinematic=True)
 
     def evaluate_all(self) -> tuple[ReadinessReport, ...]:
         """Evaluate every persisted CAP in deterministic asset-ID order."""
@@ -211,7 +215,11 @@ class CAPReadinessService:
         )
 
     def _references(
-        self, asset_id: str, entries: tuple[ReferenceLibraryEntry, ...]
+        self,
+        asset_id: str,
+        entries: tuple[ReferenceLibraryEntry, ...],
+        *,
+        cinematic: bool = False,
     ) -> ReadinessAssessment:
         template = self.templates.template_for(asset_id)
         lifecycle_by_view = {}
@@ -221,7 +229,14 @@ class CAPReadinessService:
             # the project-local overlay still says Approved/Locked.
             if lifecycle in _APPROVED_REFERENCE_STATES and not self._has_consistent_approval(entry):
                 lifecycle = CanonicalReferenceLifecycle.CANDIDATE
-            lifecycle_by_view[entry.view] = lifecycle
+            if (
+                cinematic
+                and lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+                and self.library.cinematic_usable(entry.reference_record_id)
+            ):
+                lifecycle = CanonicalReferenceLifecycle.APPROVED
+            if lifecycle in _APPROVED_REFERENCE_STATES or entry.view not in lifecycle_by_view:
+                lifecycle_by_view[entry.view] = lifecycle
         required_ready = [
             view
             for view in template.required_views

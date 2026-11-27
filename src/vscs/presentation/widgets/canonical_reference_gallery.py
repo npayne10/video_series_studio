@@ -41,6 +41,8 @@ class CanonicalReferenceGallery(QWidget):
     primary_requested = Signal(int)
     candidate_requested = Signal(int)
     approve_requested = Signal(int)
+    cinematic_requested = Signal(int)
+    cinematic_readiness_requested = Signal()
     reject_requested = Signal(int)
     archive_requested = Signal(int)
     unlock_requested = Signal(int)
@@ -95,6 +97,10 @@ class CanonicalReferenceGallery(QWidget):
         self.primary_button = QPushButton("Set as Primary")
         self.candidate_button = QPushButton("Mark Candidate")
         self.approve_button = QPushButton("Approve")
+        self.cinematic_button = QPushButton("Accept for Cinema…")
+        self.cinematic_readiness_button = QPushButton("Cinematic Readiness…")
+        self.cinematic_readiness_button.setObjectName("cinematicReferenceReadinessButton")
+        self.cinematic_readiness_button.setEnabled(False)
         self.reject_button = QPushButton("Reject")
         self.archive_button = QPushButton("Archive")
         self.unlock_button = QPushButton("Unlock")
@@ -102,6 +108,7 @@ class CanonicalReferenceGallery(QWidget):
             self.primary_button,
             self.candidate_button,
             self.approve_button,
+            self.cinematic_button,
             self.reject_button,
             self.archive_button,
             self.unlock_button,
@@ -110,6 +117,10 @@ class CanonicalReferenceGallery(QWidget):
         self.primary_button.clicked.connect(lambda: self._emit(self.primary_requested))
         self.candidate_button.clicked.connect(lambda: self._emit(self.candidate_requested))
         self.approve_button.clicked.connect(lambda: self._emit(self.approve_requested))
+        self.cinematic_button.clicked.connect(lambda: self._emit(self.cinematic_requested))
+        self.cinematic_readiness_button.clicked.connect(
+            lambda: self.cinematic_readiness_requested.emit()
+        )
         self.reject_button.clicked.connect(lambda: self._emit(self.reject_requested))
         self.archive_button.clicked.connect(lambda: self._emit(self.archive_requested))
         self.unlock_button.clicked.connect(lambda: self._emit(self.unlock_requested))
@@ -118,6 +129,7 @@ class CanonicalReferenceGallery(QWidget):
         for button in (
             self.candidate_button,
             self.approve_button,
+            self.cinematic_button,
             self.reject_button,
             self.archive_button,
             self.unlock_button,
@@ -136,6 +148,7 @@ class CanonicalReferenceGallery(QWidget):
         details.addWidget(self.path_label)
         details.addWidget(self.description_label)
         details.addWidget(self.primary_button)
+        details.addWidget(self.cinematic_readiness_button)
         details.addLayout(workflow)
 
         detail_widget = QWidget()
@@ -179,6 +192,7 @@ class CanonicalReferenceGallery(QWidget):
         selected_id = self.selected_reference_id()
         self._project_directory = project_directory
         self._governed = {entry.reference_record_id: entry for entry in governed_entries}
+        self.cinematic_readiness_button.setEnabled(bool(self._governed))
         values = tuple(references)
         self._references = {reference.id: reference for reference in values}
         self.gallery.clear()
@@ -297,6 +311,7 @@ class CanonicalReferenceGallery(QWidget):
                 self.primary_button,
                 self.candidate_button,
                 self.approve_button,
+                self.cinematic_button,
                 self.reject_button,
                 self.archive_button,
                 self.unlock_button,
@@ -339,6 +354,11 @@ class CanonicalReferenceGallery(QWidget):
             family = governed.family.value.replace("_", " ").title()
             self.governance_label.setText(
                 f"Governance: {family} — {governed.lifecycle.value.title()}"
+                + (
+                    "\nCinematic-use QC recorded (freshness checked at use; not canonical approval)"
+                    if governed.cinematic_acceptance is not None
+                    else ""
+                )
             )
         self.version_label.setText(f"Version: {reference.version}")
         approved_at = (
@@ -380,6 +400,17 @@ class CanonicalReferenceGallery(QWidget):
                 and reference.status
                 in {CanonicalReferenceStatus.CANDIDATE, CanonicalReferenceStatus.APPROVED}
             )
+        )
+        self.cinematic_button.setEnabled(
+            governed is not None
+            and governed.family is not CanonicalReferenceFamily.MASTER
+            and governed.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+            and reference.status is CanonicalReferenceStatus.CANDIDATE
+        )
+        self.cinematic_button.setText(
+            "Review Cinematic Acceptance…"
+            if governed is not None and governed.cinematic_acceptance is not None
+            else "Accept for Cinema…"
         )
         self.approve_button.setText(
             "Confirm Governed Approval"

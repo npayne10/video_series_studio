@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QLabel, QMessageBox
 
 from vscs.application.assets import AssetService
 from vscs.application.assets.canonical_creation import CanonicalAssetCreationService
@@ -18,6 +18,7 @@ from vscs.application.caps.derived_reference_generation import (
     DerivedReferenceGenerationService,
     DerivedReferenceGeneratorRegistry,
 )
+from vscs.application.caps.production_projection_service import ProductionProjectionService
 from vscs.application.caps.readiness_service import CAPReadinessService
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
@@ -36,6 +37,7 @@ from vscs.presentation.widgets.cap_derived_reference_generation import (
     DerivedReferenceGenerationDialog,
 )
 from vscs.presentation.widgets.cap_reference_file_management import (
+    CinematicCrossViewDialog,
     ReferenceEvidenceDialog,
     _approve,
     _archive,
@@ -172,6 +174,88 @@ def test_derived_gallery_approval_updates_governed_library_and_readiness(tmp_pat
     assert not any("Front" in gap.message for gap in after.references.gaps)
     assert not after.references.ready  # Rear/Left/Right remain genuinely missing.
     assert not after.production.ready  # Draft CAP remains unapproved.
+    context.shutdown()
+
+
+def test_cinematic_acceptance_is_separate_and_fails_closed_on_image_change(qtbot, tmp_path):
+    context, project, _assets, caps, references, library, _master, generator, provider = _context(
+        tmp_path
+    )
+    front = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.FRONT,), provider_name=provider
+    )[0]
+    library.approve(front, "Fixture reviewer")
+    rear = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.REAR,), provider_name=provider
+    )[0]
+    with pytest.raises(ValueError, match="substantive"):
+        library.accept_cinematic(rear, "Reviewer", "fine")
+    entry = library.accept_cinematic(
+        rear,
+        "Reviewer",
+        "Rear silhouette and materials match the Front and MASTER; slight angle accepted.",
+    )
+    assert entry.cinematic_acceptance is not None
+    assert entry.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+    assert library.cinematic_usable(rear)
+    reopened_library = ReferenceLibraryService(references)
+    assert reopened_library.cinematic_usable(rear)
+    assert reopened_library.get(rear).cinematic_acceptance is not None
+    gallery = CanonicalReferenceGallery()
+    qtbot.addWidget(gallery)
+    gallery.set_references(
+        references.list_for_cap("CAP-PRP-999"),
+        project,
+        governed_entries=library.list_for_cap("CAP-PRP-999"),
+    )
+    for row in range(gallery.gallery.count()):
+        if gallery.gallery.item(row).data(gallery.REFERENCE_ID_ROLE) == rear:
+            gallery.gallery.setCurrentRow(row)
+            break
+    assert gallery.cinematic_button.isEnabled()
+    assert gallery.cinematic_readiness_button.isEnabled()
+    with qtbot.waitSignal(gallery.cinematic_readiness_requested, timeout=1000):
+        gallery.cinematic_readiness_button.click()
+    assert "Review Cinematic" in gallery.cinematic_button.text()
+    assert "Cinematic-use QC recorded" in gallery.governance_label.text()
+    assert references.get(rear).status is CanonicalReferenceStatus.CANDIDATE
+    readiness = CAPReadinessService(caps, references, library)
+    assert any("Rear" in gap.message for gap in readiness.evaluate("CAP-PRP-999").references.gaps)
+    assert not any(
+        "Rear" in gap.message for gap in readiness.evaluate_cinematic("CAP-PRP-999").references.gaps
+    )
+    projections = ProductionProjectionService(caps, references, library, readiness)
+    assert not any(
+        item.view is CanonicalReferenceView.REAR
+        for item in projections.project("CAP-PRP-999").references
+    )
+    assert any(
+        item.view is CanonicalReferenceView.REAR
+        and item.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+        for item in projections.project_cinematic("CAP-PRP-999").references
+    )
+    # Changing the source image invalidates cinematic use without modifying history.
+    rear_path = project / references.get(rear).file_path
+    rear_path.write_bytes(rear_path.read_bytes() + b"changed")
+    assert not library.cinematic_usable(rear)
+    assert any(
+        "Rear" in gap.message for gap in readiness.evaluate_cinematic("CAP-PRP-999").references.gaps
+    )
+    context.shutdown()
+
+
+def test_cross_view_dialog_requires_explicit_operator_review(qtbot, tmp_path):
+    context, project, _assets, _caps, references, library, _master, generator, provider = _context(
+        tmp_path
+    )
+    rear = generator.generate(
+        "CAP-PRP-999", (CanonicalReferenceView.REAR,), provider_name=provider
+    )[0]
+    dialog = CinematicCrossViewDialog(references, library.cinematic_comparison(rear), project)
+    qtbot.addWidget(dialog)
+    assert not dialog.confirm.isChecked()
+    assert dialog.assessment.toPlainText() == ""
+    assert dialog.findChildren(QLabel, "cinematicComparisonImage_" + str(rear))
     context.shutdown()
 
 
