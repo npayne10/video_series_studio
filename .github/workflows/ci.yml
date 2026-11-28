@@ -6,7 +6,29 @@ on:
   pull_request:
 
 jobs:
+  lint-format:
+    name: Fast Ruff lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Ruff
+        run: python -m pip install "ruff==0.17.6"
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Format check
+        run: python -m ruff format --check --no-cache .
+
   quality:
+    needs: lint-format
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -28,12 +50,6 @@ jobs:
       # update these together after a full Windows and Linux qualification.
       - name: Pin CI quality tools
         run: python -m pip install "ruff==0.17.6" "mypy==2.4.1"
-
-      - name: Lint
-        run: ruff check .
-
-      - name: Format check
-        run: ruff format --check .
 
       - name: Type check
         run: mypy

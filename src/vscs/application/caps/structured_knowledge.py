@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from vscs.application.caps.design_completion import DetailDecision
+from vscs.application.caps.review_snapshot import load_review_snapshot
 from vscs.application.caps.service import CAPService
 from vscs.domain.caps import (
     CanonicalConstraintKind,
@@ -28,6 +30,9 @@ class StructuredKnowledgeProposal(BaseModel):
     source_summary: str = ""
     unresolved_questions: tuple[str, ...] = ()
     contradictions: tuple[str, ...] = ()
+    visual_identity: str = ""
+    production_notes: str = ""
+    deferred_fields: tuple[str, ...] = ()
 
 
 class StructuredKnowledgeError(RuntimeError):
@@ -40,6 +45,155 @@ class CAPStructuredKnowledgeService:
     def __init__(self, caps: CAPService, provider: CAPGenerationProvider) -> None:
         self.caps = caps
         self.provider = provider
+
+    def propose_from_reviewed_cap(self, asset_id: str) -> StructuredKnowledgeProposal:
+        """Reconcile persisted, human-reviewed facts without calling an AI provider.
+
+        Verify the saved field-level review, including historical records whose
+        master prompt was rebuilt after the review result hash was recorded.
+        Deferred, rejected or altered attributes never become proposed canon.
+        """
+        cap = self.caps.get(asset_id)
+        asset = self.caps.assets.get(asset_id)
+        specification, review, diagnostic = load_review_snapshot(cap.production_metadata)
+        if specification is None or review is None:
+            raise StructuredKnowledgeError(
+                f"A current saved human-reviewed CAP specification is required: {diagnostic} "
+                "No provider request was submitted."
+            )
+        reviewed_attributes = {
+            field.field: field.final_value
+            for field in review.fields
+            if field.decision in {DetailDecision.ACCEPT, DetailDecision.EDIT}
+        }
+        if (
+            specification.asset_id != cap.asset_id
+            or specification.category != asset.category
+            or specification.canonical_attributes != reviewed_attributes
+        ):
+            raise StructuredKnowledgeError(
+                "Saved CAP identity or reviewed canonical attributes have changed; "
+                "repeat the CAP design review. No provider request was submitted."
+            )
+        approved_attributes = reviewed_attributes
+        if not approved_attributes:
+            raise StructuredKnowledgeError(
+                "No accepted or edited canonical attributes are current; review the CAP "
+                "specification first. No provider request was submitted."
+            )
+        source = f"reviewed-cap-specification:{specification.fingerprint()}"
+        facts = tuple(
+            PersistedCanonicalFact(
+                key=key,
+                value=value,
+                source=source,
+                authority=KnowledgeAuthority.PROPOSED,
+            )
+            for key, value in sorted(approved_attributes.items())
+        )
+        constraints = tuple(
+            PersistedCanonicalConstraint(
+                kind=CanonicalConstraintKind.REQUIRED,
+                rule=f"Preserve reviewed {key}: {value}",
+                rationale=f"Accepted CAP design field: {key}",
+                source=source,
+                authority=KnowledgeAuthority.PROPOSED,
+            )
+            for key, value in sorted(approved_attributes.items())
+        )
+        deferred = tuple(
+            sorted(
+                field.field
+                for field in review.fields
+                if field.decision in {DetailDecision.DEFER, DetailDecision.REJECT}
+            )
+        )
+        constraints += tuple(
+            PersistedCanonicalConstraint(
+                kind=CanonicalConstraintKind.REQUIRED,
+                rule=rule,
+                rationale="Persisted CAP continuity rule; subject to human review",
+                source=source,
+                authority=KnowledgeAuthority.PROPOSED,
+            )
+            for rule in (() if deferred else specification.continuity_rules)
+            if rule.strip()
+        )
+
+        # Physical affordances can be described, but unseen behavior/function
+        # must not be invented from the presence of a screen or controls.
+        capabilities: list[PersistedFunctionalCapability] = []
+        reviewed_text = " ".join(approved_attributes.values()).lower()
+        if "display" in reviewed_text or "screen" in reviewed_text:
+            capabilities.append(
+                PersistedFunctionalCapability(
+                    capability="visible_display_surface",
+                    description="Contains the reviewed visible display surface; display behavior is unspecified.",
+                    source=source,
+                    authority=KnowledgeAuthority.PROPOSED,
+                )
+            )
+        if "button" in reviewed_text or "dial" in reviewed_text or "control" in reviewed_text:
+            capabilities.append(
+                PersistedFunctionalCapability(
+                    capability="physical_control_interface",
+                    description="Contains the reviewed physical controls; their operational behavior is unspecified.",
+                    source=source,
+                    authority=KnowledgeAuthority.PROPOSED,
+                )
+            )
+        existing = self.knowledge(asset_id)
+        identity = "\n".join(
+            f"{key.replace('_', ' ').title()}: {value}"
+            for key, value in sorted(approved_attributes.items())
+            if value.strip()
+        )
+        notes = "\n".join(
+            (
+                "Maintain the reviewed asset identity, materials, components and appearance "
+                "consistently across production shots.",
+                *(
+                    f"Preserve reviewed {key.replace('_', ' ')}: {value}"
+                    for key, value in sorted(approved_attributes.items())
+                    if value.strip()
+                ),
+                *(
+                    f"Continuity: {rule}"
+                    for rule in (() if deferred else specification.continuity_rules)
+                    if rule.strip()
+                ),
+            )
+        )
+        questions = tuple(
+            (
+                ["No explicit functional capability is supported by the reviewed fields."]
+                if not capabilities
+                else []
+            )
+            + (
+                ["Continuity prose withheld because deferred/rejected design fields need review."]
+                if deferred and specification.continuity_rules
+                else []
+            )
+        )
+        return StructuredKnowledgeProposal(
+            asset_id=asset_id,
+            knowledge=StructuredCAPKnowledge(
+                facts=facts,
+                functional_identity=tuple(capabilities),
+                constraints=constraints,
+                semantic_tags=existing.semantic_tags,
+                production_classifications=existing.production_classifications
+                or (asset.category.value,),
+                behaviour_references=existing.behaviour_references,
+                production_metadata=existing.production_metadata,
+            ),
+            source_summary=source,
+            unresolved_questions=questions,
+            visual_identity=identity,
+            production_notes=notes,
+            deferred_fields=deferred,
+        )
 
     def propose(self, asset_id: str) -> StructuredKnowledgeProposal:
         """Use the configured CAP intelligence provider to propose structured knowledge.

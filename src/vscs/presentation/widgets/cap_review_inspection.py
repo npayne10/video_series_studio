@@ -8,24 +8,100 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QDialog,
+    QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
+    QMessageBox,
     QPlainTextEdit,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
+from vscs.application.caps.design_revision import REVISION_REFRESH_KEY, revise_reviewed_field
 from vscs.application.caps.review_snapshot import load_review_snapshot
+from vscs.application.caps.service import CAPService
+from vscs.domain.caps import CAPStatus
+
+
+class ReviewedFieldRevisionDialog(QDialog):
+    """Independent operator authorization for one accepted design field."""
+
+    def __init__(self, field: str, existing: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Revise Reviewed Specification — {field}")
+        self.setObjectName("capReviewedFieldRevisionDialog")
+        self.resize(760, 600)
+        form = QFormLayout(self)
+        self.existing = QPlainTextEdit(existing)
+        self.existing.setReadOnly(True)
+        self.revised = QPlainTextEdit(existing)
+        self.revised.setObjectName("capReviewedRevisionValue")
+        self.reviewer = QLineEdit()
+        self.reviewer.setObjectName("capReviewedRevisionReviewer")
+        self.rationale = QPlainTextEdit()
+        self.rationale.setObjectName("capReviewedRevisionRationale")
+        form.addRow("Original reviewed value (read-only)", self.existing)
+        form.addRow("Revised specification", self.revised)
+        form.addRow("Reviewer", self.reviewer)
+        form.addRow("Revision rationale", self.rationale)
+        notice = QLabel(
+            "This revises a Draft design requirement only. Existing knowledge, guidance and "
+            "visual candidate assessments must be refreshed. It does not approve the CAP, "
+            "MASTER or images, or start generation."
+        )
+        notice.setWordWrap(True)
+        form.addRow(notice)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self._confirm)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def _confirm(self) -> None:
+        if (
+            not self.revised.toPlainText().strip()
+            or not self.reviewer.text().strip()
+            or len(self.rationale.toPlainText().strip()) < 15
+            or self.revised.toPlainText().strip() == self.existing.toPlainText().strip()
+        ):
+            QMessageBox.warning(
+                self,
+                "Revision Incomplete",
+                "Enter a changed specification, reviewer and rationale (15+ characters).",
+            )
+            return
+        if (
+            QMessageBox.question(
+                self,
+                "Authorize Design Revision?",
+                "Save this human-authorized Draft specification revision and preserve the prior audit? "
+                "Derived knowledge and visual assessments will require refresh.",
+            )
+            is QMessageBox.StandardButton.Yes
+        ):
+            self.accept()
 
 
 class CAPReviewedSpecificationPanel(QWidget):
     """Non-editable, project-backed view of structured CAP details and review decisions."""
 
-    def __init__(self, metadata: dict[str, str], parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        metadata: dict[str, str],
+        parent: QWidget | None = None,
+        *,
+        caps: CAPService | None = None,
+        asset_id: str = "",
+        status: CAPStatus | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("capReviewedSpecificationPanel")
         self.specification, self.review, message = load_review_snapshot(metadata)
@@ -39,8 +115,22 @@ class CAPReviewedSpecificationPanel(QWidget):
         self.status_label.setObjectName("capReviewedSpecificationStatus")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
+        if metadata.get(REVISION_REFRESH_KEY):
+            warning = QLabel(
+                "Design revised: refresh structured CAP knowledge, Visual Identity and "
+                "Production Notes; reassess candidate images before approval."
+            )
+            warning.setObjectName("capReviewedRevisionRefreshWarning")
+            warning.setWordWrap(True)
+            layout.addWidget(warning)
         if self.specification is None or self.review is None:
             return
+
+        if caps is not None and status is CAPStatus.DRAFT:
+            revise_button = QPushButton("Revise Reviewed Specification…")
+            revise_button.setObjectName("capReviseReviewedSpecificationButton")
+            revise_button.clicked.connect(lambda: self._revise(caps, asset_id))
+            layout.addWidget(revise_button)
 
         summary = QFormLayout()
         summary.addRow("Asset ID", QLabel(self.specification.asset_id))
@@ -163,3 +253,41 @@ class CAPReviewedSpecificationPanel(QWidget):
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         return label
+
+    def _revise(self, caps: CAPService, asset_id: str) -> None:
+        if self.specification is None or self.review is None:
+            return
+        row = self.fields_table.currentRow()
+        if row < 0:
+            QMessageBox.information(self, "Select Field", "Select a reviewed field first.")
+            return
+        field = self.review.fields[row]
+        existing = self.specification.canonical_attributes.get(field.field)
+        if existing is None:
+            QMessageBox.warning(
+                self, "Field Not Revisable", "Only saved accepted/edited fields can be revised."
+            )
+            return
+        dialog = ReviewedFieldRevisionDialog(field.field, existing, self)
+        if not dialog.exec():
+            return
+        try:
+            revise_reviewed_field(
+                caps,
+                asset_id,
+                field=field.field,
+                final_value=dialog.revised.toPlainText(),
+                reviewer=dialog.reviewer.text(),
+                rationale=dialog.rationale.toPlainText(),
+                expected_fingerprint=self.specification.fingerprint(),
+            )
+        except (ValueError, RuntimeError) as exc:
+            QMessageBox.critical(self, "Design Revision Not Saved", str(exc))
+            return
+        self.status_label.setText(
+            "Design revision saved with prior audit preserved. Close and reopen this Production "
+            "Contract to inspect the current review; refresh derived knowledge and reassess images."
+        )
+        revision_button = self.findChild(QPushButton, "capReviseReviewedSpecificationButton")
+        if revision_button is not None:
+            revision_button.setEnabled(False)

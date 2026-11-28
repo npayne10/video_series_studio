@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from vscs.domain.assets import Asset, AssetCategory, AssetStatus
+from vscs.domain.caps import CanonicalReferenceLifecycle
 from vscs.presentation.widgets.asset_manager import AssetEditDialog, AssetManagerWidget
 
 
@@ -20,7 +21,9 @@ def _asset(file_path: Path | None = Path("references/Guild_Tug_MASTER.png")) -> 
 
 
 def test_asset_edit_dialog_protects_identity_and_governs_master(qtbot, tmp_path: Path) -> None:
-    dialog = AssetEditDialog(_asset(), tmp_path)
+    dialog = AssetEditDialog(
+        _asset(), tmp_path, master_lifecycle=CanonicalReferenceLifecycle.LOCKED
+    )
     qtbot.addWidget(dialog)
 
     assert dialog.asset_id.isReadOnly()

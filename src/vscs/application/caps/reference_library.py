@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -18,6 +19,7 @@ from vscs.domain.caps.production_contract import (
     ProductionReference,
 )
 from vscs.domain.caps.reference_library import (
+    CinematicReferenceAcceptance,
     ReferenceLibraryEntry,
     ReferenceLibrarySnapshot,
     ReferenceLifecycleAction,
@@ -39,6 +41,33 @@ class ReferenceLibraryConflictError(ReferenceLibraryError):
 
 class InvalidReferenceLifecycleTransitionError(ReferenceLibraryError):
     """Raised when a requested production lifecycle transition is invalid."""
+
+
+VIEWPOINT_ATTESTATION = "VIEWPOINT ACCEPTANCE: "
+GEOMETRY_ATTESTATION = "CANONICAL GEOMETRY REVIEW: "
+
+
+def _qualified_view_review(note: str, *, unseen_geometry: bool) -> bool:
+    """Require independent, substantive operator attestations; no inferred approval."""
+    lines = note.splitlines()
+    viewpoint = [
+        line[len(VIEWPOINT_ATTESTATION) :].strip()
+        for line in lines
+        if line.startswith(VIEWPOINT_ATTESTATION)
+    ]
+    geometry = [
+        line[len(GEOMETRY_ATTESTATION) :].strip()
+        for line in lines
+        if line.startswith(GEOMETRY_ATTESTATION)
+    ]
+    if len(viewpoint) != 1 or not viewpoint[0].startswith("PASS — ") or len(viewpoint[0]) < 37:
+        return False
+    return not (
+        unseen_geometry
+        and (
+            len(geometry) != 1 or not geometry[0].startswith("VERIFIED — ") or len(geometry[0]) < 41
+        )
+    )
 
 
 class ReferenceLibraryStore:
@@ -253,6 +282,25 @@ class ReferenceLibraryService:
         if not approver:
             raise ValueError("Approved by is required")
         reference = self.references.get(reference_record_id)
+        if (
+            entry.origin is CanonicalReferenceOrigin.VSCS_DERIVED
+            and entry.view
+            in {
+                CanonicalReferenceView.FRONT,
+                CanonicalReferenceView.REAR,
+                CanonicalReferenceView.LEFT,
+                CanonicalReferenceView.RIGHT,
+            }
+            and "_qualification_" in Path(reference.file_path).name
+            and not _qualified_view_review(
+                note, unseen_geometry=entry.view is not CanonicalReferenceView.FRONT
+            )
+        ):
+            raise ReferenceLibraryConflictError(
+                "Qualified views require separate human viewpoint acceptance and, "
+                "for Rear/side, canonical geometry review backed by design evidence. "
+                "Unverified features must remain Candidate or be rejected"
+            )
         if reference.status is CanonicalReferenceStatus.IMPORTED:
             self.references.mark_candidate(reference_record_id)
         reference = self.references.get(reference_record_id)
@@ -267,6 +315,118 @@ class ReferenceLibraryService:
             note,
             approval=(approver, now),
         )
+
+    def cinematic_comparison(self, reference_record_id: int) -> tuple[ReferenceLibraryEntry, ...]:
+        """Collect current MASTER, approved Front and available cardinal views for QC."""
+        selected = self.get(reference_record_id)
+        if selected.family is CanonicalReferenceFamily.MASTER or selected.view not in {
+            CanonicalReferenceView.FRONT,
+            CanonicalReferenceView.REAR,
+            CanonicalReferenceView.LEFT,
+            CanonicalReferenceView.RIGHT,
+        }:
+            raise ReferenceLibraryConflictError(
+                "Only cardinal production views support cinematic QC"
+            )
+        entries = self.list_for_cap(selected.asset_id)
+        master = next(
+            (
+                item
+                for item in entries
+                if item.family is CanonicalReferenceFamily.MASTER
+                and item.lifecycle is CanonicalReferenceLifecycle.LOCKED
+            ),
+            None,
+        )
+        if master is None:
+            raise ReferenceLibraryConflictError("A locked MASTER is required for cinematic QC")
+        master_reference = self.references.get(master.reference_record_id)
+        if (
+            master_reference.status is not CanonicalReferenceStatus.APPROVED
+            or not master_reference.locked
+        ):
+            raise ReferenceLibraryConflictError("MASTER legacy approval and lock are not current")
+        return (
+            master,
+            *(
+                item
+                for item in entries
+                if item.family is not CanonicalReferenceFamily.MASTER
+                and item.lifecycle
+                in {
+                    CanonicalReferenceLifecycle.CANDIDATE,
+                    CanonicalReferenceLifecycle.APPROVED,
+                    CanonicalReferenceLifecycle.LOCKED,
+                }
+                and item.view
+                in {
+                    CanonicalReferenceView.FRONT,
+                    CanonicalReferenceView.REAR,
+                    CanonicalReferenceView.LEFT,
+                    CanonicalReferenceView.RIGHT,
+                }
+            ),
+        )
+
+    def _comparison_hashes(self, reference_record_id: int) -> dict[str, str]:
+        project = self._store().project_directory.resolve(strict=True)
+        comparisons = self.cinematic_comparison(reference_record_id)
+        if not any(
+            item.view is CanonicalReferenceView.FRONT
+            and item.lifecycle
+            in {CanonicalReferenceLifecycle.APPROVED, CanonicalReferenceLifecycle.LOCKED}
+            and self.references.get(item.reference_record_id).status
+            is CanonicalReferenceStatus.APPROVED
+            and self.references.get(item.reference_record_id).locked
+            for item in comparisons
+        ):
+            raise ReferenceLibraryConflictError("An approved Front is required for cross-view QC")
+        hashes: dict[str, str] = {}
+        for entry in comparisons:
+            reference = self.references.get(entry.reference_record_id)
+            path = (project / reference.file_path).resolve(strict=True)
+            if not path.is_relative_to(project) or not path.is_file():
+                raise ReferenceLibraryConflictError(
+                    "Cinematic evidence must be a managed project file"
+                )
+            hashes[str(entry.reference_record_id)] = sha256(path.read_bytes()).hexdigest()
+        return hashes
+
+    def accept_cinematic(
+        self, reference_record_id: int, actor: str, assessment: str
+    ) -> ReferenceLibraryEntry:
+        """Record an explicit limited-use decision without approving canonical geometry."""
+        entry = self.get(reference_record_id)
+        if entry.lifecycle is not CanonicalReferenceLifecycle.CANDIDATE:
+            raise ReferenceLibraryConflictError("Cinematic acceptance requires a Candidate view")
+        if not actor.strip() or len(assessment.strip()) < 30:
+            raise ValueError("Human actor and substantive cinematic QC assessment are required")
+        hashes = self._comparison_hashes(reference_record_id)
+        if str(reference_record_id) not in hashes:
+            raise ReferenceLibraryConflictError("Selected reference is absent from comparison")
+        updated = entry.model_copy(
+            update={
+                "cinematic_acceptance": CinematicReferenceAcceptance(
+                    actor=actor.strip(), assessment=assessment.strip(), comparison_sha256=hashes
+                ),
+                "updated_at": datetime.now(UTC),
+            }
+        )
+        self._save_entry(self._store().load(), updated)
+        return updated
+
+    def cinematic_usable(self, reference_record_id: int) -> bool:
+        """Fail closed if image, MASTER, comparisons or lifecycle have changed."""
+        try:
+            entry = self.get(reference_record_id)
+            decision = entry.cinematic_acceptance
+            return bool(
+                entry.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+                and decision is not None
+                and decision.comparison_sha256 == self._comparison_hashes(reference_record_id)
+            )
+        except (ReferenceLibraryError, OSError, ValueError):
+            return False
 
     def lock(
         self,

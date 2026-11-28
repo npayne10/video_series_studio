@@ -31,7 +31,9 @@ from vscs.application.assets.canonical_creation import (
     CanonicalAssetCreationService,
 )
 from vscs.application.caps import CanonicalReferenceService, CAPService, ReferenceLibraryService
+from vscs.application.caps.reference_library import ReferenceLibraryError
 from vscs.domain.assets import Asset, AssetCategory, AssetCreate, AssetStatus, AssetUpdate
+from vscs.domain.caps import CanonicalReferenceLifecycle
 from vscs.presentation.dialogs.xpd_import_dialog import XPDImportDialog
 
 
@@ -181,6 +183,8 @@ class AssetEditDialog(QDialog):
         asset: Asset,
         project_directory: Path | None = None,
         parent: QWidget | None = None,
+        *,
+        master_lifecycle: CanonicalReferenceLifecycle | None = None,
     ) -> None:
         super().__init__(parent)
         self.asset = asset
@@ -188,6 +192,8 @@ class AssetEditDialog(QDialog):
             project_directory.resolve(strict=False) if project_directory is not None else None
         )
         self.original_master = str(asset.file_path or "")
+        self.original_master_lifecycle = master_lifecycle
+        self._master_selection_pending = False
         self.setWindowTitle(f"Edit Asset — {asset.asset_id}")
         self.setMinimumWidth(680)
 
@@ -212,9 +218,14 @@ class AssetEditDialog(QDialog):
         master_row.addWidget(self.master_reference, 1)
         master_row.addWidget(self.master_browse_button)
 
-        initial_status = (
-            "Locked canonical authority" if self.original_master else "Missing — select a MASTER"
-        )
+        if master_lifecycle is CanonicalReferenceLifecycle.LOCKED:
+            initial_status = "Locked canonical authority"
+        elif master_lifecycle is not None:
+            initial_status = f"MASTER {master_lifecycle.value.title()} — not locked"
+        elif self.original_master:
+            initial_status = "Asset file present — not a locked MASTER"
+        else:
+            initial_status = "Missing — select a MASTER"
         self.master_status = QLineEdit(initial_status)
         self.master_status.setReadOnly(True)
         self.master_confirmation = QCheckBox(
@@ -275,7 +286,10 @@ class AssetEditDialog(QDialog):
         )
 
     def master_changed(self) -> bool:
-        return self.master_reference.text().strip() != self.original_master
+        return (
+            self._master_selection_pending
+            or self.master_reference.text().strip() != self.original_master
+        )
 
     def selected_master_path(self) -> Path | None:
         text = self.master_reference.text().strip()
@@ -321,10 +335,13 @@ class AssetEditDialog(QDialog):
             )
             return
         self.master_reference.setText(str(relative))
+        self._master_selection_pending = True
         self.master_confirmation.setChecked(False)
         self.master_confirmation.setEnabled(True)
         self.master_status.setText(
-            "Pending MASTER revision" if self.original_master else "Pending MASTER attachment"
+            "Pending MASTER revision"
+            if self.original_master_lifecycle is not None
+            else "Pending MASTER attachment"
         )
 
 
@@ -490,7 +507,19 @@ class AssetManagerWidget(QWidget):
         except AssetError as exc:
             QMessageBox.critical(self, "Asset Error", str(exc))
             return
-        dialog = AssetEditDialog(asset, self.assets.projects.project_directory, self)
+        master_lifecycle = None
+        if self.canonical_creation is not None:
+            try:
+                master_lifecycle = self.canonical_creation.active_master_lifecycle(asset_id)
+            except ReferenceLibraryError as exc:
+                QMessageBox.critical(self, "MASTER Governance Error", str(exc))
+                return
+        dialog = AssetEditDialog(
+            asset,
+            self.assets.projects.project_directory,
+            self,
+            master_lifecycle=master_lifecycle,
+        )
         dialog.open_canonical_profile_requested.connect(self.open_canonical_profile_requested.emit)
         if not dialog.exec():
             return

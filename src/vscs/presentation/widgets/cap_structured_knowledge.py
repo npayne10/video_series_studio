@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -10,9 +11,11 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QTableWidget,
@@ -23,6 +26,12 @@ from PySide6.QtWidgets import (
 )
 
 from vscs.application.caps import StructuredKnowledgeError
+from vscs.application.caps.design_revision import REVISION_REFRESH_KEY
+from vscs.application.caps.revision_reconciliation import (
+    REVISION_RECONCILED_KEY,
+    CAPRevisionReconciliation,
+    plan_revision_reconciliation,
+)
 from vscs.domain.caps import (
     CanonicalConstraintKind,
     KnowledgeAuthority,
@@ -41,7 +50,15 @@ def preserve_governed_review_metadata(
     from vscs.application.caps.structured_specification import SPECIFICATION_METADATA_KEY
 
     retained = dict(edited)
-    for key in (SPECIFICATION_METADATA_KEY, DESIGN_REVIEW_KEY):
+    from vscs.application.caps.design_revision import REVISION_HISTORY_KEY, REVISION_REFRESH_KEY
+
+    for key in (
+        SPECIFICATION_METADATA_KEY,
+        DESIGN_REVIEW_KEY,
+        REVISION_HISTORY_KEY,
+        REVISION_REFRESH_KEY,
+        REVISION_RECONCILED_KEY,
+    ):
         if key in current:
             retained[key] = current[key]
         else:
@@ -73,15 +90,33 @@ def _terms(text: str) -> tuple[str, ...]:
 
 
 class StructuredKnowledgeProposalDialog(QDialog):
-    """Review an AI-generated structured proposal before placing it in the editor."""
+    """Review source-grounded proposals before explicitly accepting them."""
 
-    def __init__(self, knowledge: StructuredCAPKnowledge, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        knowledge: StructuredCAPKnowledge,
+        parent: QWidget | None = None,
+        *,
+        source_summary: str = "",
+        unresolved_questions: tuple[str, ...] = (),
+        visual_identity: str = "",
+        production_notes: str = "",
+        deferred_fields: tuple[str, ...] = (),
+        existing_visual_identity: bool = False,
+        existing_production_notes: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.knowledge = knowledge
         self.setWindowTitle("Structured CAP Knowledge Proposal")
         self.resize(760, 520)
         summary = QLabel(
-            "AI proposal only — nothing is persisted until you accept this proposal and save the CAP.\n\n"
+            "Source-grounded proposal — inspect every entry. Accepting it merges entries into "
+            "the editor as human-reviewed Approved knowledge; nothing is persisted until "
+            "you save the CAP. Existing entries are preserved.\n\n"
+            f"Evidence: {source_summary or 'provider proposal'}\n"
+            f"Unresolved: {'; '.join(unresolved_questions) or 'none'}\n\n"
+            f"Deferred/rejected design fields (not proposed as canon): "
+            f"{', '.join(deferred_fields) or 'none'}\n\n"
             f"Facts: {len(knowledge.facts)}\n"
             f"Capabilities: {len(knowledge.functional_identity)}\n"
             f"Constraints: {len(knowledge.constraints)}\n"
@@ -89,7 +124,13 @@ class StructuredKnowledgeProposalDialog(QDialog):
         )
         summary.setWordWrap(True)
         preview = QTableWidget(0, 3)
+        preview.setObjectName("structuredKnowledgeProposalPreview")
         preview.setHorizontalHeaderLabels(("Type", "Value", "Authority"))
+        preview.setWordWrap(True)
+        preview.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        preview.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        preview.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        preview.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         for fact in knowledge.facts:
             _add_row(preview, ("Fact", f"{fact.key}: {fact.value}", fact.authority.value))
         for capability in knowledge.functional_identity:
@@ -102,16 +143,76 @@ class StructuredKnowledgeProposalDialog(QDialog):
                 preview,
                 (constraint.kind.value.title(), constraint.rule, constraint.authority.value),
             )
-        preview.horizontalHeader().setStretchLastSection(True)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Use Proposal")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Accept Reviewed Entries")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)
         layout.addWidget(summary)
         layout.addWidget(preview, 1)
+        self.visual_identity_edit = QPlainTextEdit(visual_identity)
+        self.visual_identity_edit.setObjectName("reviewedVisualIdentityProposal")
+        self.visual_identity_edit.setMinimumHeight(90)
+        self.production_notes_edit = QPlainTextEdit(production_notes)
+        self.production_notes_edit.setObjectName("reviewedProductionNotesProposal")
+        self.production_notes_edit.setMinimumHeight(110)
+        for title, field, protected in (
+            ("Visual Identity", self.visual_identity_edit, existing_visual_identity),
+            (
+                "Production Notes / Continuity",
+                self.production_notes_edit,
+                existing_production_notes,
+            ),
+        ):
+            caption = QLabel(
+                f"{title} — existing editor text preserved (read-only proposal)"
+                if protected
+                else f"{title} — review/edit before accepting; filled only if currently empty"
+            )
+            caption.setWordWrap(True)
+            field.setReadOnly(protected)
+            layout.addWidget(caption)
+            layout.addWidget(field)
+        layout.addWidget(buttons)
+
+
+class CAPRevisionReconciliationDialog(QDialog):
+    """Show the exact proposed replacements before independent human acceptance."""
+
+    def __init__(self, plan: CAPRevisionReconciliation, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Reconcile Reviewed CAP Revision — Human Acceptance")
+        self.setObjectName("capRevisionReconciliationDialog")
+        self.resize(900, 640)
+        layout = QVBoxLayout(self)
+        guidance = QLabel(
+            "Inspect each old/new replacement. Only entries tied to the superseded reviewed "
+            "field are replaced; unrelated approved entries and metadata remain intact. "
+            "Accepting stages changes in the CAP editor. Save the CAP to persist; no provider "
+            "or approval action is triggered."
+        )
+        guidance.setWordWrap(True)
+        layout.addWidget(guidance)
+        table = QTableWidget(0, 3)
+        table.setObjectName("capRevisionReconciliationPreview")
+        table.setHorizontalHeaderLabels(("Target", "Existing value", "Reconciled value"))
+        table.setWordWrap(True)
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        for row in plan.changes:
+            _add_row(table, row)
+        layout.addWidget(table, 1)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Accept Reconciled Entries")
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
 
@@ -196,7 +297,7 @@ def install_structured_cap_editor() -> None:
         heading.setWordWrap(True)
         heading.setObjectName("capStructuredKnowledgeGuidance")
 
-        self.propose_structured_button = QPushButton("Propose Structured Knowledge…")
+        self.propose_structured_button = QPushButton("Prepare from Reviewed CAP (Offline)…")
         self.propose_structured_button.setObjectName("proposeStructuredKnowledgeButton")
         parent = self.parent()
         generator = getattr(parent, "generator", None)
@@ -206,7 +307,10 @@ def install_structured_cap_editor() -> None:
         self.propose_structured_button.setEnabled(
             self.profile is not None and self._structured_service is not None
         )
-        self.propose_structured_button.clicked.connect(lambda: _propose(self))
+        self.propose_structured_button.clicked.connect(lambda: _propose(self, offline=True))
+        self.ai_structured_button = QPushButton("AI Proposal (May Cost)…")
+        self.ai_structured_button.setEnabled(self.propose_structured_button.isEnabled())
+        self.ai_structured_button.clicked.connect(lambda: _propose(self, offline=False))
 
         container = QWidget()
         container_layout = QVBoxLayout(container)
@@ -214,6 +318,7 @@ def install_structured_cap_editor() -> None:
         container_layout.addWidget(heading)
         container_layout.addWidget(self.structured_tabs)
         container_layout.addWidget(self.propose_structured_button)
+        container_layout.addWidget(self.ai_structured_button)
 
         form = self.layout().itemAt(1 if self.layout().count() > 2 else 0).layout()
         if not isinstance(form, QFormLayout):
@@ -256,10 +361,40 @@ def install_structured_cap_editor() -> None:
         value = original_update_value(self)
         knowledge = _read_knowledge(self)
         # The generic editor is not an authority-changing review workflow.
-        existing_metadata = self.profile.production_metadata if self.profile is not None else {}
+        # A revision may be saved from the reviewed-specification panel while
+        # this editor is open. Never restore stale metadata from self.profile.
+        existing_metadata = (
+            self.caps.get(self.profile.asset_id).production_metadata
+            if self.profile is not None
+            else {}
+        )
         metadata = preserve_governed_review_metadata(
             existing_metadata, knowledge.production_metadata
         )
+        pending = getattr(self, "_accepted_revision_reconciliation", None)
+        if pending is not None and existing_metadata.get(REVISION_REFRESH_KEY):
+            current = _read_knowledge(self)
+            if (
+                current.facts == pending.knowledge.facts
+                and current.constraints == pending.knowledge.constraints
+                and self.visual_identity.toPlainText() == pending.visual_identity
+                and self.production_notes.toPlainText() == pending.production_notes
+                and json.loads(existing_metadata[REVISION_REFRESH_KEY]).get(
+                    "specification_fingerprint"
+                )
+                == pending.fingerprint
+            ):
+                metadata.pop(REVISION_REFRESH_KEY, None)
+                from vscs.application.caps.design_revision import REVISION_HISTORY_KEY
+
+                metadata[REVISION_RECONCILED_KEY] = json.dumps(
+                    {
+                        "specification_fingerprint": pending.fingerprint,
+                        "human_accepted": True,
+                        "history_count": len(json.loads(existing_metadata[REVISION_HISTORY_KEY])),
+                    },
+                    sort_keys=True,
+                )
         return value.model_copy(
             update={
                 "structured_schema_version": knowledge.schema_version,
@@ -348,13 +483,31 @@ def _table_page(table: QTableWidget, defaults: tuple[str, ...]) -> QWidget:
 
 
 def _read_knowledge(dialog: Any) -> StructuredCAPKnowledge:
+    original = getattr(dialog, "_knowledge_provenance", None)
+    prior_facts = {item.key: item for item in original.facts} if original is not None else {}
+    prior_capabilities = (
+        {item.capability: item for item in original.functional_identity}
+        if original is not None
+        else {}
+    )
+    prior_constraints = (
+        {(item.kind, item.rule): item for item in original.constraints}
+        if original is not None
+        else {}
+    )
     facts = tuple(
         PersistedCanonicalFact(
             key=_text(dialog.facts_table, row, 0),
             value=_text(dialog.facts_table, row, 1),
             unit=_text(dialog.facts_table, row, 2) or None,
-            source="Human CAP editor",
-            authority=KnowledgeAuthority.APPROVED,
+            source=(
+                prior_facts[_text(dialog.facts_table, row, 0)].source
+                if _text(dialog.facts_table, row, 0) in prior_facts
+                and prior_facts[_text(dialog.facts_table, row, 0)].value
+                == _text(dialog.facts_table, row, 1)
+                else "Human CAP editor"
+            ),
+            authority=KnowledgeAuthority(_text(dialog.facts_table, row, 3).lower()),
         )
         for row in range(dialog.facts_table.rowCount())
         if _text(dialog.facts_table, row, 0) and _text(dialog.facts_table, row, 1)
@@ -363,8 +516,14 @@ def _read_knowledge(dialog: Any) -> StructuredCAPKnowledge:
         PersistedFunctionalCapability(
             capability=_text(dialog.capabilities_table, row, 0),
             description=_text(dialog.capabilities_table, row, 1),
-            source="Human CAP editor",
-            authority=KnowledgeAuthority.APPROVED,
+            source=(
+                prior_capabilities[_text(dialog.capabilities_table, row, 0)].source
+                if _text(dialog.capabilities_table, row, 0) in prior_capabilities
+                and prior_capabilities[_text(dialog.capabilities_table, row, 0)].description
+                == _text(dialog.capabilities_table, row, 1)
+                else "Human CAP editor"
+            ),
+            authority=KnowledgeAuthority(_text(dialog.capabilities_table, row, 2).lower()),
         )
         for row in range(dialog.capabilities_table.rowCount())
         if _text(dialog.capabilities_table, row, 0)
@@ -374,8 +533,21 @@ def _read_knowledge(dialog: Any) -> StructuredCAPKnowledge:
             kind=CanonicalConstraintKind(_text(dialog.constraints_table, row, 0).lower()),
             rule=_text(dialog.constraints_table, row, 1),
             rationale=_text(dialog.constraints_table, row, 2),
-            source="Human CAP editor",
-            authority=KnowledgeAuthority.APPROVED,
+            source=(
+                prior_constraints[
+                    (
+                        CanonicalConstraintKind(_text(dialog.constraints_table, row, 0).lower()),
+                        _text(dialog.constraints_table, row, 1),
+                    )
+                ].source
+                if (
+                    CanonicalConstraintKind(_text(dialog.constraints_table, row, 0).lower()),
+                    _text(dialog.constraints_table, row, 1),
+                )
+                in prior_constraints
+                else "Human CAP editor"
+            ),
+            authority=KnowledgeAuthority(_text(dialog.constraints_table, row, 3).lower()),
         )
         for row in range(dialog.constraints_table.rowCount())
         if _text(dialog.constraints_table, row, 1)
@@ -400,6 +572,11 @@ def _read_knowledge(dialog: Any) -> StructuredCAPKnowledge:
 
 
 def _load_knowledge(dialog: Any, profile: Any) -> None:
+    dialog._knowledge_provenance = StructuredCAPKnowledge(
+        facts=tuple(profile.facts),
+        functional_identity=tuple(profile.functional_identity),
+        constraints=tuple(profile.constraints),
+    )
     dialog.facts_table.setRowCount(0)
     for fact in profile.facts:
         _add_row(
@@ -444,14 +621,126 @@ def _apply_to_editor(dialog: Any, knowledge: StructuredCAPKnowledge) -> None:
     _load_knowledge(dialog, profile)
 
 
-def _propose(dialog: Any) -> None:
+def _propose(dialog: Any, *, offline: bool = True) -> None:
     if dialog.profile is None or dialog._structured_service is None:
         return
+    if not offline:
+        response = QMessageBox.question(
+            dialog,
+            "AI Structured CAP Proposal — Possible Cost",
+            "This will call the configured CAP AI provider and may incur a charge. "
+            "It does not approve or save the CAP. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if response != QMessageBox.StandardButton.Yes:
+            return
     try:
-        proposal = dialog._structured_service.propose(dialog.profile.asset_id)
+        proposal = (
+            dialog._structured_service.propose_from_reviewed_cap(dialog.profile.asset_id)
+            if offline
+            else dialog._structured_service.propose(dialog.profile.asset_id)
+        )
     except (StructuredKnowledgeError, RuntimeError, ValueError) as exc:
         QMessageBox.critical(dialog, "Structured CAP Knowledge", str(exc))
         return
-    review = StructuredKnowledgeProposalDialog(proposal.knowledge, dialog)
+    if offline:
+        metadata = dialog.caps.get(dialog.profile.asset_id).production_metadata
+        if REVISION_REFRESH_KEY in metadata:
+            try:
+                reconciliation = plan_revision_reconciliation(
+                    metadata,
+                    _read_knowledge(dialog),
+                    proposal,
+                    dialog.visual_identity.toPlainText(),
+                    dialog.production_notes.toPlainText(),
+                )
+            except (ValueError, TypeError, KeyError) as exc:
+                QMessageBox.warning(dialog, "CAP Revision Requires Independent Review", str(exc))
+                return
+            if not CAPRevisionReconciliationDialog(reconciliation, dialog).exec():
+                return
+            _apply_to_editor(dialog, reconciliation.knowledge)
+            dialog.visual_identity.setPlainText(reconciliation.visual_identity)
+            dialog.production_notes.setPlainText(reconciliation.production_notes)
+            dialog._accepted_revision_reconciliation = reconciliation
+            QMessageBox.information(
+                dialog,
+                "CAP Revision Reconciliation Staged",
+                "The reviewed replacements are staged. Save this CAP to persist them. "
+                "Then reopen and reassess the visual candidate.",
+            )
+            return
+    review = StructuredKnowledgeProposalDialog(
+        proposal.knowledge,
+        dialog,
+        source_summary=proposal.source_summary,
+        unresolved_questions=proposal.unresolved_questions,
+        visual_identity=proposal.visual_identity
+        or (
+            "\n".join(
+                f"{item.key.replace('_', ' ').title()}: {item.value}"
+                for item in proposal.knowledge.facts
+                if item.value.strip()
+            )
+            if offline
+            else ""
+        ),
+        production_notes=proposal.production_notes,
+        deferred_fields=proposal.deferred_fields,
+        existing_visual_identity=bool(dialog.visual_identity.toPlainText().strip()),
+        existing_production_notes=bool(dialog.production_notes.toPlainText().strip()),
+    )
     if review.exec():
-        _apply_to_editor(dialog, proposal.knowledge)
+        current = _read_knowledge(dialog)
+        proposed = proposal.knowledge
+        # Explicit acceptance in the preview is the human authority transition.
+        approved = StructuredCAPKnowledge(
+            facts=tuple(
+                item.model_copy(update={"authority": KnowledgeAuthority.APPROVED})
+                for item in proposed.facts
+            ),
+            functional_identity=tuple(
+                item.model_copy(update={"authority": KnowledgeAuthority.APPROVED})
+                for item in proposed.functional_identity
+            ),
+            constraints=tuple(
+                item.model_copy(update={"authority": KnowledgeAuthority.APPROVED})
+                for item in proposed.constraints
+            ),
+        )
+        _apply_to_editor(
+            dialog,
+            StructuredCAPKnowledge(
+                facts=tuple(
+                    {item.key: item for item in (*approved.facts, *current.facts)}.values()
+                ),
+                functional_identity=tuple(
+                    {
+                        item.capability: item
+                        for item in (*approved.functional_identity, *current.functional_identity)
+                    }.values()
+                ),
+                constraints=tuple(
+                    {
+                        (item.kind, item.rule): item
+                        for item in (*approved.constraints, *current.constraints)
+                    }.values()
+                ),
+                semantic_tags=current.semantic_tags or proposed.semantic_tags,
+                production_classifications=(
+                    current.production_classifications or proposed.production_classifications
+                ),
+                behaviour_references=current.behaviour_references,
+                production_metadata=current.production_metadata,
+            ),
+        )
+        if offline and not dialog.visual_identity.toPlainText().strip():
+            # A human-accepted proposal fills only an empty editor field.
+            identity = review.visual_identity_edit.toPlainText().strip()
+            if identity:
+                dialog.visual_identity.setPlainText(identity)
+        if offline and not dialog.production_notes.toPlainText().strip():
+            guidance = review.production_notes_edit.toPlainText().strip()
+            if guidance:
+                dialog.production_notes.setPlainText(guidance)

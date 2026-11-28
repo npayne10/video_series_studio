@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
 
@@ -10,14 +13,17 @@ from vscs.application.caps.reference_library import ReferenceLibraryService
 from vscs.application.caps.reference_service import CanonicalReferenceService
 from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.domain.caps import (
+    CanonicalReference,
     CanonicalReferenceCreate,
     CanonicalReferenceFamily,
     CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
+    CanonicalReferenceStatus,
     CanonicalReferenceType,
     CanonicalReferenceView,
     ReferenceCoverage,
 )
+from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 
 
 class DerivedReferenceGenerationError(RuntimeError):
@@ -38,6 +44,7 @@ class DerivedReferenceRequest:
     height: int = 720
     seed: int = 0
     project_directory: Path | None = None
+    progress_callback: Callable[[str], None] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +117,58 @@ class DerivedReferenceGenerationService:
         """Return category-template coverage for the active CAP reference set."""
         return self.templates.coverage(asset_id)
 
+    def master_authority_state(self, asset_id: str) -> tuple[bool, str]:
+        """Read-only UI gate; never invoke a provider to determine MASTER status."""
+        try:
+            self._resolve_locked_master(asset_id)
+        except DerivedReferenceGenerationError as exc:
+            return False, str(exc)
+        return True, "Approved, locked ChatGPT MASTER and reference record agree"
+
+    def _resolve_locked_master(
+        self, asset_id: str
+    ) -> tuple[
+        Path,
+        tuple[ReferenceLibraryEntry, ...],
+        ReferenceLibraryEntry,
+        CanonicalReference,
+        Path,
+    ]:
+        project = self.references.caps.assets.projects.project_directory
+        if project is None:
+            raise DerivedReferenceGenerationError("Open a project before generating references")
+        project = project.resolve(strict=False)
+        entries = self.library.list_for_cap(asset_id)
+        master = next(
+            (
+                entry
+                for entry in entries
+                if entry.family is CanonicalReferenceFamily.MASTER
+                and entry.lifecycle is CanonicalReferenceLifecycle.LOCKED
+            ),
+            None,
+        )
+        if master is None:
+            raise DerivedReferenceGenerationError(
+                "A locked ChatGPT MASTER is required before derived references can be generated"
+            )
+        master_record = self.references.get(master.reference_record_id)
+        if (
+            master_record.status is not CanonicalReferenceStatus.APPROVED
+            or not master_record.locked
+            or master_record.role is not CanonicalReferenceRole.PRIMARY
+        ):
+            raise DerivedReferenceGenerationError(
+                "Locked MASTER authority mismatch between the reference library and the "
+                "canonical reference record; review the MASTER in Assets before generation"
+            )
+        master_path = (project / master_record.file_path).resolve(strict=False)
+        if not master_path.exists() or not master_path.is_file():
+            raise DerivedReferenceGenerationError(
+                f"MASTER reference file does not exist: {master_record.file_path}"
+            )
+        return project, entries, master, master_record, master_path
+
     def generate_missing_required(
         self,
         asset_id: str,
@@ -119,6 +178,7 @@ class DerivedReferenceGenerationService:
         width: int = 1280,
         height: int = 720,
         seed: int = 0,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> tuple[int, ...]:
         """Generate every currently missing required derived view for the asset category."""
         coverage = self.coverage(asset_id)
@@ -138,6 +198,7 @@ class DerivedReferenceGenerationService:
             width=width,
             height=height,
             seed=seed,
+            progress_callback=progress_callback,
         )
 
     def generate(
@@ -150,6 +211,7 @@ class DerivedReferenceGenerationService:
         width: int = 1280,
         height: int = 720,
         seed: int = 0,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> tuple[int, ...]:
         """Generate selected views and register every output as a derived Candidate."""
         normalized_views = tuple(dict.fromkeys(views))
@@ -160,31 +222,7 @@ class DerivedReferenceGenerationService:
 
         provider = self.providers.require(provider_name)
         cap = self.references.caps.get(asset_id)
-        project = self.references.caps.assets.projects.project_directory
-        if project is None:
-            raise DerivedReferenceGenerationError("Open a project before generating references")
-        project = project.resolve(strict=False)
-
-        entries = self.library.list_for_cap(asset_id)
-        master = next(
-            (
-                entry
-                for entry in entries
-                if entry.family is CanonicalReferenceFamily.MASTER
-                and entry.lifecycle is CanonicalReferenceLifecycle.LOCKED
-            ),
-            None,
-        )
-        if master is None:
-            raise DerivedReferenceGenerationError(
-                "A locked ChatGPT MASTER is required before derived references can be generated"
-            )
-        master_record = self.references.get(master.reference_record_id)
-        master_path = (project / master_record.file_path).resolve(strict=False)
-        if not master_path.exists():
-            raise DerivedReferenceGenerationError(
-                f"MASTER reference file does not exist: {master_record.file_path}"
-            )
+        project, entries, master, master_record, master_path = self._resolve_locked_master(asset_id)
 
         existing_views = {
             entry.view
@@ -206,18 +244,42 @@ class DerivedReferenceGenerationService:
         image_root.mkdir(parents=True, exist_ok=True)
         created_ids: list[int] = []
         for offset, view in enumerate(normalized_views):
+            previous = [
+                entry
+                for entry in entries
+                if entry.view is view
+                and entry.lifecycle
+                in {
+                    CanonicalReferenceLifecycle.REJECTED,
+                    CanonicalReferenceLifecycle.ARCHIVED,
+                }
+            ]
+            predecessor = previous[-1] if previous else None
+            predecessor_hash = ""
+            if predecessor is not None:
+                prior_record = self.references.get(predecessor.reference_record_id)
+                prior_file = (project / prior_record.file_path).resolve(strict=False)
+                if prior_file.is_file():
+                    predecessor_hash = sha256(prior_file.read_bytes()).hexdigest()
+            isolated_description, excluded_context = self._isolated_description(
+                cap.canonical_description
+            )
+            isolated_visual, excluded_visual = self._isolated_description(cap.visual_identity)
             request = DerivedReferenceRequest(
                 asset_id=asset_id.upper(),
                 title=cap.title,
                 view=view,
                 master_path=master_path,
-                prompt=self._prompt(cap.canonical_description, cap.visual_identity, view),
+                prompt=self._prompt(isolated_description, isolated_visual, view),
                 negative_prompt=self._negative_prompt(),
                 width=width,
                 height=height,
                 seed=seed + offset,
                 project_directory=project,
+                progress_callback=progress_callback,
             )
+            if progress_callback is not None:
+                progress_callback(f"Starting {view.value} with {provider.name}")
             generated = provider.generate(request)
             suffix = Path(generated.filename).suffix or ".png"
             destination = self._destination(image_root, view, suffix)
@@ -239,6 +301,12 @@ class DerivedReferenceGenerationService:
                         f"Model: {generated.model or 'unspecified'}\n"
                         f"MASTER: {master.reference_id}\n"
                         f"View: {view.value}\n"
+                        f"Supersedes reference: {predecessor.reference_id if predecessor else 'none'}\n"
+                        f"Previous image SHA-256: {predecessor_hash or 'none'}\n"
+                        f"Seed: {generated.seed}\n"
+                        "Prompt scope: isolated asset, context excluded from provider input\n"
+                        "Excluded scene context: "
+                        f"{' | '.join((*excluded_context, *excluded_visual)) or 'none'}\n"
                         f"Production capable provider: {provider.production_capable}"
                     ),
                     version=master_record.version,
@@ -255,7 +323,130 @@ class DerivedReferenceGenerationService:
                 note=f"Generated {view.value} from locked MASTER {master.reference_id}",
             )
             created_ids.append(reference.id)
+            if progress_callback is not None:
+                progress_callback(f"Registered {view.value} Candidate {reference.id}")
         return tuple(created_ids)
+
+    def register_qualified_candidate(
+        self,
+        asset_id: str,
+        view: CanonicalReferenceView,
+        *,
+        output_path: Path,
+        master_reference_id: str,
+        master_sha256: str,
+        qualification_id: str,
+        provider_name: str,
+        seed: int,
+        sampling_mode: str = "fast",
+        actor: str = "Multiple-angle qualification",
+    ) -> int:
+        """Adopt a reconciled output as Candidate, never as an approved reference.
+
+        The caller must first verify the provider result and create its durable
+        audit record. This method rechecks MASTER and view authority at commit.
+        """
+        cap = self.references.caps.get(asset_id)
+        project, entries, master, master_record, master_path = self._resolve_locked_master(asset_id)
+        if (
+            master.reference_id != master_reference_id
+            or sha256(master_path.read_bytes()).hexdigest() != master_sha256
+        ):
+            raise DerivedReferenceGenerationError("MASTER changed before Candidate registration")
+        if any(
+            entry.view is view
+            and entry.lifecycle
+            not in {CanonicalReferenceLifecycle.REJECTED, CanonicalReferenceLifecycle.ARCHIVED}
+            for entry in entries
+        ):
+            raise DerivedReferenceGenerationError(
+                "Active production view blocks Candidate registration"
+            )
+        image_root = (
+            project / "Canonical Assets" / asset_id.upper() / "Images" / "Derived"
+        ).resolve()
+        path = output_path.resolve(strict=True)
+        if not path.is_relative_to(image_root) or path.suffix.lower() != ".png":
+            raise DerivedReferenceGenerationError(
+                "Qualified output is outside managed Derived images"
+            )
+        if not path.is_file() or not path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"):
+            raise DerivedReferenceGenerationError("Qualified output is not a PNG image")
+        if (
+            not qualification_id
+            or path.name != f"{view.value}_qualification_{qualification_id}.png"
+        ):
+            raise DerivedReferenceGenerationError(
+                "Qualification output filename does not match view"
+            )
+        reference = self.references.create(
+            asset_id,
+            CanonicalReferenceCreate(
+                cap_id=cap.id,
+                reference_type=CanonicalReferenceType.IMAGE,
+                role=CanonicalReferenceRole.SUPPLEMENTARY,
+                title=f"{cap.title} — {self._label(view)}",
+                file_path=path.relative_to(project),
+                description=self._prompt(
+                    self._isolated_description(cap.canonical_description)[0],
+                    self._isolated_description(cap.visual_identity)[0],
+                    view,
+                ),
+                notes=(
+                    f"VSCS multiple-angle qualified Candidate\nProvider: {provider_name}\n"
+                    f"MASTER: {master_reference_id}\nMASTER SHA-256: {master_sha256}\n"
+                    f"Qualification: {qualification_id}\nOutput SHA-256: {sha256(path.read_bytes()).hexdigest()}\n"
+                    f"View: {view.value}\nSeed: {seed}\nSampling mode: {sampling_mode}\n"
+                    "Human QC and approval required"
+                ),
+                version=master_record.version,
+            ),
+        )
+        self.references.mark_candidate(reference.id)
+        self.library.register_derived(
+            asset_id,
+            reference.id,
+            family=self._family(view),
+            view=view,
+            generator=provider_name,
+            actor=actor,
+            note=f"Qualified {qualification_id} from locked MASTER {master_reference_id}; Candidate only",
+        )
+        return reference.id
+
+    @staticmethod
+    def _isolated_description(description: str) -> tuple[str, tuple[str, ...]]:
+        """Exclude explicit scene relationships without modifying the persisted CAP.
+
+        The exclusion is sentence-based and audit-visible, not an AI rewrite.
+        No removed content is sent to the provider as a negative prompt either.
+        """
+        contextual = re.compile(
+            r"\b(?:beside|alongside|next to|adjacent to|nearby|opposite|"
+            r"surrounded by|located in|located within|aboard|"
+            r"physically separate from|in the same room)\b",
+            flags=re.IGNORECASE,
+        )
+        external = re.compile(
+            r"\b(?:workstation|inspection bay|vessel|spaceship|room|"
+            r"surroundings|environment|scene|background)\b",
+            flags=re.IGNORECASE,
+        )
+        sentences = tuple(
+            sentence.strip()
+            for sentence in re.split(r"(?<=[.!?])\s+", description.strip())
+            if sentence.strip()
+        )
+        excluded = tuple(
+            sentence
+            for sentence in sentences
+            if contextual.search(sentence) and external.search(sentence)
+        )
+        kept = tuple(sentence for sentence in sentences if sentence not in excluded)
+        return (
+            " ".join(kept) or "Preserve the canonical asset visible in the MASTER image.",
+            excluded,
+        )
 
     @staticmethod
     def _prompt(description: str, visual_identity: str, view: CanonicalReferenceView) -> str:
@@ -263,12 +454,33 @@ class DerivedReferenceGenerationService:
         visual = (
             visual_identity.strip() or "Preserve every visible canonical feature from the MASTER."
         )
+        viewpoints = {
+            CanonicalReferenceView.FRONT: (
+                "Strict straight-on frontal elevation, camera centred on the front face, "
+                "perpendicular to its plane; no three-quarter angle, visible side face "
+                "or visible top surface."
+            ),
+            CanonicalReferenceView.REAR: (
+                "Strict straight-on rear elevation, centred and perpendicular to the back; "
+                "no front face, three-quarter angle or visible top surface."
+            ),
+            CanonicalReferenceView.LEFT: (
+                "Strict straight-on view of the asset's own left side, perpendicular to "
+                "that side; no front or rear three-quarter angle."
+            ),
+            CanonicalReferenceView.RIGHT: (
+                "Strict straight-on view of the asset's own right side, perpendicular to "
+                "that side; no front or rear three-quarter angle."
+            ),
+        }
+        orientation = viewpoints.get(view, f"Show only the specified {label} viewpoint.")
         return (
             f"Using the supplied MASTER image as the absolute visual identity authority, create a "
             f"canonical {label} production reference of the exact same asset. Do not redesign, "
             f"restyle, add, remove, or reinterpret canonical features. Preserve geometry, "
             f"proportions, materials, colours, markings and identity exactly. Asset canon: "
             f"{description.strip()} Visual identity: {visual} Requested viewpoint only: {label}. "
+            f"Camera and orientation requirement: {orientation} "
             f"Neutral production-reference presentation, no dramatic action or scene context."
         )
 

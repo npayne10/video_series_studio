@@ -41,6 +41,17 @@ class ReferenceLifecycleEvent(BaseModel):
     to_lifecycle: CanonicalReferenceLifecycle | None = None
 
 
+class CinematicReferenceAcceptance(BaseModel):
+    """Separate human cinematic-use decision; never canonical geometry authority."""
+
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    actor: str = Field(min_length=1)
+    at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    assessment: str = Field(min_length=30)
+    comparison_sha256: dict[str, str] = Field(min_length=2)
+
+
 class ReferenceLibraryEntry(BaseModel):
     """Production metadata overlay for one structured CanonicalReference record."""
 
@@ -60,6 +71,7 @@ class ReferenceLibraryEntry(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     approved_by: str | None = Field(default=None, max_length=200)
     approved_at: datetime | None = None
+    cinematic_acceptance: CinematicReferenceAcceptance | None = None
     history: tuple[ReferenceLifecycleEvent, ...] = ()
 
     @model_validator(mode="after")

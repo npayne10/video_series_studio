@@ -63,6 +63,54 @@ class _ProductionProjections:
         return SimpleNamespace(references=self.references)
 
 
+class _CinematicProjections(_ProductionProjections):
+    def __init__(self, references: tuple[ProductionReference, ...], *, ready: bool) -> None:
+        super().__init__(references)
+        self.ready = ready
+
+    def project_cinematic(self, asset_id: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            references=self.references,
+            readiness=SimpleNamespace(
+                references=SimpleNamespace(ready=self.ready),
+                production=SimpleNamespace(ready=self.ready),
+            ),
+        )
+
+
+def test_cinematic_resolution_requires_fresh_view_authority_and_approved_cap() -> None:
+    candidate = _production_reference().model_copy(
+        update={"lifecycle": CanonicalReferenceLifecycle.CANDIDATE}
+    )
+    projections = _CinematicProjections((candidate,), ready=True)
+    resolver = AssetResolutionService(
+        _Assets(_asset()),  # type: ignore[arg-type]
+        _Caps(_cap()),  # type: ignore[arg-type]
+        _References((_reference(),)),  # type: ignore[arg-type]
+        projections,  # type: ignore[arg-type]
+    )
+    request = AssetResolutionRequest(_asset().asset_id, cinematic_references=True)
+
+    accepted = resolver.resolve(request)
+    assert accepted.resolved
+    assert accepted.references[0].reference_id == "MASTER-7"
+    assert accepted.references[0].checksum != ""
+    projections.ready = False
+    stale = resolver.resolve(request)
+    assert not stale.resolved
+    assert {item.code for item in stale.diagnostics} >= {
+        "reference.cinematic_not_ready",
+        "cap.cinematic_production_not_ready",
+    }
+
+    draft = _cap().model_copy(update={"status": CAPStatus.DRAFT})
+    projections.ready = True
+    resolver.caps = _Caps(draft)  # type: ignore[assignment]
+    unapproved = resolver.resolve(request)
+    assert not unapproved.resolved
+    assert "cap.not_approved" in {item.code for item in unapproved.diagnostics}
+
+
 def _asset() -> Asset:
     now = datetime.now(UTC)
     return Asset(

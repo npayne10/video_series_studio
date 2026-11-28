@@ -1,8 +1,12 @@
 """Read-only integrated CAP review inspection from persisted metadata."""
 
 import json
+from types import SimpleNamespace
+from unittest.mock import Mock
 
+import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel, QPushButton
 
 from vscs.application.caps.design_completion import (
     DESIGN_REVIEW_KEY,
@@ -11,11 +15,17 @@ from vscs.application.caps.design_completion import (
     DetailDecision,
     DetailOrigin,
 )
+from vscs.application.caps.design_revision import (
+    REVISION_HISTORY_KEY,
+    REVISION_REFRESH_KEY,
+    revise_reviewed_field,
+)
 from vscs.application.caps.structured_specification import (
     SPECIFICATION_METADATA_KEY,
     CAPStructuredSpecification,
 )
 from vscs.domain.assets.models import AssetCategory
+from vscs.domain.caps import CAPStatus
 from vscs.presentation.widgets.cap_review_inspection import (
     CAPReviewedSpecificationPanel,
     load_review_snapshot,
@@ -157,6 +167,8 @@ def test_generic_editor_preserves_governed_review_metadata():
     )
 
     original = _metadata()
+    original[REVISION_HISTORY_KEY] = '[{"field":"architecture"}]'
+    original[REVISION_REFRESH_KEY] = '{"requires_guidance_refresh":true}'
     edited = {
         SPECIFICATION_METADATA_KEY: "overwritten",
         "ordinary": "updated",
@@ -164,6 +176,8 @@ def test_generic_editor_preserves_governed_review_metadata():
     preserved = preserve_governed_review_metadata(original, edited)
     assert preserved[SPECIFICATION_METADATA_KEY] == original[SPECIFICATION_METADATA_KEY]
     assert preserved[DESIGN_REVIEW_KEY] == original[DESIGN_REVIEW_KEY]
+    assert preserved[REVISION_HISTORY_KEY] == original[REVISION_HISTORY_KEY]
+    assert preserved[REVISION_REFRESH_KEY] == original[REVISION_REFRESH_KEY]
     assert preserved["ordinary"] == "updated"
 
 
@@ -176,3 +190,92 @@ def test_generic_editor_cannot_inject_review_metadata_into_new_cap():
         {}, {DESIGN_REVIEW_KEY: "untrusted", SPECIFICATION_METADATA_KEY: "untrusted"}
     )
     assert result == {}
+
+
+def _revision_services(metadata, status=CAPStatus.DRAFT):
+    cap = SimpleNamespace(
+        asset_id="STORY-LOC-001",
+        status=status,
+        production_metadata=metadata,
+    )
+    caps = Mock()
+    caps.get.return_value = cap
+    caps.assets.get.return_value = SimpleNamespace(category=AssetCategory.LOCATION)
+    return caps
+
+
+def test_human_revision_preserves_original_audit_and_requires_refresh():
+    metadata = _metadata()
+    before = json.loads(metadata[DESIGN_REVIEW_KEY])
+    spec, _, _ = load_review_snapshot(metadata)
+    assert spec is not None
+    caps = _revision_services(metadata)
+    revise_reviewed_field(
+        caps,
+        spec.asset_id,
+        field="architecture",
+        final_value="Square corners and raised side returns",
+        reviewer="Neill Payne",
+        rationale="Operator accepts these visual design changes",
+        expected_fingerprint=spec.fingerprint(),
+    )
+    update = caps.update.call_args.args[1]
+    after = update.production_metadata
+    revised, review, diagnostic = load_review_snapshot(after)
+    assert revised is not None and review is not None, diagnostic
+    assert revised.canonical_attributes["architecture"] == "Square corners and raised side returns"
+    assert review.fields[0].decision is DetailDecision.EDIT
+    assert review.fields[0].origin is DetailOrigin.OPERATOR_EDITED
+    history = json.loads(after[REVISION_HISTORY_KEY])
+    assert history[0]["previous_review_audit"] == before
+    assert history[0]["old_value"] == "Console beside workstation"
+    refresh = json.loads(after[REVISION_REFRESH_KEY])
+    assert refresh["requires_visual_reassessment"] is True
+    assert refresh["requires_guidance_refresh"] is True
+    assert caps.update.call_count == 1
+
+    panel = CAPReviewedSpecificationPanel(
+        after, caps=caps, asset_id=spec.asset_id, status=CAPStatus.DRAFT
+    )
+    assert panel.findChild(QLabel, "capReviewedRevisionRefreshWarning")
+    assert panel.findChild(QPushButton, "capReviseReviewedSpecificationButton")
+
+
+def test_revision_rejects_stale_state_or_non_draft_without_writes():
+    metadata = _metadata()
+    spec, _, _ = load_review_snapshot(metadata)
+    assert spec is not None
+    for status, fingerprint in (
+        (CAPStatus.APPROVED, spec.fingerprint()),
+        (CAPStatus.DRAFT, "stale"),
+    ):
+        caps = _revision_services(metadata, status)
+        with pytest.raises(ValueError):
+            revise_reviewed_field(
+                caps,
+                spec.asset_id,
+                field="architecture",
+                final_value="Newly agreed design",
+                reviewer="Neill Payne",
+                rationale="Reviewed operator design revision",
+                expected_fingerprint=fingerprint,
+            )
+        caps.update.assert_not_called()
+
+
+def test_revision_does_not_promote_deferred_field():
+    metadata = _metadata()
+    spec, _, _ = load_review_snapshot(metadata)
+    assert spec is not None
+    caps = _revision_services(metadata)
+    with pytest.raises(ValueError, match="previously accepted"):
+        revise_reviewed_field(
+            caps,
+            spec.asset_id,
+            field="lighting",
+            final_value="A new lamp",
+            reviewer="Neill Payne",
+            rationale="Human authorized design refinement",
+            expected_fingerprint=spec.fingerprint(),
+        )
+    caps.update.assert_not_called()

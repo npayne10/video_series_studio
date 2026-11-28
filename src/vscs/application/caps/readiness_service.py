@@ -5,11 +5,21 @@ from __future__ import annotations
 from typing import ClassVar
 
 from vscs.application.caps.reference_library import ReferenceLibraryService
-from vscs.application.caps.reference_service import CanonicalReferenceService
+from vscs.application.caps.reference_service import (
+    CanonicalReferenceError,
+    CanonicalReferenceService,
+)
 from vscs.application.caps.reference_templates import CategoryReferenceTemplateService
 from vscs.application.caps.service import CAPService
 from vscs.domain.assets import AssetCategory
-from vscs.domain.caps import CanonicalReferenceLifecycle, CanonicalReferenceView, CAPStatus
+from vscs.domain.caps import (
+    CanonicalReferenceFamily,
+    CanonicalReferenceLifecycle,
+    CanonicalReferenceRole,
+    CanonicalReferenceStatus,
+    CanonicalReferenceView,
+    CAPStatus,
+)
 from vscs.domain.caps.readiness import (
     ReadinessAssessment,
     ReadinessDimension,
@@ -18,6 +28,7 @@ from vscs.domain.caps.readiness import (
     ReadinessSeverity,
     ReadinessState,
 )
+from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 from vscs.domain.caps.structured_knowledge import is_production_authority
 
 _APPROVED_REFERENCE_STATES = {
@@ -73,14 +84,14 @@ class CAPReadinessService:
         self.library = library or ReferenceLibraryService(references)
         self.templates = templates or CategoryReferenceTemplateService(references, self.library)
 
-    def evaluate(self, asset_id: str) -> ReadinessReport:
+    def evaluate(self, asset_id: str, *, cinematic: bool = False) -> ReadinessReport:
         """Evaluate one CAP from persisted canonical data only."""
         cap = self.caps.get(asset_id)
         asset = self.caps.assets.get(asset_id)
         entries = self.library.list_for_cap(asset_id)
 
         identity = self._identity(cap, entries, asset.category)
-        references = self._references(asset_id, entries)
+        references = self._references(asset_id, entries, cinematic=cinematic)
         generation = self._generation(cap.status, identity, references)
         production = self._production(cap, asset.category, generation)
         overall_score = round(
@@ -99,6 +110,10 @@ class CAPReadinessService:
             overall_score=overall_score,
         )
 
+    def evaluate_cinematic(self, asset_id: str) -> ReadinessReport:
+        """Explicit video-use assessment; canonical readiness remains unchanged."""
+        return self.evaluate(asset_id, cinematic=True)
+
     def evaluate_all(self) -> tuple[ReadinessReport, ...]:
         """Evaluate every persisted CAP in deterministic asset-ID order."""
         return tuple(
@@ -112,8 +127,24 @@ class CAPReadinessService:
     def blocking_gaps(self, asset_id: str) -> tuple[ReadinessGap, ...]:
         return self.evaluate(asset_id).blocking_gaps
 
+    def _has_consistent_approval(self, entry: ReferenceLibraryEntry) -> bool:
+        """A library lifecycle label cannot overrule a stale legacy reference."""
+        try:
+            reference = self.references.get(entry.reference_record_id)
+        except CanonicalReferenceError:
+            return False
+        master = entry.family is CanonicalReferenceFamily.MASTER
+        expected_role = (
+            CanonicalReferenceRole.PRIMARY if master else CanonicalReferenceRole.SUPPLEMENTARY
+        )
+        return (
+            reference.status is CanonicalReferenceStatus.APPROVED
+            and reference.locked
+            and reference.role is expected_role
+        )
+
     def _identity(
-        self, cap: object, entries: tuple[object, ...], category: AssetCategory
+        self, cap: object, entries: tuple[ReferenceLibraryEntry, ...], category: AssetCategory
     ) -> ReadinessAssessment:
         gaps: list[ReadinessGap] = []
         checks = 3
@@ -140,6 +171,7 @@ class CAPReadinessService:
                 for entry in entries
                 if getattr(entry, "view", None) is CanonicalReferenceView.MASTER
                 and getattr(entry, "lifecycle", None) is CanonicalReferenceLifecycle.LOCKED
+                and self._has_consistent_approval(entry)
             ),
             None,
         )
@@ -182,11 +214,29 @@ class CAPReadinessService:
             gaps=tuple(gaps),
         )
 
-    def _references(self, asset_id: str, entries: tuple[object, ...]) -> ReadinessAssessment:
+    def _references(
+        self,
+        asset_id: str,
+        entries: tuple[ReferenceLibraryEntry, ...],
+        *,
+        cinematic: bool = False,
+    ) -> ReadinessAssessment:
         template = self.templates.template_for(asset_id)
-        lifecycle_by_view = {
-            getattr(entry, "view", None): getattr(entry, "lifecycle", None) for entry in entries
-        }
+        lifecycle_by_view = {}
+        for entry in entries:
+            lifecycle = getattr(entry, "lifecycle", None)
+            # Keep a stale/unlocked legacy record non-authoritative even when
+            # the project-local overlay still says Approved/Locked.
+            if lifecycle in _APPROVED_REFERENCE_STATES and not self._has_consistent_approval(entry):
+                lifecycle = CanonicalReferenceLifecycle.CANDIDATE
+            if (
+                cinematic
+                and lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+                and self.library.cinematic_usable(entry.reference_record_id)
+            ):
+                lifecycle = CanonicalReferenceLifecycle.APPROVED
+            if lifecycle in _APPROVED_REFERENCE_STATES or entry.view not in lifecycle_by_view:
+                lifecycle_by_view[entry.view] = lifecycle
         required_ready = [
             view
             for view in template.required_views

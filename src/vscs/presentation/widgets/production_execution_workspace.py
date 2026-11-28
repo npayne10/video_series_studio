@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
@@ -1487,6 +1488,47 @@ class ProductionExecutionWorkspace(QWidget):
         value = selected.strip()
         return value or None
 
+    def _confirm_one_use_video_gpu_authorization(self, task_id: str, profile: str) -> bool:
+        """Require an exact, copyable, per-attempt phrase before a real provider run."""
+        readiness = self._provider_execution_readiness
+        if readiness is None or not readiness.ready_to_execute:
+            return False
+        phrase = f"AUTHORIZE VIDEO GPU {uuid4().hex}"
+        dialog = QDialog(self)
+        dialog.setWindowTitle("One-Use Video GPU Authorization")
+        layout = QVBoxLayout(dialog)
+        detail = QLabel(
+            "This will submit real video-generation work to the selected provider. "
+            "It may use substantial GPU memory and time. Generated video remains "
+            "unapproved until human review.\n\n"
+            f"Task: {task_id}\nExecution profile: {profile}\n"
+            f"Provider: {readiness.provider_profile_id}\n"
+            f"Provider plan: {readiness.provider_plan_id or '-'}\n\n"
+            "Copy the following one-use phrase and paste it into the field below:"
+        )
+        detail.setWordWrap(True)
+        layout.addWidget(detail)
+        expected = QLineEdit(phrase)
+        expected.setReadOnly(True)
+        expected.setToolTip("Select and copy this qualification-specific phrase.")
+        layout.addWidget(expected)
+        entered = QLineEdit()
+        entered.setPlaceholderText("Paste the exact authorization phrase")
+        layout.addWidget(entered)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+        entered.textChanged.connect(
+            lambda value: buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
+                value == phrase
+            )
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        return dialog.exec() == QDialog.DialogCode.Accepted and entered.text() == phrase
+
     def _run_automated_span_orchestration(self) -> None:
         if self._selected_task_id is None or self._timed_span_status is None:
             return
@@ -1497,6 +1539,8 @@ class ProductionExecutionWorkspace(QWidget):
             return
         task_id = self._selected_task_id
         profile = self.profile.currentText()
+        if not self._confirm_one_use_video_gpu_authorization(task_id, profile):
+            return
         thread = QThread(self)
         worker = _AutomatedSpanWorker(
             lambda: service.run_automated_timed_span_orchestration(

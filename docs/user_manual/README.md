@@ -1,16 +1,37 @@
 # VSCS — Operator Help and User Manual Index
 
-**Version:** v0.14 (living documentation, updated 2026-11-17)  
+## Automated structured CAP completion
+
+For an existing human-reviewed CAP, **Structured Production Knowledge → Prepare from Reviewed CAP (Offline)…** creates reviewable Facts, visible affordances, canonical Constraints and a draft Visual Identity from saved, current reviewed CAP fields. **Accept Reviewed Entries**, inspect and Save to persist; approval of CAP, Asset and reference views remains separate. The optional **AI Proposal (May Cost)…** requires explicit cost confirmation. [Operator procedure](../engineering/VSCS_Automated_Structured_CAP_Knowledge_Completion.md).
+
+## Start here for every Episode
+
+**[End-to-End Episode Production Runbook](VSCS_Episode_Production_Runbook.md)** is the required operator sequence: Story and proposal compilation → Episode/Scene/Shot Planner → Asset Resolver → Camera/Lighting/Environment Planner → Planning Review → Production Packages and all compiler tabs → Tasks/Scheduling → provider readiness → separately authorized video → GeneratedMedia QC → Episode Assembly → Post-Production/export. It includes per-gate acceptance checks and a record template.
+
+**Current stop (2026-11-26):** the diagnostic-console Shot's Asset Resolver shows **5 declared, 0 production-ready, 3 unresolved/Draft/stale visible assets, 2 reviewed nonvisual**. Resolve these three visible requirements before Camera Planner Ready and downstream W2.2 execution. The H3 GPU trial is **on hold**, regardless of code-level readiness.
+
+**Version:** v0.16 (living documentation, updated 2026-11-23)
 **Source:** Current VSCS development branch; do not treat work-in-progress instructions as accepted production authority.
 
-## Issue #58 — honest multi-field Stage C1 review (operator acceptance pending)
+## Issue #61 — governed ChatGPT MASTER-to-derived-reference route (Stage A accepted)
+
+The real entry point is **Assets → Add Asset / Edit Selected → Browse…** with a separately human-approved, authentic ChatGPT image and explicit provenance confirmation. That **single save** registers, approves and locks the MASTER immediately; the software does not perform a staged ChatGPT MASTER quality review for the operator. Existing local ComfyUI/Qwen supplementary Candidates remain supplementary and may not be mislabelled as ChatGPT MASTER. **Canonical Profiles → Generate Production References** requires consistent locked MASTER authority and produces **Supplementary Candidates**, not approved references. The gallery now routes registered derived approvals/rejections/archives into the production library, prevents derived-Primary/MASTER promotion, and clearly distinguishes an unregistered gallery image from production authority. Readiness fails closed on a legacy/library lock mismatch.
+
+- [Exact Windows runbook: accepted offline checks and controlled real MASTER/derived cycle](VSCS_User_Manual.md#issue-61--governed-chatgpt-master-and-derived-references-stage-a-accepted-stage-b-pending)
+- [Issue #61 formal engineering contract, view templates and acceptance matrix](../engineering/Issue_61_Governed_MASTER_Workflow_Audit.md)
+
+**Stage A operator accepted on 2026-11-23:** 19 focused / 2,993 full Windows tests (2 expected skips), CI, four UI screens, and 9 protected SHA-256 snapshot entries unchanged. **Stage B pending:** the newly ChatGPT-generated and human-approved Diagnostic Console image has **not yet been imported, registered or locked**. Follow the [exact Console source handoff and SHA test](../engineering/Issue_61_Stage_B_Console_Reference_Handoff.md). Actual derived GPU generation still requires separate per-call consent. No new real CAP/Canon/production or video approval was granted.
+
+**Target automation (approved specification; not yet built):** [Governed OpenAI MASTER generation and correction v1.0](../engineering/Governed_OpenAI_MASTER_Generation_Specification_V1.md), tracked separately in [Issue #67](https://github.com/npayne10/video_series_studio/issues/67). After the real MASTER/derived lifecycle has passed, rebuild the complete development and full-system UAT/end-to-end production acceptance backlog.
+
+## Issue #58 — honest multi-field Stage C1 review (merged, operator accepted 2026-11-22)
 
 The Stage C1 implementation candidate now permits one *source-quoted, operator-reviewed* shared atomic correction for two independently FAILED accepted CAP fields, such as the Console Candidate 1 raised dial violating both `geometry` and `components`. Different failures remain FAILED and need their own correction scope, not an invented PASS. C2.1 retains the scope for offline replay while resetting fresh ROI consent. Semantic findings are saved-report hints only; no paid AI, GPU job, attempt or image is initiated.
 
-- [Exact GUI runbook from launching VSCS through SHA non-mutation checks](VSCS_User_Manual.md#issue-58--correlated-stage-b--c1-field-failures-implementation-candidate-2026-11-22)
+- [Exact GUI runbook from launching VSCS through SHA non-mutation checks](VSCS_User_Manual.md#issue-58--correlated-stage-b--c1-field-failures-pr-65-merged-2026-11-22)
 - [Stage C engineering contract](../F5_4_2_STAGE_C_GOVERNED_VISUAL_CORRECTION.md)
 
-**Operator acceptance is not complete.** Protect historical Candidate 4 and the previously saved C2/C2.1 evidence; only a separately reviewed new immutable C2.1 record may be added during the offline acceptance.
+**Merged in PR #65** on 2026-11-22 following operator UI approval and historical CAP review non-mutation. Protected historical Candidate 4 and existing C2/C2.1 evidence remain governed; later actual edits and generation require fresh consent.
 
 ## Open first
 
@@ -559,3 +580,45 @@ The operator has **visually approved the final isolated F5.4.1D `run_004` illust
 ### F5.4.2 Stage A operator acceptance — 2026-11-12
 
 Software validation **2,800 passed, 1 skipped**, Ruff/Mypy clean. UI screenshot confirms the Candidate review shows four reviewed fields as unverified, separates advisory semantic findings, and routes operator-selected `components` + `missing_component` to `reconstruct_component -> verify_design` with no generation action. **Stage A accepted** for visible workflow; no independent CAP non-mutation audit was supplied. Candidate 4's historic report remains distinct from visually approved external `run_004`. Candidate 4 governed final Attempt 2/2 remains protected. See [Stage A acceptance record](VSCS_User_Manual.md#f542-stage-a--operator-ui-acceptance-evidence-2026-11-12).
+
+# Issue #61 Stage B.2 — viewpoint qualification
+
+The [Stage B.2 engineering/operator runbook](../engineering/Issue_61_Stage_B2_Deterministic_Viewpoint_Qualification.md)
+documents isolated derived-reference prompts and the read-only evaluation of
+ComfyUI's Qwen multiple-angle camera workflow. The audit never authorises
+generation, modification of approved MASTER assets or automated reference
+approval. The original managed Qwen v2.1 workflow remains unchanged.
+
+### Issue #61 Stage B.2C — camera workflow preflight
+
+The [offline multiple-angle binding runbook](../engineering/Issue_61_Stage_B2C_Multiple_Angle_Offline_Binding.md)
+documents provisional cardinal camera settings, locked MASTER source-binding
+checks, required node/model evidence, and the explicit no-GPU boundary.
+The compiled draft graph is not executable or production-approved.
+
+### Issue #61 Stage B.2D — offline provider compatibility
+
+The [provider compatibility preflight runbook](../engineering/Issue_61_Stage_B2D_Provider_Compatibility_Preflight.md)
+explains how to compare the reviewed API workflow with a saved ComfyUI
+`/object_info` snapshot, interpret missing node interfaces and model selectors,
+and preserve the MASTER/candidate audit boundary. Results do not authorise GPU
+generation. Camera calibration and VRAM fit remain operator qualification gates.
+
+Stage B.2D.1 refines this report for dynamic `ComfySwitchNode` branches and the
+intentional pending MASTER source marker. Mixed/unresolved switch types remain
+blocking; the marker is reported as unresolved binding, not a missing model.
+
+### Issue #61 Stage B.2E — MASTER runtime qualification readiness
+
+The [Stage B.2E readiness runbook](../engineering/Issue_61_Stage_B2E_MASTER_Runtime_Readiness.md)
+describes governed MASTER hash/authority rechecks, unique non-overwriting
+queue/output planning and the explicit execution stop gates. Plans exist only
+in memory and do not create candidates, stage queue files or run ComfyUI.
+
+### Issue #61 Stage B.2F — offline execution safeguard preparation
+
+The [Stage B.2F staging runbook](../engineering/Issue_61_Stage_B2F_Execution_Safeguards.md)
+covers explicit offline-only staging consent, exclusive queue/manifest creation,
+restart inspection, cancellation records and failure handling. Do not use the
+protected disposable GPU project for staging tests: pytest creates disposable
+fixtures. No ComfyUI submission or generated Candidate is authorised.

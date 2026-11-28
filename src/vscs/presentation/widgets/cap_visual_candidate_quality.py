@@ -37,6 +37,10 @@ from vscs.application.caps.c4b_isolated_mask_provider import (
     inspect_c4b_local_node_inventory,
     prepare_c4b_isolated_blueprint,
 )
+from vscs.application.caps.candidate_requalification import (
+    CandidateRequalificationError,
+    CandidateRequalificationService,
+)
 from vscs.application.caps.general_visual_correction_triage import (
     candidate_visual_triage,
     semantic_field_suggestions,
@@ -1446,6 +1450,89 @@ def _review_selected(dialog: Any) -> None:
         dialog._refresh_references()
 
 
+def _requalify_selected(dialog: Any) -> None:
+    gallery = getattr(dialog, "reference_gallery", None)
+    selected = None if gallery is None else gallery.selected_reference()
+    profile = getattr(dialog, "profile", None)
+    refs = getattr(dialog, "reference_service", None)
+    if selected is None or profile is None or refs is None:
+        QMessageBox.information(
+            dialog, "Candidate Requalification", "Select a local Candidate first."
+        )
+        return
+    service = CandidateRequalificationService(refs)
+    try:
+        plan = service.prepare(profile.asset_id, selected.id)
+    except (OSError, ValueError) as exc:
+        QMessageBox.warning(dialog, "Candidate Requalification Blocked", str(exc))
+        return
+    confirm = QDialog(dialog)
+    confirm.setObjectName("candidateRequalificationDialog")
+    confirm.setWindowTitle("Requalify Existing Candidate (Offline) — Human QC")
+    confirm.resize(780, 510)
+    content = QVBoxLayout(confirm)
+    explanation = QLabel(
+        "Original image SHA-256: " + plan.image_sha256 + "\n"
+        "Previous design fingerprint: " + plan.previous_specification_fingerprint + "\n"
+        "Current design fingerprint: " + plan.current_specification_fingerprint + "\n"
+        "Changed reviewed fields: " + ", ".join(plan.changed_fields) + "\n\n"
+        "This reuses identical PNG bytes in a separate, auditable Candidate record. "
+        "The original Candidate and its provenance remain untouched. "
+        "It does NOT approve any image or CAP and does NOT generate an image. "
+        "A fresh independent Candidate Quality Review remains mandatory."
+    )
+    explanation.setWordWrap(True)
+    content.addWidget(explanation)
+    content.addWidget(QLabel("Reviewer identity"))
+    reviewer = QLineEdit()
+    reviewer.setObjectName("candidateRequalificationReviewer")
+    content.addWidget(reviewer)
+    content.addWidget(QLabel("Independent acceptance rationale (15+ characters)"))
+    rationale = QPlainTextEdit()
+    rationale.setObjectName("candidateRequalificationRationale")
+    content.addWidget(rationale)
+    buttons = QDialogButtonBox(
+        QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+    )
+    buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Create Requalified Candidate")
+
+    def authorize() -> None:
+        if not reviewer.text().strip() or len(rationale.toPlainText().strip()) < 15:
+            QMessageBox.warning(
+                confirm, "Human QC Required", "Enter reviewer and rationale (15+ characters)."
+            )
+            return
+        if (
+            QMessageBox.question(
+                confirm,
+                "Confirm Offline Candidate Requalification?",
+                "Create a new Candidate using unchanged image bytes and current reviewed CAP "
+                "provenance? Original records remain unchanged; no approval or generation occurs.",
+            )
+            is QMessageBox.StandardButton.Yes
+        ):
+            confirm.accept()
+
+    buttons.accepted.connect(authorize)
+    buttons.rejected.connect(confirm.reject)
+    content.addWidget(buttons)
+    if not confirm.exec():
+        return
+    try:
+        new_id = service.accept(plan, reviewer.text(), rationale.toPlainText())
+    except (CandidateRequalificationError, OSError, RuntimeError, ValueError) as exc:
+        QMessageBox.critical(dialog, "Candidate Requalification Not Saved", str(exc))
+        return
+    dialog._refresh_references()
+    QMessageBox.information(
+        dialog,
+        "Requalified Candidate Created",
+        f"New Candidate #{new_id} was created with unchanged image bytes. "
+        "Select the new requalified Candidate in the gallery and click Review Visual Candidate…. "
+        "The original Candidate remains unchanged.",
+    )
+
+
 def _reopen_saved_candidate_review(dialog: Any) -> None:
     """Open saved semantic evidence directly without any provider request."""
     gallery = getattr(dialog, "reference_gallery", None)
@@ -1538,6 +1625,9 @@ def _update_button(dialog: Any) -> None:
     )
     if button is not None:
         button.setEnabled(enabled)
+    requalify = getattr(dialog, "candidate_requalification_button", None)
+    if requalify is not None:
+        requalify.setEnabled(enabled)
     if saved_button is not None:
         saved_button.setEnabled(enabled)
     if correction_button is not None:
@@ -1563,6 +1653,16 @@ def install_visual_candidate_quality_review() -> None:
         )
         self.candidate_quality_button.clicked.connect(lambda: _review_selected(self))
         self.layout().insertWidget(2, self.candidate_quality_button)
+        self.candidate_requalification_button = QPushButton(
+            "Requalify Existing Candidate (Offline)…"
+        )
+        self.candidate_requalification_button.setObjectName("requalifyExistingVisualCandidate")
+        self.candidate_requalification_button.setToolTip(
+            "Independently attest reuse of unchanged Candidate PNG bytes under a revised CAP; "
+            "requires a new quality review and never generates or approves an image"
+        )
+        self.candidate_requalification_button.clicked.connect(lambda: _requalify_selected(self))
+        self.layout().insertWidget(3, self.candidate_requalification_button)
         self.candidate_saved_review_button = QPushButton("Open Saved Candidate Review…")
         self.candidate_saved_review_button.setObjectName("openSavedCandidateQualityReview")
         self.candidate_saved_review_button.setToolTip(

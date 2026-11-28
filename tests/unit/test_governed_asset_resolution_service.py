@@ -258,6 +258,36 @@ def test_draft_requirement_can_be_saved_unbound(tmp_path: Path) -> None:
     context.shutdown()
 
 
+def test_cinematic_mode_is_explicit_persisted_and_editable_only_in_draft(
+    tmp_path: Path,
+) -> None:
+    context, _shots, service, shot = _planning(tmp_path)
+    binding = service.create(
+        shot_id=shot.shot_id,
+        sequence_number=1,
+        role="Hero spacecraft",
+        requirement="Visible ship",
+        expected_category=AssetCategory.SHIP,
+        cinematic_references=True,
+    )
+    assert binding.cinematic_references
+    assert service.binding(binding.binding_id).cinematic_references
+    saved = json.loads(service.planning_file.read_text(encoding="utf-8"))
+    assert "cinematic_references" in str(saved)
+    changed = service.update(
+        binding.binding_id,
+        role=binding.role,
+        requirement=binding.requirement,
+        expected_category=binding.expected_category,
+        asset_id="",
+        notes="Strict reference use",
+        cinematic_references=False,
+    )
+    assert not changed.cinematic_references
+    assert not service.binding(binding.binding_id).cinematic_references
+    context.shutdown()
+
+
 def test_asset_resolution_requires_current_ready_shot(tmp_path: Path) -> None:
     context, shots, service, shot = _planning(tmp_path)
     shots.return_to_draft(shot.shot_id)

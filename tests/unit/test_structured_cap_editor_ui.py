@@ -2,15 +2,25 @@
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QTableWidgetItem
+from PySide6.QtWidgets import QDialog, QHeaderView, QMessageBox, QTableWidget, QTableWidgetItem
 
 from vscs.application.assets import AssetService
 from vscs.application.caps import CanonicalReferenceService, CAPService
+from vscs.application.caps.structured_knowledge import StructuredKnowledgeProposal
 from vscs.application.projects import ProjectService
 from vscs.bootstrap import BootstrapOptions, StartupMode, build_application_context
 from vscs.domain.assets import AssetCategory, AssetCreate
-from vscs.domain.caps import CAPCreate
+from vscs.domain.caps import (
+    CAPCreate,
+    KnowledgeAuthority,
+    PersistedCanonicalFact,
+    StructuredCAPKnowledge,
+)
 from vscs.presentation.widgets.cap_manager import CAPEditorDialog
+from vscs.presentation.widgets.cap_structured_knowledge import (
+    StructuredKnowledgeProposalDialog,
+    _propose,
+)
 
 
 def _options(tmp_path: Path) -> BootstrapOptions:
@@ -76,3 +86,108 @@ def test_cap_editor_exposes_structured_production_knowledge(qtbot, tmp_path: Pat
     assert update.functional_identity[0].capability == "Orbital flight"
     assert update.constraints is not None and update.constraints[0].rule == "Preserve hull"
     context.shutdown()
+
+
+def test_offline_proposal_preserves_existing_and_requires_review(
+    qtbot, tmp_path: Path, monkeypatch
+) -> None:
+    context = build_application_context(_options(tmp_path))
+    context.services.require(ProjectService).create(tmp_path / "Production", name="Production")
+    assets = context.services.require(AssetService)
+    caps = context.services.require(CAPService)
+    assets.create(AssetCreate(asset_id="CAP-PRP-990", name="Console", category=AssetCategory.PROP))
+    caps.create(CAPCreate(asset_id="CAP-PRP-990", title="Console", canonical_description="Console"))
+    window = context.create_main_window()
+    qtbot.addWidget(window)
+    dialog = CAPEditorDialog(
+        caps,
+        context.services.require(CanonicalReferenceService),
+        caps.get("CAP-PRP-990"),
+        window.cap_manager,
+    )
+    qtbot.addWidget(dialog)
+    assert "Offline" in dialog.propose_structured_button.text()
+    dialog.facts_table.insertRow(0)
+    for column, value in enumerate(("existing", "Retain", "", "approved")):
+        dialog.facts_table.setItem(0, column, QTableWidgetItem(value))
+
+    proposal = StructuredKnowledgeProposal(
+        asset_id="CAP-PRP-990",
+        knowledge=StructuredCAPKnowledge(
+            facts=(
+                PersistedCanonicalFact(
+                    key="geometry",
+                    value="Approved housing",
+                    source="reviewed-spec:abc",
+                    authority=KnowledgeAuthority.PROPOSED,
+                ),
+            )
+        ),
+        source_summary="reviewed local test",
+        production_notes="Preserve reviewed geometry: Approved housing",
+    )
+
+    class OfflineOnly:
+        def propose_from_reviewed_cap(self, asset_id):
+            assert asset_id == "CAP-PRP-990"
+            return proposal
+
+        def propose(self, asset_id):
+            raise AssertionError("No provider call without AI confirmation")
+
+    dialog._structured_service = OfflineOnly()
+    monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.DialogCode.Rejected)
+    _propose(dialog, offline=True)
+    assert dialog.facts_table.rowCount() == 1
+
+    monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    _propose(dialog, offline=True)
+    update = dialog.update_value()
+    assert {item.key for item in update.facts} == {"existing", "geometry"}
+    assert all(item.authority is KnowledgeAuthority.APPROVED for item in update.facts)
+    assert (
+        next(item for item in update.facts if item.key == "geometry").source == "reviewed-spec:abc"
+    )
+    assert "Geometry: Approved housing" in dialog.visual_identity.toPlainText()
+    assert "Preserve reviewed geometry" in dialog.production_notes.toPlainText()
+    dialog.visual_identity.setPlainText("Operator authored identity")
+    dialog.production_notes.setPlainText("Operator authored production notes")
+    _propose(dialog, offline=True)
+    assert dialog.visual_identity.toPlainText() == "Operator authored identity"
+    assert dialog.production_notes.toPlainText() == "Operator authored production notes"
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.No,
+    )
+    _propose(dialog, offline=False)
+    context.shutdown()
+
+
+def test_structured_proposal_wraps_long_values_without_clipping(qtbot) -> None:
+    long_value = "One broad display and three circular buttons. " * 18
+    proposal = StructuredKnowledgeProposalDialog(
+        StructuredCAPKnowledge(
+            facts=(
+                PersistedCanonicalFact(
+                    key="components",
+                    value=long_value,
+                    source="reviewed-spec:abc",
+                    authority=KnowledgeAuthority.PROPOSED,
+                ),
+            )
+        )
+    )
+    qtbot.addWidget(proposal)
+    proposal.resize(760, 520)
+    proposal.show()
+    qtbot.waitExposed(proposal)
+
+    preview = proposal.findChild(QTableWidget, "structuredKnowledgeProposalPreview")
+    assert preview is not None
+    assert preview.wordWrap()
+    assert preview.horizontalHeader().sectionResizeMode(1) is QHeaderView.ResizeMode.Stretch
+    assert preview.verticalHeader().sectionResizeMode(0) is QHeaderView.ResizeMode.ResizeToContents
+    assert preview.item(0, 1).text() == "components: " + long_value.strip()
+    assert preview.rowHeight(0) > preview.fontMetrics().height() * 2

@@ -25,10 +25,13 @@ from PySide6.QtWidgets import (
 
 from vscs.domain.caps import (
     CanonicalReference,
+    CanonicalReferenceFamily,
+    CanonicalReferenceLifecycle,
     CanonicalReferenceRole,
     CanonicalReferenceStatus,
     CanonicalReferenceType,
 )
+from vscs.domain.caps.reference_library import ReferenceLibraryEntry
 
 
 class CanonicalReferenceGallery(QWidget):
@@ -38,6 +41,8 @@ class CanonicalReferenceGallery(QWidget):
     primary_requested = Signal(int)
     candidate_requested = Signal(int)
     approve_requested = Signal(int)
+    cinematic_requested = Signal(int)
+    cinematic_readiness_requested = Signal()
     reject_requested = Signal(int)
     archive_requested = Signal(int)
     unlock_requested = Signal(int)
@@ -47,6 +52,7 @@ class CanonicalReferenceGallery(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._references: dict[int, CanonicalReference] = {}
+        self._governed: dict[int, ReferenceLibraryEntry] = {}
         self._project_directory: Path | None = None
 
         self.gallery = QListWidget()
@@ -78,6 +84,8 @@ class CanonicalReferenceGallery(QWidget):
         self.type_label = QLabel("Type: —")
         self.role_label = QLabel("Role: —")
         self.status_label = QLabel("Status: —")
+        self.governance_label = QLabel("Governed lifecycle: —")
+        self.governance_label.setWordWrap(True)
         self.version_label = QLabel("Version: —")
         self.approval_label = QLabel("Approval: —")
         self.approval_label.setWordWrap(True)
@@ -89,6 +97,10 @@ class CanonicalReferenceGallery(QWidget):
         self.primary_button = QPushButton("Set as Primary")
         self.candidate_button = QPushButton("Mark Candidate")
         self.approve_button = QPushButton("Approve")
+        self.cinematic_button = QPushButton("Accept for Cinema…")
+        self.cinematic_readiness_button = QPushButton("Cinematic Readiness…")
+        self.cinematic_readiness_button.setObjectName("cinematicReferenceReadinessButton")
+        self.cinematic_readiness_button.setEnabled(False)
         self.reject_button = QPushButton("Reject")
         self.archive_button = QPushButton("Archive")
         self.unlock_button = QPushButton("Unlock")
@@ -96,6 +108,7 @@ class CanonicalReferenceGallery(QWidget):
             self.primary_button,
             self.candidate_button,
             self.approve_button,
+            self.cinematic_button,
             self.reject_button,
             self.archive_button,
             self.unlock_button,
@@ -104,6 +117,10 @@ class CanonicalReferenceGallery(QWidget):
         self.primary_button.clicked.connect(lambda: self._emit(self.primary_requested))
         self.candidate_button.clicked.connect(lambda: self._emit(self.candidate_requested))
         self.approve_button.clicked.connect(lambda: self._emit(self.approve_requested))
+        self.cinematic_button.clicked.connect(lambda: self._emit(self.cinematic_requested))
+        self.cinematic_readiness_button.clicked.connect(
+            lambda: self.cinematic_readiness_requested.emit()
+        )
         self.reject_button.clicked.connect(lambda: self._emit(self.reject_requested))
         self.archive_button.clicked.connect(lambda: self._emit(self.archive_requested))
         self.unlock_button.clicked.connect(lambda: self._emit(self.unlock_requested))
@@ -112,6 +129,7 @@ class CanonicalReferenceGallery(QWidget):
         for button in (
             self.candidate_button,
             self.approve_button,
+            self.cinematic_button,
             self.reject_button,
             self.archive_button,
             self.unlock_button,
@@ -124,11 +142,13 @@ class CanonicalReferenceGallery(QWidget):
         details.addWidget(self.type_label)
         details.addWidget(self.role_label)
         details.addWidget(self.status_label)
+        details.addWidget(self.governance_label)
         details.addWidget(self.version_label)
         details.addWidget(self.approval_label)
         details.addWidget(self.path_label)
         details.addWidget(self.description_label)
         details.addWidget(self.primary_button)
+        details.addWidget(self.cinematic_readiness_button)
         details.addLayout(workflow)
 
         detail_widget = QWidget()
@@ -163,10 +183,16 @@ class CanonicalReferenceGallery(QWidget):
         layout.addWidget(splitter, 1)
 
     def set_references(
-        self, references: Iterable[CanonicalReference], project_directory: Path | None
+        self,
+        references: Iterable[CanonicalReference],
+        project_directory: Path | None,
+        *,
+        governed_entries: Iterable[ReferenceLibraryEntry] = (),
     ) -> None:
         selected_id = self.selected_reference_id()
         self._project_directory = project_directory
+        self._governed = {entry.reference_record_id: entry for entry in governed_entries}
+        self.cinematic_readiness_button.setEnabled(bool(self._governed))
         values = tuple(references)
         self._references = {reference.id: reference for reference in values}
         self.gallery.clear()
@@ -279,10 +305,13 @@ class CanonicalReferenceGallery(QWidget):
             ):
                 label.setText(text)
             self.description_label.clear()
+            self.governance_label.setText("Governed lifecycle: —")
+            self.approve_button.setText("Approve")
             for button in (
                 self.primary_button,
                 self.candidate_button,
                 self.approve_button,
+                self.cinematic_button,
                 self.reject_button,
                 self.archive_button,
                 self.unlock_button,
@@ -315,6 +344,22 @@ class CanonicalReferenceGallery(QWidget):
         self.status_label.setText(
             f"Status: {reference.status.value.title()}{' — Locked' if reference.locked else ''}"
         )
+        governed = self._governed.get(reference.id)
+        if governed is None:
+            self.governance_label.setText(
+                "Governance: Unregistered gallery reference — not MASTER or "
+                "governed production-view authority"
+            )
+        else:
+            family = governed.family.value.replace("_", " ").title()
+            self.governance_label.setText(
+                f"Governance: {family} — {governed.lifecycle.value.title()}"
+                + (
+                    "\nCinematic-use QC recorded (freshness checked at use; not canonical approval)"
+                    if governed.cinematic_acceptance is not None
+                    else ""
+                )
+            )
         self.version_label.setText(f"Version: {reference.version}")
         approved_at = (
             reference.approved_at.astimezone().strftime("%Y-%m-%d %H:%M")
@@ -328,17 +373,89 @@ class CanonicalReferenceGallery(QWidget):
         self.description_label.setText(reference.description or reference.notes or "No description")
 
         self.primary_button.setEnabled(
-            not reference.locked and reference.role is not CanonicalReferenceRole.PRIMARY
+            governed is None
+            and not reference.locked
+            and reference.role is not CanonicalReferenceRole.PRIMARY
+            and not any(
+                entry.family is CanonicalReferenceFamily.MASTER
+                and entry.lifecycle is not CanonicalReferenceLifecycle.ARCHIVED
+                for entry in self._governed.values()
+            )
         )
         self.candidate_button.setEnabled(
-            not reference.locked and reference.status is CanonicalReferenceStatus.IMPORTED
+            not reference.locked
+            and reference.status is CanonicalReferenceStatus.IMPORTED
+            and governed is None
         )
         self.approve_button.setEnabled(
-            reference.status is CanonicalReferenceStatus.CANDIDATE and not reference.locked
+            (
+                governed is None
+                and reference.status is CanonicalReferenceStatus.CANDIDATE
+                and not reference.locked
+            )
+            or (
+                governed is not None
+                and governed.family is not CanonicalReferenceFamily.MASTER
+                and governed.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+                and reference.status
+                in {CanonicalReferenceStatus.CANDIDATE, CanonicalReferenceStatus.APPROVED}
+            )
         )
-        self.reject_button.setEnabled(reference.status is CanonicalReferenceStatus.APPROVED)
-        self.archive_button.setEnabled(reference.status is not CanonicalReferenceStatus.ARCHIVED)
-        self.unlock_button.setEnabled(reference.locked)
+        self.cinematic_button.setEnabled(
+            governed is not None
+            and governed.family is not CanonicalReferenceFamily.MASTER
+            and governed.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+            and reference.status is CanonicalReferenceStatus.CANDIDATE
+        )
+        self.cinematic_button.setText(
+            "Review Cinematic Acceptance…"
+            if governed is not None and governed.cinematic_acceptance is not None
+            else "Accept for Cinema…"
+        )
+        self.approve_button.setText(
+            "Confirm Governed Approval"
+            if (
+                governed is not None
+                and governed.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+                and reference.status is CanonicalReferenceStatus.APPROVED
+            )
+            else "Approve"
+        )
+        self.reject_button.setEnabled(
+            not reference.locked
+            and (
+                (governed is None and reference.status is CanonicalReferenceStatus.APPROVED)
+                or (
+                    governed is not None
+                    and governed.family is not CanonicalReferenceFamily.MASTER
+                    and governed.lifecycle
+                    in {
+                        CanonicalReferenceLifecycle.CANDIDATE,
+                        CanonicalReferenceLifecycle.APPROVED,
+                    }
+                )
+            )
+        )
+        self.reject_button.setText(
+            "Reject Candidate (QC)"
+            if governed is not None and governed.lifecycle is CanonicalReferenceLifecycle.CANDIDATE
+            else "Return to Candidate"
+        )
+        self.archive_button.setEnabled(
+            reference.status is not CanonicalReferenceStatus.ARCHIVED
+            and (governed is None or governed.lifecycle is not CanonicalReferenceLifecycle.ARCHIVED)
+            and (governed is None or governed.family is not CanonicalReferenceFamily.MASTER)
+        )
+        self.unlock_button.setEnabled(
+            reference.locked
+            and (
+                governed is None
+                or (
+                    governed.family is not CanonicalReferenceFamily.MASTER
+                    and governed.lifecycle is CanonicalReferenceLifecycle.APPROVED
+                )
+            )
+        )
 
     def _activate_item(self, item: QListWidgetItem) -> None:
         reference_id = int(item.data(self.REFERENCE_ID_ROLE))

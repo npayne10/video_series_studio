@@ -54,6 +54,7 @@ class AssetBindingEditorValues:
     expected_category: AssetCategory
     asset_id: str
     notes: str
+    cinematic_references: bool = False
 
 
 class AssetBindingEditorDialog(QDialog):
@@ -90,6 +91,11 @@ class AssetBindingEditorDialog(QDialog):
         self.asset_combo = QComboBox(self)
         self.asset_combo.setObjectName("governedAssetSelection")
         self.notes_edit = QPlainTextEdit(binding.notes if binding else "", self)
+        self.cinematic_checkbox = QCheckBox(
+            "Use human-accepted cinematic views for video (not canonical approval)", self
+        )
+        self.cinematic_checkbox.setObjectName("cinematicAssetReferenceMode")
+        self.cinematic_checkbox.setChecked(binding.cinematic_references if binding else False)
         self.readiness_label = QLabel(self)
         self.readiness_label.setObjectName("assetBindingReadiness")
         self.readiness_label.setWordWrap(True)
@@ -97,7 +103,8 @@ class AssetBindingEditorDialog(QDialog):
         guidance = QLabel(
             "Bind this Shot requirement to an existing project asset. Camera and lighting profiles are "
             "owned by later specialist planners. Production approval requires an approved Asset, CAP and "
-            "approved canonical reference.",
+            "approved references. Cinematic mode only substitutes independently accepted "
+            "video views; Asset and CAP approvals remain mandatory.",
             self,
         )
         guidance.setWordWrap(True)
@@ -108,6 +115,7 @@ class AssetBindingEditorDialog(QDialog):
         form.addRow("Requirement *", self.requirement_edit)
         form.addRow("Asset category *", self.category_combo)
         form.addRow("Project asset", self.asset_combo)
+        form.addRow("Reference authority", self.cinematic_checkbox)
         form.addRow("Notes", self.notes_edit)
         form.addRow("Current resolution", self.readiness_label)
 
@@ -126,6 +134,7 @@ class AssetBindingEditorDialog(QDialog):
 
         self.category_combo.currentIndexChanged.connect(lambda _index: self._reload_assets())
         self.asset_combo.currentIndexChanged.connect(self._refresh_readiness)
+        self.cinematic_checkbox.toggled.connect(self._refresh_readiness)
         self._reload_assets(binding.asset_id if binding else "")
 
     def _selected_category(self) -> AssetCategory | None:
@@ -171,13 +180,15 @@ class AssetBindingEditorDialog(QDialog):
                 require_cap=True,
                 require_approved_cap=True,
                 require_approved_references=True,
+                cinematic_references=self.cinematic_checkbox.isChecked(),
             )
         )
         if result.status is AssetResolutionStatus.RESOLVED:
             reference_count = len(result.references)
             cap_version = result.cap.version if result.cap is not None else "—"
             self.readiness_label.setText(
-                f"Resolved — approved CAP {cap_version}; {reference_count} approved canonical reference(s)."
+                f"Resolved — approved CAP {cap_version}; {reference_count} "
+                f"{'cinematic-use' if self.cinematic_checkbox.isChecked() else 'canonical'} reference(s)."
             )
             return
         diagnostics = "; ".join(item.message for item in result.diagnostics) or result.status.value
@@ -204,6 +215,7 @@ class AssetBindingEditorDialog(QDialog):
             expected_category=category,
             asset_id=str(self.asset_combo.currentData() or "").strip().upper(),
             notes=self.notes_edit.toPlainText().strip(),
+            cinematic_references=self.cinematic_checkbox.isChecked(),
         )
 
 
@@ -719,6 +731,7 @@ class GovernedAssetResolverDialog(QDialog):
                 expected_category=values.expected_category,
                 asset_id=values.asset_id,
                 notes=values.notes,
+                cinematic_references=values.cinematic_references,
             )
         except GovernedAssetResolutionError as exc:
             QMessageBox.warning(self, "Asset Resolver", str(exc))
@@ -743,6 +756,7 @@ class GovernedAssetResolverDialog(QDialog):
                 expected_category=values.expected_category,
                 asset_id=values.asset_id,
                 notes=values.notes,
+                cinematic_references=values.cinematic_references,
             )
         except GovernedAssetResolutionError as exc:
             QMessageBox.warning(self, "Asset Resolver", str(exc))

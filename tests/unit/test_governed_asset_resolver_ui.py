@@ -58,6 +58,9 @@ def test_asset_editor_excludes_camera_lighting_and_reference_categories(qtbot) -
     assert AssetCategory.REFERENCE not in categories
     assert str(dialog.asset_combo.currentData() or "") == ""
     assert "Unbound" in dialog.readiness_label.text()
+    assert not dialog.cinematic_checkbox.isChecked()
+    dialog.cinematic_checkbox.setChecked(True)
+    assert dialog.values().cinematic_references
 
 
 def test_asset_resolver_exposes_automated_requirement_analysis_and_human_apply(

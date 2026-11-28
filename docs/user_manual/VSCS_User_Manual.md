@@ -1,16 +1,79 @@
 # Video Series Studio (VSCS) — User Manual
 
+> **For every new Episode, follow the [End-to-End Episode Production Runbook](VSCS_Episode_Production_Runbook.md) in order.** Its Stage B Asset Resolver, Camera, Lighting, Environment and Planning Review gates must be completed **before** Production Packages, ProductionTask preparation or GPU video generation. The historical phase acceptance sections below are reference material, not permission to skip those gates.
+
 **Document status:** Living user/operator manual, **v0.1 initial foundation**  
-**Last verified:** 2026-11-17 (C4B.1 offline/GET-only qualification operator accepted; C4B.2A disposable-only staging and launch-preview implementation pending Windows/operator acceptance; C4B.2B/C4 generation unauthorized)  
+**Last verified:** 2026-11-23 (Issue #58 merged; Issue #61 Stage A Windows/UI/SHA accepted, Stage B human-approved ChatGPT image not yet registered in VSCS; C4B.2B/C4 video generation unauthorized)
 **Audience:** VSCS operators, reviewers, authors, technical acceptance testers  
 **Scope:** Actual VSCS framework workflows, not aspirational features. Screens and controls are marked **Verified**, **Code-confirmed**, **Pending UI validation**, or **Planned**. This is **not yet a complete user manual**.  
 **Primary operating principles:** Automation; continuity of narrative/assets; low cost/free local generation when feasible; ease of use; explicit governance; evidence-based acceptance.
 
 This manual lives in the VSCS repository and must change with each material UI or workflow change. The source of truth for a feature's actual behavior is the current working-branch code and a successful operator UI acceptance. Do not present a planned feature as available, and do not assume a proposed item is production authority.
 
-## Issue #58 — correlated Stage B / C1 field failures (implementation candidate, 2026-11-22)
+## Issue #61 — governed ChatGPT MASTER and derived references (Stage A accepted; Stage B pending)
 
-**Engineering-verified, Windows operator acceptance pending.** The reviewed Candidate may truthfully fail more than one accepted CAP field for the *same physical defect*. A shared Stage C1 correction is permitted only after a human supplies a source-quoted correlation for each affected CAP field and reviews the exact same defect and ROI for all of them. Separate failures must remain FAILED, with explicit acknowledgement that they need separate corrections. No false PASS, automatic image generation, CAP/Canon/MASTER approval or attempt reservation is permitted.
+**Scope:** Verify the actual MASTER-to-derived-reference path; the application must never treat a local ComfyUI/Qwen supplementary Candidate, an AI quality score, gallery Primary status or an unreviewed file path as an approved ChatGPT-origin MASTER. The Issue #61 code fixes the gap between the Gallery's legacy approval and the governed production-reference library. **Stage A was operator accepted on 2026-11-23:** Windows Ruff/format/Mypy, 19 focused tests, 2,993 full tests (2 expected symlink skips), four real UI screenshots, GitHub CI, and a fresh 9-entry before/after SHA-256 snapshot with zero changes. Stage B requires separately reviewed source files and intentional project writes. The [engineering audit](../engineering/Issue_61_Governed_MASTER_Workflow_Audit.md) explains the authority model.
+
+### A. Safe offline Windows acceptance (start VSCS; no writes to project)
+
+1. Completely close VSCS. Update the Issue #61 test branch from GitHub as instructed with the PR; check `git status --short` first and preserve any unrelated local modifications. Run `python -m ruff check .`, `python -m ruff format --check .`, `python -m mypy src`, the focused Issue #61/MASTER/readiness/gallery tests and `python -m pytest -q`. **Stop on any failure.** Do not move or delete the existing historical evidence.
+2. In PowerShell set `$project = 'D:\VSCS\C4B2B_DISPOSABLE_GPU_01'`. Capture SHA-256 **BEFORE** for `planning\asset_resolutions.json`, existing `.vscs\cap_reference_library.json` if present, the current Console and Workstation Candidate PNGs, historical Console Candidate 4, old C2/C2.1 masks and sessions, and existing saved semantic review JSON. Capture current CAP/readiness/reference counts. The protected files must remain unchanged during this **offline** phase.
+3. Launch VSCS (`vscs` in the activated environment), then **File → Open Project** and open the *existing* disposable project. Confirm the project name/path and do not create or clone assets.
+4. Go to **View → Assets**, select the existing Diagnostic Console (`CAP-PRP-002`), then click **Edit Selected**. Read **MASTER Status**. An Asset `file_path` alone must display **“Asset file present — not a locked MASTER”**; an empty path must display **“Missing — select a MASTER”**. Only an actually governed, approved and locked MASTER may display **“Locked canonical authority.”** Take a screenshot and click **Cancel**. **Do not Browse, confirm, or Save** for this offline acceptance.
+5. Go to **View → Canonical Profiles**, select `CAP-PRP-002`, and inspect **CAP Readiness**. Record `Approved ChatGPT MASTER is not locked`, missing category-required views and the other still-blocking CAP/structured authority gaps. A score, reference count or gallery image must not remove them.
+6. With the CAP selected, click **Generate Production References** to open the dialog only. If no genuine consistent locked MASTER exists, expect **“BLOCKED — A locked ChatGPT MASTER is required…”** (or a specific authority mismatch/missing file), and both **Generate Selected** and **Generate Missing Required Views** must be disabled. Confirm Prop required views are MASTER, Front, Rear, Left, Right; recommended Top and Detail remain distinct. Take a screenshot; **Cancel** without generating.
+7. Open **Canonical Profiles → Edit Selected → Canonical Reference Gallery**. Select the existing local Supplementary Candidate 1. Confirm its `Role=Supplementary`, `Status=Candidate` and **Governance: Unregistered gallery reference — not MASTER or governed production-view authority** where applicable. This image is not an approved MASTER, even if its technical or semantic score is high. **Do not click Set as Primary, Approve, Unlock, Archive or Generate.** Capture a screenshot and close without saving.
+8. If needed, inspect **Open Saved Candidate Review…** (offline, no new AI charge). Do not click **Review Visual Candidate… → Yes**, which authorizes a separate paid semantic call. A review score never approves or locks any reference.
+9. Close VSCS and capture **AFTER** SHA-256 over the same protected inventory. All existing hashes, CAP/Asset Resolution, reference counts, MASTER and production approvals, and correction-attempt counters must match BEFORE. Record screenshots and expected/actual results. Any mutation, enabled generation despite missing MASTER, incorrect locked label, new reference, provider call or premature readiness is **FAIL**.
+
+**Operator accepted Stage A:** The offline UI reported real missing authority, prevented generation and preserved the project, with matching protected SHA-256 snapshots over 9 monitored entries. The automated tests used a synthetic fake MASTER and test-only offline derived provider. **This does not mark Stage B or Issue #61 fully accepted.**
+
+### B. Separately authorised genuine MASTER creation and derived-view cycle
+
+Complete these steps only after Neill deliberately approves the **actual** ChatGPT image, human review and project writes. This phase is **not authorised by the offline audit**.
+
+1. Use an **authentic ChatGPT-origin image** of the agreed, distinctive physical design. Review it independently against the accepted CAP geometry, materials, colours, proportions, controls and required structure. Correct/regenerate it **before import**, each invocation with separate consent; reject any failed version. Preserve the ChatGPT source, prompt/result, explicit operator decision, reviewer, timestamp and SHA-256. The VSCS confirmation checkbox is a human provenance declaration, not an automatic proof of ChatGPT origin. **Never reclassify a ComfyUI, XCIC or Qwen supplementary Candidate as ChatGPT MASTER.**
+2. Save the selected approved image as an immutable, **new versioned filename inside the active project**, without overwriting an existing locked file. For a new Asset use **Assets → Add Asset**; for the existing `CAP-PRP-002`, use **Assets → Edit Selected → Browse…**. Verify Asset ID/category, select the exact approved image, check **“I confirm … approved ChatGPT Master Canonical Reference”**, then **Save**. This single explicit action creates/ensures a Draft CAP and registers, approves and locks the MASTER. It does not approve CAP Canon or Production. Take screenshots and check production-library and legacy reference states, audit reviewer and file hash.
+3. If replacing a MASTER, archive/review its dependent derived views first. **Assets → Edit Selected → Browse…** uses a new versioned source file and archives the prior MASTER only when the dependency gate allows it. Locked MASTERs cannot be silently edited or unlocked through the gallery. Verify old version/history remains recoverable. The current system does not independently seal a MASTER's bytes at registration: preserving the file and its recorded SHA is an explicit human safety obligation.
+4. Inspect **Canonical Profiles → Generate Production References**. It must show **MASTER authority verified**, plus required/recommended/optional category views. Choose one or the specifically authorised missing required views, provider, model settings, size and seed. **Generate Selected / Generate Missing Required Views actually initiates image generation**; do not press without a new explicit provider/cost/GPU consent. Generated views have **Role Supplementary, Status Candidate**, and governed `origin=vscs_derived`, parent MASTER/version, exact view and provider provenance. No automatic approval follows.
+5. For each Candidate, inspect its image and independent technical/semantic evaluation, compare details with the MASTER and accepted CAP, and **Approve only after a human decision** in **Canonical Profiles → Edit Selected → Canonical Reference Gallery**. A registered derived Approve now also writes governed **Production View — Approved** and the legacy locked approval. If a historical image shows legacy Approved but governed Candidate, use **Confirm Governed Approval** only after renewed review; never silently reconcile. Reject/return or archive wrong images, then regenerate with new consent and a distinct version. Do not make a derived reference Primary.
+6. Reopen **CAP Readiness**. Confirm required views are *approved* rather than merely *present*, the original MASTER remains LOCKED and both databases agree, and any missing CAP Approved status, structured functional capabilities/constraints, visual identity, production guidance, and downstream Asset Resolution are still enforced. Resolve each through its separate human-reviewed authority workflow. Only then continue Production Planning—**stop before actual video clip creation**.
+
+**Acceptance screenshots:** initial Asset MASTER status; provenance attestation before Save (if authorised); locked MASTER in Assets/gallery; generation view template and provider settings; one unapproved derived Candidate with parent/version; a deliberately approved/rejected view; reopened lifecycle/readiness; before/after hashes and expected changes. Do not equate the synthetic automated tests with this complete real-world visual acceptance.
+
+### B.1 Approved Diagnostic Console source — exact Stage B handoff
+
+Neill approved the ChatGPT-conversation-generated physical design of `CAP-PRP-002`
+on **2026-11-23**, including the visually recessed dial, three buttons, blue
+display and ribbed graphite housing; numeric scale is still unresolved. The
+approved original PNG is **1024 × 1536**, SHA-256
+`C9741D39D1713E7EDDB600A15DD8D8D1B7A5C353225445CE2E4444589B9A3A38`.
+The file has **not** yet been moved into the Windows project or registered as
+MASTER. Do not substitute the local supplementary Candidate or a resaved,
+visually similar image. A downloaded PNG must match this exact SHA or be
+re-reviewed before importing.
+
+The [full controlled Stage B Console handoff](../engineering/Issue_61_Stage_B_Console_Reference_Handoff.md)
+provides copy/verification PowerShell, a new versioned project filename, the
+single **Assets → Edit Selected → Browse → explicit confirmation → Save**
+registration, read-back of both statuses, and the stop before separately
+authorised local GPU derived-view generation. Capture an intentional-change
+inventory: new MASTER/source/database records may change; historical
+Candidate 4, C2/C2.1 masks/reviews and old attempts must not change.
+
+For **routine future production**, Neill has approved the architecture of an
+in-app **Generate OpenAI MASTER Candidate → Review/Correct → Approve & Lock**
+workflow. It is a **specification, not an existing VSCS button**; see
+[Governed OpenAI MASTER generation v1.0](../engineering/Governed_OpenAI_MASTER_Generation_Specification_V1.md)
+and [Issue #67](https://github.com/npayne10/video_series_studio/issues/67).
+The human ChatGPT-browser import path remains supported during this test.
+The full remaining-fixes/UAT/end-to-end production backlog will be reconciled
+after the real MASTER and derived-reference lifecycle is proven, before any
+authorised first video generation.
+
+## Issue #58 — correlated Stage B / C1 field failures (PR #65 merged, 2026-11-22)
+
+**Engineering-verified; operator UI accepted and PR #65 merged.** The reviewed Candidate may truthfully fail more than one accepted CAP field for the *same physical defect*. A shared Stage C1 correction is permitted only after a human supplies a source-quoted correlation for each affected CAP field and reviews the exact same defect and ROI for all of them. Separate failures must remain FAILED, with explicit acknowledgement that they need separate corrections. No false PASS, automatic image generation, CAP/Canon/MASTER approval or attempt reservation is permitted.
 
 ### Issue #58 safe operator test — from starting VSCS
 
@@ -37,7 +100,7 @@ This manual lives in the VSCS repository and must change with each material UI o
 
 **PASS:** Two independently reviewed FAILED fields share one human-source-quoted C1 scope; the third field retains its honest status; all other failures remain outstanding; no generation or authority is gained; the persisted C2.1 session reopens without restoring operator consent. **FAIL:** The workflow requires a false PASS, groups different ROIs/defects, silently accepts report suggestions, silently executes GPU work, or mutates protected evidence.
 
-This is an **offline implementation candidate**, not an assertion of successful real-project Windows UI acceptance. Record screenshots of Stage B, exact source excerpts, C1 scope, session save/reopen, and before/after protected hashes for sign-off.
+Issue #58 has been **accepted in operator UI testing and merged**. Retain the screenshots of Stage B, exact source excerpts, C1 scope, session save/reopen, and before/after protected hashes as regression evidence; no generation or approval was granted by that sign-off.
 
 ## 1. Read this first: objects, authority and safe operation
 
@@ -2687,3 +2750,31 @@ Diagnostic Console Candidate 4 may be used as the source or mask.
 
 See [complete C4B.2B engineering and safety procedure](
 ../F5_4_2_STAGE_C4B2B_SUPERVISED_GPU_QUALIFICATION.md).
+
+### Issue #61 Stage B.1 — Reject and replace a derived production reference
+
+Use **Canonical Profiles → select CAP → reference Gallery**. For a generated
+production-view Candidate, select its thumbnail and click **Reject Candidate
+(QC)**. Enter a specific visual failure reason and confirm. The reference is
+now **Rejected** in the governed library, while the original image, MASTER,
+operator and timestamped QC event are retained. A Candidate's rejection is not
+the same operation as returning an already approved view to Candidate status.
+
+To correct it, open **Generate Production References**, choose only the failed
+view and the local ComfyUI Qwen provider, and enter a documented seed. The
+provider uses explicit cardinal-view instructions; outputs are still subject
+to visual inspection, not guaranteed correct. A new unique image filename is
+used and its reference notes identify the previous reference and image hash.
+The dialog runs in the background with an indeterminate progress indicator,
+elapsed time, provider status and ComfyUI prompt ID where available. Buttons
+remain disabled during the job to prevent duplicate submissions; wait before
+closing. A failure does not grant approval. Inspect the replacement before
+clicking **Approve** on that particular Candidate.
+
+The Qwen v2.1 Width/Height fields record *requested* dimensions only. Actual
+output geometry comes from the source MASTER through `FluxKontextImageScale`;
+inspect the produced image dimensions independently. For the Diagnostic Console
+Stage B test, preserve the original `front.png` with SHA-256
+`038A00EB3C502F8C352A2C9B6504D1A7F7A1AE91F0A3E8E76B44BC5D1198D915`.
+See the [Issue #61 Stage B handoff](../engineering/Issue_61_Stage_B_Console_Reference_Handoff.md)
+for the exact operator test sequence, snapshots and stop conditions.

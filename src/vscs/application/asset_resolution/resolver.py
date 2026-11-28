@@ -128,9 +128,12 @@ class AssetResolutionService:
         reference_bindings: tuple[ResolvedReferenceBinding, ...] = ()
         if cap_found:
             if self.production_projections is not None:
-                production_references = self.production_projections.project(
-                    asset.asset_id
-                ).references
+                projection = (
+                    self.production_projections.project_cinematic(asset.asset_id)
+                    if request.cinematic_references
+                    else self.production_projections.project(asset.asset_id)
+                )
+                production_references = projection.references
                 reference_bindings = tuple(
                     ResolvedReferenceBinding(
                         reference.reference_id,
@@ -170,6 +173,33 @@ class AssetResolutionService:
                         "reference.approved_missing",
                         AssetResolutionSeverity.ERROR,
                         "Asset has no approved canonical reference.",
+                        asset.asset_id,
+                    )
+                )
+            if (
+                request.cinematic_references
+                and request.require_approved_references
+                and self.production_projections is not None
+                and not projection.readiness.references.ready
+            ):
+                diagnostics.append(
+                    AssetResolutionDiagnostic(
+                        "reference.cinematic_not_ready",
+                        AssetResolutionSeverity.ERROR,
+                        "Required cinematic views are not accepted or their evidence is stale.",
+                        asset.asset_id,
+                    )
+                )
+            if (
+                request.cinematic_references
+                and self.production_projections is not None
+                and not projection.readiness.production.ready
+            ):
+                diagnostics.append(
+                    AssetResolutionDiagnostic(
+                        "cap.cinematic_production_not_ready",
+                        AssetResolutionSeverity.ERROR,
+                        "Cinematic CAP production readiness is blocked; review CAP readiness gaps.",
                         asset.asset_id,
                     )
                 )
