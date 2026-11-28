@@ -222,6 +222,52 @@ class CandidateQualityReviewService:
         prompt = manifest.get("prompt")
         if not isinstance(prompt, str) or not prompt.strip() or prompt != reference.description:
             raise CandidateQualityError("Candidate generation prompt provenance mismatch")
+        requalification = manifest.get("requalification")
+        if requalification is not None:
+            if (
+                not isinstance(requalification, dict)
+                or requalification.get("no_image_generation") is not True
+                or requalification.get("not_canonical_approval") is not True
+                or requalification.get("source_image_sha256") != image_digest
+                or type(requalification.get("source_reference_id")) is not int
+                or not isinstance(requalification.get("reviewer"), str)
+                or not requalification["reviewer"].strip()
+                or not isinstance(requalification.get("rationale"), str)
+                or len(requalification["rationale"].strip()) < 15
+            ):
+                raise CandidateQualityError("Invalid offline Candidate requalification evidence")
+            source = refs.get(requalification["source_reference_id"])
+            source_image = (root / source.file_path).resolve(strict=False)
+            try:
+                if source_image.relative_to(root).parent != expected_prefix:
+                    raise CandidateQualityError("Requalification source is not a local Candidate")
+            except ValueError as exc:
+                raise CandidateQualityError("Requalification source escapes project") from exc
+            if (
+                source.cap_id != cap.id
+                or not source_image.is_file()
+                or hashlib.sha256(source_image.read_bytes()).hexdigest() != image_digest
+                or requalification.get("original_generation_prompt") != source.description
+            ):
+                raise CandidateQualityError("Source Candidate or image has changed")
+            source_manifest = (
+                root
+                / "Canonical Assets"
+                / asset_id
+                / ".metadata"
+                / "visual"
+                / f"{source_image.stem}.json"
+            )
+            try:
+                original = json.loads(source_manifest.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                raise CandidateQualityError("Original Candidate manifest is missing") from exc
+            if (
+                original != requalification.get("source_manifest")
+                or original.get("image_sha256") != image_digest
+                or original.get("prompt") != source.description
+            ):
+                raise CandidateQualityError("Original Candidate provenance has changed")
         attempt: int | None = None
         parent_reference_id: int | None = None
         previous_technical: int | None = None
